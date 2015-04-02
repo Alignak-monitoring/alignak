@@ -25,5 +25,12 @@ BASE_PATH=$(dirname "$THIS_PATH")
 cd $BASE_PATH
 
 # install prog AND tests requirements :
+pip install .
+
 pip install -r test/requirements.txt
-python setup.py develop
+
+pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
+if test -e "test/requirements.py${pyversion}.txt"
+then
+    pip install -r "test/requirements.py${pyversion}.txt"
+fi

@@ -110,7 +110,7 @@ class testSchedulerInit(AlignakTest):
             assert(fun in reg_list)
 
         # Launch an arbiter so that the scheduler get a conf and init
-        args = ["../bin/alignak-arbiter.py", "-c", daemons_config[Arbiter][0], "-d"]
+        args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0], "-d"]
         proc = self.arb_proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Ok, now the conf

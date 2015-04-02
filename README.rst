@@ -42,9 +42,9 @@ __ https://alignak.readthedocs.org/en/latest/02_gettingstarted/installations/ali
 Update
 ------
 
-Launch:
+Launch::
 
-  python setup.py install --update
+  python setup.py install
 
 It will only update the alignak lib and scripts, but won't touch your current configuration
 
@@ -57,7 +57,7 @@ Alignak is installed with `init.d` scripts, enables them at boot time and starts
   chkconfig --add alignak
   chkconfig alignak on
 
-or :
+or ::
 
   update-rc.d alignak defaults 20
 
@@ -117,6 +117,111 @@ When filing a new bug, please remember to include:
 
 __ https://github.com/Alignak-monitoring/alignak/issues/
 __ https://gist.github.com/
+
+
+
+Install Alignak as python lib
+=============================
+
+In a virtualenv ::
+
+  virtualenv env
+  source env/bin/activate
+  python setup.py install_lib
+  python -c 'from alignak.bin import VERSION; print(VERSION)'
+
+Or directly on your system ::
+
+  sudo python setup.py install_lib
+  python -c 'from alignak.bin import VERSION; print(VERSION)'
+
+
+Get Alignak dev environment
+===========================
+
+
+To setup Alignak dev environment::
+
+  virtualenv env
+  source env/bin/activate
+  python setup.py develop
+  python setup.py install_data
+
+If you want to use init scripts in your virtualenv you have to REsource ``activate``::
+
+  source env/bin/activate
+
+
+Folders
+-------
+
+env/etc: Configuration folder
+
+env/var/lib/alignak/modules: Modules folder
+
+env/var/log/alignak: Logs folder
+
+env/var/run/alignak: Pid files folder
+
+Launch daemons
+--------------
+
+With binaries
+~~~~~~~~~~~~~
+
+Arbiter::
+
+  alignak-arbiter -c env/etc/alignak/alignak.cfg
+
+Broker::
+
+  alignak-broker -c env/etc/alignak/daemons/brokerd.ini
+
+Scheduler::
+
+  alignak-scheduler -c env/etc/alignak/daemons/schedulerd.ini
+
+Poller::
+
+  alignak-poller -c env/etc/alignak/daemons/pollerd.ini
+
+Reactionner::
+
+  alignak-reactionner -c env/etc/alignak/daemons/reactionnerd.ini
+
+Receiver::
+
+  alignak-receiver -c env/etc/alignak/daemons/receiverd.ini
+
+
+With init scripts
+~~~~~~~~~~~~~~~~~
+
+Arbiter::
+
+  env/etc/init.d/alignak-arbiter start
+
+Broker::
+
+  env/etc/init.d/alignak-broker start
+
+Scheduler::
+
+  env/etc/init.d/alignak-scheduler start
+
+Poller::
+
+  env/etc/init.d/alignak-poller start
+
+Reactionner::
+
+  env/etc/init.d/alignak-reactionner start
+
+Receiver::
+
+  env/etc/init.d/alignak-receiver start
+
+
 
 
 
