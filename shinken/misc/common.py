@@ -80,7 +80,4 @@ DICT_MODATTR = {
 
 }
 
-try:
-    from setproctitle import setproctitle
-except ImportError as err:
-    setproctitle = lambda s: None
+from setproctitle import setproctitle
