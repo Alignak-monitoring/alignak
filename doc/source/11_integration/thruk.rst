@@ -1,7 +1,7 @@
 .. _integration/thruk-usage:
 
 ======================
-Use Shinken with Thruk
+Use Alignak with Thruk
 ======================
 
 Thruk
@@ -12,9 +12,9 @@ Thruk
 
 * Homepage: http://www.thruk.org/
 * Screenshots: http://www.thruk.org/images/screenshots/screenshots.html
-* Description: "Thruk is an independent multibackend monitoring webinterface which currently supports Nagios, Icinga and Shinken as backend using the Livestatus addon. It is designed to be a "dropin" replacement. The target is to cover 100% of the original features plus additional enhancements for large installations."
+* Description: "Thruk is an independent multibackend monitoring webinterface which currently supports Nagios, Icinga and Alignak as backend using the Livestatus addon. It is designed to be a "dropin" replacement. The target is to cover 100% of the original features plus additional enhancements for large installations."
 * License: GPL v2
-* Shinken dedicated forum: http://forum.shinken-monitoring.org/forums/14-Use-with-Thruk
+* Alignak dedicated forum: http://forum...
 
   
   
@@ -37,13 +37,13 @@ Note: if you're using SELinux, also run:
   setsebool -P httpd_can_network_connect on
 
 
-.. _integration/thruk-usage#using_shinken_with_thruk:
+.. _integration/thruk-usage#using_alignak_with_thruk:
 
 
-Using Shinken with Thruk 
+Using Alignak with Thruk 
 ========================
 
-Thruk communicates with Shinken through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
+Thruk communicates with Alignak through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
 
 You can review the configuration using the two following steps.
 
@@ -54,27 +54,27 @@ Enable Livestatus module
 See :ref:`enable Livestatus module <enable_livestatus_module>`.
 
 
-Declare Shinken peer in Thruk 
+Declare Alignak peer in Thruk 
 ------------------------------
 
-Edit ''/etc/thruk/thruk_local.conf'' and declare the Shinken peer:
+Edit ''/etc/thruk/thruk_local.conf'' and declare the Alignak peer:
 
 ::
 
-    enable_shinken_features = 1
+    enable_alignak_features = 1
     <Component Thruk::Backend>
         <peer>
-            name   = External Shinken
+            name   = External Alignak
             type   = livestatus
             <options>
                 peer    = 127.0.0.01:50000
             </options>
-            # Uncomment the following lines if you want to configure shinken through Thruk
+            # Uncomment the following lines if you want to configure alignak through Thruk
             #<configtool>
-            #    core_type      = shinken
-            #    core_conf      = /etc/shinken/shinken.cfg
-            #    obj_check_cmd  = service shinken check
-            #    obj_reload_cmd = service shinken restart
+            #    core_type      = alignak
+            #    core_conf      = /etc/alignak/alignak.cfg
+            #    obj_check_cmd  = service alignak check
+            #    obj_reload_cmd = service alignak restart
             #</configtool>
         </peer>
     </Component>
@@ -84,14 +84,14 @@ Or use the backend wizard which starts automatically upon first installation.
 Don't forget to change the 127.0.0.1 with the IP/name of your broker if it is installed on an different host, or if you are using a distributed architecture with multiple brokers!
 
 
-Credit Shinken in the webpages title :-) 
+Credit Alignak in the webpages title :-) 
 -----------------------------------------
 
   Edit ''/etc/thruk/thruk.conf'':
 
 ::
 
-  title_prefix = Shinken+Thruk-
+  title_prefix = Alignak+Thruk-
 
 
 Configure users 
@@ -108,10 +108,10 @@ User permissions: modify ''templates.cfg:generic-contact'':
 
 ::
 
-      # I couldn't manage to get Thruk-level permissions to work, let's use Shinken admins privileges
+      # I couldn't manage to get Thruk-level permissions to work, let's use Alignak admins privileges
       can_submit_commands             0
 
-and define some users as admins in the Shinken configuration:
+and define some users as admins in the Alignak configuration:
   
 ::
 

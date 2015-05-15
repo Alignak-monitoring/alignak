@@ -7,7 +7,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-TEXT_template = """***** Shinken Notification *****
+TEXT_template = """***** Alignak Notification *****
 
 Notification: %(notify)s
 
@@ -31,7 +31,7 @@ HTML_template = '''<html>
 .unknown { color:gray }
 .bold { font-weight:bold }
 </style>
-<strong> ***** Shinken Notification ***** </strong><br><br>
+<strong> ***** Alignak Notification ***** </strong><br><br>
 Notification: <span class="%(notify)s bold">%(notify)s</span><br><br>
 State: <span class="%(state)s bold">%(state)s</span><br><br>
 Service: %(service)s <br>

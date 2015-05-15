@@ -5,6 +5,6 @@
 # your environment as necessary.
 
 now=$(date +%s)
-commandfile='/usr/local/shinken/var/rw/nagios.cmd'
+commandfile='/usr/local/alignak/var/rw/nagios.cmd'
 
 printf "[111] ADD_SIMPLE_POLLER;All;newpoller;localhost;8771\n" > $commandfile

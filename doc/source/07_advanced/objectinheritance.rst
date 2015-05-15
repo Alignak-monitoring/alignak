@@ -15,7 +15,7 @@ Introduction
 
 This documentation attempts to explain object inheritance and how it can be used in your :ref:`object definitions <configuration/objectdefinitions>`.
 
-If you are confused about how recursion and inheritance work after reading this, take a look at the sample object config files provided in the Shinken distribution. If that still doesn't help, have a look to the :ref:`shinken resources for help <contributing/how-to-contribute>`.
+If you are confused about how recursion and inheritance work after reading this, take a look at the sample object config files provided in the Alignak distribution. If that still doesn't help, have a look to the :ref:`Alignak resources for help <contributing/how-to-contribute>`.
 
 
 
@@ -39,7 +39,7 @@ The first variable is "name". Its just a "template" name that can be referenced 
 
 The second variable is "use". This is where you specify the name of the template object that you want to inherit properties/variables from. The name you specify for this variable must be defined as another object's template named (using the name variable).
 
-The third variable is "register". This variable is used to indicate whether or not the object definition should be "registered" with Shinken. By default, all object definitions are registered. If you are using a partial object definition as a template, you would want to prevent it from being registered (an example of this is provided later). Values are as follows: 0 = do NOT register object definition, 1 = register object definition (this is the default). This variable is NOT inherited; every (partial) object definition used as a template must explicitly set the "register" directive to be 0. This prevents the need to override an inherited "register" directive with a value of 1 for every object that should be registered.
+The third variable is "register". This variable is used to indicate whether or not the object definition should be "registered" with Alignak. By default, all object definitions are registered. If you are using a partial object definition as a template, you would want to prevent it from being registered (an example of this is provided later). Values are as follows: 0 = do NOT register object definition, 1 = register object definition (this is the default). This variable is NOT inherited; every (partial) object definition used as a template must explicitly set the "register" directive to be 0. This prevents the need to override an inherited "register" directive with a value of 1 for every object that should be registered.
 
 
 
@@ -66,7 +66,7 @@ One important thing to understand with inheritance is that “local" object vari
          use                     hosttemplate1
          }
 
-You'll note that the definition for host *bighost1* has been defined as having *hosttemplate1* as its template name. The definition for host *bighost2* is using the definition of *bighost1* as its template object. Once Shinken processes this data, the resulting definition of host *bighost2* would be equivalent to this definition:
+You'll note that the definition for host *bighost1* has been defined as having *hosttemplate1* as its template name. The definition for host *bighost2* is using the definition of *bighost1* as its template object. Once Alignak processes this data, the resulting definition of host *bighost2* would be equivalent to this definition:
 
 
 ::
@@ -113,7 +113,7 @@ Objects can inherit properties/variables from multiple levels of template object
          use                     hosttemplate2
          }
 
-You'll notice that the definition of host *bighost3* inherits variables from the definition of host *bighost2*, which in turn inherits variables from the definition of host *bighost1*. Once Shinken processes this configuration data, the resulting host definitions are equivalent to the following:
+You'll notice that the definition of host *bighost3* inherits variables from the definition of host *bighost2*, which in turn inherits variables from the definition of host *bighost1*. Once Alignak processes this configuration data, the resulting host definitions are equivalent to the following:
 
 
 ::
@@ -172,9 +172,9 @@ It is possible to use incomplete object definitions as templates for use by othe
          use                     generichosthosttemplate
          }
 
-Notice that the first host definition is incomplete because it is missing the required "host_name" variable. We don't need to supply a host name because we just want to use this definition as a generic host template. In order to prevent this definition from being registered with Shinken as a normal host, we set the "register" variable to 0.
+Notice that the first host definition is incomplete because it is missing the required "host_name" variable. We don't need to supply a host name because we just want to use this definition as a generic host template. In order to prevent this definition from being registered with Alignak as a normal host, we set the "register" variable to 0.
 
-The definitions of hosts *bighost1* and *bighost2* inherit their values from the generic host definition. The only variable we've chosed to override is the "address" variable. This means that both hosts will have the exact same properties, except for their "host_name" and "address" variables. Once Shinken processes the config data in the example, the resulting host definitions would be equivalent to specifying the following:
+The definitions of hosts *bighost1* and *bighost2* inherit their values from the generic host definition. The only variable we've chosed to override is the "address" variable. This means that both hosts will have the exact same properties, except for their "host_name" and "address" variables. Once Alignak processes the config data in the example, the resulting host definitions would be equivalent to specifying the following:
 
 
 ::
@@ -275,7 +275,7 @@ Additive Inheritance of String Values
 ======================================
 
 
-Shinken gives preference to local variables instead of values inherited from templates. In most cases local variable values override those that are defined in templates. In some cases it makes sense to allow Shinken to use the values of inherited and local variables together.
+Alignak gives preference to local variables instead of values inherited from templates. In most cases local variable values override those that are defined in templates. In some cases it makes sense to allow Alignak to use the values of inherited and local variables together.
 
 This "additive inheritance" can be accomplished by prepending the local variable value with a plus sign (+). This features is only available for standard (non-custom) variables that contain string values. Take the following example:
 
@@ -313,7 +313,7 @@ Implied Inheritance
 ====================
 
 
-Normally you have to either explicitly specify the value of a required variable in an object definition or inherit it from a template. There are a few exceptions to this rule, where Shinken will assume that you want to use a value that instead comes from a related object. For example, the values of some service variables will be copied from the host the service is associated with if you don't otherwise specify them.
+Normally you have to either explicitly specify the value of a required variable in an object definition or inherit it from a template. There are a few exceptions to this rule, where Alignak will assume that you want to use a value that instead comes from a related object. For example, the values of some service variables will be copied from the host the service is associated with if you don't otherwise specify them.
 
 The following table lists the object variables that will be implicitly inherited from related objects if you don't explicitly specify their value in your object definition or inherit them from a template.
 
@@ -439,7 +439,7 @@ Precedence With Multiple Inheritance Sources
 =============================================
 
 
-When you use multiple inheritance sources, it is important to know how Shinken handles variables that are defined in multiple sources. In these cases Shinken will use the variable/value from the first source that is specified in the use directive. Since inheritance sources can themselves inherit variables/values from one or more other sources, it can get tricky to figure out what variable/value pairs take precedence.
+When you use multiple inheritance sources, it is important to know how Alignak handles variables that are defined in multiple sources. In these cases Alignak will use the variable/value from the first source that is specified in the use directive. Since inheritance sources can themselves inherit variables/values from one or more other sources, it can get tricky to figure out what variable/value pairs take precedence.
 
 
 

@@ -26,7 +26,7 @@ I'll show you how you can create :ref:`timeperiod <thebasics/timeperiods>` defin
 Scenario 1: Holidays and Weekends 
 ==================================
 
-Two admins - John and Bob - are responsible for responding to Shinken alerts. John receives all notifications for weekdays (and weeknights) - except for holidays - and Bob gets handles notifications during the weekends and holidays. Lucky Bob. Here's how you can define this type of rotation using timeperiods...
+Two admins - John and Bob - are responsible for responding to Alignak alerts. John receives all notifications for weekdays (and weeknights) - except for holidays - and Bob gets handles notifications during the weekends and holidays. Lucky Bob. Here's how you can define this type of rotation using timeperiods...
 
 First, define a timeperiod that contains time ranges for holidays:
 

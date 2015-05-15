@@ -1,14 +1,14 @@
 .. _integration/centreon:
 
 =========================
-Use Shinken with Centreon
+Use Alignak with Centreon
 =========================
 
 
 Centreon 
 =========
 
-Centreon is a famous French monitoring solution based on Nagios, which can also be used with Shinken.
+Centreon is a famous French monitoring solution based on Nagios, which can also be used with Alignak.
 
 
 .. image:: /_static/images/centreon.png
@@ -19,34 +19,34 @@ Centreon is a famous French monitoring solution based on Nagios, which can also 
 * Screenshots: http://www.centreon.com/Content-Products-IT-network-monitoring/screenshots-for-centreon-it-monitoring-centreon
 * Description: "Centreon is an Open Source software package that lets you supervise all the infrastructures and applications comprising your information system"
 * License: GPL v2
-* Shinken dedicated forum: http://www.shinken-monitoring.org/forum/index.php/board,8.0.html
+* Alignak dedicated forum: http://www...
 
 
-How to use Shinken as a Centreon backend 
+How to use Alignak as a Centreon backend 
 =========================================
 
-The following Shinken Broker modules are required:
+The following Alignak Broker modules are required:
   * NDO/MySQL
   * Simple log
   * Flat file perfdata
 
-Below is the configuration you should set (there is already sample configuration files in your ''/etc/shinken/'' directory)
+Below is the configuration you should set (there is already sample configuration files in your ''/etc/alignak/'' directory)
 
 
 Simple log 
 -----------
 
-The module **simple_log** puts all Shinken's logs (Arbiter, Scheduler, Poller, etc.) into a single file.
+The module **simple_log** puts all Alignak's logs (Arbiter, Scheduler, Poller, etc.) into a single file.
 
-In ''/etc/shinken/modules/simple-log.cfg'':
+In ''/etc/alignak/modules/simple-log.cfg'':
 
 ::
 
   define module{
        module_name      Simple-log
        module_type      simple_log
-       path             /var/lib/shinken/shinken.log
-       archive_path     /var/lib/shinken/archives/
+       path             /var/lib/alignak/alignak.log
+       archive_path     /var/lib/alignak/archives/
   }
 
 It takes these parameters:
@@ -62,7 +62,7 @@ The module **ndodb_mysql** exports all data into a NDO MySQL database.
 
 It needs the python module **MySQLdb** (Debian: ''sudo apt-get install python-mysqldb'', or ''easy_install MySQL-python'')
 
-In ''/etc/shinken/modules/ndodb_mysql.cfg'':
+In ''/etc/alignak/modules/ndodb_mysql.cfg'':
 
 ::
 
@@ -91,14 +91,14 @@ Service Perfdata
 
 The module **service_perfdata** exports service's perfdata to a flat file.
 
-In ''/etc/shinken/modules/perfdata-service.cfg'':
+In ''/etc/alignak/modules/perfdata-service.cfg'':
 
 ::
 
   define module{
        module_name      Service-Perfdata
        module_type      service_perfdata
-       path             /var/lib/shinken/service-perfdata
+       path             /var/lib/alignak/service-perfdata
   }
 
 It takes the following parameters:
@@ -110,7 +110,7 @@ It takes the following parameters:
 Configure Broker to use these modules 
 --------------------------------------
 
-In ''/etc/shinken/brokers/broker-master.cfg'' find the object **Broker**, and add the above modules to the **modules** line:
+In ''/etc/alignak/brokers/broker-master.cfg'' find the object **Broker**, and add the above modules to the **modules** line:
 
 ::
 
@@ -124,9 +124,9 @@ In ''/etc/shinken/brokers/broker-master.cfg'' find the object **Broker**, and ad
 Configure Scheduler to match Centreon's Poller 
 -----------------------------------------------
 
-Shinken's "Scheduler" is called a "Poller" in Centreon. If you keep the sample Scheduler name, you won't see any data in the Centreon interface.
+Alignak's "Scheduler" is called a "Poller" in Centreon. If you keep the sample Scheduler name, you won't see any data in the Centreon interface.
 
-So edit ''/etc/shinken/schedulers/scheduler-master.cfg'' and change the Scheduler name to match the Centreon's Poller name ("default"):
+So edit ''/etc/alignak/schedulers/scheduler-master.cfg'' and change the Scheduler name to match the Centreon's Poller name ("default"):
 
 
 ::

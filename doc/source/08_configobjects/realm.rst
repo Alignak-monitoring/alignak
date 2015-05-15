@@ -10,7 +10,7 @@ Description
 
 The realms are a optional feature useful if the administrator want to divide it's resources like schedulers or pollers.
 
-The Realm definition is optional. If no scheduler is defined, Shinken will "create" one for the user and will be the default one.
+The Realm definition is optional. If no scheduler is defined, Alignak will "create" one for the user and will be the default one.
 
 
 Definition Format 

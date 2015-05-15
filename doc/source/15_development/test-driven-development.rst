@@ -26,19 +26,19 @@ There are different test levels :
   * Integration tests : Integration tests should be more extensive and can have longer execution periods as these are launched less often (before a release, or in an integration server).
 
 
-TDD in Shinken
+TDD in Alignak
 --------------
 
-We think all functions and features should have a test case. Shinken has a system to run automated tests that pinpoint any issues. This is used prior to commit, at regular intervals and when preparing a release.
+We think all functions and features should have a test case. Alignak has a system to run automated tests that pinpoint any issues. This is used prior to commit, at regular intervals and when preparing a release.
 
-Shinken uses Test Driven Development to achieve agility and stability in its software development process. Developers must adhere to the described methods in order to maintain a high quality standard.
+Alignak uses Test Driven Development to achieve agility and stability in its software development process. Developers must adhere to the described methods in order to maintain a high quality standard.
 
 We know some functions will be hard to test (databases for example), so let's do our best, we can't have 100% coverage. Tests should cover the various input and expected output of a function. Tests can also cover end-to-end cases for performance, stability and features. Test can also be classified in their time to run, quick tests for commit level validation and integration tests that go in-depth.
 
 We are not saying "all patches should be sent with tests", but new features/functions should have tests. First, the submitter knows what his code is designed to do, second this will save us from having to create one or more test cases later on when something gets broken. Test examples can be found in the /tests/ directory of the repository or your local installation.
 
 
-Add test to Shinken
+Add test to Alignak
 ===================
 
 I guess you have come here to chew bubblegum and create tests ... and you are all out of bubblegum! Lucky you are, here is some help to create tests!
@@ -53,9 +53,9 @@ Here is the file :
   
 ::
 
-  from shinken_test import *
+  from alignak_test import *
   
-  class TestConfig(ShinkenTest):
+  class TestConfig(AlignakTest):
   
       def setUp(self):
           self.setup_with_file('etc/nagios_bad_contact_call.cfg')
@@ -95,7 +95,7 @@ If there is no error then everything is correct. You can try to launch it with n
 
 .. note::   nosetests has a different behavior than unittests, the jenkins integration is using nosetests, that's why it's a good thing to check before comminting.
 
-The automated tests permit developers to concentrate on what they do best, while making sure they don't break anything. That's why the tests are critical to the success of the project. Shinken aims for "baseline zero bug" code and failure by design development :)
+The automated tests permit developers to concentrate on what they do best, while making sure they don't break anything. That's why the tests are critical to the success of the project. Alignak aims for "baseline zero bug" code and failure by design development :)
 We all create bugs, it's the coders life after all, lets at least catch them before they create havoc for users! The automated tests handle regression, performance, stability, new features and edge cases.
 
 The test is ready for commit. The last thing to do is to run the test suit to ensure you do not create code regression. This can be a long step if you have made a big change.
@@ -155,7 +155,7 @@ It takes the arguments: "file with a list of test\_-scripts" [NO]COVERAGE [NO]PY
 * test/test_end_to_end.sh
 
 
-Other integration server is at https://test.savoirfairelinux.com/view/Shinken/
+Other integration server is at https://test.savoirfairelinux.com/view/Alignak/
 
 This one use the new_runtest script.
 
@@ -165,27 +165,27 @@ Automated test execution
 
 The Hudson automated test jobs are:
 
- * Shinken
+ * Alignak
  
    * executed after each git commit
    * runtests test/jenkins/shorttests.txt NOCOVERAGE NOPYLINT
    * the scripts in shorttests.txt take a few minutes to run
    * give the developer feedback as fast as possible (**nobody should git-commit without running tests in his private environment first**)
 
- * Shinken-Multiplatform
+ * Alignak-Multiplatform
  
    * runs 4 times per day
    * runtests test/jenkins/longtests.txt NOCOVERAGE NOPYLINT
    * linux-python-2.4,linux-python-2.6,linux-python-2.7,windows-python-2.7
    * executes _all_ test\_-scripts we have, so it takes a long time
 
- * Shinken-End-to-End
+ * Alignak-End-to-End
  
-   * runs after each successful Shinken-Multiplatform
+   * runs after each successful Alignak-Multiplatform
    * executes the test/test_end_to_end.sh script
    * try a direct launch, install then launch, and high availability environment launch.
 
- * Shinken-Code-Quality
+ * Alignak-Code-Quality
  
    * runs once a day
    * runtests test/jenkins/longtests.txt COVERAGE PYLINT
@@ -193,7 +193,7 @@ The Hudson automated test jobs are:
 
 On the Jenkins one : 
 
- * Shinken-Upstream-Commit-Short-Tests 	 
+ * Alignak-Upstream-Commit-Short-Tests 	 
  
    * executed after each git commit
    * ./test/jenkins/new_runtests ./test/jenkins/shorttests.txt ./test/moodulelist COVERAGE PYLINT PEP8
@@ -201,12 +201,12 @@ On the Jenkins one :
    * the scripts in shorttests.txt take a few minutes to run
    * give the developer feedback as fast as possible (**nobody should git-commit without running tests in his private environment first**)
 
- * Shinken-Upstream-Daily-Full-Tests 
+ * Alignak-Upstream-Daily-Full-Tests 
  
    * executed every 6 hours
    * ./test/jenkins/new_runtest ./test/jenkins/all_tests.txt ./test/moduleslist COVERAGE PYLINT PEP8
    * the all_test is regenerated every time (all test_*.py)
    * run all test in all module listed
-   * give a full view of shinken coverage.
+   * give a full view of alignak coverage.
 
 .. _ Wikipedia article about TDD: http://en.wikipedia.org/wiki/Test-driven_development

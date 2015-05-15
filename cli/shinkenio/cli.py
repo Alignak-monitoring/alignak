@@ -1,26 +1,46 @@
 #!/usr/bin/env python
-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Gregory Starck, g.starck@gmail.com
-#    Hartmut Goebel, h.goebel@goebel-consult.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 import pycurl
 import os
@@ -32,9 +52,9 @@ import tarfile
 import urllib
 import shutil
 from StringIO import StringIO
-from shinken.log import logger, cprint
+from alignak.log import logger, cprint
 
-# Will be populated by the shinken CLI command
+# Will be populated by the alignak CLI command
 CONFIG = None
 
 
@@ -227,7 +247,7 @@ def do_search(*look_at):
     else:
         logger.debug("CALL SEARCH WITH ARGS %s", str(look_at))
         matches = search(look_at)
-    if matches == [] : print ('you are unlucky, use "shinken search all" for a complete list ')
+    if matches == [] : print ('you are unlucky, use "alignak search all" for a complete list ')
     print_search_matches(matches)
 
 

@@ -4,7 +4,7 @@
 
 .. _configuration/index:
 
-Configuring Shinken
+Configuring Alignak
 ===================
 
 .. raw:: LaTeX

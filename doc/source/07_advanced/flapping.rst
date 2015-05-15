@@ -8,7 +8,7 @@
 Introduction 
 =============
 
-Shinken supports optional detection of hosts and services that are “flapping". Flapping occurs when a service or host changes state too frequently, resulting in a storm of problem and recovery notifications. Flapping can be indicative of configuration problems (i.e. thresholds set too low), troublesome services, or real network problems.
+Alignak supports optional detection of hosts and services that are “flapping". Flapping occurs when a service or host changes state too frequently, resulting in a storm of problem and recovery notifications. Flapping can be indicative of configuration problems (i.e. thresholds set too low), troublesome services, or real network problems.
 
 
 How Flap Detection Works 
@@ -16,7 +16,7 @@ How Flap Detection Works
 
 Before I get into this, let me say that flapping detection has been a little difficult to implement. How exactly does one determine what "too frequently" means in regards to state changes for a particular host or service? When I first started thinking about implementing flap detection I tried to find some information on how flapping could/should be detected. I couldn't find any information about what others were using (where they using any?), so I decided to settle with what seemed to me to be a reasonable solution...
 
-Whenever Shinken checks the status of a host or service, it will check to see if it has started or stopped flapping. It does this by.
+Whenever Alignak checks the status of a host or service, it will check to see if it has started or stopped flapping. It does this by.
 
   * Storing the results of the last 21 checks of the host or service
   * Analyzing the historical check results and determine where state changes/transitions occur
@@ -59,8 +59,8 @@ Since the flap detection logic will give newer state changes a higher rate than 
 
 The calculated percent state change for the service (31%) will then be compared against flapping thresholds to see what should happen:
 
-  * If the service was not previously flapping and 31% is equal to or greater than the high flap threshold, Shinken considers the service to have just started flapping.
-  * If the service was previously flapping and 31% is less than the low flap threshold, Shinken considers the service to have just stopped flapping.
+  * If the service was not previously flapping and 31% is equal to or greater than the high flap threshold, Alignak considers the service to have just started flapping.
+  * If the service was previously flapping and 31% is less than the low flap threshold, Alignak considers the service to have just stopped flapping.
 
 If neither of those two conditions are met, the flap detection logic won't do anything else with the service, since it is either not currently flapping or it is still flapping.
 
@@ -68,7 +68,7 @@ If neither of those two conditions are met, the flap detection logic won't do an
 Flap Detection for Services 
 ============================
 
-Shinken checks to see if a service is flapping whenever the service is checked (either actively or passively).
+Alignak checks to see if a service is flapping whenever the service is checked (either actively or passively).
 
 The flap detection logic for services works as described in the example above.
 
@@ -76,7 +76,7 @@ The flap detection logic for services works as described in the example above.
 Flap Detection for Hosts 
 =========================
 
-Host flap detection works in a similar manner to service flap detection, with one important difference: Shinken will attempt to check to see if a host is flapping whenever:
+Host flap detection works in a similar manner to service flap detection, with one important difference: Alignak will attempt to check to see if a host is flapping whenever:
 
   * The host is checked (actively or passively)
   * Sometimes when a service associated with that host is checked. More specifically, when at least x amount of time has passed since the flap detection was last performed, where x is equal to the average check interval of all services associated with the host.
@@ -87,7 +87,7 @@ Why is this done? With services we know that the minimum amount of time between 
 Flap Detection Thresholds 
 ==========================
 
-Shinken uses several variables to determine the percent state change thresholds is uses for flap detection. For both hosts and services, there are global high and low thresholds and host- or service-specific thresholds that you can configure. Shinken will use the global thresholds for flap detection if you to not specify host- or service- specific thresholds.
+Alignak uses several variables to determine the percent state change thresholds is uses for flap detection. For both hosts and services, there are global high and low thresholds and host- or service-specific thresholds that you can configure. Alignak will use the global thresholds for flap detection if you to not specify host- or service- specific thresholds.
 
 The table below shows the global and host- or service-specific variables that control the various thresholds used in flap detection.
 
@@ -102,7 +102,7 @@ Service     :ref:`low_service_flap_threshold <configuration/configmain-advanced#
 States Used For Flap Detection 
 ===============================
 
-Normally Shinken will track the results of the last 21 checks of a host or service, regardless of the check result (host/service state), for use in the flap detection logic.
+Normally Alignak will track the results of the last 21 checks of a host or service, regardless of the check result (host/service state), for use in the flap detection logic.
 
 You can exclude certain host or service states from use in flap detection logic by using the "flap_detection_options" directive in your host or service definitions. This directive allows you to specify what host or service states (i.e. "UP, "DOWN", "OK, "CRITICAL") you want to use for flap detection. If you don't use this directive, all host or service states are used in flap detection.
 
@@ -110,14 +110,14 @@ You can exclude certain host or service states from use in flap detection logic 
 Flap Handling 
 ==============
 
-When a service or host is first detected as flapping, Shinken will:
+When a service or host is first detected as flapping, Alignak will:
 
   * Log a message indicating that the service or host is flapping.
   * Add a non-persistent comment to the host or service indicating that it is flapping.
   * Send a "flapping start" notification for the host or service to appropriate contacts.
   * Suppress other notifications for the service or host (this is one of the filters in the :ref:`notification logic <thebasics/notifications>`).
 
-When a service or host stops flapping, Shinken will:
+When a service or host stops flapping, Alignak will:
 
   * Log a message indicating that the service or host has stopped flapping.
   * Delete the comment that was originally added to the service or host when it started flapping.
@@ -128,7 +128,7 @@ When a service or host stops flapping, Shinken will:
 Enabling Flap Detection 
 ========================
 
-In order to enable the flap detection features in Shinken, you'll need to:
+In order to enable the flap detection features in Alignak, you'll need to:
 
   * Set :ref:`enable_flap_detection <configuration/configmain-advanced#enable_flap_detection>` directive is set to 1.
   * Set the "flap_detection_enabled" directive in your host and service definitions is set to 1.

@@ -1,7 +1,7 @@
 .. _integration/nagvis:
 
 =======================
-Use Shinken with Nagvis
+Use Alignak with Nagvis
 =======================
 
 
@@ -16,13 +16,13 @@ NagVis
 * Screenshots: http://www.nagvis.org/screenshots
 * Description: "NagVis is a visualization addon for the well known network management system Nagios."
 * License: GPL v2
-* Shinken dedicated forum: http://www.shinken-monitoring.org/forum/index.php/board,11.0.html
+* Alignak dedicated forum: http://www...
 
 
-Using Shinken with NagVis 
+Using Alignak with NagVis 
 ==========================
 
-NagVis communicates with Shinken through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
+NagVis communicates with Alignak through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
 
 You can review the configuration using the following steps.
 
@@ -30,7 +30,7 @@ You can review the configuration using the following steps.
 Enable Livestatus module 
 -------------------------
 
-The Livestatus API is server from the Shinken broker. It permits communications via TCP to efficiently retrieve the current state and performance data of supervised hosts and services from Shinken. It also exposes configuration information.
+The Livestatus API is server from the Alignak broker. It permits communications via TCP to efficiently retrieve the current state and performance data of supervised hosts and services from Alignak. It also exposes configuration information.
 
 See :ref:`enable Livestatus module <enable_livestatus_module>`.
 
@@ -44,7 +44,7 @@ Download the software and follow the installation guide from http://www.nagvis.o
 NagVis configuration 
 ---------------------
 
-Nagvis needs to know where the Shinken Livestatus API is hosted.
+Nagvis needs to know where the Alignak Livestatus API is hosted.
 
 In NagVis configuration file ''/etc/nagvis/nagvis.ini.php'':
 
@@ -57,4 +57,4 @@ In NagVis configuration file ''/etc/nagvis/nagvis.ini.php'':
   socket="tcp:localhost:50000"
 
 
-.. important::  If you are using a non local broker (or a distributed Shinken architecture with multiple brokers) you should change **localhost** to the **IP/Servername/FQDN of your broker**!
+.. important::  If you are using a non local broker (or a distributed Alignak architecture with multiple brokers) you should change **localhost** to the **IP/Servername/FQDN of your broker**!

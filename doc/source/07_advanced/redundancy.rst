@@ -8,5 +8,5 @@
 Introduction 
 =============
 
-**This topic is managed in the distributed section because it's a part of the Shinken architecture.**
+**This topic is managed in the distributed section because it's a part of the Alignak architecture.**
 

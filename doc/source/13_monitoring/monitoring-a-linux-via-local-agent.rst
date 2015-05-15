@@ -19,7 +19,7 @@ NRPE
 
 
 See:
-  * Shinken Module to bypass check_nrpe tool: :ref:`NRPE Module <packages/setup-nrpe-booster-module>`
+  * Alignak Module to bypass check_nrpe tool: :ref:`NRPE Module <packages/setup-nrpe-booster-module>`
 
 
 NSCA 
@@ -30,4 +30,4 @@ NSCA
 
 
 See:
-  * Shinken Module to natively receive NSCA messages : :ref:` <nsca_daemon_module>`
+  * Alignak Module to natively receive NSCA messages : :ref:` <nsca_daemon_module>`

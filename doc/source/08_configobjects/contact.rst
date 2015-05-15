@@ -132,7 +132,7 @@ address*x*
   Address directives are used to define additional “addresses" for the contact. These addresses can be anything - cell phone numbers, instant messaging addresses, etc. Depending on how you configure your notification commands, they can be used to send out an alert o the contact. Up to six addresses can be defined using these directives (*address1* through *address6*). The $CONTACTADDRESS*x*$ :ref:`macro <thebasics/macros>` will contain this value.
 
 can_submit_commands
-  This directive is used to determine whether or not the contact can submit :ref:`external commands <advanced/extcommands>` to Shinken from the CGIs. Values:
+  This directive is used to determine whether or not the contact can submit :ref:`external commands <advanced/extcommands>` to Alignak from the CGIs. Values:
   
     * 0 = don't allow contact to submit commands
     * 1 = allow contact to submit commands.

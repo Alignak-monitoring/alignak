@@ -82,7 +82,7 @@ contact_groups
   This directive is used to identify the *short name* of the :ref:`contact group <configobjects/contactgroup>` that should be notified when the service notification is escalated. Multiple contact groups should be separated by commas. You must specify at least one contact or contact group in each service escalation definition.
 
 notification_interval
-  This directive is used to determine the interval at which notifications should be made while this escalation is valid. If you specify a value of 0 for the interval, Shinken will send the first notification when this escalation definition is valid, but will then prevent any more problem notifications from being sent out for the host. Notifications are sent out again until the host recovers. This is useful if you want to stop having notifications sent out after a certain amount of time.
+  This directive is used to determine the interval at which notifications should be made while this escalation is valid. If you specify a value of 0 for the interval, Alignak will send the first notification when this escalation definition is valid, but will then prevent any more problem notifications from being sent out for the host. Notifications are sent out again until the host recovers. This is useful if you want to stop having notifications sent out after a certain amount of time.
   
   If multiple escalation entries for a host overlap for one or more notification ranges, the smallest notification interval from all escalation entries is used.
 

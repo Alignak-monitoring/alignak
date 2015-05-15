@@ -1,44 +1,66 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Olivier Hanesse, olivier.hanesse@gmail.com
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Olivier Hanesse, olivier.hanesse@gmail.com
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys
 import time
 import os
 
 try:
-    import shinken
+    import alignak
 except ImportError:
-    # If importing shinken fails, try to load from current directory
+    # If importing alignak fails, try to load from current directory
     # or parent directory to support running without installation.
     # Submodules will then be loaded from there, too.
     import imp
-    imp.load_module('shinken', *imp.find_module('shinken', [os.path.realpath("."), os.path.realpath(".."), os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), "..")]))
+    imp.load_module('alignak', *imp.find_module('alignak', [os.path.realpath("."), os.path.realpath(".."), os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), "..")]))
 
-from shinken.objects.config import Config
-from shinken.log import logger
-from shinken.modules.logstore_sqlite import get_instance as get_instance_sqlite
-from shinken.modules.logstore_mongodb import get_instance as get_instance_mongodb
-from shinken.modules.logstore_sqlite import LiveStatusLogStoreError
-from shinken.modules.livestatus_broker.log_line import Logline
+from alignak.objects.config import Config
+from alignak.log import logger
+from alignak.modules.logstore_sqlite import get_instance as get_instance_sqlite
+from alignak.modules.logstore_mongodb import get_instance as get_instance_mongodb
+from alignak.modules.logstore_sqlite import LiveStatusLogStoreError
+from alignak.modules.livestatus_broker.log_line import Logline
 
 class Dummy:
     def add(self, o):
@@ -70,7 +92,7 @@ class Converter(object):
 
 if __name__ == '__main__':
     if (len(sys.argv) < 2):
-        print "usage: sql2mdb shinken-specifig.cfg"
+        print "usage: sql2mdb alignak-specifig.cfg"
         sys.exit(1)
     conv = Converter(sys.argv[1])
     print conv.mod_mongodb

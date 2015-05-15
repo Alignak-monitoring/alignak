@@ -11,18 +11,18 @@ begin
  port = 9090
  transport = Thrift::BufferedTransport.new(Thrift::Socket.new('localhost', port))
  protocol = Thrift::BinaryProtocol.new(transport)
- client = Org::Shinken_monitoring::TSCA::StateService::Client.new(protocol)
+ client = Org::Alignak_monitoring::TSCA::StateService::Client.new(protocol)
  transport.open()
  list = Array.new
- data = Org::Shinken_monitoring::TSCA::DataArgs.new()
+ data = Org::Alignak_monitoring::TSCA::DataArgs.new()
 
  CSV.open(ARGV[0], 'r', ',') do |row|
-   trace = Org::Shinken_monitoring::TSCA::State.new()
+   trace = Org::Alignak_monitoring::TSCA::State.new()
    trace.timestamp = Time.now.to_i
    trace.hostname = row[0]
    trace.serv = row[1]
    trace.output = row[2]
-   trace.rc = Org::Shinken_monitoring::TSCA::ReturnCode::OK
+   trace.rc = Org::Alignak_monitoring::TSCA::ReturnCode::OK
    list.push(trace)
  end
  data.states = list

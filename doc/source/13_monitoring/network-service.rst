@@ -7,25 +7,25 @@ Monitoring Publicly Available Services
 
 **Abstract**
 
-This document describes how you can monitor publicly available services, applications and protocols. By “public" I mean services that are accessible across the network - either the local network or Internet. Examples of public services include "HTTP", "POP3", "IMAP", "FTP", and "SSH". There are many more public services that you probably use on a daily basis. These services and applications, as well as their underlying protocols, can usually be monitored by Shinken without any special access requirements.
+This document describes how you can monitor publicly available services, applications and protocols. By “public" I mean services that are accessible across the network - either the local network or Internet. Examples of public services include "HTTP", "POP3", "IMAP", "FTP", and "SSH". There are many more public services that you probably use on a daily basis. These services and applications, as well as their underlying protocols, can usually be monitored by Alignak without any special access requirements.
 
 
 Introduction 
 =============
 
-Private services, in contrast, cannot be monitored with Shinken without an intermediary agent of some kind. Examples of private services associated with hosts are things like CPU load, memory usage, disk usage, current user count, process information, etc.
+Private services, in contrast, cannot be monitored with Alignak without an intermediary agent of some kind. Examples of private services associated with hosts are things like CPU load, memory usage, disk usage, current user count, process information, etc.
 
-These instructions assume that you've installed Shinken according to the :ref:`Installation tutorial <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you followed the quickstart.
+These instructions assume that you've installed Alignak according to the :ref:`Installation tutorial <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you followed the quickstart.
 
 
 Plugins For Monitoring Services 
 ================================
 
-When you find yourself needing to monitor a particular application, service, or protocol, chances are good that a :ref:`plugin <thebasics/plugins>` exists to monitor it. The official Nagios/Shinken plugins distribution comes with plugins that can be used to monitor a variety of services and protocols. There are also a large number of contributed plugins that can be found in the "contrib/" subdirectory of the plugin distribution. The `Monitoringexchange.org`_ website hosts a number of additional plugins that have been written by users, so check it out when you have a chance.
+When you find yourself needing to monitor a particular application, service, or protocol, chances are good that a :ref:`plugin <thebasics/plugins>` exists to monitor it. The official Nagios/Alignak plugins distribution comes with plugins that can be used to monitor a variety of services and protocols. There are also a large number of contributed plugins that can be found in the "contrib/" subdirectory of the plugin distribution. The `Monitoringexchange.org`_ website hosts a number of additional plugins that have been written by users, so check it out when you have a chance.
 
 If you don't happen to find an appropriate plugin for monitoring what you need, you can always write your own. Plugins are easy to write, so don't let this thought scare you off. Read the documentation on :ref:`developing plugins <development/pluginapi>` for more information.
 
-I'll walk you through monitoring some basic services that you'll probably use sooner or later. Each of these services can be monitored using one of the plugins that gets installed as part of the Nagios/Shinken plugins distribution. Let's get started...
+I'll walk you through monitoring some basic services that you'll probably use sooner or later. Each of these services can be monitored using one of the plugins that gets installed as part of the Nagios/Alignak plugins distribution. Let's get started...
 
 
 The host definition 
@@ -203,11 +203,11 @@ To get smtp, pop3 and imap service checks, you can just link all theses template
   }
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-Once you've added the new host templates to your object configuration file(s), you're ready to start monitoring them. To do this, you'll need to :ref:`verify your configuration <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+Once you've added the new host templates to your object configuration file(s), you're ready to start monitoring them. To do this, you'll need to :ref:`verify your configuration <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!
 
 .. _Monitoringexchange.org: https://www.monitoringexchange.org/

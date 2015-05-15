@@ -15,7 +15,7 @@ A trigger object is something that can be called after a "change" on an object. 
 Here is an example that will raise a critical check if the CPU is too loaded:
 
 .. note:: If your trigger is made to edit output add the trigger_broker_raise_enabled parameter into the service definition.
-          If not, Shinken will generate 2 broks (1 before and 1 after the trigger). This can lead to bad data in broker module (Graphite)
+          If not, Alignak will generate 2 broks (1 before and 1 after the trigger). This can lead to bad data in broker module (Graphite)
 
 ::
   
@@ -49,5 +49,5 @@ Then define your trigger in etc/trigger.d/yourtrigger.trig. here the file is sim
     unknown(self, 'UNKNOWN | load=%d' % load)
   
   
-Finally, add the triggers_dir=trigger.d statement to your shinken.cfg
+Finally, add the triggers_dir=trigger.d statement to your alignak.cfg
 

@@ -1,7 +1,7 @@
 .. _development/documentation:
 
 ======================
-Shinken documentation
+Alignak documentation
 ======================
 
 
@@ -11,7 +11,7 @@ About this documentation
 This documentation uses `Python-sphinx`_, which itself uses `reStructuredText`_
 syntax.
 
-The guidelines below are loosely based on the `documentation-style-guide-sphinx`_ project and improve upon the converted content of the numerous of contributors to the shinken wiki.
+The guidelines below are loosely based on the `documentation-style-guide-sphinx`_ project and improve upon the converted content of the numerous of contributors to the alignak wiki.
 
 
 Contribute by...
@@ -21,17 +21,17 @@ Contribute by...
   * Split the configuration parameters that are unused from the unimplemented ones
   * Remove the nagios and nagios-specific references (such as unused parameters) from the various pages
   * Clean up the gettingstarted / installations section
-  * Fix the internal links on the "troubleshooting/troubleshooting-shinken" page
+  * Fix the internal links on the "troubleshooting/troubleshooting-alignak" page
   * Dedicate a basic page on how to use the shinken.io packs
   * Shorten the directory names in the source directory for shorter links
   * Find or create the correct targets for:
     
-    * the "configuringshinken/objectdefinitions#retention_notes" links, referenced multiple times by 
+    * the "configuringalignak/objectdefinitions#retention_notes" links, referenced multiple times by 
     
       * "configobjects/service"
       * "configobjects/host"
     
-    * the "internal_metrics" links, or create the page based on http://www.shinken-monitoring.org/wiki/internal_metrics
+    * the "internal_metrics" links, or create the page based on http://www...
     * the original "thebasics/cgis" links spread across the documentation
   
   

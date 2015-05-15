@@ -1,27 +1,48 @@
 #!/usr/bin/env python
 
 # -*- coding: utf-8 -*-
-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Gregory Starck, g.starck@gmail.com
-#    Hartmut Goebel, h.goebel@goebel-consult.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 # This Class is an example of an Scheduler module
 # Here for the configuration phase AND running one
@@ -31,8 +52,8 @@ import signal
 import time
 from Queue import Empty
 
-from shinken.basemodule import BaseModule
-from shinken.log import logger
+from alignak.basemodule import BaseModule
+from alignak.log import logger
 
 properties = {
     'daemons': ['poller'],
@@ -64,7 +85,7 @@ class Dummy_poller(BaseModule):
     # Get new checks if less than nb_checks_max
     # If no new checks got and no check in queue,
     # sleep for 1 sec
-    # REF: doc/shinken-action-queues.png (3)
+    # REF: doc/alignak-action-queues.png (3)
     def get_new_checks(self):
         try:
             while(True):
@@ -78,7 +99,7 @@ class Dummy_poller(BaseModule):
                 time.sleep(1)
 
     # Launch checks that are in status
-    # REF: doc/shinken-action-queues.png (4)
+    # REF: doc/alignak-action-queues.png (4)
     def launch_new_checks(self):
         # queue
         for chk in self.checks:
@@ -91,7 +112,7 @@ class Dummy_poller(BaseModule):
 
     # Check the status of checks
     # if done, return message finished :)
-    # REF: doc/shinken-action-queues.png (5)
+    # REF: doc/alignak-action-queues.png (5)
     def manage_finished_checks(self):
         to_del = []
         for action in self.checks:
@@ -126,11 +147,11 @@ class Dummy_poller(BaseModule):
             # If we are dying (big problem!) we do not
             # take new jobs, we just finished the current one
             if not self.i_am_dying:
-                # REF: doc/shinken-action-queues.png (3)
+                # REF: doc/alignak-action-queues.png (3)
                 self.get_new_checks()
-                # REF: doc/shinken-action-queues.png (4)
+                # REF: doc/alignak-action-queues.png (4)
                 self.launch_new_checks()
-            # REF: doc/shinken-action-queues.png (5)
+            # REF: doc/alignak-action-queues.png (5)
             self.manage_finished_checks()
 
             # Now get order from master

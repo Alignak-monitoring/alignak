@@ -23,7 +23,7 @@ Introduction
 
 Publicly available services that are provided by Windows machines ("HTTP", "FTP", "POP3", etc.) can be monitored by following the documentation on :ref:`Monitoring publicly available services (HTTP, FTP, SSH, etc.) <monitoring/network-service>`.
 
-The instructions assume that you've installed Shinken according to the :ref:`Installation tutorial <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that were installed.
+The instructions assume that you've installed Alignak according to the :ref:`Installation tutorial <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that were installed.
 
 
 Overview 
@@ -51,7 +51,7 @@ There are several steps you'll need to follow in order to monitor a Microsoft Wi
   * Install check_wmi_plus plugin on the server running your poller daemons
   * Setup an account on the monitored windows server for the WMI queries
   * Declare your windows host in the configuration
-  * Restart the Shinken Arbiter
+  * Restart the Alignak Arbiter
 
 
 What's Already Been Done For You 
@@ -62,7 +62,7 @@ To make your life a bit easier, configuration templates are provided as a starti
   * A selection of **check_windows** based command definitions have been added to the "commands.cfg" file. This allows you to use the **check_wmi_plus** plugin.
   * A Windows host template (called "windows") is included the "templates.cfg" file. This allows you to add new Windows host definitions in a simple manner.
 
-The above-mentioned config files can be found in the /etc/shinken/packs/os/windows/ directory. You can modify the definitions in these and other templates to suit your needs. However, wait until you're more familiar with Shinken before doing so. For the time being, just follow the directions outlined below and you will be monitoring your Windows devices in no time.
+The above-mentioned config files can be found in the /etc/alignak/packs/os/windows/ directory. You can modify the definitions in these and other templates to suit your needs. However, wait until you're more familiar with Alignak before doing so. For the time being, just follow the directions outlined below and you will be monitoring your Windows devices in no time.
 
 
 Setup the check_wmi_plus plugin 
@@ -77,22 +77,22 @@ Setup a windows account for WMI queries
 
 TODO: write on using less than server admin
 
-You need to configure your user account int the /etc/shinken/resources.cfg file or the c:\shinken\etc\resource.cfg file under windows with the one you just configured:
+You need to configure your user account int the /etc/alignak/resources.cfg file or the c:\alignak\etc\resource.cfg file under windows with the one you just configured:
   
 ::
 
   
-  $DOMAINUSER$=shinken_user
+  $DOMAINUSER$=alignak_user
   $DOMAINPASSWORD$=superpassword
 
 
 .. tip::  You can also consult the Nagios documentation which provides a very helpful write up on setting up the domain account and assigning permissions. `Monitoring_Windows_Using_WMI.pdf`_
 
 
-Declare your host in Shinken 
+Declare your host in Alignak 
 =============================
 
-Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Shinken configuration files in order to monitor the new Windows device.
+Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Alignak configuration files in order to monitor the new Windows device.
 
 We will assume that your server is named *srv-win-1*. Replace this with the real hostname of your server.
 
@@ -102,13 +102,13 @@ Under Linux:
 
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-win-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-win-1.cfg
   
 Or Windows:
 
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-win-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-win-1.cfg
   
   
 You need to add a new :ref:`host <configobjects/host>` definition for the Windows device that you will monitor. Just copy/paste the above definition, change the "host_name", and "address" fields to appropriate values.
@@ -132,7 +132,7 @@ Note: If you use a hostname be aware that you will have a DNS dependency in your
 What is monitored by the windows template? 
 -------------------------------------------
 
-You have configured your host to be checked by the windows template. What does it means? It means that you Shinken will monitor the following :
+You have configured your host to be checked by the windows template. What does it means? It means that you Alignak will monitor the following :
 
   * host check each 5 minutes with a ping
   * check disk space
@@ -145,12 +145,12 @@ You have configured your host to be checked by the windows template. What does i
   * processes hogging the CPU
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-You're done with modifying the Shinken configuration, so you'll need to :ref:`verify your configuration files <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+You're done with modifying the Alignak configuration, so you'll need to :ref:`verify your configuration files <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!
 
 .. _Monitoring_Windows_Using_WMI.pdf: http://assets.nagios.com/downloads/nagiosxi/docs/Monitoring_Windows_Using_WMI.pdf
 .. _Check WMI Plus website: http://assets.nagios.com/

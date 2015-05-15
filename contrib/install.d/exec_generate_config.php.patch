@@ -5,7 +5,7 @@
      // check if the Nagios / Icinga binary is executable
      exec(NAGIOS_BIN,$bin_out);
 -    if(!preg_match('/Nagios|Icinga/',implode(' ',$bin_out))){
-+    if(!preg_match('/Nagios|Icinga|Shinken/',implode(' ',$bin_out))){
++    if(!preg_match('/Nagios|Icinga|Shinken|Alignak/',implode(' ',$bin_out))){
          $content = "Error accessing or executing Nagios / Icinga binary '".NAGIOS_BIN."'. <br>Cannot run the mandatory syntax check.";
          NConf_DEBUG::set($content, 'ERROR');
          echo NConf_HTML::limit_space(
@@ -14,8 +14,8 @@
  	}
  
 +    // set engine
-+    if(preg_match('/Shinken/',implode(' ',$bin_out))){    
-+        $engine = "shinken";
++    if(preg_match('/Alignak/',implode(' ',$bin_out))){    
++        $engine = "alignak";
 +    }else{
 +        $engine = "nagios";
 +    }
@@ -28,7 +28,7 @@
  
          if($entry["config_class"] == 'nagios-collector'){
 -            $renamed = preg_replace('/Nagios|Icinga/i','collector',$renamed);
-+            $renamed = preg_replace('/Nagios|Icinga|Shinken/i','collector',$renamed);
++            $renamed = preg_replace('/Nagios|Icinga|Shinken|Alignak/i','collector',$renamed);
          }
          array_push($servers, $renamed);
      }
@@ -104,7 +104,7 @@
          foreach($srv_summary[$server] as $line){
 -            if( preg_match("/^Total/",$line) ){
 -                # add splitter between messages
-+            if ($engine == "shinken"){
++            if ($engine == "alignak"){
                  $total_msg .= ( $i > 0 ) ? $break : '';
                  $i++;
                  $total_msg .= $line;
@@ -146,7 +146,7 @@
          echo NConf_HTML::title($title, 3, 'class="accordion_title ui-accordion-header ui-helper-reset ui-state-default ui-corner-top ui-corner-bottom"');
          echo '<div class="accordion_content ui-widget-content ui-corner-bottom monospace" style="display: none;">';
 +
-+        if ($engine == "shinken"){
++        if ($engine == "alignak"){
 +            foreach($srv_summary[$server] as $line){
 +                if ( preg_match("/Error :/",$line) ){
 +                    echo '<span class="red">'.$line.'</span>';

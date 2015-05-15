@@ -10,14 +10,14 @@ output_folder = "../source"
 
 chapters = {'about': '01',
             'gettingstarted': '02',
-            'configuringshinken': '03',
-            'runningshinken': '04',
+            'configuringalignak': '03',
+            'runningalignak': '04',
             'thebasics': '05',
             'advancedtopics': '06',
             'configobjects': '07',
             'securityandperformancetuning': '08',
             'integrationwithothersoftware': '09',
-            'shinkenaddons': '10',
+            'alignakaddons': '10',
             'development': '11',
             }
 
@@ -265,8 +265,8 @@ for root, dirs, files in os.walk(input_folder):
                     ref = link[0].split(":")[-1]
                     ref_text = link[1].strip()
                     line = re.sub("\[\[(.*?)\|(.*?)\]\]", ":ref:`%s <%s>`" % (ref_text, ref), line, count=1, flags=0)
-                    if ref.startswith("configuringshinken/configobjects/"):
-                        ref = ref.replace("configuringshinken/configobjects/", '')
+                    if ref.startswith("configuringalignak/configobjects/"):
+                        ref = ref.replace("configuringalignak/configobjects/", '')
                     internal_links[ref_text] = ref
 
             m = re.search("\[\[(.*?)\]\]", line)
@@ -276,8 +276,8 @@ for root, dirs, files in os.walk(input_folder):
                     ref = link.split(":")[-1]
                     ref_text = ref
                     line = re.sub("\[\[(.*?)\]\]", ":ref:`%s` <%s>" % (ref_text, ref), line, count=1, flags=0)
-                    if ref.startswith("configuringshinken/configobjects/"):
-                        ref = ref.replace("configuringshinken/configobjects/", '')
+                    if ref.startswith("configuringalignak/configobjects/"):
+                        ref = ref.replace("configuringalignak/configobjects/", '')
                     internal_links[ref_text] = ref
 
             # Search image
@@ -286,14 +286,14 @@ for root, dirs, files in os.walk(input_folder):
                 images = re.findall("\{\{(.*?)\|(.*?)\}\}", line)
                 for image, text in images:
                     # TODO prepare image var
-                    path = image.replace(":shinken:", "")
+                    path = image.replace(":alignak:", "")
                     path = path.replace(":", "/")
                     img_filename = os.path.basename(path)
                     path = os.path.dirname(path)
                     # Download images
-                    image_url = image.replace(":shinken:", "")
+                    image_url = image.replace(":alignak:", "")
                     image_url = image_url.replace(":", "/")
-                    image_url = "http://www.shinken-monitoring.org/wiki/_media/" + image_url
+                    image_url = "http://www.../wiki/_media/" + image_url
                     ##
 #                    path = os.path.join("_static/images/", path)
                     path = "_static/images/" + path
@@ -310,14 +310,14 @@ for root, dirs, files in os.walk(input_folder):
                 images = re.findall("\{\{(.*?)\}\}", line)
                 for image in images:
                     # TODO prepare image var
-                    path = image.replace(":shinken:", "")
+                    path = image.replace(":alignak:", "")
                     path = path.replace(":", "/")
                     img_filename = os.path.basename(path)
                     path = os.path.dirname(path)
                     # Download images
-                    image_url = image.replace(":shinken:", "")
+                    image_url = image.replace(":alignak:", "")
                     image_url = image_url.replace(":", "/")
-                    image_url = "http://www.shinken-monitoring.org/wiki/_media/" + image_url
+                    image_url = "http://www.../wiki/_media/" + image_url
                     ##
 #                    path = os.path.join("_static/images/", path)
                     path = "_static/images/" + path

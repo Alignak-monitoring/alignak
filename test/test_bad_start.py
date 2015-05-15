@@ -1,22 +1,44 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
 # This file is used to test reading and processing of config files
@@ -28,19 +50,18 @@ import os
 import tempfile
 import shutil
 
-from shinken_test import unittest, time_hacker, get_free_port
+from alignak_test import *
 
-import shinken.log as shinken_log
+import alignak.log as alignak_log
 
-from shinken.daemon import InvalidPidFile, InvalidWorkDir
-from shinken.http_daemon import PortNotFree
+from alignak.daemon import InvalidPidFile, InvalidWorkDir
+from alignak.http_daemon import PortNotFree
 
-from shinken.daemons.pollerdaemon import Poller
-from shinken.daemons.brokerdaemon import Broker
-from shinken.daemons.schedulerdaemon import Shinken
-from shinken.daemons.reactionnerdaemon import Reactionner
-from shinken.daemons.arbiterdaemon import Arbiter
-
+from alignak.daemons.pollerdaemon import Poller
+from alignak.daemons.brokerdaemon import Broker
+from alignak.daemons.schedulerdaemon import Alignak
+from alignak.daemons.reactionnerdaemon import Reactionner
+from alignak.daemons.arbiterdaemon import Arbiter
 try:
     import pwd, grp
     from pwd import getpwnam
@@ -67,8 +88,8 @@ daemons_config = {
     Broker:       "etc/core/daemons/brokerd.ini",
     Poller:       "etc/core/daemons/pollerd.ini",
     Reactionner:  "etc/core/daemons/reactionnerd.ini",
-    Shinken:      "etc/core/daemons/schedulerd.ini",
-    Arbiter:    ["etc/core/shinken.cfg"]
+    Alignak:      "etc/core/daemons/schedulerd.ini",
+    Arbiter:    ["etc/core/alignak.cfg"]
 }
 
 #############################################################################
@@ -92,7 +113,8 @@ class template_Daemon_Bad_Start():
         return cls(daemons_config[cls], False, True, False, None, '')
 
     def get_daemon(self):
-        shinken_log.local_log = None  # otherwise get some "trashs" logs..
+
+        alignak_log.local_log = None  # otherwise get some "trashs" logs..
         d = self.create_daemon()
 
         # configuration is "relative" : some config file reference others with
@@ -155,23 +177,24 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
-    daemon_cls = Shinken
+class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+    daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+
     daemon_cls = Arbiter
 
     def create_daemon(self):

@@ -13,7 +13,7 @@ Introduction
 
 Event handlers are optional system commands (scripts or executables) that are run whenever a host or service state change occurs.
 
-An obvious use for event handlers is the ability for Shinken to proactively fix problems before anyone is notified. Some other uses for event handlers include:
+An obvious use for event handlers is the ability for Alignak to proactively fix problems before anyone is notified. Some other uses for event handlers include:
 
   * Restarting a failed service
   * Entering a trouble ticket into a helpdesk system
@@ -48,14 +48,14 @@ There are different types of optional event handlers that you can define to hand
 
 Global host and service event handlers are run for every host or service state change that occurs, immediately prior to any host- or service-specific event handler that may be run. 
 
-Event handlers offer functionality similar to notifications (launch some command) but are called each state change, soft or hard. This allows to call handler function and react to problems before Shinken raises a hard state and starts sending out notifications.
+Event handlers offer functionality similar to notifications (launch some command) but are called each state change, soft or hard. This allows to call handler function and react to problems before Alignak raises a hard state and starts sending out notifications.
 
 You can specify global event handler commands by using the :ref:`global_host_event_handler <configuration/configmain-advanced#global_host_event_handler>` and :ref:`global_service_event_handler <configuration/configmain-advanced#global_service_event_handler>` options in your main configuration file.
 
 Individual hosts and services can have their own event handler command that should be run to handle state changes. You can specify an event handler that should be run by using the "event_handler" directive in your :ref:`host <configobjects/host>` and :ref:`service <configobjects/service>` definitions. These host- and service-specific event handlers are executed immediately after the (optional) global host or service event handler is executed.
 
 
-.. important::  Global event handlers are currently not launched as of April 2013: https://github.com/naparuba/shinken/issues/717
+.. important::  Global event handlers are currently not launched as of April 2013: https://github.com/...
 
 
 Enabling Event Handlers 
@@ -92,9 +92,9 @@ Additional sample event handler scripts can be found in the "contrib/eventhandle
 Permissions For Event Handler Commands 
 =======================================
 
-Event handler commands will normally execute with the same permissions as the user under which Shinken is running on your machine. This can present a problem if you want to write an event handler that restarts system services, as root privileges are generally required to do these sorts of tasks.
+Event handler commands will normally execute with the same permissions as the user under which Alignak is running on your machine. This can present a problem if you want to write an event handler that restarts system services, as root privileges are generally required to do these sorts of tasks.
 
-Ideally you should evaluate the types of event handlers you will be implementing and grant just enough permissions to the Shinken user for executing the necessary system commands. You might want to try using `sudo`_ to accomplish this.
+Ideally you should evaluate the types of event handlers you will be implementing and grant just enough permissions to the Alignak user for executing the necessary system commands. You might want to try using `sudo`_ to accomplish this.
 
 
 .. _advanced/eventhandlers#service_event_handler_example:
@@ -197,7 +197,7 @@ The sample script provided above will attempt to restart the web server on the l
   * After the service has been rechecked for the 3rd time and is in a SOFT CRITICAL state
   * After the service first goes into a HARD CRITICAL state
 
-The script should theoretically restart and web server and fix the problem before the service goes into a HARD problem state, but we include a fallback case in the event it doesn't work the first time. It should be noted that the event handler will only be executed the first time that the service falls into a HARD problem state. This prevents Shinken from continuously executing the script to restart the web server if the service remains in a HARD problem state. You don't want that. :-)
+The script should theoretically restart and web server and fix the problem before the service goes into a HARD problem state, but we include a fallback case in the event it doesn't work the first time. It should be noted that the event handler will only be executed the first time that the service falls into a HARD problem state. This prevents Alignak from continuously executing the script to restart the web server if the service remains in a HARD problem state. You don't want that. :-)
 
 That's all there is to it! Event handlers are pretty simple to write and implement, so give it a try and see what you can do.
 

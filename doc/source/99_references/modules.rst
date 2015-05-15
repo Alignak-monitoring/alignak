@@ -1,7 +1,7 @@
-shinken
+alignak
 =======
 
 .. toctree::
    :maxdepth: 4
 
-   shinken
+   alignak

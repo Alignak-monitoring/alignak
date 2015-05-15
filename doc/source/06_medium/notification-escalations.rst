@@ -11,7 +11,7 @@ Escalations
 .. image:: /_static/images///official/images/objects-contacts.png
    :scale: 90 %
 
-Shinken supports optional escalation of contact notifications for hosts and services. Escalation of host and service notifications is accomplished by defining :ref:`escalations <medium/notification-escalations>` and call them from your hosts and services definitions.
+Alignak supports optional escalation of contact notifications for hosts and services. Escalation of host and service notifications is accomplished by defining :ref:`escalations <medium/notification-escalations>` and call them from your hosts and services definitions.
 
 .. tip::  Legacy Nagios host_escalations and service_escalations objects are still managed, but it's advised to migrate and simplify your configuration with simple escalations objects.
 

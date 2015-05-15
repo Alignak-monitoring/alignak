@@ -7,11 +7,11 @@ Monitoring a DMZ
 
 There is two ways for monitoring a DMZ network:
   * got a poller on the LAN, and launch check from it, so the firewall should allow monitoring traffic (like nrpe, snmp, etc)
-  * got a poller on the DMZ, so only the Shinken communications should be open through the firewall
+  * got a poller on the DMZ, so only the Alignak communications should be open through the firewall
 
 If you can take the first, use it :)
 
-If you can't because your security manager is not happy about it, you should put a poller in the DMZ. So look at the page :ref:`distributed shinken <advanced/distributed-shinken>` first, because you will need a distributed architecture.
+If you can't because your security manager is not happy about it, you should put a poller in the DMZ. So look at the page :ref:`distributed alignak <advanced/distributed-alignak>` first, because you will need a distributed architecture.
 
 Pollers a "dumb" things. They look for jobs to all scheduler (of their realm, if you don't know what is it from now, it's not important). So if you just put a poller in the DMZ network aside another in the LAN, some checks for the dmz will be take by the LAN one, and some for the lan will be take by the DMZ one. It's not a good thing of course :)
 
@@ -35,7 +35,7 @@ You just need to install a poller with the 'DMZ' tag in the DMZ and then add it 
 Configuration part 
 ===================
 
-So you need to declare in the /etc/pollers/poller-master.cfg (or c:\shinken\etc\pollers\poller-master.cfg):
+So you need to declare in the /etc/pollers/poller-master.cfg (or c:\alignak\etc\pollers\poller-master.cfg):
  
 ::
   

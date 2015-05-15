@@ -15,7 +15,7 @@ $TO=$ARGV[6];
 
 $boundary = "====" . time() . "====";
 
-$text = "***** Notification Shinken *****\n\n"
+$text = "***** Notification Alignak *****\n\n"
         . "Notification : $NOTIFICATIONTYPE\n\n"
         . "Host : $HOSTNAME\n\n"
         . "Address : $HOSTADDRESS\n"
@@ -23,7 +23,7 @@ $text = "***** Notification Shinken *****\n\n"
         . "Date/Time : $SHORTDATETIME\n\n"
         . "Host output : $HOSTOUTPUT";
 
-$texthtml = " <center><strong>***** Notification Shinken *****</strong></center>\n";
+$texthtml = " <center><strong>***** Notification Alignak *****</strong></center>\n";
 
 $color="blue";
 if ($NOTIFICATIONTYPE =~ /RECOVERY/) {

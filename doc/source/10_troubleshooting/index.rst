@@ -13,4 +13,4 @@ Troubleshooting
 
 .. toctree::
     
-    troubleshooting-shinken
+    troubleshooting-alignak
