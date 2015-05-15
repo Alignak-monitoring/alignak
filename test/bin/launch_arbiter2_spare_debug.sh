@@ -8,4 +8,4 @@ DEBUG_PATH="/tmp/arbiter_spare.debug"
 # needed because arbiter doesn't have a default 'workdir' "properties" attribute:
 cd "$DIR/../../var"
 echo "Launching Arbiter (that read configuration and dispatch it) in debug mode to the file $DEBUG_PATH"
-$BIN/shinken-arbiter -d -c $ETC/../test/etc/test_stack2/shinken.cfg -c $ETC/../test/etc/test_stack2/shinken-spare.cfg  -c $ETC/../test/etc/test_stack2/shinken-specific-ha-only.cfg --debug $DEBUG_PATH --name Arbiter-spare
+$BIN/alignak-arbiter -d -c $ETC/../test/etc/test_stack2/alignak.cfg -c $ETC/../test/etc/test_stack2/alignak-spare.cfg  -c $ETC/../test/etc/test_stack2/alignak-specific-ha-only.cfg --debug $DEBUG_PATH --name Arbiter-spare

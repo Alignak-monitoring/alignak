@@ -1,5 +1,5 @@
 
-from shinken.basemodule import BaseModule
+from alignak.basemodule import BaseModule
 
 
 properties = {

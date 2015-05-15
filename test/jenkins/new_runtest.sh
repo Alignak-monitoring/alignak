@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
-#Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-#This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-#Shinken is free software: you can redistribute it and/or modify
-#it under the terms of the GNU Affero General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# This file is part of Alignak.
 #
-#Shinken is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU Affero General Public License for more details.
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#You should have received a copy of the GNU Affero General Public License
-#along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #############################################################################
@@ -83,12 +104,12 @@ test "$PEP8" == "PEP8" || PYLINT="NOPEP8"
 PIP_DOWNLOAD_CACHE=$HOME/.pip/download_cache
 COVERAGE_PROCESS_START=$DIR/.coveragerc
 
-# Will be /path/to/shinken/test/jenkins
+# Will be /path/to/alignak/test/jenkins
 DIR=$(dirname $(readlink -f "$0"))
 
-SHINKENDIR=$(readlink -f "$DIR/../..")
+ALIGNAKDIR=$(readlink -f "$DIR/../..")
 RESULTSDIR="results"
-SHINKENCLI=$SHINKENDIR/bin/shinken
+ALIGNAKCLI=$ALIGNAKDIR/bin/alignak
 
 
 #Check virtualenv, pip and nosetests
@@ -250,8 +271,8 @@ END
 END
         git clone $GIT_URL/$module.git tmp/$module
 
-        # $SHINKENCLI install --local tmp/$module > /dev/null
-        # cp __import_shinken.py shinken_test.py shinken_modules.py tmp/$module/test
+        # $ALIGNAKCLI install --local tmp/$module > /dev/null
+        # cp __import_alignak.py alignak_test.py alignak_modules.py tmp/$module/test
 
         # Symlink of config files to etc
         if [ -d "tmp/$module/test/etc" ]; then
@@ -267,7 +288,7 @@ END
         test -f "${mod_requirements}" && pip install -r "${mod_requirements}"
     done
     # mod-logstore-mongodb and sqlite
-    # depends on mock_livestatus from mod-livestatus, so we need to copy it (here in shinken/test)
+    # depends on mock_livestatus from mod-livestatus, so we need to copy it (here in alignak/test)
     # so it's available to them
     cp tmp/mod-livestatus/test/mock_livestatus.py ./
 
@@ -319,7 +340,7 @@ function main {
 
     local tests_rc
 
-    export PYTHONPATH=$PYTHONPATH:$SHINKENDIR
+    export PYTHONPATH=$PYTHONPATH:$ALIGNAKDIR
 
     enable_debug
 
@@ -335,7 +356,7 @@ function main {
     PYTHONTOOLS=$(dirname $(which $PYTHONBIN))
     echo "PYTHONTOOLS=$PYTHONTOOLS"
 
-    cd .. # We should now be into /path/to/shinken/test/
+    cd .. # We should now be into /path/to/alignak/test/
 
     if [[ ! -d "$RESULTSDIR" ]]; then
         echo "Creation dir $RESULTSDIR"
@@ -374,7 +395,7 @@ function main {
                 is_branch_1=0
             fi
         }
-        # on old branch 1.* modules are included in shinken,
+        # on old branch 1.* modules are included in alignak,
         # so no need to bother with them in such case:
         test "$is_branch_1" = "1" && return 0
         grab_modules || return 2
@@ -393,15 +414,15 @@ function main {
 
     if [[ $PYLINT == "PYLINT" ]]; then
         echo "Pylint Checking"
-        cd $SHINKENDIR
-        ${PYTHONTOOLS}/pylint --rcfile $DIR/pylint.rc shinken > "test/$RESULTSDIR/pylint.txt"
+        cd $ALIGNAKDIR
+        ${PYTHONTOOLS}/pylint --rcfile $DIR/pylint.rc alignak > "test/$RESULTSDIR/pylint.txt"
         cd -
     fi
 
     if [[ $PEP8 == "PEP8" ]]; then
         echo "Pep8 Checking"
-        cd $SHINKENDIR
-        ${PYTHONTOOLS}/pep8 --max-line-length=100 --ignore=E303 shinken > "test/$RESULTSDIR/pep8.txt"
+        cd $ALIGNAKDIR
+        ${PYTHONTOOLS}/pep8 --max-line-length=100 --ignore=E303 alignak > "test/$RESULTSDIR/pep8.txt"
         cd -
     fi
 
