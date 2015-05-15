@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
-from shinken_test import ShinkenTest, unittest
-from shinken.misc.regenerator import Regenerator
-from shinken.brok import Brok
+from alignak_test import AlignakTest, unittest
+from alignak.misc.regenerator import Regenerator
+from alignak.brok import Brok
 
 
-class TestReversedList(ShinkenTest):
+class TestReversedList(AlignakTest):
     def setUp(self):
-        self.setup_with_file("etc/shinken_service_withhost_exclude.cfg")
+        self.setup_with_file("etc/alignak_service_withhost_exclude.cfg")
 
     def test_reversed_list(self):
         """ Test to ensure new conf is properly merge with different servicegroup definition
         The first conf has all its servicegroup defined servicegroups.cfg and services.cfg
-        The second conf has both, so that servicegroups defined ins services.cfg are genretaed by Shinken
+        The second conf has both, so that servicegroups defined ins services.cfg are genretaed by Alignak
         This lead to another generated id witch should be handled properly when regenerating reversed list / merging
         servicegroups definition
         """
@@ -28,7 +28,7 @@ class TestReversedList(ShinkenTest):
         reg.all_done_linking(0)
 
 
-        self.setup_with_file("etc/shinken_reversed_list.cfg")
+        self.setup_with_file("etc/alignak_reversed_list.cfg")
 
         reg.all_done_linking(0)
 

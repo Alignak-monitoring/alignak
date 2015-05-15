@@ -1,36 +1,57 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2012:
-#    Hartmut Goebel <h.goebel@crazy-compilers.com>
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# This file is part of Shinken.
+# This file is part of Alignak.
 #
-# Shinken is free software: you can redistribute it and/or modify
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2012:
+#     Hartmut Goebel <h.goebel@crazy-compilers.com>
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Test default values for item types.
 """
 
 
-import __import_shinken
-from shinken.property import UnusedProp, none_object
-import shinken.daemon
+import __import_alignak
+from alignak.property import UnusedProp, none_object
+import alignak.daemon
 
 # TODO: clean import *
-from shinken_test import *
-from shinken.property import *
+from alignak_test import *
+from alignak.property import *
 
 class PropertiesTester(object):
 
@@ -73,7 +94,7 @@ class PropertiesTester(object):
             self.assertIn(name, prop_names,
                           msg='unknown property %r found' % name)
 
-class TestConfig(PropertiesTester, ShinkenTest):
+class TestConfig(PropertiesTester, AlignakTest):
 
     unused_props = [
         'log_file', 'object_cache_file', 'precached_object_file',
@@ -101,16 +122,16 @@ class TestConfig(PropertiesTester, ShinkenTest):
     without_default = []
 
     properties = dict([
-        ('prefix', '/usr/local/shinken/'),
-        ('workdir', '/var/run/shinken/'),
+        ('prefix', '/usr/local/alignak/'),
+        ('workdir', '/var/run/alignak/'),
         ('config_base_dir', ''),
-        ('modules_dir', '/var/lib/shinken/modules'),
+        ('modules_dir', '/var/lib/alignak/modules'),
         ('use_local_log', True),
         ('log_level', 'WARNING'),
-        ('local_log', '/var/log/shinken/arbiterd.log'),
+        ('local_log', '/var/log/alignak/arbiterd.log'),
         ('resource_file', '/tmp/resources.txt'),
-        ('shinken_user', shinken.daemon.get_cur_user()),
-        ('shinken_group', shinken.daemon.get_cur_group()),
+        ('alignak_user', alignak.daemon.get_cur_user()),
+        ('alignak_group', alignak.daemon.get_cur_group()),
         ('enable_notifications', True),
         ('execute_service_checks', True),
         ('accept_passive_service_checks', True),
@@ -118,10 +139,10 @@ class TestConfig(PropertiesTester, ShinkenTest):
         ('accept_passive_host_checks', True),
         ('enable_event_handlers', True),
         ('log_rotation_method', 'd'),
-        ('log_archive_path', '/usr/local/shinken/var/archives'),
+        ('log_archive_path', '/usr/local/alignak/var/archives'),
         ('check_external_commands', True),
         ('command_file', ''),
-        ('lock_file', '/var/run/shinken/arbiterd.pid'),
+        ('lock_file', '/var/run/alignak/arbiterd.pid'),
         ('state_retention_file', ''),
         ('retention_update_interval', 60),
         ('use_syslog', False),
@@ -198,7 +219,7 @@ class TestConfig(PropertiesTester, ShinkenTest):
         ('modified_attributes', 0L),
         ('daemon_enabled', True),
 
-        # Shinken specific
+        # Alignak specific
         ('idontcareaboutsecurity', False),
         ('flap_history', 20),
         ('max_plugins_output_length', 8192),
@@ -233,7 +254,7 @@ class TestConfig(PropertiesTester, ShinkenTest):
         ('enable_environment_macros', True),
         ('timeout_exit_status', 2),
 
-        # kernel.shinken.io part
+        # kernel.alignak.io part
         ('api_key', ''),
         ('secret', ''),
         ('http_proxy', ''),
@@ -241,16 +262,16 @@ class TestConfig(PropertiesTester, ShinkenTest):
         # statsd part
         ('statsd_host', 'localhost'),
         ('statsd_port', 8125),
-        ('statsd_prefix', 'shinken'),
+        ('statsd_prefix', 'alignak'),
         ('statsd_enabled', False),
         ])
 
     def setUp(self):
-        from shinken.objects.config import Config
+        from alignak.objects.config import Config
         self.item = Config()
 
 
-class TestCommand(PropertiesTester, ShinkenTest):
+class TestCommand(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -270,11 +291,11 @@ class TestCommand(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.command import Command
+        from alignak.objects.command import Command
         self.item = Command()
 
 
-class TestContactgroup(PropertiesTester, ShinkenTest):
+class TestContactgroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -292,11 +313,11 @@ class TestContactgroup(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.contactgroup import Contactgroup
+        from alignak.objects.contactgroup import Contactgroup
         self.item = Contactgroup()
 
 
-class TestContact(PropertiesTester, ShinkenTest):
+class TestContact(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -336,11 +357,11 @@ class TestContact(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.contact import Contact
+        from alignak.objects.contact import Contact
         self.item = Contact()
 
 
-class TestDiscoveryrule(PropertiesTester, ShinkenTest):
+class TestDiscoveryrule(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -357,11 +378,11 @@ class TestDiscoveryrule(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.discoveryrule import Discoveryrule
+        from alignak.objects.discoveryrule import Discoveryrule
         self.item = Discoveryrule()
 
 
-class TestDiscoveryrun(PropertiesTester, ShinkenTest):
+class TestDiscoveryrun(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -376,11 +397,11 @@ class TestDiscoveryrun(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.discoveryrun import Discoveryrun
+        from alignak.objects.discoveryrun import Discoveryrun
         self.item = Discoveryrun()
 
 
-class TestEscalation(PropertiesTester, ShinkenTest):
+class TestEscalation(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -400,11 +421,11 @@ class TestEscalation(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.escalation import Escalation
+        from alignak.objects.escalation import Escalation
         self.item = Escalation()
 
 
-class TestHostdependency(PropertiesTester, ShinkenTest):
+class TestHostdependency(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -425,11 +446,11 @@ class TestHostdependency(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.hostdependency import Hostdependency
+        from alignak.objects.hostdependency import Hostdependency
         self.item = Hostdependency()
 
 
-class TestHostescalation(PropertiesTester, ShinkenTest):
+class TestHostescalation(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -452,11 +473,11 @@ class TestHostescalation(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.hostescalation import Hostescalation
+        from alignak.objects.hostescalation import Hostescalation
         self.item = Hostescalation()
 
 
-class TestHostextinfo(PropertiesTester, ShinkenTest):
+class TestHostextinfo(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -479,11 +500,11 @@ class TestHostextinfo(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.hostextinfo import HostExtInfo
+        from alignak.objects.hostextinfo import HostExtInfo
         self.item = HostExtInfo()
 
 
-class TestHostgroup(PropertiesTester, ShinkenTest):
+class TestHostgroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -505,11 +526,11 @@ class TestHostgroup(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.hostgroup import Hostgroup
+        from alignak.objects.hostgroup import Hostgroup
         self.item = Hostgroup()
 
 
-class TestHost(PropertiesTester, ShinkenTest):
+class TestHost(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -596,11 +617,11 @@ class TestHost(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.host import Host
+        from alignak.objects.host import Host
         self.item = Host()
 
 
-class TestModule(PropertiesTester, ShinkenTest):
+class TestModule(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -616,11 +637,11 @@ class TestModule(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.module import Module
+        from alignak.objects.module import Module
         self.item = Module()
 
 
-class TestNotificationway(PropertiesTester, ShinkenTest):
+class TestNotificationway(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -643,11 +664,11 @@ class TestNotificationway(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.notificationway import NotificationWay
+        from alignak.objects.notificationway import NotificationWay
         self.item = NotificationWay()
 
 
-class TestPack(PropertiesTester, ShinkenTest):
+class TestPack(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -662,11 +683,11 @@ class TestPack(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.pack import Pack
+        from alignak.objects.pack import Pack
         self.item = Pack()
 
 
-class TestRealm(PropertiesTester, ShinkenTest):
+class TestRealm(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -688,11 +709,11 @@ class TestRealm(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.realm import Realm
+        from alignak.objects.realm import Realm
         self.item = Realm()
 
 
-class TestResultmodulation(PropertiesTester, ShinkenTest):
+class TestResultmodulation(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -710,11 +731,11 @@ class TestResultmodulation(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.resultmodulation import Resultmodulation
+        from alignak.objects.resultmodulation import Resultmodulation
         self.item = Resultmodulation()
 
 
-class TestServicedependency(PropertiesTester, ShinkenTest):
+class TestServicedependency(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -736,11 +757,11 @@ class TestServicedependency(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.servicedependency import Servicedependency
+        from alignak.objects.servicedependency import Servicedependency
         self.item = Servicedependency()
 
 
-class TestServiceescalation(PropertiesTester, ShinkenTest):
+class TestServiceescalation(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -763,11 +784,11 @@ class TestServiceescalation(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.serviceescalation import Serviceescalation
+        from alignak.objects.serviceescalation import Serviceescalation
         self.item = Serviceescalation()
 
 
-class TestServiceextinfo(PropertiesTester, ShinkenTest):
+class TestServiceextinfo(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -786,11 +807,11 @@ class TestServiceextinfo(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.serviceextinfo import ServiceExtInfo
+        from alignak.objects.serviceextinfo import ServiceExtInfo
         self.item = ServiceExtInfo()
 
 
-class TestServicegroup(PropertiesTester, ShinkenTest):
+class TestServicegroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -811,11 +832,11 @@ class TestServicegroup(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.servicegroup import Servicegroup
+        from alignak.objects.servicegroup import Servicegroup
         self.item = Servicegroup()
 
 
-class TestService(PropertiesTester, ShinkenTest):
+class TestService(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -900,11 +921,11 @@ class TestService(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.service import Service
+        from alignak.objects.service import Service
         self.item = Service()
 
 
-class TestTimeperiod(PropertiesTester, ShinkenTest):
+class TestTimeperiod(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -923,11 +944,11 @@ class TestTimeperiod(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.timeperiod import Timeperiod
+        from alignak.objects.timeperiod import Timeperiod
         self.item = Timeperiod()
 
 
-class TestTrigger(PropertiesTester, ShinkenTest):
+class TestTrigger(PropertiesTester, AlignakTest):
 
     unused_props = []
 
@@ -943,7 +964,7 @@ class TestTrigger(PropertiesTester, ShinkenTest):
         ])
 
     def setUp(self):
-        from shinken.objects.trigger import Trigger
+        from alignak.objects.trigger import Trigger
         self.item = Trigger()
 
 

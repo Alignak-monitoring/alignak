@@ -10,16 +10,16 @@ import datetime # not used but "sub-"imported by livestatus test.. (to be correc
 import sys # not here used but "sub-"imported by livestatus test.. (to be corrected..)
 
 #
-from shinken.modulesctx import modulesctx
-from shinken.objects.module import Module
-from shinken.modulesmanager import ModulesManager
-from shinken.misc.datamanager import datamgr
-from shinken.log import logger
+from alignak.modulesctx import modulesctx
+from alignak.objects.module import Module
+from alignak.modulesmanager import ModulesManager
+from alignak.misc.datamanager import datamgr
+from alignak.log import logger
 
 #
-from  shinken_test import (
+from alignak_test import (
     modules_dir,
-    ShinkenTest,
+    alignakTest,
     time_hacker, # not used here but "sub"-imported by lvestatus test (to be corrected)
 )
 
@@ -27,7 +27,7 @@ modulesctx.set_modulesdir(modules_dir)
 
 
 # Special Livestatus module opening since the module rename
-#from shinken.modules.livestatus import module as livestatus_broker
+#from alignak.modules.livestatus import module as livestatus_broker
 livestatus_broker = modulesctx.get_module('livestatus')
 LiveStatus_broker = livestatus_broker.LiveStatus_broker
 LiveStatus = livestatus_broker.LiveStatus
@@ -46,7 +46,7 @@ livestatus_modconf.properties = livestatus_broker.properties.copy()
 
 
 
-class ShinkenModulesTest(ShinkenTest):
+class AlignakModulesTest(AlignakTest):
 
     def do_load_modules(self):
         self.modules_manager.load_and_init()
@@ -130,7 +130,7 @@ class ShinkenModulesTest(ShinkenTest):
         #--- livestatus_broker.do_main
 
 
-class TestConfig(ShinkenModulesTest):
+class TestConfig(AlignakModulesTest):
 
     def tearDown(self):
         self.livestatus_broker.db.close()
@@ -140,8 +140,8 @@ class TestConfig(ShinkenModulesTest):
             os.remove(self.livelogs + "-journal")
         if os.path.exists(self.livestatus_broker.pnp_path):
             shutil.rmtree(self.livestatus_broker.pnp_path)
-        if os.path.exists('var/shinken.log'):
-            os.remove('var/shinken.log')
+        if os.path.exists('var/alignak.log'):
+            os.remove('var/alignak.log')
         if os.path.exists('var/retention.dat'):
             os.remove('var/retention.dat')
         if os.path.exists('var/status.dat'):

@@ -1,26 +1,47 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2012:
-#    Hartmut Goebel <h.goebel@crazy-compilers.com>
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# This file is part of Shinken.
+# This file is part of Alignak.
 #
-# Shinken is free software: you can redistribute it and/or modify
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2012:
+#     Hartmut Goebel <h.goebel@crazy-compilers.com>
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Test shinken.logging
+Test alignak.logging
 """
 
 import sys
@@ -31,16 +52,16 @@ from cStringIO import StringIO
 
 from tempfile import NamedTemporaryFile
 
-import __import_shinken
+import __import_alignak
 import logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, StreamHandler
-from shinken.log import logger as shinken_logger, naglog_result, Log, human_timestamp_log
-from shinken.log import defaultFormatter, BrokHandler, ColorStreamHandler
+from alignak.log import logger as alignak_logger, naglog_result, Log, human_timestamp_log
+from alignak.log import defaultFormatter, BrokHandler, ColorStreamHandler
 
-shinken_logger.set_log = True
+alignak_logger.set_log = True
 
-from shinken.brok import Brok
-from shinken_test import *
+from alignak.brok import Brok
+from alignak_test import *
 
 # The logging module requires some object for collecting broks
 class Dummy:
@@ -68,7 +89,7 @@ class NoSetup:
 
 
 
-class TestLevels(NoSetup, ShinkenTest):
+class TestLevels(NoSetup, AlignakTest):
 
     def test_default_level(self):
         logger = Log(name=None, log_set=True)
@@ -91,19 +112,19 @@ class TestLevels(NoSetup, ShinkenTest):
         self.assertEqual(logger.level, min(CRITICAL, INFO))
 
 
-class TestBasics(NoSetup, ShinkenTest):
+class TestBasics(NoSetup, AlignakTest):
 
     def test_setting_and_unsetting_human_timestamp_format(self):
-        # :hack: shinken.log.human_timestamp_log is a global variable
-        self.assertEqual(shinken.log.human_timestamp_log, False)
+        # :hack: alignak.log.human_timestamp_log is a global variable
+        self.assertEqual(alignak.log.human_timestamp_log, False)
         logger.set_human_format(True)
-        self.assertEqual(shinken.log.human_timestamp_log, True)
+        self.assertEqual(alignak.log.human_timestamp_log, True)
         logger.set_human_format(False)
-        self.assertEqual(shinken.log.human_timestamp_log, False)
+        self.assertEqual(alignak.log.human_timestamp_log, False)
         logger.set_human_format(True)
-        self.assertEqual(shinken.log.human_timestamp_log, True)
+        self.assertEqual(alignak.log.human_timestamp_log, True)
         logger.set_human_format(False)
-        self.assertEqual(shinken.log.human_timestamp_log, False)
+        self.assertEqual(alignak.log.human_timestamp_log, False)
 
 
 class LogCollectMixin:
@@ -173,18 +194,18 @@ class LogCollectMixin:
         return loglist
 
 
-class TestDefaultLoggingMethods(NoSetup, ShinkenTest, LogCollectMixin):
+class TestDefaultLoggingMethods(NoSetup, AlignakTest, LogCollectMixin):
 
     def test_basic_logging_log(self):
         sys.stdout = StringIO()
         self._collector = Collector()
         sh = StreamHandler(sys.stdout)
         sh.setFormatter(defaultFormatter)
-        shinken_logger.handlers = []
-        shinken_logger.addHandler(sh)
-        shinken_logger.load_obj(self._collector)
-        shinken_logger.log_set = True
-        shinken_logger.setLevel(DEBUG)
+        alignak_logger.handlers = []
+        alignak_logger.addHandler(sh)
+        alignak_logger.load_obj(self._collector)
+        alignak_logger.log_set = True
+        alignak_logger.setLevel(DEBUG)
         self.generic_tst(lambda x: naglog_result('info', x), 'Some log-message',
                          [1, 1], [r'^\[\d+\] Some log-message\n$', r'^\[\d+\] Some log-message$'])
 
@@ -257,43 +278,43 @@ class TestDefaultLoggingMethods(NoSetup, ShinkenTest, LogCollectMixin):
         self.test_basic_logging_info()
 
 
-class TestColorConsoleLogger(NoSetup, ShinkenTest, LogCollectMixin):
+class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
 
     def test_basic_logging_info_colored(self):
-        shinken_logger.setLevel(INFO)
+        alignak_logger.setLevel(INFO)
         self._collector = Collector()
         sys.stdout = StringIO()
-        shinken_logger.handlers[0].stream = sys.stdout
-        shinken_logger.load_obj(self._collector)
-        if isinstance(shinken_logger.handlers[0], ColorStreamHandler):
-            self.generic_tst(shinken_logger.info, 'Some log-message',
+        alignak_logger.handlers[0].stream = sys.stdout
+        alignak_logger.load_obj(self._collector)
+        if isinstance(alignak_logger.handlers[0], ColorStreamHandler):
+            self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
-                             [r'^\[.+?\] INFO: \[Shinken\] Some log-message$',
-                              r'^\x1b\[95m\[.+?\] INFO: \[Shinken\] Some log-message\x1b\[0m$'])
+                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
+                              r'^\x1b\[95m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
         else:
-            self.generic_tst(shinken_logger.info, 'Some log-message',
+            self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
                              [r'^\[.+?\] INFO:\s+Some log-message$',
                               r'^\[.+?\] INFO:\s+Some log-message$'])
 
     def test_human_timestamp_format(self):
         "test output using the human timestamp format"
-        shinken_logger.setLevel(INFO)
+        alignak_logger.setLevel(INFO)
         self._collector = Collector()
         sys.stdout = StringIO()
-        shinken_logger.handlers[0].stream = sys.stdout
-        shinken_logger.load_obj(self._collector)
-        shinken_logger.set_human_format(True)
-        if isinstance(shinken_logger.handlers[0], ColorStreamHandler):
-            loglist = self.generic_tst(shinken_logger.info, 'Some log-message',
+        alignak_logger.handlers[0].stream = sys.stdout
+        alignak_logger.load_obj(self._collector)
+        alignak_logger.set_human_format(True)
+        if isinstance(alignak_logger.handlers[0], ColorStreamHandler):
+            loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
-                             [r'^\[.+?\] INFO: \[Shinken\] Some log-message$',
-                              r'^\x1b\[95m\[.+?\] INFO: \[Shinken\] Some log-message\x1b\[0m$'])
+                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
+                              r'^\x1b\[95m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
         else:
-            loglist = self.generic_tst(shinken_logger.info, 'Some log-message',
+            loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
-                             [r'^\[.+?\] INFO: \[Shinken\] Some log-message$',
-                              r'^\[.+?\] INFO: \[Shinken\] Some log-message$'])
+                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
+                              r'^\[.+?\] INFO: \[Alignak\] Some log-message$'])
 
 
         times = loglist[1][0].split(' INFO: ', 1)[0]
@@ -312,7 +333,7 @@ class TestColorConsoleLogger(NoSetup, ShinkenTest, LogCollectMixin):
         self.test_basic_logging_info_colored()
 
 
-class TestWithLocalLogging(NoSetup, ShinkenTest, LogCollectMixin):
+class TestWithLocalLogging(NoSetup, AlignakTest, LogCollectMixin):
 
     def _prepare_logging(self):
         logger = super(TestWithLocalLogging, self)._prepare_logging()
@@ -344,15 +365,15 @@ class TestWithLocalLogging(NoSetup, ShinkenTest, LogCollectMixin):
         self._collector = Collector()
         sh = StreamHandler(sys.stdout)
         sh.setFormatter(defaultFormatter)
-        shinken_logger.handlers = []
-        shinken_logger.addHandler(sh)
-        shinken_logger.load_obj(self._collector)
-        shinken_logger.log_set = True
+        alignak_logger.handlers = []
+        alignak_logger.addHandler(sh)
+        alignak_logger.load_obj(self._collector)
+        alignak_logger.log_set = True
         logfile = NamedTemporaryFile("w", delete=False)
         logfile.close()
         self.logfile_name = logfile.name
-        shinken_logger.register_local_log(logfile.name, purge_buffer=False)
-        shinken_logger.setLevel(DEBUG)
+        alignak_logger.register_local_log(logfile.name, purge_buffer=False)
+        alignak_logger.setLevel(DEBUG)
         self.generic_tst(lambda x: naglog_result('info', x), 'Some log-message',
                          [1, 1, 1], ['', r'^\[\d+\] Some log-message$', r'^\[\d+\] Some log-message$'])
 
@@ -418,7 +439,7 @@ class TestWithLocalLogging(NoSetup, ShinkenTest, LogCollectMixin):
         self.test_basic_logging_info()
 
 
-class TestNamedCollector(NoSetup, ShinkenTest, LogCollectMixin):
+class TestNamedCollector(NoSetup, AlignakTest, LogCollectMixin):
 
     # :todo: add a test for the local log file, too
 
@@ -427,7 +448,7 @@ class TestNamedCollector(NoSetup, ShinkenTest, LogCollectMixin):
         self._stdout = sys.stdout
         sys.stdout = StringIO()
         logger = Log(name=None, log_set=True)
-        from shinken.log import defaultFormatter
+        from alignak.log import defaultFormatter
         from logging import StreamHandler
         sh = StreamHandler(sys.stdout)
         sh.setFormatter(defaultFormatter)

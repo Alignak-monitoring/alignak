@@ -1,18 +1,17 @@
 
-
 from os.path import abspath, dirname, join
 
-from shinken_test import unittest, ShinkenTest
+from alignak_test import unittest, AlignakTest
 
-from shinken.objects.module import Module
-from shinken.modulesmanager import ModulesManager
+from alignak.objects.module import Module
+from alignak.modulesmanager import ModulesManager
 
 
 
 modules_dir = join(dirname(abspath(__file__)), 'test_module_as_package')
 
-class TestModuleManager_And_Packages(ShinkenTest):
-    ''' Test to make sure that we correctly import shinken modules.
+class TestModuleManager_And_Packages(AlignakTest):
+    ''' Test to make sure that we correctly import alignak modules.
     '''
 
     def test_conflicting_modules(self):

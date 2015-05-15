@@ -20,46 +20,46 @@ import locale
 import unittest2 as unittest
 
 
-# import the shinken library from the parent directory
-import __import_shinken ; del __import_shinken
+# import the alignak library from the parent directory
+import __import_alignak ; del __import_alignak
 
-import shinken
-from shinken.objects.config import Config
-from shinken.objects.command import Command
-from shinken.objects.module import Module
+import alignak
+from alignak.objects.config import Config
+from alignak.objects.command import Command
+from alignak.objects.module import Module
 
-from shinken.dispatcher import Dispatcher
-from shinken.log import logger
-from shinken.modulesctx import modulesctx
-from shinken.scheduler import Scheduler
-from shinken.macroresolver import MacroResolver
-from shinken.external_command import ExternalCommandManager, ExternalCommand
-from shinken.check import Check
-from shinken.message import Message
-from shinken.objects.arbiterlink import ArbiterLink
-from shinken.objects.schedulerlink import SchedulerLink
-from shinken.objects.pollerlink import PollerLink
-from shinken.objects.reactionnerlink import ReactionnerLink
-from shinken.objects.brokerlink import BrokerLink
-from shinken.objects.satellitelink import SatelliteLink
-from shinken.notification import Notification
-from shinken.modulesmanager import ModulesManager
-from shinken.basemodule import BaseModule
+from alignak.dispatcher import Dispatcher
+from alignak.log import logger
+from alignak.modulesctx import modulesctx
+from alignak.scheduler import Scheduler
+from alignak.macroresolver import MacroResolver
+from alignak.external_command import ExternalCommandManager, ExternalCommand
+from alignak.check import Check
+from alignak.message import Message
+from alignak.objects.arbiterlink import ArbiterLink
+from alignak.objects.schedulerlink import SchedulerLink
+from alignak.objects.pollerlink import PollerLink
+from alignak.objects.reactionnerlink import ReactionnerLink
+from alignak.objects.brokerlink import BrokerLink
+from alignak.objects.satellitelink import SatelliteLink
+from alignak.notification import Notification
+from alignak.modulesmanager import ModulesManager
+from alignak.basemodule import BaseModule
 
-from shinken.brok import Brok
-from shinken.misc.common import DICT_MODATTR
+from alignak.brok import Brok
+from alignak.misc.common import DICT_MODATTR
 
-from shinken.daemons.schedulerdaemon import Shinken
-from shinken.daemons.brokerdaemon import Broker
-from shinken.daemons.arbiterdaemon import Arbiter
-from shinken.daemons.receiverdaemon import Receiver
+from alignak.daemons.schedulerdaemon import Alignak
+from alignak.daemons.brokerdaemon import Broker
+from alignak.daemons.arbiterdaemon import Arbiter
+from alignak.daemons.receiverdaemon import Receiver
 from logging import ERROR
 
 # Modules are by default on the ../modules
 myself = os.path.abspath(__file__)
 
 global modules_dir
-modules_dir = os.environ.get('SHINKEN_MODULES_DIR', "modules")
+modules_dir = os.environ.get('ALIGNAK_MODULES_DIR', "modules")
 
 
 class __DUMMY:
@@ -174,9 +174,9 @@ class Pluginconf(object):
 
 
 
-class ShinkenTest(unittest.TestCase):
+class AlignakTest(unittest.TestCase):
     def setUp(self):
-        self.setup_with_file('etc/shinken_1r_1h_1s.cfg')
+        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
 
     def setup_with_file(self, path):
         time_hacker.set_my_time()
@@ -253,7 +253,7 @@ class ShinkenTest(unittest.TestCase):
         self.conf.show_errors()
         self.dispatcher = Dispatcher(self.conf, self.me)
 
-        scheddaemon = Shinken(None, False, False, False, None, None)
+        scheddaemon = Alignak(None, False, False, False, None, None)
         self.scheddaemon = scheddaemon
         self.sched = scheddaemon.sched
         scheddaemon.modules_dir = modules_dir

@@ -1,22 +1,45 @@
 #!/bin/bash
-# Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-# This file is part of Shinken.
 #
-# Shinken is free software: you can redistribute it and/or modify
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#      Gabes Jean, naparuba@gmail.com
+#      Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #set -x
@@ -35,7 +58,7 @@ echo "NB CPUS: " $NB_CPUS
 
 # check for a process existance with good number
 function check_process_nb {
-    NB=`ps -ef | grep -v grep | grep "shinken-"$1 | wc -l`
+    NB=`ps -ef | grep -v grep | grep "alignak-"$1 | wc -l`
     if [ $NB != "$2" ]
     then
 	echo "Error: There is not enough $1 launched (only $NB)."
@@ -103,28 +126,28 @@ function check_good_run {
 
     echo "Now checking for good file prensence"
     ls var
-    is_file_present $LOG/shinken.log
-    string_in_file "Waiting for initial configuration" $LOG/shinken.log
-#    string_in_file "First scheduling" $LOG/shinken.log
-    string_in_file "OK, all schedulers configurations are dispatched :)" $LOG/shinken.log
-    string_in_file "OK, no more reactionner sent need" $LOG/shinken.log
-    string_in_file "OK, no more poller sent need" $LOG/shinken.log
-    string_in_file "OK, no more broker sent need" $LOG/shinken.log
+    is_file_present $LOG/alignak.log
+    string_in_file "Waiting for initial configuration" $LOG/alignak.log
+#    string_in_file "First scheduling" $LOG/alignak.log
+    string_in_file "OK, all schedulers configurations are dispatched :)" $LOG/alignak.log
+    string_in_file "OK, no more reactionner sent need" $LOG/alignak.log
+    string_in_file "OK, no more poller sent need" $LOG/alignak.log
+    string_in_file "OK, no more broker sent need" $LOG/alignak.log
 }
 
 function localize_config {
-    # change paths in config files (/usr/local/shinken/*) to
+    # change paths in config files (/usr/local/alignak/*) to
     # relative paths, so this test runs only in the current directory.
-    # takes shinken.cfg and shinken-specific.cfg
-    cp $1 /tmp/shinken.cfg.save
-    cp $2 /tmp/shinken-specific.cfg.save
-    sed -e 's/\/usr\/local\/shinken\///g' < /tmp/shinken.cfg.save > $1
-    sed -e 's/\/usr\/local\/shinken\/var\///g' < /tmp/shinken-specific.cfg.save > $2
+    # takes alignak.cfg and alignak-specific.cfg
+    cp $1 /tmp/alignak.cfg.save
+    cp $2 /tmp/alignak-specific.cfg.save
+    sed -e 's/\/usr\/local\/alignak\///g' < /tmp/alignak.cfg.save > $1
+    sed -e 's/\/usr\/local\/alignak\/var\///g' < /tmp/alignak-specific.cfg.save > $2
 }
 
 function globalize_config {
-    mv /tmp/shinken.cfg.save $1
-    mv /tmp/shinken-specific.cfg.save $2
+    mv /tmp/alignak.cfg.save $1
+    mv /tmp/alignak-specific.cfg.save $2
 }
 
 
@@ -151,9 +174,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg etc/shinken-specific.cfg
+localize_config etc/alignak.cfg etc/alignak-specific.cfg
 bin/launch_all_debug.sh
-globalize_config etc/shinken.cfg etc/shinken-specific.cfg
+globalize_config etc/alignak.cfg etc/alignak-specific.cfg
 
 
 echo "Now checking for existing apps"
@@ -162,7 +185,7 @@ echo "we can sleep 5sec for conf dispatching and so good number of process"
 sleep 20
 
 #Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "First launch check OK"
@@ -209,42 +232,42 @@ fi
 echo "Real install OK"
 
 # Useful to take it from setup_parameter? It's just for coding here
-ETC=/etc/shinken
-is_file_present $ETC/shinken.cfg
-string_in_file "servicegroups.cfg" $ETC/shinken.cfg
-is_file_present /usr/bin/shinken-arbiter
+ETC=/etc/alignak
+is_file_present $ETC/alignak.cfg
+string_in_file "servicegroups.cfg" $ETC/alignak.cfg
+is_file_present /usr/bin/alignak-arbiter
 
-ps -fu shinken
+ps -fu alignak
 
 
 echo "Now we can test a real run guy"
-sudo /etc/init.d/shinken-scheduler -d start
-sudo /etc/init.d/shinken-poller -d start
-sudo /etc/init.d/shinken-reactionner -d start
-sudo /etc/init.d/shinken-broker -d start
-sudo /etc/init.d/shinken-receiver -d start
-sudo /etc/init.d/shinken-arbiter -d start
+sudo /etc/init.d/alignak-scheduler -d start
+sudo /etc/init.d/alignak-poller -d start
+sudo /etc/init.d/alignak-reactionner -d start
+sudo /etc/init.d/alignak-broker -d start
+sudo /etc/init.d/alignak-receiver -d start
+sudo /etc/init.d/alignak-arbiter -d start
 
 echo "We will sleep again 15sec so every one is quite stable...."
 sleep 20
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 
-sudo /etc/init.d/shinken-arbiter status
-sudo /etc/init.d/shinken-scheduler status
-sudo /etc/init.d/shinken-poller status
-sudo /etc/init.d/shinken-reactionner status
-sudo /etc/init.d/shinken-broker status
-sudo /etc/init.d/shinken-receiver status
+sudo /etc/init.d/alignak-arbiter status
+sudo /etc/init.d/alignak-scheduler status
+sudo /etc/init.d/alignak-poller status
+sudo /etc/init.d/alignak-reactionner status
+sudo /etc/init.d/alignak-broker status
+sudo /etc/init.d/alignak-receiver status
 
-sudo /etc/init.d/shinken-arbiter stop
-sudo /etc/init.d/shinken-scheduler stop
-sudo /etc/init.d/shinken-poller stop
-sudo /etc/init.d/shinken-reactionner stop
-sudo /etc/init.d/shinken-broker stop
-sudo /etc/init.d/shinken-receiver stop
+sudo /etc/init.d/alignak-arbiter stop
+sudo /etc/init.d/alignak-scheduler stop
+sudo /etc/init.d/alignak-poller stop
+sudo /etc/init.d/alignak-reactionner stop
+sudo /etc/init.d/alignak-broker stop
+sudo /etc/init.d/alignak-receiver stop
 
 sleep 5
-ps -fu shinken
+ps -fu alignak
 
 check_process_nb arbiter 0
 check_process_nb scheduler 0
@@ -268,9 +291,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config test/etc/test_stack2/shinken.cfg test/etc/test_stack2/shinken-specific-ha-only.cfg
+localize_config test/etc/test_stack2/alignak.cfg test/etc/test_stack2/alignak-specific-ha-only.cfg
 test/bin/launch_all_debug2.sh
-globalize_config test/etc/test_stack2/shinken.cfg test/etc/test_stack2/shinken-specific-ha-only.cfg
+globalize_config test/etc/test_stack2/alignak.cfg test/etc/test_stack2/alignak-specific-ha-only.cfg
 
 
 echo "Now checking for existing apps"
@@ -295,14 +318,14 @@ NB_RECEIVERS=2
 NB_ARBITERS=6
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of HA daemons is OK"
 
 # Now we kill and see if all is OK :)
 # We clean the log file
-#> $VAR/shinken.log
+#> $VAR/alignak.log
 
 
 # We kill the most important thing first: the scheduler-Master
@@ -315,10 +338,10 @@ print_date
 
 
 # Then we look if the scheduler-spare got a conf from arbiter (here, view from the arbiter)
-string_in_file "Dispatch OK of conf in scheduler scheduler-Spare" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Spare" $VAR/alignak.log
 
 # then is the broker know it and try to connect to the new scheduler-spare
-string_in_file "\[broker-Master\] Connection OK to the scheduler scheduler-Spare" $VAR/shinken.log
+string_in_file "\[broker-Master\] Connection OK to the scheduler scheduler-Spare" $VAR/alignak.log
 
 
 echo "Now stop the poller-Master"
@@ -329,11 +352,11 @@ sleep 60
 print_date
 
 # The master should be look dead
-string_in_file "Warning : \[All\] The poller poller-Master seems to be down, I must re-dispatch its role to someone else." $VAR/shinken.log
+string_in_file "Warning : \[All\] The poller poller-Master seems to be down, I must re-dispatch its role to someone else." $VAR/alignak.log
 # The spare should got the conf
-string_in_file "\[All\] Dispatch OK of configuration 0 to poller poller-Slave" $VAR/shinken.log
+string_in_file "\[All\] Dispatch OK of configuration 0 to poller poller-Slave" $VAR/alignak.log
 # And he should got the scheduler link (the sapre one)
-string_in_file "\[poller-Slave\] Connection OK with scheduler scheduler-Spare" $VAR/shinken.log
+string_in_file "\[poller-Slave\] Connection OK with scheduler scheduler-Spare" $VAR/alignak.log
 #string_in_file "\[poller-Slave\] Connection OK with scheduler scheduler-Spare" $VAR/pollerd-2.log
 
 
@@ -344,11 +367,11 @@ sleep 60
 print_date
 
 # The master should be look dead
-string_in_file "Warning : \[All\] The reactionner reactionner-Master seems to be down, I must re-dispatch its role to someone else." $VAR/shinken.log
+string_in_file "Warning : \[All\] The reactionner reactionner-Master seems to be down, I must re-dispatch its role to someone else." $VAR/alignak.log
 # The spare should got the conf
-string_in_file "\[All\] Dispatch OK of configuration 0 to reactionner reactionner-Spare" $VAR/shinken.log
+string_in_file "\[All\] Dispatch OK of configuration 0 to reactionner reactionner-Spare" $VAR/alignak.log
 # And he should got the scheduler link (the sapre one)
-string_in_file "\[reactionner-Spare\] Connection OK with scheduler scheduler-Spare" $VAR/shinken.log
+string_in_file "\[reactionner-Spare\] Connection OK with scheduler scheduler-Spare" $VAR/alignak.log
 # string_in_file "\[reactionner-Spare\] Connection OK with scheduler scheduler-Spare" $VAR/reactionnerd-2.log
 
 
@@ -359,30 +382,30 @@ sleep 60
 print_date
 
 # The master should be look dead
-string_in_file "Warning : \[All\] The broker broker-Master seems to be down, I must re-dispatch its role to someone else." $VAR/shinken.log
+string_in_file "Warning : \[All\] The broker broker-Master seems to be down, I must re-dispatch its role to someone else." $VAR/alignak.log
 # The spare should got the conf
-string_in_file "\[All\] Dispatch OK of configuration 0 to broker broker-Slave" $VAR/shinken.log
+string_in_file "\[All\] Dispatch OK of configuration 0 to broker broker-Slave" $VAR/alignak.log
 # And he should got the scheduler link (the spare one)
-string_in_file "\[broker-Slave\] Connection OK to the scheduler scheduler-Spare" $VAR/shinken.log
+string_in_file "\[broker-Slave\] Connection OK to the scheduler scheduler-Spare" $VAR/alignak.log
 # And to other satellites
-string_in_file "\[broker-Slave\] Connection OK to the reactionner reactionner-Spare" $VAR/shinken.log
-string_in_file "\[broker-Slave\] Connection problem to the poller poller-Master" $VAR/shinken.log
+string_in_file "\[broker-Slave\] Connection OK to the reactionner reactionner-Spare" $VAR/alignak.log
+string_in_file "\[broker-Slave\] Connection problem to the poller poller-Master" $VAR/alignak.log
 # And should have load the modules
-string_in_file "\[broker-Slave\] I correctly loaded the modules: \[Simple-log,Livestatus\]" $VAR/shinken.log
+string_in_file "\[broker-Slave\] I correctly loaded the modules: \[Simple-log,Livestatus\]" $VAR/alignak.log
 
 
 echo "Now we stop... the Arbiter!"
 # We clean the log first
-> $VAR/shinken.log
+> $VAR/alignak.log
 
 bin/stop_arbiter.sh
 sleep 70
 
 echo "OK AND NOW?"
-string_in_file "Arbiter Master is dead. The arbiter Arbiter-spare take the lead"  $VAR/shinken.log
+string_in_file "Arbiter Master is dead. The arbiter Arbiter-spare take the lead"  $VAR/alignak.log
 
 # Look at satellite states
-string_in_file "Setting the satellite broker-Master to a dead state" $VAR/shinken.log
+string_in_file "Setting the satellite broker-Master to a dead state" $VAR/alignak.log
 
 echo "Now we clean it"
 ./clean.sh
@@ -396,9 +419,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-lb-only.cfg
+localize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-lb-only.cfg
 test/bin/launch_all_debug3.sh
-globalize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-lb-only.cfg
+globalize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-lb-only.cfg
 
 
 echo "Now checking for existing apps"
@@ -422,24 +445,24 @@ NB_RECEIVERS=2
 NB_ARBITERS=3
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
 
 
 # Now look if it's also good in the log file too
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
 
 # Now we will check what happened when we will an alive satellite, and if another active
 # one got configuration again and again (and so don't work...) or if its managed
 echo "Killing Poller 1"
 
-POLLER1_PID=`ps -fu shinken | grep poller | grep -v test_stack2 | grep -v grep |awk '{print $2, $3}' |grep -E " 1$" | awk '{print $1}'`
+POLLER1_PID=`ps -fu alignak | grep poller | grep -v test_stack2 | grep -v grep |awk '{print $2, $3}' |grep -E " 1$" | awk '{print $1}'`
 kill $POLLER1_PID
 
 echo "sleep some few seconds to see the arbiter react"
@@ -447,7 +470,7 @@ sleep 20
 
 date +%s
 # And we look if the arbiter find that the other poller do not need another configuration send
-string_in_file "Skipping configuration 0 send to the poller poller-Master-2: it already got it" $VAR/shinken.log
+string_in_file "Skipping configuration 0 send to the poller poller-Master-2: it already got it" $VAR/alignak.log
 
 
 echo "Now we clean it"
@@ -465,9 +488,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-bcl.cfg
+localize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-bcl.cfg
 test/bin/launch_all_debug7.sh
-globalize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-bcl.cfg
+globalize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-bcl.cfg
 
 
 echo "Now checking for existing apps"
@@ -491,22 +514,22 @@ NB_RECEIVERS=2
 NB_ARBITERS=3
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
 
 
 # Now look if it's also good in the log file too
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "\[broker-Master-1\] Connection OK to the scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "\[broker-Master-2\] Connection OK to the scheduler scheduler-Master-1" $VAR/shinken2.log
-string_in_file "initial Broks for broker broker-Master-1" $VAR/shinken.log
-string_in_file "initial Broks for broker broker-Master-2" $VAR/shinken2.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "\[broker-Master-1\] Connection OK to the scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "\[broker-Master-2\] Connection OK to the scheduler scheduler-Master-1" $VAR/alignak2.log
+string_in_file "initial Broks for broker broker-Master-1" $VAR/alignak.log
+string_in_file "initial Broks for broker broker-Master-2" $VAR/alignak2.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
 
 echo "Now we clean it"
 ./clean.sh
@@ -523,9 +546,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-passive-poller.cfg
+localize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-passive-poller.cfg
 test/bin/launch_all_debug4.sh
-globalize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-passive-poller.cfg
+globalize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-passive-poller.cfg
 
 
 echo "Now checking for existing apps"
@@ -550,22 +573,22 @@ NB_RECEIVERS=2
 NB_ARBITERS=3
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
 
 
 # Now look if it's also good in the log file too
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
 # We should see the poller 2 say it is passive
-string_in_file "\[poller-Master-2\] Passive mode enabled." $VAR/shinken.log
+string_in_file "\[poller-Master-2\] Passive mode enabled." $VAR/alignak.log
 # and the schedulers should connect to it too
-string_in_file "Connection OK to the poller poller-Master-2" $VAR/shinken.log
+string_in_file "Connection OK to the poller poller-Master-2" $VAR/alignak.log
 
 
 echo "Now we clean it"
@@ -583,9 +606,9 @@ echo "##########################################################################
 
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg etc/shinken-specific.cfg
+localize_config etc/alignak.cfg etc/alignak-specific.cfg
 bin/launch_all_debug.sh
-globalize_config etc/shinken.cfg etc/shinken-specific.cfg
+globalize_config etc/alignak.cfg etc/alignak-specific.cfg
 
 
 echo "Now checking for existing apps"
@@ -605,33 +628,33 @@ NB_RECEIVERS=2
 NB_ARBITERS=3  # master itself & namedpipe-autogenerated!
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
 
 
 # Now look if it's also good in the log file too
-string_in_file "Dispatch OK of conf in scheduler scheduler-master" $VAR/shinken.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-master" $VAR/alignak.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
 
 
 # Now we stop the scheduler and restart it
 # We clean the log and restart teh scheduler
 bin/stop_scheduler.sh
-> $VAR/shinken.log
+> $VAR/alignak.log
 sleep 20
 bin/launch_scheduler_debug.sh
 sleep 180
 
 
 
-string_in_file "Warning : Scheduler scheduler-master did not managed its configuration 0,I am not happy." $VAR/shinken.log
-string_in_file "The receiver receiver-1 manage a unmanaged configuration" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-master" $VAR/shinken.log
-string_in_file "Dispatch OK of configuration 0 to poller poller-master" $VAR/shinken.log
+string_in_file "Warning : Scheduler scheduler-master did not managed its configuration 0,I am not happy." $VAR/alignak.log
+string_in_file "The receiver receiver-1 manage a unmanaged configuration" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-master" $VAR/alignak.log
+string_in_file "Dispatch OK of configuration 0 to poller poller-master" $VAR/alignak.log
 
 echo "Now we clean it"
 ./clean.sh
@@ -645,9 +668,9 @@ echo "#                                                                         
 echo "####################################################################################"
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-passive-arbiter.cfg
+localize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-passive-arbiter.cfg
 test/bin/launch_all_debug5.sh
-globalize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-passive-arbiter.cfg
+globalize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-passive-arbiter.cfg
 
 
 echo "Now checking for existing apps"
@@ -671,21 +694,21 @@ NB_RECEIVERS=2
 NB_ARBITERS=3
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
 
 
 # Now look if it's also good in the log file too
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
 
 # And the string so the spare is taking the control
-string_in_file "Arbiter Master is dead. The arbiter Arbiter-spare take the lead" $VAR/shinken.log
+string_in_file "Arbiter Master is dead. The arbiter Arbiter-spare take the lead" $VAR/alignak.log
 
 echo "Now we clean it"
 ./clean.sh
@@ -704,9 +727,9 @@ CMD_FILE=/tmp/tmp-for-receiver-direct-routing.cmd
 rm -f $CMD_FILE
 
 echo "Now we can start some launch tests"
-localize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-receiver-direct-routing.cfg
+localize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-receiver-direct-routing.cfg
 test/bin/launch_all_debug6.sh
-globalize_config etc/shinken.cfg test/etc/test_stack2/shinken-specific-receiver-direct-routing.cfg
+globalize_config etc/alignak.cfg test/etc/test_stack2/alignak-specific-receiver-direct-routing.cfg
 
 
 
@@ -731,7 +754,7 @@ NB_RECEIVERS=3
 NB_ARBITERS=3
 
 # Now check if the run looks good with var in the direct directory
-check_good_run /var/lib/shinken /var/run/shinken /var/log/shinken
+check_good_run /var/lib/alignak /var/run/alignak /var/log/alignak
 #var var var
 
 echo "All launch of LB daemons is OK"
@@ -740,12 +763,12 @@ echo "All launch of LB daemons is OK"
 is_file_present $CMD_FILE
 
 # Now look if it's also good in the log file too
-#string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/shinken.log
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/shinken.log
-string_in_file "OK, no more reactionner sent need" $VAR/shinken.log
-string_in_file "OK, no more poller sent need" $VAR/shinken.log
-string_in_file "OK, no more broker sent need" $VAR/shinken.log
-string_in_file "OK, no more receiver sent need" $VAR/shinken.log
+#string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2" $VAR/alignak.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-1" $VAR/alignak.log
+string_in_file "OK, no more reactionner sent need" $VAR/alignak.log
+string_in_file "OK, no more poller sent need" $VAR/alignak.log
+string_in_file "OK, no more broker sent need" $VAR/alignak.log
+string_in_file "OK, no more receiver sent need" $VAR/alignak.log
 
 now=$(date +%s)
 
@@ -756,8 +779,8 @@ printf "[111] PROCESS_HOST_CHECK_RESULT;localhost;2;Oh yes\n" > $CMD_FILE
 
 sleep 20
 
-string_in_file "Dispatch OK of configuration 0 to poller newpoller"   $VAR/shinken.log
-string_in_file "PASSIVE HOST CHECK: localhost;2;Oh yes"   $VAR/shinken.log
+string_in_file "Dispatch OK of configuration 0 to poller newpoller"   $VAR/alignak.log
+string_in_file "PASSIVE HOST CHECK: localhost;2;Oh yes"   $VAR/alignak.log
 
 # Now we will try to stop the scheduler, and switch to a new one
 echo "STOPPING MASTER SCHEDULER"
@@ -767,10 +790,10 @@ sleep 20
 
 date +%s
 #Check if slave scheduler is ok
-string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2"   $VAR/shinken.log
+string_in_file "Dispatch OK of conf in scheduler scheduler-Master-2"   $VAR/alignak.log
 
 # Clean the log
-> $VAR/shinken.log
+> $VAR/alignak.log
 
 printf "[111] ADD_SIMPLE_POLLER;All;newpoller;localhost;8771\n" > $CMD_FILE
 printf "[111] PROCESS_HOST_CHECK_RESULT;localhost;2;Oh yes again\n" > $CMD_FILE
@@ -778,7 +801,7 @@ printf "[111] PROCESS_HOST_CHECK_RESULT;localhost;2;Oh yes again\n" > $CMD_FILE
 sleep 5
 
 date +%s
-string_in_file "PASSIVE HOST CHECK: localhost;2;Oh yes again"   $VAR/shinken.log
+string_in_file "PASSIVE HOST CHECK: localhost;2;Oh yes again"   $VAR/alignak.log
 
 echo "Now we clean it"
 ./clean.sh

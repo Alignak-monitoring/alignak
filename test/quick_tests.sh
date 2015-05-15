@@ -1,22 +1,45 @@
 #!/bin/bash
-# Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-# This file is part of Shinken.
 #
-# Shinken is free software: you can redistribute it and/or modify
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#      Gabes Jean, naparuba@gmail.com
+#      Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 DIR=$(cd $(dirname "$0"); pwd)
@@ -44,7 +67,7 @@ python-coverage xml --omit=/usr/lib
 
 echo "Launchng pep8 now"
 cd ..
-pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' shinken/*
+pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' alignak/*
 
 echo "All quick unit tests passed :)"
 echo "But please launch a test.sh pass too for long tests too!"

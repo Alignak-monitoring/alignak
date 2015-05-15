@@ -1,8 +1,8 @@
 
-from shinken_test import ShinkenTest
+from alignak_test import AlignakTest
 
 
-class TestConfig(ShinkenTest):
+class TestConfig(AlignakTest):
 
     def setUp(self):
         pass # force no setUp for this class.

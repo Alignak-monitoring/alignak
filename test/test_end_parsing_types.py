@@ -1,21 +1,43 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2015:
-#    Coavoux Sebastien <s.coavoux@free.fr>
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2015:
+#     Coavoux Sebastien <s.coavoux@free.fr>
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
 # This file is used to test reading and processing of config files
@@ -25,12 +47,12 @@ import unittest2 as unittest
 
 import string
 
-from shinken_test import time_hacker
-from shinken.log import logger
-from shinken.objects.config import Config
-from shinken.brok import Brok
-from shinken.external_command import ExternalCommand
-from shinken.property import UnusedProp, StringProp, IntegerProp, \
+from alignak_test import time_hacker
+from alignak.log import logger
+from alignak.objects.config import Config
+from alignak.brok import Brok
+from alignak.external_command import ExternalCommand
+from alignak.property import UnusedProp, StringProp, IntegerProp, \
     BoolProp, CharProp, DictProp, FloatProp, ListProp, AddrProp, ToGuessProp
 
 
@@ -83,7 +105,7 @@ class TestEndParsingType(unittest.TestCase):
             self.sched.run_external_command(b.cmd_line)
 
     def test_types(self):
-        path = 'etc/shinken_1r_1h_1s.cfg'
+        path = 'etc/alignak_1r_1h_1s.cfg'
         time_hacker.set_my_time()
         self.print_header()
         # i am arbiter-like

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 
-from shinken_test import *
+from alignak_test import *
 
-class TestConfig(ShinkenTest):
+class TestConfig(AlignakTest):
 
     def setUp(self):
         # load the configuration from file
-        self.setup_with_file('etc/shinken_antivirg.cfg')
+        self.setup_with_file('etc/alignak_antivirg.cfg')
 
     def test_hostname_antivirg(self):
         """Check that it is allowed to have a host with the "__ANTI-VIRG__" substring in its hostname"""

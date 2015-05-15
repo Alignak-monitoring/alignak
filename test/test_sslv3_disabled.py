@@ -1,22 +1,44 @@
 #!/usr/bin/env python
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
 # This test checks that sslv3 is disabled when SSL is used with a cherrypy backend to secure against the Poodle vulnerability (https://poodlebleed.com)
@@ -30,30 +52,30 @@ try:
     import OpenSSL
 except ImportError:
     OpenSSL = None
-from shinken_test import *
+from alignak_test import *
 
-import shinken.log as shinken_log
+import alignak.log as alignak_log
 
-from shinken.daemons.schedulerdaemon import Shinken
-from shinken.daemons.arbiterdaemon import Arbiter
+from alignak.daemons.schedulerdaemon import Alignak
+from alignak.daemons.arbiterdaemon import Arbiter
 
 daemons_config = {
-    Shinken:      "etc/test_sslv3_disabled/schedulerd.ini",
-    Arbiter:    ["etc/test_sslv3_disabled/shinken.cfg"]
+    Alignak:      "etc/test_sslv3_disabled/schedulerd.ini",
+    Arbiter:    ["etc/test_sslv3_disabled/alignak.cfg"]
 }
 
 
-class testSchedulerInit(ShinkenTest):
+class testSchedulerInit(AlignakTest):
     def setUp(self):
         time_hacker.set_real_time()
 
     def create_daemon(self):
-        cls = Shinken
+        cls = Alignak
         return cls(daemons_config[cls], False, True, False, None, '')
     @unittest.skipIf(OpenSSL is None, "Test requires OpenSSL")
     def test_scheduler_init(self):
 
-        shinken_log.local_log = None  # otherwise get some "trashs" logs..
+        alignak_log.local_log = None  # otherwise get some "trashs" logs..
         d = self.create_daemon()
 
         d.load_config_file()
@@ -63,7 +85,7 @@ class testSchedulerInit(ShinkenTest):
         d.load_modules_manager()
 
         # Launch an arbiter so that the scheduler get a conf and init
-        subprocess.Popen(["../bin/shinken-arbiter.py", "-c", daemons_config[Arbiter][0], "-d"])
+        subprocess.Popen(["../bin/alignak-arbiter.py", "-c", daemons_config[Arbiter][0], "-d"])
         if not hasattr(ssl, 'SSLContext'):
             print 'BAD ssl version for testing, bailing out'
             return
