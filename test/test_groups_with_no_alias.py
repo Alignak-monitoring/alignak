@@ -44,7 +44,7 @@
 # This file is used to test reading and processing of config files
 #
 
-from Alignak_test import *
+from alignak_test import *
 
 
 class TestGroupwithNoAlias(AlignakTest):
