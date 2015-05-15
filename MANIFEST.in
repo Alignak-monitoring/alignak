@@ -1,8 +1,8 @@
-recursive-include shinken *.*
-recursive-include shinken/webui *.*
+recursive-include alignak *.*
+recursive-include alignak/webui *.*
 recursive-include etc *
 recursive-include windows .bat .reg
-recursive-include bin *.* *-* shinken
+recursive-include bin *.* *-* alignak
 recursive-include libexec *.*
 recursive-include modules *.*
 recursive-include doc *.*
