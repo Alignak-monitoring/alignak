@@ -19,7 +19,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# This file incorporates work covered by the following copyright and 
+# This file incorporates work covered by the following copyright and
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
