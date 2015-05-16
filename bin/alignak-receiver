@@ -1,25 +1,46 @@
 #!/usr/bin/env python
-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Gregory Starck, g.starck@gmail.com
-#    Hartmut Goebel, h.goebel@goebel-consult.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 '''
  This class is an interface for the Receiver
@@ -38,28 +59,28 @@ import sys
 import optparse
 
 try:
-    from shinken.bin import VERSION
-    import shinken
+    from alignak.bin import VERSION
+    import alignak
 except ImportError:
-    # If importing shinken fails, try to load from current directory
+    # If importing alignak fails, try to load from current directory
     # or parent directory to support running without installation.
     # Submodules will then be loaded from there, too.
     import imp
-    imp.load_module('shinken',
-                    *imp.find_module('shinken',
+    imp.load_module('alignak',
+                    *imp.find_module('alignak',
                                      [os.path.realpath("."),
                                       os.path.realpath(".."),
                                       os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
                                                    "..")]))
-    import shinken
-    # Ok we should add the shinken root directory to our sys.path so our sons
-    # will be able to use the shinken import without problems
-    shinken_root_path = os.path.dirname(os.path.dirname(shinken.__file__))
-    os.environ['PYTHONPATH'] = os.path.join(os.environ.get('PYTHONPATH', ''), shinken_root_path)
+    import alignak
+    # Ok we should add the alignak root directory to our sys.path so our sons
+    # will be able to use the alignak import without problems
+    alignak_root_path = os.path.dirname(os.path.dirname(alignak.__file__))
+    os.environ['PYTHONPATH'] = os.path.join(os.environ.get('PYTHONPATH', ''), alignak_root_path)
 
 
-from shinken.daemons.receiverdaemon import Receiver
-from shinken.bin import VERSION
+from alignak.daemons.receiverdaemon import Receiver
+from alignak.bin import VERSION
 
 
 # Protect for windows multiprocessing that will RELAUNCH all

@@ -1,25 +1,46 @@
 #!/usr/bin/env python
-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Gregory Starck, g.starck@gmail.com
-#    Hartmut Goebel, h.goebel@goebel-consult.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import optparse
@@ -41,23 +62,23 @@ import signal
 from StringIO import StringIO
 
 try:
-    import shinken
-    from shinken.bin import VERSION
+    import alignak
+    from alignak.bin import VERSION
 except ImportError:
-    # If importing shinken fails, try to load from current directory
+    # If importing alignak fails, try to load from current directory
     # or parent directory to support running without installation.
     # Submodules will then be loaded from there, too.
     import imp
-    imp.load_module('shinken',
-                    *imp.find_module('shinken',
+    imp.load_module('alignak',
+                    *imp.find_module('alignak',
                                      [os.path.realpath("."),
                                       os.path.realpath(".."),
                                       os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
                                                    "..")]))
-    from shinken.bin import VERSION
+    from alignak.bin import VERSION
 
-from shinken.log import logger, cprint, nagFormatter
-from shinken.objects.config import Config
+from alignak.log import logger, cprint, nagFormatter
+from alignak.objects.config import Config
 
 
 logger.setLevel('WARNING')
@@ -87,9 +108,9 @@ logger.load_obj(Dummy())
 
 
 if os.name != 'nt':
-    DEFAULT_CFG = os.path.expanduser('~/.shinken.ini')
+    DEFAULT_CFG = os.path.expanduser('~/.alignak.ini')
 else:
-    DEFAULT_CFG = 'c:\\shinken\\etc\\shinken.ini'
+    DEFAULT_CFG = 'c:\\alignak\\etc\\alignak.ini'
 
 
 # This will allow to add comments to the generated configuration file, once
@@ -125,20 +146,20 @@ class CLICommander(object):
 
     ini_defaults = {'paths': {'comment': ''' # Set the paths according to your setup. '''
                                          '''Defaults follow # the Linux Standard Base''',
-                              'values': [('etc', '/etc/shinken'), ('lib', '/var/lib/shinken'),
+                              'values': [('etc', '/etc/alignak'), ('lib', '/var/lib/alignak'),
                                          ('share', '%(lib)s/share'), ('cli', '%(lib)s/cli'),
                                          ('packs', '%(etc)s/packs'), ('modules', '%(lib)s/modules'),
                                          ('doc', '%(lib)s/doc'), ('inventory', '%(lib)s/inventory'),
                                          ('libexec', '%(lib)s/libexec'),
                                          ]
                               },
-                    'shinken.io': {'comment': '''# Options for connection to the shinken.io '''
+                    'alignak.io': {'comment': '''# Options for connection to the alignak.io '''
                                               '''website.  # proxy: curl style, should look as '''
                                               '''http://user:password@server:3128 # api_key: '''
                                               '''useful for publishing packages or earn XP '''
                                               '''after each install. Create an account at '''
-                                              '''http://shinken.io and go to '''
-                                              '''http://shinken.io/~''',
+                                              '''http://alignak.io and go to '''
+                                              '''http://alignak.io/~''',
                                    'values': [('proxy', ''), ('api_key', '')]
                                    }
                     }
@@ -236,7 +257,7 @@ class CLICommander(object):
         # EMACS rules :) / VI sucks
         readline.parse_and_bind('set editing-mode emacs')
         # Try to read and save the history when exiting
-        histfile = os.path.join(os.path.expanduser("~"), ".shinken.history")
+        histfile = os.path.join(os.path.expanduser("~"), ".alignak.history")
         try:
             readline.read_history_file(histfile)
         except IOError:
@@ -396,17 +417,17 @@ def main(custom_args=None):
                       help="""Proxy URI. Like http://user:password@proxy-server:3128""")
     parser.add_option('-A', '--api-key',
                       dest="api_key", help=("Your API key for uploading the package to the "
-                                            "Shinken.io website. If you don't have one, "
+                                            "Alignak.io website. If you don't have one, "
                                             "please go to your account page"))
     parser.add_option('-l', '--list', action='store_true',
                       dest="do_list", help=("List available commands"))
     parser.add_option('--init', action='store_true',
-                      dest="do_init", help=("Initialize/refill your shinken.ini file "
+                      dest="do_init", help=("Initialize/refill your alignak.ini file "
                                             "(default to %s)" % DEFAULT_CFG))
     parser.add_option('-D', action='store_true',
                       dest="do_debug", help=("Enable the debug mode"))
     parser.add_option('-c', '--config', dest="iniconfig", default=DEFAULT_CFG,
-                      help=("Path to your shinken.ini file. Default: %s" % DEFAULT_CFG))
+                      help=("Path to your alignak.ini file. Default: %s" % DEFAULT_CFG))
     parser.add_option('-v', action='store_true',
                       dest="do_verbose", help=("Be more verbose"))
     parser.add_option('-h', '--help', action='store_true',
@@ -445,11 +466,11 @@ def main(custom_args=None):
 
     # Now replace if given in command line
     if opts.api_key:
-        CONFIG['shinken.io']['api_key'] = opts.api_key
+        CONFIG['alignak.io']['api_key'] = opts.api_key
         logger.debug("Using given api-key in command line")
 
     if opts.proxy:
-        CONFIG['shinken.io']['proxy'] = opts.proxy
+        CONFIG['alignak.io']['proxy'] = opts.proxy
         logger.debug("Using given proxy in command line")
 
     CLI = CLICommander(CONFIG, cfg, opts)
@@ -499,7 +520,7 @@ def main(custom_args=None):
 
     # If the user explicitely set the proxy, take it!
     if opts.proxy:
-        CONFIG['shinken.io']['proxy'] = opts.proxy
+        CONFIG['alignak.io']['proxy'] = opts.proxy
 
     # Maybe he/she just want to list our commands?
     if opts.do_list:
@@ -528,7 +549,7 @@ def main(custom_args=None):
         write_ini_file(cfg, CLI, opts)
         sys.exit(0)
 
-    # if just call shinken, we must open a prompt, but will be for another version
+    # if just call alignak, we must open a prompt, but will be for another version
     if len(command_args) == 0:
         CLI.loop()
         sys.exit(0)
