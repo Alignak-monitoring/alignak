@@ -1,11 +1,11 @@
 .. _thebasics/macrolist:
 
 ============================
- Standard Macros in Shinken 
+ Standard Macros in Alignak 
 ============================
 
 
-Standard macros that are available in Shinken are listed here. On-demand macros and macros for custom variables are described :ref:`here <thebasics/macros>`.
+Standard macros that are available in Alignak are listed here. On-demand macros and macros for custom variables are described :ref:`here <thebasics/macros>`.
 
 
 Macro Validity 
@@ -24,7 +24,7 @@ Although macros can be used in all commands you define, not all macros may be va
   * Service :ref:`performance data <advanced/perfdata>` commands
   * Host :ref:`performance data <advanced/perfdata>` commands
 
-The tables below list all macros currently available in Shinken, along with a brief description of each and the types of commands in which they are valid. If a macro is used in a command in which it is invalid, it is replaced with an empty string. It should be noted that macros consist of all uppercase characters and are enclosed in $ characters.
+The tables below list all macros currently available in Alignak, along with a brief description of each and the types of commands in which they are valid. If a macro is used in a command in which it is invalid, it is replaced with an empty string. It should be noted that macros consist of all uppercase characters and are enclosed in $ characters.
 
 
 Macro Availability Chart 

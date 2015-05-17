@@ -1,24 +1,24 @@
 .. _development/hackingcode:
 
 ==========================
- Hacking the Shinken Code 
+ Hacking the Alignak Code 
 ==========================
 
 
 Development goals 
 ==================
 
-Shinken is an open source program. 
+Alignak is an open source program. 
 
 Enhancements, optimization, fixes, these are all good reasons to create a patch and send it to the development mailing list. Even if you are not sure about the quality of your patch or your ideas, submit them to the mailing list for review or comment. Having feedback is essential to any project.
 
-This documentation will show how to add code to Shinken. Shinken is written in Python. If you are new to python please consider reading this `introduction / beginners guide`_.
+This documentation will show how to add code to Alignak. Alignak is written in Python. If you are new to python please consider reading this `introduction / beginners guide`_.
 
 
 Development rules 
 ==================
 
-If you wish to commit code to the Shinken repository, you must strive to follow the :ref:`Shinken development rules <development/programming-rules>`.
+If you wish to commit code to the Alignak repository, you must strive to follow the :ref:`Alignak development rules <development/programming-rules>`.
 
 Before sending us a Pull Request please consider the following table
 
@@ -33,7 +33,7 @@ New feature                   Yes              Yes               Yes            
 Depending on the contribution you should ensure the previous condition. If you don't met one of those your pull request may take some time to be merged or simply be rejected.
 Ensuring stability is a top priority. Whenever a piece of code is edit, test should ensure nothing is broken. Documentation is also important, undocumented features are almost useless.
 
-Please try to stick to that when contributing to Shinken. We will be happy to merge your work.
+Please try to stick to that when contributing to Alignak. We will be happy to merge your work.
 
 Best Practices
 ===============
@@ -47,22 +47,22 @@ Best Practices
   * Tagging experimental unfinished features in the documentation
   * Release soon and release often mentality
 
-How is Shinken's code organized 
+How is Alignak's code organized 
 ================================
 
-The Shinken code is in the shinken directory. All important source files are :
+The Alignak code is in the alignak directory. All important source files are :
 
-  * bin/shinken-* : source files of daemons
-  * shinken/objects/item.py : base class for nearly all important objects like hosts, services and contacts.
-  * shinken/\*link.py : class used by Arbiter to connect to daemons.
-  * shinken/modules/\*/\*py : modules for daemons (like the Broker).
-  * shinken/objects/schedulingitem.py : base class for host/service that defines all the algorithms for scheduling.
+  * bin/alignak-* : source files of daemons
+  * alignak/objects/item.py : base class for nearly all important objects like hosts, services and contacts.
+  * alignak/\*link.py : class used by Arbiter to connect to daemons.
+  * alignak/modules/\*/\*py : modules for daemons (like the Broker).
+  * alignak/objects/schedulingitem.py : base class for host/service that defines all the algorithms for scheduling.
 
 
-Datadriven programming in Shinken code 
+Datadriven programming in Alignak code 
 =======================================
 
-A very important thing in Shinken code is the data programming method : instead of hardcoding transformation for properties, it's better to have a array (dict in Python) that described all transformations we can use on these properties.
+A very important thing in Alignak code is the data programming method : instead of hardcoding transformation for properties, it's better to have a array (dict in Python) that described all transformations we can use on these properties.
 
 With this method, a developer only needs to add this description, and all transformations will be automatic (like configuration parsing, inheritance application, etc).
 
@@ -86,7 +86,7 @@ Specific properties for objects like Hosts or Services are in a properties dict(
 These classes also have another "properties" like dict : "running_properties". It's like the standard one, but for running only properties (aka no configuration based properties).
 
 
-Programming with broker modules in Shinken 
+Programming with broker modules in Alignak 
 ===========================================
 
 Modules are pieces of code that are executed by a daemon.
@@ -96,8 +96,8 @@ Module configuration and startup is controlled in the modules/\*.cfg files
   * The module is declared in a daemon
   * The module itself is defined and its variables set
 
-A shinken module class must have an _init_, init and documentation.
-A shinken module can use the following functions:
+A Alignak module class must have an _init_, init and documentation.
+A alignak module can use the following functions:
 
   * managed_broks: A specific function that will dynamically build calls for functions for specific brok.types if the functions exist.
   * manage_NAME-OF-BROK-TYPE_broks: The function that will process a specific type of brok
@@ -142,7 +142,7 @@ Example of code hacking : add a parameter for the flapping history
   * :ref:`Running part <development/hackingcode#running_part>`
   * :ref:`The perfect patch <development/hackingcode#the_perfect_patch>`
 
-In the Nagios code, the flapping state history size is hard coded (20). As in the first Shinken release. Let'S see how it works to add such a parameter in the global file and use it in the scheduling part of the code.
+In the Nagios code, the flapping state history size is hard coded (20). As in the first Alignak release. Let'S see how it works to add such a parameter in the global file and use it in the scheduling part of the code.
 
 We will see that adding such a parameter is very (very) easy. To do this, only 5 lines need to be changed in :
 
@@ -179,7 +179,7 @@ From this file, we are in an object named self in Python. To access the 'flap_hi
   flap_history = self.__class__.flap_history Then we change occurrences in the code : if len(self.flapping_changes)
   flap_history: [...] r += i*(1.2-0.8)/flap_history + 0.8 r = r / flap_history
 
-That's all. You can test and propose the patch in the devel list. We will thank you and after some patch proposals, you can ask for a git access, you will be a Shinken developer :)
+That's all. You can test and propose the patch in the devel list. We will thank you and after some patch proposals, you can ask for a git access, you will be a Alignak developer :)
 
 
 .. _development/hackingcode#the_perfect_patch:

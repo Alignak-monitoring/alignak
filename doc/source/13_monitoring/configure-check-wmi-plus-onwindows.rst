@@ -5,18 +5,18 @@ Monitoring Windows devices via WMI
 ==================================
 
 
-The premier WMI check program, `check_wmi_plus.pl`_,  can now be used on the windows platform in association with the shinken WMIC.EXE. 
+The premier WMI check program, `check_wmi_plus.pl`_,  can now be used on the windows platform in association with the Alignak WMIC.EXE. 
 
 
-WMIC.EXE is not the native wmic of the windows system. It is a standalone program created to have the same input/output as the linux WMIC. This permits check_wmi_plus to use WMIC on windows with the same options as the linux program. WMIC.EXE (binaries and sources) are included with Shinken (1.2.2 and newer).
+WMIC.EXE is not the native wmic of the windows system. It is a standalone program created to have the same input/output as the linux WMIC. This permits check_wmi_plus to use WMIC on windows with the same options as the linux program. WMIC.EXE (binaries and sources) are included with Alignak (1.2.2 and newer).
 
-WMIC.EXE and associated Shinken programs under Windows, use the .NET framework 2.0.
+WMIC.EXE and associated Alignak programs under Windows, use the .NET framework 2.0.
 
 
 Pre-requisites for using check_wmi_plus.pl 
 ===========================================
 
-Check_wmi_plus.pl needs a perl interpreter to work, we recommend activePerl. At this time, strawberry perl cannot be used as a non interactive program. The Shinken poller starts programs in a non interactive mode, which means no Strawberrt perl. 
+Check_wmi_plus.pl needs a perl interpreter to work, we recommend activePerl. At this time, strawberry perl cannot be used as a non interactive program. The Alignak poller starts programs in a non interactive mode, which means no Strawberrt perl. 
 
    * `Download activeperl`_ and select the 5.16.x Windows x64 version
    * Download and install PERL Number::Format using CPAN
@@ -34,49 +34,49 @@ After having installed all dependencies, you can now proceed to install check_wm
 Make sure to change the references into the check_wmi_plus.conf file and the initial variables into the check_wmi_plus.pl (take a look to match the install folder and the WMIC.exe path)
 
 
-Shinken configuration to use check_wmi_plus 
+Alignak configuration to use check_wmi_plus 
 ============================================
 
-At first you must configure monitoring parameters in the Shinken etc/resource.cfg file : 
+At first you must configure monitoring parameters in the Alignak etc/resource.cfg file : 
 
 ::
 
   $DOMAIN$=domain
-  $DOMAINUSERSHORT$=shinken_user
+  $DOMAINUSERSHORT$=alignak_user
   $DOMAINUSER$=$DOMAIN$\\$DOMAINUSERSHORT$
   $DOMAINPASSWORD$=superpassword
   $LDAPBASE$=dc=eu,dc=society,dc=com
 
 
-These options are set by default, but the poller will also use a « hidden » *$DOMAINUSERSHORT$* parameter set in the Shinken templates.cfg. Just set this parameter in the resource.cfg file to overload the template and make use of a single configuration file.
+These options are set by default, but the poller will also use a « hidden » *$DOMAINUSERSHORT$* parameter set in the Alignak templates.cfg. Just set this parameter in the resource.cfg file to overload the template and make use of a single configuration file.
 
 These options are used by the check_wmi_plus plugin as credentials for WMI local or remote access. If you intend to monitor hosts that are not controlled by a domain controller (simple workgroup members) it is necessary to overload the *$DOMAINUSER$* parameter : 
 
 ::
 
   $DOMAIN$=domain
-  $DOMAINUSERSHORT$=shinken_user
+  $DOMAINUSERSHORT$=alignak_user
   $DOMAINUSER$=$DOMAINUSERSHORT$
   $DOMAINPASSWORD$=superpassword
   $LDAPBASE$=dc=eu,dc=society,dc=com
 
 
-**You need to set the appropriate values for your environment, the above values (domain, shinken_user and superpassword) are simply examples. :-)**
+**You need to set the appropriate values for your environment, the above values (domain, alignak_user and superpassword) are simply examples. :-)**
 
-To test the settings, just add a host to be monitored by setting a new host in a cfg file named with the name of the host for example etc\hosts\clishinken.cfg  based on the windows template:
+To test the settings, just add a host to be monitored by setting a new host in a cfg file named with the name of the host for example etc\hosts\clialignak.cfg  based on the windows template:
 
 ::
 
   define host{
       use               windows
       contact_groups    admins
-      host_name         clishinken
-      address           clishinken
+      host_name         clialignak
+      address           clialignak
       icon_set          server
   }
 
 
-Restart the Shinken windows services. The WebUI now checks a new windows host : clishinken !
+Restart the Alignak windows services. The WebUI now checks a new windows host : clialignak !
 In this configuration, the remote WMI is executed using the credentials set into the resource.cfg file. It"s working but is not really secure.
 
 .. warning::  warning
@@ -94,7 +94,7 @@ In this configuration, the remote WMI is executed using the credentials set into
 Secure method to use check_wmi_plus on windows 
 ===============================================
 
-There is a new option to use check_wmi_plus with shinken : Use the poller configuration service credentials.
+There is a new option to use check_wmi_plus with alignak : Use the poller configuration service credentials.
 
 For most sysadmins, putting an unencrypted password in a config file is not a best practice. IT secuirty will be compromised if someone can read the configuration file. The rights of this user on servers are also very high (WMI requests need more configuration to be security compliant on windows server, including DCOM configuration or admin rights…) You can find a good idea of how to configure the remote wmi on windows here:
 
@@ -102,7 +102,7 @@ For most sysadmins, putting an unencrypted password in a config file is not a be
 
 To set a “bypass" credential, only set the $DOMAINUSERSHORT$ to #### (4 sharp symbols without spaces)
 If the WMIC see this specific user,it just will use the caller credentials - in all cases the poller service user.
-By default, the Shinken services are set to localsystem. 
+By default, the Alignak services are set to localsystem. 
 
 Stop the services (manually or using the bin\stop_allservices.cmd script).
 
@@ -113,7 +113,7 @@ Open the services.msc (or the server manager, and then the services part)
    :scale: 90 %
 
 
-double-click on the Shinken poller service
+double-click on the Alignak poller service
 
 
 .. image:: /_static/images/poller1.jpg
@@ -127,7 +127,7 @@ go to the log On tab
    :scale: 90 %
 
 
-check the “This account" radio button and set the Shinken user account (the same as you set the resource.cfg file)
+check the “This account" radio button and set the ShAlignak user account (the same as you set the resource.cfg file)
 
 
 .. image:: /_static/images/poller3.jpg

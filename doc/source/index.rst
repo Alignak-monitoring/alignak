@@ -1,10 +1,10 @@
-.. Shinken documentation master file, created by
+.. Alignak documentation master file, created by
    sphinx-quickstart on Wed Nov 13 01:01:23 2013.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
 ===================================
-Welcome to Shinken's documentation!
+Welcome to Alignak's documentation!
 ===================================
 
 .. toctree::
@@ -13,7 +13,7 @@ Welcome to Shinken's documentation!
     01_introduction/index
     02_gettingstarted/index
     03_configuration/index
-    04_runningshinken/index
+    04_runningalignak/index
     05_thebasics/index
     06_medium/index
     07_advanced/index

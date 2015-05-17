@@ -1,7 +1,7 @@
 .. _advanced/distributed-with-realm:
 
 ==============================================
-Shinken's distributed architecture with realms
+Alignak's distributed architecture with realms
 ==============================================
 
 
@@ -9,11 +9,11 @@ Multi customers and/or sites: REALMS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-Shinken's architecture like we saw allows us to have a unique administration and data location. All pollers the hosts are cut and sent to schedulers, and the pollers take jobs from all schedulers. Every one is happy.
+Alignak's architecture like we saw allows us to have a unique administration and data location. All pollers the hosts are cut and sent to schedulers, and the pollers take jobs from all schedulers. Every one is happy.
 
 Every one? In fact no. If an administrator got a continental distributed architecture he can have serious problems. If the architecture is common to multiple customers network, a customer A scheduler can have a customer B poller that asks him jobs. It's not a good solution. Even with distributed network, distant pollers should not ask jobs to schedulers in the other continent, it's not network efficient.
 
-That is where the site/customers management is useful. In Shinken, it's managed by the **realms**.
+That is where the site/customers management is useful. In Alignak, it's managed by the **realms**.
 
 A realm is a group of resources that will manage hosts or hostgroups. Such a link will be unique: a host cannot be in multiple realms. If you put a hostgroup in a realm, all hosts in this group will be in the realm (unless a host already has the realm set, the host value will be taken).
 
@@ -62,14 +62,14 @@ Let's take two examples of distributed architectures around the world. In the fi
 Here is the isolated one:
 
 
-.. image:: /_static/images/official/images/shinken-architecture-isolated-realms.png
+.. image:: /_static/images/official/images/alignak-architecture-isolated-realms.png
    :scale: 90 %
 
 
 And a more common way of sharing reactionner/broker:
 
 
-.. image:: /_static/images///official/images/shinken-architecture-global-realm.png
+.. image:: /_static/images///official/images/alignak-architecture-global-realm.png
    :scale: 90 %
 
 

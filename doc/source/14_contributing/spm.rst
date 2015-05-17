@@ -1,10 +1,10 @@
 .. _contributing/spm:
 
 ========================
-Shinken Package Manager
+Alignak Package Manager
 ========================
 
-.. important::  I don't now how you get here :)  it's a poc of the design of a shinken pack manager. A pack can be a module, a configuration pack or what ever you want.
+.. important::  I don't now how you get here :)  it's a poc of the design of a alignak pack manager. A pack can be a module, a configuration pack or what ever you want.
 
 A pack can be about :
   * configuration
@@ -21,7 +21,7 @@ Each pack should have a pack.json file that describe it.
       "description": "Standard linux checks, like CPU, RAM and disk space. Checks are done by SNMP.",
       "type": "configuration",
       "dependencies": {
-          "shinken" : ">1.2"
+          "alignak" : ">1.2"
       },
       "repository": {
           "type": "git",
@@ -55,7 +55,7 @@ And for a module one :
       "description": "Log store module for LiveStatus. Will save the logs into Mongodb.",
       "type": "module",
       "dependencies": {
-          "shinken" : ">1.2",
+          "alignak" : ">1.2",
           "livestatus" : ">1.2"
       },
       "repository": {

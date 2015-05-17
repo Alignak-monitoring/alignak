@@ -1,0 +1,377 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+
+import os
+import cmd
+import sys
+import time
+
+try:
+    from alignak.bin import VERSION
+    import alignak
+except ImportError:
+    # If importing alignak fails, try to load from current directory
+    # or parent directory to support running without installation.
+    # Submodules will then be loaded from there, too.
+    import imp
+    imp.load_module('alignak', *imp.find_module('alignak', [os.path.realpath("."), os.path.realpath(".."), os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), "..")]))
+
+from alignak.bin import VERSION
+
+try:
+    import alignak.pyro_wrapper as pyro
+except ImportError:
+    sys.exit("Alignak require the Python Pyro module. Please install it.")
+from alignak.objects.arbiterlink import ArbiterLink
+Pyro = pyro.Pyro
+
+
+class Dummy:
+    def add(self, o):
+        pass
+
+from alignak.log import logger
+logger.load_obj(Dummy())
+
+sat_types = ['arbiter', 'scheduler', 'poller', 'reactionner',
+             'receiver', 'broker']
+
+
+def get_since(t):
+    now = time.time()
+    if t == 0:
+        return "never"
+    return "%ds ago" % (int(now - t))
+
+
+class AlignakAdmin(cmd.Cmd):
+    prompt = "> "
+
+    def __init__(self):
+        cmd.Cmd.__init__(self)
+        self.arb = None
+
+    # If we got no connections, connect with a standard localhost one
+    def look_connection(self):
+        if not self.arb:
+            self.do_connect('')
+        self.arb.ping()
+
+    def emptyline(self):
+        return
+
+    def do_connect(self, line):
+        '''
+        Connect to an arbiter daemon
+        Syntax: connect [host]:[port]
+        Ex: for Connecting to server, port 7770
+        > connect server:7770
+        Ex: connect to localhost, port 7770
+        > connect
+        '''
+        line = line.strip()
+        tokens = line.split(':')
+        if line == '':
+            addr = 'localhost'
+            port = '7770'
+        else:
+            addr = tokens[0]
+            try:
+                port = tokens[1]
+            except IndexError:
+                port = '7770'
+        #port = int(port)
+        print "Connection to %s:%s" % (addr, port)
+        ArbiterLink.use_ssl = False
+        self.arb = ArbiterLink({'arbiter_name': 'unnamed arbiter', 'address': addr, 'port': port})
+        self.arb.fill_default()
+        self.arb.pythonize()
+        self.arb.update_infos()
+        if self.arb.reachable:
+            print "Connection OK"
+        else:
+            print "Connection problem"
+
+    def do_status(self, line):
+        '''
+        Get daemons status as the connected arbiter know. If you call it
+        without an already open arbiter connection with 'connect' it will automatically
+        connect to locahost:7770.
+        '''
+        self.look_connection()
+        if not self.arb.reachable:
+            print "Cannot connect to the arbiter, bail out"
+            return
+
+        data = self.arb.get_all_states()
+
+        arbs = data['arbiter']
+
+        print "+-----------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} |".format("Arbiter", "address", "port", "alive", "reachable", "last_check")
+        print "+-----------------------------------------------------------------+"
+        for a in arbs:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} |".format(a.arbiter_name, a.address, a.port,
+                                    a.alive, a.reachable, get_since(a.last_check))
+        print "+-----------------------------------------------------------------+"
+
+        print "+-------------------------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format("Scheduler", "address", "port", "alive", "reachable", "last_check")
+        print "+-------------------------------------------------------------------------------+"
+        for s in data['scheduler']:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format(s.scheduler_name, s.address, s.port,
+                                    s.alive, s.reachable, get_since(s.last_check))
+        print "+-------------------------------------------------------------------------------+"
+
+        print "+-------------------------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format("Poller", "address", "port", "alive", "reachable", "last_check")
+        print "+-------------------------------------------------------------------------------+"
+        for s in data['poller']:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format(s.poller_name, s.address, s.port,
+                                                            s.alive, s.reachable, get_since(s.last_check))
+        print "+-------------------------------------------------------------------------------+"
+
+        print "+-------------------------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format("Reactionner", "address", "port", "alive", "reachable", "last_check")
+        print "+-------------------------------------------------------------------------------+"
+        for s in data['reactionner']:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format(s.reactionner_name, s.address, s.port,
+                                                            s.alive, s.reachable, get_since(s.last_check))
+        print "+-------------------------------------------------------------------------------+"
+
+        print "+-------------------------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format("Broker", "address", "port", "alive", "reachable", "last_check")
+        print "+-------------------------------------------------------------------------------+"
+        for s in data['broker']:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format(s.broker_name, s.address, s.port,
+                                    s.alive, s.reachable, get_since(s.last_check))
+        print "+-------------------------------------------------------------------------------+"
+
+        print "+-------------------------------------------------------------------------------+"
+        print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format("Receiver", "address", "port", "alive", "reachable", "last_check")
+        print "+-------------------------------------------------------------------------------+"
+        for s in data['receiver']:
+            print "| {0:15} | {1:15} | {2:5} | {3:5} | {4:11} | {5:11} |".format(s.receiver_name, s.address, s.port,
+                                    s.alive, s.reachable, get_since(s.last_check))
+        print "+-------------------------------------------------------------------------------+"
+
+    def do_getconf(self, line):
+        '''
+        Get the data in the arbiter for a table and some properties
+        like hosts  host_name realm
+        '''
+        self.look_connection()
+        if not self.arb.reachable:
+            print "Cannot connect to the arbiter, bail out"
+            return
+
+        data = self.arb.get_objects_properties('hosts', 'host_name', 'check_interval')
+
+        for l in data:
+            print ' '.join(['%s' % i for i in l])
+
+    def do_gethostname(self, line):
+        '''
+        Return the hostname of this machine as is it look for the*
+        host_name parameter of the arbiter configuration.
+        '''
+        import socket
+        print socket.gethostname()
+
+    def do_EOF(self, line):
+        return self.do_quit('')
+
+    def do_quit(self, line):
+        print "",
+        return True
+
+    def do_easter(self, line):
+        '''
+        Surprise. Look closer to the code to know what to launch with it.
+        '''
+        import alignak.easter as easter
+        line = line.strip()
+        f = getattr(easter, line, None)
+        if f:
+            f()
+
+    def do_showconfig(self, line):
+        '''
+        Display daemon configuration
+        The column Default show that we are using default values when D is present
+        Ex: show config poller will display configuration for all pollers
+        '''
+        from alignak.objects.config import Config
+
+        from alignak.objects.arbiterlink import ArbiterLink
+        from alignak.objects.schedulerlink import SchedulerLink
+        from alignak.objects.pollerlink import PollerLink
+        from alignak.objects.reactionnerlink import ReactionnerLink
+        from alignak.objects.brokerlink import BrokerLink
+        from alignak.objects.receiverlink import ReceiverLink
+
+
+        if line == "help" or line == "":
+            print "Usage: showconfig objecttype [objectname]"
+            print "Example: showconfig poller poller-1"
+        else:
+            type = line
+            self.look_connection()
+
+            # get properties from link classes
+            if type == 'arbiter':
+                o = ArbiterLink()
+                cfglink = 'arbiters'
+            elif type == 'scheduler':
+                o = SchedulerLink()
+                cfglink = 'schedulers'
+            elif type == 'poller':
+                o = PollerLink()
+                cfglink = 'pollers'
+            elif type == 'broker':
+                o = BrokerLink()
+                cfglink = 'brokers'
+            elif type == 'reactionner':
+                o = ReactionnerLink()
+                cfglink = 'reactionners'
+            elif type == 'receiver':
+                o = ReceiverLink()
+                cfglink = 'receivers'
+            else:
+                print "Unknown object type: %s" % type
+                return False
+
+            cfg = self.arb.get_config()
+            dlinks = getattr(cfg, cfglink)
+
+            for d in dlinks:
+                print "+%s+" % ("-".center(86, '-'))
+                print "| Config for: {0:71} |".format(type)
+                print "+%s+" % ("-".center(106, '-'))
+                print "| {0:8} | {1:30} | {2:60} |".format("Default", "Directive", "Value")
+                print "+%s+" % ("-".center(106, '-'))
+                for key in o.properties.keys():
+                    default = u""
+                    if hasattr(d, key):
+                        o = getattr(d, key)
+                        if isinstance(o, list):
+                            eltl = []
+                            for elt in getattr(d, key):
+                                if isinstance(elt, str):
+                                    eltl.append(unicode(elt))
+                                else:
+                                    eltl.append(unicode(elt.get_name()))
+                            elts = u", ".join(eltl)
+                        else:
+                            elts = unicode(getattr(d, key))
+                    else:
+                        # TODO: get default parameters
+                        default = u"D"
+                        elts = "TODO: get default value"
+                    if elts:
+                        print u"| {0:8} | {1:30} | {2:60} |".format(default, unicode(key), elts)
+                print "+%s+" % ("-".center(106, '-'))
+
+    def do_setloglevel(self, line):
+        '''
+        Change logging level for the given daemon (change all daemons logging level if no name given).
+        Allowed log level are: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+        WARNING: the change is not permanent! loglevel are reset to configuration value when daemons are restarted
+        '''
+        self.look_connection()
+        if not self.arb.reachable:
+            print "Cannot connect to the arbiter, bail out"
+            return
+
+        args = line.strip().split(' ')
+        if len(args) > 2 or args[0] == '':
+            print "Invalid number of arguments"
+            return
+
+        daemon = '*' if len(args) < 2 else args[0]
+        try:
+            loglevel = logger.get_level_id(args[-1])
+        except KeyError:
+            print "Invalid '%s' log level. Must be one of DEBUG, INFO, WARNING, ERROR, CRITICAL" % args[-1]
+            return
+
+        conf = self.arb.get_config()
+
+        # find matching daemons
+        matches = []
+
+        for type in sat_types:
+            # is the following line really necessary?
+            sats = self.arb.get_satellite_list(type)
+            sconf = getattr(conf, type + 's')
+
+            matches.extend([{
+                'type': type,
+                'name': getattr(c, type + '_name'),
+                'address': c.address,
+                'port': c.port
+            } for c in sconf if
+                c.alive is True and
+                (daemon == '*' or getattr(c, type + '_name') == daemon)
+            ])
+
+        if not len(matches):
+            print "No daemon(s) found!"
+
+        for m in matches:
+            print "Setting loglevel %s to *%s* daemon" % (args[-1], m['name'])
+            uri = pyro.create_uri(m['address'], m['port'], "ForArbiter", False)
+            conn = pyro.getProxy(uri)
+
+            try:
+                conn.set_log_level(loglevel)
+            except:
+                print "Cannot reach %s daemon!" % m['name']
+
+intro = 'Available functions:\n# connect [localhost:7770] \n# status\n# gethostname\n# help [function]\n# showconfig [daemon type]\n# setloglevel [daemon-name] loglevel\n# quit'
+
+if __name__ == "__main__":
+    AlignakAdmin().cmdloop(intro)

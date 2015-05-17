@@ -139,19 +139,19 @@ display_name
   This directive is used to define an alternate name that should be displayed in the web interface for this host. If not specified, this defaults to the value you specify for the *host_name* directive.
 
 parents
-  This directive is used to define a comma-delimited list of short names of the "parent" hosts for this particular host. Parent hosts are typically routers, switches, firewalls, etc. that lie between the monitoring host and a remote hosts. A router, switch, etc. which is closest to the remote host is considered to be that host's "parent". Read the "Determining Status and Reachability of Network Hosts" document located :ref:`here <thebasics/networkreachability>` for more information. If this host is on the same network segment as the host doing the monitoring (without any intermediate routers, etc.) the host is considered to be on the local network and will not have a parent host. Leave this value blank if the host does not have a parent host (i.e. it is on the same segment as the Shinken host). The order in which you specify parent hosts has no effect on how things are monitored.
+  This directive is used to define a comma-delimited list of short names of the "parent" hosts for this particular host. Parent hosts are typically routers, switches, firewalls, etc. that lie between the monitoring host and a remote hosts. A router, switch, etc. which is closest to the remote host is considered to be that host's "parent". Read the "Determining Status and Reachability of Network Hosts" document located :ref:`here <thebasics/networkreachability>` for more information. If this host is on the same network segment as the host doing the monitoring (without any intermediate routers, etc.) the host is considered to be on the local network and will not have a parent host. Leave this value blank if the host does not have a parent host (i.e. it is on the same segment as the Alignak host). The order in which you specify parent hosts has no effect on how things are monitored.
 
 hostgroups
   This directive is used to identify the *short name(s)* of the :ref:`hostgroup(s) <configobjects/hostgroup>` that the host belongs to. Multiple hostgroups should be separated by commas. This directive may be used as an alternative to (or in addition to) using the *members* directive in :ref:`hostgroup <configobjects/hostgroup>` definitions.
 
 check_command
-  This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that should be used to check if the host is up or down. Typically, this command would try and ping the host to see if it is "alive". The command must return a status of OK (0) or Shinken will assume the host is down. If you leave this argument blank, the host will *not* be actively checked. Thus, Shinken will likely always assume the host is up (it may show up as being in a "PENDING" state in the web interface). This is useful if you are monitoring printers or other devices that are frequently turned off. The maximum amount of time that the notification command can run is controlled by the :ref:`host_check_timeout <configuration/configmain#host_check_timeout>` option.
+  This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that should be used to check if the host is up or down. Typically, this command would try and ping the host to see if it is "alive". The command must return a status of OK (0) or Alignak will assume the host is down. If you leave this argument blank, the host will *not* be actively checked. Thus, Alignak will likely always assume the host is up (it may show up as being in a "PENDING" state in the web interface). This is useful if you are monitoring printers or other devices that are frequently turned off. The maximum amount of time that the notification command can run is controlled by the :ref:`host_check_timeout <configuration/configmain#host_check_timeout>` option.
 
 initial_state
-  By default Shinken will assume that all hosts are in UP states when in starts. You can override the initial state for a host by using this directive. Valid options are: **o** = UP, **d** = DOWN, and **u** = UNREACHABLE.
+  By default Alignak will assume that all hosts are in UP states when in starts. You can override the initial state for a host by using this directive. Valid options are: **o** = UP, **d** = DOWN, and **u** = UNREACHABLE.
 
 max_check_attempts
-  This directive is used to define the number of times that Shinken will retry the host check command if it returns any state other than an OK state. Setting this value to 1 will cause Shinken to generate an alert without retrying the host check again.
+  This directive is used to define the number of times that Alignak will retry the host check command if it returns any state other than an OK state. Setting this value to 1 will cause Alignak to generate an alert without retrying the host check again.
 
   If you do not want to check the status of the host, you must still set this to a minimum value of 1. To bypass the host check, just leave the "check_command" option blank.
 
@@ -178,7 +178,7 @@ check_freshness
   This directive is used to determine whether or not :ref:`freshness checks <advanced/freshness>` are enabled for this host. Values: 0 = disable freshness checks, 1 = enable freshness checks.
 
 freshness_threshold
-  This directive is used to specify the freshness threshold (in seconds) for this host. If you set this directive to a value of 0, Shinken will determine a freshness threshold to use automatically.
+  This directive is used to specify the freshness threshold (in seconds) for this host. If you set this directive to a value of 0, Alignak will determine a freshness threshold to use automatically.
 
 event_handler
   This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that should be run whenever a change in the state of the host is detected (i.e. whenever it goes down or recovers). Read the documentation on :ref:`event handlers <advanced/eventhandlers>` for a more detailed explanation of how to write scripts for handling events. The maximum amount of time that the event handler command can run is controlled by the :ref:`event_handler_timeout <configuration/configmain-advanced#event_handler_timeout>` option.
@@ -214,16 +214,16 @@ contact_groups
   This is a list of the *short names* of the :ref:`contact groups <configobjects/contactgroup>` that should be notified whenever there are problems (or recoveries) with this host. Multiple contact groups should be separated by commas. You must specify at least one contact or contact group in each host definition.
 
 notification_interval
-  This directive is used to define the number of “time units" to wait before re-notifying a contact that this service is *still* down or unreachable. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Shinken will *not* re-notify contacts about problems for this host - only one problem notification will be sent out.
+  This directive is used to define the number of “time units" to wait before re-notifying a contact that this service is *still* down or unreachable. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Alignak will *not* re-notify contacts about problems for this host - only one problem notification will be sent out.
 
 first_notification_delay
-  This directive is used to define the number of “time units" to wait before sending out the first problem notification when this host enters a non-UP state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Shinken will start sending out notifications immediately.
+  This directive is used to define the number of “time units" to wait before sending out the first problem notification when this host enters a non-UP state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Alignak will start sending out notifications immediately.
 
 notification_period
   This directive is used to specify the short name of the :ref:`time period <configobjects/timeperiod>` during which notifications of events for this host can be sent out to contacts. If a host goes down, becomes unreachable, or recoveries during a time which is not covered by the time period, no notifications will be sent out.
 
 notification_options
-  This directive is used to determine when notifications for the host should be sent out. Valid options are a combination of one or more of the following: **d** = send notifications on a DOWN state, **u** = send notifications on an UNREACHABLE state, **r** = send notifications on recoveries (OK state), **f** = send notifications when the host starts and stops :ref:`flapping <advanced/flapping>`, and **s** = send notifications when :ref:`scheduled downtime <advanced/downtime>` starts and ends. If you specify **n** (none) as an option, no host notifications will be sent out. If you do not specify any notification options, Shinken will assume that you want notifications to be sent out for all possible states.
+  This directive is used to determine when notifications for the host should be sent out. Valid options are a combination of one or more of the following: **d** = send notifications on a DOWN state, **u** = send notifications on an UNREACHABLE state, **r** = send notifications on recoveries (OK state), **f** = send notifications when the host starts and stops :ref:`flapping <advanced/flapping>`, and **s** = send notifications when :ref:`scheduled downtime <advanced/downtime>` starts and ends. If you specify **n** (none) as an option, no host notifications will be sent out. If you do not specify any notification options, Alignak will assume that you want notifications to be sent out for all possible states.
 
   If you specify **d,r** in this field, notifications will only be sent out when the host goes DOWN and when it recovers from a DOWN state.
 
@@ -238,10 +238,10 @@ notes
   This directive is used to define an optional string of notes pertaining to the host. If you specify a note here, you will see the it in the extended information CGI (when you are viewing information about the specified host).
 
 notes_url
-  This variable is used to define an optional URL that can be used to provide more information about the host. If you specify an URL, you will see a red folder icon in the CGIs (when you are viewing host information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/shinken///). This can be very useful if you want to make detailed information on the host, emergency contact methods, etc. available to other support staff.
+  This variable is used to define an optional URL that can be used to provide more information about the host. If you specify an URL, you will see a red folder icon in the CGIs (when you are viewing host information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/alignak///). This can be very useful if you want to make detailed information on the host, emergency contact methods, etc. available to other support staff.
 
 action_url
-  This directive is used to define one or more optional URL that can be used to provide more actions to be performed on the host. If you specify an URL, you will see a red “splat" icon in the CGIs (when you are viewing host information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. */cgi-bin/shinken/*).
+  This directive is used to define one or more optional URL that can be used to provide more actions to be performed on the host. If you specify an URL, you will see a red “splat" icon in the CGIs (when you are viewing host information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. */cgi-bin/alignak/*).
   :ref:`Configure multiple action_urls. <advanced/multiple-urls>`
 
 icon_image
@@ -291,10 +291,10 @@ business_impact_modulations
   This variable is used to link with business_impact_modulations objects. It will allow such modulation to apply (for example if the host is a payd server, it will be important only in a specific timeperiod: near the payd day). Look at business_impact_modulations objects for more details.
 
 icon_set
-  This variable is used to set the icon in the Shinken Webui. For now, values are only : database, disk, network_service, server
+  This variable is used to set the icon in the Alignak Webui. For now, values are only : database, disk, network_service, server
 
 maintenance_period
-  Shinken-specific variable to specify a recurring downtime period. This works like a scheduled downtime, so unlike a check_period with exclusions, checks will still be made (no ":ref:`blackout <thebasics/timeperiods#how_time_periods_work_with_host_and_service_checks>`" times). `announcement`_
+  Alignak-specific variable to specify a recurring downtime period. This works like a scheduled downtime, so unlike a check_period with exclusions, checks will still be made (no ":ref:`blackout <thebasics/timeperiods#how_time_periods_work_with_host_and_service_checks>`" times). `announcement`_
 
 service_overrides
   This variable may be used to override services directives for a specific host. This is especially useful when services are inherited (for instance from packs), because it allows to have a host attached service set one of its directives a specific value. For example, on a set of web servers, **HTTP** service (inherited from **http** pack) on *production* servers should have notifications enabled **24x7**, and *staging* server should only notify during **workhours**. To do so, staging server should be set the following directive: **service_overrides HTTP,notification_period workhours**. Several overrides may be specified, each override should be written on a single line. *Caution*, *service_overrides* may be inherited (through the **use** directive), but specifying an override on a host overloads all values inherited from parent hosts, it does not append it (as of any single valued attribute). See :ref:`inheritance description<advanced/objectinheritance>` for more details.
@@ -350,5 +350,5 @@ trigger_broker_raise_enabled
   Basically, if you use one of the predefined function (trigger_functions.py) set it to 1
 
 
-.. _announcement: http://www.mail-archive.com/shinken-devel@lists.sourceforge.net/msg00247.html
+.. _announcement: http://www.mail-archive.com/...
 .. _gd library: http://www.boutell.com/gd/

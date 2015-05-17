@@ -6,7 +6,7 @@
 
 <Component Thruk::Backend>
     <peer>
-        name   = External Shinken
+        name   = External Alignak
         type   = livestatus
         <options>
             peer    = 127.0.0.1:50000

@@ -146,7 +146,7 @@ is_volatile
   This directive is used to denote whether the service is "volatile". Services are normally *not* volatile. More information on volatile service and how they differ from normal services can be found :ref:`here <advanced/volatileservices>`. Value: 0 = service is not volatile, 1 = service is volatile.
 
 check_command
-  This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that Shinken will run in order to check the status of the service. The maximum amount of time that the service check command can run is controlled by the :ref:`service_check_timeout <configuration/configmain#service_check_timeout>` option.
+  This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that Alignak will run in order to check the status of the service. The maximum amount of time that the service check command can run is controlled by the :ref:`service_check_timeout <configuration/configmain#service_check_timeout>` option.
   There is also a command with the reserved name "bp_rule". It is defined internally and has a special meaning. Unlike other commands it mustn't be registered in a command definition. It's purpose is not to execute a plugin but to represent a logical operation on the statuses of other services. It is possible to define logical relationships with the following operators :
 
     * & : it's use to make an AND betweens statuses
@@ -164,7 +164,7 @@ check_command
   If at least one of the apaches on servers websrv1 and websrv2 is OK and if the oracle database on dbsrv1 is OK then the rule and thus the service is OK
 
 initial_state
-  By default Shinken will assume that all services are in OK states when in starts. You can override the initial state for a service by using this directive. Valid options are:
+  By default Alignak will assume that all services are in OK states when in starts. You can override the initial state for a service by using this directive. Valid options are:
 
     * **o** = OK
     * **w** = WARNING
@@ -172,7 +172,7 @@ initial_state
     * **c** = CRITICAL.
 
 max_check_attempts
-  This directive is used to define the number of times that Shinken will retry the service check command if it returns any state other than an OK state. Setting this value to 1 will cause Shinken to generate an alert without retrying the service check again.
+  This directive is used to define the number of times that Alignak will retry the service check command if it returns any state other than an OK state. Setting this value to 1 will cause Alignak to generate an alert without retrying the service check again.
 
 check_interval
   This directive is used to define the number of “time units" to wait before scheduling the next “regular" check of the service. “Regular" checks are those that occur when the service is in an OK state or when the service is in a non-OK state, but has already been rechecked **max_check_attempts** number of times. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. More information on this value can be found in the :ref:`check scheduling <advanced/checkscheduling>` documentation.
@@ -205,7 +205,7 @@ check_freshness :ref:`* <configuration/objectdefinitions#retention_notes>`
     * 1 = enable freshness checks
 
 freshness_threshold
-  This directive is used to specify the freshness threshold (in seconds) for this service. If you set this directive to a value of 0, Shinken will determine a freshness threshold to use automatically.
+  This directive is used to specify the freshness threshold (in seconds) for this service. If you set this directive to a value of 0, Alignak will determine a freshness threshold to use automatically.
 
 event_handler
   This directive is used to specify the *short name* of the :ref:`command <configobjects/command>` that should be run whenever a change in the state of the service is detected (i.e. whenever it goes down or recovers). Read the documentation on :ref:`event handlers <advanced/eventhandlers>` for a more detailed explanation of how to write scripts for handling events. The maximum amount of time that the event handler command can run is controlled by the :ref:`event_handler_timeout <configuration/configmain-advanced#event_handler_timeout>` option.
@@ -255,10 +255,10 @@ retain_nonstatus_information
     * 1 = enable non-status information retention
 
 notification_interval
-  This directive is used to define the number of “time units" to wait before re-notifying a contact that this service is *still* in a non-OK state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Shinken will *not* re-notify contacts about problems for this service - only one problem notification will be sent out.
+  This directive is used to define the number of “time units" to wait before re-notifying a contact that this service is *still* in a non-OK state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Alignak will *not* re-notify contacts about problems for this service - only one problem notification will be sent out.
 
 first_notification_delay
-  This directive is used to define the number of “time units" to wait before sending out the first problem notification when this service enters a non-OK state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Shinken will start sending out notifications immediately.
+  This directive is used to define the number of “time units" to wait before sending out the first problem notification when this service enters a non-OK state. Unless you've changed the :ref:`interval_length <configuration/configmain-advanced#interval_length>` directive from the default value of 60, this number will mean minutes. If you set this value to 0, Alignak will start sending out notifications immediately.
 
 notification_period
   This directive is used to specify the short name of the :ref:`time period <configobjects/timeperiod>` during which notifications of events for this service can be sent out to contacts. No service notifications will be sent out during times which is not covered by the time period.
@@ -272,7 +272,7 @@ notification_options
     * **r** = send notifications on recoveries (OK state)
     * **f** = send notifications when the service starts and stops :ref:`flapping <advanced/flapping>`
     * **s** = send notifications when :ref:`scheduled downtime <advanced/downtime>` starts and ends
-    * **n** (none) as an option, no service notifications will be sent out. If you do not specify any notification options, Shinken will assume that you want notifications to be sent out for all possible states
+    * **n** (none) as an option, no service notifications will be sent out. If you do not specify any notification options, Alignak will assume that you want notifications to be sent out for all possible states
 
   If you specify **w,r** in this field, notifications will only be sent out when the service goes into a WARNING state and when it recovers from a WARNING state.
 
@@ -302,10 +302,10 @@ notes
   This directive is used to define an optional string of notes pertaining to the service. If you specify a note here, you will see the it in the :ref:`extended information <thebasics/cgis>` CGI (when you are viewing information about the specified service).
 
 notes_url
-  This directive is used to define an optional URL that can be used to provide more information about the service. If you specify an URL, you will see a red folder icon in the CGIs (when you are viewing service information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/shinken///). This can be very useful if you want to make detailed information on the service, emergency contact methods, etc. available to other support staff.
+  This directive is used to define an optional URL that can be used to provide more information about the service. If you specify an URL, you will see a red folder icon in the CGIs (when you are viewing service information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/alignak///). This can be very useful if you want to make detailed information on the service, emergency contact methods, etc. available to other support staff.
 
 action_url
-  This directive is used to define an optional URL that can be used to provide more actions to be performed on the service. If you specify an URL, you will see a red “splat" icon in the CGIs (when you are viewing service information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/shinken///).
+  This directive is used to define an optional URL that can be used to provide more actions to be performed on the service. If you specify an URL, you will see a red “splat" icon in the CGIs (when you are viewing service information) that links to the URL you specify here. Any valid URL can be used. If you plan on using relative paths, the base path will the the same as what is used to access the CGIs (i.e. ///cgi-bin/alignak///).
 
 icon_image
   This variable is used to define the name of a GIF, PNG, or JPG image that should be associated with this service. This image will be displayed in the :ref:`status <thebasics/cgis#thebasics_cgis_status_cgi>` and :ref:`extended information <thebasics/cgis>` CGIs. The image will look best if it is 40x40 pixels in size. Images for services are assumed to be in the **logos/** subdirectory in your HTML images directory.
@@ -325,7 +325,7 @@ reactionner_tag
 
 duplicate_foreach
   This is used to generate serveral service with only one service declaration.
-  Shinken understands this statement as : "Create a service for earch key in the variable".
+  Alignak understands this statement as : "Create a service for earch key in the variable".
   Usually, this statement come with a "$KEY$" string in the service_description (to have a differente name) and in the check_command (you want also a different check)
   Moreover, one or several variables can be associated to each key. Then, values can be used in the service definition with $VALUE$ or $VALUEn$ macros.
 
@@ -377,10 +377,10 @@ business_impact
   This variable is used to set the importance we gave to this service from the less important (0 = nearly nobody will see if it's in error) to the maximum (5 = you lost your job if it fail). The default value is 2.
 
 icon_set
-  This variable is used to set the icon in the Shinken Webui. For now, values are only : database, disk, network_service, server
+  This variable is used to set the icon in the Alignak Webui. For now, values are only : database, disk, network_service, server
 
 maintenance_period
-  Shinken-specific variable to specify a recurring downtime period. This works like a scheduled downtime, so unlike a check_period with exclusions, checks will still be made (no ":ref:`blackout <thebasics/timeperiods#how_time_periods_work_with_host_and_service_checks>`" times). `announcement`_
+  Alignak-specific variable to specify a recurring downtime period. This works like a scheduled downtime, so unlike a check_period with exclusions, checks will still be made (no ":ref:`blackout <thebasics/timeperiods#how_time_periods_work_with_host_and_service_checks>`" times). `announcement`_
 
 host_dependency_enabled
   This variable may be used to remove the dependency between a service and its parent host. Used for volatile services that need notification related to itself and not depend on the host notifications.
@@ -428,4 +428,4 @@ trigger_broker_raise_enabled
   Basically, if you use one of the predefined function (trigger_functions.py) set it to 1
 
 
-.. _announcement: http://www.mail-archive.com/shinken-devel@lists.sourceforge.net/msg00247.html
+.. _announcement: http://www.mail-archive.com/...

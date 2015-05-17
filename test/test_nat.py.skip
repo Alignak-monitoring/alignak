@@ -1,29 +1,50 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-# Copyright (C) 2009-2014:
-#    Guillaume Bour/Uperto, guillaume.bour@uperto.com
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Guillaume Bour/Uperto, guillaume.bour@uperto.com
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #
-# This file test Shinken working in a NATted environment
+# This file test Alignak working in a NATted environment
 # Makes use of netkit (www.netkit.org) software
 #
 
@@ -36,10 +57,10 @@ import os.path
 import unittest
 import subprocess
 
-SVC_CMD = "cd /hostlab && ./bin/shinken-#svc# -d -r -c ./test/etc/netkit/basic/#svc#d.ini\n"
+SVC_CMD = "cd /hostlab && ./bin/alignak-#svc# -d -r -c ./test/etc/netkit/basic/#svc#d.ini\n"
 
 launchers = {
-    'arbiter': "cd /hostlab/var && ../bin/shinken-#svc# -r -c ../etc/shinken.cfg -c ../test/etc/netkit/#conf#/shinken-specific.cfg 2>&1 > ./arbiter.debug&\n",
+    'arbiter': "cd /hostlab/var && ../bin/alignak-#svc# -r -c ../etc/alignak.cfg -c ../test/etc/netkit/#conf#/alignak-specific.cfg 2>&1 > ./arbiter.debug&\n",
     'broker': SVC_CMD,
     'poller': SVC_CMD,
     'reactionner': SVC_CMD,
@@ -68,7 +89,7 @@ def cleanup():
             os.remove(f)
 
 
-class TestNat(ShinkenTest):
+class TestNat(AlignakTest):
     def setUp(self):
         self.testdir = os.path.dirname(os.path.abspath(sys.argv[0]))
         self.files = dict()
@@ -87,7 +108,7 @@ class TestNat(ShinkenTest):
 
             self.files[vm+'.lock'] = lock
 
-        # cleanup shinken logs
+        # cleanup alignak logs
         for f in glob.glob(os.path.join(self.testdir, "..", "var", "*.log")):
             os.remove(f)
         try:

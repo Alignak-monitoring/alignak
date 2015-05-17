@@ -5,6 +5,6 @@
 # your environment as necessary.
 
 now=$(date +%s)
-commandfile='/usr/local/shinken/var/rw/nagios.cmd'
+commandfile='/usr/local/alignak/var/rw/nagios.cmd'
 
 printf "[%lu] ACKNOWLEDGE_HOST_PROBLEM;dc01;1;1;1;Jean Gabes;Some Acknowledgement Comment\n" $now > $commandfile

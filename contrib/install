@@ -1,25 +1,47 @@
 #!/bin/bash
 #set -x
-#Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    David GUENAULT, dguenault@monitoring-fr.org
-#    Romain FORLOT, rforlot@yahoo.com
 #
-#This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-#Shinken is free software: you can redistribute it and/or modify
-#it under the terms of the GNU Affero General Public License as published by
-#the Free Software Foundation, either version 3 of the License, or
-#(at your option) any later version.
+# This file is part of Alignak.
 #
-#Shinken is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU Affero General Public License for more details.
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-#You should have received a copy of the GNU Affero General Public License
-#along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     David GUENAULT, dguenault@monitoring-fr.org
+#     Romain FORLOT, rforlot@yahoo.com
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
@@ -30,11 +52,11 @@
 
 export myscripts=$(readlink -f $(dirname $0))
 src=$myscripts
-. "$myscripts"/install.d/shinken.conf
+. "$myscripts"/install.d/alignak.conf
 
 
 function remove(){
-    cadre "Removing shinken" green
+    cadre "Removing alignak" green
     skill
 
     manageparameters "quiet"
@@ -52,29 +74,29 @@ function remove(){
         rm -Rf $ETC
     fi
 
-    if [ -h "/etc/default/shinken" ]
+    if [ -h "/etc/default/alignak" ]
     then
         cecho " > Removing defaults" green
-        rm -Rf /etc/default/shinken
+        rm -Rf /etc/default/alignak
     fi
-    if [ -f "/etc/init.d/shinken" ] || [ -f ${SYSTEMDPATH}lib/systemd/system/shinken-arbiter.service ]
+    if [ -f "/etc/init.d/alignak" ] || [ -f ${SYSTEMDPATH}lib/systemd/system/alignak-arbiter.service ]
     then
         cecho " > Removing startup scripts" green
         case $INIT in
             init)
-                disable_service shinken
-                rm -f /etc/init.d/shinken* >> ${LOGFILE} 2>&1
+                disable_service alignak
+                rm -f /etc/init.d/alignak* >> ${LOGFILE} 2>&1
                 ;;
             systemd)
                 systemctl disable $SYSTEMDSERVICES >> ${LOGFILE} 2>&1
-                rm -f ${SYSTEMDPATH}lib/systemd/system/shinken* >> ${LOGFILE} 2>&1
+                rm -f ${SYSTEMDPATH}lib/systemd/system/alignak* >> ${LOGFILE} 2>&1
                 systemctl --system daemon-reload
                 ;;
         esac
     fi
 
-    # Remove sudo file used for shinken
-    rm -f /etc/sudoers.d/shinken
+    # Remove sudo file used for alignak
+    rm -f /etc/sudoers.d/alignak
 
     if [ -d "$PNPPREFIX" ]
     then
@@ -196,10 +218,10 @@ function purgeSQLITE(){
 }
 
 function skill(){
-    cecho " > Stopping Shinken" green
+    cecho " > Stopping Alignak" green
     case $INIT in
         init)
-            /etc/init.d/shinken stop >> ${LOGFILE} 2>&1
+            /etc/init.d/alignak stop >> ${LOGFILE} 2>&1
             ;;
         systemd)
             systemctl stop $SYSTEMDSERVICES >> ${LOGFILE} 2>&1
@@ -224,10 +246,10 @@ function skill(){
 }
 
 function sstart() {
-    cecho " > Starting shinken" green
+    cecho " > Starting alignak" green
     case $INIT in
         init)
-            /etc/init.d/shinken start >> ${LOGFILE} 2>&1
+            /etc/init.d/alignak start >> ${LOGFILE} 2>&1
             ;;
         systemd)
             systemctl --system daemon-reload
@@ -235,7 +257,7 @@ function sstart() {
             systemctl status $SYSTEMDSERVICES >> ${LOGFILE} 2>&1
             ;;
         *)
-            cecho " > Your init system aren't supported in shinken for now." red
+            cecho " > Your init system aren't supported in alignak for now." red
             exit 2
             ;;
     esac
@@ -282,20 +304,20 @@ function check_exist(){
         cecho " > Target folder already exists" red
         exit 2
     fi
-    if [ -e "/etc/init.d/shinken" ]
+    if [ -e "/etc/init.d/alignak" ]
     then
         cecho " > Init scripts already exists" red
         exit 2
     fi
-    if [ -L "/etc/default/shinken" ]
+    if [ -L "/etc/default/alignak" ]
     then
-        cecho " > Shinken default already exists" red
+        cecho " > Alignak default already exists" red
         exit 2
     fi
 
 }
 
-function shinken_exist(){
+function alignak_exist(){
     if [ -d $TARGET ]
     then
         echo 1
@@ -569,17 +591,17 @@ function check_distro(){
 }
 
 function get_from_git(){
-    cadre "Getting shinken" green
+    cadre "Getting alignak" green
     cd $TMP
-    if [ -e "shinken" ]
+    if [ -e "alignak" ]
     then
-        rm -Rf shinken
+        rm -Rf alignak
     fi
     env GIT_SSL_NO_VERIFY=true git clone $GIT >> ${LOGFILE} 2>&1
-    cd shinken
+    cd alignak
     cecho " > Switching to version $VERSION" green
     git checkout $VERSION >> ${LOGFILE} 2>&1
-    export src=$TMP/shinken
+    export src=$TMP/alignak
     # clean up .git folder
     rm -Rf .git
 }
@@ -651,12 +673,12 @@ function register(){
 
     cecho " > trying to register " yellow
 
-    result=$($TARGET/bin/shinken-packs -r -l $login -P $pass -e $email | grep "^OK")
+    result=$($TARGET/bin/alignak-packs -r -l $login -P $pass -e $email | grep "^OK")
     if [ ! -z "$result" ]
     then
         creads " --> Registration success. Please look at your email and click in the link in it to validate your account (Hit ENTER when done)" green
         cecho " ----> Getting key" green
-        apikey=$($TARGET/bin/shinken-packs -g -l $login -P $pass | grep "api key is" | awk '{print $5}')
+        apikey=$($TARGET/bin/alignak-packs -g -l $login -P $pass | grep "api key is" | awk '{print $5}')
         if [ -z "$apikey" ]
         then
             cecho " ------> There was a problem getting your api key!" red
@@ -693,16 +715,16 @@ function relocate(){
     # relocate nagios plugin path
     cecho " > relocate nagios plugin path" green
     sed -i "s#/usr/lib/nagios/plugins#$LIBEXEC#g" $ETC/resource.cfg
-    sed -i "s#/usr/local/shinken/libexec#$LIBEXEC#g" $ETC/resource.cfg
+    sed -i "s#/usr/local/alignak/libexec#$LIBEXEC#g" $ETC/resource.cfg
 
-    # relocate default /usr/local/shinken path
-    if [ "$TARGET" != "/usr/local/shinken" ]
+    # relocate default /usr/local/alignak path
+    if [ "$TARGET" != "/usr/local/alignak" ]
     then
-	    for fic in $(find . | grep -v "shinken-install" | grep -v "\.pyc$" | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
+	    for fic in $(find . | grep -v "alignak-install" | grep -v "\.pyc$" | xargs grep -snH "/usr/local/alignak" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
 	    do
 	        cecho " > Processing $fic" green
 	        cp "$fic" "$fic.orig"
-	        sed -i 's#/usr/local/shinken#'$TARGET'#g' "$fic"
+	        sed -i 's#/usr/local/alignak#'$TARGET'#g' "$fic"
 	    done
     fi
 
@@ -710,18 +732,18 @@ function relocate(){
     if [ "$TARGET/etc" != "$ETC" ]
     then
         cd $ETC
-        for fic in $(find . | grep -v "shinken-install" | grep -v "\.pyc$" | xargs grep -snH "/usr/local/shinken" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
+        for fic in $(find . | grep -v "alignak-install" | grep -v "\.pyc$" | xargs grep -snH "/usr/local/alignak" --color | cut -f1 -d' ' | awk -F : '{print $1}' | sort | uniq)
         do
             cecho " > Processing $fic" green
             cp "$fic" "$fic.orig"
-            sed -i 's#/usr/local/shinken#'$TARGET'#g' "$fic"
+            sed -i 's#/usr/local/alignak#'$TARGET'#g' "$fic"
         done
         cd $TARGET
     fi
 
     # set some directives
     cadre "Set some configuration directives" green
-    directives="workdir=$TARGET/var user=$SKUSER shinken_user=$SKUSER group=$SKGROUP shinken_group=$SKGROUP"
+    directives="workdir=$TARGET/var user=$SKUSER alignak_user=$SKUSER group=$SKGROUP alignak_group=$SKGROUP"
     for fic in $(ls -1 $ETC/daemons/*.ini)
     do
         cecho " > Processing $fic" green;
@@ -737,7 +759,7 @@ function relocate(){
             cecho "    > processing $file" green
         done
     done
-    #directives="workdir=$TARGET/var shinken_user=$SKUSER shinken_group=$SKGROUP local_log=$TARGET/var/arbiter.log lock_file=$TARGET/var/arbiter.pid"
+    #directives="workdir=$TARGET/var alignak_user=$SKUSER alignak_group=$SKGROUP local_log=$TARGET/var/arbiter.log lock_file=$TARGET/var/arbiter.pid"
     #for fic in $(ls -1 $ETC/nagios*cfg)
     #do
     #    cecho " > Processing $fic" green;
@@ -745,17 +767,17 @@ function relocate(){
     #done
     # relocate default file
     cd $TARGET/bin/default
-    cat $TARGET/bin/default/shinken.in | sed  -e 's#LOG\=\(.*\)$#LOG='$TARGET'/var#g' -e 's#RUN\=\(.*\)$#RUN='$TARGET'/var#g' -e  's#ETC\=\(.*\)$#ETC='$ETC'#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken
-    rm $TARGET/bin/default/shinken.in
+    cat $TARGET/bin/default/alignak.in | sed  -e 's#LOG\=\(.*\)$#LOG='$TARGET'/var#g' -e 's#RUN\=\(.*\)$#RUN='$TARGET'/var#g' -e  's#ETC\=\(.*\)$#ETC='$ETC'#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/alignak
+    rm $TARGET/bin/default/alignak.in
     # relocate init file
-    sed -i -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" $TARGET/bin/init.d/shinken
+    sed -i -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" $TARGET/bin/init.d/alignak
     # relocate skonf.cfg
     cd $ETC
 
 
     # relocate she bang python in every python files
     PY=$(which $(pythonver))
-    for f in $(grep "\#\!.*python" $TARGET/bin/shinken* | grep -v "\.py" | awk -F: '{print $1}')
+    for f in $(grep "\#\!.*python" $TARGET/bin/alignak* | grep -v "\.py" | awk -F: '{print $1}')
     do
         cecho "Relocate python interpreter to $PY in $f" green
         sed -i "s#/usr/bin/env python#$PY#g" $f
@@ -767,41 +789,41 @@ function fix(){
     cadre "Applying various fixes" green
 
     # fix some path
-    for f in $(grep -R "/var/run/shinken" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
+    for f in $(grep -R "/var/run/alignakn" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
     do
-        sed -i "s#/var/run/shinken#"$TARGET"/var#g" $f
+        sed -i "s#/var/run/alignak#"$TARGET"/var#g" $f
     done
 
-    for f in $(grep -R "/var/log/shinken" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
+    for f in $(grep -R "/var/log/alignak" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
     do
-        sed -i "s#/var/log/shinken#"$TARGET"/var#g" $f
+        sed -i "s#/var/log/alignak#"$TARGET"/var#g" $f
     done
 
-    for f in $(grep -R "/var/lib/shinken" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
+    for f in $(grep -R "/var/lib/alignak" $TARGET/ | awk -F: '{print $1}' | sort | uniq)
     do
-        sed -i "s#/var/lib/shinken#"$TARGET"#g" $f
+        sed -i "s#/var/lib/alignak#"$TARGET"#g" $f
     done
 
     # fix the htpasswd.users file path for WEBUI authentication
     export PYTHONPATH=$TARGET
     export PY="$(pythonver)"
-    result=$($PY $TARGET/install.d/tools/skonf.py -f $ETC/shinken-specific.cfg -a setparam -o module -r "module_name=Apache_passwd" -d "passwd" -v "$ETC/htpasswd.users")
+    result=$($PY $TARGET/install.d/tools/skonf.py -f $ETC/alignak-specific.cfg -a setparam -o module -r "module_name=Apache_passwd" -d "passwd" -v "$ETC/htpasswd.users")
     cecho " > $result" green
 
     cecho " > Make files permissions and owners good" green
-    [ -f /etc/init.d/shinken ] && chmod +x /etc/init.d/shinken
-    chmod +x $TARGET/bin/init.d/shinken
+    [ -f /etc/init.d/alignak ] && chmod +x /etc/init.d/alignak
+    chmod +x $TARGET/bin/init.d/alignak
     chown -R $SKUSER:$SKGROUP $TARGET
     chown -R $SKUSER:$SKGROUP $ETC
     chmod -R g+w $TARGET
     chmod -R g+w $ETC
 
-    cecho " > Fix /etc/sudoers file for shinken integration" green
+    cecho " > Fix /etc/sudoers file for alignak integration" green
     cp /etc/sudoers /etc/sudoers.$(date +%Y%m%d%H%M%S)
     sed -i "s/^Defaults.*requiretty/#&/g" /etc/sudoers
-    cecho " > Add Shinken entry for skonf in sudoers" green
-    echo "$SKUSER ALL=(ALL) NOPASSWD: /usr/bin/nmap" >> /etc/sudoers.d/shinken
-    chmod u=r,g=r,o= /etc/sudoers.d/shinken
+    cecho " > Add Alignak entry for skonf in sudoers" green
+    echo "$SKUSER ALL=(ALL) NOPASSWD: /usr/bin/nmap" >> /etc/sudoers.d/alignak
+    chmod u=r,g=r,o= /etc/sudoers.d/alignak
     [ $? -ne 0 ] && cecho "$DIST isn't supported, you must fix sudo permission at your own !!!" red
 
 
@@ -811,25 +833,25 @@ function enable_initd(){
     cecho " > Installing startup scripts" green
     case $INIT in
         init)
-            cp $TARGET/bin/init.d/shinken* /etc/init.d/
+            cp $TARGET/bin/init.d/alignak* /etc/init.d/
             cecho " > Enabling $DIST startup script" green
-            enable_service shinken
+            enable_service alignak
             ;;
         systemd)
             cp -f  "$myscripts"/for_fedora/systemd/* ${SYSTEMDPATH}lib/systemd/system
             # Fix path to daemon in service file for systemd
-            sed -i -e 's/sbin/local\/shinken\/bin/' -e 's/etc\/shinken/usr\/local\/shinken\/etc/g' ${SYSTEMDPATH}lib/systemd/system/shinken*
-            sed -i -e 's/Type=forking/&\nWorkingDirectory=\/usr\/local\/shinken\/shinken/g' ${SYSTEMDPATH}lib/systemd/system/shinken-arbiter
+            sed -i -e 's/sbin/local\/alignak\/bin/' -e 's/etc\/alignak/usr\/local\/alignak\/etc/g' ${SYSTEMDPATH}lib/systemd/system/alignak*
+            sed -i -e 's/Type=forking/&\nWorkingDirectory=\/usr\/local\/alignak\/alignak/g' ${SYSTEMDPATH}lib/systemd/system/alignak-arbiter
             cecho " > Enabling $DIST startup script" green
-            enable_service shinken-arbiter
-            enable_service shinken-broker
-            enable_service shinken-poller
-            enable_service shinken-reactionner
-            enable_service shinken-receiver
-            enable_service shinken-scheduler
+            enable_service alignak-arbiter
+            enable_service alignak-broker
+            enable_service alignak-poller
+            enable_service alignak-reactionner
+            enable_service alignak-receiver
+            enable_service alignak-scheduler
             ;;
         *)
-            cecho " > Error! your init system isn't support by shinken for now." red
+            cecho " > Error! your init system isn't support by alignak for now." red
             ;;
     esac
 }
@@ -857,28 +879,28 @@ function cleanuptarget(){
     rm -Rf MANIFEST.in setup.py
     rm -Rf $ETC/*windows*
 
-    cp $ETC/shinken-specific.cfg $ETC/shinken-specific.cfg.orig
+    cp $ETC/alignak-specific.cfg $ETC/alignak-specific.cfg.orig
 }
 
 function manageparameters(){
 
-    if [ ! -f "$HOME/.shinken" ]
+    if [ ! -f "$HOME/.alignak" ]
     then
-        touch $HOME/.shinken
-        chmod +x $HOME/.shinken
+        touch $HOME/.alignak
+        chmod +x $HOME/.alignak
 
         if [ "$1" != "quiet" ]
         then
-            echo "ETC=$ETC" >> $HOME/.shinken
-            echo "VAR=$VAR" >> $HOME/.shinken
-            echo "LIBEXEC=$LIBEXEC" >> $HOME/.shinken
-            echo "TARGET=$TARGET" >> $HOME/.shinken
+            echo "ETC=$ETC" >> $HOME/.alignak
+            echo "VAR=$VAR" >> $HOME/.alignak
+            echo "LIBEXEC=$LIBEXEC" >> $HOME/.alignak
+            echo "TARGET=$TARGET" >> $HOME/.alignak
         fi
     else
         OLDIFS=$IFS
         IFS=$'\n'
         cecho " > Found installation parameters" yellow
-        for l in $(cat $HOME/.shinken)
+        for l in $(cat $HOME/.alignak)
         do
             cecho " --> $l" yellow
         done
@@ -891,18 +913,18 @@ function manageparameters(){
         fi
         if [ "$readvalue" == "y" ]
         then
-            for l in $(cat $HOME/.shinken)
+            for l in $(cat $HOME/.alignak)
             do
                 export $l
             done
         else
-            rm -f $HOME/.shinken
-            touch $HOME/.shinken
-            chmod +x $HOME/.shinken
-            echo "ETC=$ETC" >> $HOME/.shinken
-            echo "VAR=$VAR" >> $HOME/.shinken
-            echo "LIBEXEC=$LIBEXEC" >> $HOME/.shinken
-            echo "TARGET=$TARGET" >> $HOME/.shinken
+            rm -f $HOME/.alignak
+            touch $HOME/.alignak
+            chmod +x $HOME/.alignak
+            echo "ETC=$ETC" >> $HOME/.alignak
+            echo "VAR=$VAR" >> $HOME/.alignak
+            echo "LIBEXEC=$LIBEXEC" >> $HOME/.alignak
+            echo "TARGET=$TARGET" >> $HOME/.alignak
         fi
     fi
 }
@@ -910,7 +932,7 @@ function manageparameters(){
 
 
 function sinstall(){
-    #cecho "Installing shinken" green
+    #cecho "Installing alignak" green
 
     manageparameters
 
@@ -960,7 +982,7 @@ function sinstall(){
 
     cleanuptarget
     relocate
-    ln -s $TARGET/bin/default/shinken /etc/default/shinken
+    ln -s $TARGET/bin/default/alignak /etc/default/alignak
     mkdir -p $TARGET/var/archives
     #enableretention
     enable_initd
@@ -980,14 +1002,14 @@ function sinstall(){
 
     sstart
     cecho "+------------------------------------------------------------------------------" green
-    cecho "| Shinken is now installed on your server " green
+    cecho "| Alignak is now installed on your server " green
     cecho "| The install location is: $TARGET" green
     cecho "| The configuration folder is: $ETC" green
     cecho "| " green
     cecho "| The Web Interface is available at: http://localhost:7767" green
     cecho "| The default credentials for the webui are admin/admin" green
     cecho "| " green
-    cecho "| You can now learn how to configure shinken at: http://www.shinken-monitoring.org/wiki" green
+    cecho "| You can now learn how to configure alignak at: http://www..." green
     cecho "+------------------------------------------------------------------------------" green
     echo ""
     cecho "Do not forget to allow localhost to browse the entire snmp tree. Sample configuration" yellow
@@ -1016,11 +1038,11 @@ function sinstall(){
 ########################
 
 function backup(){
-    cadre "Backup shinken platform" green
+    cadre "Backup alignak platform" green
 
     manageparameters "quiet" > /dev/null 2>&1
 
-    cecho " > Stop shinken" green
+    cecho " > Stop alignak" green
     skill
     if [ -f /etc/init.d/npcd ]
     then
@@ -1032,63 +1054,63 @@ function backup(){
     then
         mkdir $BACKUPDIR
     fi
-    mkdir -p $BACKUPDIR/bck-shinken.$DATE/etc
-    mkdir -p $BACKUPDIR/bck-shinken.$DATE/libexec
-    mkdir -p $BACKUPDIR/bck-shinken.$DATE/var
+    mkdir -p $BACKUPDIR/bck-alignak.$DATE/etc
+    mkdir -p $BACKUPDIR/bck-alignak.$DATE/libexec
+    mkdir -p $BACKUPDIR/bck-alignak.$DATE/var
     # Sugg:
-    # Add: cp -Rfp $TARGET/bin $BACKUPDIR/bck-shinken.$DATE/ line to backup bin
-    cecho " > Backup shinken" green
-    cecho " --> Backup shinken/etc" green
-    cp -Rfp $ETC/* $BACKUPDIR/bck-shinken.$DATE/etc
-    cecho " --> Backup shinken/libexec" green
-    cp -Rfp $LIBEXEC/* $BACKUPDIR/bck-shinken.$DATE/libexec
-    cecho " --> Backup shinken/var" green
-    cp -Rfp $TARGET/var/* $BACKUPDIR/bck-shinken.$DATE/var
+    # Add: cp -Rfp $TARGET/bin $BACKUPDIR/bck-alignak.$DATE/ line to backup bin
+    cecho " > Backup alignak" green
+    cecho " --> Backup alignak/etc" green
+    cp -Rfp $ETC/* $BACKUPDIR/bck-alignak.$DATE/etc
+    cecho " --> Backup alignak/libexec" green
+    cp -Rfp $LIBEXEC/* $BACKUPDIR/bck-alignak.$DATE/libexec
+    cecho " --> Backup alignak/var" green
+    cp -Rfp $TARGET/var/* $BACKUPDIR/bck-alignak.$DATE/var
 
     if [ -d $NAGVISPREFIX ]
     then
         cecho " > Backup nagvis" green
-        mkdir -p $BACKUPDIR/bck-shinken.$DATE/nagvis
+        mkdir -p $BACKUPDIR/bck-alignak.$DATE/nagvis
         cecho " --> Backup nagvis/share/userfiles" green
-        cp -Rfp $NAGVISPREFIX/share/userfiles $BACKUPDIR/bck-shinken.$DATE/nagvis/
+        cp -Rfp $NAGVISPREFIX/share/userfiles $BACKUPDIR/bck-alignak.$DATE/nagvis/
         cecho " --> Backup nagvis/etc" green
-        cp -Rfp $NAGVISPREFIX/etc $BACKUPDIR/bck-shinken.$DATE/nagvis/
+        cp -Rfp $NAGVISPREFIX/etc $BACKUPDIR/bck-alignak.$DATE/nagvis/
     fi
 
     if [ -d $MKPREFIX ]
     then
-        mkdir -p $BACKUPDIR/bck-shinken.$DATE/check_mk
+        mkdir -p $BACKUPDIR/bck-alignak.$DATE/check_mk
         cecho " > Backup check_mk" green
         cecho " --> Backup check_mk/etc" green
-        cp -Rfp $MKPREFIX/etc $BACKUPDIR/bck-shinken.$DATE/check_mk/
+        cp -Rfp $MKPREFIX/etc $BACKUPDIR/bck-alignak.$DATE/check_mk/
         cecho " --> Backup check_mk/share" green
-        cp -Rfp $MKPREFIX/share/web/plugins/dashboard $BACKUPDIR/bck-shinken.$DATE/check_mk/
-        cp -Rfp $MKPREFIX/share/web/plugins/perfometer $BACKUPDIR/bck-shinken.$DATE/check_mk/
-        cp -Rfp $MKPREFIX/share/web/htdocs/images/icons $BACKUPDIR/bck-shinken.$DATE/check_mk/
+        cp -Rfp $MKPREFIX/share/web/plugins/dashboard $BACKUPDIR/bck-alignak.$DATE/check_mk/
+        cp -Rfp $MKPREFIX/share/web/plugins/perfometer $BACKUPDIR/bck-alignak.$DATE/check_mk/
+        cp -Rfp $MKPREFIX/share/web/htdocs/images/icons $BACKUPDIR/bck-alignak.$DATE/check_mk/
         cecho " --> Backup check_mk/var" green
-        cp -Rfp $MKPREFIX/var/lib/web $BACKUPDIR/bck-shinken.$DATE/check_mk/
+        cp -Rfp $MKPREFIX/var/lib/web $BACKUPDIR/bck-alignak.$DATE/check_mk/
 
     fi
 
     if [ -d $PNPPREFIX ]
     then
-        mkdir -p $BACKUPDIR/bck-shinken.$DATE/pnp4nagios
+        mkdir -p $BACKUPDIR/bck-alignak.$DATE/pnp4nagios
         cecho " > Backup pnp4nagios" green
         cecho " --> Backup pnp4nagios/etc" green
-        cp -Rfp $PNPPREFIX/etc $BACKUPDIR/bck-shinken.$DATE/pnp4nagios/
+        cp -Rfp $PNPPREFIX/etc $BACKUPDIR/bck-alignak.$DATE/pnp4nagios/
         cecho " --> Backup pnp4nagios/var" green
-        cp -Rfp $PNPPREFIX/var $BACKUPDIR/bck-shinken.$DATE/pnp4nagios/
+        cp -Rfp $PNPPREFIX/var $BACKUPDIR/bck-alignak.$DATE/pnp4nagios/
         cecho " --> Backup pnp4nagios/share/templates" green
-        cp -Rfp $PNPPREFIX/share/templates $BACKUPDIR/bck-shinken.$DATE/pnp4nagios/
+        cp -Rfp $PNPPREFIX/share/templates $BACKUPDIR/bck-alignak.$DATE/pnp4nagios/
     fi
 
     cecho " > Compressing backup file" green
-    tar czPf $BACKUPDIR/bck-shinken.$DATE.tar.gz $BACKUPDIR/bck-shinken.$DATE
+    tar czPf $BACKUPDIR/bck-alignak.$DATE.tar.gz $BACKUPDIR/bck-alignak.$DATE
     cecho " > Removing backup folder. Backup is now at " green
-    echo $BACKUPDIR/bck-shinken.$DATE.tar.gz
-    rm -rf $BACKUPDIR/bck-shinken.$DATE
+    echo $BACKUPDIR/bck-alignak.$DATE.tar.gz
+    rm -rf $BACKUPDIR/bck-alignak.$DATE
 
-    cecho " > Start shinken" green
+    cecho " > Start alignak" green
     sstart
     if [ -f /etc/init.d/npcd ]
     then
@@ -1102,7 +1124,7 @@ function backup(){
 function backuplist(){
     cadre "List of available backups in $BACKUPDIR" green
     manageparameters "quiet"
-    for d in $(ls -1 $BACKUPDIR | grep "bck-shinken" | awk -F. '{print $2}')
+    for d in $(ls -1 $BACKUPDIR | grep "bck-alignak" | awk -F. '{print $2}')
     do
         cecho " > $d" green
     done
@@ -1110,7 +1132,7 @@ function backuplist(){
 }
 
 function restore(){
-    cadre "Restore shinken configuration, plugins and data" green
+    cadre "Restore alignak configuration, plugins and data" green
 
     manageparameters "quiet"
 
@@ -1126,50 +1148,50 @@ function restore(){
         backuplist
         exit 2
     fi
-    if [ ! -e $BACKUPDIR/bck-shinken.$1.tar.gz ]
+    if [ ! -e $BACKUPDIR/bck-alignak.$1.tar.gz ]
     then
-        cecho " > Backup not found: $BACKUPDIR/bck-shinken.$1 " red
+        cecho " > Backup not found: $BACKUPDIR/bck-alignak.$1 " red
         backuplist
         exit 2
     fi
 
     cecho " > Unpacking backup files" green
-    mkdir $BACKUPDIR/bck-shinken.$1
-    tar xzPf $BACKUPDIR/bck-shinken.$1.tar.gz -C $BACKUPDIR/bck-shinken.$1
+    mkdir $BACKUPDIR/bck-alignak.$1
+    tar xzPf $BACKUPDIR/bck-alignak.$1.tar.gz -C $BACKUPDIR/bck-alignak.$1
 
-    # Keep Shinken original files as samples conf files and restore.
-    cp -Rfp -b -S ".example" $BACKUPDIR/bck-shinken.$1/etc/* $ETC/
-    cp -Rfp $BACKUPDIR/bck-shinken.$1/var/* $VAR/
-    cp -Rfp $BACKUPDIR/bck-shinken.$1/libexec/* $LIBEXEC/
+    # Keep Alignak original files as samples conf files and restore.
+    cp -Rfp -b -S ".example" $BACKUPDIR/bck-alignak.$1/etc/* $ETC/
+    cp -Rfp $BACKUPDIR/bck-alignak.$1/var/* $VAR/
+    cp -Rfp $BACKUPDIR/bck-alignak.$1/libexec/* $LIBEXEC/
 
     if [ -d $NAGVISPREFIX ]
     then
         cecho " --> Restoring Restore Nagvis" green
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/nagvis/etc/* $NAGVISPREFIX/etc
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/nagvis/userfiles/* $NAGVISPREFIX/share/userfiles
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/nagvis/etc/* $NAGVISPREFIX/etc
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/nagvis/userfiles/* $NAGVISPREFIX/share/userfiles
     fi
 
     if [ -d $MKPREFIX ]
     then
         cecho " --> Restoring Restore Check_mk" green
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/check_mk/etc/* $MKPREFIX/etc
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/check_mk/dashboard/* $MKPREFIX/share/web/plugins/dashboard
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/check_mk/perfometer/* $MKPREFIX/share/web/plugins/perfometer
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/check_mk/icons/* $MKPREFIX/share/web/htdocs/images/icons
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/check_mk/web/* $MKPREFIX/var/lib/web
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/check_mk/etc/* $MKPREFIX/etc
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/check_mk/dashboard/* $MKPREFIX/share/web/plugins/dashboard
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/check_mk/perfometer/* $MKPREFIX/share/web/plugins/perfometer
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/check_mk/icons/* $MKPREFIX/share/web/htdocs/images/icons
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/check_mk/web/* $MKPREFIX/var/lib/web
     fi
 
     if [ -d $PNPPREFIX ]
     then
         cecho " --> Restoring Restore PNP4Nagios" green
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/pnp4nagios/etc/* $PNPPREFIX/etc
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/pnp4nagios/var/* $PNPPREFIX/var
-	 cp -Rfp $BACKUPDIR/bck-shinken.$1/pnp4nagios/templates/* $PNPPREFIX/share/templates
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/pnp4nagios/etc/* $PNPPREFIX/etc
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/pnp4nagios/var/* $PNPPREFIX/var
+	 cp -Rfp $BACKUPDIR/bck-alignak.$1/pnp4nagios/templates/* $PNPPREFIX/share/templates
     fi
 
-    rm -rf $BACKUPDIR/bck-shinken.$1
+    rm -rf $BACKUPDIR/bck-alignak.$1
 
-    # Start Shinken after restore
+    # Start Alignak after restore
     sstart
     if [ -f /etc/init.d/npcd ]
     then
@@ -1194,7 +1216,7 @@ function supdate(){
         exit 2
     fi
 
-    cadre "Updating shinken" green
+    cadre "Updating alignak" green
 
     skill
     backup
@@ -1202,8 +1224,8 @@ function supdate(){
     get_from_git
     cp -Rf  "$myscripts" $TARGET
     relocate
-    ln -sf $TARGET/bin/default/shinken /etc/default/shinken
-    cp $TARGET/bin/init.d/shinken* /etc/init.d/
+    ln -sf $TARGET/bin/default/alignak /etc/default/alignak
+    cp $TARGET/bin/init.d/alignak* /etc/init.d/
     mkdir -p $TARGET/var/archives
     fix
     restore $DATE
@@ -1255,12 +1277,12 @@ function cleanconf(){
 }
 
 function fixsudoers(){
-    cecho " > Fix /etc/sudoers.d/shinken file for shinken integration" green
-    cat "$myscripts"/install.d/sudoers.centreon | sed -e 's#TARGET#'$TARGET'#g' >> /etc/sudoers.d/shinken
+    cecho " > Fix /etc/sudoers.d/alignak file for alignak integration" green
+    cat "$myscripts"/install.d/sudoers.centreon | sed -e 's#TARGET#'$TARGET'#g' >> /etc/sudoers.d/alignak
 }
 
 function fixcentreondb(){
-    cecho " > Fix centreon database path for shinken integration" green
+    cecho " > Fix centreon database path for alignak integration" green
 
     # get existing db access
     host=$(cat /etc/centreon/conf.pm | grep "mysql_host" | awk '{print $3}' | sed -e "s/\"//g" -e "s/;//g")
@@ -1302,7 +1324,7 @@ function enablemongologs(){
 }
 
 function enablendodb(){
-    cecho " > FIX shinken ndo configuration" green
+    cecho " > FIX alignak ndo configuration" green
     # get existing db access
     host=$(cat /etc/centreon/conf.pm | grep "mysql_host" | awk '{print $3}' | sed -e "s/\"//g" -e "s/;//g")
     user=$(cat /etc/centreon/conf.pm | grep "mysql_user" | awk '{print $3}' | sed -e "s/\"//g" -e "s/;//g")
@@ -1354,14 +1376,14 @@ function enableperfdata(){
     export PYTHONPATH=$TARGET
     export PY="$(pythonver)"
     cecho " > Getting existing broker modules list" green
-    modules=$($PY $TARGET/install.d/tools/skonf.py -a getdirective -f $ETC/shinken-specific.cfg -o broker -d modules)
+    modules=$($PY $TARGET/install.d/tools/skonf.py -a getdirective -f $ETC/alignak-specific.cfg -o broker -d modules)
     if [ -z "$modules" ]
     then
         modules="Service-Perfdata, Host-Perfdata"
     else
         modules=$modules", Service-Perfdata, Host-Perfdata"
     fi
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o broker -d modules -v "$modules")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o broker -d modules -v "$modules")
     cecho " > $result" green
 }
 
@@ -1369,15 +1391,15 @@ function setdaemonsaddresses(){
     export PYTHONPATH=$TARGET
     export PY="$(pythonver)"
     localip=$(ifconfig $IF | grep "^ *inet ad:" | awk -F : '{print $2}' | awk '{print $1}')
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o arbiter -d address -v "$localip")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o arbiter -d address -v "$localip")
     cecho " > $result" green
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o scheduler -d address -v "$localip")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o scheduler -d address -v "$localip")
     cecho " > $result" green
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o reactionner -d address -v "$localip")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o reactionner -d address -v "$localip")
     cecho " > $result" green
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o receiver -d address -v "$localip")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o receiver -d address -v "$localip")
     cecho " > $result" green
-    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/shinken-specific.cfg -o poller -d address -v "$localip" -r "poller_name=poller-1")
+    result=$($PY $TARGET/install.d/tools/skonf.py -q -a setparam -f $ETC/alignak-specific.cfg -o poller -d address -v "$localip" -r "poller_name=poller-1")
     cecho " > $result" green
 }
 
@@ -1400,7 +1422,7 @@ function setdaemons(){
     daemons="$(echo $1)"
     avail="AVAIL_MODULES=\"$daemons\""
     cecho " > Enabling the followings daemons: $daemons" green
-    sed -i "s/^AVAIL_MODULES=.*$/$avail/g" /etc/init.d/shinken
+    sed -i "s/^AVAIL_MODULES=.*$/$avail/g" /etc/init.d/alignak
 }
 
 ###########################
@@ -1455,7 +1477,7 @@ function install_graphite()
     python setup.py install >> $LOGFILE 2>&1
 
     cecho "Configuring Graphite webapp" green
-    # Set TZ to avoid issue with 4H graph into shinken and set default database engine
+    # Set TZ to avoid issue with 4H graph into alignak and set default database engine
     cd /opt/graphite/webapp/graphite
     cp local_settings.py.example local_settings.py
     sed -i -r -e "s/^.(SECRET_KEY = ).*/\1'POk#dr5*4znkd6511z'/" -e "s/.TIME_ZONE.*/TIME_ZONE = \'Europe\/Paris\'/" -e 's/#(DATABASES = .*| *.default.: .*| *.NAME.*,| *.ENGINE.*| *.USER.*| *.PASSWORD.*| *.HOST.*| *.PORT.*|    \}|\})/\1/' local_settings.py
@@ -1468,7 +1490,7 @@ function install_graphite()
         DEBIAN)
             cp /opt/graphite/examples/example-graphite-vhost.conf /etc/apache2/sites-available/graphite.conf
             sed -i 's%@DJANGO_ROOT@%/usr/local/lib/python2.7/dist-packages/Django-1.5.4-py2.7.egg/django/%g' /etc/apache2/sites-available/graphite.conf
-            sed -i 's%WSGISocketPrefix .*$%WSGISocketPrefix /usr/local/shinken/var/apache2/wsgi%' /etc/apache2/sites-available/graphite.conf
+            sed -i 's%WSGISocketPrefix .*$%WSGISocketPrefix /usr/local/alignak/var/apache2/wsgi%' /etc/apache2/sites-available/graphite.conf
             a2ensite graphite.conf
             ;;
         *)
@@ -1754,7 +1776,7 @@ function install_multisite(){
     fi
 
     # Fix sudo configuration in multisite installer script
-    sed -i 's/\/etc\/sudoers/&.d\/shinken/' ./setup.sh
+    sed -i 's/\/etc\/sudoers/&.d\/alignak/' ./setup.sh
 
     cecho " > Install multisite" green
     ./setup.sh --yes >> ${LOGFILE} 2>&1
@@ -1885,9 +1907,9 @@ function uninstall_pnp4nagios(){
         disable_service npcd
         rm -Rf /etc/init.d/npcd >> ${LOGFILE} 2>&1
 
-        # remove pnp4nagios shinken configuration
+        # remove pnp4nagios alignak configuration
         cecho " > Removing NPCPDMOD module from broker configuration " green
-        BROKERS=$(PYTHONPATH=$TARGET $PY $TARGET/install.d/tools/skonf.py -a getobjectnames -f  $TARGET/etc/shinken-specific.cfg -o broker)
+        BROKERS=$(PYTHONPATH=$TARGET $PY $TARGET/install.d/tools/skonf.py -a getobjectnames -f  $TARGET/etc/alignak-specific.cfg -o broker)
         for o in $BROKERS
         do
             cecho " --> Removing from broker $o" green
@@ -2078,9 +2100,9 @@ function install_nconf(){
     chmod g+rwx $ETC/Default_collector
 
     cecho " > configure sudo for deployment (should not work with systemd)" green
-    if [ -z "$(cat /etc/sudoers.d/shinken | grep shinken-arbiter)" ]
+    if [ -z "$(cat /etc/sudoers.d/alignak | grep alignak-arbiter)" ]
     then
-        echo "$HTTPDUSER ALL=NOPASSWD: /etc/init.d/shinken-arbiter restart" >> /etc/sudoers.d/shinken
+        echo "$HTTPDUSER ALL=NOPASSWD: /etc/init.d/alignak-arbiter restart" >> /etc/sudoers.d/alignak
     fi
 
     cecho " -> Create nconf user and database" green
@@ -2113,15 +2135,15 @@ function install_nconf(){
     mysql -h localhost -u root -p$MYSQLP -e "grant all privileges on nconf.* to 'nconf'@'localhost' identified by '$NCONFP';flush privileges;"
 
 
-    cecho " > Patching nconf for shinken support" green
+    cecho " > Patching nconf for alignak support" green
     cd $NCONFTARGET/include/ajax
     patch < "$myscripts"/install.d/exec_generate_config.php.patch >> ${LOGFILE} 2>&1
 
     cecho " > Configure deployment.ini file" green
     cp -f "$myscripts"/install.d/deployment.ini.in $NCONFTARGET/config/deployment.ini
-    sed -i "s#__SHINKENTARGET__#"$TARGET"#g" $NCONFTARGET/config/deployment.ini
+    sed -i "s#__ALIGNAKTARGET__#"$TARGET"#g" $NCONFTARGET/config/deployment.ini
     sed -i "s#__NCONFTARGET__#"$NCONFTARGET"#g" $NCONFTARGET/config/deployment.ini
-    sed -i "s#__SHINKENETC__#"$ETC"#g" $NCONFTARGET/config/deployment.ini
+    sed -i "s#__ALIGNAKETC__#"$ETC"#g" $NCONFTARGET/config/deployment.ini
 
     cecho " > Alter nagios.cfg config file" green
     sed -i "s/^cfg_dir.*$/#&/g" $TARGET/etc/nagios.cfg
@@ -2157,7 +2179,7 @@ function do_skmacro(){
     macro=$1
     args=$2
     export PYTHONPATH="$TARGET"
-    export SHINKEN="$PYTHONPATH"
+    export ALIGNAK="$PYTHONPATH"
     export SKTOOLS="$PYTHONPATH/install.d/tools"
 
     $PY $SKTOOLS/skonf.py -a macros -f $SKTOOLS/macros/$macro -d $args  >> ${LOGFILE} 2>&1
@@ -2351,7 +2373,7 @@ function install_cucumber(){
     install -b -g $SKGROUP -o $SKUSER -m 0664 $LIBEXEC/eue/glpi.ini.in $LIBEXEC/eue/glpi.ini
     sed -i "s/@@IPWEBUI@@/"$IP"/g" $LIBEXEC/eue/glpi.ini
 
-    cecho " --> restart shinken" green
+    cecho " --> restart alignak" green
     skill
     sstart
 }
@@ -2816,7 +2838,7 @@ function install_manubulon(){
     # check if utils.pm is there
     if [ ! -f $LIBEXEC/utils.pm ]
     then
-        cecho " > Unable to find utils.pm. You should install nagios-plugins first (./shinken.sh -p nagios-plugins)" red
+        cecho " > Unable to find utils.pm. You should install nagios-plugins first (./alignak.sh -p nagios-plugins)" red
         exit 2
     fi
 
@@ -3356,14 +3378,14 @@ function nconf-import-packs(){
 
 function usage(){
 echo "Usage: install -k | -i | -u [addonname] | -b | -r backupname | -l | -c | -e \"daemonslist\" | -p pluginname | -a addonname
-    -k | --kill             Kill shinken
-    -i | --install          Install shinken
-    -u | --uninstall        Remove shinken and all of the addons. if an argument is specified then just remove the specified argument
-    -b | --backup           Backup shinken configuration plugins and data
-    -r | --restore          Restore shinken configuration plugins and data
-    -l | --listbackups      List shinken backups
+    -k | --kill             Kill alignak
+    -i | --install          Install alignak
+    -u | --uninstall        Remove alignak and all of the addons. if an argument is specified then just remove the specified argument
+    -b | --backup           Backup alignak configuration plugins and data
+    -r | --restore          Restore alignak configuration plugins and data
+    -l | --listbackups      List alignak backups
     -c | --compresslogs     Compress rotated logs
-    -e | --enabledaemons    Which daemons to keep enabled at boot time. It's a quoted list of shinken daemons that should be enabled at startup.
+    -e | --enabledaemons    Which daemons to keep enabled at boot time. It's a quoted list of alignak daemons that should be enabled at startup.
                             Daemons are:
                                 arbiter
                                 scheduler
@@ -3402,7 +3424,7 @@ echo "Usage: install -k | -i | -u [addonname] | -b | -r backupname | -l | -c | -
                                nconf (experimental)
                                notify_by_xmpp
                                thruk
-    --nconf-import-packs    Import shinken packs into nconf (experimental). This require nconf to be installed
+    --nconf-import-packs    Import alignak packs into nconf (experimental). This require nconf to be installed
     --register              Register on community (experimental)
     --enableeue             Enable application performance monitoring stack (experimental)
     -h | --help             Show help"
@@ -3450,10 +3472,10 @@ do
             OPTARG=$1
             shift
             manageparameters  "quiet"
-            cecho " > checking if shinken is installed in $TARGET" green
-            if [ $(shinken_exist) -eq 0 ]
+            cecho " > checking if alignak is installed in $TARGET" green
+            if [ $(alignak_exist) -eq 0 ]
             then
-                cecho " > You should install shinken first! " red
+                cecho " > You should install alignak first! " red
                 exit 2
             fi
             if [ "$OPTARG" == "check_esx3" ]
@@ -3547,10 +3569,10 @@ do
             OPTARG=$1
             shift
             manageparameters  "quiet"
-            cecho " > checking if shinken is installed in $TARGET" green
-            if [ $(shinken_exist) -eq 0 ]
+            cecho " > checking if alignak is installed in $TARGET" green
+            if [ $(alignak_exist) -eq 0 ]
             then
-                cecho " > You should install shinken first! " red
+                cecho " > You should install alignak first! " red
                 exit 2
             fi
             if [ "$OPTARG" == "pnp4nagios" ]
@@ -3618,7 +3640,7 @@ do
             OPTARG=$1
             if [ -z "$OPTARG" ] || [ "$OPTARG" == "--" ]
             then
-                cread " > Are you sure you want to remove shinken? (y|N)." yellow "n" "y n"
+                cread " > Are you sure you want to remove alignak? (y|N)." yellow "n" "y n"
                 if [ "$readvalue" == "y" ]
                 then
                     remove

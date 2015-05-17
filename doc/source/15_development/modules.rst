@@ -1,7 +1,7 @@
 .. _development/modules:
 
 ===================================
- Developing Shinken Daemon Modules 
+ Developing Alignak Daemon Modules 
 ===================================
 
 

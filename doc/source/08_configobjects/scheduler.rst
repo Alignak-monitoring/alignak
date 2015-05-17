@@ -10,7 +10,7 @@ Description
 
 The Scheduler daemon is in charge of the scheduling checks, the analysis of results and follow up actions (like if a service is down, ask for a host check). They do not launch checks or notifications. They keep a queue of pending checks and notifications for other elements of the architecture (like pollers or reactionners). There can be many schedulers.
 
-The Scheduler definition is optionnal. If no scheduler is defined, Shinken will "create" one for the user. There will be no high availability for it (no spare), and will use the default port in the server where the deamon is launched.
+The Scheduler definition is optionnal. If no scheduler is defined, Alignak will "create" one for the user. There will be no high availability for it (no spare), and will use the default port in the server where the deamon is launched.
 
 
 Definition Format 

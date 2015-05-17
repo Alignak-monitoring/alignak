@@ -88,16 +88,16 @@ The other dependency definitions shown in the image above would be defined as fo
 How Service Dependencies Are Tested 
 ====================================
 
-Before Shinken executes a service check or sends notifications out for a service, it will check to see if the service has any dependencies. If it doesn't have any dependencies, the check is executed or the notification is sent out as it normally would be. If the service *does* have one or more dependencies, Shinken will check each dependency entry as follows:
+Before Alignak executes a service check or sends notifications out for a service, it will check to see if the service has any dependencies. If it doesn't have any dependencies, the check is executed or the notification is sent out as it normally would be. If the service *does* have one or more dependencies, Alignak will check each dependency entry as follows:
 
-  - Shinken gets the current status:ref:`* <advanced/dependencies#advancedtopics_dependencies_hard_dependencies>` of the service that is being *depended upon*.
-  - Shinken compares the current status of the service that is being *depended upon* against either the execution or notification failure options in the dependency definition (whichever one is relevant at the time).
-  - If the current status of the service that is being *depended upon* matches one of the failure options, the dependency is said to have failed and Shinken will break out of the dependency check loop.
-  - If the current state of the service that is being *depended upon* does not match any of the failure options for the dependency entry, the dependency is said to have passed and Shinken will go on and check the next dependency entry.
+  - Alignak gets the current status:ref:`* <advanced/dependencies#advancedtopics_dependencies_hard_dependencies>` of the service that is being *depended upon*.
+  - Alignak compares the current status of the service that is being *depended upon* against either the execution or notification failure options in the dependency definition (whichever one is relevant at the time).
+  - If the current status of the service that is being *depended upon* matches one of the failure options, the dependency is said to have failed and Alignak will break out of the dependency check loop.
+  - If the current state of the service that is being *depended upon* does not match any of the failure options for the dependency entry, the dependency is said to have passed and Alignak will go on and check the next dependency entry.
 
 This cycle continues until either all dependencies for the service have been checked or until one dependency check fails.
 
-  * One important thing to note is that by default, Shinken will use the most current :ref:`hard state <thebasics/statetypes>` of the service(s) that is/are being depended upon when it does the dependency checks. If you want Shinken to use the most current state of the services (regardless of whether its a soft or hard state), enable the :ref:`soft_state_dependencies <configuration/configmain-advanced#soft_state_dependencies>` option.
+  * One important thing to note is that by default, Alignak will use the most current :ref:`hard state <thebasics/statetypes>` of the service(s) that is/are being depended upon when it does the dependency checks. If you want Alignak to use the most current state of the services (regardless of whether its a soft or hard state), enable the :ref:`soft_state_dependencies <configuration/configmain-advanced#soft_state_dependencies>` option.
 
 
 Execution Dependencies 
@@ -105,7 +105,7 @@ Execution Dependencies
 
 Execution dependencies are used to restrict when :ref:`active checks <thebasics/activechecks>` of a service can be performed. :ref:`Passive checks <thebasics/passivechecks>` are not restricted by execution dependencies.
 
-If all of the execution dependency tests for the service passed, Shinken will execute the check of the service as it normally would. If even just one of the execution dependencies for a service fails, Shinken will temporarily prevent the execution of checks for that (dependent) service. At some point in the future the execution dependency tests for the service may all pass. If this happens, Shinken will start checking the service again as it normally would. More information on the check scheduling logic can be found :ref:`here <advanced/checkscheduling>`.
+If all of the execution dependency tests for the service passed, Alignak will execute the check of the service as it normally would. If even just one of the execution dependencies for a service fails, Alignak will temporarily prevent the execution of checks for that (dependent) service. At some point in the future the execution dependency tests for the service may all pass. If this happens, Alignak will start checking the service again as it normally would. More information on the check scheduling logic can be found :ref:`here <advanced/checkscheduling>`.
 
 In the example above, **Service E** would have failed execution dependencies if **Service B** is in a WARNING or UNKNOWN state. If this was the case, the service check would not be performed and the check would be scheduled for (potential) execution at a later time.
 
@@ -115,7 +115,7 @@ In the example above, **Service E** would have failed execution dependencies if 
 Notification Dependencies 
 ==========================
 
-If all of the notification dependency tests for the service *passed*, Shinken will send notifications out for the service as it normally would. If even just one of the notification dependencies for a service fails, Shinken will temporarily repress notifications for that (dependent) service. At some point in the future the notification dependency tests for the service may all pass. If this happens, Shinken will start sending out notifications again as it normally would for the service. More information on the notification logic can be found :ref:`here <thebasics/notifications>`.
+If all of the notification dependency tests for the service *passed*, Alignak will send notifications out for the service as it normally would. If even just one of the notification dependencies for a service fails, Alignak will temporarily repress notifications for that (dependent) service. At some point in the future the notification dependency tests for the service may all pass. If this happens, Alignak will start sending out notifications again as it normally would for the service. More information on the notification logic can be found :ref:`here <thebasics/notifications>`.
 
 In the example above, **Service F** would have failed notification dependencies if **Service C** is in a CRITICAL state, //and/or* **Service D** is in a WARNING or UNKNOWN state, *and/or// if **Service E** is in a WARNING, UNKNOWN, or CRITICAL state. If this were the case, notifications for the service would not be sent out.
 
@@ -191,4 +191,4 @@ In the example above, the dependency definitions for Host C would be defined as 
   
 As with service dependencies, host dependencies are not inherited. In the example image you can see that Host C does not inherit the host dependencies of Host B. In order for Host C to be dependent on Host A, a new host dependency definition must be defined.
 
-Host notification dependencies work in a similar manner to service notification dependencies. If *all* of the notification dependency tests for the host *pass*, Shinken will send notifications out for the host as it normally would. If even just one of the notification dependencies for a host fails, Shinken will temporarily repress notifications for that (dependent) host. At some point in the future the notification dependency tests for the host may all pass. If this happens, Shinken will start sending out notifications again as it normally would for the host. More information on the notification logic can be found :ref:`here <thebasics/notifications>`.
+Host notification dependencies work in a similar manner to service notification dependencies. If *all* of the notification dependency tests for the host *pass*, Alignak will send notifications out for the host as it normally would. If even just one of the notification dependencies for a host fails, Alignak will temporarily repress notifications for that (dependent) host. At some point in the future the notification dependency tests for the host may all pass. If this happens, Alignak will start sending out notifications again as it normally would for the host. More information on the notification logic can be found :ref:`here <thebasics/notifications>`.

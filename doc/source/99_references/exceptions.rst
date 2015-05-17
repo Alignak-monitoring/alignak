@@ -1,21 +1,21 @@
 Exceptions
 ==========
 
-Exception class diagram in Shinken
+Exception class diagram in Alignak
 -----------------------------------
 
 Simple Exception class diagram :
 
 .. inheritance-diagram:: __builtin__.Exception
-                        shinken.http_daemon.InvalidWorkDir  shinken.http_daemon.PortNotFree
-                        shinken.http_client.HTTPException  shinken.satellite.NotWorkerMod
-                        shinken.webui.bottlecore.BottleException  shinken.webui.bottlecore.HTTPResponse
-                        shinken.webui.bottlecore.HTTPError  shinken.webui.bottlecore.RouteError
-                        shinken.webui.bottlecore.RouteReset  shinken.webui.bottlecore.RouteSyntaxError
-                        shinken.webui.bottlecore.RouteBuildError  shinken.webui.bottlecore.TemplateError
-                        shinken.webui.bottlewebui.BottleException  shinken.webui.bottlewebui.HTTPResponse
-                        shinken.webui.bottlewebui.HTTPError  shinken.webui.bottlewebui.RouteError
-                        shinken.webui.bottlewebui.RouteReset  shinken.webui.bottlewebui.RouteSyntaxError
-                        shinken.webui.bottlewebui.RouteBuildError  shinken.webui.bottlewebui.TemplateError
-                        shinken.daemon.InvalidPidFile
+                        alignak.http_daemon.InvalidWorkDir  alignak.http_daemon.PortNotFree
+                        alignak.http_client.HTTPException  alignak.satellite.NotWorkerMod
+                        alignak.webui.bottlecore.BottleException  alignak.webui.bottlecore.HTTPResponse
+                        alignak.webui.bottlecore.HTTPError  alignak.webui.bottlecore.RouteError
+                        alignak.webui.bottlecore.RouteReset  alignak.webui.bottlecore.RouteSyntaxError
+                        alignak.webui.bottlecore.RouteBuildError  alignak.webui.bottlecore.TemplateError
+                        alignak.webui.bottlewebui.BottleException  alignak.webui.bottlewebui.HTTPResponse
+                        alignak.webui.bottlewebui.HTTPError  alignak.webui.bottlewebui.RouteError
+                        alignak.webui.bottlewebui.RouteReset  alignak.webui.bottlewebui.RouteSyntaxError
+                        alignak.webui.bottlewebui.RouteBuildError  alignak.webui.bottlewebui.TemplateError
+                        alignak.daemon.InvalidPidFile
    :parts: 3

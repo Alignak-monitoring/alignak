@@ -4,7 +4,7 @@
 	
 .. _architecture/index:
 
-Shinken Architecture
+Alignak Architecture
 ====================
 
 .. raw:: LaTeX
@@ -18,4 +18,4 @@ Shinken Architecture
    advanced-features
    how-dispatching-works
    problems-and-impacts
-   the-shinken-architecture
+   the-alignak-architecture

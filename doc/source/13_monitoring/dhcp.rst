@@ -13,7 +13,7 @@ This document describes how you can monitor a DHCP service.
 Introduction 
 =============
 
-These instructions assume that you've installed Shinken according to the :ref:`Installation tutorial <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
+These instructions assume that you've installed Alignak according to the :ref:`Installation tutorial <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
 
 
 Overview 
@@ -31,7 +31,7 @@ There are some steps you'll need to follow in order to monitor a new database ma
 
   * Allow check_dhcp to run
   * Update your server host definition for dhcp monitoring
-  * Restart the Shinken daemon
+  * Restart the Alignak daemon
 
 
 What's Already Done For You 
@@ -42,7 +42,7 @@ To make your life a bit easier, a few configuration tasks have already been done
   * Some **check_dhcp** commands definition has been added to the "commands.cfg" file.
   * An DHCP host template (called "dhcp") has already been created in the "templates.cfg" file.
 
-The above-mentioned config files can be found in the //etc/shinken/packs/network/services/dhcp directory (or c:\\shinken\\etc\\packs\\network\\services\\dhcp under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Shinken before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your DHCP boxes in no time.
+The above-mentioned config files can be found in the //etc/alignak/packs/network/services/dhcp directory (or c:\\alignak\\etc\\packs\\network\\services\\dhcp under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Alignak before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your DHCP boxes in no time.
 
 .. tip::  We are supposing here that the DHCP server you want to monitor is named srv-lin-1 and is a linux. Please change the above lines and commands with the real name of your server of course.
 
@@ -50,7 +50,7 @@ The above-mentioned config files can be found in the //etc/shinken/packs/network
 Allow check_dhcp to run 
 ========================
 
-The check_dhcp must be run under the root account to send a dhcp call on the network. To do this, you should launch on your shinken server:
+The check_dhcp must be run under the root account to send a dhcp call on the network. To do this, you should launch on your alignak server:
   
 ::
 
@@ -67,14 +67,14 @@ Under Linux:
   
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-lin-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-lin-1.cfg
 
 
 Or Windows:
   
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-lin-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-lin-1.cfg
 
 
 And add:
@@ -88,9 +88,9 @@ And add:
   }
 
 
-Restarting Shinken
+Restarting Alignak
 ===================
 
-You're done with modifying the Shiknen configuration, so you'll need to :ref:`verify your configuration files <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+You're done with modifying the Shiknen configuration, so you'll need to :ref:`verify your configuration files <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!

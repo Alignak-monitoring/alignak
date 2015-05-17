@@ -1,14 +1,14 @@
 .. _contributing/modules:
 
 ==================================
-Shinken modules
+Alignak modules
 ==================================
 
 
 Packages layout 
 ================
 
-For a MODULE named ABC (ex: `github.com/shinken-monitoring/mod-ip-tag`_ )
+For a MODULE named ABC (ex: `github.com/alignak-monitoring/mod-ip-tag`_ )
   * etc/modules/abc.cfg
   * module/module.py
   * /__init__.py
@@ -28,7 +28,7 @@ The package.json is like this:
     "name": "ip-tag",
     "types": ["module"],
     "version": "1.4.1",
-    "homepage": "http://github.com/shinken-monitoring/mod-ip-tag",
+    "homepage": "http://github.com/alignak-monitoring/mod-ip-tag",
     "author": "Jean Gabès",
     "description": "Tag host by their IP ranges",
     "contributors": [
@@ -37,14 +37,14 @@ The package.json is like this:
       "email": "naparuba@gmail.com"
     }
     ],
-    "repository": "https://github.com/shinken-monitoring/mod-ip-tag",
+    "repository": "https://github.com/alignak-monitoring/mod-ip-tag",
     "keywords": [
     "module",
     "arbiter",
     "ip"
     ],
     "dependencies": {
-	"shinken": ">=1.4"
+	"alignak": ">=1.4"
     },
     "license": "AGPL"
   }
@@ -53,14 +53,14 @@ The package.json is like this:
 How to publish it 
 ==================
 
-Before publishing, you must register an account on `shinken.io`_. Then on your account page on `shinken.io/~`_ you will got your **api_key**. Put it on your ~/.shinken.ini.
+Before publishing, you must register an account on `shinken.io`_. Then on your account page on `shinken.io/~`_ you will got your **api_key**. Put it on your ~/.alignak.ini.
 
 Then you can :
   
 ::
 
   cd  my-package
-  shinken publish
+  alignak publish
 
 
 That's all :)

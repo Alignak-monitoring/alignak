@@ -8,7 +8,7 @@ Object Definitions
 Introduction 
 =============
 
-One of the features of Shinken' object configuration format is that you can create object definitions that inherit properties from other object definitions. An explanation of how object inheritance works can be found :ref:`here <advanced/objectinheritance>`. I strongly suggest that you familiarize yourself with object inheritance once you read over the documentation presented below, as it will make the job of creating and maintaining object definitions much easier than it otherwise would be. Also, read up on the :ref:`object tricks <advanced/objecttricks>` that offer shortcuts for otherwise tedious configuration tasks.
+One of the features of Alignak' object configuration format is that you can create object definitions that inherit properties from other object definitions. An explanation of how object inheritance works can be found :ref:`here <advanced/objectinheritance>`. I strongly suggest that you familiarize yourself with object inheritance once you read over the documentation presented below, as it will make the job of creating and maintaining object definitions much easier than it otherwise would be. Also, read up on the :ref:`object tricks <advanced/objecttricks>` that offer shortcuts for otherwise tedious configuration tasks.
 
 When creating and/or editing configuration files, keep the following in mind:
 
@@ -19,7 +19,7 @@ When creating and/or editing configuration files, keep the following in mind:
 Sample Configuration Files 
 ===========================
 
-Sample object configuration files are installed in the "/etc/shinken/" directory when you follow the :ref:`quickstart installation guide <gettingstarted/quickstart>`.
+Sample object configuration files are installed in the "/etc/alignak/" directory when you follow the :ref:`quickstart installation guide <gettingstarted/quickstart>`.
 
 
 Object Types 

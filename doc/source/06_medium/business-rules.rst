@@ -27,7 +27,7 @@ Let's take a simple example of a service delivery role for an ERP application. I
 
 These IT components (Hosts in this example) will be the basis for the ERP service.
 
-With business rules, you can have an "indicator" representing the "aggregated service" state for the ERP service! Shinken already checks all of the IT components one by one including processing for root cause analysis from a host and service perspective.
+With business rules, you can have an "indicator" representing the "aggregated service" state for the ERP service! Alignak already checks all of the IT components one by one including processing for root cause analysis from a host and service perspective.
 
 
 How to define Business Rules?
@@ -483,4 +483,4 @@ Imagine you want to build a consolidated service which notifications contain lin
 The resulting output would look like ``Down web services: link1 link2 link3 ...`` where ``linkN`` are urls leading to the problem in the WebUI.
 
 
-.. _ticket: https://github.com/naparuba/shinken/issues/509
+.. _ticket: https://github.com/...

@@ -20,7 +20,7 @@ Integration With Other Software
    thruk
    specific-cgi-parameters
    thruk-screenshot
-   use-shinken-with
+   use-alignak-with
    centreon
    graphite
    multisite

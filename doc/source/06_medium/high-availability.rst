@@ -1,15 +1,15 @@
 .. _medium/high-availability:
 
 ==========================
-Shinken High Availability 
+Alignak High Availability 
 ==========================
 
 
-Shinken makes it easy to have a high availability architecture. Just as easily as the load balancing feature at :ref:`distributed shinken <advanced/distributed-shinken>`
+Alignak makes it easy to have a high availability architecture. Just as easily as the load balancing feature at :ref:`distributed alignak <advanced/distributed-alignak>`
 
-Shinken is business friendly when it comes to meeting availability requirements.
+Alignak is business friendly when it comes to meeting availability requirements.
 
-You learned how to add new poller satellites in the :ref:`distributed shinken <advanced/distributed-shinken>`. For the HA the process is the same **You just need to add new satellites in the same way, then define them as "spares".**
+You learned how to add new poller satellites in the :ref:`distributed alignak <advanced/distributed-alignak>`. For the HA the process is the same **You just need to add new satellites in the same way, then define them as "spares".**
 
 You can (should) do the same for all the satellites for a complete HA architecture.
 
@@ -25,8 +25,8 @@ So like the previous case, you need to install the daemons but not launch them f
 Declare these spares on server1 
 ================================
 
-Daemons on the server1 need to know where their spares are. Everything is done in the /etc/shinken directory.
-Each daemon has its own directory into /etc/shinken
+Daemons on the server1 need to know where their spares are. Everything is done in the /etc/alignak directory.
+Each daemon has its own directory into /etc/alignak
 
 Add theses lines regarding the daemon (ex schedulers/scheduler-spare.cfg):
  
@@ -98,7 +98,7 @@ WAIT! There are 2 main pitfalls that can halt HA in its tracks:
 Copy all configuration from server1 to server3 
 ===============================================
 
-.. important::  It's very important that the two arbiter daemons have the same /etc/shinken directory. The whole configuration should also be rsync'ed or copied once a day to ensure the spare arbiter can take over in case of a massive failure of active arbiter.
+.. important::  It's very important that the two arbiter daemons have the same /etc/alignak directory. The whole configuration should also be rsync'ed or copied once a day to ensure the spare arbiter can take over in case of a massive failure of active arbiter.
 
 So copy it in the server3 (overwrite the old one) in the same place.
 
@@ -113,8 +113,8 @@ Ok, everything is ready. All you need now is to start all the daemons:
 ::
 
   
-  $server1: sudo /etc/init.d/shinken start
-  $server3: sudo /etc/init.d/shinken start
+  $server1: sudo /etc/init.d/alignak start
+  $server3: sudo /etc/init.d/alignak start
 
 
 If an active daemon die, the spare will take over. This is detected in a minute or 2 (you can change it in the daemons/deamon-spare.cfg, for each daemon).

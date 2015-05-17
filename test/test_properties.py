@@ -1,34 +1,57 @@
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Hartmut Goebel, h.goebel@goebel-consult.de
+#!/usr/bin/env python
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-Test shinken.property
+Test alignak.property
 """
 
 
-import __import_shinken
+import __import_alignak
 
-import shinken
-from shinken.property import none_object
+import alignak
+from alignak.property import none_object
 
-from shinken_test import ShinkenTest, unittest
+from alignak_test import AlignakTest, unittest
 
 
 
@@ -62,12 +85,12 @@ class PropertyTests:
         self.assertFalse(p.unused)
 
 
-#ShinkenTest
+#AlignakTest
 
-class TestBoolProp(PropertyTests, ShinkenTest):
+class TestBoolProp(PropertyTests, AlignakTest):
     """Test the BoolProp class"""
 
-    prop_class = shinken.property.BoolProp
+    prop_class = alignak.property.BoolProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -86,10 +109,10 @@ class TestBoolProp(PropertyTests, ShinkenTest):
 
 
 
-class TestIntegerProp(PropertyTests, ShinkenTest):
+class TestIntegerProp(PropertyTests, AlignakTest):
     """Test the IntegerProp class"""
 
-    prop_class = shinken.property.IntegerProp
+    prop_class = alignak.property.IntegerProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -99,10 +122,10 @@ class TestIntegerProp(PropertyTests, ShinkenTest):
         self.assertEqual(p.pythonize(["2000.66", "1000.33"]), 1000)
 
 
-class TestFloatProp(PropertyTests, ShinkenTest):
+class TestFloatProp(PropertyTests, AlignakTest):
     """Test the FloatProp class"""
 
-    prop_class = shinken.property.FloatProp
+    prop_class = alignak.property.FloatProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -112,10 +135,10 @@ class TestFloatProp(PropertyTests, ShinkenTest):
         self.assertEqual(p.pythonize(["2000.66", "1000.33"]), 1000.33)
 
 
-class TestStringProp(PropertyTests, ShinkenTest):
+class TestStringProp(PropertyTests, AlignakTest):
     """Test the StringProp class"""
 
-    prop_class = shinken.property.StringProp
+    prop_class = alignak.property.StringProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -126,10 +149,10 @@ class TestStringProp(PropertyTests, ShinkenTest):
         self.assertEqual(p.pythonize(["yes", "no"]), "no")
 
 
-class TestCharProp(PropertyTests, ShinkenTest):
+class TestCharProp(PropertyTests, AlignakTest):
     """Test the CharProp class"""
 
-    prop_class = shinken.property.CharProp
+    prop_class = alignak.property.CharProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -143,7 +166,7 @@ class TestCharProp(PropertyTests, ShinkenTest):
 class TestPathProp(TestStringProp):
     """Test the PathProp class"""
 
-    prop_class = shinken.property.PathProp
+    prop_class = alignak.property.PathProp
 
     # As of now, PathProp is a subclass of StringProp without any
     # relevant change. So no further tests are implemented here.
@@ -152,16 +175,16 @@ class TestPathProp(TestStringProp):
 class TestConfigPathProp(TestStringProp):
     """Test the ConfigPathProp class"""
 
-    prop_class = shinken.property.ConfigPathProp
+    prop_class = alignak.property.ConfigPathProp
 
     # As of now, ConfigPathProp is a subclass of StringProp without
     # any relevant change. So no further tests are implemented here.
 
 
-class TestListProp(PropertyTests, ShinkenTest):
+class TestListProp(PropertyTests, AlignakTest):
     """Test the ListProp class"""
 
-    prop_class = shinken.property.ListProp
+    prop_class = alignak.property.ListProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -179,10 +202,10 @@ class TestListProp(PropertyTests, ShinkenTest):
 
 
 
-class TestLogLevelProp(PropertyTests, ShinkenTest):
+class TestLogLevelProp(PropertyTests, AlignakTest):
     """Test the LogLevelProp class"""
 
-    prop_class = shinken.property.LogLevelProp
+    prop_class = alignak.property.LogLevelProp
 
     def test_pythonize(self):
         p = self.prop_class()
@@ -199,20 +222,20 @@ class TestLogLevelProp(PropertyTests, ShinkenTest):
 
 
 ## :todo: fix DictProp error if no `elts_prop` are passed
-## class TestDictProp(PropertyTests, ShinkenTest):
+## class TestDictProp(PropertyTests, AlignakTest):
 ##     """Test the DictProp class"""
 ##
-##     prop_class = shinken.property.DictProp
+##     prop_class = alignak.property.DictProp
 ##
 ##     def test_pythonize(self):
 ##         p = self.prop_class()
 ##         self.assertEqual(p.pythonize(""), "")
 
 
-class TestAddrProp(PropertyTests, ShinkenTest):
+class TestAddrProp(PropertyTests, AlignakTest):
     """Test the AddrProp class"""
 
-    prop_class = shinken.property.AddrProp
+    prop_class = alignak.property.AddrProp
 
     def test_pythonize_with_IPv4_addr(self):
         p = self.prop_class()

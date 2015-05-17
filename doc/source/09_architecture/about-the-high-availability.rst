@@ -1,14 +1,14 @@
 .. _architecture/about-the-high-availability:
 
 =========================================
-Arbiter supervision of Shinken processes 
+Arbiter supervision of Alignak processes 
 =========================================
 
 
 Introduction 
 =============
 
-Nobody is perfect, nor are OSes. A server can fail, and so does the network. That's why you can (should) define multiple processes as well as spares in the Shinken architecture.
+Nobody is perfect, nor are OSes. A server can fail, and so does the network. That's why you can (should) define multiple processes as well as spares in the Alignak architecture.
 
 
 Supervision method 
@@ -39,10 +39,10 @@ Diagrams
 It can be shown in the following diagram:
 
 
-.. image:: /_static/images//shinken-conf-dispatching.png
+.. image:: /_static/images//alignak-conf-dispatching.png
    :scale: 90 %
 
 
-.. image:: /_static/images//shinken-scheduler-lost.png
+.. image:: /_static/images//alignak-scheduler-lost.png
    :scale: 90 %
 

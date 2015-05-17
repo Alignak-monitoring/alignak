@@ -5,6 +5,6 @@
 # Adjust variables to fit your environment as necessary.
 
 now=$(date +%s)
-commandfile='/usr/local/shinken/var/rw/nagios.cmd'
+commandfile='/usr/local/alignak/var/rw/nagios.cmd'
 
 printf "[%lu] CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD;dbrosseau;24x7\n" $now > $commandfile

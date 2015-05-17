@@ -1,13 +1,13 @@
 .. _architecture/how-dispatching-works:
 
 =======================================================
-How are commands and configurations managed in Shinken 
+How are commands and configurations managed in Alignak 
 =======================================================
 
 
 Let's take a look at how the dispatching is managed.
 
-Shinken uses different daemons: each one has it's own task. The global master is the Arbiter: it reads the configuration, divides it into parts and sends the parts to various Shinken daemons. It also looks at which daemon are alive: if one dies, it will give the configuration of the dead one to another daemon so that it can replace it.
+Alignak uses different daemons: each one has it's own task. The global master is the Arbiter: it reads the configuration, divides it into parts and sends the parts to various Alignak daemons. It also looks at which daemon are alive: if one dies, it will give the configuration of the dead one to another daemon so that it can replace it.
 
 
 Configuration dispatching 
@@ -16,14 +16,14 @@ Configuration dispatching
 It looks like this:
 
 
-.. image:: /_static/images/shinken-conf-dispatching.png
+.. image:: /_static/images/alignak-conf-dispatching.png
    :scale: 90 %
 
 
 Configuration changes on running systems 
 =========================================
 
-Once the configuration is being dispatched to a Shinken process by the Arbiter, this causes the process (ex. Scheduler) to stop and reload its configuration. Thus for small configurations, the monitoring gap, where no monitoring is being done, is of an inconsequential duration. However, as the number of services rises above 10K and as the complexity of the configuration grows, the monitoring gap will become noticeable to the order of minutes. This gap will impact the type of SLA the monitoring solution can meet.
+Once the configuration is being dispatched to a Alignak process by the Arbiter, this causes the process (ex. Scheduler) to stop and reload its configuration. Thus for small configurations, the monitoring gap, where no monitoring is being done, is of an inconsequential duration. However, as the number of services rises above 10K and as the complexity of the configuration grows, the monitoring gap will become noticeable to the order of minutes. This gap will impact the type of SLA the monitoring solution can meet.
 
 .. important::  The 1.2 release is mandatory for anyone using more than 10K services as it includes improvements addressing this issue.
 
@@ -40,7 +40,7 @@ The user can send external commands to the system to raise a downtime or ask for
 It looks like this:
 
 
-.. image:: /_static/images/shinken-external-commands.png
+.. image:: /_static/images/alignak-external-commands.png
    :scale: 90 %
 
 

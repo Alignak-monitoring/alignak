@@ -1,9 +1,9 @@
 .. _integration/pnp:
 
-.. _integration/pnp#using_shinken_with_pnp4nagios:
+.. _integration/pnp#using_alignak_with_pnp4nagios:
 
 ===========================
-Use Shinken with PNP4Nagios
+Use Alignak with PNP4Nagios
 ===========================
 
 PNP4Nagios 
@@ -18,7 +18,7 @@ PNP4Nagios
 * Screenshots: http://docs.pnp4nagios.org/pnp-0.6/gallery/start
 * Description: "PNP is an addon to Nagios which analyzes performance data provided by plugins and stores them automatically into RRD-databases (Round Robin Databases, see `RRD Tool`_)."
 * License: GPL v2
-* Shinken dedicated forum: http://www.shinken-monitoring.org/forum/index.php/board,9.0.html
+* Alignak dedicated forum: http://www...
 
 
 .. _integration/pnp#install_pnp4nagios:
@@ -33,7 +33,7 @@ In a nutshell:
   
 ::
 
-  ./configure --with-nagios-user=shinken --with-nagios-group=shinken
+  ./configure --with-nagios-user=alignak --with-nagios-group=alignak
   make all
   make fullinstall
 
@@ -49,7 +49,7 @@ Don't forget to make PNP4Nagios' npcd daemon to start at boot, and launch it:
 Configure npcdmod 
 ------------------
 
-The module **npcdmod** is in charge to export performance data from Shinken to PNP.
+The module **npcdmod** is in charge to export performance data from Alignak to PNP.
 
   
 ::
@@ -66,7 +66,7 @@ Don't forget to replace "<PATH_TO_NPCD.CFG>" with your own value; By default som
 Enable it 
 ==========
 
-Edit ''/etc/shinken/brokers/broker-master.cfg'' and find the object **Broker** to add above defined "NPCDMOD" to its **modules** line:
+Edit ''/etc/alignak/brokers/broker-master.cfg'' and find the object **Broker** to add above defined "NPCDMOD" to its **modules** line:
 
   
 ::
@@ -78,7 +78,7 @@ Edit ''/etc/shinken/brokers/broker-master.cfg'' and find the object **Broker** t
   }
 
 
-Edit ''/etc/shinken/modules/webui.cfg'' and find the object **WebUI** to add above defined "PNP_UI" to its **modules** line:
+Edit ''/etc/alignak/modules/webui.cfg'' and find the object **WebUI** to add above defined "PNP_UI" to its **modules** line:
 
   
 ::
@@ -94,7 +94,7 @@ Then restart broker :
   
 ::
 
-  # /etc/init.d/shinken-broker restart
+  # /etc/init.d/alignak-broker restart
 
 
 Share users with Thruk 
@@ -163,11 +163,11 @@ Ask PNP4Nagios to link to ''/thruk/cgi-bin'' rather than ''/nagios/cgi-bin'':
 Enjoy it 
 =========
 
-Restart shinken-arbiter and you are done.
+Restart alignak-arbiter and you are done.
   
 ::
 
-  /etc/init.d/shinken-arbiter restart
+  /etc/init.d/alignak-arbiter restart
 
 .. _PHP4Nagios installation: http://docs.pnp4nagios.org/pnp-0.6/install 
 .. _Thruk doc: http://www.thruk.org/documentation.html#_pnp4nagios_graphs

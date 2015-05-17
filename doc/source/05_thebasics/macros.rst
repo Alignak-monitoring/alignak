@@ -8,17 +8,17 @@
 Macros 
 =======
 
-One of the main features that make Shinken so flexible is the ability to use macros in command defintions. Macros allow you to reference information from hosts, services, and other sources in your commands.
+One of the main features that make Alignak so flexible is the ability to use macros in command defintions. Macros allow you to reference information from hosts, services, and other sources in your commands.
 
 
 Macro Substitution - How Macros Work 
 =====================================
 
-Before Shinken executes a command, it will replace any macros it finds in the command definition with their corresponding values. This macro substitution occurs for all types of commands that Shinken executes - host and service checks, notifications, event handlers, etc.
+Before Alignak executes a command, it will replace any macros it finds in the command definition with their corresponding values. This macro substitution occurs for all types of commands that Alignak executes - host and service checks, notifications, event handlers, etc.
 
 Certain macros may themselves contain other macros. These include the "$HOSTNOTES$", "$HOSTNOTESURL$", "$HOSTACTIONURL$", "$SERVICENOTES$", "$SERVICENOTESURL$", and "$SERVICEACTIONURL$" macros.
 
-.. tip::  If, you need to have the '$' character in one of your command (and not referring to a macro), please put "$$" instead. Shinken will replace it well
+.. tip::  If, you need to have the '$' character in one of your command (and not referring to a macro), please put "$$" instead. Alignak will replace it well
 
 
 Example 1: Host Address Macro 
@@ -38,7 +38,7 @@ When you use host and service macros in command definitions, they refer to value
   
   define command{
     command_name    check_ping
-    command_line    /var/lib/shinken/libexec/check_ping -H $HOSTADDRESS$ -w 100.0,90% -c 200.0,60%
+    command_line    /var/lib/alignak/libexec/check_ping -H $HOSTADDRESS$ -w 100.0,90% -c 200.0,60%
   }
   
 the expanded/final command line to be executed for the host's check command would look like this:
@@ -46,7 +46,7 @@ the expanded/final command line to be executed for the host's check command woul
   
 ::
 
-  /var/lib/shinken/libexec/check_ping -H 192.168.1.2 -w 100.0,90% -c 200.0,60%
+  /var/lib/alignak/libexec/check_ping -H 192.168.1.2 -w 100.0,90% -c 200.0,60%
   
 Pretty simple, right? The beauty in this is that you can use a single command definition to check an unlimited number of hosts. Each host can be checked with the same command definition because each host's address is automatically substituted in the command line before execution.
 
@@ -73,7 +73,7 @@ In the example above, the service check command has two arguments (which can be 
 
   define command{
     command_name    check_ping
-    command_line    /var/lib/shinken/libexec/check_ping -H $HOSTADDRESS$ -w $ARG1$ -c $ARG2$
+    command_line    /var/lib/alignak/libexec/check_ping -H $HOSTADDRESS$ -w $ARG1$ -c $ARG2$
   }
   
 the expanded/final command line to be executed for the service's check command would look like this:
@@ -81,7 +81,7 @@ the expanded/final command line to be executed for the service's check command w
   
 ::
 
-  /var/lib/shinken/libexec/check_ping -H 192.168.1.2 -w 200.0,40% -c 400.0,80%
+  /var/lib/alignak/libexec/check_ping -H 192.168.1.2 -w 200.0,40% -c 400.0,80%
   
 If you need to pass bang (!) characters in your command arguments, you can do so by escaping them with a backslash (\). If you need to include backslashes in your command arguments, they should also be escaped with a backslash.
 
@@ -184,7 +184,7 @@ Some macros are stripped of potentially dangerous shell metacharacters before be
 Macros as Environment Variables 
 ================================
 
-Most macros are made available as environment variables for easy reference by scripts or commands that are executed by Shinken. For purposes of security and sanity, :ref:`$USERn$ <thebasics/macrolist#usern>` and "on-demand" host and service macros are not made available as environment variables.
+Most macros are made available as environment variables for easy reference by scripts or commands that are executed by Alignak. For purposes of security and sanity, :ref:`$USERn$ <thebasics/macrolist#usern>` and "on-demand" host and service macros are not made available as environment variables.
 
 Environment variables that contain standard macros are named the same as their corresponding macro names (listed :ref:`here <thebasics/macrolist>`), with "NAGIOS\_" prepended to their names. For example, the :ref:`$HOSTNAME$ <thebasics/macrolist#hostname>` macro would be available as an environment variable named "NAGIOS_HOSTNAME".
 
@@ -192,4 +192,4 @@ Environment variables that contain standard macros are named the same as their c
 Available Macros 
 =================
 
-A list of all the macros that are available in Shinken, as well as a chart of when they can be used, can be found :ref:`here <thebasics/macrolist>`.
+A list of all the macros that are available in Alignak, as well as a chart of when they can be used, can be found :ref:`here <thebasics/macrolist>`.

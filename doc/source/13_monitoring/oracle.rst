@@ -19,7 +19,7 @@ This document describes how you can monitor an Oracle database server such as:
 Introduction 
 =============
 
-These instructions assume that you've installed Shinken according to the :ref:`Installation tutorial <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
+These instructions assume that you've installed Alignak according to the :ref:`Installation tutorial <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
 
 
 Overview 
@@ -40,7 +40,7 @@ There are some steps you'll need to follow in order to monitor a new database ma
   * Setup the oracle user account
   * Creating an alias definition for Oracle databases
   * Update your server host definition for oracle monitoring
-  * Restart the Shinken daemon
+  * Restart the Alignak daemon
 
 
 What's Already Done For You 
@@ -51,7 +51,7 @@ To make your life a bit easier, a few configuration tasks have already been done
   * Some **check_oracle_** commands definition has been added to the "commands.cfg" file.
   * An Oracle host template (called "oracle") has already been created in the "templates.cfg" file.
 
-The above-mentioned config files can be found in the ///etc/shinken/// directory (or *c:\shinken\etc* under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Shinken before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Oracle boxes in no time.
+The above-mentioned config files can be found in the ///etc/alignak/// directory (or *c:\alignak\etc* under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Alignak before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Oracle boxes in no time.
 
 .. tip::  We are supposing here that the Oracle machine you want to monitor is named srv-lin-1 and is a linux. Please change the above lines and commands with the real name of your server of course.
 
@@ -59,11 +59,11 @@ The above-mentioned config files can be found in the ///etc/shinken/// directory
 Installing dependencies 
 ========================
 
-Installing SQL*Plus on the Shinken server 
+Installing SQL*Plus on the Alignak server 
 ------------------------------------------
 
 
-Check_oracle_health plugin needs sqlplus oracle client on the Shinken server, you can download packages on the Oracle Technology Network website.
+Check_oracle_health plugin needs sqlplus oracle client on the Alignak server, you can download packages on the Oracle Technology Network website.
 You need to have these 3 packages:
 oracle-instantclient11.2-basic-11.2.0.3.0-1.x86_64.rpm
 oracle-instantclient11.2-devel-11.2.0.3.0-1.x86_64.rpm
@@ -104,14 +104,14 @@ Installing CPAN modules
   cpan[2]> force install DBD::Oracle
 
 
-Installing the check plugins on Shinken 
+Installing the check plugins on Alignak 
 ========================================
 
-First connect as root under you Shinken server (or all poller servers for a multi-box setup) and launch:
+First connect as root under you Alignak server (or all poller servers for a multi-box setup) and launch:
 
 ::
 
-  shinken.sh -p check_oracle_health
+  alignak.sh -p check_oracle_health
 
 
 Setup the oracle user account 
@@ -126,18 +126,18 @@ Connect to your database as sysadmin on the oracle server:
   srv-lin-1:oracle# sqlplus "/ as sysdba"
 
 
-And then create your shinken account on the database:
+And then create your alignak account on the database:
 
 ::
 
-  CREATE USER shinken IDENTIFIED BY shinkenpassword; 
-  GRANT CREATE SESSION TO shinken;
-  GRANT SELECT any dictionary TO shinken;
-  GRANT SELECT ON V_$SYSSTAT TO shinken;
-  GRANT SELECT ON V_$INSTANCE TO shinken;
-  GRANT SELECT ON V_$LOG TO shinken;
-  GRANT SELECT ON SYS.DBA_DATA_FILES TO shinken;
-  GRANT SELECT ON SYS.DBA_FREE_SPACE TO shinken;
+  CREATE USER alignak IDENTIFIED BY alignakpassword; 
+  GRANT CREATE SESSION TO alignak;
+  GRANT SELECT any dictionary TO alignak;
+  GRANT SELECT ON V_$SYSSTAT TO alignak;
+  GRANT SELECT ON V_$INSTANCE TO alignak;
+  GRANT SELECT ON V_$LOG TO alignak;
+  GRANT SELECT ON SYS.DBA_DATA_FILES TO alignak;
+  GRANT SELECT ON SYS.DBA_FREE_SPACE TO alignak;
 
 
 And for old 8.1.7 database only:
@@ -146,25 +146,25 @@ And for old 8.1.7 database only:
 
   --
   -- if somebody still uses Oracle 8.1.7...
-  GRANT SELECT ON sys.dba_tablespaces TO shinken;
-  GRANT SELECT ON dba_temp_files TO shinken;
-  GRANT SELECT ON sys.v_$Temp_extent_pool TO shinken;
-  GRANT SELECT ON sys.v_$TEMP_SPACE_HEADER  TO shinken;
-  GRANT SELECT ON sys.v_$session TO shinken;
+  GRANT SELECT ON sys.dba_tablespaces TO alignak;
+  GRANT SELECT ON dba_temp_files TO alignak;
+  GRANT SELECT ON sys.v_$Temp_extent_pool TO alignak;
+  GRANT SELECT ON sys.v_$TEMP_SPACE_HEADER  TO alignak;
+  GRANT SELECT ON sys.v_$session TO alignak;
 
 
-Then you will need to configure your user/password in the macros file so the plugins will have the good values for the connction. So update the /etc/shinken/resource.cfg file or c:\\shinken\\etc\\resource.cfg file to setup the new password:
+Then you will need to configure your user/password in the macros file so the plugins will have the good values for the connction. So update the /etc/alignak/resource.cfg file or c:\\alignak\\etc\\resource.cfg file to setup the new password:
 
 ::
 
-  $ORACLEUSER$=shinken
-  $ORACLEPASSWORD$=shinkenpassword
+  $ORACLEUSER$=alignak
+  $ORACLEPASSWORD$=alignakpassword
 
 
 Creating an alias definition for Oracle databases 
 ==================================================
 
-First, you have to create a tnsnames.ora config file on the shinken server that will contain the alias definition for PROD database:
+First, you have to create a tnsnames.ora config file on the alignak server that will contain the alias definition for PROD database:
 
 ::
 
@@ -181,7 +181,7 @@ First, you have to create a tnsnames.ora config file on the shinken server that 
 
   :wq
 
-Note that you have to declare all databases that you want to monitor with Shinken in this file. 
+Note that you have to declare all databases that you want to monitor with alignak in this file. 
 For example, if you want to monitor ERP and FINANCE databases, your config file will look like this:
 
 ::
@@ -223,7 +223,7 @@ Adjust rights on the oracle client directory:
 
 ::
 
-  linux:~ # chown -R shinken:shinken /usr/lib/oracle
+  linux:~ # chown -R alignak:alignak /usr/lib/oracle
 
 
 Optionally, we may have to force loading the oracle client lib like this:
@@ -243,29 +243,29 @@ To see if the connection to the database named PROD is ok, just launch:
 
 ::
 
-   /var/lib/nagios/plugins/check_oracle_health --connect "PROD" --hostname srv-lin-1 --username shinken --password shinkenpassword --mode connection-time
+   /var/lib/nagios/plugins/check_oracle_health --connect "PROD" --hostname srv-lin-1 --username alignak --password alignakpassword --mode connection-time
 
 
 It should not return errors.
 
 
-Edit shinken init script 
+Edit Alignak init script 
 -------------------------
 
-Now, you have to edit the shinken init script for loading this new environment:
+Now, you have to edit the alignak init script for loading this new environment:
 
 ::
 
-  linux:~ # vim /etc/init.d/shinken
+  linux:~ # vim /etc/init.d/alignak
   (...)
-  NAME="shinken"
+  NAME="alignak"
   
   AVAIL_MODULES="scheduler poller reactionner broker receiver arbiter skonf"
   
   # Load environment variables
   . /etc/profile.d/oracle.sh
   
-  ## SHINKEN_MODULE_FILE is set by shinken-* if it's one of these that's calling us.
+  ## ALIGNAK_MODULE_FILE is set by alignak-* if it's one of these that's calling us.
   (...)
 
 
@@ -278,13 +278,13 @@ Under Linux:
 
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-lin-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-lin-1.cfg
   
 Or Windows:
 
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-lin-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-lin-1.cfg
 
 
 You need to add the oracle template in the use line. It's better to follow the more precise template to the less one, like here oracle first, and then linux. You also need to declare in the _databases macros all your database names, separated with comas. Here we suppose you got two databases, ERP and FINANCE (don't forget to declare them into the tnsnames.ora config file such as we described it previously):
@@ -353,11 +353,11 @@ At this point, you configure your host to be checked with a oracle template. Wha
   * sysstat: Changes/sec for any value from v$sysstat	n/sec (10,10)
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-You're done with modifying the Shiknen configuration, so you'll need to :ref:`verify your configuration files <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+You're done with modifying the Shiknen configuration, so you'll need to :ref:`verify your configuration files <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!
 
 .. _labs.consol.de/lang/en/nagios/check_oracle_health/: http://labs.consol.de/lang/en/nagios/check_oracle_health/

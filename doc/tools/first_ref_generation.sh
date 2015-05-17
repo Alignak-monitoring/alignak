@@ -3,8 +3,8 @@
 cd ../source/12_references
 
 
-echo ".. _shinken_class_reference:
-Shinken Class Reference
+echo ".. _alignak_class_reference:
+Alignak Class Reference
 =======================
 
 .. toctree::
@@ -13,10 +13,10 @@ Shinken Class Reference
   
 
 
-for d in `find ../../../shinken/ -maxdepth 1 -type d`
+for d in `find ../../../alignak/ -maxdepth 1 -type d`
 do
     dirname=`basename $d`
-    if [ "$dirname" == "shinken" ]
+    if [ "$dirname" == "alignak" ]
     then
         dirname=""
         submodule=""
@@ -42,7 +42,7 @@ do
     echo "" >> ./$dirname/index.rst
 
     echo "   $dirname/index" >> ./index.rst
-    for i in `ls ../../../shinken/$dirname/*.py -1`i
+    for i in `ls ../../../alignak/$dirname/*.py -1`i
     do
         name=`basename $i |cut -d "." -f 1`;
         filename=./$dirname/${name}.rst
@@ -56,7 +56,7 @@ do
         echo $title >> $filename
         echo "" >> $filename
         echo "" >> $filename
-        echo ".. automodule:: shinken${submodule}.${name}" >> $filename
+        echo ".. automodule:: alignak${submodule}.${name}" >> $filename
         echo "   :members:" >> $filename
         echo "   :undoc-members:" >> $filename
         echo "   $name" >> ./$dirname/index.rst

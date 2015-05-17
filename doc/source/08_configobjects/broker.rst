@@ -8,7 +8,7 @@ Broker Definition
 Description 
 ============
 
-The Broker daemon provides access to Shinken internal data. Its role is to get data from schedulers (like status and logs) and manage them. The management is done by modules. Many different modules exists : export to graphite, export to syslog, export into ndo database (MySQL and Oracle backend), service-perfdata export, couchdb export and more. To configure modules, consult the :ref:`broker module definitions <the_broker_modules>`.
+The Broker daemon provides access to Alignak internal data. Its role is to get data from schedulers (like status and logs) and manage them. The management is done by modules. Many different modules exists : export to graphite, export to syslog, export into ndo database (MySQL and Oracle backend), service-perfdata export, couchdb export and more. To configure modules, consult the :ref:`broker module definitions <the_broker_modules>`.
 
 The Broker definition is optional.
 
