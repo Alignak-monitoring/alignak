@@ -7,7 +7,7 @@ require "#{formater_path}/commons.rb"
 
 
 module Eue
-    class Shinken < Commons
+    class Alignak < Commons
 
       def initialize(step_mother, io, options={})
 
@@ -121,7 +121,7 @@ module Eue
         id = insert_document(document)
 
         ##puts @@document.to_json.to_s.gsub("{","{\n").gsub("}","\n}\n").gsub(",",",\n")
-        output_shinken(key)
+        output_alignak(key)
       end
 
       def take_screenshot(feat, scenario, step, scenario_index, step_index)

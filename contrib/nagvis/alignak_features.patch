@@ -196,7 +196,7 @@ index b63f707..61f61d1 100644
                      'editable'    => 1,
                      'default'     => '86400',
                      'match'       => MATCH_STRING),
-+                'shinken_features' => Array('must' => 1,
++                'alignak_features' => Array('must' => 1,
 +                    'editable'    => 1,
 +                    'default'     => '0',
 +                    'field_type'    => 'boolean',
@@ -224,7 +224,7 @@ index 0030002..2955964 100644
          'overlap',
      ),
  );
-+if (cfg('global', 'shinken_features')) {
++if (cfg('global', 'alignak_features')) {
 +    array_push($viewParams['automap'], 'min_business_impact');
 +}
  
@@ -235,7 +235,7 @@ index 0030002..2955964 100644
  );
  
 +
-+if (cfg('global', 'shinken_features')) {
++if (cfg('global', 'alignak_features')) {
 +    function list_business_impact() {
 +        return Array(
 +            '0'          => '0_development',
@@ -266,7 +266,7 @@ index 0030002..2955964 100644
              global $_BACKEND;
              if($dir == 'childs')
 -                $relations = $_BACKEND->getBackend($params['backend_id'])->getDirectChildNamesByHostName($obj_name);
-+                if (cfg('global', 'shinken_features')) {
++                if (cfg('global', 'alignak_features')) {
 +                    if ($params['min_business_impact']){
 +                        $tmp_array = array_flip(list_business_impact());
 +                        $min_business_impact = $tmp_array[$params['min_business_impact']];
@@ -277,7 +277,7 @@ index 0030002..2955964 100644
 +                }
              else
 -                $relations = $_BACKEND->getBackend($params['backend_id'])->getDirectParentNamesByHostName($obj_name);
-+                if (cfg('global', 'shinken_features')) {
++                if (cfg('global', 'alignak_features')) {
 +                    if ($params['min_business_impact']){
 +                        $tmp_array = array_flip(list_business_impact());
 +                        $min_business_impact = $tmp_array[$params['min_business_impact']];

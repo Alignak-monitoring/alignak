@@ -15,7 +15,7 @@ $TO=$ARGV[7];
 
 $boundary = "====" . time() . "====";
 
-$text = "***** Notification Shinken *****\n\n"
+$text = "***** Alignak Notification *****\n\n"
 	. "Notification : $NOTIFICATIONTYPE\n\n"
 	. "Impacted service : $SERVICEDESC\n"
 	. "State : $SERVICESTATE\n\n"
@@ -24,7 +24,7 @@ $text = "***** Notification Shinken *****\n\n"
 	. "Date/Time : $SHORTDATETIME\n\n"
 	. "Service output : $SERVICEOUTPUT";
 
-$texthtml = " <center><strong>***** Shinken Notification *****</strong></center>\n";
+$texthtml = " <center><strong>***** Alignak Notification *****</strong></center>\n";
 
 $color="blue";
 $colorstate="black";

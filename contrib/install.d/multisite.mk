@@ -83,7 +83,7 @@ nagvis_base_url = '/nagvis'
 
 # Links for everyone
 custom_links['guest'] = [
-  ( "Shinken WebUI", "http://__HOSTADDRESS__:7767/", "link_home.gif" ),
+  ( "Alignak WebUI", "http://__HOSTADDRESS__:7767/", "link_home.gif" ),
   ( "Addons", True, [
         ( "PNP4Nagios", "../pnp4nagios/",       "link_reporting.gif" ),
         ( "NagVis", False, [
@@ -100,7 +100,7 @@ custom_links['user'] = custom_links['guest'] + [
         ( "Multisite",     "http://mathias-kettner.de/checkmk_multisite.html" ),
         ( "MK Livestatus", "http://mathias-kettner.de/checkmk_livestatus.html" ),
         ( "Check_MK",      "http://mathias-kettner.de/check_mk.html" ),
-        ( "Shinken",        "http://www.shinken-monitoring.org/" ),
+        ( "Alignak",       "http://www.github.com/Alignak-monitoring/" ),
         ( "PNP4Nagios",    "http://pnp4nagios.org/" ),
         ( "NagVis",        "http://nagvis.org/" ),
         ( "RRDTool",       "http://oss.oetiker.ch/rrdtool/" ),
@@ -113,7 +113,7 @@ custom_links['admin'] = custom_links['user'] + [
       ( "Mathias Kettner",              "http://mathias-kettner.de/" ),
       ( "Check_MK Mailinglists",        "http://mathias-kettner.de/check_mk_lists.html" ),
       ( "Check_MK Portal (inofficial)", "http://check-mk-portal.org/"),
-      ( "Shinken",       "http://www.shinken-monitoring.org"),
+      ( "Alignak",       "http://www.github.com/Alignak-monitoring/"),
   ])
 ]
 

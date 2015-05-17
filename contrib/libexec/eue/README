@@ -26,9 +26,9 @@ And that's it !
 
 Configuring a dedicated poller 
 
-If you just want to test it on a single shinken server, you must dedicate the poller to eue. What you have to do is to make sure that one and only one check is made at a time. Otherwise the  metrics should not be accurates. 
+If you just want to test it on a single alignak server, you must dedicate the poller to eue. What you have to do is to make sure that one and only one check is made at a time. Otherwise the  metrics should not be accurates. 
 
-Edit shinken-specific.cfg and modify the poller definition so it will match the following options 
+Edit alignak-specific.cfg and modify the poller definition so it will match the following options 
 
 	max_workers 1 
 	min_workers 1 
@@ -36,13 +36,13 @@ Edit shinken-specific.cfg and modify the poller definition so it will match the 
 
 Ok time to define a new check command. Everything is under libexec/eue and the required command line is : 
 
-	/usr/bin/cucumber --format Eue::Shinken /path/to/shinken/libexec/eue/yourfeature.feature. 
+	/usr/bin/cucumber --format Eue::Alignak /path/to/alignak/libexec/eue/yourfeature.feature. 
 
 yourfeature.feature is the feature test case you want to run (there is an example named glpi.feature that check the glpi demo site). Create a new command like this one 
 
 	define command {
 	       command_name             check_eue
-	       command_line             /usr/bin/cucumber --format Eue::Shinken $PLUGINSDIR$/eue/$ARG1$.feature
+	       command_line             /usr/bin/cucumber --format Eue::Alignak $PLUGINSDIR$/eue/$ARG1$.feature
 	}
 
 The create the required service (for exemple for GLPI)

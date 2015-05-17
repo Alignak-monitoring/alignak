@@ -21,11 +21,11 @@ sample.cfg
 schedulerd-windows.ini
 servicegroups.cfg
 services
-shinken-specific.cfg.orig
-shinken-specific-high-availability.cfg
-shinken-specific-load-balanced-only.cfg
-shinken-specific-windows.cfg
-shinken-specific-windows.cfg.orig
+alignak-specific.cfg.orig
+alignak-specific-high-availability.cfg
+alignak-specific-load-balanced-only.cfg
+alignak-specific-windows.cfg
+alignak-specific-windows.cfg.orig
 templates.cfg
 timeperiods.cfg
 discovery.cfg

@@ -154,7 +154,7 @@ class Commons
 
     end
 
-    def output_shinken(key)
+    def output_alignak(key)
         result = result_data()
 
         status = result["status"]
@@ -165,7 +165,7 @@ class Commons
         duration = result["duration"]        
 
         # key = "%s.%s.%s" % [ @@start_time.to_i.to_s,normalizestring(@@params["application"]["name"]),normalizestring(@@feature)]
-        uri = "<a href=\"%s/%s\">%s</a>" % [@@params["shinken"]["base_uri"],key,@@feature]
+        uri = "<a href=\"%s/%s\">%s</a>" % [@@params["alignak"]["base_uri"],key,@@feature]
         puts "[#{status == 2 ? "CRITICAL" : "OK"}] #{uri} #{failed} | scenarios_failed=#{total_failed} scenarios_succeed=#{total_succeed} scenarios_total=#{total_succeed+total_failed} total_time=#{duration}s #{perfs.join(" ")}"
         exit(status)
     end

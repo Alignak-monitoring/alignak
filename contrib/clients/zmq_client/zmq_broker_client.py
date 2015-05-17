@@ -1,28 +1,48 @@
 #!/usr/bin/python
-
 # -*- coding: utf-8 -*-
-
-# Copyright (C) 2009-2014:
-#    Gabes Jean, naparuba@gmail.com
-#    Gerhard Lausser, Gerhard.Lausser@consol.de
-#    Gregory Starck, g.starck@gmail.com
-#    Hartmut Goebel, h.goebel@goebel-consult.de
-#    Thomas Cellerier, thomascellerier@gmail.com
 #
-# This file is part of Shinken.
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
-# Shinken is free software: you can redistribute it and/or modify
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Shinken is distributed in the hope that it will be useful,
+# Alignak is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Gabes Jean, naparuba@gmail.com
+#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     Gregory Starck, g.starck@gmail.com
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#     Thomas Cellerier, thomascellerier@gmail.com
+#
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 # This is an example client for the zmq_broker module.
 # This will listen for notifications using the given
@@ -31,7 +51,7 @@
 #
 # Examples:
 # python zmq_broker_client.py "json" "tcp://127.0.0.1:12345" "host"
-# python zmq_broker_client.py "msgpack" "ipc:///tmp/shinken_pub" ""
+# python zmq_broker_client.py "msgpack" "ipc:///tmp/alignak_pub" ""
 # python zmq_broker_client.py "json" "tcp://172.23.2.189:9067" "log"
 import zmq
 import sys
@@ -69,7 +89,7 @@ context = zmq.Context()
 s_sub = context.socket(zmq.SUB)
 s_sub.setsockopt(zmq.SUBSCRIBE, topic)
 s_sub.connect(sub_endpoint)
-print("Listening for shinken notifications.")
+print("Listening for alignak notifications.")
 
 # Process incoming messages
 while True:

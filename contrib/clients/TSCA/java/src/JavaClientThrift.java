@@ -1,6 +1,6 @@
 // JavaClientThrift.java
 
-import org.shinken_monitoring.tsca.*;
+import org.alignak_monitoring.tsca.*;
 import org.apache.thrift.TException;
 import org.apache.thrift.transport.TSSLTransportFactory;
 import org.apache.thrift.transport.TTransport;

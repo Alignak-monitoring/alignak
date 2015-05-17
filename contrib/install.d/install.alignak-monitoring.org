@@ -1,8 +1,8 @@
 #!/bin/bash
 
 CURDIR=`pwd`
-SHINKEN_PACKAGE=shinken-1.4.tar.gz
-SHINKEN_URI=http://www.shinken-monitoring.org/pub/$SHINKEN_PACKAGE
+ALIGNAK_PACKAGE=alignak-1.4.tar.gz
+ALIGNAK_URI=http://www.../pub/$ALIGNAK_PACKAGE
 
 download_url() {
         if [ -x "/usr/bin/curl" ] ; then
@@ -10,7 +10,7 @@ download_url() {
         elif [ -x "/usr/bin/wget" ] ; then
             /usr/bin/wget -q $1
         else
-            echo "Unable to install Shinken: can't find wget or curl in /usr/bin."
+            echo "Unable to install Alignak: can't find wget or curl in /usr/bin."
             exit 1
         fi
     }
@@ -21,29 +21,29 @@ do_with_root() {
             $*
         elif [ -x /bin/sudo -o -x /usr/bin/sudo ] ; then
             echo
-            echo "Sudo detected, Shinken will request root privileges to"
+            echo "Sudo detected, Alignak will request root privileges to"
             echo "install. You may be prompted for a password. If you prefer to not use"
             echo "sudo, please re-run this script as root."
             echo "sudo $*"
             sudo $*
         else
-            echo "Shinken requires root privileges to install. Please re-run this script as"
+            echo "Alignak requires root privileges to install. Please re-run this script as"
             echo "root."
             exit 1
         fi
     }
 
 
-TMPDIR=`mktemp -d -t shinken-install-XXXXXXX`
+TMPDIR=`mktemp -d -t alignak-install-XXXXXXX`
 echo
 echo "Preparing the temporary directory " $TMPDIR
 cd "$TMPDIR"
 
-download_url $SHINKEN_URI
+download_url $ALIGNAK_URI
 echo
-echo "Unziping the Shinken package" $SHINKEN_PACKAGE
-tar xfz $SHINKEN_PACKAGE
-cd shinken-*
+echo "Unziping the Alignak package" $ALIGNAK_PACKAGE
+tar xfz $ALIGNAK_PACKAGE
+cd alignak-*
 
 
 do_with_root ./install -i

@@ -1,5 +1,4 @@
 #!/bin/bash
-#set -x
 #
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -42,58 +41,36 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-if [ -f /tmp/alignak.install.log ]
+# environement
+export myscripts=$(readlink -f $(dirname $0))
+
+export plugins="nagios-plugins
+check_mysql_health check_wmi_plus check_mongodb check_emc_clariion
+check_nwc_health capture_plugin"
+export addons="pnp4nagios multisite"
+
+cd $myscripts
+./alignak.sh -i
+
+if [ $? -ne 0 ]
 then
-    rm -f /tmp/alignak.install.log
+    exit 2
 fi
 
-#####################
-### ENVIRONNEMENT ###
-#####################
-
-export myscripts=$(readlink -f $(dirname $0))
-src=$(readlink -f "$myscripts/../../..")
-. $myscripts/alignak.conf
-
-cecho "###########################################################" red
-cecho "# CAUTION THIS SCRIPT IS USED ONLY IN DEVELOPMENT PROCESS  " red
-cecho "# IT COULD BREAK YOUR SYSTEM! PRESS CTRL+C TO ABORT        " red
-cecho "###########################################################" red
-read taste
-path="/usr/local/lib/$(pythonver)/dist-packages"
-pyver=$(pythonvershort)
-pth="eeasy-install.pth"
-for p in $PYLIBSDEB
+for p in $plugins
 do
-    module=$(echo $p | awk -F\: '{print $1}')
-    cecho " > going to remove python module: $module" yellow
-    echo $path/$module
-    if [ ! -z "$(ls -1 $path/$module*)" ]
+    ./alignak.sh -p $p
+    if [ $? -ne 0 ]
     then
-        cecho " > Found $path/$module" yellow
-        res=$(easy_install-$pyver -m $module | grep "^Using" | awk '{print $2}')
-        if [ ! -z "$res" ]
-        then
-            rm -Rf $res
-        fi
+        exit 2
     fi
-
 done
-APTLIST="$APTPKGS $VSPHERESDKAPTPKGS $NAGPLUGAPTPK $CHECKORACLEHEALTHAPTPKG $CHECKMONGOAPTPKG $CHECKEMCAPTPKG $CHECKNWCAPTPKG $PNPAPTPKG $MKAPTPKG $WMICAPTPKG $CHECKHPASMAPTPKGS"
-for l in $APTLIST
+
+for m in $modules
 do
-    for p in $l
-    do
-        cecho " > remove $p" yellow
-        apt-get purge $p
-    done
+    ./alignak.sh -p $p
+    if [ $? -ne 0 ]
+    then
+        exit 2
+    fi
 done
-apt-get autoremove
-
-rm -Rf $PNPPREFIX
-rm -Rf $MKPREFIX
-
-rm -f /etc/apache2/conf.d/zzz_check_mk.conf
-rm -f /etc/apache2/conf.d/pnp4nagios.conf
-
-/etc/init.d/apache2 restart

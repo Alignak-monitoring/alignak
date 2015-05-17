@@ -1,5 +1,5 @@
 ==============================================
-Shinken installation script for shinken 1.2.1
+Alignak installation script for alignak 1.2.1
 ==============================================
 
 Contact
@@ -19,18 +19,18 @@ For Debian based distro you will need lsb_release
 Usage
 ~~~~~
 
-This is a really simple script allowing to install a fully fonctionnal shinken in seconds!
+This is a really simple script allowing to install a fully fonctionnal alignak in seconds!
 Curently only tested with Ubuntu/Linux Mint/Debian and RHEL/CentOS 5/6 distros.
 
 Usage: install -k | -i | -u [addonname] | -b | -r backupname | -l | -c | -e \"daemonslist\" | -p pluginname | -a addonname
-    -k | --kill             Kill shinken
-    -i | --install          Install shinken
-    -u | --uninstall        Remove shinken and all of the addons. if an argument is specified then just remove the specified argument
-    -b | --backup           Backup shinken configuration plugins and data
-    -r | --restore          Restore shinken configuration plugins and data
-    -l | --listbackups      List shinken backups
+    -k | --kill             Kill alignak
+    -i | --install          Install alignak
+    -u | --uninstall        Remove alignak and all of the addons. if an argument is specified then just remove the specified argument
+    -b | --backup           Backup alignak configuration plugins and data
+    -r | --restore          Restore alignak configuration plugins and data
+    -l | --listbackups      List alignak backups
     -c | --compresslogs     Compress rotated logs
-    -e | --enabledaemons    Which daemons to keep enabled at boot time. It's a quoted list of shinken daemons that should be enabled at startup.
+    -e | --enabledaemons    Which daemons to keep enabled at boot time. It's a quoted list of alignak daemons that should be enabled at startup.
                             Daemons are:
                                 arbiter
                                 scheduler
@@ -71,15 +71,15 @@ You can modify the target folder, backup folder or user/group the following way:
 allowed values are:
 
   TMP               temporary folder
-  TARGET            where to put shinken
+  TARGET            where to put alignak
   ETC               where to put the etc folder
   BACKUPDIR         where to put backups
-  SKUSER            shinken user
-  SKGROUP           shinken group
+  SKUSER            alignak user
+  SKGROUP           alignak group
   USEPROXY          use proxy environment variable for wget operations (also see below for proxy usage)
   SKIPPREREQUISITES bypass prerequisites checks and installation (experimental). Set to 1 if you want to skip prerequisites
 
-Others configuration values are stored in install.d/shinken.conf. You can try to modify them, but never forget to test it before using them in production.
+Others configuration values are stored in install.d/alignak.conf. You can try to modify them, but never forget to test it before using them in production.
 
 Using proxy
 ~~~~~~~~~~~
@@ -109,7 +109,7 @@ You should use -E option in order to preserve your environment variables
 
     export http_proxy=http://login:password@proxy:port
     export https_proxy=$http_proxy
-    sudo -E -- USEPROXY=1 ./shinken.sh -i
+    sudo -E -- USEPROXY=1 ./alignak.sh -i
 
 
 Note about addon installation

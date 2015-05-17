@@ -20,7 +20,7 @@ define('OS_LOGO_PATH', "img/logos");
 # This is the path to the Nagios binary. The binary is needed in order to run tests on the generated config.
 # This path should either point to the original binary (if Nagios is installed on the same host), to a copy of the binary
 # (copy it to the bin/ folder), or to a symbolic link. Make sure the binary is executable to the webserver user.
-define('NAGIOS_BIN', '/usr/local/shinken/bin/nagios');
+define('NAGIOS_BIN', '/usr/local/alignak/bin/nagios');
 
 # Check for updates
 # When enabled, NConf will access http://update.nconf.org and will display information about the latest available version.
