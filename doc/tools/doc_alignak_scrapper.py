@@ -6,9 +6,9 @@ import os
 import requests
 from lxml import etree
 
-#application_name = "shinken"
+#application_name = "alignak"
 application_name = ""
-url = "http://www.shinken-monitoring.org/wiki"
+url = "http://www.../wiki"
 sitemap_url = url + "/start?do=index"
 sitemap_ajax_url = url + "/lib/exe/ajax.php"
 parser = etree.HTMLParser()
@@ -38,7 +38,7 @@ def parse_level(level, root=""):
             ajax_tree = etree.parse(ajax_res, ajax_parser)
 #            print raw_ajax_res.content
             parse_level(ajax_tree, new_root)
-#            http://www.shinken-monitoring.org/wiki/lib/exe/ajax.php
+#            http://www.../wiki/lib/exe/ajax.php
 #            print title.getparent().getparent()
         else:
 #            import pdb;pdb.set_trace()
@@ -64,9 +64,9 @@ def parse_level(level, root=""):
             modified_page_raw = modified_page_raw.replace("/official/", ":%s:official:" % application_name)
             modified_page_raw = modified_page_raw.replace("[[official:", "[[%s:official:" % application_name)
             modified_page_raw = modified_page_raw.replace("[[:", "[[:%s:" % application_name)
-#            modified_page_raw = modified_page_raw.replace(":green_dot.16x16.png", ":shinken:green_dot.16x16.png")
-#            modified_page_raw = modified_page_raw.replace(":red_dot.16x16.png", ":shinken:red_dot.16x16.png")
-#            modified_page_raw = modified_page_raw.replace(":orange_dot.16x16.png", ":shinken:orange_dot.16x16.png")
+#            modified_page_raw = modified_page_raw.replace(":green_dot.16x16.png", ":alignak:green_dot.16x16.png")
+#            modified_page_raw = modified_page_raw.replace(":red_dot.16x16.png", ":alignak:red_dot.16x16.png")
+#            modified_page_raw = modified_page_raw.replace(":orange_dot.16x16.png", ":alignak:orange_dot.16x16.png")
             # Change media links
 #            modified_page_raw = modified_page_raw.replace("{{:official:images:", "{{%s:official:" % application_name)
             for k, v in replace_dict.items():
@@ -76,9 +76,9 @@ def parse_level(level, root=""):
                 modified_page_raw = modified_page_raw.replace(k, v.replace("/", ":"))
             modified_page_raw = modified_page_raw.replace(":images/", ":images/:")
 
-# DISABLE: add :shinken:
-#            modified_page_raw = modified_page_raw.replace("{{ :", "{{ :shinken:")
-#            modified_page_raw = modified_page_raw.replace(":shinken:shinken:", ":shinken:")
+# DISABLE: add :alignak:
+#            modified_page_raw = modified_page_raw.replace("{{ :", "{{ :alignak:")
+#            modified_page_raw = modified_page_raw.replace(":alignak:alignak:", ":alignak:")
 
 
 #            if replace_dict:
@@ -108,8 +108,8 @@ def find_media(raw_data):
                 continue
             media_url = url + "/_media" + media
 
-# DISABLE: add :shinken:
-            #replace_dict[media] = ":shinken:" + media.replace("/", ":")
+# DISABLE: add :alignak:
+            #replace_dict[media] = ":alignak:" + media.replace("/", ":")
             replace_dict[media] = media.replace("/", ":")
 
 
@@ -136,8 +136,8 @@ def find_media(raw_data):
 parse_level(index)
 
 lonely_pages = [
-    ("http://www.shinken-monitoring.org/wiki/official/start?do=export_raw&do=export_raw", "official"),
-    ("http://www.shinken-monitoring.org/wiki/packs/start?do=export_raw&do=export_raw", "packs"),
+    ("http://www.../wiki/official/start?do=export_raw&do=export_raw", "official"),
+    ("http://www.../wiki/packs/start?do=export_raw&do=export_raw", "packs"),
 ]
 
 for p, tmp_root in lonely_pages:
@@ -165,9 +165,9 @@ for p, tmp_root in lonely_pages:
         modified_page_raw = modified_page_raw.replace(k, v.replace("/", ":"))
     modified_page_raw = modified_page_raw.replace(":images/", ":images/:")
 
-# DISABLE: add :shinken:
-    modified_page_raw = modified_page_raw.replace("{{ :", "{{ :shinken:")
-    modified_page_raw = modified_page_raw.replace(":shinken:shinken:", ":shinken:")
+# DISABLE: add :alignak:
+    modified_page_raw = modified_page_raw.replace("{{ :", "{{ :alignak:")
+    modified_page_raw = modified_page_raw.replace(":alignak:alignak:", ":alignak:")
 
     f = open(file_name, "w")
     print "    Writing file : %s" % file_name

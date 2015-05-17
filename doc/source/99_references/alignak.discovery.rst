@@ -4,7 +4,7 @@ discovery Package
 :mod:`discovery` Package
 ------------------------
 
-.. automodule:: shinken.discovery
+.. automodule:: alignak.discovery
     :members:
     :undoc-members:
     :show-inheritance:
@@ -12,7 +12,7 @@ discovery Package
 :mod:`discoverymanager` Module
 ------------------------------
 
-.. automodule:: shinken.discovery.discoverymanager
+.. automodule:: alignak.discovery.discoverymanager
     :members:
     :undoc-members:
     :show-inheritance:

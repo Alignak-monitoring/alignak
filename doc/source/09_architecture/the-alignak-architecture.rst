@@ -1,22 +1,22 @@
-.. _architecture/the-shinken-architecture:
+.. _architecture/the-alignak-architecture:
 
 =====================
-Shinken Architecture 
+Alignak Architecture 
 =====================
 
 
 Summary 
 ========
 
-Shinken's architecture has been designed according to the Unix Way: one tool, one task. Shinken has an architecture where each part is isolated and connects to the others via standard interfaces. Shinken is based on a HTTP backend. This makes building a highly available or distributed monitoring architectures quite easy.
+Alignak's architecture has been designed according to the Unix Way: one tool, one task. Alignak has an architecture where each part is isolated and connects to the others via standard interfaces. Alignak is based on a HTTP backend. This makes building a highly available or distributed monitoring architectures quite easy.
 
-  * Shinken gets data IN
+  * Alignak gets data IN
 
     * passively
     * actively
     * Networked API
 
-  * Shinken acts on the data
+  * Alignak acts on the data
 
     * Correlation
     * Event suppression
@@ -24,7 +24,7 @@ Shinken's architecture has been designed according to the Unix Way: one tool, on
     * Adding new poller daemons
     * Runtime interaction
 
-  * Shinken gets data OUT
+  * Alignak gets data OUT
 
     * Networked API
     * Notifications
@@ -32,7 +32,7 @@ Shinken's architecture has been designed according to the Unix Way: one tool, on
     * Web/Mobile Frontend (via API and Native WebUI)
     * Metrics databases
 
-  * Shinken manages configurations
+  * Alignak manages configurations
 
     * Discovery manager SkonfUI
     * Multi-level discovery engine
@@ -40,29 +40,29 @@ Shinken's architecture has been designed according to the Unix Way: one tool, on
     * Text file management via configuration engines (cfengine, chef, puppet, salt)
 
 
-Shinken innovative features 
+Alignak innovative features 
 ============================
 
-Learn more about the :ref:`innovative features of Shinken <about/shinken-innovative-features>`.
+Learn more about the :ref:`innovative features of Alignak <about/alignak-innovative-features>`.
 
 
-Shinken data acquisition for monitoring 
+Alignak data acquisition for monitoring 
 ========================================
 
-Shinken needs plugins to actually gather data. There exists `**thousands** of plugins for every conceivable application`_. Shinken packages the configurations necessary to use common plugins in :ref:`Packs <contributing/create-and-push-packs>`. Plugins themselves need to be installed by the administrator of the monitoring solution(Shinken will install some common ones for you). This is a great strength and flexibility of Shinken, but also an administrative responsibility to download and install the necessary plugins.
+Alignak needs plugins to actually gather data. There exists `**thousands** of plugins for every conceivable application`_. Alignak packages the configurations necessary to use common plugins in :ref:`Packs <contributing/create-and-push-packs>`. Plugins themselves need to be installed by the administrator of the monitoring solution(Alignak will install some common ones for you). This is a great strength and flexibility of Alignak, but also an administrative responsibility to download and install the necessary plugins.
 
 
 Architecture diagram with all daemons illustrated 
 ==================================================
 
-.. image:: /_static/images///official/images/shinken-architecture.png
+.. image:: /_static/images///official/images/alignak-architecture.png
    :scale: 90 %
 
 
-Shinken Daemon roles 
+Alignak Daemon roles 
 =====================
 
-    * :ref:`Arbiter <configobjects/arbiter>`: The arbiter daemon reads the configuration, divides it into parts (N schedulers = N parts), and distributes them to the appropriate Shinken daemons. Additionally, it manages the high availability features: if a particular daemon dies, it re-routes the configuration managed by this failed daemon to the configured spare. Finally, it can receive input from users (such as external commands from nagios.cmd) or passive check results and routes them to the appropriate daemon. Passive check results are forwarded to the Scheduler responsible for the check. There can only be one active arbiter with other arbiters acting as hot standby spares in the architecture.
+    * :ref:`Arbiter <configobjects/arbiter>`: The arbiter daemon reads the configuration, divides it into parts (N schedulers = N parts), and distributes them to the appropriate Alignak daemons. Additionally, it manages the high availability features: if a particular daemon dies, it re-routes the configuration managed by this failed daemon to the configured spare. Finally, it can receive input from users (such as external commands from nagios.cmd) or passive check results and routes them to the appropriate daemon. Passive check results are forwarded to the Scheduler responsible for the check. There can only be one active arbiter with other arbiters acting as hot standby spares in the architecture.
 
       * Modules for data collection: :ref:`NSCA <nsca_daemon_module>`, :ref:`TSCA <tsca_daemon_module>`, :ref:`Ws_arbiter <ws_daemon_module>` (web service)
       * Modules for configuration data storage: MongoDB
@@ -87,13 +87,13 @@ Shinken Daemon roles
 
       * Module for external communications: :ref:`AndroidSMS <advanced/sms-with-android>`
 
-    * :ref:`Broker <configobjects/broker>`: The broker daemon exports and manages data from schedulers.  The broker uses modules exclusively to get the job done. The main method of interacting with Shinken is through the Livestatus API. Learn how to :ref:`configure the Broker modules <packages/the-broker-modules>`.
+    * :ref:`Broker <configobjects/broker>`: The broker daemon exports and manages data from schedulers.  The broker uses modules exclusively to get the job done. The main method of interacting with Alignak is through the Livestatus API. Learn how to :ref:`configure the Broker modules <packages/the-broker-modules>`.
 
       * Modules for the Livestatus API - live state, status retention and history:  SQLite (default), MongoDB (experimental)
-      * Module for centralizing Shinken logs: Simple-log (flat file)
+      * Module for centralizing Alignak logs: Simple-log (flat file)
       * Modules for data retention: Pickle , ToNdodb_Mysql, ToNdodb_Oracle, <del>couchdb</del> 
       * Modules for exporting data: Graphite-Perfdata, NPCDMOD(PNP4Nagios), raw_tcp(Splunk), Syslog
-      * Modules for the Shinken WebUI: GRAPHITE_UI, PNP_UI. Trending and data visualization.
+      * Modules for the Alignak WebUI: GRAPHITE_UI, PNP_UI. Trending and data visualization.
       * Modules for compatibility/migration: Service-Perfdata, Host-Perfdata and Status-Dat 
 
 
@@ -101,13 +101,13 @@ Shinken Daemon roles
 
       * Module for passive data collection: :ref:`NSCA <nsca_daemon_module>`, :ref:`TSCA <tsca_daemon_module>`, :ref:`Ws_arbiter (web service) <ws_daemon_module>`
 
-.. tip::  The various daemons can be run on a single server for small deployments or split on different hardware for larger deployments as performance or availability requirements dictate. For larger deployments, running multiple Schedulers is recommended, even if they are on the same server. Consult :ref:`planning a large scale Shinken deployment <advanced/scaling-shinken>` for more information.
+.. tip::  The various daemons can be run on a single server for small deployments or split on different hardware for larger deployments as performance or availability requirements dictate. For larger deployments, running multiple Schedulers is recommended, even if they are on the same server. Consult :ref:`planning a large scale Alignak deployment <advanced/scaling-alignak>` for more information.
 
 
-Learn more about the Shinken Distributed Architecture 
+Learn more about the Alignak Distributed Architecture 
 ======================================================
 
-The Shinken distributed architecture, more features explained.
+The Alignak distributed architecture, more features explained.
 
   * :ref:`Smart and automatic load balancing <advanced/distributed#the_smart_and_automatic_load_balancing>`
   * :ref:`High availability <advanced/distributed#the_high_availability>`
@@ -117,10 +117,10 @@ The Shinken distributed architecture, more features explained.
 If you are just starting out, you can continue on with the next tutorial, which will help you :ref:`Configure a web front-end <integration/index>`.
 
 
-Planning a large scale Shinken deployment 
+Planning a large scale Alignak deployment 
 ==========================================
 
-If you wish to plan a large scale installation of Shinken, you can consult the :ref:`Scaling Shinken <advanced/scaling-shinken>` reference.
+If you wish to plan a large scale installation of Alignak, you can consult the :ref:`Scaling Alignak <advanced/scaling-alignak>` reference.
 
 This is essential to avoid making time consuming mistakes and aggravation.
 

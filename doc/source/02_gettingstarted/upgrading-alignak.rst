@@ -1,11 +1,11 @@
-.. _gettingstarted/upgrading-shinken:
+.. _gettingstarted/upgrading-alignak:
 
 ===================
- Upgrading Shinken 
+ Upgrading Alignak 
 ===================
 
 
-Upgrading From Previous Shinken Releases 
+Upgrading From Previous Alignak Releases 
 =========================================
 
 See the :ref:`update page for that <thebasics/update>`. Basically it's only about backuping and installing from a later git version (or package).
@@ -14,4 +14,4 @@ See the :ref:`update page for that <thebasics/update>`. Basically it's only abou
 Upgrading From Nagios 3.x 
 ==========================
 
-Just install Shinken and start the arbiter with your Nagios configuration. That's all.
+Just install Alignak and start the arbiter with your Nagios configuration. That's all.

@@ -6,7 +6,7 @@ Monitoring Linux devices via SNMP
 
 .. note::  TODO: draw a by snmp diag
 
-Instructions below assume that you've installed Shinken according to the :ref:`10 Minutes Installation Guide <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files (''commands.cfg'', ''templates.cfg'', etc.) installed if you followed this quickstart.
+Instructions below assume that you've installed Alignak according to the :ref:`10 Minutes Installation Guide <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files (''commands.cfg'', ''templates.cfg'', etc.) installed if you followed this quickstart.
 
 
 Steps 
@@ -15,7 +15,7 @@ Steps
 Here are the steps you will need to follow in order to monitor a new GNU/Linux device:
   - Install/configure SNMPd on the GNU/Linux device
   - Create new host definition for monitoring this device
-  - Restart the Shinken daemon
+  - Restart the Alignak daemon
 
 
 What's Already Been Done For You 
@@ -26,7 +26,7 @@ To make your life a bit easier, a few configuration tasks have already been done
   * A selection of **check_snmp_** command definitions has been added to the "commands.cfg" file.
   * A Linux host template (called "linux") has already been created in the "templates.cfg" file. This allows you to add new host definitions with a simple keyword.
 
-The above-mentioned configuration files can be found in the ///etc/shinken///packs/os/linux directory (or *c:\shinken\etc\packs\os\linux* under windows). You can modify the definitions in these and other configuration packs to suit your needs better. However, it is recommended to wait until you're more familiar with Shinken before doing so. For the time being, just follow the directions outlined below and you'll be securely monitoring your Linux boxes in no time.
+The above-mentioned configuration files can be found in the ///etc/alignak///packs/os/linux directory (or *c:\alignak\etc\packs\os\linux* under windows). You can modify the definitions in these and other configuration packs to suit your needs better. However, it is recommended to wait until you're more familiar with Alignak before doing so. For the time being, just follow the directions outlined below and you'll be securely monitoring your Linux boxes in no time.
 
 .. tip::  In the example, the linux device being monitored is named srv-lin-1. To re-use the example, make sure to update the hostname to that of your server.
 
@@ -36,7 +36,7 @@ Installing/setup snmpd on srv-lin-1
 
 First connect as root under srv-lin-1 with SSH (or putty/SecureCRT under windows).
 
-.. note::  Todo: check if shinken.sh can do this, or with a deploy command?
+.. note::  Todo: check if alignak.sh can do this, or with a deploy command?
 
 RedHat like:
   
@@ -80,7 +80,7 @@ Restart the snmpd daemon:
 Test the connection 
 --------------------
 
-To see if the keys are working, just launch from your Shinken server. Change the "public" community value with your one:
+To see if the keys are working, just launch from your Alignak server. Change the "public" community value with your one:
   
 ::
 
@@ -89,17 +89,17 @@ To see if the keys are working, just launch from your Shinken server. Change the
 It should give you the uptime of the srv-lin-1 server.
 
 
-Declare your new host in Shinken 
+Declare your new host in Alignak 
 =================================
 
-If the SNMP community value is a global one you are using on all your hosts, you can configure it in the file /etc/shinken/resource.cfg (or c:\shinken\resource.cfg under windows) in the line:
+If the SNMP community value is a global one you are using on all your hosts, you can configure it in the file /etc/alignak/resource.cfg (or c:\alignak\resource.cfg under windows) in the line:
   
 ::
 
   $SNMPCOMMUNITYREAD$=public
 
 
-Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Shinken configuration files in order to monitor the new Linux device.
+Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Alignak configuration files in order to monitor the new Linux device.
 
 You can add the new **host** definition in an existing configuration file, but it's a good idea to have one file per host, it will be easier to manage in the future. So create a file with the name of your server.
 
@@ -107,13 +107,13 @@ Under Linux:
   
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-lin-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-lin-1.cfg
   
 Or Windows:
   
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-lin-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-lin-1.cfg
   
 
 You need to add a new :ref:`host definition <configobjects/host>` for the GNU/Linux device that you're going to monitor. Just copy/paste the above definition Change the **host_name** and **address** fields to appropriate values for this device.
@@ -156,9 +156,9 @@ At this point, you configure your host to be checked with a linux template. What
   * check network interface activities
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-You're done with modifying the Shinken configuration, so you'll need to :ref:`verify your configuration files <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+You're done with modifying the Alignak configuration, so you'll need to :ref:`verify your configuration files <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any error messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any error messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!

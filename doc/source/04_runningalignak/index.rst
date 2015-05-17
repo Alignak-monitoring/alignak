@@ -2,9 +2,9 @@
 
     \newpage
 
-.. _runningshinken/index:
+.. _runningalignak/index:
 
-Running Shinken
+Running Alignak
 ===============
 
 .. raw:: LaTeX

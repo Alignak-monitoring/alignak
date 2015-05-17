@@ -1,26 +1,26 @@
 .. _integration/webui:
 
 ======================
-Use Shinken with WebUI
+Use Alignak with WebUI
 ======================
 
 
-Shinken WebUI 
+Alignak WebUI 
 ==============
 
-Shinken includes a self sufficient Web User Interface, which includes its own web server (No need to setup Apache or Microsoft IIS)
-Shinken WebUI is started at the same time Shinken itself does, and is configured using the main Shinken configuration file by setting a few basic parameters.
+Alignak includes a self sufficient Web User Interface, which includes its own web server (No need to setup Apache or Microsoft IIS)
+Alignak WebUI is started at the same time Alignak itself does, and is configured using the main Alignak configuration file by setting a few basic parameters.
 
 
 .. image:: /_static/images/problems.png
    :scale: 90 %
 
 
-* Homepage: http://www.shinken-monitoring.org/
-* Screenshots: http://www.shinken-monitoring.org/screenshots/
-* Description: "Shinken WebUI is the default visualization interface. It's designed to be simple and focus on root problems analysis and business impacts."
+* Homepage: http://www.github.com/Alignak-monitoring//
+* Screenshots: http://...
+* Description: "Alignak WebUI is the default visualization interface. It's designed to be simple and focus on root problems analysis and business impacts."
 * License: AGPL v3
-* Shinken forum: http://www.shinken-monitoring.org/forum/
+* Alignak forum: http://www...
 
 
 Set up the WebUI module 
@@ -45,7 +45,7 @@ Enable the **webui** module in ''modules/webui.cfg'' configuration file that is 
         allow_html_output  0
   
         # Option welcome message
-        #login_text             Welcome to ACME Shinken WebUI.
+        #login_text             Welcome to ACME Alignak WebUI.
   
         #http_backend    auto
         # ; can be also: wsgiref, cherrypy, paste, tornado, twisted
@@ -81,10 +81,10 @@ By default it is using the **cfg_password_webui** module, which will look into y
 .. tip::  You need to declare these modules in the **modules** property of WebUI.
 
 
-Shinken contact - cfg_password_webui 
+Alignak contact - cfg_password_webui 
 -------------------------------------
 
-The simpliest is to use the users added as Shinken contacts.
+The simpliest is to use the users added as Alignak contacts.
 
 ::
 
@@ -106,15 +106,15 @@ This module uses an Apache passwd file (htpasswd) as authentification backend. A
        module_type      passwd_webui
   
        # WARNING: put the full PATH for this value!
-       passwd           /etc/shinken/htpasswd.users
+       passwd           /etc/alignak/htpasswd.users
   }
 
 
-Check the owner (must be Shinken user) and mode (must be readable) of this file.
+Check the owner (must be Alignak user) and mode (must be readable) of this file.
 
 If you don't have such a file you can generate one with the "htpasswd" command (in Debian's "apache2-utils" package), or from websites like `htaccessTools`_.
 
-.. important::  To be able to log into the WebUI, users also have to be Shinken contacts! So adding an user in this file without adding it in the contacts will have no effect.
+.. important::  To be able to log into the WebUI, users also have to be Alignak contacts! So adding an user in this file without adding it in the contacts will have no effect.
 
 
 Active Directory / OpenLDAP - ad_webui
@@ -186,7 +186,7 @@ You can ask for a PNP integration with a **pnp_webui** module. Here is its defin
     }
 
 
-Shinken will automatically replace YOURSERVERNAME with the broker hostname at runtime to try and make it work for you, but you MUST change it to the appropriate value.
+Alignak will automatically replace YOURSERVERNAME with the broker hostname at runtime to try and make it work for you, but you MUST change it to the appropriate value.
 
 
 Graphite graphs 
@@ -204,7 +204,7 @@ You can ask for Graphite graphs with the **graphite_ui** definition.
     }
 
 
-Shinken will automatically replace YOURSERVERNAME with the broker hostname at runtime to try and make it work for you, but you MUST change it to the appropriate value.
+Alignak will automatically replace YOURSERVERNAME with the broker hostname at runtime to try and make it work for you, but you MUST change it to the appropriate value.
 
 
 Use it! 

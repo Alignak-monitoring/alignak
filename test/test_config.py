@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.

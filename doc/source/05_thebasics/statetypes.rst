@@ -13,7 +13,7 @@ The current state of monitored services and hosts is determined by two component
   * The status of the service or host (i.e. OK, WARNING, UP, DOWN, etc.)
   * The type of state the service or host is in.
 
-There are two state types in Shinken - SOFT states and HARD states. These state types are a crucial part of the monitoring logic, as they are used to determine when :ref:`event handlers <advanced/eventhandlers>` are executed and when :ref:`notifications <thebasics/notifications>` are initially sent out.
+There are two state types in Alignak - SOFT states and HARD states. These state types are a crucial part of the monitoring logic, as they are used to determine when :ref:`event handlers <advanced/eventhandlers>` are executed and when :ref:`notifications <thebasics/notifications>` are initially sent out.
 
 This document describes the difference between SOFT and HARD states, how they occur, and what happens when they occur.
 
@@ -21,7 +21,7 @@ This document describes the difference between SOFT and HARD states, how they oc
 Service and Host Check Retries 
 ===============================
 
-In order to prevent false alarms from transient problems, Shinken allows you to define how many times a service or host should be (re)checked before it is considered to have a "real" problem. This is controlled by the max_check_attempts option in the host and service definitions. Understanding how hosts and services are (re)checked in order to determine if a real problem exists is important in understanding how state types work.
+In order to prevent false alarms from transient problems, Alignak allows you to define how many times a service or host should be (re)checked before it is considered to have a "real" problem. This is controlled by the max_check_attempts option in the host and service definitions. Understanding how hosts and services are (re)checked in order to determine if a real problem exists is important in understanding how state types work.
 
 
 Soft States 

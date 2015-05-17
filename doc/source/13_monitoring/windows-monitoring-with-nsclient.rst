@@ -10,7 +10,7 @@ Guideline
 
 Here we will focus here on the windows monitoring with an agent, NSClient++.
 
-It can be get at `NSClient++`_ addon on the Windows machine and using the **check_nt** plugin to communicate with the NSClient++ addon. The **check_nt** plugin should already be installed on the Shinken server if you followed the quickstart guide.
+It can be get at `NSClient++`_ addon on the Windows machine and using the **check_nt** plugin to communicate with the NSClient++ addon. The **check_nt** plugin should already be installed on the Alignak server if you followed the quickstart guide.
 
 .. tip::  There are others agent like `NC_Net`_ but for the sake of simplicity, we will cover only nsclient++, the most complete and active one
 
@@ -22,7 +22,7 @@ There are several steps you'll need to follow in order to monitor a new Windows 
 
   * Install a monitoring agent on the Windows machine
   * Create new host and add it the nsclient template for monitoring the Windows machine
-  * Restart the Shinken daemon
+  * Restart the Alignak daemon
 
 
 What's Already Done For You 
@@ -33,13 +33,13 @@ To make your life a bit easier, a few configuration tasks have already been done
   * Some **check_nt** based commands definition has been added to the "commands.cfg" file. This allows you to use the **check_nt** plugin to monitor Window services.
   * A Windows host template (called "windows") has already been created in the "templates.cfg" file. This allows you to add new Windows host definitions in a simple manner.
 
-The above-mentioned config files can be found in the "/etc/shinken/" directory. You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Shinken before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Windows boxes in no time.
+The above-mentioned config files can be found in the "/etc/alignak/" directory. You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Alignak before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Windows boxes in no time.
 
 
 Installing the Windows Agent 
 =============================
 
-Before you can begin monitoring private services and attributes of Windows machines, you'll need to install an agent on those machines. I recommend using the NSClient++ addon, which can be found at http://sourceforge.net/projects/nscplus. These instructions will take you through a basic installation of the NSClient++ addon, as well as the configuration of Shinken for monitoring the Windows machine.
+Before you can begin monitoring private services and attributes of Windows machines, you'll need to install an agent on those machines. I recommend using the NSClient++ addon, which can be found at http://sourceforge.net/projects/nscplus. These instructions will take you through a basic installation of the NSClient++ addon, as well as the configuration of Alignak for monitoring the Windows machine.
 
   * Download the latest stable version of the NSClient++ addon from http://sourceforge.net/projects/nscplus
   * Unzip the NSClient++ files into a new C:\NSClient++ directory
@@ -69,7 +69,7 @@ Edit the "NSC.INI file" (located in the "C:\NSClient++" directory) and make the 
 
     * Uncomment all the modules listed in the [modules] section, except for "CheckWMI.dll" and "RemoteConfiguration.dll"
     * Optionally require a password for clients by changing the "password" option in the [Settings] section.
-    * Uncomment the "allowed_hosts" option in the [Settings] section. Add the IP address of the Shinken server (or you pollers serbers for a multi-host setup) to this line, or leave it blank to allow all hosts to connect.
+    * Uncomment the "allowed_hosts" option in the [Settings] section. Add the IP address of the Alignak server (or you pollers serbers for a multi-host setup) to this line, or leave it blank to allow all hosts to connect.
     * Make sure the "port" option in the [NSClient] section is uncommented and set to '12489' (the default port).
 
 Start the NSClient++ service with the following command:
@@ -80,13 +80,13 @@ Start the NSClient++ service with the following command:
 
 
 If installed properly, a new icon should appear in your system tray. It will be a yellow circle with a black 'M' inside.
-Success! The Windows server can now be added to the Shinken monitoring configuration...
+Success! The Windows server can now be added to the Alignak monitoring configuration...
 
 
-Declare your new host in Shinken 
+Declare your new host in Alignak 
 =================================
 
-Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Shinken configuration files in order to monitor the new Windows machine.
+Now it's time to define some :ref:`object definitions <configuration/objectdefinitions>` in your Alignak configuration files in order to monitor the new Windows machine.
 
 We will suppose here that your server is named *srv-win-1*. Of course change this name with the real name of your server.
 
@@ -96,13 +96,13 @@ Under Linux:
 
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-win-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-win-1.cfg
 
 Or Windows:
 
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-win-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-win-1.cfg
 
 
 You need to add a new :ref:`host <configobjects/host>` definition for the Windows machine that you're going to monitor. Just copy/paste the above definition Change the "host_name", and "address" fields to appropriate values for the Windows box.

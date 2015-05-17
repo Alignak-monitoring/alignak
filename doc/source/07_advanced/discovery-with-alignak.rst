@@ -1,7 +1,7 @@
-.. _advanced/discovery-with-shinken:
+.. _advanced/discovery-with-alignak:
 
 ======================
-Discovery with Shinken
+Discovery with Alignak
 ======================
 
 
@@ -16,7 +16,7 @@ Simple use of the discovery tool
 ================================
 
 
-When Shinken is installed, the discovery script shinken-discovery can help you start your new monitoring tool and integrate a large number of hosts. This does not replace extracting data from an authoritative CMDB/IT reference for provisioning known hosts. It can be used to supplement the data from the authoritative references.
+When Alignak is installed, the discovery script alignak-discovery can help you start your new monitoring tool and integrate a large number of hosts. This does not replace extracting data from an authoritative CMDB/IT reference for provisioning known hosts. It can be used to supplement the data from the authoritative references.
 
 At this time, two "discovery" modules are available:
   * Network based discovery using nmap
@@ -45,7 +45,7 @@ RedHat/Centos:
 
 Windows: Not available at this time.
 
-You need to setup the nmap targets in the file /etc/shinken/resource.d/nmap.cfg:
+You need to setup the nmap targets in the file /etc/alignak/resource.d/nmap.cfg:
 For nmap:
   
 ::
@@ -65,7 +65,7 @@ Setup the VMware part
 
 You will need the check_esx3.pl script. You can get it at http://www.op5.org/community/plugin-inventory/op5-projects/op5-plugins and install it in your standard plugin directory (should be /var/lib/plugins/nagios by default).
 
-You need to setup vcenter acces in the file /etc/shinken/resource.d/vmware.cfg:
+You need to setup vcenter acces in the file /etc/alignak/resource.d/vmware.cfg:
 Enter your server and credential (can be an account domain)
   
 ::
@@ -82,37 +82,37 @@ Launch it!
 
 Now, you are ready to run the discovery tool:
 
-This call will create hosts and services for nmap and vmware (vsphere) scripts in the /etc/shinken/discovery/discovery directory.
+This call will create hosts and services for nmap and vmware (vsphere) scripts in the /etc/alignak/discovery/discovery directory.
   
 ::
 
-  sudo shinken-discovery -o /etc/shinken/objects/discovery -r nmap,vsphere
+  sudo alignak-discovery -o /etc/alignak/objects/discovery -r nmap,vsphere
   
 If you are lazy and do not want to edit the resource file, you can set macros with the -m arguments:
   
 ::
 
-  sudo shinken-discovery -o /etc/shinken/objects/discovery -r nmap -m "NMAPTARGETS=192.168.0.1-254 localhost 192.168.0.1-254"
+  sudo alignak-discovery -o /etc/alignak/objects/discovery -r nmap -m "NMAPTARGETS=192.168.0.1-254 localhost 192.168.0.1-254"
 
 You can set several macros, just put them on the same -m argument, separated by a comma (,).
 
 .. tip::  The scan can take quite a few minutes if you are scanning a large network, you can go have a coffee. The scan timeout is set to 60 minutes.
 
 
-Restart Shinken 
+Restart Alignak 
 ---------------
 
 
-Once the scan is completed, you can restart Shinken and enjoy your new hosts and services:
+Once the scan is completed, you can restart Alignak and enjoy your new hosts and services:
   
 ::
 
-  sudo /etc/init.d/shinken restart
+  sudo /etc/init.d/alignak restart
   
 
 
 More about discovery 
 ====================
 
-If you want to know more about the discovery process, like how to create a discovery script or define creation rules, consult the :ref:`advanced discovery <advanced/discovery-with-shinken-advanced>` documentation.
+If you want to know more about the discovery process, like how to create a discovery script or define creation rules, consult the :ref:`advanced discovery <advanced/discovery-with-alignak-advanced>` documentation.
 

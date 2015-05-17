@@ -6,25 +6,25 @@ Diagrams
 
 Simple PerfDatas class diagram :
 
-.. inheritance-diagram:: shinken.misc.perfdata.PerfDatas
+.. inheritance-diagram:: alignak.misc.perfdata.PerfDatas
   :parts: 3
 
 
 Simple DataManager class diagram :
 
-.. inheritance-diagram:: shinken.misc.datamanager.DataManager
+.. inheritance-diagram:: alignak.misc.datamanager.DataManager
   :parts: 3
 
 
 Simple Regenerator class diagram :
 
-.. inheritance-diagram:: shinken.misc.regenerator.Regenerator
+.. inheritance-diagram:: alignak.misc.regenerator.Regenerator
   :parts: 3
 
 
 Simple Metric class diagram :
 
-.. inheritance-diagram::  shinken.misc.perfdata.Metric
+.. inheritance-diagram::  alignak.misc.perfdata.Metric
   :parts: 3
 
 
@@ -34,7 +34,7 @@ Package
 :mod:`misc` Package
 -------------------
 
-.. automodule:: shinken.misc
+.. automodule:: alignak.misc
     :members:
     :undoc-members:
     :show-inheritance:
@@ -42,7 +42,7 @@ Package
 :mod:`datamanager` Module
 -------------------------
 
-.. automodule:: shinken.misc.datamanager
+.. automodule:: alignak.misc.datamanager
     :members:
     :undoc-members:
     :show-inheritance:
@@ -50,7 +50,7 @@ Package
 :mod:`filter` Module
 --------------------
 
-.. automodule:: shinken.misc.filter
+.. automodule:: alignak.misc.filter
     :members:
     :undoc-members:
     :show-inheritance:
@@ -58,7 +58,7 @@ Package
 :mod:`md5crypt` Module
 ----------------------
 
-.. automodule:: shinken.misc.md5crypt
+.. automodule:: alignak.misc.md5crypt
     :members:
     :undoc-members:
     :show-inheritance:
@@ -66,7 +66,7 @@ Package
 :mod:`perfdata` Module
 ----------------------
 
-.. automodule:: shinken.misc.perfdata
+.. automodule:: alignak.misc.perfdata
     :members:
     :undoc-members:
     :show-inheritance:
@@ -74,7 +74,7 @@ Package
 :mod:`regenerator` Module
 -------------------------
 
-.. automodule:: shinken.misc.regenerator
+.. automodule:: alignak.misc.regenerator
     :members:
     :undoc-members:
     :show-inheritance:
@@ -82,7 +82,7 @@ Package
 :mod:`sorter` Module
 --------------------
 
-.. automodule:: shinken.misc.sorter
+.. automodule:: alignak.misc.sorter
     :members:
     :undoc-members:
     :show-inheritance:
@@ -90,7 +90,7 @@ Package
 :mod:`termcolor` Module
 -----------------------
 
-.. automodule:: shinken.misc.termcolor
+.. automodule:: alignak.misc.termcolor
     :members:
     :undoc-members:
     :show-inheritance:

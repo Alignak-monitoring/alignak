@@ -5,6 +5,6 @@
 # your environment as necessary.
 
 now=$(date +%s)
-commandfile='/usr/local/shinken/var/rw/nagios.cmd'
+commandfile='/usr/local/alignak/var/rw/nagios.cmd'
 
 printf "[%lu] PROCESS_HOST_CHECK_RESULT;router2;2;yoyo est mort\n" $now > $commandfile

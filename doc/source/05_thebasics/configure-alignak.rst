@@ -1,16 +1,16 @@
-.. _thebasics/configure-shinken:
+.. _thebasics/configure-alignak:
 
 =========================================
-Setting up a basic Shinken Configuration 
+Setting up a basic Alignak Configuration 
 =========================================
 
 
-Default Shinken configuration 
+Default Alignak configuration 
 ==============================
 
-If you followed the :ref:`10 Minute Shinken Installation Guide <gettingstarted/installations/shinken-installation>` tutorial you were able to install and launch Shinken.
+If you followed the :ref:`10 Minute Alignak Installation Guide <gettingstarted/installations/alignak-installation>` tutorial you were able to install and launch Alignak.
 
-The default configuration deployed with the Shinken sources contains:
+The default configuration deployed with the Alignak sources contains:
 
   * one arbiter
   * one scheduler
@@ -22,14 +22,14 @@ The default configuration deployed with the Shinken sources contains:
 All these elements must have a basic configuration. The Arbiter must know about the other daemons and how to communicate with them, just as the other daemons need to know on which TCP port they must listen on.
 
 
-Configure the Shinken Daemons 
+Configure the Alignak Daemons 
 ==============================
 
 The schedulers, pollers, reactionners and brokers daemons need to know in which directory to work on, and on which TCP port to listen. That's all.
 
-.. note::  If you plan on using the default directories, user (shinken) and tcp port you shouldn't have to edit these files.
+.. note::  If you plan on using the default directories, user (alignak) and tcp port you shouldn't have to edit these files.
 
-Each daemon has one configuration file. The default location is /etc/shinken/.
+Each daemon has one configuration file. The default location is /etc/alignak/.
 
 .. important::  Remember that all daemons can be on different servers: the daemons configuration files need to be on the server which is running the daemon, not necessarily on every server
 
@@ -37,10 +37,10 @@ Let's see what it looks like:
 
 ::
 
-  $cat /etc/shinken/daemons/schedulerd.ini
+  $cat /etc/alignak/daemons/schedulerd.ini
   
   [daemon]
-  workdir=/var/lib/shinken
+  workdir=/var/lib/alignak
   pidfile=%(workdir)s/schedulerd.pid
   port=7768
   host=0.0.0.0
@@ -49,8 +49,8 @@ Let's see what it looks like:
   
   # Optional configurations
   
-  user=shinken
-  group=shinken
+  user=alignak
+  group=alignak
   idontcareaboutsecurity=0
   use_ssl=0
   #certs_dir=etc/certs
@@ -64,8 +64,8 @@ Let's see what it looks like:
 
 So here we have a scheduler:
 
-    * workdir: Working directory of the daemon. By default /var/lib/shinken
-    * pidfile: PID file of the daemon (so we can kill it :) ). By default /var/lib/shinken/schedulerd.pid for a scheduler.
+    * workdir: Working directory of the daemon. By default /var/lib/alignak
+    * pidfile: PID file of the daemon (so we can kill it :) ). By default /var/lib/alignak/schedulerd.pid for a scheduler.
     * port: TCP port to listen to. By default:
 
        * scheduler: 7768
@@ -75,8 +75,8 @@ So here we have a scheduler:
        * arbiter: 7770 (the arbiter configuration will be seen later)
 
     * host: IP interface to listen on. The default 0.0.0.0 means all interfaces.
-    * user: User used by the daemon to run. By default shinken.
-    * group: Group of the user. By default shinken.
+    * user: User used by the daemon to run. By default alignak.
+    * group: Group of the user. By default alignak.
     * idontcareaboutsecurity: If set to 1, you can run it under the root account. But seriously: do not do this. The default is 0 of course.
     * daemon_enabled : If set to 0, the daemon won't run. For example, in distributed setups where you only need a poller.
     * use_ssl=0
@@ -93,9 +93,9 @@ So here we have a scheduler:
 Daemon declaration in the global configuration 
 ===============================================
 
-Now each daemon knows in which directory to run, and on which tcp port to listen. A daemon is a resource in the Shinken architecture. Such resources must be declared in the global configuration (where the Arbiter is) for them to be utilized.
+Now each daemon knows in which directory to run, and on which tcp port to listen. A daemon is a resource in the Alignak architecture. Such resources must be declared in the global configuration (where the Arbiter is) for them to be utilized.
 
-The global configuration file is:  **/etc/shinken/shinken.cfg**
+The global configuration file is:  **/etc/alignak/alignak.cfg**
 
 The daemon declarations are quite simple: each daemon is represented by an object. The information contained in the daemon object are network parameters about how its resources should be treated (e.g. is it a spare, ...).
 
@@ -140,7 +140,7 @@ Modules have some common properties:
   * module_type: module type of the module. It's a fixed value given by the module.
   * other options: each module can have specific parameters. See the respective module documentation to learn more about them.
 
-Module references, :ref:`list of overall modules <architecture/the-shinken-architecture>`:
+Module references, :ref:`list of overall modules <architecture/the-alignak-architecture>`:
   * Arbiter modules
   * Scheduler modules
   * Broker modules
@@ -198,34 +198,34 @@ Here, we have a server named server-1 that has 192.168.0.1 as its IP address:
   define module{
        module_name      Simple-log
        module_type      simple_log
-       path             /var/lib/shinken/shinken.log
+       path             /var/lib/alignak/alignak.log
   }
   
   define module{
        module_name              Status-Dat
        module_type              status_dat
-       status_file              /var/lib/shinken/status.data
-       object_cache_file        /var/lib/shinken/objects.cache
+       status_file              /var/lib/alignak/status.data
+       object_cache_file        /var/lib/alignak/objects.cache
        status_update_interval   15 ; update status.dat every 15s
   }
   
 
 
-See? That was easy. And don't worry about forgetting one of them: if there is a missing daemon type, Shinken automatically adds one locally with a default address/port configuration.
+See? That was easy. And don't worry about forgetting one of them: if there is a missing daemon type, Alignak automatically adds one locally with a default address/port configuration.
 
 
 Removing unused configurations 
 -------------------------------
 
-The sample shinken.cfg file has all possible modules in addition to the basic daemon declarations.
+The sample alignak.cfg file has all possible modules in addition to the basic daemon declarations.
 
-  - Backup your shinken.cfg file.
+  - Backup your alignak.cfg file.
   - Delete all unused modules from your configuration file
   - Ex. If you do not use the openldap module, delete it from the file
 
 This will make any warnings or errors that show up in your log files more pertinent. This is because the modules, if declared will get loadedup even if they are not use in your Modules declaration of your daemons.
 
-If you ever lose your shinken.cfg, you can simply go to the shinken github repository and download the file.
+If you ever lose your alignak.cfg, you can simply go to the alignak github repository and download the file.
 
 
 Launch all daemons 
@@ -249,20 +249,20 @@ So a standard launch of the resources looks like:
 
 ::
 
-  /usr/bin/shinken-scheduler -d -c /etc/shinken/schedulerd.ini
-  /usr/bin/shinken-poller -d -c /etc/shinken/pollerd.ini
-  /usr/bin/shinken-reactionner -d -c /etc/shinken/reactionnerd.ini
-  /usr/bin/shinken-broker -d -c /etc/shinken/brokerd.ini
+  /usr/bin/alignak-scheduler -d -c /etc/alignak/schedulerd.ini
+  /usr/bin/alignak-poller -d -c /etc/alignak/pollerd.ini
+  /usr/bin/alignak-reactionner -d -c /etc/alignak/reactionnerd.ini
+  /usr/bin/alignak-broker -d -c /etc/alignak/brokerd.ini
 
 Now we can start the arbiter with the global configuration:
 
 ::
 
   #First we should check the configuration for errors
-  python bin/shinken-arbiter -v -c etc/shinken.cfg
+  python bin/alignak-arbiter -v -c etc/alignak.cfg
   
   #then, we can really launch it
-  python bin/shinken-arbiter -d -c etc/shinken.cfg
+  python bin/alignak-arbiter -d -c etc/alignak.cfg
 
 
 Now, you've got the same thing you had when you launched bin/launch_all.sh script 8-) (but now you know what you're doing)
@@ -271,6 +271,6 @@ Now, you've got the same thing you had when you launched bin/launch_all.sh scrip
 What's next 
 ============
 
-You are ready to continue to the next section, :ref:`get DATA IN Shinken <thebasics/plugins>`.
+You are ready to continue to the next section, :ref:`get DATA IN Alignak <thebasics/plugins>`.
 
-If you feel in the mood for testing even more shinken features, now would be the time to look at :ref:`advanced_features <architecture/advanced-features>` to play with distributed and high availability architectures!
+If you feel in the mood for testing even more alignak features, now would be the time to look at :ref:`advanced_features <architecture/advanced-features>` to play with distributed and high availability architectures!

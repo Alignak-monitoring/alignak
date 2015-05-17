@@ -1958,7 +1958,7 @@ class WSGIRefServer(ServerAdapter):
         srv.serve_forever()
 
 
-# Shinken: add WSGIRefServerSelect
+# Alignak: add WSGIRefServerSelect
 class WSGIRefServerSelect(ServerAdapter):
     def run(self, handler):  # pragma: no cover
         print "Call the Select version"
@@ -2141,7 +2141,7 @@ class AutoServer(ServerAdapter):
             except ImportError:
                 pass
 
-# Shinken: add 'wsgirefselect': WSGIRefServerSelect,
+# Alignak: add 'wsgirefselect': WSGIRefServerSelect,
 server_names = {
     'cgi': CGIServer,
     'flup': FlupFCGIServer,
@@ -2216,7 +2216,7 @@ def load_app(target):
     return rv if isinstance(rv, Bottle) else tmp
 
 
-# Shinken: add the return of the server
+# Alignak: add the return of the server
 def run(app=None, server='wsgiref', host='127.0.0.1', port=8080,
         interval=1, reloader=False, quiet=False, **kargs):
     """ Start a server instance. This method blocks until the server terminates.
@@ -2231,7 +2231,7 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080,
         in seconds (default: 1):param quiet: Suppress output to stdout and stderr?
         (default: False):param options: Options passed to the server adapter.
      """
-    # Shinken
+    # Alignak
     res = None
     app = app or default_app()
     if isinstance(app, basestring):
@@ -2256,13 +2256,13 @@ def run(app=None, server='wsgiref', host='127.0.0.1', port=8080,
             else:
                 _reloader_observer(server, app, interval)
         else:
-            # Shinken
+            # Alignak
             res = server.run(app)
     except KeyboardInterrupt:
         pass
     if not server.quiet and not os.environ.get('BOTTLE_CHILD'):
         print "Shutting down..."
-    # Shinken
+    # Alignak
     return res
 
 
@@ -2769,10 +2769,10 @@ HTTP_CODES[418] = "I'm a teapot"  # RFC 2324
 _HTTP_STATUS_LINES = dict((k, '%d %s' % (k, v)) for (k, v) in HTTP_CODES.iteritems())
 
 #: The default template used for error pages. Override with @error()
-# SHINKEN MOD: change from bottle import DEBUG to from shinken.webui.bottle import DEBUG,...
+# ALIGNAK MOD: change from bottle import DEBUG to from alignak.webui.bottle import DEBUG,...
 ERROR_PAGE_TEMPLATE = """
 %try:
-    %from shinken.webui.bottlewebui import DEBUG, HTTP_CODES, request, touni
+    %from alignak.webui.bottlewebui import DEBUG, HTTP_CODES, request, touni
     %status_name = HTTP_CODES.get(e.status, 'Unknown').title()
     <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
     <html>

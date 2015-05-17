@@ -6,26 +6,26 @@ Diagrams
 
 Simple QueryGenerator class diagram :
 
-.. inheritance-diagram:: shinken.clients.LSB.QueryGenerator  shinken.clients.LSB.SimpleQueryGenerator  shinken.clients.LSB.FileQueryGenerator
+.. inheritance-diagram:: alignak.clients.LSB.QueryGenerator  alignak.clients.LSB.SimpleQueryGenerator  alignak.clients.LSB.FileQueryGenerator
    :parts: 3
 
 
 Simple LSSyncConnection class diagram :
 
-.. inheritance-diagram:: shinken.clients.livestatus.LSSyncConnection
+.. inheritance-diagram:: alignak.clients.livestatus.LSSyncConnection
    :parts: 3
 
 
 
 Simple Query class diagram :
 
-.. inheritance-diagram:: shinken.clients.livestatus.Query
+.. inheritance-diagram:: alignak.clients.livestatus.Query
    :parts: 3
 
 
 Simple LSConnectionPool class diagram :
 
-.. inheritance-diagram:: shinken.clients.livestatus.LSConnectionPool
+.. inheritance-diagram:: alignak.clients.livestatus.LSConnectionPool
    :parts: 3
 
 
@@ -43,7 +43,7 @@ Package
 :mod:`clients` Package
 ----------------------
 
-.. automodule:: shinken.clients
+.. automodule:: alignak.clients
     :members:
     :undoc-members:
     :show-inheritance:
@@ -51,7 +51,7 @@ Package
 :mod:`LSB` Module
 -----------------
 
-.. automodule:: shinken.clients.LSB
+.. automodule:: alignak.clients.LSB
     :members:
     :undoc-members:
     :show-inheritance:
@@ -59,7 +59,7 @@ Package
 :mod:`livestatus` Module
 ------------------------
 
-.. automodule:: shinken.clients.livestatus
+.. automodule:: alignak.clients.livestatus
     :members:
     :undoc-members:
     :show-inheritance:

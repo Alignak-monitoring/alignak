@@ -5,12 +5,12 @@ Send sms by gateway
 ===================
 
 
-Shinken can be used to send sms to you and other people when you got an alert. 
+Alignak can be used to send sms to you and other people when you got an alert. 
 
 I will tell you how to do it with ovh gateway. If you need for another one you need to modify a little bit the information. 
 
 
-1. you need to go to your contact file which is for linux in /etc/shinken/contacts/
+1. you need to go to your contact file which is for linux in /etc/alignak/contacts/
 ==============================================================================================
 
 For each user you need to add her phone number in the pager line. (For ovh you need to do it with 0032 for example and not +32 , all phone number must be with the international prefix).
@@ -42,7 +42,7 @@ Then you need to add this at the end of the contacts.cfg
   }
 
 
-2. you need to go to your commands file  which is in /etc/shinken/commands/
+2. you need to go to your commands file  which is in /etc/alignak/commands/
 ======================================================================================
 
 And add these line at the end. 
@@ -54,22 +54,22 @@ And add these line at the end.
   # Notify Service by SMS-OVH
   define command {
     command_name        notify-service-by-ovhsms     // Should be the same as in the contacts.cfg
-    command_line        $PLUGINSDIR$/ovhsms.sh  $CONTACTPAGER$ $NOTIFICATIONTYPE$ $SERVICEDESC$ $HOSTNAME$ $SE$ // Tell which script shinken as to use to send sms. We will create it after. 
+    command_line        $PLUGINSDIR$/ovhsms.sh  $CONTACTPAGER$ $NOTIFICATIONTYPE$ $SERVICEDESC$ $HOSTNAME$ $SE$ // Tell which script alignak as to use to send sms. We will create it after. 
   }
   
 
   # Notify host by SMS-OVH
   define command {
     command_name        notify-host-by-ovhsms      * * Should be the same as in the contacts.cfg
-    command_line        $PLUGINSDIR$/ovhsms.sh $CONTACTPAGER$ $NOTIFICATIONTYPE$ $SERVICEDESC$ $HOSTNAME$ $SER$ // Tell which script shinken as to use to send sms. We will create it after.
+    command_line        $PLUGINSDIR$/ovhsms.sh $CONTACTPAGER$ $NOTIFICATIONTYPE$ $SERVICEDESC$ $HOSTNAME$ $SER$ // Tell which script alignak as to use to send sms. We will create it after.
   }
 
 
 3. Add the script 
 ==================
 
-First you need to be the shinken user so do a : su shinken
-do a : cd /var/lib/shinken/libexec/
+First you need to be the alignak user so do a : su alignak
+do a : cd /var/lib/alignak/libexec/
 and then create and edit your new script with the name you set above :  nano -w ovhsms.sh
 
 
@@ -96,5 +96,5 @@ and then create and edit your new script with the name you set above :  nano -w 
 
    
 Save your file and do : "exit" 
-To exit the shinken user.
+To exit the alignak user.
 Then set down one of your host or service to test if you receive it.  

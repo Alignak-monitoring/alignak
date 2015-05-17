@@ -8,9 +8,9 @@ Arbiter Definition
 Description 
 ============
 
-The Arbiter object is a way to define Arbiter daemons that will manage the configuration and all different architecture components of shinken (like distributed monitoring and high availability). It reads the configuration, cuts it into parts (N schedulers = N parts), and then sends them to all others elements. It manages the high availability part : if an element dies, it re-routes the configuration managed by this falling element to a spare one. Its other role is to receive input from users (like external commands of shinken.cmd) and send them to other elements. There can be only one active arbiter in the architecture.
+The Arbiter object is a way to define Arbiter daemons that will manage the configuration and all different architecture components of Alignak (like distributed monitoring and high availability). It reads the configuration, cuts it into parts (N schedulers = N parts), and then sends them to all others elements. It manages the high availability part : if an element dies, it re-routes the configuration managed by this falling element to a spare one. Its other role is to receive input from users (like external commands of alignak.cmd) and send them to other elements. There can be only one active arbiter in the architecture.
 
-The Arbiter definition is optional. If no arbiter is defined, Shinken will "create" one for the user. There will be no high availability for the Arbiter (no spare), and it will use the default port on the server where the daemon is launched.
+The Arbiter definition is optional. If no arbiter is defined, Alignak will "create" one for the user. There will be no high availability for the Arbiter (no spare), and it will use the default port on the server where the daemon is launched.
 
 
 Definition Format 
@@ -73,7 +73,7 @@ modules
   This variable is used to define all modules that the arbtier daemon matching this definition will load.
 
 timeout
-  This variable defines how much time the arbiter will block waiting for the response of a inter-process ping (Pyro). 3 seconds by default. This operation will become non blocking when Python 2.4 and 2.5 is dropped in Shinken 1.4.
+  This variable defines how much time the arbiter will block waiting for the response of a inter-process ping (Pyro). 3 seconds by default. This operation will become non blocking when Python 2.4 and 2.5 is dropped in Alignak 1.4.
 
 data_timeout
   Data send timeout. When sending data to another process. 120 seconds by default.

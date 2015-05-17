@@ -1,16 +1,16 @@
-.. _integration/use-shinken-with:
+.. _integration/use-alignak-with:
 
 ====================
-Use Shinken with ...
+Use Alignak with ...
 ====================
 
 
-Shinken interface 
+Alignak interface 
 ==================
 
 Administrators need a means to view status data and interact with the system.
 
-If you install Shinken using the :ref:`10 minutes installation <gettingstarted/installations/shinken-installation>` recommended method, you will have the **Shinken WebUI** installed. But it is not mandatory to use it, and you may prefer another interface. There are open-source and commercial web frontends using the **Livestatus API** or an **SQL backend** available to suit any needs.
+If you install Alignak using the :ref:`10 minutes installation <gettingstarted/installations/alignak-installation>` recommended method, you will have the **Alignak WebUI** installed. But it is not mandatory to use it, and you may prefer another interface. There are open-source and commercial web frontends using the **Livestatus API** or an **SQL backend** available to suit any needs.
 
 
 Web interfaces 
@@ -26,10 +26,10 @@ The most responsive interfaces are the native **WebUI** and those based on **Liv
 Direct memory access based interface 
 =====================================
 
-* :ref:`Shinken WebUI <integration/webui>`, included in the Shinken installation. Previews the Shinken features in an attractive package. Not meant for distributed deployments or scalability.
+* :ref:`Alignak WebUI <integration/webui>`, included in the Alignak installation. Previews the Alignak features in an attractive package. Not meant for distributed deployments or scalability.
    
 
-.. image:: /_static/images/shinken_webui.png
+.. image:: /_static/images/alignak_webui.png
    :scale: 90 %
 
 
@@ -65,7 +65,7 @@ Pickle based data export (Network)
 ===================================
 
 * Complimentary module: :ref:`Graphite <integration/graphite>` 
-*  *Note: Integrated out-of-the-box in :ref:`Shinken WebUI <integrationwithothersoftware\webui>`*
+*  *Note: Integrated out-of-the-box in :ref:`Alignak WebUI <integrationwithothersoftware\webui>`*
 
 
 Other 
@@ -91,7 +91,7 @@ Deprecated: Flat file export
 Which one is right for me? 
 ===========================
 
-Try them out and see which one fits best; this is especially easy with the Shinken WebUI and the Livestatus based interfaces.
+Try them out and see which one fits best; this is especially easy with the Alignak WebUI and the Livestatus based interfaces.
 
-  * For users just starting out with small to medium installations, **Thruk** or **Shinken's WebUI** are good choices;
+  * For users just starting out with small to medium installations, **Thruk** or **Alignak's WebUI** are good choices;
   * For maximum scalability, intuitive UI and a solid feature set **Multisite** is recommended. **Thruk** is perl/PHP based UI that is very feature complete which also provides some scalability.

@@ -1,20 +1,20 @@
 .. _tuning/statistics:
 
 ================================
- Shinken performance statistics 
+ Alignak performance statistics 
 ================================
 
 
 Introduction 
 =============
 
-Shinken provides some statistics in the log files on the health of the Shinken services. These are not currently available in the check_shinken check script. Support is planned in a future release. This will permit graphical review that Shinken :
+Alignak provides some statistics in the log files on the health of the Alignak services. These are not currently available in the check_alignak check script. Support is planned in a future release. This will permit graphical review that Alignak :
 
   * Operates efficiently
   * Locate problem areas in the monitoring process
-  * Observe the performance impacts of changes in your Shinken configuration
+  * Observe the performance impacts of changes in your Alignak configuration
 
 
-Shinken :ref:`internal metrics <internal_metrics>` are collected in the poller log and scheduler logs when :ref:`debug log level is enabled <troubleshooting/troubleshooting-shinken>`.
+Alignak :ref:`internal metrics <internal_metrics>` are collected in the poller log and scheduler logs when :ref:`debug log level is enabled <troubleshooting/troubleshooting-alignak>`.
 
 

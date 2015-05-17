@@ -1,14 +1,14 @@
 .. _development/pluginapi:
 
 ===================
- Shinken Plugin API
+ Alignak Plugin API
 ===================
 
 
 Other Resources 
 ================
 
-If you're looking at writing your own plugins for Shinken or Nagios, please make sure to visit these other resources:
+If you're looking at writing your own plugins for Alignak or Nagios, please make sure to visit these other resources:
 
   * The official `Monitoring plugins project website`_
   * The official `Monitoring plugins development guidelines`_
@@ -17,23 +17,23 @@ If you're looking at writing your own plugins for Shinken or Nagios, please make
 Plugin Overview 
 ================
 
-Scripts and executables must do two things (at a minimum) in order to function as Shinken plugins:
+Scripts and executables must do two things (at a minimum) in order to function as Alignak plugins:
 
   * Exit with one of several possible return values
   * Return at least one line of text output to "STDOUT"
 
-The inner workings of your plugin are unimportant to Shinken, interface between them is important.
+The inner workings of your plugin are unimportant to Alignak, interface between them is important.
 Your plugin could check the status of a TCP port, run a database query, check disk free space, or do whatever else it needs to check something.
 The details will depend on what needs to be checked - that's up to you.
 
-If you are interested in having a plugin that is performant to use with Shinken, consider making it a Python or python + C type plugin that is daemonized by the Shinken poller or receiver daemons.
+If you are interested in having a plugin that is performant to use with Alignak, consider making it a Python or python + C type plugin that is daemonized by the Alignak poller or receiver daemons.
 You can look at the existing poller daemons for how to create a module, it is very simple.
 
 
 Return Code 
 ============
 
-Shinken determines the status of a host or service by evaluating the return code from plugins.
+Alignak determines the status of a host or service by evaluating the return code from plugins.
 The following tables shows a list of valid return codes, along with their corresponding service or host states.
 
 ================== ============= =======================
@@ -120,7 +120,7 @@ Plugin Output Length Restrictions
 
 Nagios will only read the first 4 KB of data that a plugin returns. This is done in order to prevent runaway plugins from dumping megs or gigs of data back to Nagios. This 4 KB output limit is fairly easy to change if you need. Simply edit the value of the MAX_PLUGIN_OUTPUT_LENGTH definition in the include/nagios.h.in file of the source code distribution and recompile Nagios. There's nothing else you need to change!
 
-Shinken behaviour is pretty the same. The parameter can be specified in **shinken.cfg**. The default value is 8K
+Alignak behaviour is pretty the same. The parameter can be specified in **alignak.cfg**. The default value is 8K
 
 
 Examples 
@@ -128,7 +128,7 @@ Examples
 
 If you're looking for some example plugins to study, we would recommend that you download the official Monitoring plugins and look through the code for various C, Perl, and shell script plugins. Information on obtaining the official Monitoring plugins can be found :ref:`here <thebasics/plugins>`.
 
-Otherwise go to the Shinken Github or look in your installation in shinken/modules and look for the NRPE and NSCA modules for inspiration on create a new poller or receiver  daemon module.
+Otherwise go to the Alignak Github or look in your installation in alignak/modules and look for the NRPE and NSCA modules for inspiration on create a new poller or receiver  daemon module.
 
 
 .. _Monitoring plugins development guidelines: https://www.monitoring-plugins.org/doc/guidelines.html

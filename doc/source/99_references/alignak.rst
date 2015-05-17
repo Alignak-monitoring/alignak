@@ -1,4 +1,4 @@
-shinken Package
+Alignak Package
 ===============
 
 Diagrams
@@ -6,255 +6,255 @@ Diagrams
 
 Simple Acknowledge class diagram :
 
-.. inheritance-diagram:: shinken.acknowledge.Acknowledge
+.. inheritance-diagram:: alignak.acknowledge.Acknowledge
    :parts: 3
 
 
 Simple Action class diagram :
 
-.. inheritance-diagram:: shinken.action.__Action shinken.action.Action  shinken.eventhandler.EventHandler  shinken.notification.Notification  shinken.check.Check
+.. inheritance-diagram:: alignak.action.__Action alignak.action.Action  alignak.eventhandler.EventHandler  alignak.notification.Notification  alignak.check.Check
    :parts: 3
 
 
 Simple AutoSlots class diagram :
 
-.. inheritance-diagram:: shinken.autoslots.AutoSlots  shinken.singleton.Singleton
+.. inheritance-diagram:: alignak.autoslots.AutoSlots  alignak.singleton.Singleton
    :parts: 3
 
 
 Simple BaseModule class diagram :
 
-.. inheritance-diagram:: shinken.basemodule.BaseModule
+.. inheritance-diagram:: alignak.basemodule.BaseModule
    :parts: 3
 
 
 Simple Borg class diagram :
 
-.. inheritance-diagram:: shinken.borg.Borg  shinken.macroresolver.MacroResolver
+.. inheritance-diagram:: alignak.borg.Borg  alignak.macroresolver.MacroResolver
    :parts: 3
 
 
 Simple Brok class diagram :
 
-.. inheritance-diagram:: shinken.brok.Brok
+.. inheritance-diagram:: alignak.brok.Brok
    :parts: 3
 
 
 Simple CherryPyBackend class diagram :
 
-.. inheritance-diagram:: shinken.http_daemon.CherryPyBackend
+.. inheritance-diagram:: alignak.http_daemon.CherryPyBackend
    :parts: 3
 
 
 Simple Comment class diagram :
 
-.. inheritance-diagram:: shinken.comment.Comment
+.. inheritance-diagram:: alignak.comment.Comment
    :parts: 3
 
 
 Simple ComplexExpressionFactory class diagram :
 
-.. inheritance-diagram:: shinken.complexexpression.ComplexExpressionFactory
+.. inheritance-diagram:: alignak.complexexpression.ComplexExpressionFactory
    :parts: 3
 
 
 Simple ComplexExpressionNode class diagram :
 
-.. inheritance-diagram:: shinken.complexexpression.ComplexExpressionNode
+.. inheritance-diagram:: alignak.complexexpression.ComplexExpressionNode
    :parts: 3
 
 
 Simple ContactDowntime class diagram :
 
-.. inheritance-diagram:: shinken.contactdowntime.ContactDowntime
+.. inheritance-diagram:: alignak.contactdowntime.ContactDowntime
    :parts: 3
 
 
 Simple Daemon class diagram :
 
-.. inheritance-diagram:: shinken.daemon.Daemon
-                         shinken.daemons.arbiterdaemon.Arbiter shinken.satellite.BaseSatellite
-                         shinken.daemons.brokerdaemon.Broker  shinken.daemons.schedulerdaemon.Shinken  shinken.satellite.Satellite
-                         shinken.daemons.pollerdaemon.Poller  shinken.daemons.receiverdaemon.Receiver  shinken.daemons.reactionnerdaemon.Reactionner
+.. inheritance-diagram:: alignak.daemon.Daemon
+                         alignak.daemons.arbiterdaemon.Arbiter alignak.satellite.BaseSatellite
+                         alignak.daemons.brokerdaemon.Broker  alignak.daemons.schedulerdaemon.Alignak  alignak.satellite.Satellite
+                         alignak.daemons.pollerdaemon.Poller  alignak.daemons.receiverdaemon.Receiver  alignak.daemons.reactionnerdaemon.Reactionner
    :parts: 3
 
 
 Simple Daterange class diagram :
 
-.. inheritance-diagram:: shinken.daterange.Daterange  shinken.daterange.CalendarDaterange  shinken.daterange.StandardDaterange
-                         shinken.daterange.MonthWeekDayDaterange  shinken.daterange.MonthDateDaterange
-                         shinken.daterange.WeekDayDaterange  shinken.daterange.MonthDayDaterange
+.. inheritance-diagram:: alignak.daterange.Daterange  alignak.daterange.CalendarDaterange  alignak.daterange.StandardDaterange
+                         alignak.daterange.MonthWeekDayDaterange  alignak.daterange.MonthDateDaterange
+                         alignak.daterange.WeekDayDaterange  alignak.daterange.MonthDayDaterange
    :parts: 3
 
 
 Simple DB class diagram :
 
-.. inheritance-diagram:: shinken.db.DB  shinken.db_oracle.DBOracle  shinken.db_mysql.DBMysql  shinken.db_sqlite.DBSqlite
+.. inheritance-diagram:: alignak.db.DB  alignak.db_oracle.DBOracle  alignak.db_mysql.DBMysql  alignak.db_sqlite.DBSqlite
    :parts: 3
 
 
 Simple declared class diagram :
 
-.. inheritance-diagram:: shinken.trigger_functions.declared
+.. inheritance-diagram:: alignak.trigger_functions.declared
    :parts: 3
 
 
 Simple DependencyNode class diagram :
 
-.. inheritance-diagram:: shinken.dependencynode.DependencyNode
+.. inheritance-diagram:: alignak.dependencynode.DependencyNode
    :parts: 3
 
 
 Simple DependencyNodeFactory class diagram :
 
-.. inheritance-diagram:: shinken.dependencynode.DependencyNodeFactory
+.. inheritance-diagram:: alignak.dependencynode.DependencyNodeFactory
    :parts: 3
 
 
 Simple Dispatcher class diagram :
 
-.. inheritance-diagram:: shinken.dispatcher.Dispatcher
+.. inheritance-diagram:: alignak.dispatcher.Dispatcher
    :parts: 3
 
 
 Simple Downtime class diagram :
 
-.. inheritance-diagram:: shinken.downtime.Downtime
+.. inheritance-diagram:: alignak.downtime.Downtime
    :parts: 3
 
 
 Simple DummyCommandCall class diagram :
 
-.. inheritance-diagram:: shinken.commandcall.DummyCommandCall  shinken.commandcall.CommandCall
+.. inheritance-diagram:: alignak.commandcall.DummyCommandCall  alignak.commandcall.CommandCall
    :parts: 3
 
 
 Simple ExternalCommand class diagram :
 
-.. inheritance-diagram:: shinken.external_command.ExternalCommand
+.. inheritance-diagram:: alignak.external_command.ExternalCommand
    :parts: 3
 
 
 Simple ExternalCommandManager class diagram :
 
-.. inheritance-diagram:: shinken.external_command.ExternalCommandManager
+.. inheritance-diagram:: alignak.external_command.ExternalCommandManager
    :parts: 3
 
 
 Simple Graph class diagram :
 
-.. inheritance-diagram:: shinken.graph.Graph
+.. inheritance-diagram:: alignak.graph.Graph
    :parts: 3
 
 
 Simple HTTPClient class diagram :
 
-.. inheritance-diagram:: shinken.http_client.HTTPClient
+.. inheritance-diagram:: alignak.http_client.HTTPClient
    :parts: 3
 
 
 Simple HTTPDaemon class diagram :
 
-.. inheritance-diagram:: shinken.http_daemon.HTTPDaemon
+.. inheritance-diagram:: alignak.http_daemon.HTTPDaemon
    :parts: 3
 
 
 Simple Load class diagram :
 
-.. inheritance-diagram:: shinken.load.Load
+.. inheritance-diagram:: alignak.load.Load
    :parts: 3
 
 
 Simple Log class diagram :
 
-.. inheritance-diagram:: shinken.log.Log
+.. inheritance-diagram:: alignak.log.Log
    :parts: 3
 
 
 Simple memoized class diagram :
 
-.. inheritance-diagram:: shinken.memoized.memoized
+.. inheritance-diagram:: alignak.memoized.memoized
    :parts: 3
 
 
 Simple Message class diagram :
 
-.. inheritance-diagram:: shinken.message.Message
+.. inheritance-diagram:: alignak.message.Message
    :parts: 3
 
 
 Simple ModulesContext class diagram :
 
-.. inheritance-diagram:: shinken.modulesctx.ModulesContext
+.. inheritance-diagram:: alignak.modulesctx.ModulesContext
    :parts: 3
 
 
 Simple ModulesManager class diagram :
 
-.. inheritance-diagram:: shinken.modulesmanager.ModulesManager
+.. inheritance-diagram:: alignak.modulesmanager.ModulesManager
    :parts: 3
 
 
 Simple ModulePhases class diagram :
 
-.. inheritance-diagram:: shinken.basemodule.ModulePhases
+.. inheritance-diagram:: alignak.basemodule.ModulePhases
    :parts: 3
 
 
 Simple Property class diagram :
 
-.. inheritance-diagram:: shinken.property.Property  shinken.property.UnusedProp  shinken.property.BoolProp
-                         shinken.property.IntegerProp  shinken.property.FloatProp  shinken.property.CharProp
-                         shinken.property.StringProp  shinken.property.PathProp  shinken.property.ConfigPathProp
-                         shinken.property.ListProp  shinken.property.LogLevelProp  shinken.property.DictProp  shinken.property.AddrProp
+.. inheritance-diagram:: alignak.property.Property  alignak.property.UnusedProp  alignak.property.BoolProp
+                         alignak.property.IntegerProp  alignak.property.FloatProp  alignak.property.CharProp
+                         alignak.property.StringProp  alignak.property.PathProp  alignak.property.ConfigPathProp
+                         alignak.property.ListProp  alignak.property.LogLevelProp  alignak.property.DictProp  alignak.property.AddrProp
    :parts: 3
 
 
 Simple SatelliteLink class diagram :
 
-.. inheritance-diagram:: shinken.objects.item.Item
-                         shinken.satellitelink.SatelliteLink  shinken.schedulerlink.SchedulerLink  shinken.arbiterlink.ArbiterLink
-                         shinken.brokerlink.BrokerLink  shinken.receiverlink.ReceiverLink  shinken.pollerlink.PollerLink
-                         shinken.reactionnerlink.ReactionnerLink
+.. inheritance-diagram:: alignak.objects.item.Item
+                         alignak.satellitelink.SatelliteLink  alignak.schedulerlink.SchedulerLink  alignak.arbiterlink.ArbiterLink
+                         alignak.brokerlink.BrokerLink  alignak.receiverlink.ReceiverLink  alignak.pollerlink.PollerLink
+                         alignak.reactionnerlink.ReactionnerLink
    :parts: 3
 
 
 Simple Scheduler class diagram :
 
-.. inheritance-diagram:: shinken.scheduler.Scheduler
+.. inheritance-diagram:: alignak.scheduler.Scheduler
    :parts: 3
 
 
 Simple SortedDict class diagram :
 
-.. inheritance-diagram:: shinken.sorteddict.SortedDict
+.. inheritance-diagram:: alignak.sorteddict.SortedDict
    :parts: 3
 
 
 Simple Timerange class diagram :
 
-.. inheritance-diagram:: shinken.daterange.Timerange
+.. inheritance-diagram:: alignak.daterange.Timerange
    :parts: 3
 
 Simple Worker class diagram :
 
-.. inheritance-diagram:: shinken.worker.Worker
+.. inheritance-diagram:: alignak.worker.Worker
    :parts: 3
 
 
 Simple WSGIREFBackend class diagram :
 
-.. inheritance-diagram:: shinken.http_daemon.WSGIREFBackend
+.. inheritance-diagram:: alignak.http_daemon.WSGIREFBackend
    :parts: 3
 
 
 Package
 -------
 
-:mod:`shinken` Package
+:mod:`alignak` Package
 ----------------------
 
-.. automodule:: shinken.__init__
+.. automodule:: alignak.__init__
     :members:
     :undoc-members:
     :show-inheritance:
@@ -262,7 +262,7 @@ Package
 :mod:`acknowledge` Module
 -------------------------
 
-.. automodule:: shinken.acknowledge
+.. automodule:: alignak.acknowledge
     :members:
     :undoc-members:
     :show-inheritance:
@@ -270,7 +270,7 @@ Package
 :mod:`action` Module
 --------------------
 
-.. automodule:: shinken.action
+.. automodule:: alignak.action
     :members:
     :undoc-members:
     :show-inheritance:
@@ -278,7 +278,7 @@ Package
 :mod:`arbiterlink` Module
 -------------------------
 
-.. automodule:: shinken.arbiterlink
+.. automodule:: alignak.arbiterlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -286,7 +286,7 @@ Package
 :mod:`autoslots` Module
 -----------------------
 
-.. automodule:: shinken.autoslots
+.. automodule:: alignak.autoslots
     :members:
     :undoc-members:
     :show-inheritance:
@@ -294,7 +294,7 @@ Package
 :mod:`basemodule` Module
 ------------------------
 
-.. automodule:: shinken.basemodule
+.. automodule:: alignak.basemodule
     :members:
     :undoc-members:
     :show-inheritance:
@@ -302,7 +302,7 @@ Package
 :mod:`bin` Module
 -----------------
 
-.. automodule:: shinken.bin
+.. automodule:: alignak.bin
     :members:
     :undoc-members:
     :show-inheritance:
@@ -310,7 +310,7 @@ Package
 :mod:`borg` Module
 ------------------
 
-.. automodule:: shinken.borg
+.. automodule:: alignak.borg
     :members:
     :undoc-members:
     :show-inheritance:
@@ -318,7 +318,7 @@ Package
 :mod:`brok` Module
 ------------------
 
-.. automodule:: shinken.brok
+.. automodule:: alignak.brok
     :members:
     :undoc-members:
     :show-inheritance:
@@ -326,7 +326,7 @@ Package
 :mod:`brokerlink` Module
 ------------------------
 
-.. automodule:: shinken.brokerlink
+.. automodule:: alignak.brokerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -334,7 +334,7 @@ Package
 :mod:`check` Module
 -------------------
 
-.. automodule:: shinken.check
+.. automodule:: alignak.check
     :members:
     :undoc-members:
     :show-inheritance:
@@ -342,7 +342,7 @@ Package
 :mod:`commandcall` Module
 -------------------------
 
-.. automodule:: shinken.commandcall
+.. automodule:: alignak.commandcall
     :members:
     :undoc-members:
     :show-inheritance:
@@ -350,7 +350,7 @@ Package
 :mod:`comment` Module
 ---------------------
 
-.. automodule:: shinken.comment
+.. automodule:: alignak.comment
     :members:
     :undoc-members:
     :show-inheritance:
@@ -358,7 +358,7 @@ Package
 :mod:`complexexpression` Module
 -------------------------------
 
-.. automodule:: shinken.complexexpression
+.. automodule:: alignak.complexexpression
     :members:
     :undoc-members:
     :show-inheritance:
@@ -366,7 +366,7 @@ Package
 :mod:`contactdowntime` Module
 -----------------------------
 
-.. automodule:: shinken.contactdowntime
+.. automodule:: alignak.contactdowntime
     :members:
     :undoc-members:
     :show-inheritance:
@@ -374,7 +374,7 @@ Package
 :mod:`daemon` Module
 --------------------
 
-.. automodule:: shinken.daemon
+.. automodule:: alignak.daemon
     :members:
     :undoc-members:
     :show-inheritance:
@@ -382,7 +382,7 @@ Package
 :mod:`daterange` Module
 -----------------------
 
-.. automodule:: shinken.daterange
+.. automodule:: alignak.daterange
     :members:
     :undoc-members:
     :show-inheritance:
@@ -390,7 +390,7 @@ Package
 :mod:`db` Module
 ----------------
 
-.. automodule:: shinken.db
+.. automodule:: alignak.db
     :members:
     :undoc-members:
     :show-inheritance:
@@ -398,7 +398,7 @@ Package
 :mod:`db_mysql` Module
 ----------------------
 
-.. automodule:: shinken.db_mysql
+.. automodule:: alignak.db_mysql
     :members:
     :undoc-members:
     :show-inheritance:
@@ -406,7 +406,7 @@ Package
 :mod:`db_oracle` Module
 -----------------------
 
-.. automodule:: shinken.db_oracle
+.. automodule:: alignak.db_oracle
     :members:
     :undoc-members:
     :show-inheritance:
@@ -414,7 +414,7 @@ Package
 :mod:`db_sqlite` Module
 -----------------------
 
-.. automodule:: shinken.db_sqlite
+.. automodule:: alignak.db_sqlite
     :members:
     :undoc-members:
     :show-inheritance:
@@ -422,7 +422,7 @@ Package
 :mod:`dependencynode` Module
 ----------------------------
 
-.. automodule:: shinken.dependencynode
+.. automodule:: alignak.dependencynode
     :members:
     :undoc-members:
     :show-inheritance:
@@ -430,7 +430,7 @@ Package
 :mod:`dispatcher` Module
 ------------------------
 
-.. automodule:: shinken.dispatcher
+.. automodule:: alignak.dispatcher
     :members:
     :undoc-members:
     :show-inheritance:
@@ -438,7 +438,7 @@ Package
 :mod:`downtime` Module
 ----------------------
 
-.. automodule:: shinken.downtime
+.. automodule:: alignak.downtime
     :members:
     :undoc-members:
     :show-inheritance:
@@ -446,7 +446,7 @@ Package
 :mod:`easter` Module
 --------------------
 
-.. automodule:: shinken.easter
+.. automodule:: alignak.easter
     :members:
     :undoc-members:
     :show-inheritance:
@@ -454,7 +454,7 @@ Package
 :mod:`eventhandler` Module
 --------------------------
 
-.. automodule:: shinken.eventhandler
+.. automodule:: alignak.eventhandler
     :members:
     :undoc-members:
     :show-inheritance:
@@ -462,7 +462,7 @@ Package
 :mod:`external_command` Module
 ------------------------------
 
-.. automodule:: shinken.external_command
+.. automodule:: alignak.external_command
     :members:
     :undoc-members:
     :show-inheritance:
@@ -470,7 +470,7 @@ Package
 :mod:`graph` Module
 -------------------
 
-.. automodule:: shinken.graph
+.. automodule:: alignak.graph
     :members:
     :undoc-members:
     :show-inheritance:
@@ -478,7 +478,7 @@ Package
 :mod:`http_client` Module
 -------------------------
 
-.. automodule:: shinken.http_client
+.. automodule:: alignak.http_client
     :members:
     :undoc-members:
     :show-inheritance:
@@ -486,7 +486,7 @@ Package
 :mod:`http_daemon` Module
 -------------------------
 
-.. automodule:: shinken.http_daemon
+.. automodule:: alignak.http_daemon
     :members:
     :undoc-members:
     :show-inheritance:
@@ -494,7 +494,7 @@ Package
 :mod:`load` Module
 ------------------
 
-.. automodule:: shinken.load
+.. automodule:: alignak.load
     :members:
     :undoc-members:
     :show-inheritance:
@@ -502,7 +502,7 @@ Package
 :mod:`log` Module
 -----------------
 
-.. automodule:: shinken.log
+.. automodule:: alignak.log
     :members:
     :undoc-members:
     :show-inheritance:
@@ -510,7 +510,7 @@ Package
 :mod:`macroresolver` Module
 ---------------------------
 
-.. automodule:: shinken.macroresolver
+.. automodule:: alignak.macroresolver
     :members:
     :undoc-members:
     :show-inheritance:
@@ -518,7 +518,7 @@ Package
 :mod:`memoized` Module
 ----------------------
 
-.. automodule:: shinken.memoized
+.. automodule:: alignak.memoized
     :members:
     :undoc-members:
     :show-inheritance:
@@ -526,7 +526,7 @@ Package
 :mod:`message` Module
 ---------------------
 
-.. automodule:: shinken.message
+.. automodule:: alignak.message
     :members:
     :undoc-members:
     :show-inheritance:
@@ -534,7 +534,7 @@ Package
 :mod:`modulesctx` Module
 ------------------------
 
-.. automodule:: shinken.modulesctx
+.. automodule:: alignak.modulesctx
     :members:
     :undoc-members:
     :show-inheritance:
@@ -542,7 +542,7 @@ Package
 :mod:`modulesmanager` Module
 ----------------------------
 
-.. automodule:: shinken.modulesmanager
+.. automodule:: alignak.modulesmanager
     :members:
     :undoc-members:
     :show-inheritance:
@@ -550,7 +550,7 @@ Package
 :mod:`notification` Module
 --------------------------
 
-.. automodule:: shinken.notification
+.. automodule:: alignak.notification
     :members:
     :undoc-members:
     :show-inheritance:
@@ -558,7 +558,7 @@ Package
 :mod:`pollerlink` Module
 ------------------------
 
-.. automodule:: shinken.pollerlink
+.. automodule:: alignak.pollerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -566,7 +566,7 @@ Package
 :mod:`property` Module
 ----------------------
 
-.. automodule:: shinken.property
+.. automodule:: alignak.property
     :members:
     :undoc-members:
     :show-inheritance:
@@ -574,7 +574,7 @@ Package
 :mod:`reactionnerlink` Module
 -----------------------------
 
-.. automodule:: shinken.reactionnerlink
+.. automodule:: alignak.reactionnerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -582,7 +582,7 @@ Package
 :mod:`receiverlink` Module
 --------------------------
 
-.. automodule:: shinken.receiverlink
+.. automodule:: alignak.receiverlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -590,7 +590,7 @@ Package
 :mod:`satellite` Module
 -----------------------
 
-.. automodule:: shinken.satellite
+.. automodule:: alignak.satellite
     :members:
     :undoc-members:
     :show-inheritance:
@@ -598,7 +598,7 @@ Package
 :mod:`satellitelink` Module
 ---------------------------
 
-.. automodule:: shinken.satellitelink
+.. automodule:: alignak.satellitelink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -606,7 +606,7 @@ Package
 :mod:`scheduler` Module
 -----------------------
 
-.. automodule:: shinken.scheduler
+.. automodule:: alignak.scheduler
     :members:
     :undoc-members:
     :show-inheritance:
@@ -614,7 +614,7 @@ Package
 :mod:`schedulerlink` Module
 ---------------------------
 
-.. automodule:: shinken.schedulerlink
+.. automodule:: alignak.schedulerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -622,7 +622,7 @@ Package
 :mod:`singleton` Module
 -----------------------
 
-.. automodule:: shinken.singleton
+.. automodule:: alignak.singleton
     :members:
     :undoc-members:
     :show-inheritance:
@@ -630,7 +630,7 @@ Package
 :mod:`sorteddict` Module
 ------------------------
 
-.. automodule:: shinken.sorteddict
+.. automodule:: alignak.sorteddict
     :members:
     :undoc-members:
     :show-inheritance:
@@ -638,7 +638,7 @@ Package
 :mod:`trigger_functions` Module
 -------------------------------
 
-.. automodule:: shinken.trigger_functions
+.. automodule:: alignak.trigger_functions
     :members:
     :undoc-members:
     :show-inheritance:
@@ -646,7 +646,7 @@ Package
 :mod:`util` Module
 ------------------
 
-.. automodule:: shinken.util
+.. automodule:: alignak.util
     :members:
     :undoc-members:
     :show-inheritance:
@@ -654,7 +654,7 @@ Package
 :mod:`worker` Module
 --------------------
 
-.. automodule:: shinken.worker
+.. automodule:: alignak.worker
     :members:
     :undoc-members:
     :show-inheritance:
@@ -664,10 +664,10 @@ Subpackages
 
 .. toctree::
 
-    shinken.clients
-    shinken.daemons
-    shinken.discovery
-    shinken.misc
-    shinken.objects
-    shinken.webui
+    alignak.clients
+    alignak.daemons
+    alignak.discovery
+    alignak.misc
+    alignak.objects
+    alignak.webui
 

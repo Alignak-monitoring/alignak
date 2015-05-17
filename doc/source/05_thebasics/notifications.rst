@@ -30,7 +30,7 @@ Who Gets Notified?
 
 Each host and service definition has a "contact_groups" option that specifies what contact groups receive notifications for that particular host or service. Contact groups can contain one or more individual contacts.
 
-When Shinken sends out a host or service notification, it will notify each contact that is a member of any contact groups specified in the "contact_groups" option of the service definition. Shinken realizes that a contact may be a member of more than one contact group, so it removes duplicate contact notifications before it does anything.
+When Alignak sends out a host or service notification, it will notify each contact that is a member of any contact groups specified in the "contact_groups" option of the service definition. Alignak realizes that a contact may be a member of more than one contact group, so it removes duplicate contact notifications before it does anything.
 
 
 What Filters Must Be Passed In Order For Notifications To Be Sent? 
@@ -58,15 +58,15 @@ Notifications about host or service recoveries are only sent out if a notificati
 
 The fourth host or service filter that must be passed is the time period test. Each host and service definition has a "notification_period" option that specifies which time period contains valid notification times for the host or service. If the time that the notification is being made does not fall within a valid time range in the specified time period, no one gets contacted. If it falls within a valid time range, the notification gets passed to the next filter...
 
-If the time period filter is not passed, Shinken will reschedule the next notification for the host or service (if its in a non-OK state) for the next valid time present in the time period. This helps ensure that contacts are notified of problems as soon as possible when the next valid time in time period arrives.
+If the time period filter is not passed, Alignak will reschedule the next notification for the host or service (if its in a non-OK state) for the next valid time present in the time period. This helps ensure that contacts are notified of problems as soon as possible when the next valid time in time period arrives.
 
-The last set of host or service filters is conditional upon two things: (1) a notification was already sent out about a problem with the host or service at some point in the past and (2) the host or service has remained in the same non-OK state that it was when the last notification went out. If these two criteria are met, then Shinken will check and make sure the time that has passed since the last notification went out either meets or exceeds the value specified by the "notification_interval" option in the host or service definition. If not enough time has passed since the last notification, no one gets contacted. If either enough time has passed since the last notification or the two criteria for this filter were not met, the notification will be sent out! Whether or not it actually is sent to individual contacts is up to another set of filters...
+The last set of host or service filters is conditional upon two things: (1) a notification was already sent out about a problem with the host or service at some point in the past and (2) the host or service has remained in the same non-OK state that it was when the last notification went out. If these two criteria are met, then Alignak will check and make sure the time that has passed since the last notification went out either meets or exceeds the value specified by the "notification_interval" option in the host or service definition. If not enough time has passed since the last notification, no one gets contacted. If either enough time has passed since the last notification or the two criteria for this filter were not met, the notification will be sent out! Whether or not it actually is sent to individual contacts is up to another set of filters...
 
 
 Contact Filters: 
 =================
 
-At this point the notification has passed the program mode filter and all host or service filters and Shinken starts to notify :ref:`all the people it should <configobjects/contact>`. Does this mean that each contact is going to receive the notification? No! Each contact has their own set of filters that the notification must pass before they receive it.
+At this point the notification has passed the program mode filter and all host or service filters and Alignak starts to notify :ref:`all the people it should <configobjects/contact>`. Does this mean that each contact is going to receive the notification? No! Each contact has their own set of filters that the notification must pass before they receive it.
 
 Contact filters are specific to each contact and do not affect whether or not other contacts receive notifications.
 
@@ -80,11 +80,11 @@ The last filter that must be passed for each contact is the time period test. Ea
 Notification Methods 
 =====================
 
-You can have Shinken notify you of problems and recoveries pretty much anyway you want: pager, cellphone, email, instant message, audio alert, electric shocker, etc. How notifications are sent depends on the :ref:`notification commands <configobjects/command>` that are defined in your :ref:`object definition files <configuration/config>`.
+You can have Alignak notify you of problems and recoveries pretty much anyway you want: pager, cellphone, email, instant message, audio alert, electric shocker, etc. How notifications are sent depends on the :ref:`notification commands <configobjects/command>` that are defined in your :ref:`object definition files <configuration/config>`.
 
-If you install Shinken according to the :ref:`quickstart guide <gettingstarted/quickstart>`, it should be configured to send email notifications. You can see the email notification commands that are used by viewing the contents of the following file: "/etc/shinken/objects/commands.cfg".
+If you install Alignak according to the :ref:`quickstart guide <gettingstarted/quickstart>`, it should be configured to send email notifications. You can see the email notification commands that are used by viewing the contents of the following file: "/etc/alignak/objects/commands.cfg".
 
-Specific notification methods (paging, etc.) are not directly incorporated into the Shinken code as it just doesn't make much sense. The "core" of Shinken is not designed to be an all-in-one application. If service checks were embedded in Shinken's core it would be very difficult for users to add new check methods, modify existing checks, etc. Notifications work in a similar manner. There are a thousand different ways to do notifications and there are already a lot of packages out there that handle the dirty work, so why re-invent the wheel and limit yourself to a bike tire? Its much easier to let an external entity (i.e. a simple script or a full-blown messaging system) do the messy stuff. Some messaging packages that can handle notifications for pagers and cellphones are listed below in the resource section.
+Specific notification methods (paging, etc.) are not directly incorporated into the Alignak code as it just doesn't make much sense. The "core" of Alignak is not designed to be an all-in-one application. If service checks were embedded in Alignak's core it would be very difficult for users to add new check methods, modify existing checks, etc. Notifications work in a similar manner. There are a thousand different ways to do notifications and there are already a lot of packages out there that handle the dirty work, so why re-invent the wheel and limit yourself to a bike tire? Its much easier to let an external entity (i.e. a simple script or a full-blown messaging system) do the messy stuff. Some messaging packages that can handle notifications for pagers and cellphones are listed below in the resource section.
 
 
 Notification Type Macro 
@@ -110,7 +110,7 @@ DOWNTIMECANCELLED The period of :ref:`scheduled downtime <advanced/downtime>` fo
 Helpful Resources 
 ==================
 
-There are many ways you could configure Shinken to send notifications out. Its up to you to decide which method(s) you want to use. Once you do that you'll have to install any necessary software and configure notification commands in your config files before you can use them. Here are just a few possible notification methods:
+There are many ways you could configure Alignak to send notifications out. Its up to you to decide which method(s) you want to use. Once you do that you'll have to install any necessary software and configure notification commands in your config files before you can use them. Here are just a few possible notification methods:
 
   * Email
   * Pager
@@ -122,7 +122,7 @@ There are many ways you could configure Shinken to send notifications out. Its u
 
 Basically anything you can do from a command line can be tailored for use as a notification command.
 
-If you're looking for an alternative to using email for sending messages to your pager or cellphone, check out these packages. They could be used in conjunction with Shinken to send out a notification via a modem when a problem arises. That way you don't have to rely on email to send notifications out (remember, email may *not* work if there are network problems). I haven't actually tried these packages myself, but others have reported success using them...
+If you're looking for an alternative to using email for sending messages to your pager or cellphone, check out these packages. They could be used in conjunction with Alignak to send out a notification via a modem when a problem arises. That way you don't have to rely on email to send notifications out (remember, email may *not* work if there are network problems). I haven't actually tried these packages myself, but others have reported success using them...
 
   * `Gnokii`_ (SMS software for contacting Nokia phones via GSM network)
   * `QuickPage`_ (alphanumeric pager software)

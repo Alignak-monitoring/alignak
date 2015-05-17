@@ -8,31 +8,31 @@
 Introduction 
 =============
 
-Shinken can be configured to support distributed monitoring of network services and resources. Shinken is designed for it in contrast to the Nagios way of doing it: which is more of a "MacGyver" way.
+Alignak can be configured to support distributed monitoring of network services and resources. Alignak is designed for it in contrast to the Nagios way of doing it: which is more of a "MacGyver" way.
 
 
 Goals 
 ======
 
-The goal in the distributed monitoring environment is to offload the overhead (CPU usage, etc.) of performing and receiving service checks from a "central" server onto one or more "distributed" servers. Most small to medium sized shops will not have a real need for setting up such an environment. However, when you want to start monitoring thousands of hosts (and several times that many services) using Shinken, this becomes quite important.
+The goal in the distributed monitoring environment is to offload the overhead (CPU usage, etc.) of performing and receiving service checks from a "central" server onto one or more "distributed" servers. Most small to medium sized shops will not have a real need for setting up such an environment. However, when you want to start monitoring thousands of hosts (and several times that many services) using Alignak, this becomes quite important.
 
 
 The global architecture 
 ========================
 
-Shinken's architecture has been designed according to the Unix Way: one tool, one task. Shinken has an architecture where each part is isolated and connects to the others via standard interfaces. Shinken is based on the a HTTP backend. This makes building a highly available or distributed monitoring architecture quite easy. In contrast, the Nagios daemon does nearly everything: it loads the configuration, schedules and launches checks, and raises notifications. 
+Alignak's architecture has been designed according to the Unix Way: one tool, one task. Alignak has an architecture where each part is isolated and connects to the others via standard interfaces. Alignak is based on the a HTTP backend. This makes building a highly available or distributed monitoring architecture quite easy. In contrast, the Nagios daemon does nearly everything: it loads the configuration, schedules and launches checks, and raises notifications. 
 
-Major innovations of Shinken over Nagios are to :
+Major innovations of Alignak over Nagios are to :
   * split the different roles into separate daemons
-  * permit the use of modules to extend and enrich the various Shinken daemons
+  * permit the use of modules to extend and enrich the various Alignak daemons
 
-Shinken core uses **distributed** programming, meaning a daemon will often do remote invocations of code on other daemons, this means that to ensure maximum compatibility and stability, the core language, paths and module versions **must** be the same everywhere a daemon is running.
+Alignak core uses **distributed** programming, meaning a daemon will often do remote invocations of code on other daemons, this means that to ensure maximum compatibility and stability, the core language, paths and module versions **must** be the same everywhere a daemon is running.
 
 
-Shinken Daemon roles 
+Alignak Daemon roles 
 =====================
 
-    * **Arbiter**: The arbiter daemon reads the configuration, divides it into parts (N schedulers = N parts), and distributes them to the appropriate Shinken daemons. Additionally, it manages the high availability features: if a particular daemon dies, it re-routes the configuration managed by this failed daemon to the configured spare. Finally, it receives input from users (such as external commands from nagios.cmd) or passive check results and routes them to the appropriate daemon. Passive check results are forwarded to the Scheduler responsible for the check. There can only be one active arbiter with other arbiters acting as hot standby spares in the architecture.
+    * **Arbiter**: The arbiter daemon reads the configuration, divides it into parts (N schedulers = N parts), and distributes them to the appropriate Alignak daemons. Additionally, it manages the high availability features: if a particular daemon dies, it re-routes the configuration managed by this failed daemon to the configured spare. Finally, it receives input from users (such as external commands from nagios.cmd) or passive check results and routes them to the appropriate daemon. Passive check results are forwarded to the Scheduler responsible for the check. There can only be one active arbiter with other arbiters acting as hot standby spares in the architecture.
 
       * Modules for data collection: NSCA, TSCA, Ws_arbiter (web service)
       * Modules for configuration data storage: MongoDB, 
@@ -57,11 +57,11 @@ Shinken Daemon roles
 
     * **Broker**: The broker daemon exports and manages data from schedulers.  The management can is done exclusively with modules. Multiple :ref:`Broker modules <the_broker_modules>` can be enabled simultaneously.
 
-      * Module for centralizing Shinken logs: Simple-log (flat file)
+      * Module for centralizing Alignak logs: Simple-log (flat file)
       * Modules for data retention: Pickle , ToNdodb_Mysql, ToNdodb_Oracle, couchdb 
       * Modules for exporting data: Graphite-Perfdata, NPCDMOD(PNP4Nagios) and Syslog
       * Modules for the Livestatus API - status retention and history:  SQLite (default), MongoDB (experimental)
-      * Modules for the Shinken WebUI: GRAPHITE_UI, PNP_UI. Trending and data visualization.
+      * Modules for the Alignak WebUI: GRAPHITE_UI, PNP_UI. Trending and data visualization.
       * Modules for compatibility: Service-Perfdata, Host-Perfdata and Status-Dat 
 
 
@@ -72,7 +72,7 @@ Shinken Daemon roles
 This architecture is fully flexible and scalable: the daemons that require more performance are the poller and the schedulers. The administrator can add as many as he wants. The broker daemon should be on a well provisioned server for larger installations, as only a single broker can be active at one time. A picture is worth a thousand words: 
 
 
-.. image:: /_static/images///official/images/shinken-architecture.png
+.. image:: /_static/images///official/images/alignak-architecture.png
    :scale: 90 %
 
 
@@ -86,9 +86,9 @@ The smart and automatic load balancing
   * :ref:`The packs aggregations into scheduler configurations <advanced/distributed#the_packs_aggregations_into_scheduler_configurations>`
   * :ref:`The configurations sending to satellites <advanced/distributed#the_configurations_sending_to_satellites>`
 
-Shinken is able to cut the user configuration into parts and dispatch it to the schedulers. The load balancing is done automatically: the administrator does not need to remember which host is linked with another one to create packs, Shinken does it for him.
+Alignak is able to cut the user configuration into parts and dispatch it to the schedulers. The load balancing is done automatically: the administrator does not need to remember which host is linked with another one to create packs, Alignak does it for him.
 
-The dispatch is a host-based one: that means that all services of a host will be in the same scheduler as this host. The major advantage of Shinken is the ability to create independent configurations: an element of a configuration will not have to call an element of another pack. That means that the administrator does not need to know all relations among elements like parents, hostdependencies or service dependencies: Shinken is able to look at these relations and put these related elements into the same packs.
+The dispatch is a host-based one: that means that all services of a host will be in the same scheduler as this host. The major advantage of Alignak is the ability to create independent configurations: an element of a configuration will not have to call an element of another pack. That means that the administrator does not need to know all relations among elements like parents, hostdependencies or service dependencies: Alignak is able to look at these relations and put these related elements into the same packs.
 
 This action is done in two parts:
 
@@ -108,7 +108,7 @@ The cutting action is done by looking at two elements: hosts and services. Servi
   * hostdependencies
   * servicesdependencies
 
-Shinken looks at all these relations and creates a graph with it. A graph is a relation pack. This can be illustrated by the following picture :
+Alignak looks at all these relations and creates a graph with it. A graph is a relation pack. This can be illustrated by the following picture :
 
 
 .. image:: /_static/images///official/images/pack-creation.png
@@ -151,7 +151,7 @@ The high availability
 
   * :ref:`When a node dies <advanced/distributed#when_a_node_dies>`
 
-The shinken architecture is a high availability one. Before looking at how this works,let's take a look at how the load balancing works if it's now already done.
+The alignak architecture is a high availability one. Before looking at how this works,let's take a look at how the load balancing works if it's now already done.
 
 
 .. _advanced/distributed#when_a_node_dies:
@@ -172,12 +172,12 @@ This can be explained by the following picture :
 External commands dispatching 
 ==============================
 
-The administrator needs to send orders to the schedulers (like a new status for passive checks). In the Shinken way of thinking, the users only need to send orders to one daemon that will then dispatch them to all others. In Nagios the administrator needs to know where the hosts or services are to send the order to the right node. In Shinken the administrator just sends the order to the Arbiter, that's all. External commands can be divided into two types :
+The administrator needs to send orders to the schedulers (like a new status for passive checks). In the Alignak way of thinking, the users only need to send orders to one daemon that will then dispatch them to all others. In Nagios the administrator needs to know where the hosts or services are to send the order to the right node. In Alignak the administrator just sends the order to the Arbiter, that's all. External commands can be divided into two types :
 
   * commands that are global to all schedulers
   * commands that are specific to one element (host/service).
 
-For each command, Shinken knows if it is global or not. If global, it just sends orders to all schedulers. For specific ones instead it searches which scheduler manages the element referred by the command (host/service) and sends the order to this scheduler. When the order is received by schedulers they just need to apply them.
+For each command, Alignak knows if it is global or not. If global, it just sends orders to all schedulers. For specific ones instead it searches which scheduler manages the element referred by the command (host/service) and sends the order to this scheduler. When the order is received by schedulers they just need to apply them.
 
 
 .. _advanced/distributed#poller_tag:
@@ -188,7 +188,7 @@ Different types of Pollers: poller_tag
 
   * :ref:`Use cases <advanced/distributed#use_cases>`
 
-The current Shinken architecture is useful for someone that uses the same type of poller for checks. But it can be useful to have different types of pollers, like GNU/Linux ones and Windows ones. We already saw that all pollers talk to all schedulers. In fact, pollers can be "tagged" so that they will execute only some checks.
+The current Alignak architecture is useful for someone that uses the same type of poller for checks. But it can be useful to have different types of pollers, like GNU/Linux ones and Windows ones. We already saw that all pollers talk to all schedulers. In fact, pollers can be "tagged" so that they will execute only some checks.
 
 This is useful when the user needs to have hosts in the same scheduler (like with dependencies) but needs some hosts or services to be checked by specific pollers (see usage cases below).
 
@@ -243,13 +243,13 @@ Advanced architectures: Realms
   * :ref:`Sub realms <advanced/distributed#sub_realms>`
   * :ref:`Example of realm usage <advanced/distributed#example_of_realm_usage>`
 
-Shinken's architecture allows the administrator to have a unique point of administration with numerous schedulers, pollers, reactionners and brokers. Hosts are dispatched with their own services to schedulers and the satellites (pollers/reactionners/brokers) get jobs from them. Everyone is happy.
+Alignak's architecture allows the administrator to have a unique point of administration with numerous schedulers, pollers, reactionners and brokers. Hosts are dispatched with their own services to schedulers and the satellites (pollers/reactionners/brokers) get jobs from them. Everyone is happy.
 
-Or almost everyone. Think about an administrator who has a distributed architecture around the world. With the current Shinken architecture the administrator can put a couple scheduler/poller daemons in Europe and another set in Asia, but he cannot "tag" hosts in Asia to be checked by the asian scheduler . Also trying to check an asian server with an european scheduler can be very sub-optimal, read very sloooow. The hosts are dispatched to all schedulers and satellites so the administrator cannot be sure that asian hosts will be checked by the asian monitoring servers.
+Or almost everyone. Think about an administrator who has a distributed architecture around the world. With the current Alignak architecture the administrator can put a couple scheduler/poller daemons in Europe and another set in Asia, but he cannot "tag" hosts in Asia to be checked by the asian scheduler . Also trying to check an asian server with an european scheduler can be very sub-optimal, read very sloooow. The hosts are dispatched to all schedulers and satellites so the administrator cannot be sure that asian hosts will be checked by the asian monitoring servers.
 
-In the normal Shinken Architecture is useful for load balancing with high availability, for single site.
+In the normal Alignak Architecture is useful for load balancing with high availability, for single site.
 
-Shinken provides a way to manage different geographic or organizational sites.
+Alignak provides a way to manage different geographic or organizational sites.
 
 We will use a generic term for this site management, **Realms**.
 
@@ -301,14 +301,14 @@ Let's take a look at two distributed environnements. In the first case the admin
 Distincts realms :
 
 
-.. image:: /_static/images///official/images/shinken-architecture-isolated-realms.png
+.. image:: /_static/images///official/images/alignak-architecture-isolated-realms.png
    :scale: 90 %
 
 
 More common usage, the global realm with reactionner/broker, and sub realms with schedulers/pollers :
 
 
-.. image:: /_static/images///official/images/shinken-architecture-global-realm.png
+.. image:: /_static/images///official/images/alignak-architecture-global-realm.png
    :scale: 90 %
 
 

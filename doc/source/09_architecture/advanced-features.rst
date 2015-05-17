@@ -4,13 +4,13 @@
 Advanced architectures 
 =======================
 
-Shinken has got some cool features in term of configuration management or performance, but it's true added value is in its architecture. It's been designed to achieve easy distributed architecture and high availability.
+Alignak has got some cool features in term of configuration management or performance, but it's true added value is in its architecture. It's been designed to achieve easy distributed architecture and high availability.
 
 
 Distributed architecture 
 =========================
 
-The load balancing feature is very easy to obtain with Shinken. If I say that the project's name comes from it you should believe me :-)
+The load balancing feature is very easy to obtain with Alignak. If I say that the project's name comes from it you should believe me :-)
 
 In fact the load is present in 2 major places:
   * pollers: they launch checks, they use a lot of resources
@@ -32,15 +32,15 @@ Now you need to launch the scheduler and pollers (or just one of them if you wan
 ::
 
   
-  /etc/init.d/shinken-scheduler start
-  /etc/init.d/shinken-poller start
+  /etc/init.d/alignak-scheduler start
+  /etc/init.d/alignak-poller start
 
 
 It looks like the launch in the master server? Yes, it's the same :-)
 
 Here you just launch the daemons, now you need to declare them in their respectively directories on the master server (the one with the arbiter daemon). You need to add new entries for these satellites:
    
-In /etc/shinken/schedulers/scheduler-master.cfg (create it if necessary):
+In /etc/alignak/schedulers/scheduler-master.cfg (create it if necessary):
 
 
 ::
@@ -57,7 +57,7 @@ In /etc/shinken/schedulers/scheduler-master.cfg (create it if necessary):
 
 
 
-In /etc/shinken/pollers/poller-master.cfg (create it if necessary):
+In /etc/alignak/pollers/poller-master.cfg (create it if necessary):
 
 
 ::
@@ -83,7 +83,7 @@ High availability architecture
 
 Ok, a server can crash or a network can go down. The high availability is not a useless feature, you know?
 
-With shinken, making a high availability architecture is very easy. Just as easy as the load balancing feature :)
+With alignak, making a high availability architecture is very easy. Just as easy as the load balancing feature :)
 
 You saw how to add new scheduler/poller satellites. For the HA it's quite the same. You just need to add new satellites in the same way you just did, and define them as "spares". You can (should) do the same for all the satellites (a new arbiter, reactionner and broker) for a whole HA architecture.
 
@@ -93,8 +93,8 @@ We keep the load balancing previous installation and we add a new server (if you
 ::
 
   
-  /etc/init.d/shinken-scheduler start
-  /etc/init.d/shinken-poller start
+  /etc/init.d/alignak-scheduler start
+  /etc/init.d/alignak-poller start
 
 
 Nothing new here. 
@@ -102,7 +102,7 @@ Nothing new here.
 And we need to declare the new satellites in the directories near the arbiter:
 
 
-In /etc/shinken/schedulers/scheduler-3.cfg (create it if necessary):
+In /etc/alignak/schedulers/scheduler-3.cfg (create it if necessary):
 
 ::
 
@@ -118,7 +118,7 @@ In /etc/shinken/schedulers/scheduler-3.cfg (create it if necessary):
        }
 
 
-In /etc/shinken/pollers/poller-3.cfg (create it if necessary):
+In /etc/alignak/pollers/poller-3.cfg (create it if necessary):
 
 ::
 
@@ -150,7 +150,7 @@ You should do the same for arbiter, reactionner and broker. Just install them in
 Mixed Architecture (poller GNU/Linux and Windows or LAN/DMZ) 
 =============================================================
 
-There can be as many pollers as you want. And Shinken runs under a lot of systems, like GNU/Linux and Windows. It could be useful to make windows hosts checks by a windows pollers (by a server IN the domain), and all the others by a GNU/Linux one.
+There can be as many pollers as you want. And Alignak runs under a lot of systems, like GNU/Linux and Windows. It could be useful to make windows hosts checks by a windows pollers (by a server IN the domain), and all the others by a GNU/Linux one.
 
 And in fact you can, and again it's quite easy :)
 All pollers connect to all schedulers, so we must have a way to distinguish 'windows' checks from 'gnu/linux' ones.
@@ -174,7 +174,7 @@ Let take an example with a 'windows' tag:
 ::
 
    command_name   
-   command_line   c:\shinken\libexec\check_wmi.exe -H $HOSTADRESS$ -r $ARG1$
+   command_line   c:\alignak\libexec\check_wmi.exe -H $HOSTADRESS$ -r $ARG1$
    poller_tag     Windows
   }
   
@@ -226,11 +226,11 @@ And that's all :)
 Multi customers and/or sites: REALMS 
 =====================================
 
-The shinken's architecture like we saw allows us to have a unique administration and data location. All pollers the hosts are cut and sent to schedulers, and the pollers take jobs from all schedulers. Every one is happy.
+The alignak's architecture like we saw allows us to have a unique administration and data location. All pollers the hosts are cut and sent to schedulers, and the pollers take jobs from all schedulers. Every one is happy.
 
 Every one? In fact no. If an administrator got a continental distributed architecture he can have serious problems. If the architecture is common to multile customers network, a customer A scheduler can have a customer B poller that asks him jobs. It's not a good solution. Even with distributed network, distant pollers should not ask jobs to schedulers in the other continent, it's not network efficient.
 
-That is where the site/customers management is useful. In Shinken, it's managed by the **realms**.
+That is where the site/customers management is useful. In Alignak, it's managed by the **realms**.
 
 A realm is a group of resources that will manage hosts or hostgroups. Such a link will be unique: a host cannot be in multiple realms. If you put a hostgroup in a realm, all hosts in this group will be in the realm (unless a host already has the realm set, the host value will be taken).
 
@@ -277,14 +277,14 @@ Let's take two examples of distributed architectures around the world. In the fi
 Here is the isolated one:
 
 
-.. image:: /_static/images/official/images/shinken-architecture-isolated-realms.png
+.. image:: /_static/images/official/images/alignak-architecture-isolated-realms.png
    :scale: 90 %
 
 
 And a more common way of sharing reactionner/broker:
 
 
-.. image:: /_static/images/official/images/shinken-architecture-global-realm.png
+.. image:: /_static/images/official/images/alignak-architecture-global-realm.png
    :scale: 90 %
 
 

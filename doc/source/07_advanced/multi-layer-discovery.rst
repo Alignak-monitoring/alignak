@@ -5,12 +5,12 @@ Multi layer discovery
 =====================
 
 
-Shinken provides a discovery mecanism in several steps. There are on a side the **runners** (cf :ref:`Runners description <advanced/discovery-with-shinken-advanced>`) which are script that output in formatted way properties list of scanned host and on another side discovery rules which use properties list to tag hosts when some of these properties are meaningful.
+Alignak provides a discovery mecanism in several steps. There are on a side the **runners** (cf :ref:`Runners description <advanced/discovery-with-alignak-advanced>`) which are script that output in formatted way properties list of scanned host and on another side discovery rules which use properties list to tag hosts when some of these properties are meaningful.
 
 There are two kinds of rules, those which generate a host definition and those which launch another runners more specific to the scanned object. Better an image than a long speech :
 
 
-.. image:: /_static/images/shinken_multilayer_discovery.png
+.. image:: /_static/images/alignak_multilayer_discovery.png
    :scale: 90 %
 
 
@@ -41,7 +41,7 @@ Macros mode.
 -------------
 
 It is the easiest mode. It will add a line into host definition with host macro '_fs' with comma-separated list of filesystems. Then it is only needed to write a service definition using 
-that macro with shinken directive "duplicate_foreach". Here is an example :
+that macro with alignak directive "duplicate_foreach". Here is an example :
 
 ::
   
@@ -130,7 +130,7 @@ Now, if you want to apply same treatment to several filesystems, like "/var" and
         register               0
   }
 
-Pay attention to double "$$", it is needed cause macros interpretation. When more than one "$" is used just double them else in this example we gotten Shinken trying to interprate macro '$|home$'.
+Pay attention to double "$$", it is needed cause macros interpretation. When more than one "$" is used just double them else in this example we gotten Alignak trying to interprate macro '$|home$'.
 
 
 Cluster 

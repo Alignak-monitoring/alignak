@@ -7,7 +7,7 @@
 Deprecated
 ===========
 
-The following content is deprecated in this Shinken version and may be completely removed soon.
+The following content is deprecated in this Alignak version and may be completely removed soon.
 
 .. raw:: LaTeX
 

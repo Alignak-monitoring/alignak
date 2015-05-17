@@ -1,14 +1,14 @@
-.. _advanced/distributed-shinken:
+.. _advanced/distributed-alignak:
 
 ==================================
-Shinken's distributed architecture
+Alignak's distributed architecture
 ==================================
 
 
-Shinken's distributed architecture for load balancing 
+Alignak's distributed architecture for load balancing 
 ------------------------------------------------------
 
-The load balancing feature is very easy to obtain with Shinken. If I say that the project's name comes from it you should believe me :)
+The load balancing feature is very easy to obtain with Alignak. If I say that the project's name comes from it you should believe me :)
 
 If you use the distributed architecture for load balancing, know that load is typically present in 2 processes:
   * pollers: they launch checks, they use a lot of CPU resources
@@ -34,29 +34,29 @@ Install the poller on the new server
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-But I already hear you asking "How to add new satellites?". That's very simple: **you start by installing the application on a new server like you did in the 10 min starting tutorial but you can pass the discovery, the webUI and skip the /etc/init.d/shinken script (or Windows services)**.
+But I already hear you asking "How to add new satellites?". That's very simple: **you start by installing the application on a new server like you did in the 10 min starting tutorial but you can pass the discovery, the webUI and skip the /etc/init.d/alignak script (or Windows services)**.
 
 Let say that this new server is called server2 and has the IP 192.168.0.2 and the "master" is called server1 with 192.168.0.1 as its IP.
 
 .. tip::  You need to have all plugins you use in server1 also installed on server2, this should already done if you followed the 10 min tutorial.
 
-On server2, you just need to start the poller service, not the whole Shinken stack.
+On server2, you just need to start the poller service, not the whole Alignak stack.
   
 ::
 
   
    On ubuntu/debian:
-  update-rc.d shinken-poller default
+  update-rc.d alignak-poller default
    On RedHat/Centos:
-  chkconfig --add shinken-poller
-  chkconfig shinken-poller on
+  chkconfig --add alignak-poller
+  chkconfig alignak-poller on
   
 Then start it:
   
 ::
 
   
-  sudo /etc/init.d/shinken-poller start
+  sudo /etc/init.d/alignak-poller start
 
 
 .. warning::  DO NOT START the arbiter on the server2 for load balancing purpose. It can be done for high availability. Unless you know what you are doing, don't start the arbiter process!^_^
@@ -68,7 +68,7 @@ Declare the new poller on the main configuration file
 
 Ok, now you have a brand new poller declared on your new server, server2. **But server1 needs to know that it must give work to it. This is done by declaring the new poller in the pollers/poller-master.cfg file.**
 
-Edit your /etc/shinken/pollers/poller-master.cfg file (or c:\shinken\etc\pollers\poller-master.cfg under Windows) and define your new poller under the existing poller-1 definition (on server1):
+Edit your /etc/alignak/pollers/poller-master.cfg file (or c:\alignak\etc\pollers\poller-master.cfg under Windows) and define your new poller under the existing poller-1 definition (on server1):
 
 ::
   
@@ -99,13 +99,13 @@ When it's done, restart your arbiter:
 
   
   Under Linux:
-  sudo /etc/init.d/shinken-arbiter restart
+  sudo /etc/init.d/alignak-arbiter restart
   Under Windows:
-  net stop shinken-arbiter
-  net start shinken-arbiter
+  net stop alignak-arbiter
+  net start alignak-arbiter
 
 
-It's done! You can look at the global shinken.log file (should be under /var/lib/shinken/shinken.log or c:\shinken\var\shinken.log) that the new poller is started and can reach scheduler-1. 
+It's done! You can look at the global alignak.log file (should be under /var/lib/alignak/alignak.log or c:\alignak\var\alignak.log) that the new poller is started and can reach scheduler-1. 
 So look for lines like:
   
 ::

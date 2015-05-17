@@ -1,14 +1,14 @@
 .. _contributing/packs:
 
 ==============
-Shinken packs
+Alignak packs
 ==============
 
 
 What are Packs? 
 ================
 
-Packs are a small subset of configuration files, templates or pictures about a subject, like Linux or Windows. It's designed to be a "pack" about how to monitor a specific subject. Everyone can contribute by creating and sending their how packs to the `Shinken community website`_.
+Packs are a small subset of configuration files, templates or pictures about a subject, like Linux or Windows. It's designed to be a "pack" about how to monitor a specific subject. Everyone can contribute by creating and sending their how packs to the `Alignak community website`_.
 
 Technically, it's a zip file with configuration files and some pictures or templates in it.
 
@@ -61,34 +61,34 @@ Let use our linux-smnp sample:
 	"snmp"
     ],
     "dependencies": {
-	"shinken": ">=1.4"
+	"alignak": ">=1.4"
     },
     "license": "AGPL"
   }
 
 
-  * name -> The name of your pack. Directory with this name will be created on your /etc/shinken/packs
+  * name -> The name of your pack. Directory with this name will be created on your /etc/alignak/packs
   * types -> Can be pack or module
   * version -> Pretty simple, the version of pack
   * homepage -> Homepage of pack, is usual a github repo
   * author -> Maintainer of package
   * contributors -> People, who makes changes in this package
   * repository -> Repo with source code
-  * keywords -> Help for search via shinken CLI or shinken.io website
-  * dependencies -> Describe versions of software need to all works okay. Can provide any strings, besides shinken version
+  * keywords -> Help for search via alignak CLI or shinken.io website
+  * dependencies -> Describe versions of software need to all works okay. Can provide any strings, besides alignak version
 
   
 How to share the zip pack to the community website? 
 ====================================================
 
-The community website is available at `shinken.io`_. You will need an account to share your zip packs or retrive some new from others community members. After register put your API key from `shinken.io/~`_ to ~/shinken.ini file.
+The community website is available at `shinken.io`_. You will need an account to share your zip packs or retrive some new from others community members. After register put your API key from `shinken.io/~`_ to ~/alignak.ini file.
 
 Now you can push packages:
   
 ::
 
   cd my-package
-  shinken publish
+  alignak publish
 
 
 After 5 minutes you can see your new or updated package on `shinken.io`_ main page.
