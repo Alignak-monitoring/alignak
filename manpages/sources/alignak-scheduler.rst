@@ -1,10 +1,10 @@
-==============
-shinken-poller
-==============
+=================
+alignak-scheduler
+=================
 
----------------------
-Shinken poller daemon
----------------------
+------------------------
+Alignak scheduler daemon
+------------------------
 
 :Author:            Michael Leinartas,
                     Arthur Gautier,
@@ -13,27 +13,27 @@ Shinken poller daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-poller** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-scheduler** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken poller daemon.
+Alignak scheduler daemon.
 
-The **shinken-poller** daemon is in charge of launching plugins as requested by schedulers. When the check is finished it returns the result to the schedulers.
+The **alignak-scheduler** manages the dispatching of checks and actions sent to alignak-reactionner and alignak-poller based on configuration sent to it by alignak-arbiter.
 
 OPTIONS
 =======
 
   -c INI-CONFIG-FILE, --config=INI-CONFIG-FILE  Config file
   -d, --daemon                                  Run in daemon mode
-  -r, --replace                                 Replace previous running poller
+  -r, --replace                                 Replace previous running scheduler
   -h, --help                                    Show this help message
   --version                                     Show program's version number 
   --debugfile=DEBUGFILE                         Enable debug logging to *DEBUGFILE*

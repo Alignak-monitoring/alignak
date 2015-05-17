@@ -1,9 +1,9 @@
 ===============
-shinken-arbiter
+alignak-arbiter
 ===============
 
 ----------------------
-Shinken arbiter daemon
+Alignak arbiter daemon
 ----------------------
 
 :Author:            Michael Leinartas,
@@ -13,22 +13,22 @@ Shinken arbiter daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-arbiter** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
-  **shinken-arbiter** -v [-c *CONFIGFILE*]
+  **alignak-arbiter** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-arbiter** -v [-c *CONFIGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken arbiter daemon
+Alignak arbiter daemon
 
-The **shinken-arbiter** daemon reads the configuration, divides it into parts
-(N schedulers = N parts), and distributes them to the appropriate Shinken daemons.
+The **alignak-arbiter** daemon reads the configuration, divides it into parts
+(N schedulers = N parts), and distributes them to the appropriate Alignak daemons.
 Additionally, it manages the high availability features: if a particular daemon dies,
 it re-routes the configuration managed by this failed  daemon to the configured spare.
 Finally, it receives input from users (such as external commands from nagios.cmd) and

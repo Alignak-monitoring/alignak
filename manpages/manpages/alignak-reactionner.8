@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH SHINKEN-ARBITER 8 "2014-04-24" "2.0.1" "Shinken commands"
+.TH ALIGNAK-REACTIONNER 8 "2014-04-24" "2.0.1" "Alignak commands"
 .SH NAME
-shinken-arbiter \- Shinken arbiter daemon
+alignak-reactionner \- Alignak reactionner daemon
 .
 .nr rst2man-indent-level 0
 .
@@ -33,21 +33,14 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH SYNOPSIS
 .INDENT 0.0
 .INDENT 3.5
-\fBshinken\-arbiter\fP [\-dr] [\-c \fICONFIGFILE\fP] [\-\-debugfile \fIDEBUGFILE\fP]
-\fBshinken\-arbiter\fP \-v [\-c \fICONFIGFILE\fP]
+\fBalignak\-reactionner\fP [\-dr] [\-c \fICONFIGFILE\fP] [\-\-debugfile \fIDEBUGFILE\fP]
 .UNINDENT
 .UNINDENT
 .SH DESCRIPTION
 .sp
-Shinken arbiter daemon
+Alignak reactionner daemon.
 .sp
-The \fBshinken\-arbiter\fP daemon reads the configuration, divides it into parts
-(N schedulers = N parts), and distributes them to the appropriate Shinken daemons.
-Additionally, it manages the high availability features: if a particular daemon dies,
-it re\-routes the configuration managed by this failed  daemon to the configured spare.
-Finally, it receives input from users (such as external commands from nagios.cmd) and
-routes them to the appropriate daemon. There can only be one active arbiter in the
-architecture.
+The \fBalignak\-reactionner\fP is similar to alignak\-poller but handles actions such as notifications and event\-handlers from the schedulers rather than checks.
 .SH OPTIONS
 .INDENT 0.0
 .INDENT 3.5
@@ -56,14 +49,14 @@ architecture.
 .B \-v\fP,\fB  \-\-verify\-config
 Verify config file and exit
 .TP
-.BI \-c \ CONFIGFILE\fP,\fB \ \-\-config\fB= CONFIGFILE
-Config file (your nagios.cfg). Multiple \-c can be used, it will be like if all files was just one
+.BI \-c \ INI\-CONFIG\-FILE\fP,\fB \ \-\-config\fB= INI\-CONFIG\-FILE
+Config file
 .TP
 .B \-d\fP,\fB  \-\-daemon
 Run in daemon mode
 .TP
 .B \-r\fP,\fB  \-\-replace
-Replace previous running arbiter
+Replace previous running reactionner
 .TP
 .B \-h\fP,\fB  \-\-help
 Show this help message
@@ -76,15 +69,6 @@ Enable debug logging to \fIDEBUGFILE\fP
 .TP
 .BI \-p \ PROFILE\fP,\fB \ \-\-profile\fB= PROFILE
 Dump a profile file. Need the python cProfile librairy
-.TP
-.BI \-a \ ANALYSE\fP,\fB \ \-\-analyse\fB= ANALYSE
-Dump an analyse statistics file, for support
-.TP
-.BI \-m \ MIGRATE\fP,\fB \ \-\-migrate\fB= MIGRATE
-Migrate the raw configuration read from the arbier to another module. \-\-> VERY EXPERIMENTAL!
-.TP
-.BI \-n \ ARB_NAME\fP,\fB \ \-\-name\fB= ARB_NAME
-Give the arbiter name to use. Optionnal, will use the hostaddress if not provide to find it.
 .UNINDENT
 .UNINDENT
 .UNINDENT

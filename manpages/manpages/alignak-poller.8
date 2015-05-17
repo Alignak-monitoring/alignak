@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH SHINKEN-REACTIONNER 8 "2014-04-24" "2.0.1" "Shinken commands"
+.TH ALIGNAK-POLLER 8 "2014-04-24" "2.0.1" "Alignak commands"
 .SH NAME
-shinken-reactionner \- Shinken reactionner daemon
+alignak-poller \- Alignak poller daemon
 .
 .nr rst2man-indent-level 0
 .
@@ -33,14 +33,14 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH SYNOPSIS
 .INDENT 0.0
 .INDENT 3.5
-\fBshinken\-reactionner\fP [\-dr] [\-c \fICONFIGFILE\fP] [\-\-debugfile \fIDEBUGFILE\fP]
+\fBalignak\-poller\fP [\-dr] [\-c \fICONFIGFILE\fP] [\-\-debugfile \fIDEBUGFILE\fP]
 .UNINDENT
 .UNINDENT
 .SH DESCRIPTION
 .sp
-Shinken reactionner daemon.
+Alignak poller daemon.
 .sp
-The \fBshinken\-reactionner\fP is similar to shinken\-poller but handles actions such as notifications and event\-handlers from the schedulers rather than checks.
+The \fBalignak\-poller\fP daemon is in charge of launching plugins as requested by schedulers. When the check is finished it returns the result to the schedulers.
 .SH OPTIONS
 .INDENT 0.0
 .INDENT 3.5
@@ -56,7 +56,7 @@ Config file
 Run in daemon mode
 .TP
 .B \-r\fP,\fB  \-\-replace
-Replace previous running reactionner
+Replace previous running poller
 .TP
 .B \-h\fP,\fB  \-\-help
 Show this help message

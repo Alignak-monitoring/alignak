@@ -1,9 +1,9 @@
 ==============
-shinken-broker
+alignak-broker
 ==============
 
 ---------------------
-Shinken broker daemon
+Alignak broker daemon
 ---------------------
 
 :Author:            Michael Leinartas,
@@ -13,20 +13,20 @@ Shinken broker daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-broker** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-broker** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken broker daemon.
+Alignak broker daemon.
 
-The **shinken-broker**'s role is to export and manage data from schedulers (such as status). The management itself is done by modules.
+The **alignak-broker**'s role is to export and manage data from schedulers (such as status). The management itself is done by modules.
 
 The following management modules are included:
 export into an NDO (Nagios Data Out) database (MySQL or Oracle backend)

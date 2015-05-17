@@ -1,10 +1,10 @@
-===================
-shinken-reactionner
-===================
+==============
+alignak-poller
+==============
 
---------------------------
-Shinken reactionner daemon
---------------------------
+---------------------
+Alignak poller daemon
+---------------------
 
 :Author:            Michael Leinartas,
                     Arthur Gautier,
@@ -13,27 +13,27 @@ Shinken reactionner daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-reactionner** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-poller** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken reactionner daemon.
+Alignak poller daemon.
 
-The **shinken-reactionner** is similar to shinken-poller but handles actions such as notifications and event-handlers from the schedulers rather than checks.
+The **alignak-poller** daemon is in charge of launching plugins as requested by schedulers. When the check is finished it returns the result to the schedulers.
 
 OPTIONS
 =======
 
   -c INI-CONFIG-FILE, --config=INI-CONFIG-FILE  Config file
   -d, --daemon                                  Run in daemon mode
-  -r, --replace                                 Replace previous running reactionner
+  -r, --replace                                 Replace previous running poller
   -h, --help                                    Show this help message
   --version                                     Show program's version number 
   --debugfile=DEBUGFILE                         Enable debug logging to *DEBUGFILE*

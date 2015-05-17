@@ -1,9 +1,9 @@
 =================
-shinken-discovery
+alignak-discovery
 =================
 
 ------------------------
-Shinken discovery daemon
+Alignak discovery daemon
 ------------------------
 
 :Author:            Michael Leinartas,
@@ -13,18 +13,18 @@ Shinken discovery daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-discovery** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-discovery** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken discovery command.
+Alignak discovery command.
 
 There are two discovery modules included:
 

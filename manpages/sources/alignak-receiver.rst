@@ -1,10 +1,10 @@
-=================
-shinken-scheduler
-=================
+================
+alignak-receiver
+================
 
-------------------------
-Shinken scheduler daemon
-------------------------
+-----------------------
+Alignak receiver daemon
+-----------------------
 
 :Author:            Michael Leinartas,
                     Arthur Gautier,
@@ -13,27 +13,27 @@ Shinken scheduler daemon
 :Date:              2014-04-24
 :Version:           2.0.1
 :Manual section:    8
-:Manual group:      Shinken commands
+:Manual group:      Alignak commands
 
 
 SYNOPSIS
 ========
 
-  **shinken-scheduler** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
+  **alignak-receiver** [-dr] [-c *CONFIGFILE*] [--debugfile *DEBUGFILE*]
 
 DESCRIPTION
 ===========
 
-Shinken scheduler daemon.
+Alignak receiver daemon.
 
-The **shinken-scheduler** manages the dispatching of checks and actions sent to shinken-reactionner and shinken-poller based on configuration sent to it by shinken-arbiter.
+The **alignak-receiver** daemon manages passive information and serves as a buffer that will be read from by the alignak-arbiter to dispatch data.
 
 OPTIONS
 =======
 
   -c INI-CONFIG-FILE, --config=INI-CONFIG-FILE  Config file
   -d, --daemon                                  Run in daemon mode
-  -r, --replace                                 Replace previous running scheduler
+  -r, --replace                                 Replace previous running receiver
   -h, --help                                    Show this help message
   --version                                     Show program's version number 
   --debugfile=DEBUGFILE                         Enable debug logging to *DEBUGFILE*
