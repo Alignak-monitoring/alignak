@@ -418,7 +418,7 @@ class Satellite(BaseSatellite):
             # Now ret have all verifs, we can return them
             send_ok = False
             ret = sched['wait_homerun'].values()
-            if ret is not []:
+            if ret:
                 try:
                     con = sched['con']
                     if con is not None:  # None = not initialized
