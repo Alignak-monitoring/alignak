@@ -308,13 +308,13 @@ class Satellite(BaseSatellite):
         statsmgr.incr('con-init.scheduler', time.time() - _t)
         return r
 
-
-    # Initialize or re-initialize connection with scheduler """
     def do_pynag_con_init(self, id):
+        '''Initialize a connection with scheduler having 'id'
+        Return the new connection to the scheduler if it succeeded,
+            else: any error OR sched is inactive: return None.
+        NB: if sched is inactive then None is directly returned.
+        '''
         sched = self.schedulers[id]
-
-        # If sched is not active, I do not try to init
-        # it is just useless
         if not sched['active']:
             return
 
@@ -356,7 +356,7 @@ class Satellite(BaseSatellite):
             sched['wait_homerun'].clear()
         sched['running_id'] = new_run_id
         logger.info("[%s] Connection OK with scheduler %s", self.name, sname)
-
+        return sch_con
 
     # Manage action returned from Workers
     # We just put them into the corresponding sched
@@ -403,44 +403,52 @@ class Satellite(BaseSatellite):
         statsmgr.incr('core.manage-returns', time.time() - _t)
         return r
 
-
     # Return the chk to scheduler and clean them
     # REF: doc/shinken-action-queues.png (6)
     def do_manage_returns(self):
-        # return
-        # For all schedulers, we check for waitforhomerun
+        # For all schedulers, we check for wait_homerun
         # and we send back results
-        for sched_id in self.schedulers:
-            sched = self.schedulers[sched_id]
+        for sched_id, sched in self.schedulers.iteritems():
             # If sched is not active, I do not try return
             if not sched['active']:
                 continue
             # Now ret have all verifs, we can return them
-            send_ok = False
-            ret = sched['wait_homerun'].values()
-            if ret:
-                try:
-                    con = sched['con']
-                    if con is not None:  # None = not initialized
-                        send_ok = con.post('put_results', {'results': ret})
-                # Not connected or sched is gone
-                except (HTTPExceptions, KeyError), exp:
-                    logger.error('manage_returns exception:: %s,%s ', type(exp), str(exp))
-                    self.pynag_con_init(sched_id)
-                    return
-                except AttributeError, exp:  # the scheduler must  not be initialized
-                    logger.error('manage_returns exception:: %s,%s ', type(exp), str(exp))
-                except Exception, exp:
-                    logger.error("A satellite raised an unknown exception: %s (%s)", exp, type(exp))
-                    raise
+            results = sched['wait_homerun']
+            # NB: it's safe for us to not use some lock around this 'results',
+            # along with its clear() call if put_results_ok below.
+            # Because it can only be modified (for adding new values) by the
+            # same thread running this function (that is the main satellite
+            # thread), and this occurs exactly in self.manage_action_return().
+            if not results:
+                return
 
-            # We clean ONLY if the send is OK
-            if send_ok:
-                sched['wait_homerun'].clear()
-            else:
-                self.pynag_con_init(sched_id)
-                logger.warning("Sent failed!")
+            send_ok = put_results_ok = False
+            try:
+                con = sched.get('con')
+                if con is None:  # None = not initialized
+                    con = self.pynag_con_init(sched_id)
 
+                if con:
+                    put_results_ok = con.post('put_results', {'results':
+                                                              results.values()})
+                    # actually scheduler.put_results() always returns True ..
+                    # not sure why it would or could return False..
+                    send_ok = True
+            # Not connected or sched is gone
+            except HTTPExceptions as err:
+                logger.error('Could not send results to scheduler %s : %s',
+                             sched['name'], err)
+            except Exception as err:
+                logger.exception("Unhandled exception trying to send results "
+                                 "to scheduler %s: %s", sched['name'], err)
+                raise
+            finally:
+                if send_ok:
+                    if put_results_ok:
+                        results.clear()
+                else:  # if - and only if - send was not ok,
+                    # then "de-init" the sched connection:
+                    sched['con'] = None
 
     # Get all returning actions for a call from a
     # scheduler
