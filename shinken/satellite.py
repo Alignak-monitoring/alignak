@@ -415,26 +415,21 @@ class Satellite(BaseSatellite):
             # Now ret have all verifs, we can return them
             results = sched['wait_homerun']
             # NB: it's safe for us to not use some lock around this 'results',
-            # along with its clear() call if put_results_ok below.
+            # along with its clear() call if send_ok below.
             # Because it can only be modified (for adding new values) by the
             # same thread running this function (that is the main satellite
             # thread), and this occurs exactly in self.manage_action_return().
             if not results:
                 return
 
-            send_ok = put_results_ok = False
+            send_ok = False
             try:
                 con = sched.get('con')
                 if con is None:  # None = not initialized
                     con = self.pynag_con_init(sched_id)
-
                 if con:
-                    put_results_ok = con.post('put_results', {'results':
-                                                              results.values()})
-                    # actually scheduler.put_results() always returns True ..
-                    # not sure why it would or could return False..
+                    con.post('put_results', {'results': results.values()})
                     send_ok = True
-            # Not connected or sched is gone
             except HTTPExceptions as err:
                 logger.error('Could not send results to scheduler %s : %s',
                              sched['name'], err)
@@ -444,8 +439,7 @@ class Satellite(BaseSatellite):
                 raise
             finally:
                 if send_ok:
-                    if put_results_ok:
-                        results.clear()
+                    results.clear()
                 else:  # if - and only if - send was not ok,
                     # then "de-init" the sched connection:
                     sched['con'] = None
