@@ -409,18 +409,23 @@ class Satellite(BaseSatellite):
         # For all schedulers, we check for wait_homerun
         # and we send back results
         for sched_id, sched in self.schedulers.iteritems():
-            # If sched is not active, I do not try return
             if not sched['active']:
                 continue
-            # Now ret have all verifs, we can return them
             results = sched['wait_homerun']
-            # NB: it's safe for us to not use some lock around this 'results',
-            # along with its clear() call if send_ok below.
+            # NB: it's **mostly** safe for us to not use some lock around
+            # this 'results' / sched['wait_homerun'].
             # Because it can only be modified (for adding new values) by the
             # same thread running this function (that is the main satellite
             # thread), and this occurs exactly in self.manage_action_return().
+            # Another possibility is for the sched['wait_homerun'] to be
+            # cleared within/by :
+            # ISchedulers.get_returns() -> Satelitte.get_return_for_passive()
+            # This can so happen in an (http) client thread.
             if not results:
                 return
+            # So, at worst, some results would be received twice on the
+            # scheduler level, which shouldn't be a problem given they are
+            # indexed by their "action_id".
 
             send_ok = False
             try:
