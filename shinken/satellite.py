@@ -395,13 +395,11 @@ class Satellite(BaseSatellite):
         except KeyError:
             pass
 
-
     # Wrapper function for stats
     def manage_returns(self):
         _t = time.time()
-        r = self.do_manage_returns()
+        self.do_manage_returns()
         statsmgr.incr('core.manage-returns', time.time() - _t)
-        return r
 
     # Return the chk to scheduler and clean them
     # REF: doc/shinken-action-queues.png (6)
