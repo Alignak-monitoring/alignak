@@ -120,3 +120,8 @@ When filing a new bug, please remember to include:
 __ https://github.com/naparuba/shinken/issues/
 __ https://gist.github.com/
 
+
+
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+   :alt: Join the chat at https://gitter.im/Alignak-monitoring/alignak
+   :target: https://gitter.im/Alignak-monitoring/alignak?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
