@@ -448,21 +448,16 @@ class Satellite(BaseSatellite):
     # scheduler
     def get_return_for_passive(self, sched_id):
         # I do not know this scheduler?
-        if sched_id not in self.schedulers:
+        sched = self.schedulers.get(sched_id)
+        if sched is None:
             logger.debug("I do not know this scheduler: %s", sched_id)
             return []
 
-        sched = self.schedulers[sched_id]
-        logger.debug("Preparing to return %s", str(sched['wait_homerun'].values()))
+        ret, sched['wait_homerun'] = sched['wait_homerun'], {}
 
-        # prepare our return
-        ret = copy.copy(sched['wait_homerun'].values())
+        logger.debug("Preparing to return %s results", len(ret))
 
-        # and clear our dict
-        sched['wait_homerun'].clear()
-
-        return ret
-
+        return ret.values()
 
     # Create and launch a new worker, and put it into self.workers
     # It can be mortal or not
