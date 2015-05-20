@@ -1,6 +1,6 @@
 #!/bin/sh
 
-testEquality() {
+testShebang() {
     files=`find ./ -type f -name "*.py"`
     for i in $files;do
         h=`head -n 1 $i`
