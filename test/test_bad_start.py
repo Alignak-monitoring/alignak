@@ -22,11 +22,13 @@
 # This file is used to test reading and processing of config files
 #
 
+from __future__ import print_function
+
 import os
 import tempfile
 import shutil
 
-from shinken_test import *
+from shinken_test import unittest, time_hacker, get_free_port
 
 import shinken.log as shinken_log
 
@@ -38,6 +40,7 @@ from shinken.daemons.brokerdaemon import Broker
 from shinken.daemons.schedulerdaemon import Shinken
 from shinken.daemons.reactionnerdaemon import Reactionner
 from shinken.daemons.arbiterdaemon import Arbiter
+
 try:
     import pwd, grp
     from pwd import getpwnam
@@ -58,7 +61,7 @@ except ImportError, exp:  # Like in nt system or Android
     def get_cur_group():
         return os.getlogin()
 
-curdir = os.getcwd()
+THIS_DIR = os.getcwd()
 
 daemons_config = {
     Broker:       "etc/core/daemons/brokerd.ini",
@@ -68,16 +71,13 @@ daemons_config = {
     Arbiter:    ["etc/core/shinken.cfg"]
 }
 
-import random
-
-HIGH_PORT = random.randint(30000,65000)
-run = 0   # We will open some ports but not close them (yes it's not good) and
-# so we will open a range from a high port
+#############################################################################
 
 class template_Daemon_Bad_Start():
 
-    def setUp(self):
-        time_hacker.set_real_time()
+    @classmethod
+    def setupClass(cls):
+        time_hacker.set_real_time()  # just to be sure..
 
     def get_login_and_group(self, p):
         try:
@@ -91,92 +91,95 @@ class template_Daemon_Bad_Start():
         cls = self.daemon_cls
         return cls(daemons_config[cls], False, True, False, None, '')
 
-
     def get_daemon(self):
-        global run
-        os.chdir(curdir)
         shinken_log.local_log = None  # otherwise get some "trashs" logs..
         d = self.create_daemon()
 
+        # configuration is "relative" : some config file reference others with
+        # a relative path (from THIS_DIR).
+        # so any time we load it we have to make sure we are back at THIS_DIR:
+        os.chdir(THIS_DIR)
+
         d.load_config_file()
         d.http_backend = 'wsgiref'
-        d.port = HIGH_PORT + run  # random high port, I hope no one is using it :)
-        run += 1
+        d.port = get_free_port()
+        d.pidfile = "pidfile"
         self.get_login_and_group(d)
         return d
 
+    def start_daemon(self, daemon):
+        daemon.do_daemon_init_and_start(fake=True)
 
     def test_bad_piddir(self):
-        print "Testing bad pidfile ..."
+        print("Testing bad pidfile ...")
         d = self.get_daemon()
         d.workdir = tempfile.mkdtemp()
         d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
-        prev_dir = os.getcwd()
-        self.assertRaises(InvalidPidFile, d.do_daemon_init_and_start, fake=True)
+
+        with self.assertRaises(InvalidPidFile):
+            self.start_daemon(d)
+        d.do_stop()
+
         shutil.rmtree(d.workdir)
-        os.chdir(prev_dir)
 
     def test_bad_workdir(self):
         print("Testing bad workdir ... mypid=%d" % (os.getpid()))
         d = self.get_daemon()
         d.workdir = '/DONOTEXISTS'
-        prev_dir = os.getcwd()
-        self.assertRaises(InvalidWorkDir, d.do_daemon_init_and_start, fake=True)
+        with self.assertRaises(InvalidWorkDir):
+            self.start_daemon(d)
         d.do_stop()
-        os.chdir(prev_dir)
 
     def test_port_not_free(self):
         print("Testing port not free ... mypid=%d" % (os.getpid()))
         d1 = self.get_daemon()
-        d1.workdir = tempfile.mkdtemp()
-        prev_dir = os.getcwd()  # We have to remember where we are to get back after
-        d1.do_daemon_init_and_start(fake=True)
-        new_dir = os.getcwd()  # We have to remember this one also
-        os.chdir(prev_dir)
-        os.unlink(os.path.join(new_dir, d1.pidfile))  ## so that second poller will not see first started poller
+
+        temp = tempfile.mkdtemp()
+        d1.workdir = temp
+
+        self.start_daemon(d1)
+        # so that second daemon will not see first started one:
+        todel = os.path.join(temp, d1.pidfile)
+        os.unlink(todel)
+
         d2 = self.get_daemon()
         d2.workdir = d1.workdir
-        # TODO: find a way in Pyro4 to get the port
-        if hasattr(d1.http_daemon, 'port'):
-            d2.port = d1.http_daemon.port
-            self.assertRaises(PortNotFree, d2.do_daemon_init_and_start, fake=True)
-            d2.do_stop()
+        d2.port = d1.http_daemon.port
+
+        with self.assertRaises(PortNotFree):
+            self.start_daemon(d2)
+
+        d2.do_stop()
         d1.do_stop()
-        try:
-            os.unlink(d1.pidfile)
-        except Exception:
-            pass
-        if hasattr(d1, 'local_log'):
-            os.unlink(os.path.join(d1.workdir, d1.local_log))
         shutil.rmtree(d1.workdir)
-        os.chdir(prev_dir)  # Back to previous dir for next test!
 
+#############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, ShinkenTest):
+class Test_Broker_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, ShinkenTest):
+class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Shinken
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, ShinkenTest):
+class Test_Poller_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, ShinkenTest):
+class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Reactionner
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, ShinkenTest):
+class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Arbiter
 
     def create_daemon(self):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        #Arbiter(config_files, is_daemon, do_replace, verify_only, debug, debug_file, profile)
         return cls(daemons_config[cls], False, True, False, False, None, '')
 
+#############################################################################
 
 if __name__ == '__main__':
     unittest.main()
