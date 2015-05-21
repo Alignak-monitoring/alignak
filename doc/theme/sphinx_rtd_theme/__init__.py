@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Sphinx ReadTheDocs theme.
 
 From https://github.com/ryan-roemer/sphinx-bootstrap-theme.

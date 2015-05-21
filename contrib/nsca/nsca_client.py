@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # This is a very quick and dirty code for David so he can work on its
 # sikuli agent and report as nsca the results.
 #

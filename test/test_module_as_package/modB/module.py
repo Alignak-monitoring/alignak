@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 from shinken.basemodule import BaseModule
 
 properties = {

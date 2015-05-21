@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''shinken.arbiterlink is deprecated. Please use shinken.objects.arbiterlink now.'''
 
 from shinken.old_daemon_link import make_deprecated_daemon_link

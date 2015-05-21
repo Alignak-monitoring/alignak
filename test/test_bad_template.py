@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 from shinken_test import ShinkenTest
 
 

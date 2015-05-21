@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''shinken.brokerlink is deprecated. Please use shinken.objects.brokerlink now.'''
 
 from shinken.old_daemon_link import make_deprecated_daemon_link

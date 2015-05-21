@@ -7,6 +7,8 @@ python:
 # some are only used for travis/coveralls so we are installing them here only
 install:
   - ./test/setup_test.sh
+before_script:
+   - curl -L "http://downloads.sourceforge.net/shunit2/shunit2-2.0.3.tgz" | tar zx
 # command to run tests
 # notice: the nose-cov is used because it is compatible with --processes, but produce a .coverage by process
 # so we must combine them in the end
@@ -15,6 +17,7 @@ script:
   - nosetests -xv --process-restartworker --processes=1 --process-timeout=999999999  --with-cov --cov=shinken
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' shinken/*
+  - sh test/test_shebang.sh
 # specific call to launch coverage data into coveralls.io
 after_success:
   coveralls

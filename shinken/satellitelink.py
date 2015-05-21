@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''shinken.satellitelink is deprecated. Please use shinken.objects.satellitelink now.'''
 
 from shinken.old_daemon_link import deprecation, make_deprecated
