@@ -16,6 +16,7 @@ import re
 import random
 import copy
 import locale
+import socket
 
 import unittest2 as unittest
 
@@ -70,6 +71,14 @@ logger.load_obj(__DUMMY())
 logger.setLevel(ERROR)
 
 #############################################################################
+
+def get_free_port(on_ip='127.0.0.1'):
+    sock = socket.socket()
+    try:
+        sock.bind((on_ip, 0))
+        return sock.getsockname()[1]
+    finally:
+        sock.close()
 
 def guess_sys_stdout_encoding():
     ''' Return the best guessed encoding to be used for printing on sys.stdout. '''
