@@ -1,0 +1,113 @@
+
+import importlib
+import sys
+
+# This is a simple hack that should make external modules / tools,
+# able to continue to work with us ..
+
+import alignak
+sys.modules['shinken'] = alignak
+
+for name in (
+    'acknowledge',
+    'action',
+    'basemodule',
+    'brok',
+    'comment',
+    'commandcall',
+    'downtime',
+    'eventhandler',
+    'external_command',
+    'http_client',
+    'http_daemon',
+    'load',
+    'log',
+    'macroresolver',
+    'memoized',
+    'message',
+    'modulesctx',
+    'modulesmanager',
+    'notification',
+    'property',
+
+    'old_daemon_link',
+    'arbiterlink',
+    'brokerlink',
+    'pollerlink',
+    'schedulerlink',
+    'reactionnerlink',
+    'receiverlink',
+
+    'scheduler',
+    'satellite',
+
+    'stats',
+    'trigger_functions',
+    'util',
+    'worker',
+
+
+    'daemons',
+    'daemons.arbiterdaemon',
+    'daemons.brokerdaemon',
+    'daemons.pollerdaemon',
+    'daemons.reactionnerdaemon',
+    'daemons.receiverdaemon',
+    'daemons.schedulerdaemon',
+
+
+    'objects',
+    'objects.arbiterlink',
+    'objects.brokerlink',
+    'objects.businessimpactmodulation',
+    'objects.checkmodulation',
+    'objects.command',
+    'objects.config',
+    'objects.contact',
+    'objects.contactgroup',
+    'objects.discoveryrule',
+    'objects.discoveryrun',
+    'objects.escalation',
+    'objects.host',
+    'objects.hostdependency',
+    'objects.hostescalation',
+    'objects.hostextinfo',
+    'objects.hostgroup',
+    'objects.item',
+    'objects.itemgroup',
+    'objects.macromodulation',
+    'objects.matchingitem',
+    'objects.module',
+    'objects.notificationway',
+    'objects.pack',
+    'objects.pollerlink',
+    'objects.reactionnerlink',
+    'objects.realm',
+    'objects.receiverlink',
+    'objects.resultmodulation',
+    'objects.satellitelink',
+    'objects.schedulerlink',
+    'objects.schedulingitem',
+    'objects.service',
+    'objects.servicedependency',
+    'objects.serviceescalation',
+    'objects.serviceextinfo',
+    'objects.servicegroup',
+    'objects.timeperiod',
+    'objects.trigger',
+
+    'misc',
+    'misc.common',
+    'misc.datamanager',
+    'misc.filter',
+    'misc.importlib',
+    'misc._importlib',
+    'misc.logevent',
+    'misc.md5crypt',
+    'misc.perfdata',
+    'misc.regenerator',
+    'misc.sorter',
+    'misc.termcolor',
+):
+    mod = importlib.import_module('alignak.%s' % name)
+    sys.modules['shinken.%s' % name] = mod
