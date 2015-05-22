@@ -5,7 +5,7 @@ Mixed GNU/linux AND Windows pollers
 ====================================
 
 
-There can be as many pollers as you want. And Shinken runs under a lot of systems, like GNU/Linux and Windows. It could be useful to make windows hosts checks :ref:`using windows pollers (by a server IN the domain) <monitoring/configure-check-wmi-plus-onwindows>`, and all the others by a GNU/Linux one (like all pure network based checks).
+There can be as many pollers as you want. And Alignak runs under a lot of systems, like GNU/Linux and Windows. It could be useful to make windows hosts checks :ref:`using windows pollers (by a server IN the domain) <monitoring/configure-check-wmi-plus-onwindows>`, and all the others by a GNU/Linux one (like all pure network based checks).
 
 And in fact you can, and again it's quite easy :)
 Its important to remember that all pollers connect to all schedulers, so we must have a way to distinguish 'windows' checks from 'gnu/linux' ones.
@@ -26,7 +26,7 @@ Let take an example with a 'windows' tag:
   define command{
   
    command_name   CheckWMI
-   command_line   c:\shinken\libexec\check_wmi.exe -H $HOSTADRESS$ -r $ARG1$
+   command_line   c:\alignak\libexec\check_wmi.exe -H $HOSTADRESS$ -r $ARG1$
    poller_tag     Windows
   }
   

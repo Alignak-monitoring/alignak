@@ -1,10 +1,10 @@
 .. _advanced/sms-with-android:
 
 
-Shinken and Android 
+Alignak and Android 
 ====================
 
-Shinken can run on an android device like a phone. It can be very useful for one particular daemon: the reactionner that send alerts. With this, you can setup a "sms by phone" architecture, with high availability. We will see that you can also receive ACKs by SMS :)
+Alignak can run on an android device like a phone. It can be very useful for one particular daemon: the reactionner that send alerts. With this, you can setup a "sms by phone" architecture, with high availability. We will see that you can also receive ACKs by SMS :)
 
 All you need is one (or two if you want high availability) android phone with an internet connection and Wifi. Any version should work.
 
@@ -26,21 +26,21 @@ Install Python on your phone
   * Don't close your sdcard explorer
 
 
-Install Shinken on your phone 
+Install Alignak on your phone 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   * Connect your phone to a computer, and open the sdcard disk.
-  * Copy your shinken library directory in SDCARD\com.googlecode.pythonforandroid\extras\python\. If you do not have the SDCARD\com.googlecode.pythonforandroid\extras\python\shinken\__ini__.py file, you put the bad directory.
-  * Copy the bin/shinken-reactionner file in SDCARD\sl4a\scripts direcotry and rename it shinken-reactionner.py (so add the .py extension)
+  * Copy your alignak library directory in SDCARD\com.googlecode.pythonforandroid\extras\python\. If you do not have the SDCARD\com.googlecode.pythonforandroid\extras\python\alignak\__ini__.py file, you put the bad directory.
+  * Copy the bin/alignak-reactionner file in SDCARD\sl4a\scripts direcotry and rename it alignak-reactionner.py (so add the .py extension)
 
 
-Time to launch the Shinken app on the phone 
+Time to launch the Alignak app on the phone 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
   * Unmount the phone from your computer and be sure to re-mount the sdcard on your phone (look at the notifications).
   * Launch the sl4a app
-  * launch the shinken-reactionner.py app in the script list.
+  * launch the alignak-reactionner.py app in the script list.
   * It should launch without errors
 
 

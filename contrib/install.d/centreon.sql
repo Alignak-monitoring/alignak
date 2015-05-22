@@ -16,7 +16,7 @@ nagios_id = '1';
 
 update CENTREON.nagios_server set
 	nagios_bin='TARGET/bin/nagios',
-	init_script='/etc/init.d/shinken',
+	init_script='/etc/init.d/alignak',
 	nagios_perfdata='TARGET/var/service-perfdata'
 where
 id = '1';
@@ -25,7 +25,7 @@ update CENTREON.options set value='TARGET' where `key`='nagios_path';
 
 update CENTREON.options set value='TARGET/bin/nagios' where `key`='nagios_path_bin';
 
-update CENTREON.options set value='/etc/init.d/shinken' where `key`='nagios_init_script';
+update CENTREON.options set value='/etc/init.d/alignak' where `key`='nagios_init_script';
 
 update CENTREON.cfg_cgi set main_config_file='TARGET/etc/nagios.cfg' where cgi_id=10;
 

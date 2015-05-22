@@ -1,10 +1,10 @@
 .. _development/programming-rules:
 
 ===============================
-Shinken Programming Guidelines 
+Alignak Programming Guidelines 
 ===============================
 
-The Shinken project aims to have good code quality. This is to the benefit of all. Easy to understand code, that is efficient and well documented can do wonders to introduce new developers to a great system and keep existing one happy!
+The Alignak project aims to have good code quality. This is to the benefit of all. Easy to understand code, that is efficient and well documented can do wonders to introduce new developers to a great system and keep existing one happy!
 
 During scores of secret meetings at undisclosed locations in the heart of Eurodisney, the following guidelines were documented.
 
@@ -44,14 +44,14 @@ Read through it to provide better understanding for yourself and others: ` Pytho
 Logging is your friend 
 =======================
 
-Shinken provides a logger module, that acts as a wrapper to the Python logging facilities. This provides valuable feedback to users, power users and developers.
+Alignak provides a logger module, that acts as a wrapper to the Python logging facilities. This provides valuable feedback to users, power users and developers.
 
 The logging functions also provide different levels to distinguish the type logging level at which the messages should appear. This is similar to how syslog classifies messages based on severity levels.
 
 Some log messages will not get the level printed, these are related to state data.
 Logging levels for logs generated at system startup and displayed in STDOUT are set by default to display all messages. This is normal behaviour. Once logging is initialized buffered messages are logged to the appropriate level defined in the daemon INI files. (ex. reactionnerd.ini, brokerd.ini, etc.)
 
-Some test cases depend on logging output, so change existing logging messages to your hearts content, but validate all changes against the FULL test suite. :ref:`Learn more about using the Shinken test suite <development/test-driven-development>`.
+Some test cases depend on logging output, so change existing logging messages to your hearts content, but validate all changes against the FULL test suite. :ref:`Learn more about using the Alignak test suite <development/test-driven-development>`.
 
 Debug:
   This is the most verbose logging level (maximum volume setting). Consider Debug to be out-of-bounds for a production system and used it only for development and testing. I prefer to aim to get my logging levels just right so I have just enough information and endeavor to log this at the Information level or above.
@@ -69,13 +69,13 @@ Critical:
   Critical is reserved for special exceptions/conditions where it is imperative that you can quickly pick out these events. I normally wouldn't expect Fatal to be used early in an application's development. It's usually only with experience I can identify situations worthy of the FATAL moniker experience do specific events become worth of promotion to Critical. After all, an error's an error.
 
 Log:
-  This level has been deprecated for NON NAGIOS/SHINKEN STATE messages and should be replaced with one of the approved logging levels listed above. The STATE messages are easy recognize as they are ALL CAPS. Do not mess with these unless you know what you are doing.
+  This level has been deprecated for NON NAGIOS/ALIGNAK STATE messages and should be replaced with one of the approved logging levels listed above. The STATE messages are easy recognize as they are ALL CAPS. Do not mess with these unless you know what you are doing.
 
 
 Technical debt must be paid 
 ============================
 
-Coding in Shinken should be fun and rewarding.
+Coding in Alignak should be fun and rewarding.
 
 "Technical debt": all little hacks here and there. __There comes a time, technical debt must be paid\__. We can have new features very quickly, if authors do not have to bypass numerous hack. We must take some time before each release to pay all technical debt we can. __The less we've got, the easier it is to service and extend the code\__.
 
@@ -87,10 +87,10 @@ We must be responsible with new features, if it means they can be used to build 
 Where does the fun happen 
 ==========================
 
-` GitHub offers great facilities to fork, test, commit, review and comment anything related to Shinken`_. 
+` GitHub offers great facilities to fork, test, commit, review and comment anything related to Alignak`_. 
 
 You can also follow the project progress in real time.
 
-.. _ GitHub offers great facilities to fork, test, commit, review and comment anything related to Shinken: https://github.com/naparuba/shinken 
+.. _ GitHub offers great facilities to fork, test, commit, review and comment anything related to Alignak: https://github.com/Alignak-monitoring/Alignak 
 .. _ Python docstring guide: http://www.python.org/dev/peps/pep-0257/ 
 .. _ PEP8 - Python Style guide: http://www.python.org/dev/peps/pep-0008/ 

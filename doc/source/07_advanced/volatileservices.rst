@@ -8,7 +8,7 @@
 Introduction 
 =============
 
-Shinken has the ability to distinguish between “normal" services and "volatile" services. The is_volatile option in each service definition allows you to specify whether a specific service is volatile or not. For most people, the majority of all monitored services will be non-volatile (i.e. “normal"). However, volatile services can be very useful when used properly...
+Alignak has the ability to distinguish between “normal" services and "volatile" services. The is_volatile option in each service definition allows you to specify whether a specific service is volatile or not. For most people, the majority of all monitored services will be non-volatile (i.e. “normal"). However, volatile services can be very useful when used properly...
 
 
 What Are They Useful For? 
@@ -37,24 +37,24 @@ These events normally only occur for services when they are in a non-OK state an
 The Power Of Two 
 =================
 
-  * :ref:`Shinken Configuration <advanced/volatileservices#shinken_configuration>`
+  * :ref:`Alignak Configuration <advanced/volatileservices#alignak_configuration>`
   * :ref:`PortSentry Configuration <advanced/volatileservices#portsentry_configuration>`
   * :ref:`Port Scan Script <advanced/volatileservices#port_scan_script>`
 
 If you combine the features of volatile services and :ref:`passive service checks <thebasics/passivechecks>`, you can do some very useful things. Examples of this include handling "SNMP" traps, security alerts, etc.
 
-How about an example... Let's say you're running `PortSentry`_ to detect port scans on your machine and automatically firewall potential intruders. If you want to let Shinken know about port scans, you could do the following...
+How about an example... Let's say you're running `PortSentry`_ to detect port scans on your machine and automatically firewall potential intruders. If you want to let Alignak know about port scans, you could do the following...
 
 
-.. _advanced/volatileservices#shinken_configuration:
+.. _advanced/volatileservices#alignak_configuration:
 
-Shinken Configuration 
+Alignak Configuration 
 ----------------------
 
 
   * Create a service definition called Port Scans and associate it with the host that PortSentry is running on.
-  * Set the "max_check_attempts" directive in the service definition to 1. This will tell Shinken to immediate force the service into a :ref:`hard state <thebasics/statetypes>` when a non-OK state is reported.
-  * Set the "active_checks_enabled" directive in the service definition to 0. This prevents Shinken from actively checking the service.
+  * Set the "max_check_attempts" directive in the service definition to 1. This will tell Alignak to immediate force the service into a :ref:`hard state <thebasics/statetypes>` when a non-OK state is reported.
+  * Set the "active_checks_enabled" directive in the service definition to 0. This prevents Alignak from actively checking the service.
   * Set the "passive_checks_enabled" directive in the service definition to 1. This enables passive checks for the service.
   * Set this "is_volatile" directive in the service definition to 1.
 
@@ -70,7 +70,7 @@ Edit your PortSentry configuration file ("portsentry.conf") and define a command
   
 ::
 
-  KILL_RUN_CMD="/usr/local/Shinken/libexec/eventhandlers/submit_check_result *"host_name"* 'Port Scans' 2 'Port scan from host $TARGET$ on port $PORT$.  Host has been firewalled.'"
+  KILL_RUN_CMD="/usr/local/alignak/libexec/eventhandlers/submit_check_result *"host_name"* 'Port Scans' 2 'Port scan from host $TARGET$ on port $PORT$.  Host has been firewalled.'"
   
 Make sure to replace host_name with the short name of the host that the service is associated with.
 
@@ -81,7 +81,7 @@ Port Scan Script
 -----------------
 
 
-Create a shell script in the "/var/lib/shinken/libexec/eventhandlers" directory named **submit_check_result**. The contents of the shell script should be something similar to the following...
+Create a shell script in the "/var/lib/alignak/libexec/eventhandlers" directory named **submit_check_result**. The contents of the shell script should be something similar to the following...
 
   
 ::
@@ -89,12 +89,12 @@ Create a shell script in the "/var/lib/shinken/libexec/eventhandlers" directory 
   
   #!/bin/sh
   
-  # Write a command to the Shinken command file to cause
+  # Write a command to the Alignak command file to cause
   # it to process a service check result
   
   echocmd="/bin/echo"
   
-  CommandFile="/var/lib/shinken/rw/shinken.cmd"
+  CommandFile="/var/lib/alignak/rw/alignak.cmd"
   
   # get the current date/time in seconds since UNIX epoch
   datetime=`date +%s`
@@ -109,9 +109,9 @@ Create a shell script in the "/var/lib/shinken/libexec/eventhandlers" directory 
 What will happen when PortSentry detects a port scan on the machine in the future?
 
   * PortSentry will firewall the host (this is a function of the PortSentry software)
-  * PortSentry will execute the **submit_check_result** shell script and send a passive check result to Shinken
-  * Shinken will read the external command file and see the passive service check submitted by PortSentry
-  * Shinken will put the Port Scans service in a hard CRITICAL state and send notifications to contacts
+  * PortSentry will execute the **submit_check_result** shell script and send a passive check result to Alignak
+  * Alignak will read the external command file and see the passive service check submitted by PortSentry
+  * Alignak will put the Port Scans service in a hard CRITICAL state and send notifications to contacts
 
 Pretty neat, huh?
 

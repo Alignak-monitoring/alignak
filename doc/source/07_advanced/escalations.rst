@@ -11,7 +11,7 @@ Introduction
 .. image:: /_static/images///official/images/objects-contacts.png
    :scale: 90 %
 
-Shinken supports optional escalation of contact notifications for hosts and services. Escalation of host and service notifications is accomplished by defining :ref:`host escalations <configobjects/hostescalation>` and :ref:`service escalations <configobjects/serviceescalation>` in your :ref:`Object Configuration Overview <configuration/configobject>`.
+Alignak supports optional escalation of contact notifications for hosts and services. Escalation of host and service notifications is accomplished by defining :ref:`host escalations <configobjects/hostescalation>` and :ref:`service escalations <configobjects/serviceescalation>` in your :ref:`Object Configuration Overview <configuration/configobject>`.
 
 The examples I provide below all make use of service escalation definitions, but host escalations work the same way. Except, of course, that they're for hosts instead of services. :-)
 
@@ -164,7 +164,7 @@ You can change the frequency at which escalated notifications are sent out for a
   
 In this example we see that the default notification interval for the services is 240 minutes (this is the value in the service definition). When the service notification is escalated on the 3rd, 4th, and 5th notifications, an interval of 45 minutes will be used between notifications. On the 6th and subsequent notifications, the notification interval will be 60 minutes, as specified in the second escalation definition.
 
-Since it is possible to have overlapping escalation definitions for a particular hostgroup or service, and the fact that a host can be a member of multiple hostgroups, Shinken has to make a decision on what to do as far as the notification interval is concerned when escalation definitions overlap. In any case where there are multiple valid escalation definitions for a particular notification, Shinken will choose the smallest notification interval. Take the following example:
+Since it is possible to have overlapping escalation definitions for a particular hostgroup or service, and the fact that a host can be a member of multiple hostgroups, Alignak has to make a decision on what to do as far as the notification interval is concerned when escalation definitions overlap. In any case where there are multiple valid escalation definitions for a particular notification, Alignak will choose the smallest notification interval. Take the following example:
 
   
 ::
@@ -187,9 +187,9 @@ Since it is possible to have overlapping escalation definitions for a particular
     contact_groups    nt-admins,managers,everyone
   }
   
-We see that the two escalation definitions overlap on the 4th and 5th notifications. For these notifications, Shinken will use a notification interval of 45 minutes, since it is the smallest interval present in any valid escalation definitions for those notifications.
+We see that the two escalation definitions overlap on the 4th and 5th notifications. For these notifications, Alignak will use a notification interval of 45 minutes, since it is the smallest interval present in any valid escalation definitions for those notifications.
 
-One last note about notification intervals deals with intervals of 0. An interval of 0 means that Shinken should only sent a notification out for the first valid notification during that escalation definition. All subsequent notifications for the hostgroup or service will be suppressed. Take this example:
+One last note about notification intervals deals with intervals of 0. An interval of 0 means that Alignak should only sent a notification out for the first valid notification during that escalation definition. All subsequent notifications for the hostgroup or service will be suppressed. Take this example:
 
   
 ::

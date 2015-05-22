@@ -18,8 +18,8 @@ import sys, os
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../..'))
-import shinken
-from shinken.bin import VERSION
+import alignak
+from alignak.bin import VERSION
 
 # Fix for missing modules
 class Mock(object):
@@ -83,8 +83,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Shinken Manual'
-copyright = u'2013, Shinken Team'
+project = u'Alignak Manual'
+copyright = u'2015, Alignak Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -209,7 +209,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Shinkendoc'
+htmlhelp_basename = 'Alignakdoc'
 
 
 # -- Options for LaTeX output --------------------------------------------------
@@ -228,8 +228,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Shinken.tex', u'Shinken Documentation',
-   u'Shinken Team', 'manual'),
+  ('index', 'Alignak.tex', u'Alignak Documentation',
+   u'Alignak Team', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -258,8 +258,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'shinken', u'Shinken Documentation',
-     [u'Shinken Team'], 1)
+    ('index', 'alignak', u'Alignak Documentation',
+     [u'Alignak Team'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -272,8 +272,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Shinken', u'Shinken Documentation',
-   u'Shinken Team', 'Shinken', 'One line description of project.',
+  ('index', 'Alignak', u'Alignak Documentation',
+   u'Alignak Team', 'Alignak', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -290,10 +290,10 @@ texinfo_documents = [
 # -- Options for Epub output ---------------------------------------------------
 
 # Bibliographic Dublin Core info.
-epub_title = u'Shinken'
-epub_author = u'Shinken Team'
-epub_publisher = u'Shinken Team'
-epub_copyright = u'2013, Shinken Team'
+epub_title = u'Alignak'
+epub_author = u'Alignak Team'
+epub_publisher = u'Alignak Team'
+epub_copyright = u'2015, Alignak Team'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

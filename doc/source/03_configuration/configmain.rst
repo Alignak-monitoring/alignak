@@ -1,7 +1,7 @@
 .. _configuration/configmain:
 
 ==============================================
- Main Configuration File (shinken.cfg) Options
+ Main Configuration File (alignak.cfg) Options
 ==============================================
 
 When creating and/or editing configuration files, keep the following in mind:
@@ -15,7 +15,7 @@ When creating and/or editing configuration files, keep the following in mind:
 
 
 
-The main configuration file is "shinken.cfg". It is located in the "/etc/shinken/" directory.
+The main configuration file is "alignak.cfg". It is located in the "/etc/alignak/" directory.
 Sample main configuration files are installed for you when you follow the :ref:`Quickstart installation guide <gettingstarted/quickstart>`.
 Below are listed parameters currently used in the file. For other parameters (not mentionned by default) see :ref:`Main Configuration File Advanced <configuration/configmain-advanced>`
 
@@ -38,10 +38,10 @@ Those are **statements and not parameters**. The arbiter considers them as order
 For the cfg_dir one, the arbiter **only** reads files ending with ".cfg".
 The arbiter **does** read recursively directory for files but **does not** consider lines into those files as **statements** anymore.
 
-This means that a cfg_dir or cfg_file is considered as a **parameter** outside of shinken.cfg (or any configuration file directly given to the arbiter as parameter in a command line)
+This means that a cfg_dir or cfg_file is considered as a **parameter** outside of alignak.cfg (or any configuration file directly given to the arbiter as parameter in a command line)
 The arbiter handles main configuration files differently than any other files.
 
-With those 2 statements, all Shinken configuration is defined : daemons, objects, resources.
+With those 2 statements, all Alignak configuration is defined : daemons, objects, resources.
 
 
 
@@ -62,7 +62,7 @@ Default:
 
   retention_update_interval=60
 
-This setting determines how often (in minutes) that Shinken **scheduler** will automatically save retention data during normal operation.
+This setting determines how often (in minutes) that Alignak **scheduler** will automatically save retention data during normal operation.
 If you set this value to 0, it will not save retention data at regular intervals, but it will still save retention data before shutting down or restarting.
 If you have disabled state retention (with the :ref:`State Retention Option <configuration/configmain-advanced#retain_state_information>` option), this option has no effect.
 
@@ -86,7 +86,7 @@ Default:
   max_service_check_spread=30
   max_host_check_spread=30
 
-This option determines the maximum number of minutes from when Shinken starts that all hosts/services (that are scheduled to be regularly checked) are checked. This option will ensure that the initial checks of all hosts/services occur within the timeframe you specify. Default value is 30 (minutes).
+This option determines the maximum number of minutes from when Alignak starts that all hosts/services (that are scheduled to be regularly checked) are checked. This option will ensure that the initial checks of all hosts/services occur within the timeframe you specify. Default value is 30 (minutes).
 
 
 .. _configuration/configmain#host_check_timeout:
@@ -109,9 +109,9 @@ Default:
   service_check_timeout=60
   host_check_timeout=30
 
-This is the maximum number of seconds that Shinken will allow service/host checks to run. If checks exceed this limit, they are killed and a CRITICAL state is returned. A timeout error will also be logged.
+This is the maximum number of seconds that Alignak will allow service/host checks to run. If checks exceed this limit, they are killed and a CRITICAL state is returned. A timeout error will also be logged.
 
-There is often widespread confusion as to what this option really does. It is meant to be used as a last ditch mechanism to kill off plugins which are misbehaving and not exiting in a timely manner. It should be set to something high (like 60 seconds or more), so that each check normally finishes executing within this time limit. If a check runs longer than this limit, Shinken will kill it off thinking it is a runaway processes.
+There is often widespread confusion as to what this option really does. It is meant to be used as a last ditch mechanism to kill off plugins which are misbehaving and not exiting in a timely manner. It should be set to something high (like 60 seconds or more), so that each check normally finishes executing within this time limit. If a check runs longer than this limit, Alignak will kill it off thinking it is a runaway processes.
 
 .. _configuration/configmain#timeout_exit_status:
 
@@ -130,7 +130,7 @@ Default:
 
    timeout_exit_status=2
 
-State set by Shinken in case of timeout.
+State set by Alignak in case of timeout.
 
 
 .. _configuration/configmain#flap_history:
@@ -232,7 +232,7 @@ Default:
 
   use_timezone=''
 
-This option allows you to override the default timezone that this instance of Shinken runs in. Useful if you have multiple instances of Shinken that need to run from the same server, but have different local times associated with them. If not specified, Shinken will use the system configured timezone.
+This option allows you to override the default timezone that this instance of Alignak runs in. Useful if you have multiple instances of Alignak that need to run from the same server, but have different local times associated with them. If not specified, Alignak will use the system configured timezone.
 
 
 
@@ -253,7 +253,7 @@ Default:
 
   enable_environment_macros=1
 
-This option determines whether or not the Shinken daemon will make all standard :ref:`macros <thebasics/macrolist>` available as environment variables to your check, notification, event hander, etc. commands. In large installations this can be problematic because it takes additional CPU to compute the values of all macros and make them available to the environment. It also cost a increase network communication between schedulers and pollers.
+This option determines whether or not the Alignak daemon will make all standard :ref:`macros <thebasics/macrolist>` available as environment variables to your check, notification, event hander, etc. commands. In large installations this can be problematic because it takes additional CPU to compute the values of all macros and make them available to the environment. It also cost a increase network communication between schedulers and pollers.
 
   * 0 = Don't make macros available as environment variables
   * 1 = Make macros available as environment variables
@@ -276,7 +276,7 @@ Default:
 
   log_initial_states=1
 
-This variable determines whether or not Shinken will force all initial host and service states to be logged, even if they result in an OK state. Initial service and host states are normally only logged when there is a problem on the first check. Enabling this option is useful if you are using an application that scans the log file to determine long-term state statistics for services and hosts.
+This variable determines whether or not Alignak will force all initial host and service states to be logged, even if they result in an OK state. Initial service and host states are normally only logged when there is a problem on the first check. Enabling this option is useful if you are using an application that scans the log file to determine long-term state statistics for services and hosts.
 
   * 0 = Don't log initial states
   * 1 = Log initial states
@@ -299,15 +299,10 @@ Default:
 
   no_event_handlers_during_downtimes=0
 
-This option determines whether or not Shinken will run :ref:`event handlers <advanced/eventhandlers>` when the host or service is in a scheduled downtime.
+This option determines whether or not Alignak will run :ref:`event handlers <advanced/eventhandlers>` when the host or service is in a scheduled downtime.
 
   * 0 = Launch event handlers (Nagios behavior)
   * 1 = Don't launch event handlers
-
-References:
-
-  * http://www.mail-archive.com/shinken-devel@lists.sourceforge.net/msg01394.html
-  * https://github.com/naparuba/shinken/commit/9ce28d80857c137e5b915b39bbb8c1baecc821f9
 
 
 
@@ -331,7 +326,7 @@ Default :
 
 ::
 
-  workdir=/var/run/shinken/
+  workdir=/var/run/alignak/
 
 This variable specify the working directory of the daemon.
 In the arbiter case, if the value is empty, the directory name of lock_file parameter. See below
@@ -354,9 +349,9 @@ Example:
 
 ::
 
-  lock_file=/var/lib/shinken/arbiterd.pid
+  lock_file=/var/lib/alignak/arbiterd.pid
 
-This option specifies the location of the lock file that Shinken **arbiter daemon** should create when it runs as a daemon (when started with the "-d" command line argument). This file contains the process id (PID) number of the running **arbiter** process.
+This option specifies the location of the lock file that Alignak **arbiter daemon** should create when it runs as a daemon (when started with the "-d" command line argument). This file contains the process id (PID) number of the running **arbiter** process.
 
 
 .. _configuration/configmain#local_log:
@@ -374,7 +369,7 @@ Default:
 
 ::
 
-  local_log=/var/log/shinken/arbiterd.log'
+  local_log=/var/log/alignak/arbiterd.log'
 
 
 This variable specifies the log file for the daemon.
@@ -401,7 +396,7 @@ Default:
 This variable specifies which logs will be raised by the arbiter daemon. For others daemons, it can be defined in their local \*d.ini files.
 
 
-.. _configuration/configmain#shinken_user:
+.. _configuration/configmain#alignak_user:
 
 Arbiter Daemon User
 --------------------
@@ -412,20 +407,20 @@ Format:
 
 ::
 
-  shinken_user=username
+  alignak_user=username
 
 Default:
 
 ::
 
-  shinken_user=<current user>
+  alignak_user=<current user>
 
 This is used to set the effective user that the **Arbiter** process (main process) should run as.
-After initial program startup, Shinken will drop its effective privileges and run as this user.
+After initial program startup, Alignak will drop its effective privileges and run as this user.
 
 
 
-.. _configuration/configmain#shinken_group:
+.. _configuration/configmain#alignak_group:
 
 Arbiter Daemon user Group
 --------------------------
@@ -436,13 +431,13 @@ Format:
 
 ::
 
-  shinken_group=groupname
+  alignak_group=groupname
 
 Default:
 
 ::
 
-  shinken_group=<current group>
+  alignak_group=<current group>
 
 This is used to set the effective group of the user used to launch the **arbiter** daemon.
 
@@ -462,7 +457,7 @@ Default:
 
 ::
 
-  modules_dir=/var/lib/shinken/modules
+  modules_dir=/var/lib/alignak/modules
 
 
 Path to the modules directory

@@ -30,7 +30,7 @@ Example:
 
   perfdata_timeout=5
   
-This is the maximum number of seconds that Shinken will allow a :ref:`host performance data processor command <configuration/configmain-advanced#host_perfdata_file_processing_command>` or :ref:`service performance data processor command <configuration/configmain-advanced#service_perfdata_file_processing_command>` to be run. If a command exceeds this time limit it will be killed and a warning will be logged.
+This is the maximum number of seconds that Alignak will allow a :ref:`host performance data processor command <configuration/configmain-advanced#host_perfdata_file_processing_command>` or :ref:`service performance data processor command <configuration/configmain-advanced#service_perfdata_file_processing_command>` to be run. If a command exceeds this time limit it will be killed and a warning will be logged.
 
 
 .. _configuration/configmain-advanced#process_performance_data:
@@ -50,7 +50,7 @@ Example:
 
   process_performance_data=1
 
-This value determines whether or not Shinken will process host and service check :ref:`performance data <advanced/perfdata>`.
+This value determines whether or not Alignak will process host and service check :ref:`performance data <advanced/perfdata>`.
 
   * 0 = Don't process performance data 
   * 1 = Process performance data (default)
@@ -98,8 +98,8 @@ Example:
 
 ::
 
-  host_perfdata_file=/var/lib/shinken/host-perfdata.dat
-  service_perfdata_file=/var/lib/shinken/service-perfdata.dat
+  host_perfdata_file=/var/lib/alignak/host-perfdata.dat
+  service_perfdata_file=/var/lib/alignak/service-perfdata.dat
   
 This option allows you to specify a file to which host/service :ref:`performance data <advanced/perfdata>` will be written after every host check. Data will be written to the performance file as specified by the :ref:`Host Performance Data File Template <configuration/configmain-advanced#host_perfdata_file_template>` option or the service one. Performance data is only written to this file if the :ref:`Performance Data Processing Option <configuration/configmain-advanced#process_performance_data>` option is enabled globally and if the "process_perf_data" directive in the :ref:`host definition <configobjects/host>` is enabled.
 
@@ -238,7 +238,7 @@ Example:
 
   passive_host_checks_are_soft=1
   
-This option determines whether or not Shinken will treat :ref:`passive host checks <thebasics/passivechecks>` as HARD states or SOFT states. By default, a passive host check result will put a host into a :ref:`HARD state type <thebasics/statetypes>`. You can change this behavior by enabling this option.
+This option determines whether or not Alignak will treat :ref:`passive host checks <thebasics/passivechecks>` as HARD states or SOFT states. By default, a passive host check result will put a host into a :ref:`HARD state type <thebasics/statetypes>`. You can change this behavior by enabling this option.
 
   * 0 = Passive host checks are HARD (default)
   * 1 = Passive host checks are SOFT
@@ -265,7 +265,7 @@ Example:
   enable_predictive_host_dependency_checks=1
   enable_predictive_service_dependency_checks=1
   
-This option determines whether or not Shinken will execute predictive checks of hosts/services that are being depended upon (as defined in :ref:`host/services dependencies <advanced/dependencies>`) for a particular host/service when it changes state. Predictive checks help ensure that the dependency logic is as accurate as possible. More information on how predictive checks work can be found :ref:`here <advanced/dependencychecks>`.
+This option determines whether or not Alignak will execute predictive checks of hosts/services that are being depended upon (as defined in :ref:`host/services dependencies <advanced/dependencies>`) for a particular host/service when it changes state. Predictive checks help ensure that the dependency logic is as accurate as possible. More information on how predictive checks work can be found :ref:`here <advanced/dependencychecks>`.
 
   * 0 = Disable predictive checks
   * 1 = Enable predictive checks (default)
@@ -295,7 +295,7 @@ This option allows you to enable or disable checks for orphaned service/host che
 
 Since no results have come back in for it, it is not rescheduled in the event queue. This can cause checks to stop being executed. Normally it is very rare for this to happen - it might happen if an external user or process killed off the process that was being used to execute a check.
 
-If this option is enabled and Shinken finds that results for a particular check have not come back, it will log an error message and reschedule the check. If you start seeing checks that never seem to get rescheduled, enable this option and see if you notice any log messages about orphaned services.
+If this option is enabled and Alignak finds that results for a particular check have not come back, it will log an error message and reschedule the check. If you start seeing checks that never seem to get rescheduled, enable this option and see if you notice any log messages about orphaned services.
 
   * 0 = Don't check for orphaned service checks
   * 1 = Check for orphaned service checks (default)
@@ -311,7 +311,7 @@ Soft State Dependencies Option (Not implemented)
 Format:  soft_state_dependencies=<0/1>
 Example:  soft_state_dependencies=0
 
-This option determines whether or not Shinken will use soft state information when checking :ref:`host and service dependencies <advanced/dependencies>`. Normally it will only use the latest hard host or service state when checking dependencies. If you want it to use the latest state (regardless of whether its a soft or hard :ref:`state type <thebasics/statetypes>`), enable this option.
+This option determines whether or not Alignak will use soft state information when checking :ref:`host and service dependencies <advanced/dependencies>`. Normally it will only use the latest hard host or service state when checking dependencies. If you want it to use the latest state (regardless of whether its a soft or hard :ref:`state type <thebasics/statetypes>`), enable this option.
 
   * 0 = Don't use soft state dependencies (default)
   * 1 = Use soft state dependencies
@@ -342,7 +342,7 @@ Example:
   
 This option determines the maximum amount of time (in seconds) that the state of a previous host check is considered current. Cached host states (from host/service checks that were performed more recently than the time specified by this value) can improve host check performance immensely. Too high of a value for this option may result in (temporarily) inaccurate host/service states, while a low value may result in a performance hit for host/service checks. Use a value of 0 if you want to disable host/service check caching. More information on cached checks can be found :ref:`here <advanced/cachedchecks>`.
 
-.. tip::  Nagios default is 15s, but it's a tweak that make checks less accurate. So Shinken use 0s as a default. If you have performances problems and you can't add a new scheduler or poller, increase this value and start to buy a new server because this won't be magical.
+.. tip::  Nagios default is 15s, but it's a tweak that make checks less accurate. So Alignak use 0s as a default. If you have performances problems and you can't add a new scheduler or poller, increase this value and start to buy a new server because this won't be magical.
 
 
 .. _configuration/configmain-advanced#use_large_installation_tweaks:
@@ -362,7 +362,7 @@ Example:
 
   use_large_installation_tweaks=0
   
-This option determines whether or not the Shinken daemon will take shortcuts to improve performance. These shortcuts result in the loss of a few features, but larger installations will likely see a lot of benefit from doing so. If you can't add new satellites to manage the load (like new pollers), you can activate it. More information on what optimizations are taken when you enable this option can be found :ref:`here <tuning/largeinstalltweaks>`.
+This option determines whether or not the Alignak daemon will take shortcuts to improve performance. These shortcuts result in the loss of a few features, but larger installations will likely see a lot of benefit from doing so. If you can't add new satellites to manage the load (like new pollers), you can activate it. More information on what optimizations are taken when you enable this option can be found :ref:`here <tuning/largeinstalltweaks>`.
 
   * 0 = Don't use tweaks (default)
   * 1 = Use tweaks
@@ -389,7 +389,7 @@ Example:
 
   enable_flap_detection=1
   
-This option determines whether or not Shinken will try and detect hosts and services that are “flapping". Flapping occurs when a host or service changes between states too frequently, resulting in a barrage of notifications being sent out. When Shinken detects that a host or service is flapping, it will temporarily suppress notifications for that host/service until it stops flapping.
+This option determines whether or not Alignak will try and detect hosts and services that are “flapping". Flapping occurs when a host or service changes between states too frequently, resulting in a barrage of notifications being sent out. When ShAlignak detects that a host or service is flapping, it will temporarily suppress notifications for that host/service until it stops flapping.
 
 More information on how flap detection and handling works can be found :ref:`here <advanced/flapping>`.
 
@@ -469,9 +469,9 @@ Example:
   ocsp_timeout=5
   ochp_timeout=5
   
-This is the maximum number of seconds that Shinken will allow :ref:`event handlers <advanced/eventhandlers>`, notification, :ref:`obsessive compulsive service processor command <configuration/configmain-advanced#ocsp_command>` or a :ref:`Obsessive Compulsive Host Processor Command <configuration/configmain-advanced#ochp_command>` to be run. If an command exceeds this time limit it will be killed and a warning will be logged.
+This is the maximum number of seconds that Alignak will allow :ref:`event handlers <advanced/eventhandlers>`, notification, :ref:`obsessive compulsive service processor command <configuration/configmain-advanced#ocsp_command>` or a :ref:`Obsessive Compulsive Host Processor Command <configuration/configmain-advanced#ochp_command>` to be run. If an command exceeds this time limit it will be killed and a warning will be logged.
 
-There is often widespread confusion as to what this option really does. It is meant to be used as a last ditch mechanism to kill off commands which are misbehaving and not exiting in a timely manner. It should be set to something high (like 60 seconds or more for notification, less for oc*p commands), so that each event handler command normally finishes executing within this time limit. If an event handler runs longer than this limit, Shinken will kill it off thinking it is a runaway processes.
+There is often widespread confusion as to what this option really does. It is meant to be used as a last ditch mechanism to kill off commands which are misbehaving and not exiting in a timely manner. It should be set to something high (like 60 seconds or more for notification, less for oc*p commands), so that each event handler command normally finishes executing within this time limit. If an event handler runs longer than this limit, Alignak will kill it off thinking it is a runaway processes.
 
 
 Old Obsess Over commands 
@@ -494,7 +494,7 @@ Example:
 
   obsess_over_services=1
   
-This value determines whether or not Shinken will “obsess" over service checks results and run the :ref:`obsessive compulsive service processor command <configuration/configmain-advanced#ocsp_command>` you define. I know _ funny name, but it was all I could think of. This option is useful for performing :ref:`distributed monitoring <advanced/distributed>`. If you're not doing distributed monitoring, don't enable this option.
+This value determines whether or not Alignak will “obsess" over service checks results and run the :ref:`obsessive compulsive service processor command <configuration/configmain-advanced#ocsp_command>` you define. I know _ funny name, but it was all I could think of. This option is useful for performing :ref:`distributed monitoring <advanced/distributed>`. If you're not doing distributed monitoring, don't enable this option.
 
   * 0 = Don't obsess over services (default)
   * 1 = Obsess over services
@@ -539,7 +539,7 @@ Example:
 
   obsess_over_hosts=1
   
-This value determines whether or not Shinken will “obsess" over host checks results and run the :ref:`obsessive compulsive host processor command <configuration/configmain-advanced#ochp_command>` you define. Same like the service one but for hosts :)
+This value determines whether or not Alignak will “obsess" over host checks results and run the :ref:`obsessive compulsive host processor command <configuration/configmain-advanced#ochp_command>` you define. Same like the service one but for hosts :)
 
   * 0 = Don't obsess over hosts (default)
   * 1 = Obsess over hosts
@@ -590,7 +590,7 @@ Example:
   check_service_freshness=0
   check_host_freshness=0
   
-This option determines whether or not Shinken will periodically check the “freshness" of host/service checks. Enabling this option is useful for helping to ensure that :ref:`passive service checks <thebasics/passivechecks>` are received in a timely manner. More information on freshness checking can be found :ref:`here <advanced/freshness>`.
+This option determines whether or not Alignak will periodically check the “freshness" of host/service checks. Enabling this option is useful for helping to ensure that :ref:`passive service checks <thebasics/passivechecks>` are received in a timely manner. More information on freshness checking can be found :ref:`here <advanced/freshness>`.
 
   * 0 = Don't check host/service freshness
   * 1 = Check host/service freshness (default)
@@ -616,7 +616,7 @@ Example:
   service_freshness_check_interval=60
   host_freshness_check_interval=60
   
-This setting determines how often (in seconds) Shinken will periodically check the “freshness" of host/service check results. If you have disabled host/service freshness checking (with the :ref:`check_service_freshness <configuration/configmain-advanced#check_service_freshness>` option), this option has no effect. More information on freshness checking can be found :ref:`here <advanced/freshness>`.
+This setting determines how often (in seconds) Alignak will periodically check the “freshness" of host/service check results. If you have disabled host/service freshness checking (with the :ref:`check_service_freshness <configuration/configmain-advanced#check_service_freshness>` option), this option has no effect. More information on freshness checking can be found :ref:`here <advanced/freshness>`.
 
 
 .. _configuration/configmain-advanced#additional_freshness_latency:
@@ -636,7 +636,7 @@ Example:
 
   additional_freshness_latency=15
   
-This option determines the number of seconds Shinken will add to any host or services freshness threshold it automatically calculates (e.g. those not specified explicitly by the user). More information on freshness checking can be found :ref:`here <advanced/freshness>`.
+This option determines the number of seconds Alignak will add to any host or services freshness threshold it automatically calculates (e.g. those not specified explicitly by the user). More information on freshness checking can be found :ref:`here <advanced/freshness>`.
 
 
 
@@ -670,7 +670,7 @@ Beware : if you set the human format, some automatic parsing log tools won't wor
 Resource File
 --------------
 
-Defined in shinken.cfg file.
+Defined in alignak.cfg file.
 
 Format
 
@@ -682,7 +682,7 @@ Example:
 
 ::
 
-  resource_file=/etc/shinken/resource.cfg
+  resource_file=/etc/alignak/resource.cfg
 
 This is used to specify an optional resource file that can contain "$USERn$" :ref:`Understanding Macros and How They Work <thebasics/macros>` definitions. "$USERn$" macros are useful for storing usernames, passwords, and items commonly used in command definitions (like directory paths).
 A classical variable used is $USER1$, used to store the plugins path, "/usr/lib/nagios/plugins" on a classic installation.
@@ -728,10 +728,10 @@ Example:
 
   idontcareaboutsecurity=0
 
-This option determines whether or not Shinken will allow the Arbiter daemon to run under the root account.
-If this option is disabled, Shinken will bailout if the :ref:`nagios_user <configuration/configmain#shinken_user>` or the :ref:`nagios_group <configuration/configmain#shinken_group>` is configured with the root account.
+This option determines whether or not Alignak will allow the Arbiter daemon to run under the root account.
+If this option is disabled, Alignak will bailout if the :ref:`nagios_user <configuration/configmain#alignak_user>` or the :ref:`nagios_group <configuration/configmain#alignak_group>` is configured with the root account.
 
-The Shinken daemons do not need root right. Without a good reason do not run thems under this account!
+The Alignak daemons do not need root right. Without a good reason do not run thems under this account!
   * 0 = Be a responsible administrator
   * 1 = Make crazy your security manager
 
@@ -753,7 +753,7 @@ Example:
 
   enable_notifications=1
 
-This option determines whether or not Shinken will send out :ref:`notifications <thebasics/notifications>`. If this option is disabled, Shinken will not send out notifications for any host or service.
+This option determines whether or not let it will send out :ref:`notifications <thebasics/notifications>`. If this option is disabled, Alignak will not send out notifications for any host or service.
 
 Values are as follows:
   * 0 = Disable notifications
@@ -777,7 +777,7 @@ Example:
 
   log_rotation_method=d
 
-This is the rotation method that you would like Shinken to use for your log file on the **broker server**. Values are as follows:
+This is the rotation method that you would like Alignak to use for your log file on the **broker server**. Values are as follows:
 
   * n = None (don't rotate the log - this is the default)
   * h = Hourly (rotate the log at the top of each hour)
@@ -805,7 +805,7 @@ Example:
 
   check_external_commands=1
 
-This option determines whether or not Shinken will check the :ref:`External Command File <configuration/configmain-advanced#command_file>` for commands that should be executed with the **arbiter daemon**. More information on external commands can be found :ref:`here <advanced/extcommands>`.
+This option determines whether or not Alignak will check the :ref:`External Command File <configuration/configmain-advanced#command_file>` for commands that should be executed with the **arbiter daemon**. More information on external commands can be found :ref:`here <advanced/extcommands>`.
 
   * 0 = Don't check external commands (default)
   * 1 = Check external commands (default)
@@ -830,9 +830,9 @@ Example:
 
 ::
 
-  command_file=/var/lib/shinken/rw/nagios.cmd
+  command_file=/var/lib/alignak/rw/nagios.cmd
 
-This is the file that Shinken will check for external commands to process with the **arbiter daemon**. The :ref:`command CGI <thebasics/cgis#cmd_cgi>` writes commands to this file. The external command file is implemented as a named pipe (FIFO), which is created when Nagios starts and removed when it shuts down. More information on external commands can be found :ref:`here <advanced/extcommands>`.
+This is the file that Alignak will check for external commands to process with the **arbiter daemon**. The :ref:`command CGI <thebasics/cgis#cmd_cgi>` writes commands to this file. The external command file is implemented as a named pipe (FIFO), which is created when Nagios starts and removed when it shuts down. More information on external commands can be found :ref:`here <advanced/extcommands>`.
 
 .. todo: where is thebasics/cgis#cmd-cgi (thebasics-cgis#thebasics-cgis-cmd_cgi-)?
 
@@ -857,11 +857,11 @@ Example:
 
   retain_state_information=1
 
-This option determines whether or not Shinken will retain state information for hosts and services between program restarts. If you enable this option, you should supply a value for the :ref:`State Retention File <configuration/configmain-advanced#state_retention_file>` variable. When enabled, Shinken will save all state information for hosts and service before it shuts down (or restarts) and will read in previously saved state information when it starts up again.
+This option determines whether or not Alignak will retain state information for hosts and services between program restarts. If you enable this option, you should supply a value for the :ref:`State Retention File <configuration/configmain-advanced#state_retention_file>` variable. When enabled, Alignak will save all state information for hosts and service before it shuts down (or restarts) and will read in previously saved state information when it starts up again.
   * 0 = Don't retain state information
   * 1 = Retain state information (default)
 
-.. note::  Idea to approve : Mark it as Unused : `Related topic`_. A Shinken module replace it.
+.. note::  Idea to approve : Mark it as Unused : `Related topic`_. A Alignak module replace it.
 
 
 .. _configuration/configmain-advanced#state_retention_file:
@@ -879,11 +879,11 @@ Example:
 
 ::
 
-  state_retention_file=/var/lib/shinken/retention.dat
+  state_retention_file=/var/lib/alignak/retention.dat
 
-This is the file that Shinken **scheduler daemons** will use for storing status, downtime, and comment information before they shuts down. When Shinken is restarted it will use the information stored in this file for setting the initial states of services and hosts before it starts monitoring anything. In order to make Shinken retain state information between program restarts, you must enable the :ref:`State Retention Option <configuration/configmain-advanced#retain_state_information>` option.
+This is the file that Alignak **scheduler daemons** will use for storing status, downtime, and comment information before they shuts down. When Alignak is restarted it will use the information stored in this file for setting the initial states of services and hosts before it starts monitoring anything. In order to make Alignak retain state information between program restarts, you must enable the :ref:`State Retention Option <configuration/configmain-advanced#retain_state_information>` option.
 
-.. important::  The file format is not the same between Shinken and Nagios! The retention.dat generated with Nagios will not load into Shinken.
+.. important::  The file format is not the same between Alignak and Nagios! The retention.dat generated with Nagios will not load into Alignak.
 
 
 
@@ -910,7 +910,7 @@ Example:
   execute_service_checks=1
   execute_host_checks=1
 
-This option determines whether or not Shinken will execute service/host checks. Do not change this option unless you use a old school distributed architecture. And even if you do this, please change your architecture with a cool new one far more efficient.
+This option determines whether or not Alignak will execute service/host checks. Do not change this option unless you use a old school distributed architecture. And even if you do this, please change your architecture with a cool new one far more efficient.
 
   * 0 = Don't execute service checks
   * 1 = Execute service checks (default)
@@ -935,7 +935,7 @@ Example:
   accept_passive_service_checks=1
   accept_passive_host_checks=1
 
-This option determines whether or not Shinken will accept :ref:`passive service/host checks <thebasics/passivechecks>`. If this option is disabled, Nagios will not accept any passive service/host checks.
+This option determines whether or not Alignak will accept :ref:`passive service/host checks <thebasics/passivechecks>`. If this option is disabled, Nagios will not accept any passive service/host checks.
 
   * 0 = Don't accept passive service/host checks
   * 1 = Accept passive service/host checks (default)
@@ -958,7 +958,7 @@ Example:
 
   enable_event_handlers=1
 
-This option determines whether or not Shinken will run :ref:`event handlers <advanced/eventhandlers>`.
+This option determines whether or not Alignak will run :ref:`event handlers <advanced/eventhandlers>`.
 
   * 0 = Disable event handlers
   * 1 = Enable event handlers (default)
@@ -1034,7 +1034,7 @@ Example:
   log_service_retries=0
   log_host_retries=0
 
-This variable determines whether or not service/host check retries are logged. Service check retries occur when a service check results in a non-OK state, but you have configured Shinken to retry the service more than once before responding to the error. Services in this situation are considered to be in "soft" states. Logging service check retries is mostly useful when attempting to debug Shinken or test out service/host :ref:`event handlers <advanced/eventhandlers>`.
+This variable determines whether or not service/host check retries are logged. Service check retries occur when a service check results in a non-OK state, but you have configured Alignak to retry the service more than once before responding to the error. Services in this situation are considered to be in "soft" states. Logging service check retries is mostly useful when attempting to debug Alignak or test out service/host :ref:`event handlers <advanced/eventhandlers>`.
 
   * 0 = Don't log service/host check retries (default)
   * 1 = Log service/host check retries
@@ -1057,7 +1057,7 @@ Example:
 
   log_event_handlers=1
 
-This variable determines whether or not service and host :ref:`event handlers <advanced/eventhandlers>` are logged. Event handlers are optional commands that can be run whenever a service or hosts changes state. Logging event handlers is most useful when debugging Shinken or first trying out your event handler scripts.
+This variable determines whether or not service and host :ref:`event handlers <advanced/eventhandlers>` are logged. Event handlers are optional commands that can be run whenever a service or hosts changes state. Logging event handlers is most useful when debugging Alignak or first trying out your event handler scripts.
 
   * 0 = Don't log event handlers
   * 1 = Log event handlers
@@ -1082,7 +1082,7 @@ Example:
 
   log_external_commands=1
 
-This variable determines whether or not Shinken will log :ref:`external commands <advanced/extcommands>` that it receives.
+This variable determines whether or not Alignak will log :ref:`external commands <advanced/extcommands>` that it receives.
 
   * 0 = Don't log external commands
   * 1 = Log external commands (default)
@@ -1105,7 +1105,7 @@ Example:
 
   log_passive_checks=1
 
-This variable determines whether or not Shinken will log :ref:`passive host and service checks <thebasics/passivechecks>` that it receives from the :ref:`external command file <configuration/configmain-advanced#command_file>`.
+This variable determines whether or not Alignak will log :ref:`passive host and service checks <thebasics/passivechecks>` that it receives from the :ref:`external command file <configuration/configmain-advanced#command_file>`.
 
   * 0 = Don't log passive checks
   * 1 = Log passive checks (default)
@@ -1133,7 +1133,7 @@ Example:
 
 This option allows you to specify a host event handler command that is to be run for every host state change. The global event handler is executed immediately prior to the event handler that you have optionally specified in each host definition. The command argument is the short name of a command that you define in your :ref:`Object Configuration Overview <configuration/configobject>`. The maximum amount of time that this command can run is controlled by the :ref:`Event Handler Timeout <configuration/configmain-advanced#event_handler_timeout>` option. More information on event handlers can be found :ref:`here <advanced/eventhandlers>`.
 
-Such commands should not be so useful with the new Shinken distributed architecture. If you use it, look if you can avoid it because such commands will kill your performances.
+Such commands should not be so useful with the new Alignak distributed architecture. If you use it, look if you can avoid it because such commands will kill your performances.
 
 
 
@@ -1158,7 +1158,7 @@ This is the number of seconds per “unit interval" used for timing in the sched
 
 The default value for this is set to 60, which means that a "unit value" of 1 in the object configuration file will mean 60 seconds (1 minute).
 
-.. tip::  Set this option top 1 is not a good thing with Shinken. It's not design to be a hard real time (<5seconds) monitoring system. Nearly no one need such hard real time (maybe only the Nuclear center or a market place like the London Exchange...).
+.. tip::  Set this option top 1 is not a good thing with Alignak. It's not design to be a hard real time (<5seconds) monitoring system. Nearly no one need such hard real time (maybe only the Nuclear center or a market place like the London Exchange...).
 
 
 
@@ -1171,7 +1171,7 @@ If you are using the old CGI from Nagios, please migrate to a new WebUI. For his
 Unused parameters
 ==================
 
-The below parameters are inherited from Nagios but are not used in Shinken. You can defined them but if you don't it will be the same :)
+The below parameters are inherited from Nagios but are not used in Alignak. You can defined them but if you don't it will be the same :)
 
 They are listed on another page :ref:`unused Nagios parameters <advanced/unused-nagios-parameters>`.
 
@@ -1198,7 +1198,7 @@ Example:
 
   date_format=us
   
-This option allows you to specify what kind of date/time format Shinken should use in date/time :ref:`macros <thebasics/macros>`. Possible options (along with example output) include:
+This option allows you to specify what kind of date/time format Alignak should use in date/time :ref:`macros <thebasics/macros>`. Possible options (along with example output) include:
 
 ============== =================== ===================
 Option         Output Format       Sample Output      
@@ -1228,7 +1228,7 @@ Example:
 
   illegal_object_name_chars=`-!$%^&*"|'<>?,()=
   
-This option allows you to specify illegal characters that cannot be used in host names, service descriptions, or names of other object types. Shinken will allow you to use most characters in object definitions, but I recommend not using the characters shown in the example above. Doing may give you problems in the web interface, notification commands, etc.
+This option allows you to specify illegal characters that cannot be used in host names, service descriptions, or names of other object types. Alignak will allow you to use most characters in object definitions, but I recommend not using the characters shown in the example above. Doing may give you problems in the web interface, notification commands, etc.
 
 
 .. _configuration/configmain-advanced#illegal_macro_output_chars:
@@ -1323,7 +1323,7 @@ Example:
 
   admin_email=root@localhost.localdomain
   
-This is the email address for the administrator of the local machine (i.e. the one that Shinken is running on). This value can be used in notification commands by using the "$ADMINEMAIL$" :ref:`macro <thebasics/macros>`.
+This is the email address for the administrator of the local machine (i.e. the one that Alignak is running on). This value can be used in notification commands by using the "$ADMINEMAIL$" :ref:`macro <thebasics/macros>`.
 
 
 .. _configuration/configmain-advanced#admin_pager:
@@ -1343,10 +1343,10 @@ Example:
 
   admin_pager=pageroot@localhost.localdomain
   
-This is the pager number (or pager email gateway) for the administrator of the local machine (i.e. the one that Shinken is running on). The pager number/address can be used in notification commands by using the $ADMINPAGER$ :ref:`macro <thebasics/macros>`.
+This is the pager number (or pager email gateway) for the administrator of the local machine (i.e. the one that Alignak is running on). The pager number/address can be used in notification commands by using the $ADMINPAGER$ :ref:`macro <thebasics/macros>`.
 
 
-Shinken.io api_key
+shinken.io api_key
 -----------------------------
 
 Format:
@@ -1361,7 +1361,7 @@ Example:
 
   api_key=AZERTYUIOP
   
-This is the api_key/scret to exchange with shinken.io and especially the kernel.shinken.io service that will print your shinken metrics. To enable it you must fill the api_key and secret parameters. You must register to http://shinken.io and look at your profile http://shinken.io/~ for your api_key and your secret.
+This is the api_key/scret to exchange with shinken.io and especially the kernel.shinken.io service that will print your alignak metrics. To enable it you must fill the api_key and secret parameters. You must register to http://shinken.io and look at your profile http://shinken.io/~ for your api_key and your secret.
 
 
 Shinken.io secret
@@ -1379,7 +1379,7 @@ Example:
 
   secret=QSDFGHJ
   
-This is the api_key/scret to exchange with shinken.io and especially the kernel.shinken.io service that will print your shinken metrics. To enable it you must fill the api_key and secret parameters. You must register to http://shinken.io and look at your profile http://shinken.io/~ for your api_key and your secret.
+This is the api_key/scret to exchange with shinken.io and especially the kernel.shinken.io service that will print your alignak metrics. To enable it you must fill the api_key and secret parameters. You must register to http://shinken.io and look at your profile http://shinken.io/~ for your api_key and your secret.
 
 
 Statsd host
@@ -1432,7 +1432,7 @@ Example:
 
 ::
 
-  statsd_prefix=shinken
+  statsd_prefix=alignak
   
 The prefix to add before all your stats so you will find them easily in graphite
 
@@ -1460,4 +1460,4 @@ Enable or not the statsd communication. By default it's disabled.
 
 
 
-.. _Related topic: http://www.shinken-monitoring.org/forum/index.php/topic,21.0.html
+.. _Related topic: http://www...

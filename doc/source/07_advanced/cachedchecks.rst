@@ -11,7 +11,7 @@ Introduction
 .. image:: /_static/images///official/images/cachedchecks1.png
    :scale: 90 %
 
-The performance of Shinken's monitoring logic can be significantly improved by implementing the use of cached checks. Cached checks allow Shinken to forgo executing a host or service check command if it determines a relatively recent check result will do instead.
+The performance of Alignak's monitoring logic can be significantly improved by implementing the use of cached checks. Cached checks allow Alignak to forgo executing a host or service check command if it determines a relatively recent check result will do instead.
 
 
 For On-Demand Checks Only 
@@ -29,7 +29,7 @@ And on-demand service checks occur...
 
   * As needed for :ref:`service dependency checks <advanced/dependencychecks>`.
 
-Unless you make use of service dependencies, Shinken will not be able to use cached check results to improve the performance of service checks. Don't worry about that - its normal. Cached host checks are where the big performance improvements lie, and everyone should see a benefit there.
+Unless you make use of service dependencies, Alignak will not be able to use cached check results to improve the performance of service checks. Don't worry about that - its normal. Cached host checks are where the big performance improvements lie, and everyone should see a benefit there.
 
 
 How Caching Works 
@@ -39,23 +39,23 @@ How Caching Works
    :scale: 90 %
 
 
-When Shinken needs to perform an on-demand host or service check, it will make a determination as to whether it can used a cached check result or if it needs to perform an actual check by executing a plugin. It does this by checking to see if the last check of the host or service occurred within the last X seconds, where X is the cached host or service check horizon.
+When Alignak needs to perform an on-demand host or service check, it will make a determination as to whether it can used a cached check result or if it needs to perform an actual check by executing a plugin. It does this by checking to see if the last check of the host or service occurred within the last X seconds, where X is the cached host or service check horizon.
 
-If the last check was performed within the timeframe specified by the cached check horizon variable, Shinken will use the result of the last host or service check and will not execute a new check. If the host or service has not yet been checked, or if the last check falls outside of the cached check horizon timeframe, Shinken will execute a new host or service check by running a plugin.
+If the last check was performed within the timeframe specified by the cached check horizon variable, Alignak will use the result of the last host or service check and will not execute a new check. If the host or service has not yet been checked, or if the last check falls outside of the cached check horizon timeframe, Alignak will execute a new host or service check by running a plugin.
 
 
 What This Really Means 
 =======================
 
-Shinken performs on-demand checks because it need to know the current state of a host or service at that exact moment in time. Utilizing cached checks allows you to make Shinken think that recent check results are “good enough" for determining the current state of hosts, and that it doesn't need to go out and actually re-check the status of that host or service.
+Alignak performs on-demand checks because it need to know the current state of a host or service at that exact moment in time. Utilizing cached checks allows you to make Alignak think that recent check results are “good enough" for determining the current state of hosts, and that it doesn't need to go out and actually re-check the status of that host or service.
 
-The cached check horizon tells Shinken how recent check results must be in order to reliably reflect the current state of a host or service. For example, with a cached check horizon of 30 seconds, you are telling Shinken that if a host's state was checked sometime in the last 30 seconds, the result of that check should still be considered the current state of the host.
+The cached check horizon tells Alignak how recent check results must be in order to reliably reflect the current state of a host or service. For example, with a cached check horizon of 30 seconds, you are telling Alignak that if a host's state was checked sometime in the last 30 seconds, the result of that check should still be considered the current state of the host.
 
-The number of cached check results that Shinken can use versus the number of on-demand checks it has to actually execute can be considered the cached check “hit" rate. By increasing the cached check horizon to equal the regular check interval of a host, you could theoretically achieve a cache hit rate of 100%. In that case all on-demand checks of that host would use cached check results. What a performance improvement! But is it really? Probably not.
+The number of cached check results that Alignak can use versus the number of on-demand checks it has to actually execute can be considered the cached check “hit" rate. By increasing the cached check horizon to equal the regular check interval of a host, you could theoretically achieve a cache hit rate of 100%. In that case all on-demand checks of that host would use cached check results. What a performance improvement! But is it really? Probably not.
 
 The reliability of cached check result information decreases over time. Higher cache hit rates require that previous check results are considered “valid" for longer periods of time. Things can change quickly in any network scenario, and there's no guarantee that a server that was functioning properly 30 seconds ago isn't on fire right now. There's the tradeoff - reliability versus speed. If you have a large cached check horizon, you risk having unreliable check result values being used in the monitoring logic.
 
-Shinken will eventually determine the correct state of all hosts and services, so even if cached check results prove to unreliably represent their true value, it will only work with incorrect information for a short period of time. Even short periods of unreliable status information can prove to be a nuisance for admins, as they may receive notifications about problems which no longer exist.
+Alignak will eventually determine the correct state of all hosts and services, so even if cached check results prove to unreliably represent their true value, it will only work with incorrect information for a short period of time. Even short periods of unreliable status information can prove to be a nuisance for admins, as they may receive notifications about problems which no longer exist.
 
 There is no standard cached check horizon or cache hit rate that will be acceptable to every users. Some people will want a short horizon timeframe and a low cache hit rate, while others will want a larger horizon timeframe and a larger cache hit rate (with a low reliability rate). Some users may even want to disable cached checks altogether to obtain a 100% reliability rate. Testing different horizon timeframes, and their effect on the reliability of status information, is the only want that an individual user will find the “right" value for their situation. More information on this is discussed below.
 
@@ -85,7 +85,7 @@ You can schedule regular checks of your hosts by specifying a value greater than
    :scale: 90 %
 
 
-A good way to determine the proper value for the cached check horizon options is to compare how many on-demand checks Shinken has to actually run versus how may it can use cached values for. The :ref:`nagiostats <tuning/nagiostats>` utility can produce information on cached checks, which can then be :ref:`graphed with MRTG <tuning/mrtggraphs>`. Example MRTG graphs that show cached vs. actual on-demand checks are shown to the right.
+A good way to determine the proper value for the cached check horizon options is to compare how many on-demand checks Alignak has to actually run versus how may it can use cached values for. The :ref:`nagiostats <tuning/nagiostats>` utility can produce information on cached checks, which can then be :ref:`graphed with MRTG <tuning/mrtggraphs>`. Example MRTG graphs that show cached vs. actual on-demand checks are shown to the right.
 
 The monitoring installation which produced the graphs above had:
 

@@ -16,5 +16,5 @@ Getting Started
 
    beginners
    installations/index
-   upgrading-shinken
+   upgrading-alignak
 

@@ -14,7 +14,7 @@ The Basics
 .. toctree::
    :maxdepth: 2
 
-   configure-shinken
+   configure-alignak
    plugins
    macros
    macrolist
@@ -27,6 +27,6 @@ The Basics
    networkreachability
    notifications
    active-module-checks
-   dependencies-in-shinken
+   dependencies-in-alignak
    update
 

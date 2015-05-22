@@ -8,7 +8,7 @@ Service Dependency Definition
 Description 
 ============
 
-Service dependencies are an advanced feature of Shinken that allow you to suppress notifications and active checks of services based on the status of one or more other services. Service dependencies are optional and are mainly targeted at advanced users who have complicated monitoring setups. More information on how service dependencies work (read this!) can be found :ref:`here <advanced/dependencies>`.
+Service dependencies are an advanced feature of Alignak that allow you to suppress notifications and active checks of services based on the status of one or more other services. Service dependencies are optional and are mainly targeted at advanced users who have complicated monitoring setups. More information on how service dependencies work (read this!) can be found :ref:`here <advanced/dependencies>`.
 
 
 Definition Format 

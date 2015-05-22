@@ -18,7 +18,7 @@ This document describes how you can monitor a MySQL server such as:
 Introduction 
 =============
 
-These instructions assume that you've installed Shinken according to the :ref:`Installation tutorial <gettingstarted/installations/shinken-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
+These instructions assume that you've installed Alignak according to the :ref:`Installation tutorial <gettingstarted/installations/alignak-installation>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed if you follow the quickstart.
 
 
 Overview 
@@ -37,7 +37,7 @@ There are some steps you'll need to follow in order to monitor a new Linux machi
   * Install check plugins
   * setup the mysql user account
   * Update your server host definition for mysql monitoring
-  * Restart the Shinken daemon
+  * Restart the Alignak daemon
 
 
 What's Already Done For You 
@@ -48,19 +48,19 @@ To make your life a bit easier, a few configuration tasks have already been done
   * Some **check_mysql_** commands definition has been added to the "commands.cfg" file.
   * A Mysql host template (called "mysql") has already been created in the "templates.cfg" file.
 
-The above-mentioned config files can be found in the ///etc/shinken/// directory (or *c:\shinken\etc* under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Shinken before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Mysql boxes in no time.
+The above-mentioned config files can be found in the ///etc/alignak/// directory (or *c:\alignak\etc* under windows). You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Alignak before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your Mysql boxes in no time.
 
 .. tip::  We are supposing here that the Mysql machine you want to monitor is named srv-lin-1 and is a Linux. Please change the above lines and commands with the real name of your server of course.
 
 
-Installing the check plugins on Shinken 
+Installing the check plugins on Alignak 
 ========================================
 
-First connect as root under you Shinken server (or all poller servers for a multi-box setup) and launch:
+First connect as root under you Alignak server (or all poller servers for a multi-box setup) and launch:
 
 ::
 
-  shinken.sh -p check_mysql_health
+  alignak.sh -p check_mysql_health
 
 
 Setup the mysql user account 
@@ -73,19 +73,19 @@ Connect with a root account on your MySQL database. change 'password' with your 
   lin-srv-1:# mysql -u root -ppassword
 
 
-And create a shinken user:
+And create a alignak user:
   
 ::
 
-  GRANT usage ON *.* TO 'shinken'@'%' IDENTIFIED BY 'shinkenpassword';
+  GRANT usage ON *.* TO 'alignak'@'%' IDENTIFIED BY 'alignakpassword';
 
 
-It's a good thing to change the shinkenpassword to another password. Then you need to update the /etc/shinken/resource.cfg file or c:\shinken\etc\resource.cfg file to setup the new password:
+It's a good thing to change the alignakpassword to another password. Then you need to update the /etc/alignak/resource.cfg file or c:\alignak\etc\resource.cfg file to setup the new password:
 
 ::
 
-  $MYSQLUSER$=shinken
-  $MYSQLPASSWORD$=shinkenpassword
+  $MYSQLUSER$=alignak
+  $MYSQLPASSWORD$=alignakpassword
 
 
 Test the connection 
@@ -95,7 +95,7 @@ To see if the connection is okay, just launch:
   
 ::
 
-   /var/lib/nagios/plugins/check_mysql_health --hostname srv-lin-1 --username shinken --password shinkenpassword --mode connection-time
+   /var/lib/nagios/plugins/check_mysql_health --hostname srv-lin-1 --username alignak --password alignakpassword --mode connection-time
 
 
 It should not return errors.
@@ -110,14 +110,14 @@ Under Linux:
 
 ::
 
-  linux:~ # vi /etc/shinken/hosts/srv-lin-1.cfg
+  linux:~ # vi /etc/alignak/hosts/srv-lin-1.cfg
 
 
 Or Windows:
 
 ::
 
-  c:\ wordpad   c:\shinken\etc\hosts\srv-lin-1.cfg
+  c:\ wordpad   c:\alignak\etc\hosts\srv-lin-1.cfg
 
 
 You need to add the mysql template in the use line. It's better to follow the more precise template to the less one, like here mysql first, and then linux.
@@ -159,11 +159,11 @@ At this point, you configure your host to be checked with a mysql template. What
   * cluster-ndb-running: Checks if all cluster nodes are running.
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-You're done with modifying the Shinken configuration, so you'll need to :ref:`verify your configuration files <runningshinken/verifyconfig>` and :ref:`restart Shinken <runningshinken/startstop>`.
+You're done with modifying the Alignak configuration, so you'll need to :ref:`verify your configuration files <runningalignak/verifyconfig>` and :ref:`restart Alignak <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!
 
 .. _labs.consol.de/lang/en/nagios/check_mysql_health/: http://labs.consol.de/lang/en/nagios/check_mysql_health/

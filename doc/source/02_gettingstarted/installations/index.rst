@@ -14,6 +14,6 @@ Installations
 .. toctree::
 
 
-    shinken-installation
-    shinken-env-setup
-    shinken-first-steps
+    alignak-installation
+    alignak-env-setup
+    alignak-first-steps

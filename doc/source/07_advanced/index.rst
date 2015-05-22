@@ -39,9 +39,9 @@ Advanced Topics
    multi-layer-discovery
    multiple-urls
    rule-agregation
-   scaling-shinken
+   scaling-alignak
    advanced-dependencies
-   distributed-shinken
+   distributed-alignak
    distributed-with-realm
    businessimpact-modulations
    check-modulations
@@ -51,5 +51,5 @@ Advanced Topics
    sms-with-gateway
    triggers
    unused-nagios-parameters
-   discovery-with-shinken-advanced
-   discovery-with-shinken
+   discovery-with-alignak-advanced
+   discovery-with-alignak

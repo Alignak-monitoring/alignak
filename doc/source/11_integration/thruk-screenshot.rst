@@ -5,9 +5,9 @@ Thruk interface
 ================
 
 
-Thruk is a web interface to get feedback about shinken status. You can also send command for asking shinken a new check, set a downtime on a host etc.  
+Thruk is a web interface to get feedback about alignak status. You can also send command for asking alignak a new check, set a downtime on a host etc.  
 
 
-.. image:: /_static/images/shinken_with_thruk.png
+.. image:: /_static/images/alignak_with_thruk.png
    :scale: 90 %
 

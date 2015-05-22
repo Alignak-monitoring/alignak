@@ -8,5 +8,5 @@
 Introduction 
 =============
 
-This Nagios option is no more useful in the Shinken architecture.
+This Nagios option is no more useful in the Alignak architecture.
 

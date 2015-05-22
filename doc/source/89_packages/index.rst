@@ -4,7 +4,7 @@
 
 .. _packages/index:
 
-Shinken modules
+Alignak modules
 ===============
 
 This part must be splitted and sent in all module repositories

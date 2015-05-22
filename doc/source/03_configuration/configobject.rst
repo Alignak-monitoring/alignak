@@ -29,13 +29,13 @@ Where Are Objects Defined?
 
 Objects can be defined in one or more configuration files and/or directories that you specify using the :ref:`cfg_file <configuration/configmain#cfg_file>` and/or :ref:`cfg_dir <configuration/configmain#cfg_dir>` directives in the main configuration file.
 
-When you follow the :ref:`Quickstart installation guide <gettingstarted/quickstart>`, several sample object configuration files are placed in "/etc/shinken/". Every object has now is own directory. You can use these sample files to see how object inheritance works and learn how to define your own object definitions.
+When you follow the :ref:`Quickstart installation guide <gettingstarted/quickstart>`, several sample object configuration files are placed in "/etc/alignak/". Every object has now is own directory. You can use these sample files to see how object inheritance works and learn how to define your own object definitions.
 
 
 How Are Objects Defined? 
 =========================
 
-Objects are defined in a flexible template format, which can make it much easier to manage your Shinken configuration in the long term. Basic information on how to define objects in your configuration files can be found :ref:`here <configuration/objectdefinitions>`.
+Objects are defined in a flexible template format, which can make it much easier to manage your Alignak configuration in the long term. Basic information on how to define objects in your configuration files can be found :ref:`here <configuration/objectdefinitions>`.
 
 Once you get familiar with the basics of how to define objects, you should read up on :ref:`object inheritance <advanced/objectinheritance>`, as it will make your configuration more robust for the future. Seasoned users can exploit some advanced features of object definitions as described in the documentation on :ref:`object tricks <advanced/objecttricks>`.
 
@@ -61,7 +61,7 @@ Host Groups
 ------------
 
 :ref:`Host Groups <configobjects/hostgroup>` are groups of one or more hosts. Host groups can make it easier to
-  - view the status of related hosts in the Shinken web interface and 
+  - view the status of related hosts in the Alignak web interface and 
   - simplify your configuration through the use of :ref:`object tricks <advanced/objecttricks>`.
 
 
@@ -79,7 +79,7 @@ Service Groups
 ---------------
 
 :ref:`Service Groups <configobjects/servicegroup>` are groups of one or more services. Service groups can make it easier to
-  - view the status of related services in the Shinken web interface and 
+  - view the status of related services in the Alignak web interface and 
   - simplify your configuration through the use of :ref:`object tricks <advanced/objecttricks>`.
 
 
@@ -112,7 +112,7 @@ Information on how timeperiods work can be found :ref:`here <thebasics/timeperio
 Commands 
 ---------
 
-:ref:`Commands <configobjects/command>` are used to tell Shinken what programs, scripts, etc. it should execute to perform:
+:ref:`Commands <configobjects/command>` are used to tell Alignak what programs, scripts, etc. it should execute to perform:
 
   * Host and service checks
   * Notifications

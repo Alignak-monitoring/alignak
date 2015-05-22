@@ -1,7 +1,7 @@
 .. _integration/multisite:
 
 ==========================
-Use Shinken with Multisite
+Use Alignak with Multisite
 ==========================
 
 
@@ -16,13 +16,13 @@ Check_MK Multisite
 * Screenshots: http://mathias-kettner.de/check_mk_multisite_screenshots.html
 * Description: "A new general purpose Nagios-plugin for retrieving data."
 * License: GPL v2
-* Shinken dedicated forum: http://forum.shinken-monitoring.org/forums/17-Use-with-Multisite
+* Alignak dedicated forum: http://...
 
 
-Using Shinken with Multisite 
+Using Alignak with Multisite 
 =============================
 
-Multisite communicates with Shinken through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
+Multisite communicates with Alignak through the LiveStatus module. If you used the sample configuration, everything should be ready already. :)
 
 You can review the configuration using the following steps.
 
@@ -40,17 +40,17 @@ Latest versions of Multisite are included into Check_MK, which must be fully ins
 
 To install and configure Multisite manually, follow `instructions at MK website`_.
 
-Best choice is to use Shinken **:ref:`install script <gettingstarted/installations/shinken-installation#method_1the_easy_way>`** (In Shinken versions >1.0). With addons installation option (''./install -a multisite'') it is fast and easy to install and configure it as Multisite's default site.
+Best choice is to use Alignak **:ref:`install script <gettingstarted/installations/alignak-installation#method_1the_easy_way>`** (In Alignak versions >1.0). With addons installation option (''./install -a multisite'') it is fast and easy to install and configure it as Multisite's default site.
 
-.. warning::  If you get some error installing Multisite related with unknown paths ("can not find Multisite_versionXXX") perhaps you must edit ''init.d/shinken.conf'' file and adjust MKVER variable (search for "export MKVER") with current stable available version of Check_MK as stated on MK website.
+.. warning::  If you get some error installing Multisite related with unknown paths ("can not find Multisite_versionXXX") perhaps you must edit ''init.d/alignak.conf'' file and adjust MKVER variable (search for "export MKVER") with current stable available version of Check_MK as stated on MK website.
 
 
 Check_MK install quick guide 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-  - Install check_mk: Detailed `instructions`_ there. Shell driven install with a lot of questions related with Check_mk install paths and integration with Apache and existing "Nagios". For Shinken some default answers must be changed to accommodate Shinken install.
-  - Edit config file ''multisite.mk'', usually in ''/etc/check_mk'', to insert a new site pointing to Shinken and write Livestatus socket address as declared at :ref:`Shinken's Livestatus module <enable_livestatus_module>`. Socket may also be an unix socket ("unix:/some/other/path").
+  - Install check_mk: Detailed `instructions`_ there. Shell driven install with a lot of questions related with Check_mk install paths and integration with Apache and existing "Nagios". For Alignak some default answers must be changed to accommodate Alignak install.
+  - Edit config file ''multisite.mk'', usually in ''/etc/check_mk'', to insert a new site pointing to Alignak and write Livestatus socket address as declared at :ref:`Alignak's Livestatus module <enable_livestatus_module>`. Socket may also be an unix socket ("unix:/some/other/path").
   - Restart Apache.
 
 ''/etc/check_mk/multisite.mk'':
@@ -61,15 +61,15 @@ Check_MK install quick guide
       "munich": {
           "alias": "Munich"
       },
-      "Shinken": {
-         "alias":          "Shinken",
+      "Alignak": {
+         "alias":          "Alignak",
          "socket":         "tcp:127.0.0.1:50000",
-         "url_prefix":     "http://shinken.fqdn/",
+         "url_prefix":     "http://alignak.fqdn/",
        },
     }
 
 
-.. note::  Replace "shinken.fqdn" with the complete URI to reach Shinken host from browser (not 127.0.0.1!). Used by PNP4Nagios's mouse-over images.
+.. note::  Replace "alignak.fqdn" with the complete URI to reach Alignak host from browser (not 127.0.0.1!). Used by PNP4Nagios's mouse-over images.
 
 If you plan to use Multisite only as web UI no more configuration is needed. Also you can disable WATO (Web Administration TOol) by including the line **wato_enabled = False** in ''multisite.mk''.
 

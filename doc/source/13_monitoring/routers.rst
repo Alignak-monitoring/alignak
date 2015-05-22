@@ -21,13 +21,13 @@ I'll describe how you can monitor the following things on managed switches, hubs
   * "SNMP" status information
   * Bandwidth / traffic rate
 
-These instructions assume that you've installed Shinken according to the :ref:`quickstart guide <gettingstarted/quickstart>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed when you follow the quickstart.
+These instructions assume that you've installed Alignak according to the :ref:`quickstart guide <gettingstarted/quickstart>`. The sample configuration entries below reference objects that are defined in the sample config files ("commands.cfg", "templates.cfg", etc.) that are installed when you follow the quickstart.
 
 
 Overview 
 =========
 
-.. image:: /_static/images/official/images/monitoring-routers-shinken.png
+.. image:: /_static/images/official/images/monitoring-routers-alignak.png
    :scale: 90 %
 
 Monitoring switches and routers can either be easy or more involved - depending on what equipment you have and what you want to monitor. As they are critical infrastructure components, you'll no doubt want to monitor them in at least some basic manner.
@@ -44,7 +44,7 @@ There are several steps you'll need to follow in order to monitor a new router o
 
   * Perform first-time prerequisites
   * Create new host and service definitions for monitoring the device
-  * Restart Shinken services
+  * Restart Alignak services
 
 
 What's Already Done For You 
@@ -55,7 +55,7 @@ To make your life a bit easier, a few configuration tasks have already been done
   * Two command definitions (*check_snmp* and *check_local_mrtgtraf*) have been added to the "commands.cfg" file. These allows you to use the **check_snmp** and **check_mrtgtraf** plugins to monitor network routers.
   * A switch host template (called *generic-switch*) has already been created in the "templates.cfg" file. This allows you to add new router/switch host definitions in a simple manner.
 
-The above-mentioned config files can be found in the "/etc/shinken/objects/" directory. You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Shinken before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your network routers/switches in no time.
+The above-mentioned config files can be found in the "/etc/alignak/objects/" directory. You can modify the definitions in these and other definitions to suit your needs better if you'd like. However, I'd recommend waiting until you're more familiar with configuring Alignak before doing so. For the time being, just follow the directions outlined below and you'll be monitoring your network routers/switches in no time.
 
 .. important::  The commands are in fact not included yet in commands.cfg
 
@@ -63,26 +63,26 @@ The above-mentioned config files can be found in the "/etc/shinken/objects/" dir
 Prerequisites 
 ==============
 
-The first time you configure Shinken to monitor a network switch, you'll need to do a bit of extra work. Remember, you only need to do this for the *first* switch you monitor.
+The first time you configure Alignak to monitor a network switch, you'll need to do a bit of extra work. Remember, you only need to do this for the *first* switch you monitor.
 
-Edit the main Shinken config file.
+Edit the main Alignak config file.
 
 ::
 
-  linux:~ # vi /etc/shinken/nagios.cfg
+  linux:~ # vi /etc/alignak/nagios.cfg
 
 Remove the leading pound (#) sign from the following line in the main configuration file:
 
 ::
 
-  cfg_file=/etc/shinken/objects/switch.cfg
+  cfg_file=/etc/alignak/objects/switch.cfg
   
 Save the file and exit.
 
-What did you just do? You told Shinken to look to the "/etc/shinken/objects/switch.cfg" to find additional object definitions. That's where you'll be adding host and service definitions for routers and switches. That configuration file already contains some sample host, hostgroup, and service definitions. For the *first* router/switch you monitor, you can simply modify the sample host and service definitions in that file, rather than creating new ones.
+What did you just do? You told Alignak to look to the "/etc/alignak/objects/switch.cfg" to find additional object definitions. That's where you'll be adding host and service definitions for routers and switches. That configuration file already contains some sample host, hostgroup, and service definitions. For the *first* router/switch you monitor, you can simply modify the sample host and service definitions in that file, rather than creating new ones.
 
 
-Configuring Shinken 
+Configuring Alignak 
 ====================
 
 You'll need to create some :ref:`object definitions <configuration/objectdefinitions>` in order to monitor a new router/switch.
@@ -91,7 +91,7 @@ Open the "switch.cfg" file for editing.
 
 ::
 
-  linux:~ # vi /etc/shinken/objects/switch.cfg
+  linux:~ # vi /etc/alignak/objects/switch.cfg
 
 Add a new :ref:`host <configobjects/host>` definition for the switch that you're going to monitor. If this is the *first* switch you're monitoring, you can simply modify the sample host definition in "switch.cfg". Change the "host_name", "alias", and "address" fields to appropriate values for the switch.
 
@@ -117,7 +117,7 @@ Replace *linksys-srw224p* in the example definitions below with the name you spe
 Monitoring Packet Loss and RTA 
 ===============================
 
-Add the following service definition in order to monitor packet loss and round trip average between the Shinken host and the switch every 5 minutes under normal conditions.
+Add the following service definition in order to monitor packet loss and round trip average between the Alignak host and the switch every 5 minutes under normal conditions.
 
 ::
 
@@ -187,7 +187,7 @@ You can usually find the OIDs that can be monitored on a switch by running the f
 Monitoring Bandwidth / Traffic Rate 
 ====================================
 
-If you're monitoring bandwidth usage on your switches or routers using `MRTG`_, you can have Shinken alert you when traffic rates exceed thresholds you specify. The **check_mrtgtraf** plugin (which is included in the Nagios plugins distribution) allows you to do this.
+If you're monitoring bandwidth usage on your switches or routers using `MRTG`_, you can have Alignak alert you when traffic rates exceed thresholds you specify. The **check_mrtgtraf** plugin (which is included in the Nagios plugins distribution) allows you to do this.
 
 You'll need to let the **check_mrtgtraf** plugin know what log file the MRTG data is being stored in, along with thresholds, etc. In my example, I'm monitoring one of the ports on a Linksys switch. The MRTG log file is stored in "/var/lib/mrtg/192.168.1.253_1.log". Here's the service definition I use to monitor the bandwidth data that's stored in the log file...
 
@@ -209,12 +209,12 @@ The "5000000,5000000" are critical thresholds (in bytes) for outgoing traffic ra
 Save the file.
 
 
-Restarting Shinken 
+Restarting Alignak 
 ===================
 
-Once you've added the new host and service definitions to the "switch.cfg" file, you're ready to start monitoring the router/switch. To do this, you'll need to :ref:`verify your configuration <runningshinken/verifyconfig>` and :ref:`restart Sinken <runningshinken/startstop>`.
+Once you've added the new host and service definitions to the "switch.cfg" file, you're ready to start monitoring the router/switch. To do this, you'll need to :ref:`verify your configuration <runningalignak/verifyconfig>` and :ref:`restart Sinken <runningalignak/startstop>`.
 
-If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Shinken until the verification process completes without any errors!
+If the verification process produces any errors messages, fix your configuration file before continuing. Make sure that you don't (re)start Alignak until the verification process completes without any errors!
 
 
 .. _MRTG: http://oss.oetiker.ch/mrtg/

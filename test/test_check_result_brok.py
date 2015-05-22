@@ -1,12 +1,29 @@
+#!/usr/bin/env python
+#
+# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from alignak_test import *
 
-from shinken_test import *
 
+class Test_CheckResult_Brok(AlignakTest):
 
-class Test_CheckResult_Brok(ShinkenTest):
-
-    cfg_file = 'etc/shinken_1r_1h_1s.cfg'
+    cfg_file = 'etc/alignak_1r_1h_1s.cfg'
 
     expected_host_command_name = 'check-host-alive-parent'
     expected_svc_command_name = 'check_service'
@@ -32,6 +49,6 @@ class Test_CheckResult_Brok(ShinkenTest):
 
 class Test_CheckResult_Brok_Host_No_command(Test_CheckResult_Brok):
 
-    cfg_file = 'etc/shinken_host_without_cmd.cfg'
+    cfg_file = 'etc/alignak_host_without_cmd.cfg'
 
     expected_host_command_name = "_internal_host_up"
