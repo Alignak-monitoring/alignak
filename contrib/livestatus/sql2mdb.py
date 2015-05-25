@@ -23,10 +23,10 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
+#     aviau, alexandre.viau@savoirfairelinux.com
 #     Olivier Hanesse, olivier.hanesse@gmail.com
-#
+#     Sebastien Coavoux, s.coavoux@free.fr
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

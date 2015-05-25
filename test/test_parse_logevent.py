@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
+
 #
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -25,6 +25,7 @@
 #
 #  Copyright (C) 2014 - Savoir-Faire Linux inc.
 #
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 # sorteddict.py
 # Sorted dictionary (implementation for Python 2.x)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
 #   Autors: David Hannequin <david.hannequin@gmail.com>,
 #           Hartmut Goebel <h.goebel@crazy-compilers.com>

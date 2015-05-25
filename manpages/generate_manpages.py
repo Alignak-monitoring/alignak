@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Author: Thibault Cohen <thibault.cohen@savoirfairelinux.com>
 # Inspired from http://docutils.sourceforge.net/tools/rst2man.py

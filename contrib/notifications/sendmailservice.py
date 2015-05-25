@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #   Autor: David Hannequin <david.hannequin@gmail.com>
 #   Date: 24 Oct 2011
 

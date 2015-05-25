@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
+
 #
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -24,11 +24,20 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
-#     Gregory Starck, g.starck@gmail.com
+#     Dessai.Imrane, dessai.imrane@gmail.com
 #     Hartmut Goebel, h.goebel@goebel-consult.de
-#
+#     Guillaume Bour, guillaume@bour.cc
+#     aviau, alexandre.viau@savoirfairelinux.com
+#     Nicolas Dupeux, nicolas@dupeux.net
+#     Grégory Starck, g.starck@gmail.com
+#     Gerhard Lausser, gerhard.lausser@consol.de
+#     Sebastien Coavoux, s.coavoux@free.fr
+#     Christophe Simon, geektophe@gmail.com
+#     Jean Gabes, naparuba@gmail.com
+#     Olivier Hanesse, olivier.hanesse@gmail.com
+#     Romain Forlot, rforlot@yahoo.com
+#     Christophe SIMON, christophe.simon@dailymotion.com
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify
