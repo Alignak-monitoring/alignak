@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # This is a very quick and dirty code for David so he can work on its
 # sikuli agent and report as nsca the results.
 #

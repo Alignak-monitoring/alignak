@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # -*- coding: utf-8 ; mode: python -*-
 #
@@ -26,6 +27,7 @@
 #  Copyright (C) 2012:
 #     Hartmut Goebel <h.goebel@crazy-compilers.com>
 #
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

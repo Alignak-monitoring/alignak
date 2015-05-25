@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
 # -*- coding: utf-8 -*-
+
 #
 # Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -24,11 +24,31 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
-#     Gregory Starck, g.starck@gmail.com
 #     Hartmut Goebel, h.goebel@goebel-consult.de
-#
+#     Andreas Karfusehr, frescha@unitedseed.de
+#     aviau, alexandre.viau@savoirfairelinux.com
+#     Nicolas Dupeux, nicolas@dupeux.net
+#     François Lafont, flafdivers@free.fr
+#     Sebastien Coavoux, s.coavoux@free.fr
+#     Demelziraptor, demelza@circularvale.com
+#     Jean Gabes, naparuba@gmail.com
+#     Romain Forlot, rforlot@yahoo.com
+#     Arthur Gautier, superbaloo@superbaloo.net
+#     Frédéric MOHIER, frederic.mohier@ipmfrance.com
+#     Frédéric Pégé, frederic.pege@gmail.com
+#     Guillaume Bour, guillaume@bour.cc
+#     Jean-Charles, jean-charles.delon@matricscom.eu
+#     Jan Ulferts, jan.ulferts@xing.com
+#     Grégory Starck, g.starck@gmail.com
+#     Andrew McGilvray, amcgilvray@kixeye.com
+#     Christophe Simon, geektophe@gmail.com
+#     Pradeep Jindal, praddyjindal@gmail.com
+#     Hubert, hubert.santuz@gmail.com
+#     Alexander Springer, alex.spri@gmail.com
+#     Olivier Hanesse, olivier.hanesse@gmail.com
+#     Gerhard Lausser, gerhard.lausser@consol.de
+#     Christophe SIMON, christophe.simon@dailymotion.com
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

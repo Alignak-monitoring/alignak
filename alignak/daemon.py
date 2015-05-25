@@ -23,11 +23,26 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
-#     Gregory Starck, g.starck@gmail.com
 #     Hartmut Goebel, h.goebel@goebel-consult.de
-#
+#     David Moreau Simard, dmsimard@iweb.com
+#     Andrew McGilvray, amcgilvray@kixeye.com
+#     Guillaume Bour, guillaume@bour.cc
+#     Alexandre Viau, alexandre@alexandreviau.net
+#     Frédéric Vachon, fredvac@gmail.com
+#     aviau, alexandre.viau@savoirfairelinux.com
+#     xkilian, fmikus@acktomic.com
+#     Nicolas Dupeux, nicolas@dupeux.net
+#     Zoran Zaric, zz@zoranzaric.de
+#     Gerhard Lausser, gerhard.lausser@consol.de
+#     Daniel Hokka Zakrisson, daniel@hozac.com
+#     Grégory Starck, g.starck@gmail.com
+#     Alexander Springer, alex.spri@gmail.com
+#     Sebastien Coavoux, s.coavoux@free.fr
+#     Christophe Simon, geektophe@gmail.com
+#     Jean Gabes, naparuba@gmail.com
+#     david hannequin, david.hannequin@gmail.com
+#     Romain Forlot, rforlot@yahoo.com
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

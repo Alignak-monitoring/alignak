@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # skvidal@fedoraproject.org, modified by David Laval
 # gplv2+
 

@@ -23,9 +23,13 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     Gabes Jean, naparuba@gmail.com
-#     Gerhard Lausser, Gerhard.Lausser@consol.de
-#
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#     Sebastien Coavoux, s.coavoux@free.fr
+#     aviau, alexandre.viau@savoirfairelinux.com
+#     Grégory Starck, g.starck@gmail.com
+#     Jean-Claude Computing, jeanclaude.computing@gmail.com
+#     Jean Gabes, naparuba@gmail.com
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify

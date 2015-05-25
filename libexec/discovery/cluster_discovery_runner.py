@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2009-2012:
 #    Camille, VACQUIE
 #    Romain, FORLOT, romain.forlot@sydel.fr

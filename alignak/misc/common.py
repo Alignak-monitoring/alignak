@@ -23,8 +23,9 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
+#     Grégory Starck, g.starck@gmail.com
 #     Sebastien Coavoux, s.coavoux@free.fr
-#
+
 #  This file is part of Shinken.
 #
 #  Shinken is free software: you can redistribute it and/or modify
