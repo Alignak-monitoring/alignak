@@ -23,7 +23,6 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     root, TODELETE
 #     andrewmcgilvray, a.mcgilvray@gmail.com
 #     Guillaume Bour, guillaume@bour.cc
 #     Alexandre Viau, alexandre@alexandreviau.net

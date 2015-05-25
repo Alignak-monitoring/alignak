@@ -33,7 +33,6 @@
 #     Dessai.Imrane, dessai.imrane@gmail.com
 #     Romain THERRAT, romain42@gmail.com
 #     Zoran Zaric, zz@zoranzaric.de
-#     root, TODELETE
 #     Guillaume Bour, guillaume@bour.cc
 #     Grégory Starck, g.starck@gmail.com
 #     Thibault Cohen, titilambert@gmail.com

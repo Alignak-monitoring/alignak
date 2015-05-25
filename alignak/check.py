@@ -23,7 +23,6 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     root, TODELETE
 #     Hartmut Goebel, h.goebel@goebel-consult.de
 #     aviau, alexandre.viau@savoirfairelinux.com
 #     Nicolas Dupeux, nicolas@dupeux.net

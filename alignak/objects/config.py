@@ -34,7 +34,6 @@
 #     Dessai.Imrane, dessai.imrane@gmail.com
 #     Frédéric Pégé, frederic.pege@gmail.com
 #     Alexander Springer, alex.spri@gmail.com
-#     root, TODELETE
 #     Guillaume Bour, guillaume@bour.cc
 #     Jan Ulferts, jan.ulferts@xing.com
 #     Grégory Starck, g.starck@gmail.com

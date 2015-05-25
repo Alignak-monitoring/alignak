@@ -23,7 +23,6 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     root, TODELETE
 #     xkilian, fmikus@acktomic.com
 #     David Moreau Simard, dmsimard@iweb.com
 #     Guillaume Bour, guillaume@bour.cc

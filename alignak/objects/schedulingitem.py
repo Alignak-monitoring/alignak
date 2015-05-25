@@ -24,7 +24,6 @@
 # permission notice:
 #
 #  Copyright (C) 2009-2014:
-#     root, TODELETE
 #     xkilian, fmikus@acktomic.com
 #     Sebastien Coavoux, s.coavoux@free.fr
 #     Gerhard Lausser, gerhard.lausser@consol.de
