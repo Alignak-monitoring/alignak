@@ -83,7 +83,7 @@ class testSchedulerInit(AlignakTest):
         d.load_config_file()
 
         d.http_backend = 'cherrypy'
-        d.do_daemon_init_and_start(fake=True)
+        d.do_daemon_init_and_start()
         d.load_modules_manager()
 
         # Launch an arbiter so that the scheduler get a conf and init

@@ -86,7 +86,6 @@ from alignak.log import logger
 from alignak.util import nighty_five_percent
 from alignak.load import Load
 from alignak.http_client import HTTPClient, HTTPExceptions
-from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 
 class Scheduler(object):
@@ -1729,9 +1728,7 @@ class Scheduler(object):
                 if nb_ticks != 0:
                     if ticks % nb_ticks == 0:
                         # Call it and save the time spend in it
-                        _t = time.time()
                         f()
-                        statsmgr.incr('loop.%s' % name, time.time() - _t)
 
             # DBG: push actions to passives?
             self.push_actions_to_passives_satellites()

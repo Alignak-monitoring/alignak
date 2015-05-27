@@ -82,7 +82,6 @@ from wsgiref import simple_server
 
 # load global helper objects for logs and stats computation
 from log import logger
-from alignak.stats import statsmgr
 
 # Let's load bottlecore! :)
 from alignak.webui import bottlecore as bottle
@@ -431,12 +430,6 @@ class HTTPDaemon(object):
                                      "[calling:%s] [json:%s] [global:%s]",
                                      fname, args_time, aqu_lock_time, calling_time, json_time,
                                      global_time)
-                        lst = [('args', args_time), ('aqulock', aqu_lock_time),
-                               ('calling', calling_time), ('json', json_time),
-                               ('global', global_time)]
-                        # increase the stats timers
-                        for (k, _t) in lst:
-                            statsmgr.incr('http.%s.%s' % (fname, k), _t)
 
                         return j
                     # Ok now really put the route in place

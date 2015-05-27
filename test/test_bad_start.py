@@ -135,7 +135,7 @@ class template_Daemon_Bad_Start():
         return d
 
     def start_daemon(self, daemon):
-        daemon.do_daemon_init_and_start(fake=True)
+        daemon.do_daemon_init_and_start()
 
     def test_bad_piddir(self):
         print("Testing bad pidfile ...")

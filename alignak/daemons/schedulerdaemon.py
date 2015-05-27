@@ -66,7 +66,7 @@ from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
 from alignak.satellite import BaseSatellite, IForArbiter as IArb, Interface
 from alignak.util import nighty_five_percent
-from alignak.stats import statsmgr
+
 
 # Interface for Workers
 
@@ -386,19 +386,6 @@ class Alignak(BaseSatellite):
         push_flavor = pk['push_flavor']
         skip_initial_broks = pk['skip_initial_broks']
         accept_passive_unknown_check_results = pk['accept_passive_unknown_check_results']
-        api_key = pk['api_key']
-        secret = pk['secret']
-        http_proxy = pk['http_proxy']
-        statsd_host = pk['statsd_host']
-        statsd_port = pk['statsd_port']
-        statsd_prefix = pk['statsd_prefix']
-        statsd_enabled = pk['statsd_enabled']
-
-        # horay, we got a name, we can set it in our stats objects
-        statsmgr.register(self.sched, instance_name, 'scheduler',
-                          api_key=api_key, secret=secret, http_proxy=http_proxy,
-                          statsd_host=statsd_host, statsd_port=statsd_port,
-                          statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
         t0 = time.time()
         conf = cPickle.loads(conf_raw)
