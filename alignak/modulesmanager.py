@@ -52,15 +52,14 @@ import time
 import sys
 import traceback
 import cStringIO
-import imp
 
+import importlib
 
 from os.path import join, isdir, abspath, dirname
 from os import listdir
 
 from alignak.basemodule import BaseModule
 from alignak.log import logger
-from alignak.misc import importlib
 
 
 # We need to manage pre-2.0 module types with _ into the new 2.0 - mode
