@@ -6,7 +6,7 @@ Welcome to the Alignak project.
 
 .. image:: https://api.travis-ci.org/Alignak-monitoring/alignak.svg?branch=develop
   :target: https://travis-ci.org/Alignak-monitoring/alignak
-.. image:: https://coveralls.io/repos/Alignak-monitoring/alignak/badge.svg
+.. image:: https://coveralls.io/repos/Alignak-monitoring/alignak/badge.svg?branch=develop
   :target: https://coveralls.io/r/Alignak-monitoring/alignak
 
 
