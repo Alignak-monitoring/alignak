@@ -20,4 +20,7 @@ script:
   - sh test/test_shebang.sh
 # specific call to launch coverage data into coveralls.io
 after_success:
-  coveralls
+  # to get coverage data with relative paths and not absolute we have to
+  # execute coveralls from the base directory of the project,
+  # so we need to move the .coverage file here :
+  mv test/.coverage . && coveralls --rcfile=test/.coveragerc -v
