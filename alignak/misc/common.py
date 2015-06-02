@@ -40,7 +40,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module is used for common variables in Alignak.
+Previously some of those variables were linked to a specific class which made no sense.
+"""
 from collections import namedtuple
 
 ModAttr = namedtuple('ModAttr', ['modattr', 'attribute', 'value'])

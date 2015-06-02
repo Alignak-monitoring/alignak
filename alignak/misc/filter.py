@@ -49,8 +49,17 @@ Helper functions for some filtering, like for user based
 """
 
 
-# Get only user relevant items for the user
+
 def only_related_to(lst, user):
+    """
+    Get only user relevant items. The item needs the following attributes :
+     contacts
+     source_problems
+     impacts
+    :param lst: A list of items
+    :param user: A contact defined in Alignak (casual string)
+    :return: A list of items (unique values)
+    """
     # if the user is an admin, show all
     if user.is_admin:
         return lst
