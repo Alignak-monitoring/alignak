@@ -87,7 +87,6 @@ except ImportError, exp:  # Like in nt system or Android
     def get_cur_group():
         return os.getlogin()
 
-THIS_DIR = os.getcwd()
 
 daemons_config = {
     Broker:       "etc/core/daemons/brokerd.ini",
@@ -104,6 +103,15 @@ class template_Daemon_Bad_Start():
     @classmethod
     def setupClass(cls):
         time_hacker.set_real_time()  # just to be sure..
+        # the daemons startup code does actually a `chrdir`,
+        # in Daemon.change_to_workdir,
+        # so in order to be always safe, let's save the cwd when we are setup,
+        # we'll chdir() to it in tearDown..
+        cls._launch_dir = os.getcwd()
+
+    @classmethod
+    def tearDown(cls):
+        os.chdir(cls._launch_dir)
 
     def get_login_and_group(self, p):
         try:
@@ -122,10 +130,11 @@ class template_Daemon_Bad_Start():
         alignak_log.local_log = None  # otherwise get some "trashs" logs..
         d = self.create_daemon()
 
-        # configuration is "relative" : some config file reference others with
-        # a relative path (from THIS_DIR).
+        # configuration is actually "relative" :
+        # some config file reference others with a relative path (from THIS_DIR).
         # so any time we load it we have to make sure we are back at THIS_DIR:
-        os.chdir(THIS_DIR)
+        # THIS_DIR should also be equal to self._launch_dir, so use that:
+        os.chdir(self._launch_dir)
 
         d.load_config_file()
         d.http_backend = 'wsgiref'
