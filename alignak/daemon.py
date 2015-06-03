@@ -342,6 +342,10 @@ class Daemon(object):
                 pass
             self.http_daemon.shutdown()
 
+        # give some time to http_daemon main thread (and the "worker"
+        # threads too, if any) to cleanly shutdown:
+        time.sleep(0.5)
+
 
     def request_stop(self):
         self.unlink()
