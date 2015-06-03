@@ -12,15 +12,12 @@ class Finder(object):
 
     def load_module(self, name):
         mod = sys.modules.get(name)
-        if mod:
-            return mod
-        alignak_name = 'alignak%s' % name[7:]
-        mod = sys.modules.get(alignak_name)
-        if mod:
+        if mod is None:
+            alignak_name = 'alignak%s' % name[7:]
+            mod = sys.modules.get(alignak_name)
+            if mod is None:
+                mod = importlib.import_module(alignak_name)
             sys.modules[name] = mod
-            return mod
-        mod = importlib.import_module(alignak_name)
-        sys.modules[name] = mod
         return mod
 
 
