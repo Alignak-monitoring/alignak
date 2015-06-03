@@ -27,3 +27,6 @@ cd $BASE_PATH
 # install prog AND tests requirements :
 pip install -r test/requirements.txt
 python setup.py develop
+
+# for eventual debug help to know what libs versions we have:
+pip freeze
