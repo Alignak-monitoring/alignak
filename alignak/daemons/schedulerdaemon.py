@@ -57,6 +57,9 @@ import traceback
 import cPickle
 import zlib
 import base64
+from multiprocessing import process
+
+
 
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
@@ -353,7 +356,7 @@ class Alignak(BaseSatellite):
                     c.t_to_go = new_t
 
     def manage_signal(self, sig, frame):
-        logger.warning("Received a SIGNAL %s", sig)
+        logger.warning("%s > Received a SIGNAL %s", process.current_process(), sig)
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
             self.sched.need_dump_memory = True
