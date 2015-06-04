@@ -310,6 +310,7 @@ class HTTPDaemon(object):
             self.registered_fun_names = []
             self.registered_fun_defaults = {}
 
+            self.srv = None
             self.lock = threading.RLock()
 
             protocol = 'http'
@@ -323,13 +324,12 @@ class HTTPDaemon(object):
                 lambda x: x.client_address[0]
 
             if http_backend == 'cherrypy' or http_backend == 'auto' and cheery_wsgiserver:
-                self.srv = CherryPyBackend(host, port, use_ssl, ca_cert, ssl_key,
-                                           ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
+                server = CherryPyBackend
             else:
-                self.srv = WSGIREFBackend(host, port, use_ssl, ca_cert, ssl_key,
-                                          ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
+                server = WSGIREFBackend
 
-
+            self.srv = server(host, port, use_ssl, ca_cert, ssl_key,
+                              ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
 
         # Get the server socket but not if disabled or closed
         def get_sockets(self):
@@ -337,10 +337,8 @@ class HTTPDaemon(object):
                 return []
             return self.srv.get_sockets()
 
-
         def run(self):
             self.srv.run()
-
 
         def register(self, obj):
             methods = inspect.getmembers(obj, predicate=inspect.ismethod)
@@ -467,14 +465,17 @@ class HTTPDaemon(object):
         def handleRequests(self, s):
             self.srv.handle_request()
 
+        def close_sockets(self):
+            if self.srv:
+                for s in self.srv.get_sockets():
+                    try:
+                        s.close()
+                    except socket.socketerror:
+                        pass
 
-        # Close all sockets and delete the server object to be sure
-        # no one is still alive
-        def shutdown(self):
-            if self.srv is not None:
+        def request_stop(self):
+            if self.srv:
                 self.srv.stop()
-                self.srv = None
-
 
         def get_socks_activity(self, timeout):
             try:

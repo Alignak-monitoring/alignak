@@ -315,7 +315,7 @@ class BaseModule(object):
 
         # TODO: fix this hack:
         if alignak.http_daemon.daemon_inst:
-            alignak.http_daemon.daemon_inst.shutdown()
+            alignak.http_daemon.daemon_inst.close_sockets()
 
         self.set_signal_handler()
         logger.info("[%s[%d]]: Now running..", self.name, os.getpid())

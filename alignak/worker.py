@@ -276,7 +276,7 @@ class Worker:
 
         print "I STOP THE http_daemon", self.http_daemon
         if self.http_daemon:
-            self.http_daemon.shutdown()
+            self.http_daemon.close_sockets()
 
         timeout = 1.0
         self.checks = []
