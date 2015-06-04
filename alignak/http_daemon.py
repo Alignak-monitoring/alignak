@@ -206,6 +206,7 @@ class WSGIREFAdapter (bottle.ServerAdapter):
 class WSGIREFBackend(object):
     def __init__(self, host, port, use_ssl, ca_cert, ssl_key,
                  ssl_cert, hard_ssl_name_check, daemon_thread_pool_size):
+        self.stop_requested = False
         self.daemon_thread_pool_size = daemon_thread_pool_size
         try:
             self.srv = bottle.run(host=host, port=port,
@@ -240,6 +241,7 @@ class WSGIREFBackend(object):
 
     # We are asking us to stop, so we close our sockets
     def stop(self):
+        self.stop_requested = True
         for s in self.get_sockets():
             try:
                 s.close()
@@ -255,11 +257,11 @@ class WSGIREFBackend(object):
         # Keep a list of our running threads
         threads = []
         logger.info('Using a %d http pool size', nb_threads)
-        while True:
+        while not self.stop_requested:
             # We must not run too much threads, so we will loop until
             # we got at least one free slot available
             free_slots = 0
-            while free_slots <= 0:
+            while free_slots <= 0 and not self.stop_requested:
                 to_del = [t for t in threads if not t.is_alive()]
                 for t in to_del:
                     t.join()
@@ -284,6 +286,8 @@ class WSGIREFBackend(object):
                     t.start()
                     threads.append(t)
 
+        for t in threads:
+            t.join()
 
     def handle_one_request_thread(self, sock):
         self.srv.handle_request()
