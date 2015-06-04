@@ -12,6 +12,7 @@ install:
 # so we must combine them in the end
 script:
   - cd test
+  - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
   - nosetests -xv --process-restartworker --processes=1 --process-timeout=999999999  --with-cov --cov=alignak
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' alignak/*
