@@ -958,12 +958,11 @@ class Daemon(object):
         try:
             self.http_daemon.run()
         except Exception, exp:
-            logger.error('The HTTP daemon failed with the error %s, exiting', str(exp))
+            logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("Back trace of this error: %s", output.getvalue())
             output.close()
-            self.do_stop()
             # Hard mode exit from a thread
             os._exit(2)
 
