@@ -54,8 +54,9 @@ from __future__ import print_function
 import os
 import tempfile
 import shutil
+import time
 
-from alignak_test import *
+from alignak_test import unittest, get_free_port, time_hacker
 
 import alignak.log as alignak_log
 
@@ -191,23 +192,23 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Broker_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Poller_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
     daemon_cls = Reactionner
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
 
     daemon_cls = Arbiter
 
