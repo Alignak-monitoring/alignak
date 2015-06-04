@@ -324,18 +324,6 @@ class Daemon(object):
 
     # At least, lose the local log file if needed
     def do_stop(self):
-        # Maybe the modules manager is not even created!
-        if getattr(self, 'modules_manager', None):
-            # We save what we can but NOT for the scheduler
-            # because the current sched object is a dummy one
-            # and the old one has already done it!
-            if not hasattr(self, 'sched'):
-                self.hook_point('save_retention')
-            # And we quit
-            print('Stopping all modules')
-            self.modules_manager.stop_all()
-            print('Stopping inter-process message')
-
         if self.http_daemon:
             # Release the lock so the daemon can shutdown without problem
             try:
@@ -349,10 +337,21 @@ class Daemon(object):
             self.http_thread.join()
             self.http_thread = None
 
-
         if self.manager:
             self.manager.shutdown()
             self.manager = None
+
+        # Maybe the modules manager is not even created!
+        if getattr(self, 'modules_manager', None):
+            # We save what we can but NOT for the scheduler
+            # because the current sched object is a dummy one
+            # and the old one has already done it!
+            if not hasattr(self, 'sched'):
+                self.hook_point('save_retention')
+            # And we quit
+            print('Stopping all modules')
+            self.modules_manager.stop_all()
+            print('Stopping inter-process message')
 
 
     def request_stop(self):
