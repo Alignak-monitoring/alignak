@@ -290,6 +290,7 @@ class Daemon(object):
         self.t_each_loop = now  # used to track system time change
         self.sleep_time = 0.0  # used to track the time we wait
 
+        self.http_thread = None
         self.http_daemon = None
 
         # Log init
@@ -334,6 +335,7 @@ class Daemon(object):
             print('Stopping all modules')
             self.modules_manager.stop_all()
             print('Stopping inter-process message')
+
         if self.http_daemon:
             # Release the lock so the daemon can shutdown without problem
             try:
@@ -341,6 +343,16 @@ class Daemon(object):
             except Exception:
                 pass
             self.http_daemon.shutdown()
+            self.http_daemon = None
+
+        if self.http_thread:
+            self.http_thread.join()
+            self.http_thread = None
+
+
+        if self.manager:
+            self.manager.shutdown()
+            self.manager = None
 
 
     def request_stop(self):
@@ -689,7 +701,6 @@ class Daemon(object):
             statsmgr.launch_reaper_thread()
 
         # Now start the http_daemon thread
-        self.http_thread = None
         if use_pyro:
             # Directly acquire it, so the http_thread will wait for us
             self.http_daemon.lock.acquire()
