@@ -310,6 +310,8 @@ class HTTPDaemon(object):
             self.registered_fun_names = []
             self.registered_fun_defaults = {}
 
+            self.lock = threading.RLock()
+
             protocol = 'http'
             if use_ssl:
                 protocol = 'https'
@@ -327,7 +329,6 @@ class HTTPDaemon(object):
                 self.srv = WSGIREFBackend(host, port, use_ssl, ca_cert, ssl_key,
                                           ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
 
-            self.lock = threading.RLock()
 
 
         # Get the server socket but not if disabled or closed
