@@ -44,4 +44,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 
+from .version import VERSION as __version__
+
+
 from . import shinken_import_hook

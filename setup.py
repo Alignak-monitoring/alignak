@@ -16,7 +16,7 @@ except ImportError:
 # Better to use exec to load the VERSION from alignak/bin/__init__
 # so to not have to import the alignak package:
 VERSION = "unknown"
-ver_file = os.path.join('alignak', 'bin', '__init__.py')
+ver_file = os.path.join('alignak', 'version.py')
 with open(ver_file) as fh:
     exec(fh.read())
 
