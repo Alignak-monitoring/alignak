@@ -115,7 +115,10 @@ class testSchedulerInit(AlignakTest):
         proc = self.arb_proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Ok, now the conf
-        d.wait_for_initial_conf(timeout=20)
+        for i in range(20):
+            d.wait_for_initial_conf(timeout=1)
+            if d.new_conf:
+                break
         self.assertTrue(d.new_conf)
 
         d.setup_new_conf()
