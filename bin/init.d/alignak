@@ -142,7 +142,7 @@ CMD=""
 SUBMODULES=""
 
 ## This permits to overhidde the default "default alignak cfg file":
-[ -z "$ALIGNAK_DEFAULT_FILE" ] && ALIGNAK_DEFAULT_FILE="/etc/default/$NAME"
+[ -z "$ALIGNAK_DEFAULT_FILE" ] && ALIGNAK_DEFAULT_FILE="${curpath}/../default/$NAME"
 ## so you can now do:
 ## bash -c "ALIGNAK_DEFAULT_FILE=$your_own_default_file $init_path/alignak $action $args"
 ## to easily use your own config
