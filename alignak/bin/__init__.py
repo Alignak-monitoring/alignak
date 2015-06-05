@@ -47,9 +47,8 @@ Arbiter, Scheduler, etc. It just checks for the main requirement of
 Alignak.
 """
 
-import sys
 
-VERSION = "2.4"
+import sys
 
 
 # Make sure people are using Python 2.6 or higher
@@ -58,3 +57,11 @@ if sys.version_info < (2, 6):
     sys.exit("Alignak requires as a minimum Python 2.6.x, sorry")
 elif sys.version_info >= (3,):
     sys.exit("Alignak is not yet compatible with Python 3.x, sorry")
+
+
+from ._deprecated_VERSION import DeprecatedAlignakBin
+
+
+# in order to have available any attribute/value assigned in this module namespace,
+# this MUST be the last statement of this module:
+sys.modules[__name__] = DeprecatedAlignakBin(__name__, globals())
