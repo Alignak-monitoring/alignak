@@ -55,7 +55,7 @@ pycurl.global_init(pycurl.GLOBAL_ALL)
 import urllib
 from StringIO import StringIO
 
-from alignak.bin import VERSION
+from alignak import __version__
 from alignak.log import logger
 PYCURL_VERSION = pycurl.version_info()[1]
 
@@ -93,7 +93,7 @@ class HTTPClient(object):
         # Remove the Expect: 100-Continue default behavior of pycurl, because swsgiref do not
         # manage it
         self.con.setopt(pycurl.HTTPHEADER, ['Expect:', 'Keep-Alive: 300', 'Connection: Keep-Alive'])
-        self.con.setopt(pycurl.USERAGENT, 'alignak:%s pycurl:%s' % (VERSION, PYCURL_VERSION))
+        self.con.setopt(pycurl.USERAGENT, 'alignak:%s pycurl:%s' % (__version__, PYCURL_VERSION))
         self.con.setopt(pycurl.FOLLOWLOCATION, 1)
         self.con.setopt(pycurl.FAILONERROR, True)
         self.con.setopt(pycurl.CONNECTTIMEOUT, self.timeout)

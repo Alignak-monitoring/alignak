@@ -124,7 +124,7 @@ except ImportError, exp:  # Like in nt system or Android
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
-from alignak.bin import VERSION
+from alignak import __version__
 
 """ TODO: Add some comment about this class for the doc"""
 class InvalidPidFile(Exception):
@@ -927,7 +927,7 @@ class Daemon(object):
         setproctitle("alignak-%s" % self.name)
 
     def get_header(self):
-        return ["Alignak %s" % VERSION,
+        return ["Alignak %s" % __version__,
                 "Copyright (c) 2015-2015:",
                 "Alignak Team",
                 "License: AGPL"]
@@ -1072,7 +1072,7 @@ class Daemon(object):
 
     # Dummy function for having the stats main structure before sending somewhere
     def get_stats_struct(self):
-        r = {'metrics': [], 'version': VERSION, 'name': '', 'type': '', 'modules':
+        r = {'metrics': [], 'version': __version__, 'name': '', 'type': '', 'modules':
              {'internal': {}, 'external': {}}}
         modules = r['modules']
 

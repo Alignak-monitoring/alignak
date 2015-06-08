@@ -72,7 +72,6 @@ if os.name != 'nt':
         sys.setrecursionlimit(int(stacksize_soft * 2.4 + 3200))
 
 try:
-    from alignak.bin import VERSION
     import alignak
 except ImportError:
     # If importing alignak fails, try to load from current directory
@@ -91,14 +90,14 @@ except ImportError:
     alignak_root_path = os.path.dirname(os.path.dirname(alignak.__file__))
     os.environ['PYTHONPATH'] = os.path.join(os.environ.get('PYTHONPATH', ''), alignak_root_path)
 
-from alignak.bin import VERSION
+from alignak import __version__
 from alignak.daemons.arbiterdaemon import Arbiter
 
 
 def main():
     parser = optparse.OptionParser(
         "%prog [options] -c configfile [-c additional_config_file]",
-        version="%prog: " + VERSION)
+        version="%prog: " + __version__)
     parser.add_option('-c', '--config', action='append',
                       dest="config_files", metavar="CONFIG-FILE",
                       help=('Config file (your nagios.cfg). Multiple -c can be '

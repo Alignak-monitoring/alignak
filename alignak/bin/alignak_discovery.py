@@ -61,10 +61,11 @@ except ImportError:
                                       os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
                                                    "..")]))
 
+from alignak import __version__
 from alignak.discovery.discoverymanager import DiscoveryManager
 
 
-VERSION = '1.0.1'
+
 if os.name != 'nt':
     DEFAULT_CFG = '/etc/alignak/discovery.cfg'
 else:
@@ -73,7 +74,7 @@ else:
 
 parser = optparse.OptionParser(
     "%prog [options] -c discovery_config -o config_output -m list of macros",
-    version="%prog " + VERSION)
+    version="%prog " + __version__)
 parser.add_option('-c', '--cfg-input',
                   dest="cfg_input", help=('Discovery configuration file (discovery.cfg)'))
 parser.add_option('-o', '--dir-output', dest="output_dir",
