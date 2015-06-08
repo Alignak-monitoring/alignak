@@ -72,7 +72,6 @@ except ImportError:
 
 
 try:
-    from alignak.bin import VERSION
     import alignak
 except ImportError:
     # If importing alignak fails, try to load from current directory
@@ -93,13 +92,13 @@ except ImportError:
 
 
 from alignak.daemons.reactionnerdaemon import Reactionner
-from alignak.bin import VERSION
+from alignak import __version__
 
 
 # Protect for windows multiprocessing that will RELAUNCH all
 def main():
     parser = optparse.OptionParser(
-        "%prog [options]", version="%prog " + VERSION)
+        "%prog [options]", version="%prog " + __version__)
     parser.add_option('-c', '--config',
                       dest="config_file", metavar="INI-CONFIG-FILE",
                       help='Config file')
