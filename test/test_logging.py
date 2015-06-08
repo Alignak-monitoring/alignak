@@ -53,7 +53,7 @@ from cStringIO import StringIO
 
 from tempfile import NamedTemporaryFile
 
-import __import_alignak
+
 import logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, StreamHandler
 from alignak.log import logger as alignak_logger, naglog_result, Log, human_timestamp_log

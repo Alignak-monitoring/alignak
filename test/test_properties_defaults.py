@@ -46,7 +46,6 @@ Test default values for item types.
 """
 
 
-import __import_alignak
 from alignak.property import UnusedProp, none_object
 import alignak.daemon
 

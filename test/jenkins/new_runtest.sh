@@ -272,7 +272,7 @@ END
         git clone $GIT_URL/$module.git tmp/$module
 
         # $ALIGNAKCLI install --local tmp/$module > /dev/null
-        # cp __import_alignak.py alignak_test.py alignak_modules.py tmp/$module/test
+        # cp alignak_test.py alignak_modules.py tmp/$module/test
 
         # Symlink of config files to etc
         if [ -d "tmp/$module/test/etc" ]; then

@@ -49,8 +49,6 @@ Test alignak.property
 """
 
 
-import __import_alignak
-
 import alignak
 from alignak.property import none_object
 
