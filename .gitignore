@@ -1,6 +1,8 @@
 # Project files #
 ######################
 *.egg-info
+*.egg-tmp/
+.eggs/
 build
 dist
 INSTALLED_FILES
