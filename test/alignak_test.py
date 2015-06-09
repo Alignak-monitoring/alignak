@@ -39,9 +39,6 @@ import socket
 import unittest2 as unittest
 
 
-# import the alignak library from the parent directory
-import __import_alignak ; del __import_alignak
-
 import alignak
 from alignak.objects.config import Config
 from alignak.objects.command import Command

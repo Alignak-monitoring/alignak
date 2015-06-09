@@ -24,9 +24,10 @@ BASE_PATH=$(dirname "$THIS_PATH")
 
 cd $BASE_PATH
 
-# install prog AND tests requirements :
-pip install .
+pip install --upgrade pip
 
+# install prog AND tests requirements :
+pip install -e .
 pip install -r test/requirements.txt
 
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
