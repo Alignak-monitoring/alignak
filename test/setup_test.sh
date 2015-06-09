@@ -27,7 +27,7 @@ cd $BASE_PATH
 pip install --upgrade pip
 
 # install prog AND tests requirements :
-pip install .
+pip install -e .
 pip install -r test/requirements.txt
 
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
