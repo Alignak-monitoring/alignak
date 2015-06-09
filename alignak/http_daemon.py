@@ -213,6 +213,15 @@ class WSGIREFBackend(object):
                                   server=WSGIREFAdapter, quiet=True, use_ssl=use_ssl,
                                   ca_cert=ca_cert, ssl_key=ssl_key, ssl_cert=ssl_cert,
                                   daemon_thread_pool_size=daemon_thread_pool_size)
+            # small workaround:
+            # if a bad client connect to us and doesn't send anything,
+            # then the client thread that handle that connection will stay
+            # infinitely blocked.. in :
+            #   self.handle_one_request_thread() ->
+            #   SocketServer.py:BaseServer.handle_request() ->
+            #       fd_sets = select.select([self], [], [], timeout)
+            # with timeout == None ..
+            self.srv.timeout = 10
         except socket.error, exp:
             msg = "Error: Sorry, the port %d is not free: %s" % (port, str(exp))
             raise PortNotFree(msg)
