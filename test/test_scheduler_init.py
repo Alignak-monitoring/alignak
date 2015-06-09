@@ -67,6 +67,7 @@ daemons_config = {
 class testSchedulerInit(AlignakTest):
     def setUp(self):
         time_hacker.set_real_time()
+        self.arb_proc = None
 
     def create_daemon(self):
         cls = Alignak
@@ -85,7 +86,7 @@ class testSchedulerInit(AlignakTest):
         return data
 
     def tearDown(self):
-        proc = getattr(self, 'arb_proc', None)
+        proc = self.arb_proc
         if proc:
             self._get_subproc_data(proc)  # so to terminate / wait it..
 
@@ -110,11 +111,14 @@ class testSchedulerInit(AlignakTest):
             assert(fun in reg_list)
 
         # Launch an arbiter so that the scheduler get a conf and init
-        args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0], "-d"]
+        args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0]]
         proc = self.arb_proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         # Ok, now the conf
-        d.wait_for_initial_conf(timeout=20)
+        for i in range(20):
+            d.wait_for_initial_conf(timeout=1)
+            if d.new_conf:
+                break
         self.assertTrue(d.new_conf)
 
         d.setup_new_conf()

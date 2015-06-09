@@ -119,6 +119,8 @@ except ImportError, exp:  # Like in nt system or Android
         return []
 
 
+IS_PY26 = sys.version_info[:2] < (2, 7)
+
 # #########################   DAEMON PART    ###############################
 # The standard I/O file descriptors are redirected to /dev/null by default.
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
@@ -290,6 +292,7 @@ class Daemon(object):
         self.t_each_loop = now  # used to track system time change
         self.sleep_time = 0.0  # used to track the time we wait
 
+        self.http_thread = None
         self.http_daemon = None
 
         # Log init
@@ -323,6 +326,32 @@ class Daemon(object):
 
     # At least, lose the local log file if needed
     def do_stop(self):
+        """Execute the stop of this daemon:
+         - Stop the http thread and join it
+         - Close the http socket
+         - Shutdown the manager
+         - Stop and join all started "modules"
+        """
+        logger.info("%s : Doing stop ..", self)
+
+        if self.http_daemon:
+            logger.info("Shutting down http_daemon ..")
+            self.http_daemon.request_stop()
+
+        if self.http_thread:
+            logger.info("Joining http_thread ..")
+            self.http_thread.join()
+            self.http_thread = None
+
+        if self.http_daemon:
+            self.http_daemon.close_sockets()
+            self.http_daemon = None
+
+        if self.manager:
+            logger.info("Shutting down manager ..")
+            self.manager.shutdown()
+            self.manager = None
+
         # Maybe the modules manager is not even created!
         if getattr(self, 'modules_manager', None):
             # We save what we can but NOT for the scheduler
@@ -331,16 +360,10 @@ class Daemon(object):
             if not hasattr(self, 'sched'):
                 self.hook_point('save_retention')
             # And we quit
-            print('Stopping all modules')
+            logger.info('Stopping all modules')
             self.modules_manager.stop_all()
-            print('Stopping inter-process message')
-        if self.http_daemon:
-            # Release the lock so the daemon can shutdown without problem
-            try:
-                self.http_daemon.lock.release()
-            except Exception:
-                pass
-            self.http_daemon.shutdown()
+
+        logger.info("%s : All stop done.", self)
 
 
     def request_stop(self):
@@ -629,21 +652,9 @@ class Daemon(object):
         # a socket of your http server alive
         def _create_manager(self):
             manager = SyncManager(('127.0.0.1', 0))
-            def close_http_daemon(daemon):
-                try:
-                    # Be sure to release the lock so there won't be lock in shutdown phase
-                    daemon.lock.release()
-                except Exception, exp:
-                    pass
-                daemon.shutdown()
-            # Some multiprocessing lib got problems with start() that cannot take args
-            # so we must look at it before
-            startargs = inspect.getargspec(manager.start)
-            # startargs[0] will be ['self'] if old multiprocessing lib
-            # and ['self', 'initializer', 'initargs'] in newer ones
-            # note: windows do not like pickle http_daemon...
-            if os.name != 'nt' and len(startargs[0]) > 1:
-                manager.start(close_http_daemon, initargs=(self.http_daemon,))
+            if os.name != 'nt' and not IS_PY26:
+                # manager in python2.6 don't have initializer..
+                manager.start(initializer=self.http_daemon.close_sockets)
             else:
                 manager.start()
             return manager
@@ -679,9 +690,9 @@ class Daemon(object):
         else:
             self.write_pid()
 
-        # Now we can start our Manager
-        # interprocess things. It's important!
+        logger.info("Creating manager ..")
         self.manager = self._create_manager()
+        logger.info("done.")
 
         # We can start our stats thread but after the double fork() call and if we are not in
         # a test launch (time.time() is hooked and will do BIG problems there)
@@ -689,12 +700,10 @@ class Daemon(object):
             statsmgr.launch_reaper_thread()
 
         # Now start the http_daemon thread
-        self.http_thread = None
         if use_pyro:
             # Directly acquire it, so the http_thread will wait for us
-            self.http_daemon.lock.acquire()
+            logger.info("Now starting http_daemon thread..")
             self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
-            # Don't lock the main thread just because of the http thread
             self.http_thread.daemon = True
             self.http_thread.start()
 
@@ -940,7 +949,7 @@ class Daemon(object):
 
     # Main fonction of the http daemon thread will loop forever unless we stop the root daemon
     def http_daemon_thread(self):
-        logger.info("Starting HTTP daemon")
+        logger.info("HTTP main thread: I'm running")
 
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
         # so "no_lock" calls can always be directly answer without having a "locked" version to
@@ -948,12 +957,11 @@ class Daemon(object):
         try:
             self.http_daemon.run()
         except Exception, exp:
-            logger.error('The HTTP daemon failed with the error %s, exiting', str(exp))
+            logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("Back trace of this error: %s", output.getvalue())
             output.close()
-            self.do_stop()
             # Hard mode exit from a thread
             os._exit(2)
 
@@ -973,14 +981,10 @@ class Daemon(object):
         socks = []
         if suppl_socks:
             socks.extend(suppl_socks)
-        # Release the lock so the http_thread can manage request during we are waiting
-        if self.http_daemon:
-            self.http_daemon.lock.release()
+
         # Ok give me the socks taht moved during the timeout max
         ins = self.get_socks_activity(socks, timeout)
         # Ok now get back the global lock!
-        if self.http_daemon:
-            self.http_daemon.lock.acquire()
         tcdiff = self.check_for_system_time_change()
         before += tcdiff
         # Increase our sleep time for the time go in select

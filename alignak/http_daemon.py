@@ -206,12 +206,22 @@ class WSGIREFAdapter (bottle.ServerAdapter):
 class WSGIREFBackend(object):
     def __init__(self, host, port, use_ssl, ca_cert, ssl_key,
                  ssl_cert, hard_ssl_name_check, daemon_thread_pool_size):
+        self.stop_requested = False
         self.daemon_thread_pool_size = daemon_thread_pool_size
         try:
             self.srv = bottle.run(host=host, port=port,
                                   server=WSGIREFAdapter, quiet=True, use_ssl=use_ssl,
                                   ca_cert=ca_cert, ssl_key=ssl_key, ssl_cert=ssl_cert,
                                   daemon_thread_pool_size=daemon_thread_pool_size)
+            # small workaround:
+            # if a bad client connect to us and doesn't send anything,
+            # then the client thread that handle that connection will stay
+            # infinitely blocked.. in :
+            #   self.handle_one_request_thread() ->
+            #   SocketServer.py:BaseServer.handle_request() ->
+            #       fd_sets = select.select([self], [], [], timeout)
+            # with timeout == None ..
+            self.srv.timeout = 10
         except socket.error, exp:
             msg = "Error: Sorry, the port %d is not free: %s" % (port, str(exp))
             raise PortNotFree(msg)
@@ -240,6 +250,7 @@ class WSGIREFBackend(object):
 
     # We are asking us to stop, so we close our sockets
     def stop(self):
+        self.stop_requested = True
         for s in self.get_sockets():
             try:
                 s.close()
@@ -255,11 +266,11 @@ class WSGIREFBackend(object):
         # Keep a list of our running threads
         threads = []
         logger.info('Using a %d http pool size', nb_threads)
-        while True:
+        while not self.stop_requested:
             # We must not run too much threads, so we will loop until
             # we got at least one free slot available
             free_slots = 0
-            while free_slots <= 0:
+            while free_slots <= 0 and not self.stop_requested:
                 to_del = [t for t in threads if not t.is_alive()]
                 for t in to_del:
                     t.join()
@@ -284,6 +295,8 @@ class WSGIREFBackend(object):
                     t.start()
                     threads.append(t)
 
+        for t in threads:
+            t.join()
 
     def handle_one_request_thread(self, sock):
         self.srv.handle_request()
@@ -306,6 +319,9 @@ class HTTPDaemon(object):
             self.registered_fun_names = []
             self.registered_fun_defaults = {}
 
+            self.srv = None
+            self.lock = threading.RLock()
+
             protocol = 'http'
             if use_ssl:
                 protocol = 'https'
@@ -317,14 +333,12 @@ class HTTPDaemon(object):
                 lambda x: x.client_address[0]
 
             if http_backend == 'cherrypy' or http_backend == 'auto' and cheery_wsgiserver:
-                self.srv = CherryPyBackend(host, port, use_ssl, ca_cert, ssl_key,
-                                           ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
+                server = CherryPyBackend
             else:
-                self.srv = WSGIREFBackend(host, port, use_ssl, ca_cert, ssl_key,
-                                          ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
+                server = WSGIREFBackend
 
-            self.lock = threading.RLock()
-
+            self.srv = server(host, port, use_ssl, ca_cert, ssl_key,
+                              ssl_cert, hard_ssl_name_check, daemon_thread_pool_size)
 
         # Get the server socket but not if disabled or closed
         def get_sockets(self):
@@ -332,10 +346,8 @@ class HTTPDaemon(object):
                 return []
             return self.srv.get_sockets()
 
-
         def run(self):
             self.srv.run()
-
 
         def register(self, obj):
             methods = inspect.getmembers(obj, predicate=inspect.ismethod)
@@ -462,14 +474,17 @@ class HTTPDaemon(object):
         def handleRequests(self, s):
             self.srv.handle_request()
 
+        def close_sockets(self):
+            if self.srv:
+                for s in self.srv.get_sockets():
+                    try:
+                        s.close()
+                    except socket.socketerror:
+                        pass
 
-        # Close all sockets and delete the server object to be sure
-        # no one is still alive
-        def shutdown(self):
-            if self.srv is not None:
+        def request_stop(self):
+            if self.srv:
                 self.srv.stop()
-                self.srv = None
-
 
         def get_socks_activity(self, timeout):
             try:
