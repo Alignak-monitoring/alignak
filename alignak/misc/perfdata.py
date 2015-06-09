@@ -48,7 +48,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide classes to handle performance data from monitoring plugin output
+"""
 import re
 from alignak.util import to_best_int_float
 
@@ -71,8 +73,10 @@ def guess_int_or_float(val):
         return None
 
 
-# Class for one metric of a perf_data
 class Metric:
+    """
+    Class providing a small abstraction for one metric of a Perfdatas class
+    """
     def __init__(self, s):
         self.name = self.value = self.uom = \
             self.warning = self.critical = self.min = self.max = None
@@ -106,6 +110,9 @@ class Metric:
 
 
 class PerfDatas:
+    """
+    Class providing performance data extracted from a check output
+    """
     def __init__(self, s):
         s = s or ''
         elts = perfdata_split_pattern.findall(s)

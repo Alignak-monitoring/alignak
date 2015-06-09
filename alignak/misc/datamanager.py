@@ -618,14 +618,14 @@ class DataManager(object):
         :type levels: int
         :return: A dict with the following structure
         ::
-         
+
            { 'node': obj,
              'fathers': [
                          {'node': Host_Object1, fathers: [...]},
                          {'node': Host_Object2, fathers: [...]},
                         ]
            }
-        
+
         :rtype: dict
         """
         res = {'node': obj, 'fathers': []}

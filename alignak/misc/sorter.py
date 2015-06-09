@@ -52,8 +52,19 @@ Helper functions for some sorting
 """
 
 
-# Sort hosts and services by impact, states and co
 def hst_srv_sort(s1, s2):
+    """
+    Sort host and service by impact then state then name
+
+    :param s1: A host or service to compare
+    :type s1: alignak.objects.schedulingitem.SchedulingItem
+    :param s2: Another host or service to compare
+    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :return:
+      * -1 if s1 > s2
+      * 0 if s1 == s2 (not true)
+      * 1 if s1 < s2
+    """
     if s1.business_impact > s2.business_impact:
         return -1
     if s2.business_impact > s1.business_impact:
@@ -82,8 +93,19 @@ def hst_srv_sort(s1, s2):
         return -1
 
 
-# Sort hosts and services by impact, states and co
 def worse_first(s1, s2):
+    """
+    Sort host and service by state then impact then name
+
+    :param s1: A host or service to compare
+    :type s1: alignak.objects.schedulingitem.SchedulingItem
+    :param s2: Another host or service to compare
+    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :return:
+      * -1 if s1 > s2
+      * 0 if s1 == s2 (not true)
+      * 1 if s1 < s2
+    """
     # Ok, we compute a importance value so
     # For host, the order is UP, UNREACH, DOWN
     # For service: OK, UNKNOWN, WARNING, CRIT
@@ -115,8 +137,19 @@ def worse_first(s1, s2):
         return 1
 
 
-# Sort hosts and services by last_state_change time
 def last_state_change_earlier(s1, s2):
+    """
+    Sort host and service by last_state_change
+
+    :param s1: A host or service to compare
+    :type s1: alignak.objects.schedulingitem.SchedulingItem
+    :param s2: Another host or service to compare
+    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :return:
+      * -1 if s1 > s2
+      * 0 if s1 == s2 (not true)
+      * 1 if s1 < s2
+    """
     # ok, here, same business_impact
     # Compare warn and crit state
     if s1.last_state_change > s2.last_state_change:
