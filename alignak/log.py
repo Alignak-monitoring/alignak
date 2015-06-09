@@ -59,14 +59,11 @@ import stat
 from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler
 from logging.handlers import TimedRotatingFileHandler
 
+from termcolor import cprint
+
+
 from brok import Brok
 
-try:
-    from alignak.misc.termcolor import cprint
-except (SyntaxError, ImportError), exp:
-    # Outch can't import a cprint, do a simple print
-    def cprint(s, color='', end=''):
-        print s
 
 
 # obj = None

@@ -291,7 +291,7 @@ class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
             self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
                              [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
-                              r'^\x1b\[95m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
+                              r'^\x1b\[35m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
         else:
             self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
@@ -310,7 +310,7 @@ class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
             loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
                              [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
-                              r'^\x1b\[95m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
+                              r'^\x1b\[35m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
         else:
             loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
                              [1, 1],
