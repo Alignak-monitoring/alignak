@@ -74,7 +74,6 @@ from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
 from alignak.daemon import Daemon, Interface
 from alignak.log import logger
-from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
 from alignak.property import BoolProp
@@ -332,18 +331,6 @@ class Arbiter(Daemon):
                     logger.info("I am the master Arbiter: %s", arb.get_name())
                 else:
                     logger.info("I am a spare Arbiter: %s", arb.get_name())
-                # export this data to our statsmgr object :)
-                api_key = getattr(self.conf, 'api_key', '')
-                secret = getattr(self.conf, 'secret', '')
-                http_proxy = getattr(self.conf, 'http_proxy', '')
-                statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
-                statsd_port = getattr(self.conf, 'statsd_port', 8125)
-                statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
-                statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
-                statsmgr.register(self, arb.get_name(), 'arbiter',
-                                  api_key=api_key, secret=secret, http_proxy=http_proxy,
-                                  statsd_host=statsd_host, statsd_port=statsd_port,
-                                  statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
                 # Set myself as alive ;)
                 self.me.alive = True
@@ -527,7 +514,6 @@ class Arbiter(Daemon):
         for inst in self.modules_manager.instances:
             # TODO : clean
             if hasattr(inst, 'get_objects'):
-                _t = time.time()
                 try:
                     r = inst.get_objects()
                 except Exception, exp:
@@ -538,7 +524,6 @@ class Arbiter(Daemon):
                     logger.error("Back trace of this remove: %s", output.getvalue())
                     output.close()
                     continue
-                statsmgr.incr('hook.get-objects', time.time() - _t)
                 types_creations = self.conf.types_creations
                 for k in types_creations:
                     (cls, clss, prop, dummy) = types_creations[k]
@@ -831,22 +816,14 @@ class Arbiter(Daemon):
             self.check_and_log_tp_activation_change()
 
             # Now the dispatcher job
-            _t = time.time()
             self.dispatcher.check_alive()
-            statsmgr.incr('core.check-alive', time.time() - _t)
 
-            _t = time.time()
             self.dispatcher.check_dispatch()
-            statsmgr.incr('core.check-dispatch', time.time() - _t)
 
             # REF: doc/alignak-conf-dispatching.png (3)
-            _t = time.time()
             self.dispatcher.dispatch()
-            statsmgr.incr('core.dispatch', time.time() - _t)
 
-            _t = time.time()
             self.dispatcher.check_bad_dispatch()
-            statsmgr.incr('core.check-bad-dispatch', time.time() - _t)
 
             # Now get things from our module instances
             self.get_objects_from_from_queues()
@@ -865,9 +842,7 @@ class Arbiter(Daemon):
                 logger.debug("Nb Broks send: %d", self.nb_broks_send)
             self.nb_broks_send = 0
 
-            _t = time.time()
             self.push_external_commands_to_schedulers()
-            statsmgr.incr('core.push-external-commands', time.time() - _t)
 
             # It's sent, do not keep them
             # TODO: check if really sent. Queue by scheduler?

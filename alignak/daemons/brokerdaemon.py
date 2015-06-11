@@ -68,7 +68,6 @@ from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
 from alignak.log import logger
-from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
 from alignak.http_client import HTTPClient, HTTPExceptions
 from alignak.daemon import Daemon, Interface
@@ -208,19 +207,9 @@ class Broker(BaseSatellite):
             return True
         return False
 
-
-    # wrapper function for the real function do_
-    # just for timing the connection
-    def pynag_con_init(self, id, type='scheduler'):
-        _t = time.time()
-        r = self.do_pynag_con_init(id, type)
-        statsmgr.incr('con-init.%s' % type, time.time() - _t)
-        return r
-
-
     # initialize or re-initialize connection with scheduler or
     # arbiter if type == arbiter
-    def do_pynag_con_init(self, id, type='scheduler'):
+    def pynag_con_init(self, id, type='scheduler'):
         # Get the good links tab for looping..
         links = self.get_links_from_type(type)
         if links is None:
@@ -426,20 +415,9 @@ class Broker(BaseSatellite):
         else:
             name = 'Unnamed broker'
         self.name = name
-        self.api_key = g_conf['api_key']
-        self.secret = g_conf['secret']
-        self.http_proxy = g_conf['http_proxy']
-        self.statsd_host = g_conf['statsd_host']
-        self.statsd_port = g_conf['statsd_port']
-        self.statsd_prefix = g_conf['statsd_prefix']
-        self.statsd_enabled = g_conf['statsd_enabled']
 
         # We got a name so we can update the logger and the stats global objects
         logger.load_obj(self, name)
-        statsmgr.register(self, name, 'broker',
-                          api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
-                          statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                          statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 
         logger.debug("[%s] Sending us configuration %s", self.name, conf)
         # If we've got something in the schedulers, we do not
@@ -728,10 +706,8 @@ class Broker(BaseSatellite):
         # Main job, go get broks in our distants daemons
         types = ['scheduler', 'poller', 'reactionner', 'receiver']
         for _type in types:
-            _t = time.time()
             # And from schedulers
             self.get_new_broks(type=_type)
-            statsmgr.incr('get-new-broks.%s' % _type, time.time() - _t)
 
         # Sort the brok list by id
         self.broks.sort(sort_by_ids)
@@ -764,7 +740,6 @@ class Broker(BaseSatellite):
         # No more need to send them
         for b in to_send:
             b.need_send_to_ext = False
-        statsmgr.incr('core.put-to-external-queue', time.time() - t0)
         logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t0)
 
         # We must had new broks at the end of the list, so we reverse the list
@@ -783,9 +758,7 @@ class Broker(BaseSatellite):
             # REF: doc/broker-modules.png (4-5)
             # We un serialize the brok before consume it
             b.prepare()
-            _t = time.time()
             self.manage_brok(b)
-            statsmgr.incr('core.manage-brok', time.time() - _t)
 
             nb_broks = len(self.broks)
 

@@ -85,7 +85,6 @@ except ImportError:
 import alignak.http_daemon
 from alignak.http_daemon import HTTPDaemon, InvalidWorkDir
 from alignak.log import logger
-from alignak.stats import statsmgr
 from alignak.modulesctx import modulesctx
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp,\
@@ -664,7 +663,7 @@ class Daemon(object):
     # and such things to have a true DAEMON :D
     # use_pyro= open the TCP port for communication
     # fake= use for test to do not launch runonly feature, like the stats reaper thread
-    def do_daemon_init_and_start(self, use_pyro=True, fake=False):
+    def do_daemon_init_and_start(self, use_pyro=True):
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
@@ -693,11 +692,6 @@ class Daemon(object):
         logger.info("Creating manager ..")
         self.manager = self._create_manager()
         logger.info("done.")
-
-        # We can start our stats thread but after the double fork() call and if we are not in
-        # a test launch (time.time() is hooked and will do BIG problems there)
-        if not fake:
-            statsmgr.launch_reaper_thread()
 
         # Now start the http_daemon thread
         if use_pyro:
@@ -1060,8 +1054,6 @@ class Daemon(object):
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
                     self.modules_manager.set_to_restart(inst)
-        statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t)
-
 
     # Dummy function for daemons. Get all retention data
     # So a module can save them
