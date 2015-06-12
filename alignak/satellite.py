@@ -494,7 +494,8 @@ class Satellite(BaseSatellite):
 
     # Create and launch a new worker, and put it into self.workers
     # It can be mortal or not
-    def create_and_launch_worker(self, module_name='fork', mortal=True):
+    def create_and_launch_worker(self, module_name='fork', mortal=True,
+                                 __warned=set()):
         # create the input queue of this worker
         try:
             if is_android:
@@ -523,6 +524,10 @@ class Satellite(BaseSatellite):
                         raise NotWorkerMod
                     target = module.work
             if target is None:
+                if module_name not in __warned:
+                    logger.warning("No target found for %s, NOT creating a worker for it..",
+                                   module_name)
+                    __warned.add(module_name)
                 return
         # We want to give to the Worker the name of the daemon (poller or reactionner)
         cls_name = self.__class__.__name__.lower()
@@ -640,7 +645,8 @@ class Satellite(BaseSatellite):
         # I want at least min_workers by module then if I can, I add worker for load balancing
         for mod in self.q_by_mod:
             # At least min_workers
-            while len(self.q_by_mod[mod]) < self.min_workers:
+            todo = max(0, self.min_workers - len(self.q_by_mod[mod]))
+            for _ in range(todo):
                 try:
                     self.create_and_launch_worker(module_name=mod)
                 # Maybe this modules is not a true worker one.
