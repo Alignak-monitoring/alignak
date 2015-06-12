@@ -47,9 +47,10 @@
 #
 # This file is used to test reading and processing of config files
 #
-from collections import OrderedDict
 
-from alignak_test import *
+
+from alignak_tst_utils import OrderedDict, unittest
+from alignak_test import AlignakTest
 from alignak.db import DB
 
 

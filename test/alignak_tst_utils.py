@@ -11,6 +11,15 @@ import sys
 from sys import __stdout__
 
 
+if sys.version_info[:2] < (2, 7):
+    import unittest2 as unittest
+    from ordereddict import OrderedDict
+else:
+    import unittest
+    from collections import OrderedDict
+
+
+
 def get_free_port(on_ip='127.0.0.1'):
     sock = socket.socket()
     try:
