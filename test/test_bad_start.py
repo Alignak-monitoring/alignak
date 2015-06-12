@@ -56,18 +56,18 @@ import tempfile
 import shutil
 import time
 
-from alignak_test import unittest, get_free_port, time_hacker
+from alignak_tst_utils import get_free_port
+from alignak_test import unittest, time_hacker
 
 import alignak.log as alignak_log
-
 from alignak.daemon import InvalidPidFile, InvalidWorkDir
 from alignak.http_daemon import PortNotFree
-
 from alignak.daemons.pollerdaemon import Poller
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak.daemons.arbiterdaemon import Arbiter
+
 try:
     import pwd, grp
     from pwd import getpwnam
