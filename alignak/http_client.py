@@ -46,30 +46,20 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 import cPickle
+import warnings
 import zlib
-import json
 
-# Pycurl part
-import pycurl
-pycurl.global_init(pycurl.GLOBAL_ALL)
-import urllib
-from StringIO import StringIO
+import requests
 
-from alignak import __version__
+
 from alignak.log import logger
-PYCURL_VERSION = pycurl.version_info()[1]
+
 
 class HTTPException(Exception):
     pass
 
 
 HTTPExceptions = (HTTPException,)
-
-class FileReader:
-    def __init__(self, fp):
-        self.fp = fp
-    def read_callback(self, size):
-        return self.fp.read(size)
 
 
 class HTTPClient(object):
@@ -79,177 +69,71 @@ class HTTPClient(object):
         self.port = port
         self.timeout = timeout
         self.data_timeout = data_timeout
-
+        self.use_ssl = use_ssl
+        self.strong_ssl = strong_ssl
         if not uri:
-            if use_ssl:
-                self.uri = "https://%s:%s/" % (self.address, self.port)
-            else:
-                self.uri = "http://%s:%s/" % (self.address, self.port)
-        else:
-            self.uri = uri
+            protocol = "https" if use_ssl else "http"
+            uri = "%s://%s:%s/" % (protocol, self.address, self.port)
+        self.uri = uri
+        self._requests_con = requests.Session()
+        self.set_proxy(proxy)
 
-        self.con = pycurl.Curl()
+    @property
+    def con(self):
+        warnings.warn("HTTPClient.con is deprecated attribute, "
+                      "please use HTTPClient.connection instead.",
+                      DeprecationWarning, stacklevel=2)
+        return self.connection
 
-        # Remove the Expect: 100-Continue default behavior of pycurl, because swsgiref do not
-        # manage it
-        self.con.setopt(pycurl.HTTPHEADER, ['Expect:', 'Keep-Alive: 300', 'Connection: Keep-Alive'])
-        self.con.setopt(pycurl.USERAGENT, 'alignak:%s pycurl:%s' % (__version__, PYCURL_VERSION))
-        self.con.setopt(pycurl.FOLLOWLOCATION, 1)
-        self.con.setopt(pycurl.FAILONERROR, True)
-        self.con.setopt(pycurl.CONNECTTIMEOUT, self.timeout)
-        self.con.setopt(pycurl.HTTP_VERSION, pycurl.CURL_HTTP_VERSION_1_1)
+    @property
+    def connection(self):
+        return self._requests_con
 
-        if proxy:
-            self.con.setopt(pycurl.PROXY, proxy)
+    def make_uri(self, path):
+        return '%s%s' % (self.uri, path)
 
-
-        # Also set the SSL options to do not look at the certificates too much
-        # unless the admin asked for it
-        if strong_ssl:
-            self.con.setopt(pycurl.SSL_VERIFYPEER, 1)
-            self.con.setopt(pycurl.SSL_VERIFYHOST, 2)
-        else:
-            self.con.setopt(pycurl.SSL_VERIFYPEER, 0)
-            self.con.setopt(pycurl.SSL_VERIFYHOST, 0)
+    def make_timeout(self, wait):
+        return self.timeout if wait == 'short' else self.data_timeout
 
     def set_proxy(self, proxy):
         if proxy:
             logger.debug('PROXY SETTING PROXY %s', proxy)
-            self.con.setopt(pycurl.PROXY, proxy)
+            self._requests_con.proxies = {
+                'http': proxy,
+                'https': proxy,
+            }
 
-    # Try to get an URI path
     def get(self, path, args={}, wait='short'):
-        c = self.con
-        c.setopt(c.POST, 0)
-        c.setopt(pycurl.HTTPGET, 1)
-
-
-        # For the TIMEOUT, it will depends if we are waiting for a long query or not
-        # long:data_timeout, like for huge broks receptions
-        # short:timeout, like for just "ok" connection
-        if wait == 'short':
-            c.setopt(c.TIMEOUT, self.timeout)
-        else:
-            c.setopt(c.TIMEOUT, self.data_timeout)
-
-        c.setopt(c.URL, str(self.uri + path + '?' + urllib.urlencode(args)))
-        # Ok now manage the response
-        response = StringIO()
-        c.setopt(pycurl.WRITEFUNCTION, response.write)
-
+        uri = self.make_uri(path)
+        timeout = self.make_timeout(wait)
         try:
-            c.perform()
-        except pycurl.error, error:
-            errno, errstr = error
-            raise HTTPException('Connection error to %s : %s' % (self.uri, errstr))
-        r = c.getinfo(pycurl.HTTP_CODE)
-        # Do NOT close the connection, we want a keep alive
+            rsp = self._requests_con.get(uri, params=args, timeout=timeout, verify=self.strong_ssl)
+            if rsp.status_code != 200:
+                raise Exception('HTTP GET not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
+            return rsp.json()
+        except Exception as err:
+            raise HTTPException('Request error to %s: %s' % (uri, err))
 
-        if r != 200:
-            err = response.getvalue()
-            logger.error("There was a critical error : %s", err)
-            raise Exception('Connection error to %s : %s' % (self.uri, r))
-        else:
-            # Manage special return of pycurl
-            ret = json.loads(response.getvalue().replace('\\/', '/'))
-            # print "GOT RAW RESULT", ret, type(ret)
-            return ret
-
-    # Try to get an URI path
     def post(self, path, args, wait='short'):
-        size = 0
-        # Take args, pickle them and then compress the result
+        uri = self.make_uri(path)
+        timeout = self.make_timeout(wait)
         for (k, v) in args.iteritems():
             args[k] = zlib.compress(cPickle.dumps(v), 2)
-            size += len(args[k])
-        # Ok go for it!
-        logger.debug('Posting to %s: %sB' % (self.uri + path, size))
-
-        c = self.con
-        c.setopt(pycurl.HTTPGET, 0)
-        c.setopt(c.POST, 1)
-
-        # For the TIMEOUT, it will depends if we are waiting for a long query or not
-        # long:data_timeout, like for huge broks receptions
-        # short:timeout, like for just "ok" connection
-        if wait == 'short':
-            c.setopt(c.TIMEOUT, self.timeout)
-        else:
-            c.setopt(c.TIMEOUT, self.data_timeout)
-        # if proxy:
-        #    c.setopt(c.PROXY, proxy)
-        # Pycurl want a list of tuple as args
-        postargs = [(k, v) for (k, v) in args.iteritems()]
-        c.setopt(c.HTTPPOST, postargs)
-        c.setopt(c.URL, str(self.uri + path))
-        # Ok now manage the response
-        response = StringIO()
-        c.setopt(pycurl.WRITEFUNCTION, response.write)
-        # c.setopt(c.VERBOSE, 1)
         try:
-            c.perform()
-        except pycurl.error as error:
-            errno, errstr = error
-            raise HTTPException('Connection error to %s : %s' % (self.uri, errstr))
+            rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl)
+            if rsp.status_code != 200:
+                raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
+        except Exception as err:
+            raise HTTPException('Request error to %s: %s' % (uri, err))
+        return rsp.content
 
-        r = c.getinfo(pycurl.HTTP_CODE)
-        # Do NOT close the connection
-        # c.close()
-        if r != 200:
-            err = response.getvalue()
-            logger.error("There was a critical error : %s", err)
-            raise Exception('Connection error to %s : %s' % (self.uri, r))
-        else:
-            # Manage special return of pycurl
-            # ret  = json.loads(response.getvalue().replace('\\/', '/'))
-            ret = response.getvalue()
-            return ret
-
-        # Should return us pong string
-        return ret
-
-
-    # Try to get an URI path
-    def put(self, path, v, wait='short'):
-
-        c = self.con
-        filesize = len(v)
-        f = StringIO(v)
-
-        c.setopt(pycurl.INFILESIZE, filesize)
-        c.setopt(pycurl.PUT, 1)
-        c.setopt(pycurl.READFUNCTION, FileReader(f).read_callback)
-
-        # For the TIMEOUT, it will depends if we are waiting for a long query or not
-        # long:data_timeout, like for huge broks receptions
-        # short:timeout, like for just "ok" connection
-        if wait == 'short':
-            c.setopt(c.TIMEOUT, self.timeout)
-        else:
-            c.setopt(c.TIMEOUT, self.data_timeout)
-        # if proxy:
-        #    c.setopt(c.PROXY, proxy)
-        # Pycurl want a list of tuple as args
-        c.setopt(c.URL, str(self.uri + path))
-        # Ok now manage the response
-        response = StringIO()
-        c.setopt(pycurl.WRITEFUNCTION, response.write)
-        # c.setopt(c.VERBOSE, 1)
+    def put(self, path, data, wait='short'):
+        uri = self.make_uri(path)
+        timeout = self.make_timeout(wait)
         try:
-            c.perform()
-        except pycurl.error, error:
-            errno, errstr = error
-            f.close()
-            raise HTTPException('Connection error to %s : %s' % (self.uri, errstr))
-
-        f.close()
-        r = c.getinfo(pycurl.HTTP_CODE)
-        # Do NOT close the connection
-        # c.close()
-        if r != 200:
-            err = response.getvalue()
-            logger.error("There was a critical error : %s", err)
-            return ''
-        else:
-            ret = response.getvalue()
-            return ret
+            rsp = self._requests_con.put(uri, data, timeout=timeout, verify=self.strong_ssl)
+            if rsp.status_code != 200:
+                raise Exception('HTTP PUT not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
+        except Exception as err:
+            raise HTTPException('Request error to %s: %s' % (uri, err))
+        return rsp.content
