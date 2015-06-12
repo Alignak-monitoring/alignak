@@ -660,7 +660,7 @@ class Daemon(object):
             return manager
 
 
-    def do_daemon_init_and_start(self, use_communication=True, fake=False):
+    def do_daemon_init_and_start(self, fake=False):
         '''Main daemon function.
 Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
@@ -670,8 +670,7 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
-        if use_communication:
-            self.setup_communication_daemon()
+        self.setup_communication_daemon()
 
         # Setting log level
         logger.setLevel(self.log_level)
@@ -701,13 +700,10 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         if not fake:
             statsmgr.launch_reaper_thread()
 
-        # Now start the http_daemon thread
-        if use_communication:
-            # Directly acquire it, so the http_thread will wait for us
-            logger.info("Now starting http_daemon thread..")
-            self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
-            self.http_thread.daemon = True
-            self.http_thread.start()
+        logger.info("Now starting http_daemon thread..")
+        self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
+        self.http_thread.daemon = True
+        self.http_thread.start()
 
 
     def setup_communication_daemon(self):
