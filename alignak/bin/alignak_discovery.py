@@ -47,23 +47,9 @@ import optparse
 import sys
 import os
 
-try:
-    import alignak
-except ImportError:
-    # If importing alignak fails, try to load from current directory
-    # or parent directory to support running without installation.
-    # Submodules will then be loaded from there, too.
-    import imp
-    imp.load_module('alignak',
-                    *imp.find_module('alignak',
-                                     [os.path.realpath("."),
-                                      os.path.realpath(".."),
-                                      os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
-                                                   "..")]))
 
 from alignak import __version__
 from alignak.discovery.discoverymanager import DiscoveryManager
-
 
 
 if os.name != 'nt':

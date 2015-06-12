@@ -71,24 +71,6 @@ if os.name != 'nt':
     else:
         sys.setrecursionlimit(int(stacksize_soft * 2.4 + 3200))
 
-try:
-    import alignak
-except ImportError:
-    # If importing alignak fails, try to load from current directory
-    # or parent directory to support running without installation.
-    # Submodules will then be loaded from there, too.
-    import imp
-    imp.load_module('alignak',
-                    *imp.find_module('alignak',
-                                     [os.path.realpath("."),
-                                      os.path.realpath(".."),
-                                      os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])),
-                                                   "..")]))
-    import alignak
-    # Ok we should add the alignak root directory to our sys.path so our sons
-    # will be able to use the alignak import without problems
-    alignak_root_path = os.path.dirname(os.path.dirname(alignak.__file__))
-    os.environ['PYTHONPATH'] = os.path.join(os.environ.get('PYTHONPATH', ''), alignak_root_path)
 
 from alignak import __version__
 from alignak.daemons.arbiterdaemon import Arbiter
