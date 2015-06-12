@@ -137,7 +137,7 @@ class CherryPyBackend(object):
             msg = "Error: Sorry, the port %d is not free: %s" % (self.port, str(exp))
             raise PortNotFree(msg)
         except Exception, e:
-            # must be a problem with pyro workdir:
+            # must be a problem with workdir:
             raise InvalidWorkDir(e)
 
 
@@ -226,7 +226,7 @@ class WSGIREFBackend(object):
             msg = "Error: Sorry, the port %d is not free: %s" % (port, str(exp))
             raise PortNotFree(msg)
         except Exception, e:
-            # must be a problem with pyro workdir:
+            # must be a problem with workdir:
             raise e
 
 

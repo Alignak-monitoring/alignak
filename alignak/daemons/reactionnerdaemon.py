@@ -52,7 +52,7 @@
 #    Event handlers
 #
 # When running the Reactionner will :
-#   Respond to Pyro pings from Arbiter
+#   Respond to pings from Arbiter
 #   Listen for new configurations from Arbiter
 #
 # The configuration consists of a list of Schedulers for which
