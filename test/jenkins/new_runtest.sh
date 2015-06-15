@@ -380,6 +380,9 @@ function main {
     # Clean previous symlinks
     find etc/ -maxdepth 1 -type l -exec rm {} \;
 
+    # Some module still use the shinken_* file so add a symlink for now
+    cp etc/alignak_1r_1h_1s.cfg etc/shinken_1r_1h_1s.cfg
+
     # Init Count for coverage
     COUNT=1
 
@@ -422,7 +425,7 @@ function main {
     if [[ $PEP8 == "PEP8" ]]; then
         echo "Pep8 Checking"
         cd $ALIGNAKDIR
-        ${PYTHONTOOLS}/pep8 --max-line-length=100 --ignore=E303 alignak > "test/$RESULTSDIR/pep8.txt"
+        ${PYTHONTOOLS}/pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' alignak/* > "test/$RESULTSDIR/pep8.txt"
         cd -
     fi
 
