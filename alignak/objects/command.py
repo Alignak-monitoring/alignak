@@ -49,22 +49,31 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide Command class used to define external commands to
+check if something is ok or not
+"""
+
 from item import Item, Items
 from alignak.brok import Brok
 from alignak.property import StringProp, IntegerProp, BoolProp
 from alignak.autoslots import AutoSlots
 
 
-# Ok, slots are fun: you cannot set the __autoslots__
-# on the same class you use, fun isn't it? So we define*
-# a dummy useless class to get such :)
 class DummyCommand(object):
+    """
+    Class used to set __autoslots__ because can't set it
+    in same class you use
+    """
     pass
 
 
 class Command(Item):
-    # AutoSlots create the __slots__ with properties and
-    # running_properties names
+    """
+    Class to manage a command
+    A command is an external command the poller module run to
+    see if something is ok or not
+    """
     __metaclass__ = AutoSlots
 
     id = 0
@@ -120,9 +129,25 @@ class Command(Item):
                 self.module_type = 'fork'
 
     def get_name(self):
+        """
+        Get the name of the command
+
+        :return: the command name string
+        :rtype: str
+        """
         return self.command_name
 
     def fill_data_brok_from(self, data, brok_type):
+        """
+        Add properties to data if fill_brok of these class properties
+        is same as brok_type
+
+        :param data: dictionnary of this command
+        :type data: dict
+        :param brok_type: type of brok
+        :type brok_type: str
+        :return: None
+        """
         cls = self.__class__
         # Now config properties
         for prop, entry in cls.properties.items():
@@ -135,9 +160,11 @@ class Command(Item):
                 #    data[prop] = entry.default
 
 
-    # Call by pickle to dataify the comment
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """
+        Call by pickle to dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -147,8 +174,10 @@ class Command(Item):
 
         return res
 
-    # Inversed function of getstate
     def __setstate__(self, state):
+        """
+        Inversed function of getstate
+        """
         cls = self.__class__
         # We move during 1.0 to a dict state
         # but retention file from 0.8 was tuple
@@ -160,18 +189,25 @@ class Command(Item):
             if prop in state:
                 setattr(self, prop, state[prop])
 
-    # In 1.0 we move to a dict save. Before, it was
-    # a tuple save, like
-    # ({'id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
-    # 'command_line': u'/usr/local/nagios/bin/rss-multiuser',
-    # 'module_type': 'fork', 'command_name': u'notify-by-rss'})
     def __setstate_pre_1_0__(self, state):
+        """
+        In 1.0 we move to a dict save. Before, it was
+        a tuple save, like
+        ({'id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
+        'command_line': u'/usr/local/nagios/bin/rss-multiuser',
+        'module_type': 'fork', 'command_name': u'notify-by-rss'})
+        """
         for d in state:
             for k, v in d.items():
                 setattr(self, k, v)
 
 
 class Commands(Items):
+    """
+    Class to manage all commands
+    A command is an external command the poller module run to
+    see if something is ok or not
+    """
 
     inner_class = Command
     name_property = "command_name"
