@@ -114,6 +114,12 @@
 #        MONTH DAY
 #
 
+"""
+This module provide Timeperiod class used to define time periods to do
+action or not if we are in right period
+"""
+
+
 import time
 import re
 
@@ -129,6 +135,11 @@ from alignak.log import logger, naglog_result
 
 
 class Timeperiod(Item):
+    """
+    Class to manage a timeperiod
+    A timeperiod is defined with range time (hours) of week to do action
+    and add day exceptions (like non working days)
+    """
     id = 1
     my_type = 'timeperiod'
 
@@ -182,19 +193,35 @@ class Timeperiod(Item):
         self.tags = set()
 
     def get_name(self):
+        """
+        Get the name of the timeperiod
+
+        :return: the timeperiod name string
+        :rtype: str
+        """
         return getattr(self, 'timeperiod_name', 'unknown_timeperiod')
 
-    # We fillfull properties with template ones if need
-    # for the unresolved values (like sunday ETCETC)
     def get_unresolved_properties_by_inheritance(self, items):
+        """
+        Fill full properties with template if needed for the
+        unresolved values (example: sunday ETCETC)
+
+        :param items: The Timeperiods object.
+        :return: None
+        """
         # Ok, I do not have prop, Maybe my templates do?
         # Same story for plus
         for i in self.templates:
             self.unresolved.extend(i.unresolved)
 
-    # Ok timeperiods are a bit different from classic items, because we do not have a real list
-    # of our raw properties, like if we got february 1 - 15 / 3 for example
     def get_raw_import_values(self):
+        """
+        Get some properties of timeperiod (timeperiod is a bit different
+        from classic item)
+
+        :return: a dictionnary of some properties
+        :rtype: dict
+        """
         properties = ['timeperiod_name', 'alias', 'use', 'register']
         r = {}
         for prop in properties:
@@ -210,6 +237,12 @@ class Timeperiod(Item):
 
 
     def is_time_valid(self, t):
+        """
+        Check if a time is valid or not
+
+        :return: time is valid or not
+        :rtype: bool
+        """
         if self.has('exclude'):
             for dr in self.exclude:
                 if dr.is_time_valid(t):
@@ -221,6 +254,15 @@ class Timeperiod(Item):
 
     # will give the first time > t which is valid
     def get_min_from_t(self, t):
+        """
+        Get the first time > t which is valid
+
+        :param t: number of seconds
+        :type t: int
+        :return: number of seconds
+        :rtype: int
+        TODO: not used, so delete it
+        """
         mins_incl = []
         for dr in self.dateranges:
             mins_incl.append(dr.get_min_from_t(t))
@@ -228,25 +270,50 @@ class Timeperiod(Item):
 
     # will give the first time > t which is not valid
     def get_not_in_min_from_t(self, f):
+        """
+        TODO: not used, so delete it
+        """
         pass
 
     def find_next_valid_time_from_cache(self, t):
+        """
+        Get the next valid time from cache
+
+        :param t: number of seconds
+        :type t: int
+        :return: Nothing or time in seconds
+        :rtype: None or int
+        """
         try:
             return self.cache[t]
         except KeyError:
             return None
 
     def find_next_invalid_time_from_cache(self, t):
+        """
+        Get the next invalid time from cache
+
+        :param t: number of seconds
+        :type t: int
+        :return: Nothing or time in seconds
+        :rtype: None or int
+        """
         try:
             return self.invalid_cache[t]
         except KeyError:
             return None
 
-    # will look for active/un-active change. And log it
-    # [1327392000] TIMEPERIOD TRANSITION: <name>;<from>;<to>
-    # from is -1 on startup.  to is 1 if the timeperiod starts
-    # and 0 if it ends.
     def check_and_log_activation_change(self):
+        """
+        Will look for active/un-active change of timeperiod.
+        In case it change, we log it like:
+        [1327392000] TIMEPERIOD TRANSITION: <name>;<from>;<to>
+
+        States of is_active:
+        -1: default value when start
+        0: when timeperiod end
+        1: when timeperiod start
+        """
         now = int(time.time())
 
         was_active = self.is_active
@@ -270,11 +337,10 @@ class Timeperiod(Item):
                 % (self.get_name(), _from, _to)
             )
 
-    # clean the get_next_valid_time_from_t cache
-    # The entries are a dict on t. t < now are useless
-    # Because we do not care about past anymore.
-    # If not, it's not important, it's just a cache after all :)
     def clean_cache(self):
+        """
+        Clean cache with entries older than now because not used in future ;)
+        """
         now = int(time.time())
         t_to_del = []
         for t in self.cache:
@@ -292,7 +358,14 @@ class Timeperiod(Item):
             del self.invalid_cache[t]
 
     def get_next_valid_time_from_t(self, t):
-        # first find from cache
+        """
+        Get next valide time from the cache
+
+        :param t: number of seconds
+        :type t: int
+        :return: Nothing or time in seconds
+        :rtype: None or int
+        """
         t = int(t)
         original_t = t
 
@@ -356,7 +429,14 @@ class Timeperiod(Item):
         return local_min
 
     def get_next_invalid_time_from_t(self, t):
-        # print '\n\n', self.get_name(), 'Search for next invalid from',
+        """
+        Get next invalide time from the cache
+
+        :param t: number of seconds
+        :type t: int
+        :return: Nothing or time in seconds
+        :rtype: None or int
+        """
         # time.asctime(time.localtime(t)), t
         t = int(t)
         original_t = t
@@ -467,11 +547,23 @@ class Timeperiod(Item):
         return local_min
 
     def has(self, prop):
+        """
+        Check if self have prop attribute
+
+        :param prop: property name
+        :type prop: string
+        :return: true if self has this attribute
+        :rtype: bool
+        """
         return hasattr(self, prop)
 
-    # We are correct only if our daterange are
-    # and if we have no unmatch entries
     def is_correct(self):
+        """
+        Check if dateranges of timeperiod are valid
+
+        :return: false if at least one datarange is invalid
+        :rtype: bool
+        """
         b = True
         for dr in self.dateranges:
             d = dr.is_correct()
@@ -485,6 +577,12 @@ class Timeperiod(Item):
         return b
 
     def __str__(self):
+        """
+        Get readable object
+
+        :return: this object in readable format
+        :rtype: str
+        """
         s = ''
         s += str(self.__dict__) + '\n'
         for elt in self.dateranges:
@@ -500,7 +598,14 @@ class Timeperiod(Item):
         return s
 
     def resolve_daterange(self, dateranges, entry):
-        # print "Trying to resolve ", entry
+        """
+        Try to solve dateranges (special cases)
+
+        :param dateranges: dateranges
+        :type dateranges: list
+        :param entry: property of timeperiod
+        :type entry: string
+        """
 
         res = re.search(
             '(\d{4})-(\d{2})-(\d{2}) - (\d{4})-(\d{2})-(\d{2}) / (\d+)[\s\t]*([0-9:, -]+)', entry
@@ -755,17 +860,28 @@ class Timeperiod(Item):
         self.invalid_entries.append(entry)
 
     def apply_inheritance(self):
+        """
+        inherite no properties and no custom variables for timeperiod
+        """
         pass
 
-    # create daterange from unresolved param
     def explode(self, timeperiods):
+        """
+        Try to resolv all unresolved elements
+
+        :param : Timeperiods object
+        """
         for entry in self.unresolved:
             # print "Revolving entry", entry
             self.resolve_daterange(self.dateranges, entry)
         self.unresolved = []
 
-    # Will make tp in exclude with id of the timeperiods
     def linkify(self, timeperiods):
+        """
+        Will make timeperiod in exclude with id of the timeperiods
+
+        :param timeperiods: Timeperiods object
+        """
         new_exclude = []
         if self.has('exclude') and self.exclude != []:
             logger.debug("[timeentry::%s] have excluded %s", self.get_name(), self.exclude)
@@ -780,6 +896,12 @@ class Timeperiod(Item):
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
+        """
+        Check if this timeperiod is tagged
+
+        :return: if tagged return false, if not true
+        :rtype: bool
+        """
         if self.rec_tag:
             logger.error("[timeentry::%s] is in a loop in exclude parameter", self.get_name())
             return False
@@ -789,6 +911,14 @@ class Timeperiod(Item):
         return True
 
     def fill_data_brok_from(self, data, brok_type):
+        """
+        Add timeperiods from brok
+
+        :param data: timeperiod dictionnary
+        :type data: dict
+        :param brok_type: brok type
+        :type brok_type: string
+        """
         cls = self.__class__
         # Now config properties
         for prop, entry in cls.properties.items():
@@ -803,21 +933,35 @@ class Timeperiod(Item):
 
 
 class Timeperiods(Items):
+    """
+    Class to manage all timeperiods
+    A timeperiod is defined with range time (hours) of week to do action
+    and add day exceptions (like non working days)
+    """
+
     name_property = "timeperiod_name"
     inner_class = Timeperiod
 
     def explode(self):
+        """
+        Try to resolv each timeperiod
+        """
         for id in self.items:
             tp = self.items[id]
             tp.explode(self)
 
     def linkify(self):
+        """
+        Check exclusion for each timeperiod
+        """
         for id in self.items:
             tp = self.items[id]
             tp.linkify(self)
 
     def apply_inheritance(self):
-        # The only interesting property to inherit is exclude
+        """
+        The only interesting property to inherit is exclude
+        """
         self.apply_partial_inheritance('exclude')
         for i in self:
             i.get_customs_properties_by_inheritance()
@@ -827,8 +971,10 @@ class Timeperiods(Items):
         for tp in self:
             tp.get_unresolved_properties_by_inheritance(self.items)
 
-    # check for loop in definition
     def is_correct(self):
+        """
+        check if each properties of timeperiods are valid
+        """
         r = True
         # We do not want a same hg to be explode again and again
         # so we tag it
