@@ -46,7 +46,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
+"""
 from Queue import Empty
 
 # In android, we should use threads, not process
@@ -116,17 +118,29 @@ class Worker:
             self.http_daemon = None
 
     def is_mortal(self):
+        """
+        Accessor to _mortal attribute
+        :return: A boolean indicating if the worker is mortal or not.
+        :rtype: bool
+        """
         return self._mortal
 
 
     def start(self):
+        """
+        Start the worker. Wrapper for calling start method of the process attribute
+        :return: None
+        """
         self._process.start()
 
 
-    # Kill the background process
-    # AND close correctly the queues (input and output)
-    # each queue got a thread, so close it too....
     def terminate(self):
+        """
+        Wrapper for calling terminate method of the process attribute
+        Also close queues (input and output) and terminate queues thread
+
+        :return: None
+        """
         # We can just terminate process, not threads
         if not is_android:
             self._process.terminate()
@@ -140,32 +154,79 @@ class Worker:
             self.s.join_thread()
 
     def join(self, timeout=None):
+        """
+         Wrapper for calling join method of the process attribute
+
+        :param timeout: time to wait for the process to terminate
+        :type timeout: int
+        :return: None
+        """
         self._process.join(timeout)
 
     def is_alive(self):
+        """
+        Wrapper for calling is_alive method of the process attribute
+
+        :return: A boolean indicating if the process is alive
+        :rtype: bool
+        """
         return self._process.is_alive()
 
     def is_killable(self):
+        """
+        Determine whether a process is killable :
+
+        * process is mortal
+        * idletime > timeout
+
+        :return: a boolean indicating if it is killable
+        :rtype: bool
+        """
         return self._mortal and self._idletime > self._timeout
 
     def add_idletime(self, time):
+        """
+        Increment idletime
+
+        :param time: time to increment in seconds
+        :type time: int
+        :return: None
+        """
         self._idletime = self._idletime + time
 
     def reset_idle(self):
+        """
+        Reset idletime (set to 0)
+
+        :return: None
+        """
         self._idletime = 0
 
     def send_message(self, msg):
+        """
+        Wrapper for calling put method of the _c attribute
+
+        :param msg: the message to put in queue
+        :return: None
+        """
         self._c.put(msg)
 
-    # A zombie is immortal, so kill not be kill anymore
     def set_zombie(self):
+        """
+        Set the process as zombie (mortal to False)
+
+        :return:None
+        """
         self._mortal = False
 
-    # Get new checks if less than nb_checks_max
-    # If no new checks got and no check in queue,
-    # sleep for 1 sec
-    # REF: doc/alignak-action-queues.png (3)
     def get_new_checks(self):
+        """
+        Get new checks if less than nb_checks_max
+        If no new checks got and no check in queue, sleep for 1 sec
+        REF: doc/alignak-action-queues.png (3)
+
+        :return: None
+        """
         try:
             while(len(self.checks) < self.processes_by_worker):
                 # print "I", self.id, "wait for a message"
@@ -183,9 +244,13 @@ class Worker:
             return
 
 
-    # Launch checks that are in status
-    # REF: doc/alignak-action-queues.png (4)
     def launch_new_checks(self):
+        """
+        Launch checks that are in status
+        REF: doc/alignak-action-queues.png (4)
+
+        :return: None
+        """
         # queue
         for chk in self.checks:
             if chk.status == 'queue':
@@ -199,10 +264,14 @@ class Worker:
                     self.i_am_dying = True
 
 
-    # Check the status of checks
-    # if done, return message finished :)
-    # REF: doc/alignak-action-queues.png (5)
     def manage_finished_checks(self):
+        """
+        Check the status of checks
+        if done, return message finished :)
+        REF: doc/alignak-action-queues.png (5)
+
+        :return: None
+        """
         to_del = []
         wait_time = 1
         now = time.time()
@@ -230,8 +299,13 @@ class Worker:
         # Little sleep
         time.sleep(wait_time)
 
-    # Check if our system time change. If so, change our
     def check_for_system_time_change(self):
+        """
+        Check if our system time change. If so, change our
+
+        :return: 0 if the difference < 900, difference else
+        :rtype: int
+        """
         now = time.time()
         difference = now - self.t_each_loop
 
@@ -245,9 +319,19 @@ class Worker:
             return 0
 
 
-    # Wrapper function for work in order to catch the exception
-    # to see the real work, look at do_work
     def work(self, s, returns_queue, c):
+        """
+        Wrapper function for work in order to catch the exception
+        to see the real work, look at do_work
+
+        :param s: Global Queue Master->Slave
+        :type s: Queue.Queue
+        :param returns_queue: queue managed by manager
+        :type returns_queue: Queue.Queue
+        :param c: Control Queue for the worker
+        :type c: Queue.Queue
+        :return: None
+        """
         try:
             self.do_work(s, returns_queue, c)
         # Catch any exception, try to print it and exit anyway
@@ -261,12 +345,21 @@ class Worker:
             raise
 
 
-    # id = id of the worker
-    # s = Global Queue Master->Slave
-    # m = Queue Slave->Master
-    # return_queue = queue managed by manager
-    # c = Control Queue for the worker
     def do_work(self, s, returns_queue, c):
+        """
+        Main function of the worker.
+        * Get checks
+        * Launch new checks
+        * Manage finished checks
+
+        :param s: Global Queue Master->Slave
+        :type s: Queue.Queue
+        :param returns_queue: queue managed by manager
+        :type returns_queue: Queue.Queue
+        :param c: Control Queue for the worker
+        :type c: Queue.Queue
+        :return: None
+        """
         # restore default signal handler for the workers:
         # but on android, we are a thread, so don't do it
         if not is_android:
@@ -324,4 +417,9 @@ class Worker:
                 timeout = 1.0
 
     def set_proctitle(self):
+        """
+        Set the proctitle of this worker for readability purpose
+
+        :return: None
+        """
         setproctitle("alignak-%s worker" % self.loaded_into)
