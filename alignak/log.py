@@ -51,7 +51,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide logging facilities for Alignak.
+There is a custom log handler that create broks for every log emited with level < debug
+"""
 import logging
 import sys
 import os
@@ -104,6 +107,9 @@ class BrokHandler(Handler):
 
 
 class ColorStreamHandler(StreamHandler):
+    """
+    This log handler provides colored logs when logs are emitted to a tty.
+    """
     def emit(self, record):
         try:
             msg = self.format(record)
@@ -218,9 +224,12 @@ class Log(logging.Logger):
                 handler.setFormatter(human_timestamp_log and humanFormatter or defaultFormatter)
 
 
-    # Stack logs if we don't open a log file so we will be able to flush them
-    # Stack max 500 logs (no memory leak please...)
     def _stack(self, level, args, kwargs):
+        """
+
+        Stack logs if we don't open a log file so we will be able to flush them
+        Stack max 500 logs (no memory leak please...)
+        """
         if self.log_set:
             return
         self.pre_log_buffer.append((level, args, kwargs))
@@ -228,8 +237,11 @@ class Log(logging.Logger):
             self.pre_log_buffer = self.pre_log_buffer[2:]
 
 
-    # Ok, we are opening a log file, flush all the logs now
     def _destack(self):
+        """
+        DIRTY HACK : log should be always written to a file.
+        we are opening a log file, flush all the logs now
+        """
         for (level, args, kwargs) in self.pre_log_buffer:
             f = getattr(logging.Logger, level, None)
             if f is None:
