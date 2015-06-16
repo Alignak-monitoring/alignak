@@ -177,6 +177,9 @@ function prepare_environment {
                 return 2
             }
         done
+        cd ../../  #
+        python setup.py develop
+        cd test/jenkins
     else
         echo "ENVIRONMENT SPECS HAVE NOT CHANGED - USING CACHED ENVIRONMENT"
         . env${PY_VERSION}/bin/activate || {
@@ -204,10 +207,10 @@ function launch_and_assert {
 END
     local start=$(date +%s)
     if test $COVERAGE == "NOCOVERAGE"; then
-      ${PYTHONTOOLS}/nosetests -v -s --with-xunit ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
+      ${PYTHONTOOLS}/nosetests -v -s --with-xunit ../alignak/shinken_import_hook.py ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
       res=$?
     else
-      ${PYTHONTOOLS}/nosetests -v -s --with-xunit --with-coverage ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
+      ${PYTHONTOOLS}/nosetests -v -s --with-xunit --with-coverage ../alignak/shinken_import_hook.py ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
       res=$?
       mv .coverage .coverage.$COUNT
       COUNT=$((COUNT + 1))
@@ -273,6 +276,8 @@ END
 
         # $ALIGNAKCLI install --local tmp/$module > /dev/null
         # cp alignak_test.py alignak_modules.py tmp/$module/test
+        cp alignak_test.py shinken_test.py
+        cp alignak_modules.py shinken_modules.py
 
         # Symlink of config files to etc
         if [ -d "tmp/$module/test/etc" ]; then
@@ -380,8 +385,10 @@ function main {
     # Clean previous symlinks
     find etc/ -maxdepth 1 -type l -exec rm {} \;
 
-    # Some module still use the shinken_* file so add a symlink for now
+    # Some module still use the shinken_* file so cp for now
     cp etc/alignak_1r_1h_1s.cfg etc/shinken_1r_1h_1s.cfg
+    cp etc/alignak_livestatus_authuser.cfg etc/shinken_livestatus_authuser.cfg
+    cp etc/alignak_problem_impact.cfg etc/shinken_problem_impact.cfg
 
     # Init Count for coverage
     COUNT=1
