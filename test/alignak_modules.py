@@ -37,7 +37,7 @@ from alignak.log import logger
 #
 from alignak_test import (
     modules_dir,
-    alignakTest,
+    AlignakTest,
     time_hacker, # not used here but "sub"-imported by lvestatus test (to be corrected)
 )
 
@@ -238,4 +238,4 @@ class TestConfig(AlignakModulesTest):
         response, keepalive = self.livestatus_broker.livestatus.handle_request(request)
         print response
 
-
+ShinkenModulesTest = AlignakModulesTest
