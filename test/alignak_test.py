@@ -439,9 +439,10 @@ class AlignakTest(unittest.TestCase):
                                     "pattern = %r\nbrok log = %r" % (pattern, brok.data['log'])
                     )
                     return
+        logs = [brok.data['log'] for brok in broks if brok.type == 'log']
         self.assertTrue(assert_not,
             "No matching log line found:\n"
-            "pattern = %r\n" "broks = %r" % (pattern, broks)
+            "pattern = %r\n" "logs broks = %r" % (pattern, logs)
         )
 
     def assert_any_log_match(self, pattern):
