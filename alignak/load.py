@@ -44,7 +44,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide a simple abstraction for load computation in satellite
+"""
 import time
 import math
 
@@ -67,6 +69,14 @@ class Load:
 
 
     def update_load(self, new_val, forced_interval=None):
+        """
+        Update load with the new value
+        :param new_val: value used to compute new load
+        :type new_val: int
+        :param forced_interval: boolean indicating if we force the interval for the value
+        :type forced_interval: bool
+        :return: None
+        """
         # The first call do not change the value, just tag
         # the beginning of last_update
         # IF  we force : bail out all time thing
@@ -88,6 +98,12 @@ class Load:
             pass
 
     def get_load(self):
+        """
+        Get actual load. val attribute accessor
+
+        :return: the load value
+        :rtype: int
+        """
         return self.val
 
 
