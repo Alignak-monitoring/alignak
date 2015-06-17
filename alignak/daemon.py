@@ -57,7 +57,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provides abstraction for creating daemon in Alignak
+"""
 import os
 import errno
 import sys
@@ -100,22 +102,46 @@ try:
     from grp import getgrnam, getgrall
 
     def get_cur_user():
+        """Wrapper for getpwuid
+        :return: user
+        :rtype: str
+        """
         return pwd.getpwuid(os.getuid()).pw_name
 
     def get_cur_group():
+        """Wrapper for getgrgid
+        :return: group
+        :rtype: str
+        """
         return grp.getgrgid(os.getgid()).gr_name
 
     def get_all_groups():
+        """Wrapper for getgrall
+        :return: all groups
+        :rtype: list
+        """
         return getgrall()
 except ImportError, exp:  # Like in nt system or Android
     # temporary workaround:
     def get_cur_user():
+        """Fake getpwuid
+        :return: alignak
+        :rtype: str
+        """
         return "alignak"
 
     def get_cur_group():
+        """Fake getgrgid
+        :return: alignak
+        :rtype: str
+        """
         return "alignak"
 
     def get_all_groups():
+        """Fake getgrall
+        :return: []
+        :rtype: list
+        """
         return []
 
 
@@ -128,13 +154,14 @@ REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 UMASK = 027
 from alignak import __version__
 
-""" TODO: Add some comment about this class for the doc"""
+
 class InvalidPidFile(Exception):
+    """Exception raise when a pid file is invalid"""
     pass
 
 
-""" Interface for Inter satellites communications """
 class Interface(object):
+    """Interface for Inter satellites communications"""
 
     #  'app' is to be set to the owner of this interface.
     def __init__(self, app):
@@ -146,68 +173,99 @@ class Interface(object):
         )
 
 
-    doc = 'Test the connection to the daemon. Returns: pong'
     def ping(self):
+        """Test the connection to the daemon. Returns: pong
+
+        :return: pong
+        :rtype: str
+        """
         return "pong"
     ping.need_lock = False
-    ping.doc = doc
 
-    doc = 'Get the start time of the daemon'
     def get_start_time(self):
+        """Get the start time of the daemon
+
+        :return: start time
+        :rtype: int
+        """
         return self.start_time
 
-    doc = 'Get the current running id of the daemon (scheduler)'
     def get_running_id(self):
+        """'Get the current running id of the daemon (scheduler)'
+
+        :return: running_ig
+        :rtype: int
+        """
         return self.running_id
     get_running_id.need_lock = False
-    get_running_id.doc = doc
 
 
-    doc = 'Send a new configuration to the daemon (internal)'
     def put_conf(self, conf):
+        """Send a new configuration to the daemon (internal)
+
+        :param conf: new conf to send
+        :return: None
+        """
         self.app.new_conf = conf
     put_conf.method = 'post'
-    put_conf.doc = doc
 
 
-    doc = 'Ask the daemon to wait a new conf'
     def wait_new_conf(self):
+        """Ask the daemon to wait a new conf
+
+        :return: Reset cur_conf to wait new one
+        """
         self.app.cur_conf = None
     wait_new_conf.need_lock = False
-    wait_new_conf.doc = doc
 
 
-    doc = 'Does the daemon got an active configuration'
     def have_conf(self):
+        """Get the daemon cur_conf state
+
+        :return: boolean indicating if the daemon has a conf
+        :rtype: bool
+        """
         return self.app.cur_conf is not None
     have_conf.need_lock = False
-    have_conf.doc = doc
 
 
-    doc = 'Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]'
     def set_log_level(self, loglevel):
+        """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
+
+        :param loglevel: a value in one of the above
+        :type loglevel: str
+        :return: None
+        """
         return logger.setLevel(loglevel)
-    set_log_level.doc = doc
 
 
-    doc = 'Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]'
     def get_log_level(self):
+        """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
+
+        :return: current log level
+        :rtype: str
+        """
         return {logging.NOTSET: 'NOTSET',
                 logging.DEBUG: 'DEBUG',
                 logging.INFO: 'INFO',
                 logging.WARNING: 'WARNING',
                 logging.ERROR: 'ERROR',
                 logging.CRITICAL: 'CRITICAL'}.get(logger._level, 'UNKNOWN')
-    get_log_level.doc = doc
 
-    doc = 'List the methods available on the daemon'
     def api(self):
+        """List the methods available on the daemon
+
+        :return: a list of methods available
+        :rtype: list
+        """
         return self.app.http_daemon.registered_fun_names
-    api.doc = doc
 
 
-    doc = 'List the api methods and their parameters'
     def api_full(self):
+        """List the api methods and their parameters
+
+        :return: a list of methods and parameters
+        """
         res = {}
         for (fname, f) in self.app.http_daemon.registered_fun.iteritems():
             fclean = fname.replace('_', '-')
@@ -232,7 +290,6 @@ class Interface(object):
                 e['doc'] = doc
             res[fclean] = e
         return res
-    api.doc = doc
 
 
 # If we are under android, we can't give parameters
@@ -245,6 +302,9 @@ else:
 
 
 class Daemon(object):
+    """Class providing daemon level call for Alignak
+        TODO: Consider clean this code and use standard libs
+    """
 
     properties = {
         # workdir is relative to $(dirname "$0"/..)
@@ -374,6 +434,10 @@ class Daemon(object):
 
 
     def request_stop(self):
+        """Remove pid and stop daemon
+
+        :return: None
+        """
         self.unlink()
         self.do_stop()
         # Brok facilities are no longer available simply print the message to STDOUT
@@ -381,20 +445,30 @@ class Daemon(object):
         sys.exit(0)
 
 
-    # Maybe this daemon is configured to NOT run, if so, bailout
     def look_for_early_exit(self):
+        """Stop the daemon if it is not enabled
+
+        :return: None
+        """
         if not self.daemon_enabled:
             logger.info('This daemon is disabled in configuration. Bailing out')
             self.request_stop()
 
 
     def do_loop_turn(self):
+        """Abstract method for deamon loop turn.
+        It must be overridden by class inheriting from Daemon
+
+        :return: None
+        """
         raise NotImplementedError()
 
 
-    # Main loop for nearly all daemon
-    # the scheduler is not managed by it :'(
     def do_mainloop(self):
+        """ Main loop for alignak daemon (except scheduler)
+
+        :return: None
+        """
         while True:
             self.do_loop_turn()
             # If ask us to dump memory, do it
@@ -411,17 +485,33 @@ class Daemon(object):
 
 
     def do_load_modules(self):
+        """Wrapper for calling load_and_init method of modules_manager attribute
+
+        :return: None
+        """
         self.modules_manager.load_and_init()
         logger.info("I correctly loaded the modules: [%s]",
                     ','.join([inst.get_name() for inst in self.modules_manager.instances]))
 
 
-    # Dummy method for adding broker to this daemon
+
     def add(self, elt):
+        """ Abstract method for adding brok
+         It is overridden in subclasses of Daemon
+
+        :param elt: element to add
+        :return: None
+        """
         pass
 
 
     def dump_memory(self):
+        """Try to dump memory
+        Does not really work :/
+
+        :return: None
+        TODO: Clean this
+        """
         logger.info("I dump my memory, it can take a minute")
         try:
             from guppy import hpy
@@ -432,6 +522,10 @@ class Daemon(object):
 
 
     def load_config_file(self):
+        """Parse config file and ensure full path in variables
+
+        :return: None
+        """
         self.parse_config_file()
         if self.config_file is not None:
             # Some paths can be relatives. We must have a full path by taking
@@ -440,6 +534,10 @@ class Daemon(object):
 
 
     def load_modules_manager(self):
+        """Instanciate Modulesmanager and load the SyncManager (multiprecessing)
+
+        :return: None
+        """
         if not modulesctx.get_modulesdir():
             modulesctx.set_modulesdir(self.find_modules_path())
         self.modules_manager = ModulesManager(self.name, self.find_modules_path(), [])
@@ -452,6 +550,10 @@ class Daemon(object):
 
 
     def change_to_workdir(self):
+        """Change working directory to working attribute
+
+        :return: None
+        """
         self.workdir = os.path.abspath(self.workdir)
         try:
             os.chdir(self.workdir)
@@ -461,6 +563,10 @@ class Daemon(object):
 
 
     def unlink(self):
+        """Remove the daemon's pidfile
+
+        :return: None
+        """
         logger.debug("Unlinking %s", self.pidfile)
         try:
             os.unlink(self.pidfile)
@@ -468,8 +574,11 @@ class Daemon(object):
             logger.error("Got an error unlinking our pidfile: %s", e)
 
 
-    # Look if we need a local log or not
     def register_local_log(self):
+        """Open local log file for logging purpose
+
+        :return: None
+        """
         # The arbiter doesn't have such attribute
         if hasattr(self, 'use_local_log') and self.use_local_log:
             try:
@@ -481,8 +590,11 @@ class Daemon(object):
             logger.info("Using the local log file '%s'", self.local_log)
 
 
-    # Only on linux-based system: Check for /dev/shm write access
     def check_shm(self):
+        """ Check /dev/shm right permissions
+
+        :return: None
+        """
         import stat
         shm_path = '/dev/shm'
         if os.name == 'posix' and os.path.exists(shm_path):
@@ -495,6 +607,12 @@ class Daemon(object):
 
 
     def __open_pidfile(self, write=False):
+        """Open pidfile in read or write mod
+
+        :param write: boolean to open file in write mod (true = write)
+        :type write: bool
+        :return: None
+        """
         # if problem on opening or creating file it'll be raised to the caller:
         try:
             p = os.path.abspath(self.pidfile)
@@ -509,9 +627,13 @@ class Daemon(object):
             raise InvalidPidFile(err)
 
 
-    # Check (in pidfile) if there isn't already a daemon running. If yes and do_replace: kill it.
-    # Keep in self.fpid the File object to the pidfile. Will be used by writepid.
     def check_parallel_run(self):
+        """Check (in pidfile) if there isn't already a daemon running.
+        If yes and do_replace: kill it.
+        Keep in self.fpid the File object to the pidfile. Will be used by writepid.
+
+        :return: None
+        """
         # TODO: other daemon run on nt
         if os.name == 'nt':
             logger.warning("The parallel daemon check is not available on nt")
@@ -556,6 +678,12 @@ class Daemon(object):
 
 
     def write_pid(self, pid=None):
+        """ Write pid to pidfile
+
+        :param pid: pid of the process
+        :type pid: int
+        :return: None
+        """
         if pid is None:
             pid = os.getpid()
         self.fpid.seek(0)
@@ -565,9 +693,14 @@ class Daemon(object):
         del self.fpid  # no longer needed
 
 
-    # Close all the process file descriptors. Skip the descriptors
-    # present in the skip_close_fds list
     def close_fds(self, skip_close_fds):
+        """Close all the process file descriptors.
+        Skip the descriptors present in the skip_close_fds list
+
+        :param skip_close_fds: list of fd to skip
+        :type skip_close_fds: list
+        :return: None
+        """
         # First we manage the file descriptor, because debug file can be
         # relative to pwd
         import resource
@@ -585,9 +718,15 @@ class Daemon(object):
                 pass
 
 
-    # Go in "daemon" mode: close unused fds, redirect stdout/err,
-    # chdir, umask, fork-setsid-fork-writepid
     def daemonize(self, skip_close_fds=None):
+        """Go in "daemon" mode: close unused fds, redirect stdout/err,
+        chdir, umask, fork-setsid-fork-writepid
+        Do the double fork to properly go daemon
+
+        :param skip_close_fds: list of fd to keep open
+        :type skip_close_fds: list
+        :return: None
+        """
         if skip_close_fds is None:
             skip_close_fds = tuple()
 
@@ -613,6 +752,12 @@ class Daemon(object):
             # In the father: we check if our child exit correctly
             # it has to write the pid of our future little child..
             def do_exit(sig, frame):
+                """Exit handler if wait too long during fork
+
+                :param sig: signal
+                :param frame: current frame
+                :return: None
+                """
                 logger.error("Timeout waiting child while it should have quickly returned ;"
                              "something weird happened")
                 os.kill(pid, 9)
@@ -653,11 +798,17 @@ class Daemon(object):
 
     if is_android:
         def _create_manager(self):
+            """Fake _create_manager for android"""
             pass
     else:
         # The Manager is a sub-process, so we must be sure it won't have
         # a socket of your http server alive
         def _create_manager(self):
+            """Instanciate and start a SyncManager
+
+            :return: the manager
+            :rtype: multiprocessing.managers.SyncManager
+            """
             manager = SyncManager(('127.0.0.1', 0))
             if os.name != 'nt' and not IS_PY26:
                 # manager in python2.6 don't have initializer..
@@ -668,12 +819,12 @@ class Daemon(object):
 
 
     def do_daemon_init_and_start(self, fake=False):
-        '''Main daemon function.
-Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
+        """Main daemon function.
+        Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-:param use_communication: if evaluate as True: the communication channel will be created.
-:param fake: use for test to do not launch runonly feature, like the stats reaper thread.
-        '''
+        :param use_communication: if evaluate as True: the communication channel will be created.
+        :param fake: use for test to do not launch runonly feature, like the stats reaper thread.
+        """
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
@@ -714,6 +865,11 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
 
 
     def setup_communication_daemon(self):
+        """ Setup HTTP server daemon to listen
+        for incoming HTTP requests from other Alignak daemons
+
+        :return: None
+        """
         if hasattr(self, 'use_ssl'):  # "common" daemon
             ssl_conf = self
         else:
@@ -750,8 +906,13 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         # TODO: fix this "hack" :
         alignak.http_daemon.daemon_inst = self.http_daemon
 
-    # Global loop part
     def get_socks_activity(self, socks, timeout):
+        """ Global loop part : wait for socket to be ready
+
+        :param socks: a socket file descriptor list
+        :param timeout: timeout to read from fd
+        :return: A list of socket file descriptor ready to read
+        """
         # some os are not managing void socks list, so catch this
         # and just so a simple sleep instead
         if socks == []:
@@ -766,9 +927,13 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
             raise
         return ins
 
-    # Find the absolute path of the alignak module directory and returns it.
-    # If the directory do not exist, we must exit!
     def find_modules_path(self):
+        """
+        Find the absolute path of the alignak module directory and returns it.
+        If the directory do not exist, we must exit!
+
+        :return: modules_dir path
+        """
         modules_dir = getattr(self, 'modules_dir', None)
         if not modules_dir:
             modules_dir = modulesctx.get_modulesdir()
@@ -785,33 +950,49 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         return modules_dir
 
 
-    # modules can have process, and they can die
     def check_and_del_zombie_modules(self):
+        """Check alive instance and try to restart the dead ones
+
+        :return: None
+        """
         # Active children make a join with every one, useful :)
         self.modules_manager.check_alive_instances()
         # and try to restart previous dead :)
         self.modules_manager.try_to_restart_deads()
 
 
-    # Just give the uid of a user by looking at it's name
     def find_uid_from_name(self):
+        """Wrapper for getpwnam : get the uid of user attribute
+
+        :return: Uid of user attribute
+        :rtype: str
+        """
         try:
             return getpwnam(self.user)[2]
         except KeyError, exp:
             logger.error("The user %s is unknown", self.user)
             return None
 
-    # Just give the gid of a group by looking at its name
     def find_gid_from_name(self):
+        """Wrapper for getgrnam : get the uid of user attribute
+
+        :return: Uid of user attribute
+        :rtype: str
+        """
         try:
             return getgrnam(self.group)[2]
         except KeyError, exp:
             logger.error("The group %s is unknown", self.group)
             return None
 
-    # Change user of the running program. Just insult the admin
-    # if he wants root run (it can override). If change failed we sys.exit(2)
     def change_to_user_group(self, insane=None):
+        """ Change to user of the running program.
+        If change failed we sys.exit(2)
+
+        :param insane: boolean to allow running as root
+        :type insane: bool
+        :return: None
+        """
         if insane is None:
             insane = not self.idontcareaboutsecurity
 
@@ -866,10 +1047,13 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
             sys.exit(2)
 
 
-    # Parse self.config_file and get all properties in it.
-    # If some properties need a pythonization, we do it.
-    # Also put default value in the properties if some are missing in the config_file
     def parse_config_file(self):
+        """Parse self.config_file and get all properties in it.
+        If some properties need a pythonization, we do it.
+        Also put default value in the properties if some are missing in the config_file
+
+        :return: None
+        """
         properties = self.__class__.properties
         if self.config_file is not None:
             config = ConfigParser.ConfigParser()
@@ -897,9 +1081,14 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
                 setattr(self, prop, value)
 
 
-    # Some paths can be relatives. We must have a full path by taking
-    # the config file by reference
+
     def relative_paths_to_full(self, reference_path):
+        """Set a full path from a relative one with che config file as reference
+        TODO: This should be done in pythonize method of Properties.
+
+        :param reference_path: reference path for reading full path
+        :return: None
+        """
         # print "Create relative paths with", reference_path
         properties = self.__class__.properties
         for prop, entry in properties.items():
@@ -914,6 +1103,15 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
 
 
     def manage_signal(self, sig, frame):
+        """Manage signals caught by the daemon
+        signal.SIGUSR1 : dump_memory
+        signal.SIGUSR2 : dump_object (nothing)
+        signal.SIGTERM, signal.SIGINT : terminate process
+
+        :param sig: signal caught by daemon
+        :param frame: current stack frame
+        :return: None
+        """
         logger.debug("I'm process %d and I received signal %s", os.getpid(), str(sig))
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
@@ -924,6 +1122,11 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
 
 
     def set_exit_handler(self):
+        """Set the signal handler to manage_signal (defined in this class)
+        Only set handlers for signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2
+
+        :return: None
+        """
         func = self.manage_signal
         if os.name == "nt":
             try:
@@ -937,9 +1140,18 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
                 signal.signal(sig, func)
 
     def set_proctitle(self):
+        """Set the proctitle of the daemon
+
+        :return: None
+        """
         setproctitle("alignak-%s" % self.name)
 
     def get_header(self):
+        """Get the log file header
+
+        :return: A string list containing project name, version, licence etc.
+        :rtype: list
+        """
         return ["Alignak %s" % __version__,
                 "Copyright (c) 2015-2015:",
                 "Alignak Team",
@@ -947,12 +1159,19 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
 
 
     def print_header(self):
+        """Log headers generated in get_header()
+
+        :return: None
+        """
         for line in self.get_header():
             logger.info(line)
 
 
-    # Main fonction of the http daemon thread will loop forever unless we stop the root daemon
     def http_daemon_thread(self):
+        """Main fonction of the http daemon thread will loop forever unless we stop the root daemon
+
+        :return: None
+        """
         logger.info("HTTP main thread: I'm running")
 
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
@@ -970,15 +1189,19 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
             os._exit(2)
 
 
-    # Wait up to timeout to handle the requests.
-    # If suppl_socks is given it also looks for activity on that list of fd.
-    # Returns a 3-tuple:
-    # If timeout: first arg is 0, second is [], third is possible system time change value
-    # If not timeout (== some fd got activity):
-    #  - first arg is elapsed time since wait,
-    #  - second arg is sublist of suppl_socks that got activity.
-    #  - third arg is possible system time change value, or 0 if no change.
     def handleRequests(self, timeout, suppl_socks=None):
+        """ Wait up to timeout to handle the requests.
+        If suppl_socks is given it also looks for activity on that list of fd.
+
+        :param timeout: timeout to wait for activity
+        :param suppl_socks: list of fd to wait for activity
+        :return:Returns a 3-tuple:
+        * If timeout: first arg is 0, second is [], third is possible system time change value
+        *  If not timeout (== some fd got activity):
+            - first arg is elapsed time since wait,
+            - second arg is sublist of suppl_socks that got activity.
+            - third arg is possible system time change value, or 0 if no change
+        """
         if suppl_socks is None:
             suppl_socks = []
         before = time.time()
@@ -1006,12 +1229,14 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         return elapsed, ins, tcdiff
 
 
-    # Check for a possible system time change and act correspondingly.
-    # If such a change is detected then we return the number of seconds that changed.
-    # 0 if no time change was detected.
-    # Time change can be positive or negative:
-    # positive when we have been sent in the future and negative if we have been sent in the past.
     def check_for_system_time_change(self):
+        """
+        Check if our system time change. If so, change our
+
+        :return: 0 if the difference < 900, difference else
+        :rtype: int
+        TODO: Duplicate of alignak.worker.Worker.check_for_system_time_change
+        """
         now = time.time()
         difference = now - self.t_each_loop
 
@@ -1026,16 +1251,20 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         return difference
 
 
-    # Default action for system time change. Actually a log is done
     def compensate_system_time_change(self, difference):
+        """Default action for system time change. Actually a log is done"""
+
         logger.warning('A system time change of %s has been detected.  Compensating...', difference)
 
 
-    # Use to wait conf from arbiter.
-    # It send us conf in our http_daemon. It put the have_conf prop
-    # if he send us something
-    # (it can just do a ping)
     def wait_for_initial_conf(self, timeout=1.0):
+        """Wait conf from arbiter.
+        Basically sleep 1.0 and check if new_conf is here
+
+        :param timeout: timeout to wait from socket read
+        :return: None
+        TODO: Clean this
+        """
         logger.info("Waiting for initial configuration")
         cur_timeout = timeout
         # Arbiter do not already set our have_conf param
@@ -1050,9 +1279,13 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
             sys.stdout.flush()
 
 
-    # We call the function of modules that got the this
-    # hook function
     def hook_point(self, hook_name):
+        """Used to call module function that may define a hook fonction
+        for hook_name
+
+        :param hook_name: function name we may hook in module
+        :return: None
+        """
         _t = time.time()
         for inst in self.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
@@ -1067,19 +1300,45 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
         statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t)
 
 
-    # Dummy function for daemons. Get all retention data
-    # So a module can save them
     def get_retention_data(self):
+        """Basic function to get retention data,
+        Maybe be overridden by subclasses to implement real get
+
+        :return: A list of Alignak object (scheduling items)
+        :rtype: list
+        """
         return []
 
 
     # Save, to get back all data
     def restore_retention_data(self, data):
+        """Basic function to save retention data,
+        Maybe be overridden by subclasses to implement real save
+
+        :return: None
+        """
         pass
 
 
-    # Dummy function for having the stats main structure before sending somewhere
     def get_stats_struct(self):
+        """Get state of modules and create a scheme for stats data of daemon
+        This may be overridden in subclasses
+
+        :return: A dict with the following strcuture
+        ::
+
+           { 'metrics': [],
+             'version': __version__,
+             'name': '',
+             'modules':
+                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                        ]
+           }
+
+        :rtype: dict
+
+        """
         r = {'metrics': [], 'version': __version__, 'name': '', 'type': '', 'modules':
              {'internal': {}, 'external': {}}}
         modules = r['modules']
@@ -1101,6 +1360,11 @@ Clean, allocates, initializes and starts all necessary resources to go in daemon
 
     @staticmethod
     def print_unrecoverable(trace):
+        """Log generic message when getting an unrecoverable error
+
+        :param trace: stack trace of the Exception
+        :return: None
+        """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
         logger.critical("If you think this is a bug, create a new ticket including"
