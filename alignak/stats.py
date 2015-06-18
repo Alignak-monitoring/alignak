@@ -52,12 +52,6 @@ import socket
 
 from alignak.log import logger
 
-# For old users python-crypto was not mandatory, don't break their setup
-try:
-    from Crypto.Cipher import AES
-except ImportError:
-    logger.error('Cannot find python lib crypto: export to kernel.alignak.io isnot available')
-    AES = None
 
 from alignak.http_client import HTTPClient, HTTPException
 
@@ -177,6 +171,12 @@ class Stats(object):
 
 
     def reaper(self):
+        try:
+            from Crypto.Cipher import AES
+        except ImportError:
+            logger.error('Cannot find python lib crypto: stats export is not available')
+            AES = None
+
         while True:
             now = int(time.time())
             stats = self.stats
