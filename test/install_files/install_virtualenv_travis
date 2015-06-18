@@ -201,8 +201,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dispatcher.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/downtime.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/downtime.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/easter.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/easter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/eventhandler.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/eventhandler.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/external_command.py

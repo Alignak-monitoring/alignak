@@ -166,7 +166,7 @@ return $error_found
 #TODO
 # check owner also, maybe we will need specific user tests
 
-error_found=0
+error_found_global=0
 ALIGNAKVERSION=$(get_alignak_version_formatted)
 SUDO="sudo"
 
@@ -195,17 +195,18 @@ for pyenv in "root" "virtualenv"; do
         test_setup "test/install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
 
         if [[ $? -ne 0 ]];then
+            echo "An error occurred during ${install_type} ${pyenv}"
             if [[ $STOP_ON_FAILURE -eq 1 ]];then
                 exit 1
             else
-                error_found=1
+                error_found_global=1
             fi
         fi
 
         $SUDO pip uninstall -y alignak 2>&1 1>/dev/null
         $SUDO ./test/uninstall_alignak.sh
-        $SUDO git clean -fdx
-        $SUDO git reset --hard
+        $SUDO git clean -fdx 2>&1 1>/dev/null
+        $SUDO git reset --hard 2>&1 1>/dev/null
 
         if [[ "$pyenv" == "virtualenv" ]]; then
             deactivate
@@ -219,4 +220,4 @@ for pyenv in "root" "virtualenv"; do
     done
 done
 
-exit $error_found
+exit $error_found_global
