@@ -61,8 +61,6 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-    def get_name(self):
-        return self.arbiter_name
 
     def get_config(self):
         return self.con.get('get_config')
