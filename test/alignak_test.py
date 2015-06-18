@@ -471,7 +471,7 @@ class AlignakTest(unittest.TestCase):
         self.assertTrue(self.conf.conf_is_correct)
 
 
-
+ShinkenTest = AlignakTest
 
 
 if __name__ == '__main__':
