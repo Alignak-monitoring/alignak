@@ -54,8 +54,6 @@ class BrokerLink(SatelliteLink):
         'port': IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
-    def get_name(self):
-        return self.broker_name
 
     def register_to_my_realm(self):
         self.realm.brokers.append(self)

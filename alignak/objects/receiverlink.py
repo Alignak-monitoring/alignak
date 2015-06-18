@@ -63,9 +63,6 @@ class ReceiverLink(SatelliteLink):
                                                          fill_brok=['full_status'], to_send=True),
     })
 
-    def get_name(self):
-        return self.receiver_name
-
     def register_to_my_realm(self):
         self.realm.receivers.append(self)
 

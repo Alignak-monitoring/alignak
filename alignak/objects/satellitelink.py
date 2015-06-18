@@ -110,6 +110,10 @@ class SatelliteLink(Item):
             except Exception:
                 pass
 
+    def get_name(self):
+        return getattr(self,
+                       "{0}_name".format(self.get_my_type()),
+                       "Unnamed {0}".format(self.get_my_type()))
 
     def set_arbiter_satellitemap(self, satellitemap):
         """

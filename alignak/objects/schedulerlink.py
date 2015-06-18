@@ -72,9 +72,6 @@ class SchedulerLink(SatelliteLink):
         'push_flavor': IntegerProp(default=0),
     })
 
-    def get_name(self):
-        return self.scheduler_name
-
     def run_external_commands(self, commands):
         if self.con is None:
             self.create_connection()

@@ -60,9 +60,6 @@ class ReactionnerLink(SatelliteLink):
         'reactionner_tags':      ListProp(default=['None'], to_send=True),
     })
 
-    def get_name(self):
-        return self.reactionner_name
-
     def register_to_my_realm(self):
         self.realm.reactionners.append(self)
 
