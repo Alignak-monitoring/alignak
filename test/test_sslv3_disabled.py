@@ -87,7 +87,7 @@ class testSchedulerInit(AlignakTest):
         d.load_modules_manager()
 
         # Launch an arbiter so that the scheduler get a conf and init
-        subprocess.Popen(["../bin/alignak-arbiter.py", "-c", daemons_config[Arbiter][0], "-d"])
+        subprocess.Popen(["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0], "-d"])
         if not hasattr(ssl, 'SSLContext'):
             print 'BAD ssl version for testing, bailing out'
             return
