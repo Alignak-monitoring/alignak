@@ -102,7 +102,7 @@ daemons_config = {
 class template_Daemon_Bad_Start():
 
     @classmethod
-    def setupClass(cls):
+    def setUpClass(cls):
         time_hacker.set_real_time()  # just to be sure..
         # the daemons startup code does actually a `chrdir`,
         # in Daemon.change_to_workdir,
