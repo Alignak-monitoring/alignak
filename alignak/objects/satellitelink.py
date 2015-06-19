@@ -41,7 +41,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provides an abstraction layer for communications between Alignak daemons
+Used by the Arbiter
+"""
 import time
 
 import cPickle
@@ -56,8 +59,8 @@ from alignak.http_client import HTTPClient, HTTPExceptions
 
 
 class SatelliteLink(Item):
-    """SatelliteLink is a common Class for link to satellite for
-    Arbiter with Conf Dispatcher.
+    """SatelliteLink is a common Class for links between
+    Arbiter and other satellites. Used by the Dispatcher object.
 
     """
     # id = 0 each Class will have it's own id
@@ -111,6 +114,14 @@ class SatelliteLink(Item):
                 pass
 
     def get_name(self):
+        """Get the name of the link based on its type
+        if *mytype*_name is an attribute then returns self.*mytype*_name.
+        otherwise returns "Unnamed *mytype*"
+        Example : self.poller_name or "Unnamed poller"
+
+        :return: String corresponding to the link name
+        :rtype: str
+        """
         return getattr(self,
                        "{0}_name".format(self.get_my_type()),
                        "Unnamed {0}".format(self.get_my_type()))
@@ -129,6 +140,11 @@ class SatelliteLink(Item):
 
 
     def create_connection(self):
+        """Initialize HTTP connection with a satellite (con attribute) and
+        set uri attribute
+
+        :return: None
+        """
         self.con = HTTPClient(address=self.arb_satmap['address'], port=self.arb_satmap['port'],
                               timeout=self.timeout, data_timeout=self.data_timeout,
                               use_ssl=self.use_ssl,
@@ -138,6 +154,11 @@ class SatelliteLink(Item):
 
 
     def put_conf(self, conf):
+        """Send the conf (serialized) to the satellite
+
+        :param conf: The conf to send (data depend on the satellite)
+        :return: None
+        """
         if self.con is None:
             self.create_connection()
 
@@ -156,16 +177,22 @@ class SatelliteLink(Item):
             return False
 
 
-    # Get and clean all of our broks
     def get_all_broks(self):
+        """Get and clean all of our broks
+
+        :return: list of all broks in the satellite
+        :rtype: list
+        """
         res = self.broks
         self.broks = []
         return res
 
 
-    # Set alive, reachable, and reset attempts.
-    # If we change state, raise a status brok update
     def set_alive(self):
+        """Set alive, reachable, and reset attempts.
+        If we change state, raise a status brok update
+
+        """
         was_alive = self.alive
         self.alive = True
         self.attempt = 0
@@ -179,6 +206,15 @@ class SatelliteLink(Item):
 
 
     def set_dead(self):
+        """Set the satellite into dead state:
+
+        * Alive -> False
+        * con -> None
+
+        Create an update Brok
+
+        :return:None
+        """
         was_alive = self.alive
         self.alive = False
         self.con = None
@@ -191,9 +227,14 @@ class SatelliteLink(Item):
             self.broks.append(b)
 
 
-    # Go in reachable=False and add a failed attempt
-    # if we reach the max, go dead
     def add_failed_check_attempt(self, reason=''):
+        """Go in reachable=False and add a failed attempt
+        if we reach the max, go dead
+
+        :param reason: the reason of adding an attemps (stack trace sometimes)
+        :type reason: str
+        :return: None
+        """
         self.reachable = False
         self.attempt += 1
         self.attempt = min(self.attempt, self.max_check_attempts)
@@ -207,10 +248,13 @@ class SatelliteLink(Item):
             self.set_dead()
 
 
-    # Update satellite info each self.check_interval seconds
-    # so we smooth arbiter actions for just useful actions
-    # and not cry for a little timeout
     def update_infos(self):
+        """Update satellite info each self.check_interval seconds
+        so we smooth arbiter actions for just useful actions.
+        Create update Brok
+
+        :return: None
+        """
         # First look if it's not too early to ping
         now = time.time()
         since_last_check = now - self.last_check
@@ -228,13 +272,26 @@ class SatelliteLink(Item):
         self.broks.append(b)
 
 
-    # The elements just got a new conf_id, we put it in our list
-    # because maybe the satellite is too busy to answer now
     def known_conf_managed_push(self, cfg_id, push_flavor):
+        """The elements just got a new conf_id, we put it in our list
+         because maybe the satellite is too busy to answer now
+
+        :param cfg_id: config id
+        :type cfg_id: int
+        :param push_flavor: push_flavor we pushed earlier to the satellite
+        :type push_flavor: int
+        :return:
+        """
         self.managed_confs[cfg_id] = push_flavor
 
 
     def ping(self):
+        """Send a HTTP request to the satellite (GET /ping)
+        Add failed attempt if an error occurs
+        Otherwise, set alive this satellite
+
+        :return: None
+        """
         logger.debug("Pinging %s", self.get_name())
         try:
             if self.con is None:
@@ -258,6 +315,10 @@ class SatelliteLink(Item):
 
 
     def wait_new_conf(self):
+        """Send a HTTP request to the satellite (GET /wait_new_conf)
+
+        :return: None
+        """
         if self.con is None:
             self.create_connection()
         try:
@@ -268,10 +329,15 @@ class SatelliteLink(Item):
             return False
 
 
-    # To know if the satellite have a conf (magic_hash = None)
-    # OR to know if the satellite have THIS conf (magic_hash != None)
-    # Magic_hash is for arbiter check only
     def have_conf(self, magic_hash=None):
+        """Send a HTTP request to the satellite (GET /have_conf)
+        Used to know if the satellite has a conf
+
+        :param magic_hash: Config hash. Only used for HA arbiter communication
+        :type magic_hash: int
+        :return: Boolean indicating if the satellite has a (specific) configuration
+        :type: bool
+        """
         if self.con is None:
             self.create_connection()
 
@@ -293,8 +359,15 @@ class SatelliteLink(Item):
             return False
 
 
-    # To know if a receiver got a conf or not
     def got_conf(self):
+        """Send a HTTP request to the satellite (GET /got_conf)
+        Used to know if the satellite has a conf
+        Actually only used for a receiverlink
+
+        :return: Boolean indicating if the satellite has a (specific) configuration
+        :type: bool
+        TODO: Merge with have_conf?
+        """
         if self.con is None:
             self.create_connection()
 
@@ -314,6 +387,15 @@ class SatelliteLink(Item):
 
 
     def remove_from_conf(self, sched_id):
+        """Send a HTTP request to the satellite (GET /remove_from_conf)
+        Tell a satellite to remove a scheduler from conf
+
+        :param sched_id: scheduler id to remove
+        :type sched_id: int
+        :return: True on success, False on failure, None if can't connect
+        :rtype: bool
+        TODO: Return False instead of None
+        """
         if self.con is None:
             self.create_connection()
 
@@ -330,6 +412,12 @@ class SatelliteLink(Item):
 
 
     def update_managed_list(self):
+        """Send a HTTP request to the satellite (GET /what_i_managed)
+        and update managed_conf attribute with dict (cleaned)
+        Set to {} on failure
+
+        :return: None
+        """
         if self.con is None:
             self.create_connection()
 
@@ -370,8 +458,14 @@ class SatelliteLink(Item):
             self.managed_confs = {}
 
 
-    # Return True if the satellite said to managed a configuration
     def do_i_manage(self, cfg_id, push_flavor):
+        """Tell if the satellite is managing cfg_id with push_flavor
+
+        :param cfg_id: config id
+        :param push_flavor: flavor id, random it generated at parsing
+        :return: True if the satellite has push_flavor in managed_confs[cfg_id]
+        :rtype: bool
+        """
         # If not even the cfg_id in the managed_conf, bail out
         if cfg_id not in self.managed_confs:
             return False
@@ -380,6 +474,16 @@ class SatelliteLink(Item):
 
 
     def push_broks(self, broks):
+        """Send a HTTP request to the satellite (GET /ping)
+        and THEN Send a HTTP request to the satellite (POST /push_broks)
+        Send broks to the satellite
+        The first ping ensure the satellite is there to avoid a big timeout
+
+        :param broks: Brok list to send
+        :type broks: list
+        :return: True on surcces, False on failure
+        :rtype: bool
+        """
         if self.con is None:
             self.create_connection()
 
@@ -398,6 +502,14 @@ class SatelliteLink(Item):
 
 
     def get_external_commands(self):
+        """Send a HTTP request to the satellite (GET /ping)
+        and THEN send a HTTP request to the satellite (GET /get_external_commands)
+        Get external commands from satellite.
+        Unpickle data received.
+
+        :return: External Command list on succes, [] on failure
+        :rtype: list
+        """
         if self.con is None:
             self.create_connection()
 
@@ -423,6 +535,12 @@ class SatelliteLink(Item):
 
 
     def prepare_for_conf(self):
+        """Init cfg dict attribute with __class__.properties
+        and extra __class__ attribute
+        (like __init__ could do with an object)
+
+        :return: None
+        """
         self.cfg = {'global': {}, 'schedulers': {}, 'arbiters': {}}
         properties = self.__class__.properties
         for prop, entry in properties.items():
@@ -439,20 +557,35 @@ class SatelliteLink(Item):
         self.cfg['global']['statsd_enabled'] = cls.statsd_enabled
 
 
-    # Some parameters for satellites are not defined in the satellites conf
-    # but in the global configuration. We can pass them in the global
-    # property
     def add_global_conf_parameters(self, params):
+        """Add some extra params in cfg dict attribute.
+        Some attributes are in the global configuration
+
+        :param params: dict to update cfg with
+        :type params: dict
+        :return: None
+        """
         for prop in params:
             self.cfg['global'][prop] = params[prop]
 
 
     def get_my_type(self):
+        """Get the satellite type. Accessor to __class__.mytype
+        ie : poller, scheduler, receiver, broker, arbiter or reactionner
+
+        :return: Satellite type
+        :rtype: str
+        """
         return self.__class__.my_type
 
 
-    # Here for poller and reactionner. Scheduler have its own function
     def give_satellite_cfg(self):
+        """Get a configuration for this satellite.
+        Not used by Scheduler and Arbiter (overridden)
+
+        :return: Configuration for satellite
+        :rtype: dict
+        """
         return {'port': self.port,
                 'address': self.address,
                 'use_ssl': self.use_ssl,
@@ -468,9 +601,14 @@ class SatelliteLink(Item):
                 }
 
 
-    # Call by pickle for dataify the downtime
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Used by pickle to serialize
+        Only dump attribute in properties and running_properties
+        except realm and con. Also add id attribute
+
+        :return: Dict with object properties and running_properties
+        :rtype: dict
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -484,8 +622,17 @@ class SatelliteLink(Item):
                     res[prop] = getattr(self, prop)
         return res
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Used by pickle to unserialize
+        Opposite of __getstate__
+        Update object with state keys
+        Reset con attribute
+
+        :param state: new satellite state
+        :type state: dict
+
+        :return: None
+        """
         cls = self.__class__
 
         self.id = state['id']
@@ -500,17 +647,31 @@ class SatelliteLink(Item):
 
 
 class SatelliteLinks(Items):
-    """Please Add a Docstring to describe the class here"""
+    """Class to handle serveral SatelliteLink"""
 
     # name_property = "name"
     # inner_class = SchedulerLink
 
-    # We must have a realm property, so we find our realm
     def linkify(self, realms, modules):
+        """Link realms and modules in all SatelliteLink
+        (Link a real Realm / Module python object to the SatelliteLink attribute)
+
+        :param realms: Realm object list
+        :type realms: list
+        :param modules: Module object list
+        :type modules: list
+        :return: None
+        """
         self.linkify_s_by_p(realms)
         self.linkify_s_by_plug(modules)
 
     def linkify_s_by_p(self, realms):
+        """Link realms in all SatelliteLink
+
+        :param realms: Realm object list
+        :type realms: list
+        :return: None
+        """
         for s in self:
             p_name = s.realm.strip()
             # If no realm name, take the default one
