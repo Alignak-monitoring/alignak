@@ -285,7 +285,7 @@ class Interface(object):
             e['need_lock'] = getattr(f, 'need_lock', True)
             e['method'] = getattr(f, 'method', 'GET').upper()
             e['encode'] = getattr(f, 'encode', 'json')
-            doc = getattr(f, 'doc', '')
+            doc = getattr(f, '__doc__', '')
             if doc:
                 e['doc'] = doc
             res[fclean] = e
