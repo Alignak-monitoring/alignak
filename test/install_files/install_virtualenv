@@ -172,7 +172,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/brokerlink.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/check.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/check.pyc
-755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/commandcall.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/commandcall.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/comment.py
@@ -281,14 +280,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_receiver.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_scheduler.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_scheduler.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/LSB.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/LSB.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/__init__.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/__init__.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/livestatus.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/livestatus.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/problems_services_unhandled.queries
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/clients/thruk_tac.queries
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/__init__.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/__init__.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/arbiterdaemon.py
