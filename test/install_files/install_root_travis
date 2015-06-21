@@ -172,7 +172,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/brokerlink.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/check.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/check.pyc
-755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/commandcall.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/commandcall.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/comment.py
@@ -279,14 +278,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_receiver.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_scheduler.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_scheduler.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/LSB.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/LSB.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/__init__.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/__init__.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/livestatus.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/livestatus.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/problems_services_unhandled.queries
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/clients/thruk_tac.queries
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/__init__.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/__init__.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/arbiterdaemon.py
