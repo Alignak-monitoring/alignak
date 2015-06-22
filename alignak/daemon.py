@@ -1324,7 +1324,7 @@ class Daemon(object):
         """Get state of modules and create a scheme for stats data of daemon
         This may be overridden in subclasses
 
-        :return: A dict with the following strcuture
+        :return: A dict with the following structure
         ::
 
            { 'metrics': [],
