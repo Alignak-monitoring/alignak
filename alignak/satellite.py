@@ -571,8 +571,8 @@ class Satellite(BaseSatellite):
         :param mortal: make the Worker mortal or not. Default True
         :param __warned: Remember the module we warned about.
                          This param is a tuple and as it is only init once (the default value)
-                         we use this python behavior that make this set grows with module_name not found
-                         on previous call
+                         we use this python behavior that make this set grows with module_name
+                         not found on previous call
         :type __warned: set
         :return: None
         """
