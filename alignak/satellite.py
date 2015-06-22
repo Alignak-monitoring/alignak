@@ -99,127 +99,150 @@ from alignak.log import logger
 from alignak.stats import statsmgr
 
 
-# Class to tell that we are facing a non worker module
-# but a standard one
 class NotWorkerMod(Exception):
+    """Class to tell that we are facing a non worker module
+    but a standard one
+
+    """
     pass
 
 
-# Interface for Arbiter, our big MASTER
-# It gives us our conf
 class IForArbiter(Interface):
+    """Interface for Arbiter, our big MASTER
+    All functions defined here are use by Arbiters
 
-    doc = 'Remove a scheduler connection (internal)'
-    # Arbiter ask us to do not manage a scheduler_id anymore
-    # I do it and don't ask why
+    """
+
     def remove_from_conf(self, sched_id):
+        """Remove a scheduler connection (internal)
+
+        :param sched_id: scheduler id to remove
+        :return: None
+        """
         try:
             del self.app.schedulers[sched_id]
         except KeyError:
             pass
-    remove_from_conf.doc = doc
 
 
-    doc = 'Return the managed configuration ids (internal)'
-    # Arbiter ask me which sched_id I manage, If it is not ok with it
-    # It will ask me to remove one or more sched_id
     def what_i_managed(self):
+        """Arbiter ask me which scheduler id I manage
+
+        :return: managed configuration ids
+        :rtype: dict
+        """
         logger.debug("The arbiter asked me what I manage. It's %s", self.app.what_i_managed())
         return self.app.what_i_managed()
     what_i_managed.need_lock = False
-    what_i_managed.doc = doc
 
-    doc = 'Ask the daemon to drop its configuration and wait for a new one'
-    # Call by arbiter if it thinks we are running but we must do not (like
-    # if I was a spare that take a conf but the master returns, I must die
-    # and wait a new conf)
-    # Us: No please...
-    # Arbiter: I don't care, hasta la vista baby!
-    # Us: ... <- Nothing! We are dead! you don't get it or what??
-    # Reading code is not a job for eyes only...
     def wait_new_conf(self):
+        """Ask the daemon to drop its configuration and wait for a new one
+
+        :return: None
+        """
         logger.debug("Arbiter wants me to wait for a new configuration")
         self.app.schedulers.clear()
         self.app.cur_conf = None
-    wait_new_conf.doc = doc
 
 
-    doc = 'Push broks objects to the daemon (internal)'
-    # NB: following methods are only used by broker
-    # Used by the Arbiter to push broks to broker
     def push_broks(self, broks):
+        """Push broks objects to the daemon (internal)
+        Only used on a Broker daemon by the Arbiter
+
+        :param broks: Brok list
+        :type broks: list
+        :return:
+        """
         with self.app.arbiter_broks_lock:
             self.app.arbiter_broks.extend(broks.values())
     push_broks.method = 'post'
     # We are using a Lock just for NOT lock this call from the arbiter :)
     push_broks.need_lock = False
-    push_broks.doc = doc
 
-    doc = 'Get the external commands from the daemon (internal)'
-    # The arbiter ask us our external commands in queue
-    # Same than push_broks, we will not using Global lock here,
-    # and only lock for external_commands
     def get_external_commands(self):
+        """Get the external commands from the daemon (internal)
+        Use a lock for this call (not a global one, just for this method)
+
+        :return: Pickled external command list
+        """
         with self.app.external_commands_lock:
             cmds = self.app.get_external_commands()
             raw = cPickle.dumps(cmds)
         return raw
     get_external_commands.need_lock = False
-    get_external_commands.doc = doc
 
 
-    doc = 'Does the daemon got configuration (receiver)'
-    # NB: only useful for receiver
     def got_conf(self):
+        """'Does the daemon got configuration (receiver)
+        Only use for a Receiver daemon
+
+        :return: True if conf is not None, False otherzise
+        """
         return self.app.cur_conf is not None
     got_conf.need_lock = False
-    got_conf.doc = doc
 
 
-    doc = 'Push hostname/scheduler links (receiver in direct routing)'
-    # Use by the receivers to got the host names managed by the schedulers
     def push_host_names(self, sched_id, hnames):
+        """Push hostname/scheduler links
+        Use by the receivers to got the host names managed by the schedulers
+
+        :param sched_id: sheduler_id that manages hnames
+        :type sched_id: int
+        :param hnames: host names list
+        :type hnames: list
+        :return:
+        """
         self.app.push_host_names(sched_id, hnames)
     push_host_names.method = 'post'
-    push_host_names.doc = doc
 
 
 class ISchedulers(Interface):
     """Interface for Schedulers
     If we are passive, they connect to this and send/get actions
+    All functions defined here are use by Schedulers
 
     """
 
-    doc = 'Push new actions to the scheduler (internal)'
-    # A Scheduler send me actions to do
     def push_actions(self, actions, sched_id):
+        """Get new actions from scheduler(internal)
+
+        :param actions: list of action to add
+        :type actions: list
+        :param sched_id: id of the scheduler sending actions
+        :return:None
+        """
         self.app.add_actions(actions, int(sched_id))
     push_actions.method = 'post'
-    push_actions.doc = doc
 
-    doc = 'Get the returns of the actions (internal)'
-    # A scheduler ask us the action return value
     def get_returns(self, sched_id):
+        """Get actions returns (serialized)
+        for the scheduler with id = sched_id
+
+        :param sched_id: id of the scheduler
+        :return: serialized list
+        """
         # print "A scheduler ask me the returns", sched_id
         ret = self.app.get_return_for_passive(int(sched_id))
         # print "Send mack", len(ret), "returns"
         return cPickle.dumps(ret)
-    get_returns.doc = doc
 
 
 class IBroks(Interface):
     """Interface for Brokers
     They connect here and get all broks (data for brokers)
     data must be ORDERED! (initial status BEFORE update...)
+    All functions defined here are use by Brokers
 
     """
 
-    doc = 'Get broks from the daemon'
-    # poller or reactionner ask us actions
     def get_broks(self, bname):
+        """Get broks from the daemon
+
+        :return: Brok list serialized and b64encoded
+        """
         res = self.app.get_broks()
         return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-    get_broks.doc = doc
+
 
 
 class IStats(Interface):
@@ -227,8 +250,12 @@ class IStats(Interface):
     Interface for various stats about poller/reactionner activity
     """
 
-    doc = 'Get raw stats from the daemon'
     def get_raw_stats(self):
+        """Get raw stats from the daemon
+
+        :return: daemon stats
+        :rtype: dict
+        """
         app = self.app
         res = {}
 
@@ -246,13 +273,15 @@ class IStats(Interface):
                         'queue_size': q.qsize(),
                         'return_queue_len': app.get_returns_queue_len()})
         return res
-    get_raw_stats.doc = doc
 
 
 
 
 class BaseSatellite(Daemon):
-    """Please Add a Docstring to describe the class here"""
+    """Base Satellite class.
+    Subclassed by Alignak (scheduler), Broker and Satellite
+
+    """
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
         super(BaseSatellite, self).__init__(name, config_file, is_daemon,
@@ -270,32 +299,47 @@ class BaseSatellite(Daemon):
         self.external_commands_lock = threading.RLock()
 
 
-    # The arbiter can resent us new conf in our communication channel.
-    # We do not want to loose time about it, so it's not a blocking
-    # wait, timeout = 0s
-    # If it send us a new conf, we reinit the connections of all schedulers
     def watch_for_new_conf(self, timeout):
+        """Triggered by Arbiter get to make the satellite wait new conf
+        Timeout is short is (1.0 or 0)
+
+        :param timeout: timeout to wait
+        :type timeout: float
+        :return: None
+        TODO: Clean this, handle return a tuple and it is not used
+        """
         self.handleRequests(timeout)
 
 
     def do_stop(self):
+        """Unregister http functions and call super(BaseSatellite, self).do_stop()
+
+        :return: None
+        """
         if self.http_daemon and self.interface:
             logger.info("[%s] Stopping all network connections", self.name)
             self.http_daemon.unregister(self.interface)
         super(BaseSatellite, self).do_stop()
 
 
-    # Give the arbiter the data about what I manage
-    # for me it's the ids of my schedulers
     def what_i_managed(self):
+        """Get the managed configuration by this satellite
+
+        :return: a dict of scheduler id as key and push_flavor as values
+        :rtype: dict
+        """
         r = {}
         for (k, v) in self.schedulers.iteritems():
             r[k] = v['push_flavor']
         return r
 
 
-    # Call by arbiter to get our external commands
     def get_external_commands(self):
+        """Get the external commands
+
+        :return: External commands list
+        :rtype: list
+        """
         res = self.external_commands
         self.external_commands = []
         return res
@@ -304,7 +348,10 @@ class BaseSatellite(Daemon):
 
 
 class Satellite(BaseSatellite):
-    """Our main APP class"""
+    """Satellite class.
+    Subclassed by Receiver, Reactionner and Poller
+
+    """
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
 
@@ -331,8 +378,13 @@ class Satellite(BaseSatellite):
         self.q_by_mod = {}
 
 
-    # Wrapper function for the true con init
     def pynag_con_init(self, id):
+        """Wrapped function for do_pynag_con_init
+
+        :param id: scheduler id to connect to
+        :return: scheduler connection object or None
+        :rtype: alignak.http_client.HTTPClient
+        """
         _t = time.time()
         r = self.do_pynag_con_init(id)
         statsmgr.incr('con-init.scheduler', time.time() - _t)
@@ -388,10 +440,15 @@ class Satellite(BaseSatellite):
         logger.info("[%s] Connection OK with scheduler %s", self.name, sname)
         return sch_con
 
-    # Manage action returned from Workers
-    # We just put them into the corresponding sched
-    # and we clean unused properties like sched_id
     def manage_action_return(self, action):
+        """Manage action return from Workers
+        We just put them into the corresponding sched
+        and we clean unused properties like sched_id
+
+        :param action: the action to manage
+        :type action: alignak.action.Action
+        :return: None
+        """
         # Maybe our workers end us something else than an action
         # if so, just add this in other queues and return
         cls_type = action.__class__.my_type
@@ -425,15 +482,23 @@ class Satellite(BaseSatellite):
         except KeyError:
             pass
 
-    # Wrapper function for stats
     def manage_returns(self):
+        """ Wrapper function of do_manage_returns()
+
+        :return: None
+        TODO: Use a decorator for stat
+        """
         _t = time.time()
         self.do_manage_returns()
         statsmgr.incr('core.manage-returns', time.time() - _t)
 
-    # Return the chk to scheduler and clean them
-    # REF: doc/alignak-action-queues.png (6)
     def do_manage_returns(self):
+        """Manage the checks and then
+        send a HTTP request to schedulers (POST /put_results)
+        REF: doc/alignak-action-queues.png (6)
+
+        :return: None
+        """
         # For all schedulers, we check for wait_homerun
         # and we send back results
         for sched_id, sched in self.schedulers.iteritems():
@@ -477,9 +542,13 @@ class Satellite(BaseSatellite):
                     # then "de-init" the sched connection:
                     sched['con'] = None
 
-    # Get all returning actions for a call from a
-    # scheduler
     def get_return_for_passive(self, sched_id):
+        """Get returns of passive actions for a specific scheduler
+
+        :param sched_id: scheduler id
+        :return: Action list
+        :rtype: list
+        """
         # I do not know this scheduler?
         sched = self.schedulers.get(sched_id)
         if sched is None:
@@ -492,10 +561,21 @@ class Satellite(BaseSatellite):
 
         return ret.values()
 
-    # Create and launch a new worker, and put it into self.workers
-    # It can be mortal or not
     def create_and_launch_worker(self, module_name='fork', mortal=True,
                                  __warned=set()):
+        """Create and launch a new worker, and put it into self.workers
+         It can be mortal or not
+
+        :param module_name: the module name related to the worker
+                            default is "fork" for no module
+        :param mortal: make the Worker mortal or not. Default True
+        :param __warned: Remember the module we warned about.
+                         This param is a tuple and as it is only init once (the default value)
+                         we use this python behavior that make this set grows with module_name not found
+                         on previous call
+        :type __warned: set
+        :return: None
+        """
         # create the input queue of this worker
         try:
             if is_android:
@@ -546,9 +626,11 @@ class Satellite(BaseSatellite):
         w.start()
 
 
-    # The main stop of this daemon. Stop all workers
-    # modules and sockets
     def do_stop(self):
+        """Stop all workers modules and sockets
+
+        :return: None
+        """
         logger.info("[%s] Stopping all workers", self.name)
         for w in self.workers.values():
             try:
@@ -567,10 +649,13 @@ class Satellite(BaseSatellite):
         super(Satellite, self).do_stop()
 
 
-    # A simple function to add objects in self
-    # like broks in self.broks, etc
-    # TODO: better tag ID?
     def add(self, elt):
+        """Add an object to the satellite one
+        Handles brok and externalcommand
+
+        :param elt: object to add
+        :return: None
+        """
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
@@ -585,19 +670,21 @@ class Satellite(BaseSatellite):
 
     # Someone ask us our broks. We send them, and clean the queue
     def get_broks(self):
+        """Get brok list from satellite
+
+        :return: A copy of the Brok list
+        :rtype: list
+        """
         res = copy.copy(self.broks)
         self.broks.clear()
         return res
 
 
-    # workers are processes, they can die in a numerous of ways
-    # like:
-    # *99.99%: bug in code, sorry:p
-    # *0.005 %: a mix between a stupid admin (or an admin without coffee),
-    # and a kill command
-    # *0.005%: alien attack
-    # So they need to be detected, and restart if need
     def check_and_del_zombie_workers(self):
+        """Check if worker are fine and kill them if not.
+        Dispatch the actions in the worker to another one
+        :return: None
+        """
         # In android, we are using threads, so there is not active_children call
         if not is_android:
             # Active children make a join with everyone, useful :)
@@ -635,8 +722,10 @@ class Satellite(BaseSatellite):
             del self.workers[id]
 
 
-    # Here we create new workers if the queue load (len of verifs) is too long
     def adjust_worker_number_by_load(self):
+        """Try to create the minimum workers specified in the configuration
+        :return: None
+        """
         to_del = []
         logger.debug("[%s] Trying to adjust worker number."
                      " Actual number : %d, min per module : %d, max per module : %d",
@@ -676,10 +765,14 @@ class Satellite(BaseSatellite):
         # TODO: if len(workers) > 2*wish, maybe we can kill a worker?
 
 
-    # Get the Queue() from an action by looking at which module
-    # it wants with a round robin way to scale the load between
-    # workers
     def _got_queue_from_action(self, a):
+        """Find a queue for the action depending on the module.
+        The id is found with a modulo on action id
+
+        :param a: the action that need a queue to be assigned
+        :return: worker id and queue. (0, None) if no queue for the module_type
+        :rtype: tuple
+        """
         # get the module name, if not, take fork
         mod = getattr(a, 'module_type', 'fork')
         queues = self.q_by_mod[mod].items()
@@ -697,8 +790,15 @@ class Satellite(BaseSatellite):
         return (i, q)
 
 
-    # Add a list of actions to our queues
     def add_actions(self, lst, sched_id):
+        """Add a list of actions to the satellite queues
+
+        :param lst: Action list
+        :type lst: list
+        :param sched_id: sheduler id to assign to
+        :type sched_id: int
+        :return: None
+        """
         for a in lst:
             # First we look if we do not already have it, if so
             # do nothing, we are already working!
@@ -709,8 +809,13 @@ class Satellite(BaseSatellite):
             self.assign_to_a_queue(a)
 
 
-    # Take an action and put it into one queue
     def assign_to_a_queue(self, a):
+        """Take an action and put it to a queue
+
+        :param a: action to put
+        :type a: alignak.action.Action
+        :return: None
+        """
         msg = Message(id=0, type='Do', data=a)
         (i, q) = self._got_queue_from_action(a)
         # Tag the action as "in the worker i"
@@ -719,17 +824,25 @@ class Satellite(BaseSatellite):
             q.put(msg)
 
 
-    # Wrapper function for the real function
     def get_new_actions(self):
+        """ Wrapper function for do_get_new_actions
+        For stats purpose
+
+        :return: None
+        TODO: Use a decorator
+        """
+
         _t = time.time()
         self.do_get_new_actions()
         statsmgr.incr('core.get-new-actions', time.time() - _t)
 
 
-    # We get new actions from schedulers, we create a Message and we
-    # put it in the s queue (from master to slave)
-    # REF: doc/alignak-action-queues.png (1)
     def do_get_new_actions(self):
+        """Get new actions from schedulers
+        Create a Message and put into the module queue
+        REF: doc/alignak-action-queues.png (1)
+        :return:
+        """
         # Here are the differences between a
         # poller and a reactionner:
         # Poller will only do checks,
@@ -787,19 +900,29 @@ class Satellite(BaseSatellite):
                 raise
 
 
-    # In android we got a Queue, and a manager list for others
     def get_returns_queue_len(self):
+        """Wrapper for returns_queue.qsize method. Return queue length
+
+        :return: queue length
+        :rtype: int
+        """
         return self.returns_queue.qsize()
 
 
-    # In android we got a Queue, and a manager list for others
     def get_returns_queue_item(self):
+        """Wrapper for returns_queue.get method. Return an queue element
+
+        :return: queue Message
+        :rtype: alignak.message.Message
+        """
         return self.returns_queue.get()
 
 
-    # An arbiter ask us to wait a new conf, so we must clean
-    # all the mess we did, and close modules too
     def clean_previous_run(self):
+        """Clean variables from previous configuration,
+        such as schedulers, broks and external commands
+        :return: None
+        """
         # Clean all lists
         self.schedulers.clear()
         self.broks.clear()
@@ -808,6 +931,17 @@ class Satellite(BaseSatellite):
 
 
     def do_loop_turn(self):
+        """Satellite main loop::
+
+        * Setup new conf if necessary
+        * Watch for new conf
+        * Check and delete zombies actions / modules
+        * Get returns from queues
+        * Adjust worker number
+        * Get new actions
+
+        :return: None
+        """
         logger.debug("Loop turn")
         # Maybe the arbiter ask us to wait for a new conf
         # If true, we must restart all...
@@ -913,10 +1047,13 @@ class Satellite(BaseSatellite):
         self.hook_point('tick')
 
 
-    # Do this satellite (poller or reactionner) post "daemonize" init:
-    # we must register our interfaces for 3 possible callers: arbiter,
-    # schedulers or brokers.
     def do_post_daemon_init(self):
+        """Do this satellite (poller or reactionner) post "daemonize" init:
+        we must register our interfaces for 3 possible callers: arbiter,
+        schedulers or brokers
+
+        :return: None
+        """
 
         # And we register them
         self.uri2 = self.http_daemon.register(self.interface)
@@ -943,8 +1080,11 @@ class Satellite(BaseSatellite):
         socket.setdefaulttimeout(None)
 
 
-    # Setup the new received conf from arbiter
     def setup_new_conf(self):
+        """Setup new conf received from Arbiter
+
+        :return: None
+        """
         conf = self.new_conf
         logger.debug("[%s] Sending us a configuration %s", self.name, conf)
         self.new_conf = None
@@ -1082,8 +1222,27 @@ class Satellite(BaseSatellite):
                 self.q_by_mod[module.module_type] = {}
 
 
-    # stats threads is asking us a main structure for stats
     def get_stats_struct(self):
+        """Get state of modules and create a scheme for stats data of daemon
+        This may be overridden in subclasses
+
+        :return: A dict with the following structure
+        ::
+
+           { 'metrics': ['%s.%s.external-commands.queue %d %d'],
+             'version': __version__,
+             'name': self.name,
+             'type': _type,
+             'passive': self.passive,
+             'modules':
+                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                        ]
+           }
+
+        :rtype: dict
+
+        """
         now = int(time.time())
         # call the daemon one
         res = super(Satellite, self).get_stats_struct()
@@ -1101,6 +1260,10 @@ class Satellite(BaseSatellite):
 
 
     def main(self):
+        """Main satellite function. Do init and then mainloop
+
+        :return: None
+        """
         try:
             for line in self.get_header():
                 logger.info(line)
