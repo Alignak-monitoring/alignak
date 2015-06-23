@@ -85,7 +85,7 @@ from log import logger
 from alignak.stats import statsmgr
 
 # Let's load bottlecore! :)
-from alignak.webui import bottlecore as bottle
+import bottle
 bottle.debug(True)
 
 
