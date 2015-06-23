@@ -190,7 +190,7 @@ class IForArbiter(Interface):
         :type sched_id: int
         :param hnames: host names list
         :type hnames: list
-        :return:
+        :return: None
         """
         self.app.push_host_names(sched_id, hnames)
     push_host_names.method = 'post'
@@ -668,7 +668,6 @@ class Satellite(BaseSatellite):
                 self.external_commands.append(elt)
 
 
-    # Someone ask us our broks. We send them, and clean the queue
     def get_broks(self):
         """Get brok list from satellite
 

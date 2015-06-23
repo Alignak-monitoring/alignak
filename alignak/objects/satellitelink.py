@@ -155,6 +155,7 @@ class SatelliteLink(Item):
 
     def put_conf(self, conf):
         """Send the conf (serialized) to the satellite
+        HTTP request to the satellite (POST / put_conf)
 
         :param conf: The conf to send (data depend on the satellite)
         :return: None

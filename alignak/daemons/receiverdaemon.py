@@ -49,7 +49,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This modules provides class for the Receiver daemon
+and interfaces classes for it to communicate with other daemons
+"""
 import os
 import time
 import traceback
@@ -74,28 +77,37 @@ class IStats(Interface):
     Interface for various stats about broker activity
     """
 
-    doc = '''Get raw stats from the daemon:
-  * command_buffer_size: external command buffer size
-'''
     def get_raw_stats(self):
-        app = self.app
+        """        Get raw stats from the daemon::
+
+        * command_buffer_size: external command buffer size
+
+        :return: external command length
+        :rtype: dict
+        """
+        app = self.app  # TODO: remove this and use self directly...
         res = {'command_buffer_size': len(app.external_commands)}
         return res
-    get_raw_stats.doc = doc
 
 class IBroks(Interface):
     """ Interface for Brokers:
 They connect here and get all broks (data for brokers). Data must be ORDERED!
 (initial status BEFORE update...) """
 
-    # A broker ask us broks
     def get_broks(self, bname):
+        """Wrapper of get_brok for app attribute
+
+        :param bname: Useless. TODO: Remove it
+        :return: base64 zlib compress pickled broks
+        """
         res = self.app.get_broks()
         return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
     get_broks.encode = 'raw'
 
-# Our main APP class
 class Receiver(Satellite):
+    """Receiver class. Referenced as "app" in most Interface
+
+    """
     my_type = 'receiver'
 
     properties = Satellite.properties.copy()
@@ -139,12 +151,13 @@ class Receiver(Satellite):
         e.load_receiver(self)
         self.external_command = e
 
-    # Schedulers have some queues. We can simplify call by adding
-    # elements into the proper queue just by looking at their type
-    # Brok -> self.broks
-    # TODO: better tag ID?
-    # External commands -> self.external_commands
     def add(self, elt):
+        """Add an object to the receiver one
+        Handles brok and externalcommand
+
+        :param elt: object to add
+        :return: None
+        """
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
@@ -157,20 +170,42 @@ class Receiver(Satellite):
 
 
     def push_host_names(self, sched_id, hnames):
+        """Link hostnames to scheduler id.
+        Called by alignak.satellite.IForArbiter.push_host_names
+
+        :param sched_id: scheduler id to link to
+        :type sched_id: int
+        :param hnames: host names list
+        :type hnames: list
+        :return: None
+        """
         for h in hnames:
             self.host_assoc[h] = sched_id
 
 
     def get_sched_from_hname(self, hname):
+        """Get scheduler linked to the given host_name
+
+        :param hname: host_name we want the scheduler from
+        :type hname: str
+        :return: scheduler with id corresponding to the mapping table
+        :rtype: dict
+        """
         i = self.host_assoc.get(hname, None)
         e = self.schedulers.get(i, None)
         return e
 
 
-    # Get a brok. Our role is to put it in the modules
-    # THEY MUST DO NOT CHANGE data of b!!!
-    # REF: doc/receiver-modules.png (4-5)
     def manage_brok(self, b):
+        """Send brok to modules. Modules have to implement their own manage_brok function.
+        They usually do if they inherits from basemodule
+        REF: doc/receiver-modules.png (4-5)
+
+        :param b: brok to manage
+        :type b: alignak.brok.Brok
+
+        :return: None
+        """
         to_del = []
         # Call all modules if they catch the call
         for mod in self.modules_manager.get_internal_instances():
@@ -187,6 +222,12 @@ class Receiver(Satellite):
 
 
     def do_stop(self):
+        """Stop the Receiver
+        Wait for children to stop and call super(Receiver, self).do_stop()
+
+        :return: None
+        """
+
         act = active_children()
         for a in act:
             a.terminate()
@@ -195,6 +236,11 @@ class Receiver(Satellite):
 
 
     def setup_new_conf(self):
+        """Receiver custom setup_new_conf method
+        Implements specific setup for receiver
+
+        :return: None
+        """
         conf = self.new_conf
         self.new_conf = None
         self.cur_conf = conf
@@ -295,9 +341,13 @@ class Receiver(Satellite):
             time.tzset()
 
 
-    # Take all external commands, make packs and send them to
-    # the schedulers
     def push_external_commands_to_schedulers(self):
+        """Send a HTTP request to the schedulers (POST /run_external_commands)
+        with external command list if the receiver is in direct routing.
+        If not in direct_routing just clear the unprocessed_external_command list and return
+
+        :return: BIbe
+        """
         # If we are not in a direct routing mode, just bailout after
         # faking resolving the commands
         if not self.direct_routing:
@@ -353,6 +403,10 @@ class Receiver(Satellite):
 
 
     def do_loop_turn(self):
+        """Receiver daemon main loop
+
+        :return:
+        """
         sys.stdout.write(".")
         sys.stdout.flush()
 
@@ -379,8 +433,12 @@ class Receiver(Satellite):
             # print "get enw broks watch new conf 1: end", len(self.broks)
 
 
-    #  Main function, will loop forever
     def main(self):
+        """Main receiver function
+        Init daemon and loop forever
+
+        :return: None
+        """
         try:
             self.load_config_file()
 
@@ -436,8 +494,28 @@ class Receiver(Satellite):
             raise
 
 
-    # stats threads is asking us a main structure for stats
     def get_stats_struct(self):
+        """Get state of modules and create a scheme for stats data of daemon
+        This may be overridden in subclasses
+
+        :return: A dict with the following structure
+        ::
+
+           { 'metrics': ['%s.%s.external-commands.queue %d %d'],
+             'version': __version__,
+             'name': self.name,
+             'direct_routing': self.direct_routing,
+             'type': _type,
+             'passive': self.passive,
+             'modules':
+                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                        ]
+           }
+
+        :rtype: dict
+
+        """
         now = int(time.time())
         # call the daemon one
         res = super(Receiver, self).get_stats_struct()
