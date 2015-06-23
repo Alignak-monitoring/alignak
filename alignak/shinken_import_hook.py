@@ -7,7 +7,8 @@ import sys
 class Finder(object):
 
     def find_module(self, fullname, path=None):
-        if fullname == 'shinken' or fullname.startswith('shinken.'):
+        hookable_names = ['shinken', 'shinken_modules', 'shinken_test']
+        if fullname in hookable_names or fullname.startswith('shinken.'):
             return self
 
     def load_module(self, name):

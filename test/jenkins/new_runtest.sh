@@ -276,8 +276,6 @@ END
 
         # $ALIGNAKCLI install --local tmp/$module > /dev/null
         # cp alignak_test.py alignak_modules.py tmp/$module/test
-        cp alignak_test.py shinken_test.py
-        cp alignak_modules.py shinken_modules.py
 
         # Symlink of config files to etc
         if [ -d "tmp/$module/test/etc" ]; then
