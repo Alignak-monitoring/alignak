@@ -84,6 +84,9 @@ from alignak.log import logger, naglog_result
 
 
 class Host(SchedulingItem):
+    """Host class implements monitoring concepts for host.
+    For example it defines parents, check_interval, check_command  etc.
+    """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
     __metaclass__ = AutoSlots
@@ -684,17 +687,26 @@ class Host(SchedulingItem):
 ######
 
 
-    # Fill address with host_name if not already set
     def fill_predictive_missing_parameters(self):
+        """Fill address with host_name if not already set
+
+        :return: None
+        """
         if hasattr(self, 'host_name') and not hasattr(self, 'address'):
             self.address = self.host_name
         if hasattr(self, 'host_name') and not hasattr(self, 'alias'):
             self.alias = self.host_name
 
 
-    # Check is required prop are set:
-    # contacts OR contactgroups is need
     def is_correct(self):
+        """Check if this host configuration is correct ::
+
+        * All required parameter are specified
+        * Go thought all configuration warnings and errors that could have been raised earlier
+
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
+        """
         state = True
         cls = self.__class__
 
@@ -768,21 +780,35 @@ class Host(SchedulingItem):
         return state
 
 
-    # Search in my service if I've got the service
     def find_service_by_name(self, service_description):
+        """Get a service object from this host
+
+        :param service_description: service_description of the service we want
+        :return: service with service.service_description == service_description
+        :rtype: alignak.objects.service.Services
+        """
         for s in self.services:
             if getattr(s, 'service_description', '__UNNAMED_SERVICE__') == service_description:
                 return s
         return None
 
 
-    # Return all of the services on a host
     def get_services(self):
+        """Get all services for this host
+
+        :return: list of services
+        :rtype: list
+        """
         return self.services
 
 
-    # For get a nice name
     def get_name(self):
+        """Get the host name.
+        Try several attributes before returning UNNAMED*
+
+        :return: The name of the host
+        :rtype: str
+        """
         if not self.is_tpl():
             try:
                 return self.host_name
@@ -796,6 +822,12 @@ class Host(SchedulingItem):
 
 
     def get_groupname(self):
+        """Get alias of the host's hostgroup
+
+        :return: host group name
+        :rtype: str
+        TODO: Clean this. It returns the last hostgroup encountered
+        """
         groupname = ''
         for hg in self.hostgroups:
             # naglog_result('info', 'get_groupname : %s %s %s' % (hg.id, hg.alias, hg.get_name()))
@@ -805,6 +837,11 @@ class Host(SchedulingItem):
 
 
     def get_groupnames(self):
+        """Get aliases of the host's hostgroups
+
+        :return: comma separated aliases of hostgroups
+        :rtype: str
+        """
         groupnames = ''
         for hg in self.hostgroups:
             # naglog_result('info', 'get_groupnames : %s' % (hg.get_name()))
@@ -815,39 +852,74 @@ class Host(SchedulingItem):
         return groupnames
 
 
-    # For debugging purpose only
     def get_dbg_name(self):
+        """Accessor to host_name attribute
+
+        :return: host_name
+        :rtype: str
+        """
         return self.host_name
 
 
-    # Same but for clean call, no debug
     def get_full_name(self):
+        """Accessor to host_name attribute
+
+        :return: host_name
+        :rtype: str
+        """
         return self.host_name
 
 
-    # Get our realm
     def get_realm(self):
+        """Accessor to realm attribute
+
+        :return: realm object of host
+        :rtype: alignak.objects.realm.Realm
+        """
         return self.realm
 
 
     def get_hostgroups(self):
+        """Accessor to hostgroups attribute
+
+        :return: hostgroup list object of host
+        :rtype: list
+        """
         return self.hostgroups
 
 
     def get_host_tags(self):
+        """Accessor to tags attribute
+
+        :return: tag list  of host
+        :rtype: list
+        """
         return self.tags
 
 
-    # Say if we got the other in one of your dep list
     def is_linked_with_host(self, other):
+        """Check if other is in act_depend_of host attribute
+
+        :param other: other host to search
+        :type other: alignak.objects.host.Host
+        :return: True if other in act_depend_of list, False otherwise
+        """
         for (h, status, type, timeperiod, inherits_parent) in self.act_depend_of:
             if h == other:
                 return True
         return False
 
 
-    # Delete all links in the act_depend_of list of self and other
     def del_host_act_dependency(self, other):
+        """Remove act_dependency between two hosts.
+
+        :param other: other host we want to remove the dependency
+        :type other: alignak.objects.host.Host
+        :return: None
+        TODO: Host object should not handle other host obj.
+             We should call obj.del_* on both obj.
+             This is 'Java' style
+        """
         to_del = []
         # First we remove in my list
         for (h, status, type, timeperiod, inherits_parent) in self.act_depend_of:
@@ -871,9 +943,23 @@ class Host(SchedulingItem):
         self.parent_dependencies.remove(other)
 
 
-    # Add a dependency for action event handler, notification, etc)
-    # and add ourself in it's dep list
     def add_host_act_dependency(self, h, status, timeperiod, inherits_parent):
+        """Add logical act_dependency between two hosts.
+
+        :param h: other host we want to add the dependency
+        :type h: alignak.objects.host.Host
+        :param status: notification failure criteria, notification for a dependent host may vary
+        :type status: list
+        :param timeperiod: dependency period. Timeperiod for dependency may vary
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
+        :type inherits_parent: bool
+        :return: None
+        TODO: Host object should not handle other host obj.
+             We should call obj.add_* on both obj.
+             This is 'Java' style
+        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
+        """
         # I add him in MY list
         self.act_depend_of.append((h, status, 'logic_dep', timeperiod, inherits_parent))
         # And I add me in it's list
@@ -883,12 +969,20 @@ class Host(SchedulingItem):
         h.register_son_in_parent_child_dependencies(self)
 
 
-    # Register the dependency between 2 service for action (notification etc)
-    # but based on a BUSINESS rule, so on fact:
-    # ERP depend on database, so we fill just database.act_depend_of_me
-    # because we will want ERP mails to go on! So call this
-    # on the database service with the srv=ERP service
     def add_business_rule_act_dependency(self, h, status, timeperiod, inherits_parent):
+        """Add business act_dependency between two hosts.
+
+        :param h: other host we want to add the dependency
+        :type h: alignak.objects.host.Host
+        :param status: notification failure criteria, notification for a dependent host may vary
+        :type status: list
+        :param timeperiod: dependency period. Timeperiod for dependency may vary
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
+        :type inherits_parent: bool
+        :return: None
+        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
+        """
         # first I add the other the I depend on in MY list
         # I only register so he know that I WILL be a impact
         self.act_depend_of_me.append((h, status, 'business_dep',
@@ -897,8 +991,20 @@ class Host(SchedulingItem):
         # And the parent/child dep lists too
         self.register_son_in_parent_child_dependencies(h)
 
-    # Add a dependency for check (so before launch)
     def add_host_chk_dependency(self, h, status, timeperiod, inherits_parent):
+        """Add logic chk_dependency between two hosts.
+
+        :param h: other host we want to add the dependency
+        :type h: alignak.objects.host.Host
+        :param status: notification failure criteria, notification for a dependent host may vary
+        :type status: list
+        :param timeperiod: dependency period. Timeperiod for dependency may vary
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
+        :type inherits_parent: bool
+        :return: None
+        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
+        """
         # I add him in MY list
         self.chk_depend_of.append((h, status, 'logic_dep', timeperiod, inherits_parent))
         # And I add me in it's list
@@ -909,8 +1015,13 @@ class Host(SchedulingItem):
         h.register_son_in_parent_child_dependencies(self)
 
 
-    # Add one of our service to services (at linkify)
     def add_service_link(self, service):
+        """Add a service to the service list of this host
+
+        :param service: the service to add
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         self.services.append(service)
 
 
@@ -956,20 +1067,24 @@ class Host(SchedulingItem):
 
 
 
-    # Set unreachable: all our parents are down!
-    # We have a special state, but state was already set, we just need to
-    # update it. We are no DOWN, we are UNREACHABLE and
-    # got a state id is 2
     def set_unreachable(self):
+        """Set unreachable: all our parents are down
+        Unreachable is different from down even if the state id is the same
+
+        :return:None
+        """
         now = time.time()
         self.state_id = 2
         self.state = 'UNREACHABLE'
         self.last_time_unreachable = int(now)
 
 
-    # We just go an impact, so we go unreachable
-    # But only if we enable this state change in the conf
     def set_impact_state(self):
+        """We just go an impact, so we go unreachable
+        But only if we enable this state change in the conf
+
+        :return: None
+        """
         cls = self.__class__
         if cls.enable_problem_impacts_states_change:
             # Keep a trace of the old state (problem came back before
@@ -982,20 +1097,25 @@ class Host(SchedulingItem):
             self.state_id = 2
 
 
-    # Ok, we are no more an impact, if no news checks
-    # override the impact state, we came back to old
-    # states
-    # And only if impact state change is set in configuration
     def unset_impact_state(self):
+        """Unset impact, only if impact state change is set in configuration
+
+        :return: None
+        """
         cls = self.__class__
         if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
             self.state = self.state_before_impact
             self.state_id = self.state_id_before_impact
 
 
-    # set the state in UP, DOWN, or UNDETERMINED
-    # with the status of a check. Also update last_state
     def set_state_from_exit_status(self, status):
+        """Set the state in UP, DOWN, or UNDETERMINED
+        with the status of a check. Also update last_state
+
+        :param status: integer between 0 and 3 (but not 1)
+        :type status: int
+        :return: None
+        """
         now = time.time()
         self.last_state_update = now
         # we should put in last_state the good last state:
@@ -1035,8 +1155,13 @@ class Host(SchedulingItem):
         self.duration_sec = now - self.last_state_change
 
 
-    # See if status is status. Can be low of high format (o/UP, d/DOWN, ...)
     def is_state(self, status):
+        """Return if status match the current host status
+
+        :param status: status to compare ( "o", "d", "u"). Usually comes from config files
+        :type status: str
+        :return: True if status <=> self.status, False otherwise
+        """
         if status == self.state:
             return True
         # Now low status
@@ -1049,8 +1174,12 @@ class Host(SchedulingItem):
         return False
 
 
-    # The last time when the state was not UP
     def last_time_non_ok_or_up(self):
+        """Get the last time the host was in a non-OK state
+
+        :return: self.last_time_down if self.last_time_down > self.last_time_up, 0 otherwise
+        :rtype: bool
+        """
         if self.last_time_down > self.last_time_up:
             last_time_non_up = self.last_time_down
         else:
@@ -1058,18 +1187,26 @@ class Host(SchedulingItem):
         return last_time_non_up
 
 
-    # Add a log entry with a HOST ALERT like:
-    # HOST ALERT: server;DOWN;HARD;1;I don't know what to say...
     def raise_alert_log_entry(self):
+        """Raise HOST ALERT entry (critical level)
+        Format is : "HOST ALERT: *get_name()*;*state*;*state_type*;*attempt*;*output*"
+        Example : "HOST ALERT: server;DOWN;HARD;1;I don't know what to say..."
+
+        :return: None
+        """
         naglog_result('critical',
                       'HOST ALERT: %s;%s;%s;%d;%s' % (self.get_name(),
                                                       self.state, self.state_type,
                                                       self.attempt, self.output))
 
 
-    # If the configuration allow it, raise an initial log like
-    # CURRENT HOST STATE: server;DOWN;HARD;1;I don't know what to say...
     def raise_initial_state(self):
+        """Raise CURRENT HOST ALERT entry (info level)
+        Format is : "CURRENT HOST STATE: *get_name()*;*state*;*state_type*;*attempt*;*output*"
+        Example : "CURRENT HOST STATE: server;DOWN;HARD;1;I don't know what to say..."
+
+        :return: None
+        """
         if self.__class__.log_initial_states:
             naglog_result('info',
                           'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (self.get_name(),
@@ -1077,10 +1214,16 @@ class Host(SchedulingItem):
                                                                   self.attempt, self.output))
 
 
-    # Add a log entry with a Freshness alert like:
-    # Warning: The results of host 'Server' are stale by 0d 0h 0m 58s (threshold=0d 1h 0m 0s).
-    # I'm forcing an immediate check of the host.
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
+        """Raise freshness alert entry (warning level)
+        Format is : "The results of host '*get_name()*' are stale by *t_stale_by*
+                     (threshold=*t_threshold*).  I'm forcing an immediate check of the host."
+        Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s (threshold=0d 1h 0m 0s). ..."
+
+        :param t_stale_by: time in seconds the host has been in a stale state
+        :param t_threshold: threshold (seconds) to trigger this log entry
+        :return: None
+        """
         logger.warning("The results of host '%s' are stale by %s "
                        "(threshold=%s).  I'm forcing an immediate check "
                        "of the host.",
@@ -1089,9 +1232,15 @@ class Host(SchedulingItem):
                        format_t_into_dhms_format(t_threshold))
 
 
-    # Raise a log entry with a Notification alert like
-    # HOST NOTIFICATION: superadmin;server;UP;notify-by-rss;no output
     def raise_notification_log_entry(self, n):
+        """Raise HOST NOTIFICATION entry (critical level)
+        Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;*command.get_name()*;*output*"
+        Example : "HOST NOTIFICATION: superadmin;server;UP;notify-by-rss;no output"
+
+        :param n: notification object created by host alert
+        :type n: alignak.objects.notification.Notification
+        :return: None
+        """
         contact = n.contact
         command = n.command_call
         if n.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
@@ -1107,9 +1256,15 @@ class Host(SchedulingItem):
                                                                  command.get_name(), self.output))
 
 
-    # Raise a log entry with a Eventhandler alert like
-    # HOST EVENT HANDLER: superadmin;server;UP;notify-by-rss;no output
     def raise_event_handler_log_entry(self, command):
+        """Raise HOST EVENT HANDLER entry (critical level)
+        Format is : "HOST EVENT HANDLER: *self.get_name()*;*state*;*state_type*;*attempt*;*command.get_name()*"
+        Example : "HOST EVENT HANDLER: server;UP;HARD;1;notify-by-rss"
+
+        :param command: Handler launched
+        :type command: alignak.objects.command.Command
+        :return: None
+        """
         if self.__class__.log_event_handlers:
             naglog_result('critical',
                           "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (self.get_name(),
@@ -1117,9 +1272,15 @@ class Host(SchedulingItem):
                                                                   self.attempt, command.get_name()))
 
 
-    # Raise a log entry with a Snapshot alert like
-    # HOST SNAPSHOT: superadmin;server;UP;notify-by-rss;no output
     def raise_snapshot_log_entry(self, command):
+        """Raise HOST SNAPSHOT entry (critical level)
+        Format is : "HOST SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;*command.get_name()*"
+        Example : "HOST SNAPSHOT: server;UP;HARD;1;notify-by-rss"
+
+        :param command: Snapshot command launched
+        :type command: alignak.objects.command.Command
+        :return: None
+        """
         if self.__class__.log_event_handlers:
             naglog_result('critical',
                           "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (self.get_name(),
@@ -1127,10 +1288,19 @@ class Host(SchedulingItem):
                                                              self.attempt, command.get_name()))
 
 
-    # Raise a log entry with FLAPPING START alert like
-    # HOST FLAPPING ALERT: server;STARTED; Host appears to have started ...
-    #      .... flapping (50.6% change >= 50.0% threshold)
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
+        """Raise HOST FLAPPING ALERT START entry (critical level)
+        Format is : "HOST FLAPPING ALERT: *self.get_name()*;STARTED;
+                     Host appears to have started
+                     flapping (*change_ratio*% change >= *threshold*% threshold)"
+        Example : "HOST FLAPPING ALERT: server;STARTED;
+                   Host appears to have started
+                   flapping (50.6% change >= 50.0% threshold)"
+
+        :param change_ratio: percent of changing state
+        :param threshold: threshold (percent) to trigger this log entry
+        :return: None
+        """
         naglog_result('critical',
                       "HOST FLAPPING ALERT: %s;STARTED; "
                       "Host appears to have started flapping "
@@ -1138,10 +1308,19 @@ class Host(SchedulingItem):
                       % (self.get_name(), change_ratio, threshold))
 
 
-    # Raise a log entry with FLAPPING STOP alert like
-    # HOST FLAPPING ALERT: server;STOPPED; host appears to have stopped ...
-    #      .....  flapping (23.0% change < 25.0% threshold)
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
+        """Raise HOST FLAPPING ALERT STOPPED entry (critical level)
+        Format is : "HOST FLAPPING ALERT: *self.get_name()*;STOPPED;
+                     Host appears to have stopped
+                     flapping (*change_ratio*% change < *threshold*% threshold)"
+        Example : "HOST FLAPPING ALERT: server;STOPPED;
+                   Host appears to have stopped
+                   flapping (23.0% change < 25.0% threshold)"
+
+        :param change_ratio: percent of changing state
+        :param threshold: threshold (percent) to trigger this log entry
+        :return: None
+        """
         naglog_result('critical',
                       "HOST FLAPPING ALERT: %s;STOPPED; "
                       "Host appears to have stopped flapping "
@@ -1149,44 +1328,66 @@ class Host(SchedulingItem):
                       % (self.get_name(), change_ratio, threshold))
 
 
-    # If there is no valid time for next check, raise a log entry
     def raise_no_next_check_log_entry(self):
+        """Raise no scheduled check entry (warning level)
+        Format is : "I cannot schedule the check for the host 'get_name()*' because there is not future valid time"
+        Example : "I cannot schedule the check for the host 'Server' because there is not future valid time"
+
+        :return: None
+        """
         logger.warning("I cannot schedule the check for the host '%s' "
                        "because there is not future valid time",
                        self.get_name())
 
 
-    # Raise a log entry when a downtime begins
-    # HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime
     def raise_enter_downtime_log_entry(self):
+        """Raise HOST DOWNTIME ALERT entry (critical level)
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;STARTED; Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('critical',
                       "HOST DOWNTIME ALERT: %s;STARTED; "
                       "Host has entered a period of scheduled downtime"
                       % (self.get_name()))
 
 
-    # Raise a log entry when a downtime has finished
-    # HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime
     def raise_exit_downtime_log_entry(self):
+        """Raise HOST DOWNTIME ALERT entry (critical level)
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;STOPPED; Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('critical',
                       "HOST DOWNTIME ALERT: %s;STOPPED; Host has "
                       "exited from a period of scheduled downtime"
                       % (self.get_name()))
 
 
-    # Raise a log entry when a downtime prematurely ends
-    # HOST DOWNTIME ALERT: test_host_0;CANCELLED; Service has entered a period of scheduled downtime
     def raise_cancel_downtime_log_entry(self):
+        """Raise HOST DOWNTIME ALERT entry (critical level)
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;CANCELLED; Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;CANCELLED; Host has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('critical',
                       "HOST DOWNTIME ALERT: %s;CANCELLED; "
                       "Scheduled downtime for host has been cancelled."
                       % (self.get_name()))
 
 
-    # Is stalking?
-    # Launch if check is waitconsume==first time
-    # and if c.status is in self.stalking_options
     def manage_stalking(self, c):
+        """Check if the host need stalking or not (immediate recheck)
+        If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
+        Raise a log entry (info level) if stalk is needed
+
+        :param c: finshed check (c.status == 'waitconsume')
+        :type c: alignak.check.Check
+        :return: None
+        """
         need_stalk = False
         if c.status == 'waitconsume':
             if c.exit_status == 0 and 'o' in self.stalking_options:
@@ -1203,9 +1404,15 @@ class Host(SchedulingItem):
             logger.info("Stalking %s: %s", self.get_name(), self.output)
 
 
-    # fill act_depend_of with my parents (so network dep)
-    # and say parents they impact me, no timeperiod and follow parents of course
     def fill_parents_dependency(self):
+        """Add network act_dependency for each parent of this host.
+        This dependency is always effective (No timeperiod and all states) and inherits from parent
+
+        :return: None
+        TODO: Host object should not handle other host obj.
+             We should call obj._fun_ on both obj.
+             This is 'Java' style
+        """
         for parent in self.parents:
             if parent is not None:
                 # I add my parent in my list
@@ -1218,8 +1425,13 @@ class Host(SchedulingItem):
                 parent.register_son_in_parent_child_dependencies(self)
 
 
-    # Register a child in our lists
     def register_child(self, child):
+        """Add a child to child list
+
+        :param child: host to add
+        :type child: alignak.objects.host.Host
+        :return: None
+        """
         # We've got 2 list: a list for our child
         # where we just put the pointer, it's just for broking
         # and another with all data, useful for 'running' part
@@ -1227,41 +1439,96 @@ class Host(SchedulingItem):
         self.act_depend_of_me.append((child, ['d', 'u', 's', 'f'], 'network_dep', None, True))
 
 
-    # Give data for checks's macros
     def get_data_for_checks(self):
+        """Return the host itself in a single member list
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        TODO: This function seems useless. Why not do [h] directly instead of h.fun()
+        """
         return [self]
 
 
-    # Give data for event handler's macro
     def get_data_for_event_handler(self):
+        """Return the host itself in a single member list
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        TODO: This function seems useless. Why not do [h] directly instead of h.fun()
+        """
         return [self]
 
 
-    # Give data for notifications'n macros
     def get_data_for_notifications(self, contact, n):
+        """Return the host itself, the contact and the notification in a list
+
+        :param contact: The contact to return
+        :param n: the notification to return
+        :return: list containing a the host and the given parameter
+        :rtype: list
+        TODO: This function seems useless. Why not do [h, c, n] directly instead of h.fun(c,n)
+        """
         return [self, contact, n]
 
 
-    # See if the notification is launchable (time is OK and contact is OK too)
     def notification_is_blocked_by_contact(self, n, contact):
+        """Check if the notification is blocked by this contact.
+
+        :param n: notification created earlier
+        :type n: alignak.notification.Notification
+        :param contact: contact we want to notify
+        :type n: alignak.objects.contact.Contact
+        :return: True if the notification is blocked, False otherwise
+        :rtype: bool
+        TODO: We should do contact.func(h.attr1, n.attr2 ..) before instead of calling it here with self.attr1
+        """
         return not contact.want_host_notification(self.last_chk, self.state, n.type,
                                                   self.business_impact, n.command_call)
 
 
-    # MACRO PART
     def get_duration_sec(self):
+        """Get duration in seconds. (cast it before returning)
+
+        :return: duration in seconds
+        :rtype: int
+        """
         return str(int(self.duration_sec))
 
 
     def get_duration(self):
+        """Get duration formatted
+        Format is : "HHh MMm SSs"
+        Example : "10h 20m 40s"
+
+        :return: Formatted duration
+        :rtype: str
+        """
         m, s = divmod(self.duration_sec, 60)
         h, m = divmod(m, 60)
         return "%02dh %02dm %02ds" % (h, m, s)
 
 
-    # Check if a notification for this host is suppressed at this time
-    # This is a check at the host level. Do not look at contacts here
     def notification_is_blocked_by_item(self, type, t_wished=None):
+        """Check if a notification is blocked the host.
+        Conditions are ONE of the following::
+
+        * enable_notification is False (global)
+        * not in a notification_period
+        * notifications_enable is False (local)
+        * notification_options is 'n' or matches the state ('DOWN' <=> 'd' ...) (include flapping and downtimes)
+        * state goes ok and type is 'ACKNOWLEDGEMENT' (no sense)
+        * scheduled_downtime_depth > 0 and flapping (host is in downtime)
+        * scheduled_downtime_depth > 1 and not downtime end (deep downtime)
+        * scheduled_downtime_depth > 0 and problem or recovery (host is in downtime)
+        * SOFT state of a problem (we raise notification ony on HARD state)
+        * ACK notification when already ACK (don't raise again ACK)
+        * not flapping notification in a flapping state
+        * business rule smart notifications is enabled and all its children have been acknowledged or are under downtime
+
+        :param type: notification type
+        :param t_wished: the time we sould like to notify the host (mostly now)
+        :return: True if ONE of the above condition was met, False otherwise
+        """
         if t_wished is None:
             t_wished = time.time()
 
@@ -1343,13 +1610,14 @@ class Host(SchedulingItem):
         return False
 
 
-    # Get a oc*p command if item has obsess_over_*
-    # command. It must be enabled locally and globally
     def get_obsessive_compulsive_processor_command(self):
+        """Create action for obsessive compulsive commands if such option is enabled
+
+        :return: None
+        """
         cls = self.__class__
         if not cls.obsess_over or not self.obsess_over_host:
             return
-
         m = MacroResolver()
         data = self.get_data_for_event_handler()
         cmd = m.resolve_command(cls.ochp_command, data)
@@ -1358,11 +1626,21 @@ class Host(SchedulingItem):
         # ok we can put it in our temp action queue
         self.actions.append(e)
 
-    # Macro part
     def get_total_services(self):
+        """Get the number of services for this host
+
+        :return: service list length
+        :rtype: str
+        """
         return str(len(self.services))
 
     def _tot_services_by_state(self, state):
+        """Get the number of service in the specified state
+
+        :param state: state to filter service
+        :return: number of service with s.state_id == state
+        :rtype: int
+        """
         return str(sum(1 for s in self.services
                        if s.state_id == state))
 
@@ -1372,21 +1650,43 @@ class Host(SchedulingItem):
     get_total_services_unknown = lambda s: s._tot_services_by_state(3)
 
     def get_ack_author_name(self):
+        """Get the author of the acknowledgement
+
+        :return: author
+        :rtype: str
+        TODO: use getattr(self.acknowledgement, "author", '') instead
+        """
         if self.acknowledgement is None:
             return ''
         return self.acknowledgement.author
 
 
     def get_ack_comment(self):
+        """Get the comment of the acknowledgement
+
+        :return: comment
+        :rtype: str
+        TODO: use getattr(self.acknowledgement, "comment", '') instead
+        """
         if self.acknowledgement is None:
             return ''
         return self.acknowledgement.comment
 
 
     def get_check_command(self):
+        """Wrapper to get the name of the check_command attribute
+
+        :return: check_command name
+        :rtype: str
+        """
         return self.check_command.get_name()
 
     def get_short_status(self):
+        """Get the short status of this host
+
+        :return: "U", "D", "N" or "n/a" based on host state_id or business_rule state
+        :rtype: str
+        """
         mapping = {
             0: "U",
             1: "D",
@@ -1398,6 +1698,11 @@ class Host(SchedulingItem):
             return mapping.get(self.state_id, "n/a")
 
     def get_status(self):
+        """Get the status of this host
+
+        :return: "UP", "DOWN", "UNREACHABLE" or "n/a" based on host state_id or business_rule state
+        :rtype: str
+        """
         if self.got_business_rule:
             mapping = {
                 0: "UP",
@@ -1409,12 +1714,18 @@ class Host(SchedulingItem):
             return self.state
 
     def get_downtime(self):
+        """Accessor to scheduled_downtime_depth attribue
+
+        :return: scheduled downtime depth
+        :rtype: str
+        """
         return str(self.scheduled_downtime_depth)
 
 
-# CLass for the hosts lists. It's mainly for configuration
-# part
 class Hosts(Items):
+    """Class for the hosts lists. It's mainly for configuration
+
+    """
     name_property = "host_name"  # use for the search by name
     inner_class = Host  # use for know what is in items
 
@@ -1427,6 +1738,37 @@ class Hosts(Items):
     def linkify(self, timeperiods=None, commands=None, contacts=None, realms=None,
                 resultmodulations=None, businessimpactmodulations=None, escalations=None,
                 hostgroups=None, triggers=None, checkmodulations=None, macromodulations=None):
+        """Create link between objects::
+
+         * hosts -> timeperiods
+         * hosts -> hosts (parents, etc)
+         * hosts -> commands (check_command)
+         * hosts -> contacts
+
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param commands: commands to link
+        :type commands: alignak.objects.command.Commands
+        :param contacts: contacts to link
+        :type contacts: alignak.objects.contact.Contacts
+        :param realms: realms to link
+        :type realms: alignak.objects.realm.Realms
+        :param resultmodulations: resultmodulations to link
+        :type resultmodulations: alignak.objects.resultmodulation.Resultmodulations
+        :param businessimpactmodulations: businessimpactmodulations to link
+        :type businessimpactmodulations: alignak.objects.businessimpactmodulation.Businessimpactmodulations
+        :param escalations: escalations to link
+        :type escalations: alignak.objects.escalation.Escalations
+        :param hostgroups: escalations to link
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :param triggers: triggers to link
+        :type triggers: alignak.objects.trigger.Triggers
+        :param checkmodulations: checkmodulations to link
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param macromodulations: macromodulations to link
+        :type macromodulations:  alignak.objects.macromodulation.Macromodulations
+        :return: None
+        """
         self.linkify_with_timeperiods(timeperiods, 'notification_period')
         self.linkify_with_timeperiods(timeperiods, 'check_period')
         self.linkify_with_timeperiods(timeperiods, 'maintenance_period')
@@ -1450,13 +1792,19 @@ class Hosts(Items):
         self.linkify_with_macromodulations(macromodulations)
 
 
-    # Fill address by host_name if not set
     def fill_predictive_missing_parameters(self):
+        """Loop on hosts and call Host.fill_predictive_missing_parameters()
+
+        :return: None
+        """
         for h in self:
             h.fill_predictive_missing_parameters()
 
-    # Link host with hosts (parents)
     def linkify_h_by_h(self):
+        """Link hosts with their parents
+
+        :return: None
+        """
         for h in self:
             parents = h.parents
             # The new member list
@@ -1474,8 +1822,13 @@ class Hosts(Items):
             h.parents = new_parents
 
 
-    # Link with realms and set a default realm if none
     def linkify_h_by_realms(self, realms):
+        """Link hosts with realms
+
+        :param realms: realms object to link with
+        :type realms: alignak.objects.realm.Realms
+        :return: None
+        """
         default_realm = None
         for r in realms:
             if getattr(r, 'default', False):
@@ -1496,8 +1849,13 @@ class Hosts(Items):
                 h.got_default_realm = True
 
 
-    # We look for hostgroups property in hosts and link them
     def linkify_h_by_hg(self, hostgroups):
+        """Link hosts with hostgroups
+
+        :param realms: realms object to link with
+        :type realms: alignak.objects.hostgroup.Hostgroups
+        :return: None
+        """
         # Register host in the hostgroups
         for h in self:
             new_hostgroups = []
@@ -1515,8 +1873,21 @@ class Hosts(Items):
             h.hostgroups = new_hostgroups
 
 
-    # We look for hostgroups property in hosts and
     def explode(self, hostgroups, contactgroups, triggers):
+        """Explode hosts, hostrgroups and triggers::
+
+        * Add triggers source to host triggers
+        * Add contact from contactgroups to host contacts
+        * Add host into their hostgroups as hostgroup members
+
+        :param hostgroups: Hostgroups to explode
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :param contactgroups: Contactgorups to explode
+        :type contactgroups: alignak.objects.contactgroup.Contactgroups
+        :param triggers: Triggers to explode
+        :type triggers: alignak.objects.trigger.Triggers
+        :return:
+        """
 
         # items::explode_trigger_string_into_triggers
         self.explode_trigger_string_into_triggers(triggers)
@@ -1537,26 +1908,41 @@ class Hosts(Items):
                 for hg in h.hostgroups:
                     hostgroups.add_member(hname, hg.strip())
 
-    # Create dependencies:
-    # Dependencies at the host level: host parent
     def apply_dependencies(self):
+        """Loop on hosts and call Host.fill_parents_dependency()
+
+        :return: None
+        """
         for h in self:
             h.fill_parents_dependency()
 
-    # Return a list of the host_name of the hosts
-    # that got the template with name=tpl_name or inherit from
-    # a template that use it
     def find_hosts_that_use_template(self, tpl_name):
+        """
+
+        :param tpl_name: the template name we filter or
+        :return: list of the host_name of the hosts that got the template tpl_name in tags
+        :rtype: list[str]
+        """
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
-    # Will create all business tree for the
-    # services
     def create_business_rules(self, hosts, services):
+        """
+        Loop on hosts and call Host.create_business_rules(hosts, services)
+
+
+        :param hosts: hosts to link to
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services to link to
+        :type services: alignak.objects.service.Services
+        :return: None
+        """
         for h in self:
             h.create_business_rules(hosts, services)
 
-    # Will link all business service/host with theirs
-    # dep for problem/impact link
     def create_business_rules_dependencies(self):
+        """Loop on hosts and call Host.create_business_rules_dependencies()
+
+        :return: None
+        """
         for h in self:
             h.create_business_rules_dependencies()
