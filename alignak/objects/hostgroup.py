@@ -50,6 +50,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide Hostgroup and Hostgroups class used to manage host groups
+"""
+
+
 from itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
@@ -58,6 +63,10 @@ from alignak.log import logger
 
 
 class Hostgroup(Itemgroup):
+    """
+    Class to manage a group of host
+    A Hostgroup is used to manage a group of hosts
+    """
     id = 1  # zero is always a little bit special... like in database
     my_type = 'hostgroup'
 
@@ -82,24 +91,47 @@ class Hostgroup(Itemgroup):
     }
 
     def get_name(self):
+        """
+        Get name of group
+
+        :return: Name of hostgroup
+        :rtype: str
+        """
         return self.hostgroup_name
 
     def get_hosts(self):
+        """
+        Get list of hosts of this group
+
+        :return: list of hosts
+        :rtype: list
+        """
         if getattr(self, 'members', None) is not None:
             return self.members
         else:
             return []
 
     def get_hostgroup_members(self):
+        """
+        Get hostgroup members
+
+        :return: list of hosts
+        :rtype: list
+        """
         if self.has('hostgroup_members'):
             return [m.strip() for m in self.hostgroup_members.split(',')]
         else:
             return []
 
-    # We fillfull properties with template ones if need
-    # Because hostgroup we call may not have it's members
-    # we call get_hosts_by_explosion on it
     def get_hosts_by_explosion(self, hostgroups):
+        """
+        Get hosts of this group
+
+        :param hostgroups: Hostgroup object
+        :type hostgroups: object
+        :return: list of hosts of this group
+        :rtype: list
+        """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
         self.already_explode = True
@@ -127,10 +159,22 @@ class Hostgroup(Itemgroup):
 
 
 class Hostgroups(Itemgroups):
+    """
+    Class to manage list of Hostgroup
+    Hostgroups is used to regroup all Hostgroup
+    """
     name_property = "hostgroup_name"  # is used for finding hostgroups
     inner_class = Hostgroup
 
     def get_members_by_name(self, hgname):
+        """
+        Get all members by name given in parameter
+
+        :param hgname: name of members
+        :type hgname: str
+        :return: list of hosts with this name
+        :rtype: list
+        """
         hg = self.find_by_name(hgname)
         if hg is None:
             return []
@@ -138,13 +182,26 @@ class Hostgroups(Itemgroups):
 
 
     def linkify(self, hosts=None, realms=None):
+        """
+        Make link of hosts / realms
+
+        :param hosts: object Hosts
+        :type hosts: object
+        :param realms: object Realms
+        :type realms: object
+        """
         self.linkify_hg_by_hst(hosts)
         self.linkify_hg_by_realms(realms)
 
 
-    # We just search for each hostgroup the id of the hosts
-    # and replace the name by the id
     def linkify_hg_by_hst(self, hosts):
+        """
+        We just search for each hostgroup the id of the hosts
+        and replace the name by the id
+
+        :param hosts: object Hosts
+        :type hosts: object
+        """
         for hg in self:
             mbrs = hg.get_hosts()
             # The new member list, in id
@@ -174,11 +231,16 @@ class Hostgroups(Itemgroups):
                 # and be sure we are uniq in it
                 h.hostgroups = list(set(h.hostgroups))
 
-    # More than an explode function, but we need to already
-    # have members so... Will be really linkify just after
-    # And we explode realm in ours members, but do not override
-    # a host realm value if it's already set
     def linkify_hg_by_realms(self, realms):
+        """
+        More than an explode function, but we need to already
+        have members so... Will be really linkify just after
+        And we explode realm in ours members, but do not override
+        a host realm value if it's already set
+
+        :param realms: object Realms
+        :type realms: object
+        """
         # Now we explode the realm value if we've got one
         # The group realm must not override a host one (warning?)
         for hg in self:
@@ -211,9 +273,16 @@ class Hostgroups(Itemgroups):
                         logger.warning("[hostgroups] host %s it not in the same realm than it's "
                                        "hostgroup %s", h.get_name(), hg.get_name())
 
-    # Add a host string to a hostgroup member
-    # if the host group do not exist, create it
     def add_member(self, hname, hgname):
+        """
+        Add a host string to a hostgroup member
+        if the host group do not exist, create it
+
+        :param hname: host name
+        :type hname: str
+        :param hgname:hostgroup name
+        :type hgname: str
+        """
         hg = self.find_by_name(hgname)
         # if the id do not exist, create the hg
         if hg is None:
@@ -222,8 +291,10 @@ class Hostgroups(Itemgroups):
         else:
             hg.add_string_member(hname)
 
-    # Use to fill members with hostgroup_members
     def explode(self):
+        """
+        Fill members with hostgroup_members
+        """
         # We do not want a same hg to be explode again and again
         # so we tag it
         for tmp_hg in self.items.values():
