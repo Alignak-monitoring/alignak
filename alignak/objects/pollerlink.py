@@ -40,16 +40,20 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide PollerLink and PollerLinks classes used to manage link
+between the modules Arbiter and Poller
+"""
+
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 
 
 class PollerLink(SatelliteLink):
-    """This class is the link between Arbiter and Poller. With it, arbiter
-    can see if a poller is alive, and can send it new configuration
-
     """
-
+    Class to manage the link between Arbiter and Poller. With it, arbiter
+    can see if a poller is alive, and can send it new configuration
+    """
     id = 0
     my_type = 'poller'
     # To_send: send or not to satellite conf
@@ -64,11 +68,16 @@ class PollerLink(SatelliteLink):
     })
 
     def register_to_my_realm(self):
+        """
+        Add this relation to the realm
+        """
         self.realm.pollers.append(self)
 
 
 class PollerLinks(SatelliteLinks):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage list of PollerLink.
+    PollerLinks is used to regroup all links between the Arbiter and different Pollers
+    """
     name_property = "poller_name"
     inner_class = PollerLink
