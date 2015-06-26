@@ -49,7 +49,10 @@
 
 # The resultmodulation class is used for in scheduler modulation of results
 # like the return code or the output.
-
+"""
+This module provide Businessimpactmodulation and Businessimpactmodulations classes used to describe
+the modulation of a business impact. Modulation occurs on a modulation period (Timeperiod)
+"""
 import time
 
 from item import Item, Items
@@ -58,6 +61,10 @@ from alignak.property import StringProp, IntegerProp
 
 
 class Businessimpactmodulation(Item):
+    """Businessimpactmodulation class is simply a modulation of the business impact value (of a Host/Service)
+    during a modulation period.
+
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'businessimpactmodulation'
 
@@ -67,21 +74,38 @@ class Businessimpactmodulation(Item):
                        'modulation_period':               StringProp(default=''),
                        })
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Accessor to business_impact_modulation_name attribute
+
+        :return: business impact modulation name
+        :rtype: str
+        """
         return self.business_impact_modulation_name
 
 
 class Businessimpactmodulations(Items):
+    """Businessimpactmodulations class allowed to handle easily several Businessimpactmodulation objects
+
+    """
     name_property = "business_impact_modulation_name"
     inner_class = Businessimpactmodulation
 
     def linkify(self, timeperiods):
+        """Wrapper for Businessimpactmodulations.linkify_cm_by_tp(timeperiods)
+
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         self.linkify_cm_by_tp(timeperiods)
 
-    # We just search for each timeperiod the tp
-    # and replace the name by the tp
     def linkify_cm_by_tp(self, timeperiods):
+        """Replace modulation period by real Timeperiod object into each Businessimpactmodulation
+
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         for rm in self:
             mtp_name = rm.modulation_period.strip()
 

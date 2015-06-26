@@ -1218,7 +1218,8 @@ class Host(SchedulingItem):
         """Raise freshness alert entry (warning level)
         Format is : "The results of host '*get_name()*' are stale by *t_stale_by*
                      (threshold=*t_threshold*).  I'm forcing an immediate check of the host."
-        Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s (threshold=0d 1h 0m 0s). ..."
+        Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s
+                   (threshold=0d 1h 0m 0s). ..."
 
         :param t_stale_by: time in seconds the host has been in a stale state
         :param t_threshold: threshold (seconds) to trigger this log entry
@@ -1234,7 +1235,8 @@ class Host(SchedulingItem):
 
     def raise_notification_log_entry(self, n):
         """Raise HOST NOTIFICATION entry (critical level)
-        Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;*command.get_name()*;*output*"
+        Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;
+                     *command.get_name()*;*output*"
         Example : "HOST NOTIFICATION: superadmin;server;UP;notify-by-rss;no output"
 
         :param n: notification object created by host alert
@@ -1258,7 +1260,8 @@ class Host(SchedulingItem):
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)
-        Format is : "HOST EVENT HANDLER: *self.get_name()*;*state*;*state_type*;*attempt*;*command.get_name()*"
+        Format is : "HOST EVENT HANDLER: *self.get_name()*;*state*;*state_type*;*attempt*;
+                    *command.get_name()*"
         Example : "HOST EVENT HANDLER: server;UP;HARD;1;notify-by-rss"
 
         :param command: Handler launched
@@ -1274,7 +1277,8 @@ class Host(SchedulingItem):
 
     def raise_snapshot_log_entry(self, command):
         """Raise HOST SNAPSHOT entry (critical level)
-        Format is : "HOST SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;*command.get_name()*"
+        Format is : "HOST SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
+                    *command.get_name()*"
         Example : "HOST SNAPSHOT: server;UP;HARD;1;notify-by-rss"
 
         :param command: Snapshot command launched
@@ -1330,8 +1334,10 @@ class Host(SchedulingItem):
 
     def raise_no_next_check_log_entry(self):
         """Raise no scheduled check entry (warning level)
-        Format is : "I cannot schedule the check for the host 'get_name()*' because there is not future valid time"
-        Example : "I cannot schedule the check for the host 'Server' because there is not future valid time"
+        Format is : "I cannot schedule the check for the host 'get_name()*'
+                    because there is not future valid time"
+        Example : "I cannot schedule the check for the host 'Server'
+                  because there is not future valid time"
 
         :return: None
         """
@@ -1342,8 +1348,10 @@ class Host(SchedulingItem):
 
     def raise_enter_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
-        Format is : "HOST DOWNTIME ALERT: *get_name()*;STARTED; Host has entered a period of scheduled downtime"
-        Example : "HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime"
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;STARTED;
+                    Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;STARTED;
+                   Host has entered a period of scheduled downtime"
 
         :return: None
         """
@@ -1355,8 +1363,10 @@ class Host(SchedulingItem):
 
     def raise_exit_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
-        Format is : "HOST DOWNTIME ALERT: *get_name()*;STOPPED; Host has entered a period of scheduled downtime"
-        Example : "HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has entered a period of scheduled downtime"
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;STOPPED;
+                     Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;STOPPED;
+                   Host has entered a period of scheduled downtime"
 
         :return: None
         """
@@ -1368,8 +1378,10 @@ class Host(SchedulingItem):
 
     def raise_cancel_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
-        Format is : "HOST DOWNTIME ALERT: *get_name()*;CANCELLED; Host has entered a period of scheduled downtime"
-        Example : "HOST DOWNTIME ALERT: test_host_0;CANCELLED; Host has entered a period of scheduled downtime"
+        Format is : "HOST DOWNTIME ALERT: *get_name()*;CANCELLED;
+                     Host has entered a period of scheduled downtime"
+        Example : "HOST DOWNTIME ALERT: test_host_0;CANCELLED;
+                   Host has entered a period of scheduled downtime"
 
         :return: None
         """
@@ -1480,7 +1492,8 @@ class Host(SchedulingItem):
         :type n: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
-        TODO: We should do contact.func(h.attr1, n.attr2 ..) before instead of calling it here with self.attr1
+        TODO: We should do contact.func(h.attr1, n.attr2 ..)before
+        instead of calling it here with self.attr1
         """
         return not contact.want_host_notification(self.last_chk, self.state, n.type,
                                                   self.business_impact, n.command_call)
@@ -1515,7 +1528,8 @@ class Host(SchedulingItem):
         * enable_notification is False (global)
         * not in a notification_period
         * notifications_enable is False (local)
-        * notification_options is 'n' or matches the state ('DOWN' <=> 'd' ...) (include flapping and downtimes)
+        * notification_options is 'n' or matches the state ('DOWN' <=> 'd' ...)
+          (include flapping and downtimes)
         * state goes ok and type is 'ACKNOWLEDGEMENT' (no sense)
         * scheduled_downtime_depth > 0 and flapping (host is in downtime)
         * scheduled_downtime_depth > 1 and not downtime end (deep downtime)
@@ -1523,7 +1537,8 @@ class Host(SchedulingItem):
         * SOFT state of a problem (we raise notification ony on HARD state)
         * ACK notification when already ACK (don't raise again ACK)
         * not flapping notification in a flapping state
-        * business rule smart notifications is enabled and all its children have been acknowledged or are under downtime
+        * business rule smart notifications is enabled and all its children have been acknowledged
+          or are under downtime
 
         :param type: notification type
         :param t_wished: the time we sould like to notify the host (mostly now)
@@ -1756,7 +1771,8 @@ class Hosts(Items):
         :param resultmodulations: resultmodulations to link
         :type resultmodulations: alignak.objects.resultmodulation.Resultmodulations
         :param businessimpactmodulations: businessimpactmodulations to link
-        :type businessimpactmodulations: alignak.objects.businessimpactmodulation.Businessimpactmodulations
+        :type businessimpactmodulations:
+              alignak.objects.businessimpactmodulation.Businessimpactmodulations
         :param escalations: escalations to link
         :type escalations: alignak.objects.escalation.Escalations
         :param hostgroups: escalations to link

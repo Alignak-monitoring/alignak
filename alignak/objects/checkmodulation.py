@@ -44,7 +44,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide CheckModulation and CheckModulations classes used to describe
+the modulation of a check command. Modulation occurs on a check period (Timeperiod)
+"""
 from item import Item, Items
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
@@ -52,6 +55,10 @@ from alignak.log import logger
 
 
 class CheckModulation(Item):
+    """CheckModulation class is simply a modulation of the check command (of a Host/Service)
+    during a check_period.
+
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'checkmodulation'
 
@@ -71,20 +78,35 @@ class CheckModulation(Item):
 
     macros = {}
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Accessor to checkmodulation_name attribute
+
+        :return: check modulation name
+        :rtype: str
+        """
         return self.checkmodulation_name
 
 
-    # Will look at if our check_period is ok, and give our check_command if we got it
     def get_check_command(self, t_to_go):
+        """Get the check_command if we are in the check period modulation
+
+        :param t_to_go: time to check if we are in the timeperiod
+        :return: A check command if we are in the check period, None otherwise
+        :rtype: alignak.objects.command.Command
+        """
         if not self.check_period or self.check_period.is_time_valid(t_to_go):
             return self.check_command
         return None
 
 
-    # Should have all properties, or a void check_period
     def is_correct(self):
+        """Check if the CheckModulation definition is correct::
+
+        * Check for required attribute
+        * Raise previous configuration errors
+
+        :return: True if the definition is correct, False otherwise
+        """
         state = True
         cls = self.__class__
 
@@ -123,16 +145,37 @@ class CheckModulation(Item):
 
 
 class CheckModulations(Items):
+    """CheckModulations class allowed to handle easily several CheckModulation objects
+
+    """
     name_property = "checkmodulation_name"
     inner_class = CheckModulation
 
 
     def linkify(self, timeperiods, commands):
+        """Replace check_period by real Timeperiod object into each CheckModulation
+        Replace check_command by real Command object into each CheckModulation
+
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param commands: commands to link to
+        :type commands: alignak.objects.command.Commands
+        :return: None
+        """
         self.linkify_with_timeperiods(timeperiods, 'check_period')
         self.linkify_one_command_with_commands(commands, 'check_command')
 
 
     def new_inner_member(self, name=None, params={}):
+        """Create a CheckModulation object and add it to items
+
+        :param name: CheckModulation name
+        :type name: str
+        :param params: parameters to init CheckModulation
+        :type params: dict
+        :return: None
+        TODO: Remove this default mutable argument. Usually result in unexpected behavior
+        """
         if name is None:
             name = CheckModulation.id
         params['checkmodulation_name'] = name
