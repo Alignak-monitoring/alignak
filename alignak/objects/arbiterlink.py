@@ -209,7 +209,7 @@ class ArbiterLinks(SatelliteLinks):
 
     def linkify(self, modules):
         """
-        Link to realm (required)
+        Link modules to Arbiter
 
         :param modules: list of modules
         :type modules: list
