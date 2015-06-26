@@ -216,8 +216,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/log.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/macroresolver.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/macroresolver.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/memoized.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/memoized.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/message.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/message.pyc
 755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/misc

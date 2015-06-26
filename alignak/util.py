@@ -201,19 +201,19 @@ def jsonify_r(obj):
     return res
 
 # ################################## TIME ##################################
-# @memoized
+
 def get_end_of_day(year, month_id, day):
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
 
 
-# @memoized
+
 def print_date(t):
     return time.asctime(time.localtime(t))
 
 
-# @memoized
+
 def get_day(t):
     return int(t - get_sec_from_morning(t))
 
@@ -224,7 +224,7 @@ def get_wday(t):
     return t_lt.tm_wday
 
 
-# @memoized
+
 def get_sec_from_morning(t):
     t_lt = time.localtime(t)
     h = t_lt.tm_hour
@@ -233,7 +233,7 @@ def get_sec_from_morning(t):
     return h * 3600 + m * 60 + s
 
 
-# @memoized
+
 def get_start_of_day(year, month_id, day):
     start_time = (year, month_id, day, 00, 00, 00, 0, 0, -1)
     try:

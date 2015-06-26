@@ -216,8 +216,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/log.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/macroresolver.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/macroresolver.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/memoized.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/memoized.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/message.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/message.pyc
 755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc
