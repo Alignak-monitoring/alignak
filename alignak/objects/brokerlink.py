@@ -40,12 +40,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide BrokerLink and BrokerLinks classes used to manage brokers
+"""
+
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
 
 
 class BrokerLink(SatelliteLink):
-    """TODO: Add some comment about this class for the doc"""
+    """
+    Class to manage the broker information
+    """
     id = 0
     my_type = 'broker'
     properties = SatelliteLink.properties.copy()
@@ -56,10 +62,16 @@ class BrokerLink(SatelliteLink):
 
 
     def register_to_my_realm(self):
+        """
+        Add this broker to the realm
+        """
         self.realm.brokers.append(self)
 
 
 class BrokerLinks(SatelliteLinks):
-    """TODO: Add some comment about this class for the doc"""
+    """
+    Class to manage list of BrokerLink.
+    BrokerLinks is used to regroup all brokers
+    """
     name_property = "broker_name"
     inner_class = BrokerLink
