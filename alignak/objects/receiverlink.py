@@ -41,6 +41,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide ReceiverLink and ReceiverLinks classes used to manage receivers
+"""
+
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.log import logger
@@ -48,8 +52,9 @@ from alignak.http_client import HTTPExceptions
 
 
 class ReceiverLink(SatelliteLink):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage the receiver information
+    """
     id = 0
     my_type = 'receiver'
     properties = SatelliteLink.properties.copy()
@@ -64,9 +69,20 @@ class ReceiverLink(SatelliteLink):
     })
 
     def register_to_my_realm(self):
+        """
+        Add this reactionner to the realm
+        """
         self.realm.receivers.append(self)
 
     def push_host_names(self, sched_id, hnames):
+        """
+        Send host names to receiver
+
+        :param sched_id: id of the scheduler
+        :type sched_id: int
+        :param hnames: list of host names
+        :type hnames: list
+        """
         try:
             if self.con is None:
                 self.create_connection()
@@ -85,7 +101,9 @@ class ReceiverLink(SatelliteLink):
 
 
 class ReceiverLinks(SatelliteLinks):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage list of ReceiverLink.
+    ReceiverLinks is used to regroup all receivers
+    """
     name_property = "receiver_name"
     inner_class = ReceiverLink
