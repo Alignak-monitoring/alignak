@@ -41,13 +41,18 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide ReactionnerLink and ReactionnerLinks classes used to manage reactionners
+"""
+
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 
 
 class ReactionnerLink(SatelliteLink):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage the reactionner information
+    """
     id = 0
     my_type = 'reactionner'
     properties = SatelliteLink.properties.copy()
@@ -61,11 +66,16 @@ class ReactionnerLink(SatelliteLink):
     })
 
     def register_to_my_realm(self):
+        """
+        Add this reactionner to the realm
+        """
         self.realm.reactionners.append(self)
 
 
 class ReactionnerLinks(SatelliteLinks):  # (Items):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage list of ReactionnerLink.
+    ReactionnerLinks is used to regroup all reactionners
+    """
     name_property = "reactionner_name"
     inner_class = ReactionnerLink
