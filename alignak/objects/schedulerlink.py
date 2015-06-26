@@ -41,6 +41,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide SchedulerLink and SchedulerLinks classes used to manage schedulers
+"""
+
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.log import logger
@@ -48,8 +52,9 @@ from alignak.http_client import HTTPExceptions
 
 
 class SchedulerLink(SatelliteLink):
-    """Please Add a Docstring to describe the class here"""
-
+    """
+    Class to manage the scheduler information
+    """
     id = 0
 
     # Ok we lie a little here because we are a mere link in fact
@@ -73,6 +78,13 @@ class SchedulerLink(SatelliteLink):
     })
 
     def run_external_commands(self, commands):
+        """
+        Run external commands
+
+        :param commands:
+        :return: False, None or str
+        TODO: need recode this fonction because return types are too many
+        """
         if self.con is None:
             self.create_connection()
         if not self.alive:
@@ -86,18 +98,32 @@ class SchedulerLink(SatelliteLink):
             return False
 
     def register_to_my_realm(self):
+        """
+        Add this reactionner to the realm
+        """
         self.realm.schedulers.append(self)
 
     def give_satellite_cfg(self):
+        """
+        Get configuration of the scheduler satellite
+
+        :return: dictionnary of scheduler information
+        :rtype: dict
+        """
         return {'port': self.port, 'address': self.address,
                 'name': self.scheduler_name, 'instance_id': self.id,
                 'active': self.conf is not None, 'push_flavor': self.push_flavor,
                 'timeout': self.timeout, 'data_timeout': self.data_timeout,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
-    # Some parameters can give as 'overridden parameters' like use_timezone
-    # so they will be mixed (in the scheduler) with the standard conf sent by the arbiter
     def get_override_configuration(self):
+        """
+        Some parameters can give as 'overridden parameters' like use_timezone
+        so they will be mixed (in the scheduler) with the standard conf sent by the arbiter
+
+        :return: dictionnary of properties
+        :rtype: dict
+        """
         r = {}
         properties = self.__class__.properties
         for prop, entry in properties.items():
