@@ -61,9 +61,8 @@ from alignak.property import StringProp, IntegerProp
 
 
 class Businessimpactmodulation(Item):
-    """Businessimpactmodulation class is simply a modulation of the business impact value (of a Host/Service)
-    during a modulation period.
-
+    """Businessimpactmodulation class is simply a modulation of the business impact value
+    (of a Host/Service) during a modulation period.
     """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'businessimpactmodulation'
