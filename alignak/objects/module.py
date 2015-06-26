@@ -49,6 +49,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide Module and Modules classes used to manage internal and external modules
+for each daemon
+"""
+
 from item import Item, Items
 
 from alignak.property import StringProp, ListProp
@@ -57,6 +62,9 @@ from alignak.log import logger
 
 
 class Module(Item):
+    """
+    Class to manage a module
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'module'
 
@@ -71,6 +79,12 @@ class Module(Item):
 
     # For debugging purpose only (nice name)
     def get_name(self):
+        """
+        Get name of module
+
+        :return: Name of module
+        :rtype: str
+        """
         return self.module_name
 
     def __repr__(self):
@@ -80,13 +94,23 @@ class Module(Item):
 
 
 class Modules(Items):
+    """
+    Class to manage list of Module
+    Modules is used to regroup all Module
+    """
     name_property = "module_name"
     inner_class = Module
 
     def linkify(self):
+        """
+        Link modules
+        """
         self.linkify_s_by_plug()
 
     def linkify_s_by_plug(self):
+        """
+        Link modules
+        """
         for s in self:
             new_modules = []
             mods = strip_and_uniq(s.modules)
@@ -108,6 +132,8 @@ class Modules(Items):
             s.modules = new_modules
 
 
-    # We look for contacts property in contacts and
     def explode(self):
+        """
+        Explode but not explode because this function is empty
+        """
         pass
