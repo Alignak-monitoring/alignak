@@ -43,6 +43,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide MacroModulation and MacroModulations classes used to change critical and
+warning level in some periods (like the night)
+"""
+
 import time
 
 from item import Item, Items
@@ -52,6 +57,11 @@ from alignak.log import logger
 
 
 class MacroModulation(Item):
+    """
+    Class to manage a MacroModulation
+    A MacroModulation is defined to change critical and warning level in some periods (like the
+    night)
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'macromodulation'
 
@@ -68,19 +78,34 @@ class MacroModulation(Item):
 
     macros = {}
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """
+        Get the name of the timeperiod
+
+        :return: the timeperiod name string
+        :rtype: str
+        """
         return self.macromodulation_name
 
-    # Will say if we are active or not
     def is_active(self):
+        """
+        Know if this macro is active for this correct period
+
+        :return: True is we are in the period, else return False
+        :rtype: bool
+        """
         now = int(time.time())
         if not self.modulation_period or self.modulation_period.is_time_valid(now):
             return True
         return False
 
-    # Should have all properties, or a void macro_period
     def is_correct(self):
+        """
+        Check if the macromodulation is valid and have all properties defined
+
+        :return: True if valide, else return False
+        :rtype: bool
+        """
         state = True
         cls = self.__class__
 
@@ -106,8 +131,17 @@ class MacroModulation(Item):
 
 
 class MacroModulations(Items):
+    """
+    Class to manage all MacroModulation
+    """
     name_property = "macromodulation_name"
     inner_class = MacroModulation
 
     def linkify(self, timeperiods):
+        """
+        Link with timeperiod
+
+        :param timeperiods: Timeperiod object
+        :type timeperiods: object
+        """
         self.linkify_with_timeperiods(timeperiods, 'modulation_period')
