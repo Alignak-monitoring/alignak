@@ -47,6 +47,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide Pack and Packs classes used to define 'group' of configurations
+"""
+
 import time
 import os
 import re
@@ -61,6 +65,10 @@ from alignak.log import logger
 
 
 class Pack(Item):
+    """
+    Class to manage a Pack
+    A Pack contain multiple configuration files (like all checks for os 'FreeBSD')
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'pack'
 
@@ -72,6 +80,12 @@ class Pack(Item):
 
     # For debugging purpose only (nice name)
     def get_name(self):
+        """
+        Get the name of the pack
+
+        :return: the pack name string or 'UnnamedPack'
+        :rtype: str
+        """
         try:
             return self.pack_name
         except AttributeError:
@@ -79,11 +93,20 @@ class Pack(Item):
 
 
 class Packs(Items):
+    """
+    Class to manage all Pack
+    """
     name_property = "pack_name"
     inner_class = Pack
 
-    # We will dig into the path and load all .pack files
     def load_file(self, path):
+        """
+        Load files in path parameter to load all configuration files with extension .pack
+        of the pack
+
+        :param path: Path where file of pack are
+        :type path: str
+        """
         # Now walk for it
         for root, dirs, files in os.walk(path):
             for file in files:
@@ -99,8 +122,15 @@ class Packs(Items):
                         continue
                     self.create_pack(buf, file[:-5])
 
-    # Create a pack from the string buf, and get a real object from it
     def create_pack(self, buf, name):
+        """
+        Create pack with data from configuration file
+
+        :param buf: buffer
+        :type buf: str
+        :param name: name of file
+        :type name: str
+        """
         if not json:
             logger.warning("[Pack] cannot load the pack file '%s': missing json lib", name)
             return
