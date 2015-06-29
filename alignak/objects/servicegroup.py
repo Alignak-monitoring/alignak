@@ -48,6 +48,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide Servicegroup and Servicegroups classes used to group services
+"""
+
 from alignak.property import StringProp, IntegerProp
 from alignak.log import logger
 
@@ -56,6 +60,10 @@ from .service import Service
 
 
 class Servicegroup(Itemgroup):
+    """
+    Class to manage a servicegroup
+    A servicegroup is used to group services
+    """
     id = 1  # zero is always a little bit special... like in database
     my_type = 'servicegroup'
 
@@ -78,24 +86,47 @@ class Servicegroup(Itemgroup):
     }
 
     def get_services(self):
+        """
+        Get services of this servicegroup
+
+        :return: list of services (members)
+        :rtype: list
+        """
         if getattr(self, 'members', None) is not None:
             return self.members
         else:
             return []
 
     def get_name(self):
+        """
+        Get the name of the servicegrop
+
+        :return: the servicegroup name string
+        :rtype: str
+        """
         return self.servicegroup_name
 
     def get_servicegroup_members(self):
+        """
+        Get list of members of this servicegroup
+
+        :return: list of services (members)
+        :rtype: list
+        """
         if self.has('servicegroup_members'):
             return [m.strip() for m in self.servicegroup_members.split(',')]
         else:
             return []
 
-    # We fillfull properties with template ones if need
-    # Because hostgroup we call may not have it's members
-    # we call get_hosts_by_explosion on it
     def get_services_by_explosion(self, servicegroups):
+        """
+        Get all services of this servicegroup and add it in members container
+
+        :param servicegroups: servicegroups object
+        :type servicegroups: object
+        :return: return empty string or list of members
+        :rtype: str or list
+        """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
         self.already_explode = True
@@ -129,17 +160,35 @@ class Servicegroup(Itemgroup):
 
 
 class Servicegroups(Itemgroups):
+    """
+    Class to manage all servicegroups
+    """
     name_property = "servicegroup_name"  # is used for finding servicegroup
     inner_class = Servicegroup
 
     def linkify(self, hosts, services):
+        """
+        Link services with host
+
+        :param hosts: hosts object
+        :type hosts: object
+        :param services: services object
+        :type services: object
+        """
         self.linkify_sg_by_srv(hosts, services)
 
-    # We just search for each host the id of the host
-    # and replace the name by the id
-    # TODO: very slow for hight services, so search with host list,
-    # not service one
     def linkify_sg_by_srv(self, hosts, services):
+        """
+        We just search for each host the id of the host
+        and replace the name by the id
+        TODO: very slow for hight services, so search with host list,
+        not service one
+
+        :param hosts: hosts object
+        :type hosts: object
+        :param services: services object
+        :type services: object
+        """
         for sg in self:
             mbrs = sg.get_services()
             # The new member list, in id
@@ -178,9 +227,15 @@ class Servicegroups(Itemgroups):
                 # and make this uniq
                 s.servicegroups = list(set(s.servicegroups))
 
-    # Add a service string to a service member
-    # if the service group do not exist, create it
     def add_member(self, cname, sgname):
+        """
+        Add a member (service) to this servicegroup
+
+        :param cname: member (service) name
+        :type cname: str
+        :param sgname: servicegroup name
+        :type sgname: str
+        """
         sg = self.find_by_name(sgname)
         # if the id do not exist, create the cg
         if sg is None:
@@ -189,8 +244,10 @@ class Servicegroups(Itemgroups):
         else:
             sg.add_string_member(cname)
 
-    # Use to fill members with contactgroup_members
     def explode(self):
+        """
+        Get services and put them in members container
+        """
         # We do not want a same hg to be explode again and again
         # so we tag it
         for sg in self:
