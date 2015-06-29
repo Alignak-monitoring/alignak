@@ -1,6 +1,0 @@
-CENTREON   ALL = NOPASSWD: /etc/init.d/alignak restart
-CENTREON   ALL = NOPASSWD: /etc/init.d/alignak start
-CENTREON   ALL = NOPASSWD: /etc/init.d/alignak reload
-CENTREON   ALL = NOPASSWD: /etc/init.d/alignak stop
-CENTREON   ALL = NOPASSWD: TARGET/bin/nagios -v *
-

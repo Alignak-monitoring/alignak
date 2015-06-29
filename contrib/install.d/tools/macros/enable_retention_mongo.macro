@@ -1,5 +1,0 @@
-# Enable retention for scheduler, retention in mongodb
-setconfigfile __ETC__/alignak-specific.cfg
-getdirective modules from scheduler where scheduler_name=scheduler-1
-setparam modules=LAST,MongodbRetention from scheduler where scheduler_name=scheduler-1
-writeconfig
