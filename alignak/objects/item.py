@@ -55,8 +55,9 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-""" This class is a base class for nearly all configuration
- elements like service, hosts or contacts.
+"""
+This class is a base class for nearly all configuration
+elements like service, hosts or contacts.
 """
 import time
 import cPickle  # for hashing compute
@@ -83,7 +84,11 @@ from alignak.graph import Graph
 
 
 class Item(object):
-
+    """
+    Class to manage an item
+    An Item is the base of many objects of Alignak. So it define common properties,
+    common functions.
+    """
     properties = {
         'imported_from':            StringProp(default='unknown'),
         'use':                      ListProp(default=None, split_on_coma=True),
@@ -185,9 +190,15 @@ class Item(object):
                 setattr(self, key, val)
 
 
-    # When values to set on attributes are unique (single element list),
-    # return the value directly rather than setting list element.
     def compact_unique_attr_value(self, val):
+        """
+        Get value of first element of list if val is a list
+
+        :param val: simple value (string, integer...) or list
+        :type val: list or other (string, integer...)
+        :return: value
+        :rtype: str
+        """
         if isinstance(val, list):
             if len(val) > 1:
                 return val
@@ -199,6 +210,10 @@ class Item(object):
             return val
 
     def init_running_properties(self):
+        """
+        Init the running_properties.
+        Each instance have own property.
+        """
         for prop, entry in self.__class__.running_properties.items():
             # Copy is slow, so we check type
             # Type with __iter__ are list or dict, or tuple.
@@ -211,7 +226,12 @@ class Item(object):
             # each instance to have his own running prop!
 
     def copy(self):
-        """ Return a copy of the item, but give him a new id """
+        """
+        Get a copy of this item but with a new id
+
+        :return: copy of this object with a new id
+        :rtype: object
+        """
         cls = self.__class__
         i = cls({})  # Dummy item but with it's own running properties
         for prop in cls.properties:
@@ -228,8 +248,9 @@ class Item(object):
         return i
 
     def clean(self):
-        """ Clean useless things not requested once item has been fully initialized&configured.
-Like temporary attributes such as "imported_from", etc.. """
+        """
+        Clean properties only need when initilize & configure
+        """
         for name in ('imported_from', 'use', 'plus', 'templates',):
             try:
                 delattr(self, name)
@@ -237,6 +258,12 @@ Like temporary attributes such as "imported_from", etc.. """
                 pass
 
     def get_name(self):
+        """
+        Get the name of the item
+
+        :return: the object name string
+        :rtype: str
+        """
         return getattr(self, 'name', "unknown")
 
     def __str__(self):
@@ -246,28 +273,33 @@ Like temporary attributes such as "imported_from", etc.. """
     __repr__ = __str__
 
     def is_tpl(self):
-        """ Return if the elements is a template """
+        """
+        Check if this object is a template
+
+        :return: True if is a template, else False
+        :rtype: bool
+        """
         return not getattr(self, "register", True)
 
-    # If a prop is absent and is not required, put the default value
     def fill_default(self):
-        """ Fill missing properties if they are missing """
+        """
+        Define properties with default value when not defined
+        """
         cls = self.__class__
 
         for prop, entry in cls.properties.items():
             if not hasattr(self, prop) and entry.has_default:
                 setattr(self, prop, entry.default)
 
-    # We load every useful parameter so no need to access global conf later
-    # Must be called after a change in a global conf parameter
     def load_global_conf(cls, conf):
-        """ Used to put global values in the sub Class like
-        hosts or services """
-        # conf have properties, if 'enable_notifications':
-        # { [...] 'class_inherit': [(Host, None), (Service, None),
-        #  (Contact, None)]}
-        # get the name and put the value if None, put the Name
-        # (not None) if not (not clear?)
+        """
+        Load configuration of parent object
+
+        :param cls: parent object
+        :type cls: object
+        :param conf: current object (child)
+        :type conf: object
+        """
         for prop, entry in conf.properties.items():
             # If we have a class_inherit, and the arbiter really send us it
             # if 'class_inherit' in entry and hasattr(conf, prop):
@@ -284,15 +316,28 @@ Like temporary attributes such as "imported_from", etc.. """
     load_global_conf = classmethod(load_global_conf)
 
     def get_templates(self):
+        """
+        Get list of templates this object use
+
+        :return: list of templates
+        :rtype: list
+        """
         use = getattr(self, 'use', '')
         if isinstance(use, list):
             return [n.strip() for n in use if n.strip()]
         else:
             return [n.strip() for n in use.split(',') if n.strip()]
 
-
-    # We fillfull properties with template ones if need
     def get_property_by_inheritance(self, prop):
+        """
+        Get the property asked in parameter to this object or from defined templates of this
+        object
+
+        :param prop: name of property
+        :type prop: str
+        :return: Value of property of this object or of a template
+        :rtype: str or None
+        """
         if prop == 'register':
             return None  # We do not inherit from register
 
@@ -384,11 +429,13 @@ Like temporary attributes such as "imported_from", etc.. """
         # Not even a plus... so None :)
         return getattr(self, prop, None)
 
-
-    # We fillfull properties with template ones if need
     def get_customs_properties_by_inheritance(self):
-        # We reverse list, so that when looking for properties by inheritance,
-        # the least defined template wins (if property is set).
+        """
+        Get custom properties from the templates defined in this object
+
+        :return: list of custom properties
+        :rtype: list
+        """
         for i in self.templates:
             tpl_cv = i.get_customs_properties_by_inheritance()
             if tpl_cv is not {}:
@@ -416,6 +463,14 @@ Like temporary attributes such as "imported_from", etc.. """
 
 
     def has_plus(self, prop):
+        """
+        Check if self.plus list have this property
+
+        :param prop: property to check
+        :type prop: str
+        :return: True is self.plus have this property, else False
+        :rtype: bool
+        """
         try:
             self.plus[prop]
         except KeyError:
@@ -424,6 +479,12 @@ Like temporary attributes such as "imported_from", etc.. """
 
 
     def get_all_plus_and_delete(self):
+        """
+        Get all self.plus items of list. We copy it, delete the original and return the copy list
+
+        :return: list of self.plus
+        :rtype: list
+        """
         res = {}
         props = self.plus.keys()  # we delete entries, so no for ... in ...
         for prop in props:
@@ -432,14 +493,27 @@ Like temporary attributes such as "imported_from", etc.. """
 
 
     def get_plus_and_delete(self, prop):
+        """
+        get a copy of the property (parameter) in self.plus, delete the original and return the
+        value of copy
+
+        :param prop: a property
+        :type prop: str
+        :return: return the value of the property
+        :rtype: str
+        """
         val = self.plus[prop]
         del self.plus[prop]
         return val
 
 
-    # Check is required prop are set:
-    # template are always correct
     def is_correct(self):
+        """
+        Check if this object is correct
+
+        :return: True if it's correct, else False
+        :rtype: bool
+        """
         state = True
         properties = self.__class__.properties
 
@@ -457,12 +531,12 @@ Like temporary attributes such as "imported_from", etc.. """
         return state
 
 
-    # This function is used by service and hosts
-    # to transform Nagios2 parameters to Nagios3
-    # ones, like normal_check_interval to
-    # check_interval. There is a old_parameters tab
-    # in Classes that give such modifications to do.
     def old_properties_names_to_new(self):
+        """
+        This function is used by service and hosts to transform Nagios2 parameters to Nagios3
+        ones, like normal_check_interval to check_interval. There is a old_parameters tab
+        in Classes that give such modifications to do.
+        """
         old_properties = getattr(self.__class__, "old_properties", {})
         for old_name, new_name in old_properties.items():
             # Ok, if we got old_name and NO new name,
@@ -472,8 +546,13 @@ Like temporary attributes such as "imported_from", etc.. """
                 setattr(self, new_name, value)
                 delattr(self, old_name)
 
-    # The arbiter is asking us our raw value before all explode or linking
     def get_raw_import_values(self):
+        """
+        Get properties => values of this object
+
+        :return: dictionnary of properties => values
+        :rtype: dict
+        """
         r = {}
         properties = self.__class__.properties.keys()
         # Register is not by default in the properties
@@ -489,9 +568,21 @@ Like temporary attributes such as "imported_from", etc.. """
 
 
     def add_downtime(self, downtime):
+        """
+        Add a downtime in this object
+
+        :param downtime: a Downtime object
+        :type downtime: object
+        """
         self.downtimes.append(downtime)
 
     def del_downtime(self, downtime_id):
+        """
+        Delete a downtime in this object
+
+        :param downtime_id: id of the downtime to delete
+        :type downtime_id: int
+        """
         d_to_del = None
         for dt in self.downtimes:
             if dt.id == downtime_id:
@@ -501,9 +592,21 @@ Like temporary attributes such as "imported_from", etc.. """
             self.downtimes.remove(d_to_del)
 
     def add_comment(self, comment):
+        """
+        Add a comment to this object
+
+        :param comment: a Comment object
+        :type comment: object
+        """
         self.comments.append(comment)
 
     def del_comment(self, comment_id):
+        """
+        Delete a comment in this object
+
+        :param comment_id: id of the comment to delete
+        :type comment_id: int
+        """
         c_to_del = None
         for c in self.comments:
             if c.id == comment_id:
@@ -513,6 +616,22 @@ Like temporary attributes such as "imported_from", etc.. """
             self.comments.remove(c_to_del)
 
     def acknowledge_problem(self, sticky, notify, persistent, author, comment, end_time=0):
+        """
+        Add an acknowledge
+
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
+        :type end_time: int
+        """
         if self.state != self.ok_up:
             if notify:
                 self.create_notifications('ACKNOWLEDGEMENT')
@@ -532,17 +651,20 @@ Like temporary attributes such as "imported_from", etc.. """
             self.add_comment(c)
             self.broks.append(self.get_update_status_brok())
 
-    # Look if we got an ack that is too old with an expire date and should
-    # be delete
     def check_for_expire_acknowledge(self):
+        """
+        If have acknowledge and is expired, delete it
+        """
         if (self.acknowledgement and
                 self.acknowledgement.end_time != 0 and
                 self.acknowledgement.end_time < time.time()):
             self.unacknowledge_problem()
 
-    #  Delete the acknowledgement object and reset the flag
-    #  but do not remove the associated comment.
     def unacknowledge_problem(self):
+        """
+        Remove the acknowledge, reset the flag. The comment is deleted except if the acknowledge
+        is defined to be persistent
+        """
         if self.problem_has_been_acknowledged:
             logger.debug("[item::%s] deleting acknowledge of %s",
                          self.get_name(),
@@ -557,16 +679,19 @@ Like temporary attributes such as "imported_from", etc.. """
                     self.del_comment(c.id)
             self.broks.append(self.get_update_status_brok())
 
-    # Check if we have an acknowledgement and if this is marked as sticky.
-    # This is needed when a non-ok state changes
     def unacknowledge_problem_if_not_sticky(self):
+        """
+        Remove the acknowledge if it is not sticky
+        """
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem()
 
-    # Will flatten some parameters tagged by the 'conf_send_preparation'
-    # property because they are too "linked" to be send like that (like realms)
     def prepare_for_conf_sending(self):
+        """
+        Flatten some properties tagged by the 'conf_send_preparation' because
+        they are too 'linked' to be send like that (like realms)
+        """
         cls = self.__class__
 
         for prop, entry in cls.properties.items():
@@ -586,9 +711,17 @@ Like temporary attributes such as "imported_from", etc.. """
                         val = f(getattr(self, prop))
                         setattr(self, prop, val)
 
-    # Get the property for an object, with good value
-    # and brok_transformation if need
     def get_property_value_for_brok(self, prop, tab):
+        """
+        Get the property of an object and brok_transformation if needed and return the value
+
+        :param prop: property name
+        :type prop: str
+        :param tab: object with all properties of an object
+        :type tab: object
+        :return: value of the property original or brok converted
+        :rtype: str
+        """
         entry = tab[prop]
         # Get the current value, or the default if need
         value = getattr(self, prop, entry.default)
@@ -601,9 +734,16 @@ Like temporary attributes such as "imported_from", etc.. """
 
         return value
 
-    # Fill data with info of item by looking at brok_type
-    # in props of properties or running_properties
     def fill_data_brok_from(self, data, brok_type):
+        """
+        Add properties to 'data' parameter with properties of this object when 'brok_type'
+        parameter is defined in fill_brok of these properties
+
+        :param data: object to fill
+        :type data: object
+        :param brok_type: name of brok_type
+        :type brok_type: var
+        """
         cls = self.__class__
         # Now config properties
         for prop, entry in cls.properties.items():
@@ -619,35 +759,61 @@ Like temporary attributes such as "imported_from", etc.. """
                 if brok_type in entry.fill_brok:
                     data[prop] = self.get_property_value_for_brok(prop, cls.running_properties)
 
-
-    # Get a brok with initial status
     def get_initial_status_brok(self):
+        """
+        Create initial brok
+
+        :return: Brok object
+        :rtype: object
+        """
         data = {'id': self.id}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('initial_' + self.my_type + '_status', data)
 
-
-    # Get a brok with update item status
     def get_update_status_brok(self):
+        """
+        Create update brok
+
+        :return: Brok object
+        :rtype: object
+        """
         data = {'id': self.id}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('update_' + self.my_type + '_status', data)
 
-    # Get a brok with check_result
     def get_check_result_brok(self):
+        """
+        Create check_result brok
+
+        :return: Brok object
+        :rtype: object
+        """
         data = {}
         self.fill_data_brok_from(data, 'check_result')
         return Brok(self.my_type + '_check_result', data)
 
-    # Get brok about the new schedule (next_check)
     def get_next_schedule_brok(self):
+        """
+        Create next_schedule (next check) brok
+
+        :return: Brok object
+        :rtype: object
+        """
         data = {}
         self.fill_data_brok_from(data, 'next_schedule')
         return Brok(self.my_type + '_next_schedule', data)
 
-    # A snapshot brok is alike a check_result, with also a
-    # output from the snapshot command
     def get_snapshot_brok(self, snap_output, exit_status):
+        """
+        Create snapshot (check_result type) brok
+
+        :param snap_output: value of output
+        :type snap_output: str
+        :param exit_status: status of exit
+        :type exit_status: integer
+        :return: Brok object
+        :rtype: object
+        """
         data = {
             'snapshot_output':      snap_output,
             'snapshot_time':        int(time.time()),
@@ -656,8 +822,15 @@ Like temporary attributes such as "imported_from", etc.. """
         self.fill_data_brok_from(data, 'check_result')
         return Brok(self.my_type + '_snapshot', data)
 
-    # Link one command property to a class (for globals like oc*p_command)
     def linkify_one_command_with_commands(self, commands, prop):
+        """
+        Link a command
+
+        :param commands: object commands
+        :type commands: object
+        :param prop: property name
+        :type prop: str
+        """
         if hasattr(self, prop):
             command = getattr(self, prop).strip()
             if command != '':
@@ -673,9 +846,13 @@ Like temporary attributes such as "imported_from", etc.. """
             else:
                 setattr(self, prop, None)
 
-
-    # We look at the 'trigger' prop and we create a trigger for it
     def explode_trigger_string_into_triggers(self, triggers):
+        """
+        Add trigger to triggers if exist
+
+        :param triggers: trigger object
+        :type triggers: object
+        """
         src = getattr(self, 'trigger', '')
         if src:
             # Change on the fly the characters
@@ -687,9 +864,13 @@ Like temporary attributes such as "imported_from", etc.. """
                 # so my name can be dropped
                 self.triggers.append(t.get_name())
 
-
-    # Link with triggers. Can be with a "in source" trigger, or a file name
     def linkify_with_triggers(self, triggers):
+        """
+        Link with triggers
+
+        :param triggers: Triggers object
+        :type triggers: object
+        """
         # Get our trigger string and trigger names in the same list
         self.triggers.extend([self.trigger_name])
         # print "I am linking my triggers", self.get_full_name(), self.triggers
@@ -709,6 +890,12 @@ Like temporary attributes such as "imported_from", etc.. """
         self.triggers = new_triggers
 
     def dump(self):
+        """
+        Dump properties
+
+        :return: dictionnary with properties
+        :rtype: dict
+        """
         dmp = {}
         for prop in self.properties.keys():
             if not hasattr(self, prop):
@@ -723,6 +910,12 @@ Like temporary attributes such as "imported_from", etc.. """
         return dmp
 
     def _get_name(self):
+        """
+        Get the name of the object
+
+        :return: the object name string
+        :rtype: str
+        """
         if hasattr(self, 'get_name'):
             return self.get_name()
         name = getattr(self, 'name', None)
@@ -732,6 +925,9 @@ Like temporary attributes such as "imported_from", etc.. """
 
 
 class Items(object):
+    """
+    Class to manage all Item
+    """
     def __init__(self, items, index_items=True):
         self.items = {}
         self.name_to_item = {}
@@ -742,6 +938,14 @@ class Items(object):
         self.add_items(items, index_items)
 
     def get_source(self, item):
+        """
+        Get source, so with what system we import this item
+
+        :param item: item object
+        :type item: object
+        :return: name of the source
+        :rtype: str
+        """
         source = getattr(item, 'imported_from', None)
         if source:
             return " in %s" % source
@@ -750,12 +954,12 @@ class Items(object):
 
     def add_items(self, items, index_items):
         """
-        Add items into the `items` or `templates` container depending on the
-        is_tpl method result.
+        Add items to template if is template, else add in item list
 
-        :param items:       The items list to add.
-        :param index_items: Flag indicating if the items should be indexed
-                            on the fly.
+        :param items: items list to add
+        :type items: object
+        :param index_items: Flag indicating if the items should be indexed on the fly.
+        :type index_items: bool
         """
         for i in items:
             if i.is_tpl():
@@ -776,9 +980,12 @@ class Items(object):
         If the new item has precedence over the New existing one, the
         existing is removed for the new to replace it.
 
-        :param item:    The new item to check for confict
-        :param name:    The exiting object name
-        :return         The retained object
+        :param item: object to check for conflict
+        :type item: object
+        :param name: name of the object
+        :type name: str
+        :return: 'item' parameter modified
+        :rtype: object
         """
         if item.is_tpl():
             existing = self.name_to_template[name]
@@ -817,9 +1024,10 @@ class Items(object):
 
     def add_template(self, tpl):
         """
-        Adds and index a template into the `templates` container.
+        Add and index a template into the `templates` container.
 
         :param tpl: The template to add
+        :type tpl: object
         """
         tpl = self.index_template(tpl)
         self.templates[tpl.id] = tpl
@@ -829,6 +1037,7 @@ class Items(object):
         Indexes a template by `name` into the `name_to_template` dictionnary.
 
         :param tpl: The template to index
+        :type tpl: object
         """
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
@@ -843,9 +1052,10 @@ class Items(object):
 
     def remove_template(self, tpl):
         """
-        Removes and unindex a template from the `templates` container.
+        Removes and un-index a template from the `templates` container.
 
         :param tpl: The template to remove
+        :type tpl: object
         """
         try:
             del self.templates[tpl.id]
@@ -857,7 +1067,8 @@ class Items(object):
         """
         Unindex a template from the `templates` container.
 
-        :param tpl: The template to unindex
+        :param tpl: The template to un-index
+        :type tpl: object
         """
         name = getattr(tpl, 'name', '')
         try:
@@ -866,10 +1077,13 @@ class Items(object):
             pass
 
     def add_item(self, item, index=True):
-        """Adds an item into our containers, and index it depending on the `index` flag.
+        """
+        Add an item into our containers, and index it depending on the `index` flag.
 
-        :param item:    The item to add
-        :param index:   Flag indicating if the item should be indexed
+        :param item: object to add
+        :type item: object
+        :param index: Flag indicating if the item should be indexed
+        :type index: bool
         """
         name_property = getattr(self.__class__, "name_property", None)
         if index is True and name_property:
@@ -877,21 +1091,25 @@ class Items(object):
         self.items[item.id] = item
 
     def remove_item(self, item):
-        """Removes (and un-index) an item from our containers.
+        """
+        Remove (and un-index) an object
 
-        :param item: The item to be removed.
-        :type item:  Item  # or subclass of
+        :param item: object to remove
+        :type item: object
         """
         self.unindex_item(item)
         self.items.pop(item.id, None)
 
     def index_item(self, item):
-        """ Indexes an item into our `name_to_item` dictionary.
+        """
+        Indexe an item into our `name_to_item` dictionary.
         If an object holding the same item's name/key already exists in the index
         then the conflict is managed by the `manage_conflict` method.
 
-        :param item: The item to index
-        :param name: The optional name to use to index the item
+        :param item: item to index
+        :type item: object
+        :return: item modified
+        :rtype: object
         """
         # TODO: simplify this function (along with its opposite: unindex_item)
         # it's too complex for what it does.
@@ -918,8 +1136,10 @@ class Items(object):
         return item
 
     def unindex_item(self, item):
-        """ Unindex an item from our name_to_item dict.
-        :param item:    The item to unindex
+        """
+        Un-index an item from our name_to_item dict.
+        :param item: the item to un-index
+        :type item: object
         """
         name_property = getattr(self.__class__, "name_property", None)
         if name_property is None:
@@ -952,14 +1172,26 @@ class Items(object):
         return key in self.items
 
     def find_by_name(self, name):
+        """
+        Find an item by name
+
+        :param name: name of item
+        :type name: str
+        :return: name of the item
+        :rtype: str or None
+        """
         return self.name_to_item.get(name, None)
 
 
-    # Search items using a list of filter callbacks. Each callback is passed
-    # the item instances and should return a boolean value indicating if it
-    # matched the filter.
-    # Returns a list of items matching all filters.
     def find_by_filter(self, filters):
+        """
+        Find items by filters
+
+        :param filters: list of filters
+        :type filters: list
+        :return: list of items
+        :rtype: list
+        """
         items = []
         for i in self:
             failed = False
@@ -971,28 +1203,48 @@ class Items(object):
                 items.append(i)
         return items
 
-
-    # prepare_for_conf_sending to flatten some properties
     def prepare_for_sending(self):
+        """
+        flatten some properties
+        """
         for i in self:
             i.prepare_for_conf_sending()
 
-
-    # It's used to change old Nagios2 names to
-    # Nagios3 ones
     def old_properties_names_to_new(self):
+        """
+        Convert old Nagios2 names to Nagios3 new names
+        """
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
             i.old_properties_names_to_new()
 
     def pythonize(self):
+        """
+        Pythonize items
+        """
         for id in self.items:
             self.items[id].pythonize()
 
     def find_tpl_by_name(self, name):
+        """
+        Find template by name
+
+        :param name: name of template
+        :type name: str
+        :return: name of template found
+        :rtype: str or None
+        """
         return self.name_to_template.get(name, None)
 
     def get_all_tags(self, item):
+        """
+        Get all tags of an item
+
+        :param item: an item
+        :type item: object
+        :return: list of tags
+        :rtype: list
+        """
         all_tags = item.get_templates()
 
         for t in item.templates:
@@ -1002,6 +1254,12 @@ class Items(object):
 
 
     def linkify_item_templates(self, item):
+        """
+        Link templates
+
+        :param item: an item
+        :type item: object
+        """
         tpls = []
         tpl_names = item.get_templates()
 
@@ -1026,9 +1284,10 @@ class Items(object):
                     tpls.append(t)
         item.templates = tpls
 
-    # We will link all templates, and create the template
-    # graph too
     def linkify_templates(self):
+        """
+        Link all templates, and create the template graph too
+        """
         # First we create a list of all templates
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
@@ -1037,6 +1296,12 @@ class Items(object):
             i.tags = self.get_all_tags(i)
 
     def is_correct(self):
+        """
+        Check if all items are correct (no error)
+
+        :return: True if correct, else False
+        :rtype: bool
+        """
         # we are ok at the beginning. Hope we still ok at the end...
         r = True
         # Some class do not have twins, because they do not have names
@@ -1078,19 +1343,23 @@ class Items(object):
         return r
 
     def remove_templates(self):
-        """ Remove useless templates (& properties) of our items
-            otherwise we could get errors on config.is_correct()
+        """
+        Remove templates
         """
         del self.templates
 
     def clean(self):
-        """ Request to remove the unnecessary attributes/others from our items """
+        """
+        Request to remove the unnecessary attributes/others from our items
+        """
         for i in self:
             i.clean()
         Item.clean(self)
 
-    # If a prop is absent and is not required, put the default value
     def fill_default(self):
+        """
+        Define properties for each items with default value when not defined
+        """
         for i in self:
             i.fill_default()
 
@@ -1100,8 +1369,14 @@ class Items(object):
 
     __repr__ = __str__
 
-    # Inheritance for just a property
     def apply_partial_inheritance(self, prop):
+        """
+        Define property with inherance value of the property
+
+        :param prop: property
+        :type prop: str
+        """
+
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
             i.get_property_by_inheritance(prop)
@@ -1113,8 +1388,8 @@ class Items(object):
                 pass
 
     def apply_inheritance(self):
-        """ For all items and templates inherite properties and custom
-            variables.
+        """
+        For all items and templates inherite properties and custom variables.
         """
         # We check for all Class properties if the host has it
         # if not, it check all host templates for a value
@@ -1125,9 +1400,13 @@ class Items(object):
                                  self.templates.itervalues()):
             i.get_customs_properties_by_inheritance()
 
-    # We've got a contacts property with , separated contacts names
-    # and we want have a list of Contacts
     def linkify_with_contacts(self, contacts):
+        """
+        Link items with contacts items
+
+        :param contacts: all contacts object
+        :type contacts: object
+        """
         for i in self:
             if hasattr(i, 'contacts'):
                 contacts_tab = strip_and_uniq(i.contacts)
@@ -1146,8 +1425,13 @@ class Items(object):
                 # Get the list, but first make elements uniq
                 i.contacts = list(set(new_contacts))
 
-    # Make link between an object and its escalations
     def linkify_with_escalations(self, escalations):
+        """
+        Link with escalations
+
+        :param escalations: all escalations object
+        :type escalations: object
+        """
         for i in self:
             if hasattr(i, 'escalations'):
                 escalations_tab = strip_and_uniq(i.escalations)
@@ -1162,8 +1446,13 @@ class Items(object):
                         i.configuration_errors.append(err)
                 i.escalations = new_escalations
 
-    # Make link between item and it's resultmodulations
     def linkify_with_resultmodulations(self, resultmodulations):
+        """
+        Link items with resultmodulations items
+
+        :param resultmodulations: all resultmodulations object
+        :type resultmodulations: object
+        """
         for i in self:
             if hasattr(i, 'resultmodulations'):
                 resultmodulations_tab = strip_and_uniq(i.resultmodulations)
@@ -1179,8 +1468,13 @@ class Items(object):
                         continue
                 i.resultmodulations = new_resultmodulations
 
-    # Make link between item and it's business_impact_modulations
     def linkify_with_business_impact_modulations(self, business_impact_modulations):
+        """
+        Link items with business impact objects
+
+        :param business_impact_modulations: all business impacts object
+        :type business_impact_modulations: object
+        """
         for i in self:
             if hasattr(i, 'business_impact_modulations'):
                 business_impact_modulations_tab = strip_and_uniq(i.business_impact_modulations)
@@ -1196,10 +1490,15 @@ class Items(object):
                         continue
                 i.business_impact_modulations = new_business_impact_modulations
 
-    # If we've got a contact_groups properties, we search for all
-    # theses groups and ask them their contacts, and then add them
-    # all into our contacts property
     def explode_contact_groups_into_contacts(self, item, contactgroups):
+        """
+        Get all contacts of contact_groups and put them in contacts container
+
+        :param item: item where have contact_groups property
+        :type item: object
+        :param contactgroups: all contactgroups object
+        :type contactgroups: object
+        """
         if hasattr(item, 'contact_groups'):
             # TODO : See if we can remove this if
             if isinstance(item.contact_groups, list):
@@ -1223,8 +1522,15 @@ class Items(object):
                     else:
                         item.contacts = cnames
 
-    # Link a timeperiod property (prop)
     def linkify_with_timeperiods(self, timeperiods, prop):
+        """
+        Link items with timeperiods items
+
+        :param timeperiods: all timeperiods object
+        :type timeperiods: object
+        :param prop: property name
+        :type prop: str
+        """
         for i in self:
             if hasattr(i, prop):
                 tpname = getattr(i, prop).strip()
@@ -1245,6 +1551,18 @@ class Items(object):
                 setattr(i, prop, tp)
 
     def create_commandcall(self, prop, commands, command):
+        """
+        Create commandCall object with command
+
+        :param prop: property
+        :type prop: str
+        :param commands: all commands
+        :type commands: object
+        :param command: a command object
+        :type command: object
+        :return: a commandCall object
+        :rtype: object
+        """
         comandcall = dict(commands=commands, call=command)
         if hasattr(prop, 'enable_environment_macros'):
             comandcall['enable_environment_macros'] = prop.enable_environment_macros
@@ -1256,8 +1574,15 @@ class Items(object):
 
         return CommandCall(**comandcall)
 
-    # Link one command property
     def linkify_one_command_with_commands(self, commands, prop):
+        """
+        Link a command to a property
+
+        :param commands: commands object
+        :type commands: object
+        :param prop: property name
+        :type prop: str
+        """
         for i in self:
             if hasattr(i, prop):
                 command = getattr(i, prop).strip()
@@ -1270,8 +1595,15 @@ class Items(object):
 
                     setattr(i, prop, None)
 
-    # Link a command list (commands with , between) in real CommandCalls
     def linkify_command_list_with_commands(self, commands, prop):
+        """
+        Link a command list (commands with , between) in real CommandCalls
+
+        :param commands: commands object
+        :type commands: object
+        :param prop: property name
+        :type prop: str
+        """
         for i in self:
             if hasattr(i, prop):
                 coms = strip_and_uniq(getattr(i, prop))
@@ -1285,15 +1617,23 @@ class Items(object):
                         pass
                 setattr(i, prop, com_list)
 
-    # Link with triggers. Can be with a "in source" trigger, or a file name
     def linkify_with_triggers(self, triggers):
+        """
+        Link triggers
+
+        :param triggers: triggers object
+        :type triggers: object
+        """
         for i in self:
             i.linkify_with_triggers(triggers)
 
-
-    # We've got a notificationways property with , separated contacts names
-    # and we want have a list of NotificationWay
     def linkify_with_checkmodulations(self, checkmodulations):
+        """
+        Link checkmodulation object
+
+        :param checkmodulations: checkmodulations object
+        :type checkmodulations: object
+        """
         for i in self:
             if not hasattr(i, 'checkmodulations'):
                 continue
@@ -1310,9 +1650,13 @@ class Items(object):
             i.checkmodulations = new_checkmodulations
 
 
-    # We've got list of macro modulations as list of names, and
-    # we want real objects
     def linkify_with_macromodulations(self, macromodulations):
+        """
+        Link macromodulations
+
+        :param macromodulations: macromodulations object
+        :type macromodulations: object
+        """
         for i in self:
             if not hasattr(i, 'macromodulations'):
                 continue
@@ -1328,9 +1672,13 @@ class Items(object):
             # Get the list, but first make elements uniq
             i.macromodulations = new_macromodulations
 
-
-    # Linkify with modules
     def linkify_s_by_plug(self, modules):
+        """
+        Link modules
+
+        :param modules: modules object (all modules)
+        :type modules: object
+        """
         for s in self:
             new_modules = []
             for plug_name in s.modules:
@@ -1348,7 +1696,20 @@ class Items(object):
             s.modules = new_modules
 
     def evaluate_hostgroup_expression(self, expr, hosts, hostgroups, look_in='hostgroups'):
-        # print "\n"*10, "looking for expression", expr
+        """
+        Evaluate hostgroup expression
+
+        :param expr: an expression
+        :type expr: str
+        :param hosts: hosts object (all hosts)
+        :type hosts: object
+        :param hostgroups: hostgroups object (all hostgroups)
+        :type hostgroups: object
+        :param look_in: item name where search
+        :type look_in: str
+        :return: return list of hostgroups
+        :rtype: list
+        """
         # Maybe exp is a list, like numerous hostgroups entries in a service, link them
         if isinstance(expr, list):
             expr = '|'.join(expr)
@@ -1370,6 +1731,16 @@ class Items(object):
         return list(set_res)
 
     def get_hosts_from_hostgroups(self, hgname, hostgroups):
+        """
+        Get hosts of hostgroups
+
+        :param hgname: hostgroup name
+        :type hgname: str
+        :param hostgroups: hostgroups object (all hostgroups)
+        :type hostgroups: object
+        :return: list of hosts
+        :rtype: list
+        """
         if not isinstance(hgname, list):
             hgname = [e.strip() for e in hgname.split(',') if e.strip()]
 
@@ -1383,10 +1754,17 @@ class Items(object):
             host_names.extend(mbrs)
         return host_names
 
-    # If we've got a hostgroup_name property, we search for all
-    # theses groups and ask them their hosts, and then add them
-    # all into our host_name property
     def explode_host_groups_into_hosts(self, item, hosts, hostgroups):
+        """
+        Get all hosts of hostgroups and add all in host_name container
+
+        :param item: the item object
+        :type item: object
+        :param hosts: hosts object
+        :type hosts: object
+        :param hostgroups: hostgroups object
+        :type hostgroups: object
+        """
         hnames_list = []
         # Gets item's hostgroup_name
         hgnames = getattr(item, "hostgroup_name", '')
@@ -1426,15 +1804,19 @@ class Items(object):
 
         item.host_name = ','.join(hnames)
 
-    # Take our trigger strings and create true objects with it
     def explode_trigger_string_into_triggers(self, triggers):
+        """
+        Get al trigger in triggers and manage them
+
+        :param triggers: triggers object
+        :type triggers: object
+        """
         for i in self:
             i.explode_trigger_string_into_triggers(triggers)
 
-    # Parent graph: use to find quickly relations between all item, and loop
-    # return True if there is a loop
     def no_loop_in_parents(self, attr1, attr2):
-        """ Find loop in dependencies.
+        """
+        Find loop in dependencies.
         For now, used with the following attributes :
         :(self, parents):
             host dependencies from host object
@@ -1442,8 +1824,14 @@ class Items(object):
             host dependencies from hostdependencies object
         :(service_description, dependent_service_description):
             service dependencies from servicedependencies object
-        """
 
+        :param attr1: attribute name
+        :type attr1: str
+        :param attr2: attribute name
+        :type attr2: str
+        :return: True if no loop, else false
+        :rtype: bool
+        """
         # Ok, we say "from now, no loop :) "
         r = True
 
