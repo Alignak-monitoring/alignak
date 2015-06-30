@@ -96,7 +96,7 @@ class Servicedependency(Item):
     })
 
     def get_name(self):
-        """Get name based on 4 class attribute
+        """Get name based on 4 class attributes
         Each attribute is substituted by '' if attribute does not exist
 
         :return: dependent_host_name/dependent_service_description..host_name/service_description
@@ -189,11 +189,12 @@ class Servicedependencies(Items):
 
     def explode(self, hostgroups):
         """Explode all service dependency for each member of hostgroups
-        Eache member of dependent hostgroup or hostgroup in dependency have to get a copy of
-        service dependencies (quite complexe to parse)
+        Each member of dependent hostgroup or hostgroup in dependency have to get a copy of
+        service dependencies (quite complex to parse)
 
 
         :param hostgroups: used to look for hostgroup
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
         # The "old" services will be removed. All services with
@@ -302,7 +303,7 @@ class Servicedependencies(Items):
         """Replace dependent_service_description and service_description
         in service dependency by the real object
 
-        :param hosts: host list to look for a specific one
+        :param hosts: host list, used to look for a specific one
         :type hosts: alignak.objects.host.Hosts
         :param services: service list to look for a specific one
         :type services: alignak.objects.service.Services
@@ -357,7 +358,7 @@ class Servicedependencies(Items):
     def linkify_sd_by_tp(self, timeperiods):
         """Replace dependency_period by a real object in service dependency
 
-        :param timeperiods: list of timeperiod to look for a specific one
+        :param timeperiods: list of timeperiod, used to look for a specific one
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
