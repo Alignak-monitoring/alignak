@@ -51,7 +51,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Servicedependency and Servicedependencies classes that
+implements dependencies between services. Basically used for parsing.
 
+"""
 from alignak.property import BoolProp, StringProp, ListProp
 from alignak.log import logger
 
@@ -60,6 +63,10 @@ from .service import Service
 
 
 class Servicedependency(Item):
+    """Servicedependency class is a simple implementation of service dependency as
+    defined in a monitoring context (dependency period, notification_failure_criteria ..)
+
+    """
     id = 0
     my_type = "servicedependency"
 
@@ -88,9 +95,14 @@ class Servicedependency(Item):
         'explode_hostgroup':             BoolProp(default=False)
     })
 
-    # Give a nice name output, for debugging purpose
-    # (Yes, debugging CAN happen...)
     def get_name(self):
+        """Get name based on 4 class attribute
+        Each attribute is substituted by '' if attribute does not exist
+
+        :return: dependent_host_name/dependent_service_description..host_name/service_description
+        :rtype: str
+        TODO: Clean this function (use format for string)
+        """
         return getattr(self, 'dependent_host_name', '') + '/'\
             + getattr(self, 'dependent_service_description', '') \
             + '..' + getattr(self, 'host_name', '') + '/' \
@@ -98,15 +110,34 @@ class Servicedependency(Item):
 
 
 class Servicedependencies(Items):
+    """Servicedependencies manage a list of Servicedependency objects, used for parsing configuration
+
+    """
     inner_class = Servicedependency  # use for know what is in items
 
     def delete_servicesdep_by_id(self, ids):
+        """Delete a list of servicedependency
+
+        :param ids: ids list to delete
+        :type ids: list
+        :return: None
+        """
         for id in ids:
             del self[id]
 
-    # Add a simple service dep from another (dep -> par)
     def add_service_dependency(self, dep_host_name, dep_service_description,
                                par_host_name, par_service_description):
+        """Instantiate and add a Servicedependency object to the items dict::
+
+        * notification criteria is "u,c,w"
+        * inherits_parent is True
+
+        :param dep_host_name: dependent host name
+        :param dep_service_description: dependent service description
+        :param par_host_name: host name
+        :param par_service_description: service description
+        :return: None
+        """
         # We create a "standard" service_dep
         prop = {
             'dependent_host_name':           dep_host_name,
@@ -119,9 +150,15 @@ class Servicedependencies(Items):
         sd = Servicedependency(prop)
         self.add_item(sd)
 
-    # If we have explode_hostgroup parameter we have to create a
-    # service dependency for each host of the hostgroup
     def explode_hostgroup(self, sd, hostgroups):
+        """Explode a service dependency for each member of hostgroup
+
+        :param sd: service dependency to explode
+        :type sd: alignak.objects.servicedependency.Servicedependency
+        :param hostgroups: used to find hostgroup objects
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :return:None
+        """
         # We will create a service dependency for each host part of the host group
 
         # First get services
@@ -150,8 +187,15 @@ class Servicedependencies(Items):
                         new_sd.dependent_service_description = dep_sname
                         self.add_item(new_sd)
 
-    # We create new servicedep if necessary (host groups and co)
     def explode(self, hostgroups):
+        """Explode all service dependency for each member of hostgroups
+        Eache member of dependent hostgroup or hostgroup in dependency have to get a copy of
+        service dependencies (quite complexe to parse)
+
+
+        :param hostgroups: used to look for hostgroup
+        :return: None
+        """
         # The "old" services will be removed. All services with
         # more than one host or a host group will be in it
         srvdep_to_remove = []
@@ -236,13 +280,34 @@ class Servicedependencies(Items):
         self.delete_servicesdep_by_id(srvdep_to_remove)
 
     def linkify(self, hosts, services, timeperiods):
+        """Create link between objects::
+
+         * servicedependency -> host
+         * servicedependency -> service
+         * servicedependency -> timeperiods
+
+        :param hosts: hosts to link
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services to link
+        :type services: alignak.objects.service.Services
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         self.linkify_sd_by_s(hosts, services)
         self.linkify_sd_by_tp(timeperiods)
         self.linkify_s_by_sd()
 
-    # We just search for each srvdep the id of the srv
-    # and replace the name by the id
     def linkify_sd_by_s(self, hosts, services):
+        """Replace dependent_service_description and service_description
+        in service dependency by the real object
+
+        :param hosts: host list to look for a specific one
+        :type hosts: alignak.objects.host.Hosts
+        :param services: service list to look for a specific one
+        :type services: alignak.objects.service.Services
+        :return: None
+        """
         to_del = []
         errors = self.configuration_errors
         warns = self.configuration_warnings
@@ -289,9 +354,13 @@ class Servicedependencies(Items):
         for sd in to_del:
             self.remove_item(sd)
 
-    # We just search for each srvdep the id of the srv
-    # and replace the name by the id
     def linkify_sd_by_tp(self, timeperiods):
+        """Replace dependency_period by a real object in service dependency
+
+        :param timeperiods: list of timeperiod to look for a specific one
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         for sd in self:
             try:
                 tp_name = sd.dependency_period
@@ -300,8 +369,11 @@ class Servicedependencies(Items):
             except AttributeError, exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
-    # We backport service dep to service. So SD is not need anymore
     def linkify_s_by_sd(self):
+        """Add dependency in service objects
+
+        :return: None
+        """
         for sd in self:
             dsc = sd.dependent_service_description
             sdval = sd.service_description
@@ -313,5 +385,13 @@ class Servicedependencies(Items):
                                                dp, sd.inherits_parent)
 
     def is_correct(self):
+        """Check if this host configuration is correct ::
+
+        * All required parameter are specified
+        * Go through all configuration warnings and errors that could have been raised earlier
+
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
+        """
         r = super(Servicedependencies, self).is_correct()
         return r and self.no_loop_in_parents("service_description", "dependent_service_description")
