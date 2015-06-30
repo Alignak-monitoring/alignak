@@ -1562,7 +1562,8 @@ class Service(SchedulingItem):
     def get_status(self):
         """Get the status of this host
 
-        :return: "OK", "WARNING", "CRITICAL", "UNKNOWN" or "n/a" based on service state_id or business_rule state
+        :return: "OK", "WARNING", "CRITICAL", "UNKNOWN" or "n/a" based on
+                 service state_id or business_rule state
         :rtype: str
         """
 
