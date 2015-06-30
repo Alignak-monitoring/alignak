@@ -50,7 +50,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Escalation and Escalations classes that
+implements escalation for notification. Basically used for parsing.
 
+"""
 from item import Item, Items
 
 from alignak.util import strip_and_uniq
@@ -64,6 +67,9 @@ _special_properties_time_based = ('contacts', 'contact_groups',
 
 
 class Escalation(Item):
+    """Escalation class is used to implement notification escalation
+
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'escalation'
 
@@ -88,18 +94,39 @@ class Escalation(Item):
         'time_based': BoolProp(default=False),
     })
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Accessor to escalation_name attribute
+
+        :return: escalation name
+        :rtype: str
+        """
         return self.escalation_name
 
-    # Return True if:
-    # *time in in escalation_period or we do not have escalation_period
-    # *status is in escalation_options
-    # *the notification number is in our interval [[first_notification .. last_notification]]
-    # if we are a classic escalation.
-    # *If we are time based, we check if the time that we were in notification
-    # is in our time interval
     def is_eligible(self, t, status, notif_number, in_notif_time, interval):
+        """Check if the escalation is eligible (notification is escalated or not)
+
+        Escalation is NOT eligible in ONE of the following condition is fulfilled::
+
+        * escalation is not time based and notification number not in range
+          [first_notification;last_notification] (if last_notif == 0, it's infinity)
+        * escalation is time based and notification time not in range
+          [first_notification_time;last_notification_time] (if last_notif_time == 0, it's infinity)
+        * status does not matches escalation_options ('WARNING' <=> 'w' ...)
+        * escalation_period is not legit for this time (now usually)
+
+
+        :param t: timestamp to check if timeperiod is valid
+        :type t: int
+        :param status: item status (one of the small_states key)
+        :type status: str
+        :param notif_number: current notification number
+        :type notif_number: int
+        :param in_notif_time: current notification time
+        :type in_notif_time: int
+        :param interval: time interval length
+        :type interval: int
+        :return: True if no condition has been fulfilled
+        """
         small_states = {
             'WARNING': 'w',    'UNKNOWN': 'u',     'CRITICAL': 'c',
             'RECOVERY': 'r',   'FLAPPING': 'f',    'DOWNTIME': 's',
@@ -137,8 +164,17 @@ class Escalation(Item):
         # Ok, I do not see why not escalade. So it's True :)
         return True
 
-    # t = the reference time
     def get_next_notif_time(self, t_wished, status, creation_time, interval):
+        """Get the next notification time for the escalation
+        Only legit for time based escalation
+
+        :param t_wished: time we would like to send a new notification (usually now)
+        :param status: status of the host or service
+        :param creation_time: time the notification was created
+        :param interval: time interval length
+        :return: timestamp for next notification or None
+        :rtype: int
+        """
         small_states = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
                         'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
                         'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'}
@@ -166,10 +202,12 @@ class Escalation(Item):
         return start
 
 
-    # Check is required prop are set:
-    # template are always correct
-    # contacts OR contactgroups is need
     def is_correct(self):
+        """Check if all elements got a good configuration
+
+        :return: True if the configuration is correct else False
+        :rtype: bool
+        """
         state = True
         cls = self.__class__
 
@@ -217,20 +255,51 @@ class Escalation(Item):
 
 
 class Escalations(Items):
+    """Escalations manage a list of Escalation objects, used for parsing configuration
+
+    """
     name_property = "escalation_name"
     inner_class = Escalation
 
     def linkify(self, timeperiods, contacts, services, hosts):
+        """Create link between objects::
+
+         * escalation -> host
+         * escalation -> service
+         * escalation -> timeperiods
+         * escalation -> contact
+
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param contacts: contacts to link
+        :type contacts: alignak.objects.contact.Contacts
+        :param services: services to link
+        :type services: alignak.objects.service.Services
+        :param hosts: hosts to link
+        :type hosts: alignak.objects.host.Hosts
+        :return: None
+        """
         self.linkify_with_timeperiods(timeperiods, 'escalation_period')
         self.linkify_with_contacts(contacts)
         self.linkify_es_by_s(services)
         self.linkify_es_by_h(hosts)
 
     def add_escalation(self, es):
+        """Wrapper for add_item method
+
+        :param es: escalation to add to item dict
+        :type es: alignak.objects.escalation.Escalation
+        :return: None
+        """
         self.add_item(es)
 
-    # Will register escalations into service.escalations
     def linkify_es_by_s(self, services):
+        """Add each escalation object into service.escalation attribute
+
+        :param services: service list, used to look for a specific service
+        :type services: alignak.objects.service.Services
+        :return: None
+        """
         for es in self:
             # If no host, no hope of having a service
             if not (hasattr(es, 'host_name') and hasattr(es, 'service_description')):
@@ -252,8 +321,13 @@ class Escalations(Items):
                             s.escalations.append(es)
                             # print "Now service", s.get_name(), 'have', s.escalations
 
-    # Will register escalations into host.escalations
     def linkify_es_by_h(self, hosts):
+        """Add each escalation object into host.escalation attribute
+
+        :param hosts: host list, used to look for a specific host
+        :type hosts: alignak.objects.host.Hosts
+        :return: None
+        """
         for es in self:
             # If no host, no hope of having a service
             if (not hasattr(es, 'host_name') or es.host_name.strip() == ''
@@ -268,8 +342,20 @@ class Escalations(Items):
                     h.escalations.append(es)
                     # print "Now host", h.get_name(), 'have', h.escalations
 
-    # We look for contacts property in contacts and
     def explode(self, hosts, hostgroups, contactgroups):
+        """Loop over all escalation and explode hostsgroups in host
+        and contactgroups in contacts
+
+        Call Item.explode_host_groups_into_hosts and Item.explode_contact_groups_into_contacts
+
+        :param hosts: host list to explode
+        :type hosts: alignak.objects.host.Hosts
+        :param hostgroups: hostgroup list to explode
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :param contactgroups: contactgroup list to explode
+        :type contactgroups: alignak.objects.contactgroup.Contactgroups
+        :return: None
+        """
         for i in self:
             # items::explode_host_groups_into_hosts
             # take all hosts from our hostgroup_name into our host_name property
