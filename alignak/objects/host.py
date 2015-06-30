@@ -702,7 +702,7 @@ class Host(SchedulingItem):
         """Check if this host configuration is correct ::
 
         * All required parameter are specified
-        * Go thought all configuration warnings and errors that could have been raised earlier
+        * Go through all configuration warnings and errors that could have been raised earlier
 
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
@@ -1178,7 +1178,7 @@ class Host(SchedulingItem):
         """Get the last time the host was in a non-OK state
 
         :return: self.last_time_down if self.last_time_down > self.last_time_up, 0 otherwise
-        :rtype: bool
+        :rtype: int
         """
         if self.last_time_down > self.last_time_up:
             last_time_non_up = self.last_time_down
@@ -1452,33 +1452,30 @@ class Host(SchedulingItem):
 
 
     def get_data_for_checks(self):
-        """Return the host itself in a single member list
+        """Get data for a check
 
         :return: list containing a single host (this one)
         :rtype: list
-        TODO: This function seems useless. Why not do [h] directly instead of h.fun()
         """
         return [self]
 
 
     def get_data_for_event_handler(self):
-        """Return the host itself in a single member list
+        """Get data for an event handler
 
         :return: list containing a single host (this one)
         :rtype: list
-        TODO: This function seems useless. Why not do [h] directly instead of h.fun()
         """
         return [self]
 
 
     def get_data_for_notifications(self, contact, n):
-        """Return the host itself, the contact and the notification in a list
+        """Get data for a notification
 
         :param contact: The contact to return
         :param n: the notification to return
-        :return: list containing a the host and the given parameter
+        :return: list containing a the host and the given parameters
         :rtype: list
-        TODO: This function seems useless. Why not do [h, c, n] directly instead of h.fun(c,n)
         """
         return [self, contact, n]
 
@@ -1492,8 +1489,6 @@ class Host(SchedulingItem):
         :type n: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
-        TODO: We should do contact.func(h.attr1, n.attr2 ..)before
-        instead of calling it here with self.attr1
         """
         return not contact.want_host_notification(self.last_chk, self.state, n.type,
                                                   self.business_impact, n.command_call)
@@ -1504,6 +1499,7 @@ class Host(SchedulingItem):
 
         :return: duration in seconds
         :rtype: int
+        TODO: Move to util or SchedulingItem class
         """
         return str(int(self.duration_sec))
 
@@ -1522,7 +1518,7 @@ class Host(SchedulingItem):
 
 
     def notification_is_blocked_by_item(self, type, t_wished=None):
-        """Check if a notification is blocked the host.
+        """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
         * enable_notification is False (global)
@@ -1541,8 +1537,9 @@ class Host(SchedulingItem):
           or are under downtime
 
         :param type: notification type
-        :param t_wished: the time we sould like to notify the host (mostly now)
+        :param t_wished: the time we should like to notify the host (mostly now)
         :return: True if ONE of the above condition was met, False otherwise
+        TODO: Refactor this, a lot of code duplication with Service.notification_is_blocked_by_item
         """
         if t_wished is None:
             t_wished = time.time()
@@ -1670,6 +1667,7 @@ class Host(SchedulingItem):
         :return: author
         :rtype: str
         TODO: use getattr(self.acknowledgement, "author", '') instead
+        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
@@ -1733,6 +1731,7 @@ class Host(SchedulingItem):
 
         :return: scheduled downtime depth
         :rtype: str
+        TODO: Move to util or SchedulingItem class
         """
         return str(self.scheduled_downtime_depth)
 
@@ -1745,11 +1744,6 @@ class Hosts(Items):
     inner_class = Host  # use for know what is in items
 
 
-    # Create link between elements:
-    # hosts -> timeperiods
-    # hosts -> hosts (parents, etc)
-    # hosts -> commands (check_command)
-    # hosts -> contacts
     def linkify(self, timeperiods=None, commands=None, contacts=None, realms=None,
                 resultmodulations=None, businessimpactmodulations=None, escalations=None,
                 hostgroups=None, triggers=None, checkmodulations=None, macromodulations=None):
@@ -1775,7 +1769,7 @@ class Hosts(Items):
               alignak.objects.businessimpactmodulation.Businessimpactmodulations
         :param escalations: escalations to link
         :type escalations: alignak.objects.escalation.Escalations
-        :param hostgroups: escalations to link
+        :param hostgroups: hostgroups to link
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :param triggers: triggers to link
         :type triggers: alignak.objects.trigger.Triggers
