@@ -46,23 +46,28 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-# This class is an application that launches actions for the schedulers
-# Actions can be:
-#    Notifications
-#    Event handlers
-#
-# When running the Reactionner will :
-#   Respond to pings from Arbiter
-#   Listen for new configurations from Arbiter
-#
-# The configuration consists of a list of Schedulers for which
-# the Reactionner will launch actions for.
+"""
+This module provide Reactionner class used to launch notifications or event handlers
+"""
 
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 
 
 class Reactionner(Satellite):
+    """
+    This class is an application that launches actions for the schedulers
+    Actions can be:
+       Notifications
+       Event handlers
+
+    When running the Reactionner will :
+      Respond to pings from Arbiter
+      Listen for new configurations from Arbiter
+
+    The configuration consists of a list of Schedulers for which
+    the Reactionner will launch actions for.
+    """
     do_checks = False  # I do not do checks
     do_actions = True
     my_type = 'reactionner'
