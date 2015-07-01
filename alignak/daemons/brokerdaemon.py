@@ -54,6 +54,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+This module provide IStats and Broker classes used to use and export data from scheduler with
+the modules of this broker
+"""
+
 import os
 import sys
 import time
@@ -77,9 +82,15 @@ class IStats(Interface):
     """
     Interface for various stats about broker activity
     """
-
     doc = 'Get raw stats from the daemon'
+
     def get_raw_stats(self):
+        """
+        Get stats (queue size) for each modules
+
+        :return: list of modules with queue_size
+        :rtype: list
+        """
         app = self.app
         res = []
 
@@ -94,9 +105,12 @@ class IStats(Interface):
     get_raw_stats.doc = doc
 
 
-# Our main APP class
 class Broker(BaseSatellite):
-
+    """
+    Class to manage a Broker daemon
+    A Broker is used to get data from Scheduler and send them to modules. These modules in most
+    cases export to other softwares, databases...
+    """
     properties = BaseSatellite.properties.copy()
     properties.update({
         'pidfile':   PathProp(default='brokerd.pid'),
@@ -137,13 +151,18 @@ class Broker(BaseSatellite):
 
         self.istats = IStats(self)
 
-
-    # Schedulers have some queues. We can simplify the call by adding
-    # elements into the proper queue just by looking at their type
-    # Brok -> self.broks
-    # TODO: better tag ID?
-    # External commands -> self.external_commands
     def add(self, elt):
+        """
+        Add elt to this broker
+
+        Original comment : Schedulers have some queues. We can simplify the call by adding
+          elements into the proper queue just by looking at their type  Brok -> self.broks
+          TODO: better tag ID?
+          External commands -> self.external_commands
+
+        :param elt: object to add
+        :type elt: object
+        """
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
@@ -185,9 +204,15 @@ class Broker(BaseSatellite):
 
                 # The module death will be looked for elsewhere and restarted.
 
-
-    # Get the good tabs for links by the kind. If unknown, return None
     def get_links_from_type(self, d_type):
+        """
+        If d_type parameter is in list, return this object linked, else None
+
+        :param d_type: name of object
+        :type d_type: str
+        :return: return the object linked
+        :rtype: object
+        """
         t = {'scheduler': self.schedulers,
              'arbiter': self.arbiters,
              'poller': self.pollers,
@@ -198,29 +223,49 @@ class Broker(BaseSatellite):
             return t[d_type]
         return None
 
-
-
-    # Check if we do not connect to often to this
     def is_connection_try_too_close(self, elt):
+        """
+        Check if last_connection has been made very recently
+
+        :param elt: list with last_connection property
+        :type elt: list
+        :return: True if last connection has been made less than 5 seconds
+        :rtype: bool
+        """
         now = time.time()
         last_connection = elt['last_connection']
         if now - last_connection < 5:
             return True
         return False
 
-
-    # wrapper function for the real function do_
-    # just for timing the connection
     def pynag_con_init(self, id, type='scheduler'):
+        """
+        Wrapper function for the real function do_
+        just for timing the connection
+
+        :param id: id
+        :type id: int
+        :param type: type of item
+        :type type: str
+        :return: do_pynag_con_init return always True, so we return always True
+        :rtype: bool
+        """
         _t = time.time()
         r = self.do_pynag_con_init(id, type)
         statsmgr.incr('con-init.%s' % type, time.time() - _t)
         return r
 
-
-    # initialize or re-initialize connection with scheduler or
-    # arbiter if type == arbiter
     def do_pynag_con_init(self, id, type='scheduler'):
+        """
+        Initialize or re-initialize connection with scheduler or arbiter if type == arbiter
+
+        :param id: id
+        :type id: int
+        :param type: type of item
+        :type type: str
+        :return: Return always True
+        :rtype: bool
+        """
         # Get the good links tab for looping..
         links = self.get_links_from_type(type)
         if links is None:
@@ -297,11 +342,14 @@ class Broker(BaseSatellite):
 
         logger.info("Connection OK to the %s %s", type, links[id]['name'])
 
-
-    # Get a brok. Our role is to put it in the modules
-    # DO NOT CHANGE data of b!!!
-    # REF: doc/broker-modules.png (4-5)
     def manage_brok(self, b):
+        """
+        Get a brok.
+        We put brok data to the modules
+
+        :param b: object with data
+        :type b: object
+        """
         # Call all modules if they catch the call
         for mod in self.modules_manager.get_internal_instances():
             try:
@@ -314,35 +362,43 @@ class Broker(BaseSatellite):
                 logger.warning("Back trace of this kill: %s", traceback.format_exc())
                 self.modules_manager.set_to_restart(mod)
 
-
-    # Add broks (a tab) to different queues for
-    # internal and external modules
     def add_broks_to_queue(self, broks):
+        """
+        Add broks to global queue
+
+        :param broks: some items
+        :type broks: object
+        """
         # Ok now put in queue broks to be managed by
         # internal modules
         self.broks.extend(broks)
 
-
-    # Each turn we get all broks from
-    # self.broks_internal_raised and we put them in
-    # self.broks
     def interger_internal_broks(self):
+        """
+        Get all broks from self.broks_internal_raised and we put them in self.broks
+        """
         self.add_broks_to_queue(self.broks_internal_raised)
         self.broks_internal_raised = []
 
-
-    # We will get in the broks list the broks from the arbiters,
-    # but as the arbiter_broks list can be push by arbiter without Global lock,
-    # we must protect this with he list lock
     def interger_arbiter_broks(self):
+        """
+        We will get in the broks list the broks from the arbiters,
+        but as the arbiter_broks list can be push by arbiter without Global lock,
+        we must protect this with he list lock
+        """
         with self.arbiter_broks_lock:
             self.add_broks_to_queue(self.arbiter_broks)
             self.arbiter_broks = []
 
-
-    # We get new broks from schedulers
-    # REF: doc/broker-modules.png (2)
     def get_new_broks(self, type='scheduler'):
+        """
+        Get new broks from daemon defined in type parameter
+
+        :param type: type of object
+        :type type: str
+        :return: return always True
+        :rtype: bool
+        """
         # Get the good links tab for looping..
         links = self.get_links_from_type(type)
         if links is None:
@@ -396,26 +452,38 @@ class Broker(BaseSatellite):
                 logger.error(traceback.format_exc())
                 sys.exit(1)
 
-
-    # Helper function for module, will give our broks
     def get_retention_data(self):
+        """
+        Get all broks
+
+        :return: broks container
+        :rtype: object
+        """
         return self.broks
 
-
-    # Get back our broks from a retention module
     def restore_retention_data(self, data):
+        """
+        Add data to broks container
+
+        :param data: broks to add
+        :type data: list
+        """
         self.broks.extend(data)
 
-
     def do_stop(self):
+        """
+        Stop all children of this process
+        """
         act = active_children()
         for a in act:
             a.terminate()
             a.join(1)
         super(Broker, self).do_stop()
 
-
     def setup_new_conf(self):
+        """
+        Parse new configuration and initialize all required
+        """
         conf = self.new_conf
         self.new_conf = None
         self.cur_conf = conf
@@ -649,10 +717,10 @@ class Broker(BaseSatellite):
         for rea_id in self.reactionners:
             self.pynag_con_init(rea_id, type='reactionner')
 
-
-    # An arbiter ask us to wait for a new conf, so we must clean
-    # all our mess we did, and close modules too
     def clean_previous_run(self):
+        """
+        Clean all (when we received new conf)
+        """
         # Clean all lists
         self.schedulers.clear()
         self.pollers.clear()
@@ -667,10 +735,13 @@ class Broker(BaseSatellite):
         self.have_modules = False
         self.modules_manager.clear_instances()
 
-
-
-    # stats threads is asking us a main structure for stats
     def get_stats_struct(self):
+        """
+        Get information of modules (internal and external) and add metrics of them
+
+        :return: dictionary with state of all modules (internal and external)
+        :rtype: dict
+        """
         now = int(time.time())
         # call the daemon one
         res = super(Broker, self).get_stats_struct()
@@ -680,11 +751,14 @@ class Broker(BaseSatellite):
         metrics.append('broker.%s.external-commands.queue %d %d' % (
             self.name, len(self.external_commands), now))
         metrics.append('broker.%s.broks.queue %d %d' % (self.name, len(self.broks), now))
-
         return res
 
-
     def do_loop_turn(self):
+        """
+        Loop use to:
+         * check if modules are alive, if not restart them
+         * add broks to queue of each modules
+        """
         logger.debug("Begin Loop: managing old broks (%d)", len(self.broks))
 
         # Dump modules Queues size
@@ -817,9 +891,10 @@ class Broker(BaseSatellite):
         # Say to modules it's a new tick :)
         self.hook_point('tick')
 
-
-    #  Main function, will loop forever
     def main(self):
+        """
+        Main function, will loop forever
+        """
         try:
             self.load_config_file()
 
