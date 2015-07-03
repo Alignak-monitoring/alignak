@@ -340,7 +340,14 @@ class Daemon(object):
 
         if self.http_thread:
             logger.info("Joining http_thread ..")
-            self.http_thread.join()
+            # Add a timeout to join so that we can manually quit
+            self.http_thread.join(timeout=15)
+            if self.http_thread.is_alive():
+                logger.warning("http_thread failed to terminate. Calling _Thread__stop")
+                try:
+                    self.http_thread._Thread__stop()
+                except exp:
+                    pass
             self.http_thread = None
 
         if self.http_daemon:
