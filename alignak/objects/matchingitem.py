@@ -56,12 +56,19 @@ from item import Item
 
 
 class MatchingItem(Item):
+    """
+    MatchingItem class provide function for regular expression matching
+    """
 
-    # Try to see if the key,value is matching one or
-    # our rule. If value got ',' we must look for each value
-    # If one match, we quit
-    # We can find in matches or not_matches
     def is_matching(self, key, value, look_in='matches'):
+        """Try to see if the key,value is matching one or
+        our rule.
+
+        :param key: key to find in dict
+        :param value: value to find at dict[key]
+        :param look_in: the attribute dict to look in (matches or not_matches)
+        :return: True if  dict[key] match in value, False otherwise
+        """
         if look_in == 'matches':
             d = self.matches
         else:
@@ -92,9 +99,13 @@ class MatchingItem(Item):
                         return True
         return False
 
-    # Look if we match all discovery data or not
-    # a disco data look as a list of (key, values)
     def is_matching_disco_datas(self, datas):
+        """Check if data match one of our matching attribute (matches or not_matches)
+
+        :param datas: data to parse
+        :return: True if we match one pattern in matches and no pattern in not_matches,
+                 False otherwise
+        """
         # If we got not data, no way we can match
         if len(datas) == 0:
             return False
