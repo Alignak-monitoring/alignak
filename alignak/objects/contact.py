@@ -49,7 +49,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+""" This module provide Contact and Contacts classes that
+implements contact for notification. Basically used for parsing.
+"""
 from item import Item, Items
 
 from alignak.util import strip_and_uniq
@@ -72,6 +74,9 @@ _simple_way_parameters = (
 
 
 class Contact(Item):
+    """Host class implements monitoring concepts for contact.
+    For example it defines host_notification_period, service_notification_period etc.
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'contact'
 
@@ -136,16 +141,32 @@ class Contact(Item):
         'CONTACTGROUPNAMES': 'get_groupnames'
     }
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Get contact name
+
+        :return: contact name
+        :rtype: str
+        """
         try:
             return self.contact_name
         except AttributeError:
             return 'UnnamedContact'
 
-    # Search for notification_options with state and if t is
-    # in service_notification_period
     def want_service_notification(self, t, state, type, business_impact, cmd=None):
+        """Check if notification options match the state of the service
+
+        :param t: time we want to notify the contact (usually now)
+        :type t: int
+        :param state: host or service state ("WARNING", "CRITICAL" ..)
+        :type state: str
+        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type type: str
+        :param business_impact: impact of this service
+        :type business_impact: int
+        :param cmd: command launch to notify the contact
+        :type cmd: str
+        :return: True if contact wants notification, False otherwise
+        """
         if not self.service_notifications_enabled:
             return False
 
@@ -164,9 +185,21 @@ class Contact(Item):
         # Oh... no one is ok for it? so no, sorry
         return False
 
-    # Search for notification_options with state and if t is in
-    # host_notification_period
     def want_host_notification(self, t, state, type, business_impact, cmd=None):
+        """Check if notification options match the state of the host
+
+        :param t: time we want to notify the contact (usually now)
+        :type t: int
+        :param state: host or service state ("UP", "DOWN" ..)
+        :type state: str
+        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type type: str
+        :param business_impact: impact of this host
+        :type business_impact: int
+        :param cmd: command launch to notify the contact
+        :type cmd: str
+        :return: True if contact wants notification, False otherwise
+        """
         if not self.host_notifications_enabled:
             return False
 
@@ -185,8 +218,13 @@ class Contact(Item):
         # Oh, nobody..so NO :)
         return False
 
-    # Call to get our commands to launch a Notification
     def get_notification_commands(self, type):
+        """Get notification commands for object type
+
+        :param type: object type (host or service)
+        :return: command list
+        :rtype: list[alignak.objects.command.Command]
+        """
         r = []
         # service_notification_commands for service
         notif_commands_prop = type + '_notification_commands'
@@ -194,9 +232,15 @@ class Contact(Item):
             r.extend(getattr(nw, notif_commands_prop))
         return r
 
-    # Check is required prop are set:
-    # contacts OR contactgroups is need
     def is_correct(self):
+        """Check if this host configuration is correct ::
+
+        * All required parameter are specified
+        * Go through all configuration warnings and errors that could have been raised earlier
+
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
+        """
         state = True
         cls = self.__class__
 
@@ -227,42 +271,79 @@ class Contact(Item):
 
         return state
 
-    # Raise a log entry when a downtime begins
-    # CONTACT DOWNTIME ALERT:
-    #  test_contact;STARTED; Contact has entered a period of scheduled downtime
     def raise_enter_downtime_log_entry(self):
+        """Raise CONTACT DOWNTIME ALERT entry (info level)
+        Format is : "CONTACT DOWNTIME ALERT: *get_name()*;STARTED;
+                      Contact has entered a period of scheduled downtime"
+        Example : "CONTACT DOWNTIME ALERT: test_contact;STARTED;
+                    Contact has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('info', "CONTACT DOWNTIME ALERT: %s;STARTED; Contact has "
                       "entered a period of scheduled downtime" % self.get_name())
 
-    # Raise a log entry when a downtime has finished
-    # CONTACT DOWNTIME ALERT:
-    #  test_contact;STOPPED; Contact has exited from a period of scheduled downtime
     def raise_exit_downtime_log_entry(self):
+        """Raise CONTACT DOWNTIME ALERT entry (info level)
+        Format is : "CONTACT DOWNTIME ALERT: *get_name()*;STOPPED;
+                      Contact has entered a period of scheduled downtime"
+        Example : "CONTACT DOWNTIME ALERT: test_contact;STOPPED;
+                    Contact has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('info', "CONTACT DOWNTIME ALERT: %s;STOPPED; Contact has "
                       "exited from a period of scheduled downtime" % self.get_name())
 
-    # Raise a log entry when a downtime prematurely ends
-    # CONTACT DOWNTIME ALERT:
-    # test_contact;CANCELLED; Contact has entered a period of scheduled downtime
     def raise_cancel_downtime_log_entry(self):
+        """Raise CONTACT DOWNTIME ALERT entry (info level)
+        Format is : "CONTACT DOWNTIME ALERT: *get_name()*;CANCELLED;
+                      Contact has entered a period of scheduled downtime"
+        Example : "CONTACT DOWNTIME ALERT: test_contact;CANCELLED;
+                    Contact has entered a period of scheduled downtime"
+
+        :return: None
+        """
         naglog_result('info', "CONTACT DOWNTIME ALERT: %s;CANCELLED; Scheduled "
                       "downtime for contact has been cancelled." % self.get_name())
 
 
 class Contacts(Items):
+    """Contacts manage a list of Contacts objects, used for parsing configuration
+
+    """
     name_property = "contact_name"
     inner_class = Contact
 
     def linkify(self, timeperiods, commands, notificationways):
+        """Create link between objects::
+
+         * contacts -> timeperiods
+         * contacts -> commands
+         * contacts -> notificationways
+
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param commands: commands to link
+        :type commands: alignak.objects.command.Commands
+        :param notificationways: notificationways to link
+        :type notificationways: alignak.objects.notificationway.Notificationways
+        :return: None
+        TODO: Clean this function
+        """
         # self.linkify_with_timeperiods(timeperiods, 'service_notification_period')
         # self.linkify_with_timeperiods(timeperiods, 'host_notification_period')
         # self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         # self.linkify_command_list_with_commands(commands, 'host_notification_commands')
         self.linkify_with_notificationways(notificationways)
 
-    # We've got a notificationways property with , separated contacts names
-    # and we want have a list of NotificationWay
     def linkify_with_notificationways(self, notificationways):
+        """Link hosts with realms
+
+        :param notificationways: notificationways object to link with
+        :type notificationways: alignak.objects.notificationway.Notificationways
+        :return: None
+        """
         for i in self:
             if not hasattr(i, 'notificationways'):
                 continue
@@ -278,8 +359,16 @@ class Contacts(Items):
             # Get the list, but first make elements uniq
             i.notificationways = list(set(new_notificationways))
 
-    # We look for contacts property in contacts and
+
     def explode(self, contactgroups, notificationways):
+        """Explode all contact for each contactsgroup
+
+        :param contactgroups: contactgroups to explode
+        :type contactgroups: alignak.objects.contactgroup.Contactgroups
+        :param notificationways: notificationways to explode
+        :type notificationways: alignak.objects.notificationway.Notificationways
+        :return:
+        """
         # Contactgroups property need to be fullfill for got the informations
         self.apply_partial_inheritance('contactgroups')
         # _special properties maybe came from a template, so
