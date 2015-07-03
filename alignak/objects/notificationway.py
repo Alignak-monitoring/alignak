@@ -49,7 +49,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides NotificationWay and NotificationWays classes that
+implements way of sending notifications. Basically used for parsing.
 
+"""
 from item import Item, Items
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
@@ -60,6 +63,9 @@ _special_properties = ('service_notification_commands', 'host_notification_comma
 
 
 class NotificationWay(Item):
+    """NotificationWay class is used to implement way of sending notifications (command, periods..)
+
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'notificationway'
 
@@ -98,13 +104,38 @@ class NotificationWay(Item):
 
     macros = {}
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Accessor to notificationway_name attribute
+
+        :return: notificationway name
+        :rtype: str
+        """
         return self.notificationway_name
 
-    # Search for notification_options with state and if t is
-    # in service_notification_period
     def want_service_notification(self, t, state, type, business_impact, cmd=None):
+        """Check if notification options match the state of the service
+        Notification is NOT wanted in ONE of the following case::
+
+        * service notifications are disabled
+        * cmd is not in service_notification_commands
+        * business_impact < self.min_business_impact
+        * service_notification_period is not valid
+        * state does not match service_notification_options for problem, recovery and flapping
+        * state does not match host_notification_options for downtime
+
+        :param t: time we want to notify the contact (usually now)
+        :type t: int
+        :param state: host or service state ("WARNING", "CRITICAL" ..)
+        :type state: str
+        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type type: str
+        :param business_impact: impact of this service
+        :type business_impact: int
+        :param cmd: command launched to notify the contact
+        :type cmd: str
+        :return: True if no condition is matched, False otherwise
+        TODO: Simplify function
+        """
         if not self.service_notifications_enabled:
             return False
 
@@ -140,9 +171,30 @@ class NotificationWay(Item):
         return False
 
 
-    # Search for notification_options with state and if t is in
-    # host_notification_period
     def want_host_notification(self, t, state, type, business_impact, cmd=None):
+        """Check if notification options match the state of the host
+        Notification is NOT wanted in ONE of the following case::
+
+        * host notifications are disabled
+        * cmd is not in host_notification_commands
+        * business_impact < self.min_business_impact
+        * host_notification_period is not valid
+        * state does not match host_notification_options for problem, recovery, flapping and dt
+
+
+        :param t: time we want to notify the contact (usually now)
+        :type t: int
+        :param state: host or service state ("WARNING", "CRITICAL" ..)
+        :type state: str
+        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type type: str
+        :param business_impact: impact of this service
+        :type business_impact: int
+        :param cmd: command launched to notify the contact
+        :type cmd: str
+        :return: True if no condition is matched, False otherwise
+        TODO: Simplify function
+        """
         if not self.host_notifications_enabled:
             return False
 
@@ -176,17 +228,28 @@ class NotificationWay(Item):
         return False
 
 
-    # Call to get our commands to launch a Notification
     def get_notification_commands(self, type):
+        """Get notification commands for object type
+
+        :param type: object type (host or service)
+        :return: command list
+        :rtype: list[alignak.objects.command.Command]
+        """
         # service_notification_commands for service
         notif_commands_prop = type + '_notification_commands'
         notif_commands = getattr(self, notif_commands_prop)
         return notif_commands
 
 
-    # Check is required prop are set:
-    # contacts OR contactgroups is need
     def is_correct(self):
+        """Check if this host configuration is correct ::
+
+        * All required parameter are specified
+        * Go through all configuration warnings and errors that could have been raised earlier
+
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
+        """
         state = True
         cls = self.__class__
 
@@ -260,11 +323,25 @@ class NotificationWay(Item):
 
 
 class NotificationWays(Items):
+    """NotificationWays manage a list of NotificationWay objects, used for parsing configuration
+
+    """
     name_property = "notificationway_name"
     inner_class = NotificationWay
 
 
     def linkify(self, timeperiods, commands):
+        """Create link between objects::
+
+         * notificationways -> timeperiods
+         * notificationways -> commands
+
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param commands: commands to link
+        :type commands: alignak.objects.command.Commands
+        :return: None
+        """
         self.linkify_with_timeperiods(timeperiods, 'service_notification_period')
         self.linkify_with_timeperiods(timeperiods, 'host_notification_period')
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
@@ -272,6 +349,13 @@ class NotificationWays(Items):
 
 
     def new_inner_member(self, name=None, params={}):
+        """Create new instance of NotificationWay with given name and parameters
+        and add it to the item list
+
+        :param name: notification way name
+        :param params: notification wat parameters
+        :return: None
+        """
         if name is None:
             name = NotificationWay.id
         params['notificationway_name'] = name

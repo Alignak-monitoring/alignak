@@ -163,7 +163,7 @@ class Contact(Item):
         :type type: str
         :param business_impact: impact of this service
         :type business_impact: int
-        :param cmd: command launch to notify the contact
+        :param cmd: command launched to notify the contact
         :type cmd: str
         :return: True if contact wants notification, False otherwise
         """
