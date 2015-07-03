@@ -1862,8 +1862,8 @@ class Hosts(Items):
     def linkify_h_by_hg(self, hostgroups):
         """Link hosts with hostgroups
 
-        :param realms: realms object to link with
-        :type realms: alignak.objects.hostgroup.Hostgroups
+        :param hostgroups: realms object to link with
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
         # Register host in the hostgroups

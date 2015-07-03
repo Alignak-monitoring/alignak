@@ -128,7 +128,7 @@ class Hostgroup(Itemgroup):
         Get hosts of this group
 
         :param hostgroups: Hostgroup object
-        :type hostgroups: object
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: list of hosts of this group
         :rtype: list
         """
@@ -186,9 +186,9 @@ class Hostgroups(Itemgroups):
         Make link of hosts / realms
 
         :param hosts: object Hosts
-        :type hosts: object
+        :type hosts: alignak.objects.hostgroup.Hostgroups
         :param realms: object Realms
-        :type realms: object
+        :type realms: alignak.objects.realm.Realms
         """
         self.linkify_hg_by_hst(hosts)
         self.linkify_hg_by_realms(realms)
