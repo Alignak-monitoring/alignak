@@ -188,7 +188,7 @@ class Contactgroups(Itemgroups):
         """Create link between objects::
 
         * contactgroups -> contacts
-        
+
         :param contacts: contacts to link
         :type contacts: alignak.objects.contact.Contacts
         :return: None
