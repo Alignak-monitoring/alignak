@@ -59,6 +59,7 @@ class TestBadRealmConf(AlignakTest):
         self.assertFalse(self.conf.conf_is_correct)
         self.assert_any_log_match(" Error : More than one realm are set to the default realm")
         self.assert_any_log_match("\[host::.*\] the host .* got an invalid realm")
+        self.assert_any_log_match("\[itemgroup::.*\] as realm, got unknown member UNKNOWNREALM")
 
 
 if __name__ == '__main__':
