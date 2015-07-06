@@ -97,7 +97,7 @@ class Realm(Itemgroup):
         return self.realm_members
 
     def add_string_member(self, member):
-        self.realm_members += ',' + member
+        self.realm_members.append(member)
 
     def get_realm_members(self):
         if self.has('realm_members'):
@@ -123,7 +123,7 @@ class Realm(Itemgroup):
             if self.has('members'):
                 return self.members
             else:
-                return ''
+                return []
 
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
@@ -133,13 +133,13 @@ class Realm(Itemgroup):
             p = realms.find_by_name(p_mbr.strip())
             if p is not None:
                 value = p.get_realms_by_explosion(realms)
-                if value is not None:
+                if len(value) > 0:
                     self.add_string_member(value)
 
         if self.has('members'):
             return self.members
         else:
-            return ''
+            return []
 
     def get_all_subs_satellites_by_type(self, sat_type):
         r = copy.copy(getattr(self, sat_type))
@@ -367,6 +367,8 @@ class Realms(Itemgroups):
                 new_mbr = self.find_by_name(mbr)
                 if new_mbr is not None:
                     new_mbrs.append(new_mbr)
+                else:
+                    p.add_string_unknown_member(mbr)
             # We find the id, we replace the names
             p.realm_members = new_mbrs
 

@@ -1914,7 +1914,8 @@ class Config(Item):
 
         for x in ('hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
                   'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
-                  'hostsextinfo', 'servicesextinfo', 'checkmodulations', 'macromodulations'):
+                  'hostsextinfo', 'servicesextinfo', 'checkmodulations', 'macromodulations',
+                  'realms'):
             if self.read_config_silent == 0:
                 logger.info('Checking %s...', x)
 
