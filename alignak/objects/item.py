@@ -1178,7 +1178,7 @@ class Items(object):
         :param name: name of item
         :type name: str
         :return: name of the item
-        :rtype: str or None
+        :rtype: alignak.objects.item.Item
         """
         return self.name_to_item.get(name, None)
 
