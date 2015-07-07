@@ -92,16 +92,6 @@ properties = {
 }
 
 
-class ModulePhases:
-    """TODO: Add some comment about this class for the doc"""
-    # TODO: why not use simply integers instead of string
-    # to represent the different phases??
-    CONFIGURATION = 1
-    LATE_CONFIGURATION = 2
-    RUNNING = 4
-    RETENTION = 8
-
-
 class BaseModule(object):
     """This is the base class for the alignak modules.
     Modules can be used by the different alignak daemons/services
