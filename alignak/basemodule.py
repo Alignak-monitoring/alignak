@@ -93,19 +93,19 @@ properties = {
 
 
 class BaseModule(object):
-    """This is the base class for the alignak modules.
-    Modules can be used by the different alignak daemons/services
+    """This is the base class for the Alignak modules.
+    Modules can be used by the different Alignak daemons/services
     for different tasks.
-    Example of task that a alignak module can do:
+    Example of task that a Alignak module can do:
 
     - load additional configuration objects.
     - recurrently save hosts/services status/perfdata
-       informations in different format.
+       information in different format.
     - ...
     """
 
     def __init__(self, mod_conf):
-        """Instanciate a new module.
+        """Instantiate a new module.
         There can be many instance of the same type.
         'mod_conf' is module configuration object
         for this new module instance.
@@ -142,6 +142,12 @@ class BaseModule(object):
 
 
     def set_loaded_into(self, daemon_name):
+        """Setter for loaded_into attribute
+        Used to know what daemon has loaded this module
+
+        :param daemon_name: value to set
+        :return: None
+        """
         self.loaded_into = daemon_name
 
 
@@ -162,7 +168,11 @@ class BaseModule(object):
 
 
     def clear_queues(self, manager):
-        """Release the resources associated to the queues of this instance"""
+        """Release the resources associated to the queues of this instance
+
+        :param manager: queue manager
+        :return: None
+        """
         for q in (self.to_q, self.from_q):
             if q is None:
                 continue
@@ -177,6 +187,11 @@ class BaseModule(object):
 
 
     def start_module(self):
+        """Wrapper for _main function.
+        Catch and raise any exception occurring in the main function
+
+        :return:
+        """
         try:
             self._main()
         except Exception as e:
@@ -184,8 +199,15 @@ class BaseModule(object):
             raise e
 
 
-    # Start this module process if it's external. if not -> donothing
     def start(self, http_daemon=None):
+        """Actually restart the process if the module is external
+        Try first to stop the process and create a new Process instance
+        with target start_module.
+        Finally start process.
+
+        :param http_daemon: Not used here but can be used in other modules
+        :return: None
+        """
 
         if not self.is_external:
             return
@@ -243,8 +265,12 @@ class BaseModule(object):
             self.process = None
 
 
-    # TODO: are these 2 methods really needed?
+
     def get_name(self):
+        """Wrapper to access name attribute
+
+        :return: module name
+        """
         return self.name
 
     def has(self, prop):
@@ -252,9 +278,14 @@ class BaseModule(object):
         return hasattr(self, prop)
 
 
-    # For in scheduler modules, we will not send all broks to external
-    # modules, only what they really want
     def want_brok(self, b):
+        """Generic function to check if the module need a specific brok
+        In this case it is always True
+
+        :param b: brok to check
+        :type b: alignak.brok.Brok
+        :return: True if the module wants the brok, False otherwise
+        """
         return True
 
 
@@ -270,10 +301,23 @@ class BaseModule(object):
 
 
     def manage_signal(self, sig, frame):
+        """Generic function to handle signals
+        Set interrupted attribute to True and return
+
+        :param sig: signal sent
+        :param frame: frame before catching signal
+        :return: None
+        """
         self.interrupted = True
 
 
     def set_signal_handler(self, sigs=None):
+        """Set the signal handler function (manage_signal)
+        for sigs signals or signal.SIGINT and signal.SIGTERM if sigs is None
+
+        :param sigs: signals to handle
+        :return: None
+        """
         if sigs is None:
             sigs = (signal.SIGINT, signal.SIGTERM)
 
@@ -297,6 +341,11 @@ class BaseModule(object):
         raise NotImplementedError()
 
     def set_proctitle(self, name):
+        """Wrapper for setproctitle method
+
+        :param name: module name
+        :return: None
+        """
         setproctitle("alignak-%s module: %s" % (self.loaded_into, name))
 
     def _main(self):
