@@ -111,3 +111,7 @@ class Test_Alignak_Http_Client(unittest.TestCase):
 class Test_Alignak_Http_Client_With_CherrPy_Backend(Test_Alignak_Http_Client):
 
     http_backend = 'cherrypy'  # ho well
+
+
+if __name__ == '__main__':
+    unittest.main()
