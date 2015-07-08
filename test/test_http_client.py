@@ -47,6 +47,10 @@ class Test_Alignak_Http_Client(unittest.TestCase):
             self.__thread.join(15)
             if self.__thread.isAlive():
                 print("warn: http thread still alive", file=sys.stderr)
+                try:
+                    self.__thread._Thread__stop()
+                except Exception:
+                    pass
         self.__thread = None
         self.__server = None
 
