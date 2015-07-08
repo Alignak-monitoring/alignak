@@ -346,7 +346,7 @@ class Daemon(object):
                 logger.warning("http_thread failed to terminate. Calling _Thread__stop")
                 try:
                     self.http_thread._Thread__stop()
-                except exp:
+                except Exception:
                     pass
             self.http_thread = None
 
