@@ -45,11 +45,17 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide Comment class, used to attach comments to hosts / services
 
+"""
 import time
 
-""" TODO: Add some comment about this class for the doc"""
+
 class Comment:
+    """Comment class implements comments for monitoring purpose.
+    It contains data like author, type, expire_time, peristent etc..
+
+    """
     id = 1
 
     properties = {
@@ -70,12 +76,47 @@ class Comment:
         # 'ref':  None
     }
 
-    # Adds a comment to a particular service. If the "persistent" field
-    # is set to zero (0), the comment will be deleted the next time
-    # Alignak is restarted. Otherwise, the comment will persist
-    # across program restarts until it is deleted manually.
     def __init__(self, ref, persistent, author, comment, comment_type, entry_type, source, expires,
                  expire_time):
+        """Adds a comment to a particular service. If the "persistent" field
+        is set to zero (0), the comment will be deleted the next time
+        Alignak is restarted. Otherwise, the comment will persist
+        across program restarts until it is deleted manually.
+
+        :param ref: reference object (host / service)
+        :type ref: alignak.object.schedulingitem.SchedulingItem
+        :param persistent: comment is persistent or not (stay after reboot)
+        :type persistent: bool
+        :param author: Author of this comment
+        :type author: str
+        :param comment: text comment itself
+        :type comment: str
+        :param comment_type: comment type ::
+
+                            * 1 <=> HOST_COMMENT
+                            * 2 <=> SERVICE_COMMENT
+
+        :type comment_type: int
+        :param entry_type: type of entry linked to this comment ::
+
+                          * 1 <=> USER_COMMENT
+                          * 2 <=>DOWNTIME_COMMENT
+                          * 3 <=>FLAPPING_COMMENT
+                          * 4 <=>ACKNOWLEDGEMENT_COMMENT
+
+        :type entry_type: int
+        :param source: source of this comment ::
+
+                      * 0 <=> COMMENTSOURCE_INTERNAL
+                      * 1 <=> COMMENTSOURCE_EXTERNAL
+
+        :type source: int
+        :param expires: comment expires or not
+        :type expires: bool
+        :param expire_time: time of expiration
+        :type expire_time: int
+        :return: None
+        """
         self.id = self.__class__.id
         self.__class__.id += 1
         self.ref = ref  # pointer to srv or host we are apply
@@ -97,9 +138,10 @@ class Comment:
     def __str__(self):
         return "Comment id=%d %s" % (self.id, self.comment)
 
-    # Call by pickle for dataify the ackn
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle to dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -108,8 +150,8 @@ class Comment:
                 res[prop] = getattr(self, prop)
         return res
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Inverted function of getstate"""
         cls = self.__class__
 
         # Maybe it's not a dict but a list like in the old 0.4 format
@@ -127,10 +169,8 @@ class Comment:
         if self.id >= cls.id:
             cls.id = self.id + 1
 
-    # This function is DEPRECATED and will be removed in a future version of
-    # Alignak. It should not be useful any more after a first load/save pass.
-    # Inverted function of getstate
     def __setstate_deprecated__(self, state):
+        """In 1.0 we move to a dict save."""
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!
