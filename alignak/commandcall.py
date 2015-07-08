@@ -46,7 +46,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This modules provide CommandCall class which is a absraction for dealing with command line
+(resolve macro, parse commands etc)
 
+"""
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp, BoolProp, IntegerProp
 
@@ -55,6 +58,8 @@ class DummyCommandCall(object):
     """Ok, slots are fun: you cannot set the __autoslots__
      on the same class you use, fun isn't it? So we define*
      a dummy useless class to get such :)
+
+    TODO: Remove this class and use __slots__ properly
     """
     pass
 
@@ -129,12 +134,22 @@ class CommandCall(DummyCommandCall):
                      for s in tab[1:]]
 
     def is_valid(self):
+        """Getter for valid attribute
+
+        :return: True if object is valid, False otherwise
+        :rtype: bool
+        """
         return self.valid
 
     def __str__(self):
         return str(self.__dict__)
 
     def get_name(self):
+        """Getter for call attribute
+
+        :return: call attribute
+        :rtype: str
+        """
         return self.call
 
     def __getstate__(self):
@@ -171,6 +186,8 @@ class CommandCall(DummyCommandCall):
         ({'id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
         'command_line': u'/usr/local/nagios/bin/rss-multiuser',
         'module_type': 'fork', 'command_name': u'notify-by-rss'})
+
+        TODO: Clean this
         """
         for d in state:
             for k, v in d.items():
