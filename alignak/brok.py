@@ -45,7 +45,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""Brok module provide Brok class which is basically event for Alignak.
+Brok are filled depending on their type (check_result, initial_state ...)
 
+"""
 import cPickle
 
 
@@ -69,9 +72,11 @@ class Brok:
         return str(self.__dict__) + '\n'
 
 
-    # We unserialize the data, and if some prop were
-    # add after the serialize pass, we integer them in the data
     def prepare(self):
+        """Unpickle data from data attribute and add instance_id key if necessary
+
+        :return: None
+        """
         # Maybe the brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
