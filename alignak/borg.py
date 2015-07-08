@@ -43,10 +43,15 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""Borg module provides Borg class. Used only for MacroSolver
+
+"""
 
 class Borg(object):
-    """ Here is the new-style Borg
-    (not much more complex then the "old-style")
+    """Borg class define a simple __shared_state class attribute.
+    __dict__ points to this value when calling __init__
+
+    TODO: Is this class really needed? Only subclassed by MacroSolver
     """
     __shared_state = {}
 
