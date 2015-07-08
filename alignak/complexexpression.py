@@ -41,15 +41,17 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provides ComplexExpressionNode and ComplexExpressionFactory used for parsing
+expression (business rules)
+"""
 from alignak.util import strip_and_uniq
-
-
-"""
-Here is a node class for complex_expression(s) and a factory to create them
-"""
+from alignak.dependencynode import DependencyNode
 
 class ComplexExpressionNode(object):
+    """
+    ComplexExpressionNode is a node class for complex_expression(s)
+    """
     def __init__(self):
         self.operand = None
         self.sons = []
@@ -68,6 +70,12 @@ class ComplexExpressionNode(object):
             return 'IS LEAF %s' % self.content
 
     def resolve_elements(self):
+        """Get element of this node recursively
+        Compute rules with OR or AND rule then NOT rules.
+
+        :return: set of element
+        :rtype: set
+        """
         # If it's a leaf, we just need to dump a set with the content of the node
         if self.leaf:
             # print "Is a leaf", self.content
@@ -114,8 +122,16 @@ class ComplexExpressionNode(object):
             res = res.difference(node_members)
         return res
 
-    # Check for empty (= not found) leaf nodes
     def is_valid(self):
+        """
+        Check if all leaves are correct (no error)
+
+        :return: True if correct, else False
+        :rtype: bool
+        TODO: Fix this function and use it.
+        DependencyNode should be ComplexExpressionNode
+        Should return true on a leaf
+        """
 
         valid = True
         if not self.sons:
@@ -129,15 +145,22 @@ class ComplexExpressionNode(object):
 
 
 
-""" TODO: Add some comment about this class for the doc"""
 class ComplexExpressionFactory(object):
+    """ComplexExpressionFactory provides complex expression parsing functions
+
+    """
     def __init__(self, ctx='hostgroups', grps=None, all_elements=None):
         self.ctx = ctx
         self.grps = grps
         self.all_elements = all_elements
 
-    # the () will be eval in a recursiv way, only one level of ()
     def eval_cor_pattern(self, pattern):
+        """Parse and build recursively a tree of ComplexExpressionNode from pattern
+
+        :param pattern: pattern to parse
+        :return: root node of parsed tree
+        :type: alignak.complexexpression.ComplexExpressionNode
+        """
         pattern = pattern.strip()
         # print "eval_cor_pattern::", pattern
         complex_node = False
@@ -265,8 +288,13 @@ class ComplexExpressionFactory(object):
         # print "R %s:" % pattern, node
         return node
 
-    # We've got an object, like super-grp, so we should link th group here
     def find_object(self, pattern):
+        """Get a list of host corresponding to the pattern regarding the context
+
+        :param pattern: pattern to find
+        :return: Host list matching pattern (hostgroup name, template, all)
+        :rtype: list[alignak.objects.host.Host]
+        """
         obj = None
         error = None
         pattern = pattern.strip()
