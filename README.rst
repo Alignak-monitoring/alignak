@@ -19,6 +19,9 @@ Alignak is backwards-compatible with the Nagios configuration standard
 and plugins. It works on any operating system and architecture that
 supports Python, which includes Windows, GNU/Linux and FreeBSD.
 
+Alignak is licensed under the Gnu Affero General Public Licence version 3 (AGPLv3).
+Unless specified by another header, this licence apply to all files in this repository 
+
 Requirements
 ============
 
