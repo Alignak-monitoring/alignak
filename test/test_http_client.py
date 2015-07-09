@@ -1,8 +1,11 @@
 from __future__ import print_function
 
+import time
+import socket
 import sys
-from threading import Thread
+from multiprocessing import Process
 import mock
+import os
 
 from alignak import daemon
 from alignak.http_client import HTTPClient
@@ -36,22 +39,23 @@ class Test_Alignak_Http_Client(unittest.TestCase):
         super(Test_Alignak_Http_Client, self).__init__(*a, **kw)
         # some resources which must be initialized prior anything:
         self.__server = None
-        self.__thread = None
+        self.__process = None
         # for eventual use in tearDown:
 
     def tearDown(self):
         if self.__server:
             self.__server.request_stop()
-        if self.__thread:
+        if self.__process:
             # wait up to 5 secs for the http main thread:
-            self.__thread.join(15)
-            if self.__thread.isAlive():
-                print("warn: http thread still alive", file=sys.stderr)
+            self.__process.terminate()
+            while self.__process.is_alive():
+#                print("warn: http proc still alive", file=sys.stderr)
                 try:
-                    self.__thread._Thread__stop()
+                    os.kill(self.__process.pid, 9)
                 except Exception:
                     pass
-        self.__thread = None
+                time.sleep(1)
+        self.__process = None
         self.__server = None
 
     def setUp(self):
@@ -69,9 +73,20 @@ class Test_Alignak_Http_Client(unittest.TestCase):
             self.__mocked_app = mock.MagicMock()
             self.__dispatcher = Interface(self.__mocked_app)
             self.__server.register(self.__dispatcher)
-            self.__thread = Thread(target=self._run_http_server)
-            self.__thread.daemon = True
-            self.__thread.start()
+            self.__process = Process(target=self._run_http_server)
+            self.__process.start()
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            while True:
+                try:
+                    if sock.connect_ex((addr, port)) == 0:
+#                        print("http_server started", file=sys.stderr)
+                        break
+                except:
+                    pass
+#                print("Waiting http_server", file=sys.stderr)
+                time.sleep(1)
+            else:
+                raise Exception()
         except:  # nosetest doesn't call tearDown if setUp raise something,
             # but I want to be really clean, so:
             self.tearDown()
@@ -110,6 +125,7 @@ class Test_Alignak_Http_Client(unittest.TestCase):
         cli = self.__client
         rsp = cli.put('put_method', data=dict(a=1, b=2))
         self.assertEqual("don't know", rsp)
+
 
 
 class Test_Alignak_Http_Client_With_CherrPy_Backend(Test_Alignak_Http_Client):
