@@ -86,7 +86,7 @@ class TestSrvTplOnHostTpl(AlignakTest):
         for s in h_linux.services:
             print s.get_dbg_name()
 
-        # The linux and http service should exist on the linux host
+        # The services named "linux" and "http" should exist on the host named "linux"
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_AND_linux")
         self.assertIsNot(svc, None)
 
@@ -96,30 +96,24 @@ class TestSrvTplOnHostTpl(AlignakTest):
         for s in h_windows.services:
             print s.get_dbg_name()
 
-        # The linux and http service should exist on the linux host
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_AND_linux")
         self.assertIs(None, svc)
 
-        # The http_OR_linux should be every where
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_OR_linux")
         self.assertIsNot(svc, None)
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_OR_linux")
         self.assertIsNot(svc, None)
 
-        # The http_BUT_NOT_linux should be in the windows host only
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_BUT_NOT_linux")
         self.assertIs(None, svc)
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_BUT_NOT_linux")
         self.assertIsNot(svc, None)
 
-        # The http_ALL_BUT_NOT_linux should be in the windows host only
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_ALL_BUT_NOT_linux")
         self.assertIs(None, svc)
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_ALL_BUT_NOT_linux")
         self.assertIsNot(svc, None)
 
-        # The http_ALL_BUT_NOT_linux_AND_EVEN_LINUX should be every where :)
-        # yes, it's a stupid example, but at least it help to test :)
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_ALL_BUT_NOT_linux_AND_EVEN_LINUX")
         self.assertIsNot(svc, None)
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_ALL_BUT_NOT_linux_AND_EVEN_LINUX")

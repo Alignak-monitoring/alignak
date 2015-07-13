@@ -152,6 +152,7 @@ class ComplexExpressionFactory(object):
         # print "Is so complex?", complex_node, pattern, node
 
         # if it's a single expression like !linux or production
+        # (where "linux" and "production" are hostgroup names)
         # we will get the objects from it and return a leaf node
         if not complex_node:
             # If it's a not value, tag the node and find

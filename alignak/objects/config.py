@@ -894,7 +894,7 @@ class Config(Item):
             if self.read_config_silent == 0:
                 logger.info("[config] opening '%s' configuration file", file)
             try:
-                # Open in Universal way for Windows, Mac, Linux
+                # Open in Universal way for Windows, Mac, Linux-based systems
                 fd = open(file, 'rU')
                 buf = fd.readlines()
                 fd.close()

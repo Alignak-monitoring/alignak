@@ -502,7 +502,7 @@ class Satellite(BaseSatellite):
                 q = Queue()
             else:
                 q = self.manager.Queue()
-        # If we got no /dev/shm on linux, we can got problem here.
+        # If we got no /dev/shm on linux-based system, we can got problem here.
         # Must raise with a good message
         except OSError, exp:
             # We look for the "Function not implemented" under Linux

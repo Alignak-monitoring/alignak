@@ -114,13 +114,13 @@ class TestComplexHostgroups(AlignakTest):
         self.assertIn(test_linux_web_prod_0, hg_linux.members)
         self.assertNotIn(test_linux_web_prod_0, hg_file.members)
 
-        # First the service define for linux only
+        # First the service define for the host linux_0 only
         svc = self.find_service('test_linux_web_prod_0', 'linux_0')
-        print "Service Linux only", svc.get_dbg_name()
+        print "Service linux_0 only", svc.get_dbg_name()
         r = self.srv_define_only_on('linux_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_linux_file_prod_0])
         self.assertEqual(True, r)
 
-        print "Service Linux,web"
+        print "Service linux_0,web"
         r = self.srv_define_only_on('linux_web_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_linux_file_prod_0, test_win_web_prod_0, test_win_web_qual_0])
         self.assertEqual(True, r)
 
