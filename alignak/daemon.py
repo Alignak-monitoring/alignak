@@ -481,7 +481,7 @@ class Daemon(object):
             logger.info("Using the local log file '%s'", self.local_log)
 
 
-    # Only on linux: Check for /dev/shm write access
+    # Only on linux-based system: Check for /dev/shm write access
     def check_shm(self):
         import stat
         shm_path = '/dev/shm'

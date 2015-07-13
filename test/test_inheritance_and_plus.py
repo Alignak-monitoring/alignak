@@ -68,7 +68,7 @@ class TestInheritanceAndPlus(AlignakTest):
 
         host1 = self.sched.hosts.find_by_name("test-server1")
         host2 = self.sched.hosts.find_by_name("test-server2")
-        # HOST 1 is lin-servers,dmz, so should be in linux AND DMZ group
+        # HOST 1 is lin-servers,dmz, so should be in the hostsgroup named "linux" AND "DMZ"
         for hg in host1.hostgroups:
             print hg.get_name()
         self.assertIn(linux.get_name(), [hg.get_name() for hg in host1.hostgroups])
