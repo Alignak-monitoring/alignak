@@ -43,7 +43,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Init of Alignak, basically only import version and shinken_hook
+This file has to be as small as possible in order to namespace to work
 
+"""
 from .version import VERSION as __version__
 
 
