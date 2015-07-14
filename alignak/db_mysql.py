@@ -48,7 +48,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DBMysql class to access MYSQL databases
 
+"""
 import MySQLdb
 from MySQLdb import IntegrityError
 from MySQLdb import ProgrammingError

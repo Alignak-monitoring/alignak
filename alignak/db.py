@@ -45,6 +45,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DB class which is a generic class to access relational databases
+
+"""
 
 class DB(object):
     """DB is a generic class for SQL Database"""

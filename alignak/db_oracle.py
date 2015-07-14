@@ -46,7 +46,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DBOracle class to access Oracle databases
 
+"""
 # Failed to import will be catch by __init__.py
 from cx_Oracle import connect as connect_function
 from cx_Oracle import IntegrityError as IntegrityError_exp
