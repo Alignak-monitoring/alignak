@@ -46,15 +46,20 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides EventHandler class, used when hosts or services reach a bad state.
 
+"""
 import time
 
 from action import Action
 from alignak.property import IntegerProp, StringProp, FloatProp, BoolProp
 from alignak.autoslots import AutoSlots
 
-""" TODO: Add some comment about this class for the doc"""
 class EventHandler(Action):
+    """Notification class, inherits from action class. Used to execute action
+    when a host or a service is in a bad state
+
+    """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
     __metaclass__ = AutoSlots
@@ -115,14 +120,30 @@ class EventHandler(Action):
         self.is_snapshot = is_snapshot
 
 
-    # return a copy of the check but just what is important for execution
-    # So we remove the ref and all
     def copy_shell(self):
+        """Get a copy o this event handler with minimal values (default, id, is snapshot)
+
+        :return: new event handler
+        :rtype: alignak.eventhandler.EventHandler
+        """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(EventHandler('', id=self.id, is_snapshot=self.is_snapshot))
 
 
     def get_return_from(self, e):
+        """Setter of the following attributes::
+
+        * exit_status
+        * output
+        * long_output
+        * check_time
+        * execution_time
+        * perf_data
+
+        :param e: event handler to get data from
+        :type e: alignak.eventhandler.EventHandler
+        :return: None
+        """
         self.exit_status = e.exit_status
         self.output = e.output
         self.long_output = getattr(e, 'long_output', '')
@@ -132,10 +153,23 @@ class EventHandler(Action):
 
 
     def get_outputs(self, out, max_plugins_output_length):
+        """Setter of output attribute
+
+        :param out: new output
+        :param max_plugins_output_length: not use
+        :return: None
+        """
         self.output = out
 
 
     def is_launchable(self, t):
+        """Check if this event handler can be launched base on time
+
+        :param t: time to compare
+        :return: True if t >= self.t_to_go, False otherwise
+        :rtype: bool
+        TODO: Duplicate from Notification.is_launchable
+        """
         return t >= self.t_to_go
 
 
@@ -144,12 +178,22 @@ class EventHandler(Action):
 
 
     def get_id(self):
+        """Getter to id attribute
+
+        :return: event handler id
+        :rtype: int
+        TODO: Duplicate from Notification.get_id
+        """
         return self.id
 
 
-    # Call by pickle to dataify the comment
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle for dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+
+        :return: dict containing notification data
+        :rtype: dict
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -160,8 +204,13 @@ class EventHandler(Action):
         return res
 
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Inverted function of getstate
+
+        :param state: state to restore
+        :type state: dict
+        :return: None
+        """
         cls = self.__class__
         self.id = state['id']
         for prop in cls.properties:
