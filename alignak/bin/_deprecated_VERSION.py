@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
+"""This module provide VERSION if we try to import alignak.bin.VERSION
+It will raise a warning to notify user/dev
 
+"""
 import warnings
 
 from .. import __version__
@@ -7,6 +10,9 @@ from alignak.misc.custom_module import CustomModule
 
 
 class DeprecatedAlignakBin(CustomModule):
+    """DeprecatedAlignakBin subclasses Custommodule and implement VERSION property
+
+    """
 
     @property
     def VERSION(self):
