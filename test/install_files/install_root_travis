@@ -15,7 +15,6 @@
 755 /usr/local/etc/alignak/daemons
 755 /usr/local/etc/alignak/dependencies
 644 /usr/local/etc/alignak/dev.cfg
-755 /usr/local/etc/alignak/discovery
 755 /usr/local/etc/alignak/escalations
 755 /usr/local/etc/alignak/hostgroups
 755 /usr/local/etc/alignak/hosts
@@ -81,9 +80,6 @@
 644 /usr/local/etc/alignak/daemons/receiverd.ini
 644 /usr/local/etc/alignak/daemons/schedulerd.ini
 644 /usr/local/etc/alignak/dependencies/sample.cfg
-644 /usr/local/etc/alignak/discovery/discovery.cfg
-644 /usr/local/etc/alignak/discovery/discovery_rules.cfg
-644 /usr/local/etc/alignak/discovery/discovery_runs.cfg
 644 /usr/local/etc/alignak/escalations/sample.cfg
 644 /usr/local/etc/alignak/hostgroups/linux.cfg
 644 /usr/local/etc/alignak/hosts/localhost.cfg
@@ -195,9 +191,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/db_sqlite.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/dependencynode.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/dependencynode.pyc
-755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/discovery
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/dispatcher.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/dispatcher.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/downtime.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/downtime.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/eventhandler.py
@@ -266,8 +259,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_arbiter.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_broker.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_broker.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_discovery.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_discovery.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_poller.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_poller.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_reactionner.py
@@ -290,10 +281,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/receiverdaemon.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/schedulerdaemon.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/daemons/schedulerdaemon.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/discovery/__init__.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/discovery/__init__.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/discovery/discoverymanager.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/discovery/discoverymanager.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/misc/__init__.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/misc/__init__.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/misc/common.py
@@ -330,10 +317,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/contact.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/contactgroup.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/contactgroup.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/discoveryrule.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/discoveryrule.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/discoveryrun.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/discoveryrun.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/escalation.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/escalation.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/objects/host.py

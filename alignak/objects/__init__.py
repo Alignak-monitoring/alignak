@@ -74,8 +74,6 @@ from servicegroup import Servicegroup, Servicegroups
 from servicedependency import Servicedependency, Servicedependencies
 from hostdependency import Hostdependency, Hostdependencies
 from module import Module, Modules
-from discoveryrule import Discoveryrule, Discoveryrules
-from discoveryrun import Discoveryrun, Discoveryruns
 from trigger import Trigger, Triggers
 from businessimpactmodulation import Businessimpactmodulation, Businessimpactmodulations
 from macromodulation import MacroModulation, MacroModulations

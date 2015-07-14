@@ -81,9 +81,6 @@
 644 VIRTUALENVPATH/etc/alignak/daemons/receiverd.ini
 644 VIRTUALENVPATH/etc/alignak/daemons/schedulerd.ini
 644 VIRTUALENVPATH/etc/alignak/dependencies/sample.cfg
-644 VIRTUALENVPATH/etc/alignak/discovery/discovery.cfg
-644 VIRTUALENVPATH/etc/alignak/discovery/discovery_rules.cfg
-644 VIRTUALENVPATH/etc/alignak/discovery/discovery_runs.cfg
 644 VIRTUALENVPATH/etc/alignak/escalations/sample.cfg
 644 VIRTUALENVPATH/etc/alignak/hostgroups/linux.cfg
 644 VIRTUALENVPATH/etc/alignak/hosts/localhost.cfg
@@ -195,7 +192,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_sqlite.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dependencynode.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dependencynode.pyc
-755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/discovery
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dispatcher.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dispatcher.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/downtime.py
@@ -266,8 +262,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_arbiter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_broker.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_broker.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_discovery.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_discovery.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_poller.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_poller.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_reactionner.py
@@ -290,10 +284,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/receiverdaemon.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/schedulerdaemon.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons/schedulerdaemon.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/discovery/__init__.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/discovery/__init__.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/discovery/discoverymanager.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/discovery/discoverymanager.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/__init__.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/__init__.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/common.py
@@ -330,10 +320,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/contact.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/contactgroup.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/contactgroup.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/discoveryrule.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/discoveryrule.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/discoveryrun.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/discoveryrun.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/escalation.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/escalation.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/host.py
