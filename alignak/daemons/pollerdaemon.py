@@ -44,13 +44,17 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This modules provides class for the Poller daemon
+"""
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 
 
-# Our main APP class
 class Poller(Satellite):
+    """Poller class. Referenced as "app" in most Interface
+
+    """
     do_checks = True    # I do checks
     do_actions = False  # but no actions
     my_type = 'poller'
