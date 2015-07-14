@@ -49,6 +49,11 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This module provide IChecks, IBroks, IStats, IForArbiter and Alignak classes used to
+communicate with other daemon (Poller, Broker, Arbiter)
+Alignak is the main scheduling daemon class
+"""
 
 import os
 import signal
@@ -71,21 +76,34 @@ from alignak.satellite import BaseSatellite, IForArbiter as IArb, Interface
 from alignak.util import nighty_five_percent
 from alignak.stats import statsmgr
 
-# Interface for Workers
 
 class IChecks(Interface):
     """ Interface for Workers:
-They connect here and see if they are still OK with our running_id,
-if not, they must drop their checks """
+    They connect here and see if they are still OK with our running_id,
+    if not, they must drop their checks
+    """
 
     # poller or reactionner is asking us our running_id
     # def get_running_id(self):
     #    return self.running_id
 
-    # poller or reactionner ask us actions
     def get_checks(self, do_checks=False, do_actions=False, poller_tags=['None'],
                    reactionner_tags=['None'], worker_name='none',
                    module_types=['fork']):
+        """Get checks from scheduler, used by poller or reactionner (active ones)
+
+        :param do_checks: used for poller to get checks
+        :type do_checks: bool
+        :param do_actions: used for reactionner to get actions
+        :type do_actions: bool
+        :param poller_tags: pollers tags to filter on this poller
+        :type poller_tags: list
+        :param reactionner_tags: reactionner tags to filter on this reactionner
+        :type reactionner_tags: list
+        :param worker_name: Worker name asking (so that the scheduler add it to actions objects)
+        :param module_types: Module type to filter actions/checks
+        :return: base64 zlib compress pickled check/action list
+        """
         # print "We ask us checks"
         do_checks = (do_checks == 'True')
         do_actions = (do_actions == 'True')
@@ -99,8 +117,12 @@ if not, they must drop their checks """
     get_checks.encode = 'raw'
 
 
-    # poller or reactionner are putting us results
     def put_results(self, results):
+        """Put results to scheduler, used by poller and reactionners
+
+        :param results: results to handle
+        :return: True or ?? (if lock acquire fails)
+        """
         nb_received = len(results)
         self.app.nb_check_received += nb_received
         if nb_received != 0:
@@ -119,11 +141,17 @@ if not, they must drop their checks """
 
 class IBroks(Interface):
     """ Interface for Brokers:
-They connect here and get all broks (data for brokers). Data must be ORDERED!
-(initial status BEFORE update...) """
+    They connect here and get all broks (data for brokers). Data must be ORDERED!
+    (initial status BEFORE update...)
+    """
 
-    # A broker ask us broks
     def get_broks(self, bname):
+        """Get checks from scheduler, used by brokers
+
+        :param bname: broker name, used to filter broks
+        :type bname: str
+        :return: 64 zlib compress pickled brok list
+        """
         # Maybe it was not registered as it should, if so,
         # do it for it
         if bname not in self.app.brokers:
@@ -140,10 +168,15 @@ They connect here and get all broks (data for brokers). Data must be ORDERED!
     get_broks.encode = 'raw'
 
 
-    # A broker is a new one, if we do not have
-    # a full broks, we clean our broks, and
-    # fill it with all new values
     def fill_initial_broks(self, bname):
+        """Get initial_broks type broks from scheduler, used by brokers
+        Do not send broks, only make scheduler internal processing
+
+        :param bname: broker name, used to filter broks
+        :type bname: str
+        :return: None
+        TODO: Maybe we should check_last time we did it to prevent DDoS
+        """
         if bname not in self.app.brokers:
             logger.info("A new broker just connected : %s", bname)
             self.app.brokers[bname] = {'broks': {}, 'has_full_broks': False}
@@ -158,14 +191,18 @@ class IStats(Interface):
     Interface for various stats about scheduler activity
     """
 
-    doc = '''Get raw stats from the daemon:
-  * nb_scheduled: number of scheduled checks (to launch in the future)
-  * nb_inpoller: number of check take by the pollers
-  * nb_zombies: number of zombie checks (should be close to zero)
-  * nb_notifications: number of notifications+event handlers
-  * latency: avg,min,max latency for the services (should be <10s)
-'''
     def get_raw_stats(self):
+        """Get raw stats from the daemon::
+
+        * nb_scheduled: number of scheduled checks (to launch in the future)
+        * nb_inpoller: number of check take by the pollers
+        * nb_zombies: number of zombie checks (should be close to zero)
+        * nb_notifications: number of notifications+event handlers
+        * latency: avg,min,max latency for the services (should be <10s)
+
+        :return: stats for scheduler
+        :rtype: dict
+        """
         sched = self.app.sched
 
         res = sched.get_checks_status_counts()
@@ -187,7 +224,6 @@ class IStats(Interface):
             if lat_avg:
                 res['latency'] = (lat_avg, lat_min, lat_max)
         return res
-    get_raw_stats.doc = doc
 
 
 
@@ -196,30 +232,38 @@ class IForArbiter(IArb):
         from the arbiter. The arbiter is the interface to the administrator, so we must listen
         carefully and give him the information he wants. Which could be for another scheduler """
 
-    # arbiter is sending us a external command.
-    # it can send us global command, or specific ones
     def run_external_commands(self, cmds):
+        """Post external_commands to scheduler (from arbiter)
+        Wrapper to to app.sched.run_external_commands method
+
+        :param cmds: external commands list ro run
+        :type cmds: list
+        :return: None
+        """
         self.app.sched.run_external_commands(cmds)
     run_external_commands.method = 'POST'
 
 
     def put_conf(self, conf):
+        """Post conf to scheduler (from arbiter)
+
+        :param conf: new configuration to load
+        :type conf: dict
+        :return: None
+        """
         self.app.sched.die()
         super(IForArbiter, self).put_conf(conf)
     put_conf.method = 'POST'
 
 
-    # Call by arbiter if it thinks we are running but we must not (like
-    # if I was a spare that take a conf but the master returns, I must die
-    # and wait for a new conf)
-    # Us: No please...
-    # Arbiter: I don't care, hasta la vista baby!
-    # Us: ... <- Nothing! We are dead! you didn't follow or what??
     def wait_new_conf(self):
+        """Ask to scheduler to wait for new conf (HTTP GET from arbiter)
+
+        :return: None
+        """
         logger.debug("Arbiter wants me to wait for a new configuration")
         self.app.sched.die()
         super(IForArbiter, self).wait_new_conf()
-
 
 
 '''
@@ -241,8 +285,10 @@ class Injector(Interface):
 
 
 
-# The main app class
 class Alignak(BaseSatellite):
+    """Scheduler class. Referenced as "app" in most Interface
+
+    """
 
     properties = BaseSatellite.properties.copy()
     properties.update({
@@ -276,6 +322,10 @@ class Alignak(BaseSatellite):
 
 
     def do_stop(self):
+        """Unregister http functions and call super(BaseSatellite, self).do_stop()
+
+        :return: None
+        """
         if self.http_daemon:
             if self.ibroks:
                 self.http_daemon.unregister(self.ibroks)
@@ -285,7 +335,12 @@ class Alignak(BaseSatellite):
 
 
     def compensate_system_time_change(self, difference):
-        """ Compensate a system time change of difference for all hosts/services/checks/notifs """
+        """Compensate a system time change of difference for all hosts/services/checks/notifs
+
+        :param difference: difference in seconds
+        :type difference: int
+        :return: None
+        """
         logger.warning("A system time change of %d has been detected. Compensating...", difference)
         # We only need to change some value
         self.program_start = max(0, self.program_start + difference)
@@ -352,6 +407,16 @@ class Alignak(BaseSatellite):
                     c.t_to_go = new_t
 
     def manage_signal(self, sig, frame):
+        """Manage signals caught by the daemon
+        signal.SIGUSR1 : dump_memory
+        signal.SIGUSR2 : dump_object (nothing)
+        signal.SIGTERM, signal.SIGINT : terminate process
+
+        :param sig: signal caught by daemon
+        :param frame: current stack frame
+        :return: None
+        TODO: Refactor with Daemon one
+        """
         logger.warning("%s > Received a SIGNAL %s", process.current_process(), sig)
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
@@ -365,6 +430,11 @@ class Alignak(BaseSatellite):
 
 
     def do_loop_turn(self):
+        """Scheduler loop turn
+        Basically wait initial conf and run
+
+        :return: None
+        """
         # Ok, now the conf
         self.wait_for_initial_conf()
         if not self.new_conf:
@@ -376,6 +446,10 @@ class Alignak(BaseSatellite):
 
 
     def setup_new_conf(self):
+        """Setup new conf received for scheduler
+
+        :return: None
+        """
         pk = self.new_conf
         conf_raw = pk['conf']
         override_conf = pk['override_conf']
@@ -530,9 +604,12 @@ class Alignak(BaseSatellite):
         self.schedulers = {self.conf.instance_id: self.sched}
 
 
-    # Give the arbiter the data about what I manage
-    # for me it's just my instance_id and my push flavor
     def what_i_managed(self):
+        """Get my managed dict (instance id and push_flavor)
+
+        :return: dict containing instance_id key and push flavor value
+        :return: dict
+        """
         if hasattr(self, 'conf'):
             return {self.conf.instance_id: self.conf.push_flavor}
         else:
@@ -540,6 +617,18 @@ class Alignak(BaseSatellite):
 
     # our main function, launch after the init
     def main(self):
+        """Main function for Scheduler::
+
+        * Init daemon
+        * Load module manager
+        * Register http interfaces
+        * Launch main loop
+        * Catch any Exception that occurs
+
+
+        :return: None
+        TODO : WTF I register then unregister self.interface ??
+        """
         try:
             self.load_config_file()
             # Setting log level
