@@ -42,7 +42,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide export of Alignak metrics in a statsd format
 
+"""
 import threading
 import time
 import json
@@ -60,17 +62,30 @@ BLOCK_SIZE = 16
 
 
 def pad(data):
+    """Add data to fit BLOCK_SIZE
+
+    :param data: initial data
+    :return: data padded to fit BLOCK_SIZE
+    """
     pad = BLOCK_SIZE - len(data) % BLOCK_SIZE
     return data + pad * chr(pad)
 
 
 def unpad(padded):
+    """Unpad data based on last char
+
+    :param padded: padded data
+    :return: unpadded data
+    """
     pad = ord(padded[-1])
     return padded[:-pad]
 
 
 
 class Stats(object):
+    """Stats class to export data into a statsd format
+
+    """
     def __init__(self):
         self.name = ''
         self.type = ''
@@ -88,6 +103,10 @@ class Stats(object):
 
 
     def launch_reaper_thread(self):
+        """Launch thread that collects data
+
+        :return: None
+        """
         self.reaper_thread = threading.Thread(None, target=self.reaper, name='stats-reaper')
         self.reaper_thread.daemon = True
         self.reaper_thread.start()
@@ -96,6 +115,21 @@ class Stats(object):
     def register(self, app, name, _type, api_key='', secret='', http_proxy='',
                  statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
                  statsd_enabled=False):
+        """Init statsd instance with real values
+
+        :param app: application (arbiter, scheduler..)
+        :type app: alignak.daemon.Daemon
+        :param name: daemon name
+        :param _type: daemon type
+        :param api_key: api_key to post data
+        :param secret:  secret to post data
+        :param http_proxy: proxy http if necessary
+        :param statsd_host: host to post data
+        :param statsd_port: port to post data
+        :param statsd_prefix: prefix to add to metric
+        :param statsd_enabled: bool to enable statsd
+        :return: None
+        """
         self.app = app
         self.name = name
         self.type = _type
@@ -118,10 +152,11 @@ class Stats(object):
         self.con.set_proxy(self.http_proxy)
 
 
-    # Let be crystal clear about why I don't use the statsd lib in python: it's crappy.
-    # how guys did you fuck this up to this point? django by default for the conf?? really?...
-    # So raw socket are far better here
     def load_statsd(self):
+        """Create socket connection to statsd host
+
+        :return: None
+        """
         try:
             self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
             self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -130,8 +165,13 @@ class Stats(object):
             return
 
 
-    # Will increment a stat key, if None, start at 0
     def incr(self, k, v):
+        """Increments a key with value
+
+        :param k: key to edit
+        :param v: value to add
+        :return: None
+        """
         _min, _max, nb, _sum = self.stats.get(k, (None, None, 0, 0))
         nb += 1
         _sum += v
@@ -153,6 +193,11 @@ class Stats(object):
 
 
     def _encrypt(self, data):
+        """Cypher data
+
+        :param data: data to cypher
+        :return: cyphered data
+        """
         m = hashlib.md5()
         m.update(self.secret)
         key = m.hexdigest()
@@ -171,6 +216,10 @@ class Stats(object):
 
 
     def reaper(self):
+        """Get data from daemon and send it to the statsd daemon
+
+        :return: None
+        """
         try:
             from Crypto.Cipher import AES
         except ImportError:
