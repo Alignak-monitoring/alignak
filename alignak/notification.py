@@ -48,7 +48,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Notification class.
+Used to define monitoring notifications (email, contacts..)
 
+"""
 import time
 
 from alignak.action import Action
@@ -58,7 +61,10 @@ from alignak.autoslots import AutoSlots
 
 
 class Notification(Action):
-    """Please Add a Docstring to describe the class here"""
+    """Notification class, inherits from action class. Used to notify contacts
+     and execute notification command defined in configuration
+
+    """
 
     # AutoSlots create the __slots__ with properties and
     # running_properties names
@@ -182,18 +188,32 @@ class Notification(Action):
         self.already_start_escalations = set()
         self.enable_environment_macros = enable_environment_macros
 
-    # return a copy of the check but just what is important for execution
-    # So we remove the ref and all
     def copy_shell(self):
+        """Get a copy o this notification with minimal values (default + id)
+
+        :return: new notification
+        :rtype: alignak.notification.Notification
+        """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Notification('', '', '', '', '', '', '', id=self.id))
 
 
     def is_launchable(self, t):
+        """Check if this notification can be launched base on time
+
+        :param t: time to compare
+        :return: True if t >= self.t_to_go, False otherwise
+        :rtype: bool
+        """
         return t >= self.t_to_go
 
 
     def is_administrative(self):
+        """Check if this notification is "administrative"
+
+        :return: True in type not in ('PROBLEM', 'RECOVERY'), False otherwise
+        :rtype: bool
+        """
         if self.type in ('PROBLEM', 'RECOVERY'):
             return False
         else:
@@ -207,17 +227,34 @@ class Notification(Action):
 
 
     def get_id(self):
+        """Getter to id attribute
+
+        :return: notification id
+        :rtype: int
+        """
         return self.id
 
 
     def get_return_from(self, n):
+        """Setter of exit_status and execution_time attributes
+
+        :param n: notification to get data from
+        :type n: alignak.notification.Notification
+        :return: None
+        """
         self.exit_status = n.exit_status
         self.execution_time = n.execution_time
 
 
-    # Fill data with info of item by looking at brok_type
-    # in props of properties or running_properties
     def fill_data_brok_from(self, data, brok_type):
+        """Fill data with info of item by looking at brok_type
+        in props of properties or running_properties
+
+        :param data: data to fill
+        :param brok_type: type of brok
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
         cls = self.__class__
         # Now config properties
         for prop, entry in cls.properties.items():
@@ -225,8 +262,12 @@ class Notification(Action):
                 data[prop] = getattr(self, prop)
 
 
-    # Get a brok with initial status
     def get_initial_status_brok(self):
+        """Get a initial status brok
+
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
         data = {'id': self.id}
 
         self.fill_data_brok_from(data, 'full_status')
@@ -234,9 +275,13 @@ class Notification(Action):
         return b
 
 
-    # Call by pickle for dataify the comment
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle for dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+
+        :return: dict containing notification data
+        :rtype: dict
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -247,8 +292,13 @@ class Notification(Action):
         return res
 
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Inverted function of getstate
+
+        :param state: state to restore
+        :type state: dict
+        :return: None
+        """
         cls = self.__class__
         self.id = state['id']
         for prop in cls.properties:
