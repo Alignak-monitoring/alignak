@@ -240,7 +240,6 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('human_timestamp_log', False),
 
         # Discovery part
-        ('strip_idname_fqdn', True),
         ('runners_timeout', 3600),
         ('pack_distribution_file', 'pack_distribution.dat'),
 
@@ -359,46 +358,6 @@ class TestContact(PropertiesTester, AlignakTest):
     def setUp(self):
         from alignak.objects.contact import Contact
         self.item = Contact()
-
-
-class TestDiscoveryrule(PropertiesTester, AlignakTest):
-
-    unused_props = []
-
-    without_default = ['discoveryrule_name']
-
-    properties = dict([
-        ('imported_from', 'unknown'),
-        ('use', None),
-        ('register', True),
-        ('definition_order', 100),
-        ('name', ''),
-        ('creation_type', 'service'),
-        ('discoveryrule_order', 0),
-        ])
-
-    def setUp(self):
-        from alignak.objects.discoveryrule import Discoveryrule
-        self.item = Discoveryrule()
-
-
-class TestDiscoveryrun(PropertiesTester, AlignakTest):
-
-    unused_props = []
-
-    without_default = ['discoveryrun_name', 'discoveryrun_command']
-
-    properties = dict([
-        ('imported_from', 'unknown'),
-        ('use', None),
-        ('register', True),
-        ('definition_order', 100),
-        ('name', ''),
-        ])
-
-    def setUp(self):
-        from alignak.objects.discoveryrun import Discoveryrun
-        self.item = Discoveryrun()
 
 
 class TestEscalation(PropertiesTester, AlignakTest):

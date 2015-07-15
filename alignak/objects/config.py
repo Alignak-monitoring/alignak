@@ -102,8 +102,6 @@ from servicegroup import Servicegroup, Servicegroups
 from servicedependency import Servicedependency, Servicedependencies
 from hostdependency import Hostdependency, Hostdependencies
 from module import Module, Modules
-from discoveryrule import Discoveryrule, Discoveryrules
-from discoveryrun import Discoveryrun, Discoveryruns
 from hostextinfo import HostExtInfo, HostsExtInfo
 from serviceextinfo import ServiceExtInfo, ServicesExtInfo
 from trigger import Triggers
@@ -628,10 +626,6 @@ class Config(Item):
         'human_timestamp_log':
             BoolProp(default=False),
 
-        # Discovery part
-        'strip_idname_fqdn':
-            BoolProp(default=True),
-
         'runners_timeout':
             IntegerProp(default=3600),
 
@@ -770,10 +764,6 @@ class Config(Item):
             (Serviceescalation, Serviceescalations, 'serviceescalations', False),
         'hostescalation':
             (Hostescalation, Hostescalations, 'hostescalations', False),
-        'discoveryrule':
-            (Discoveryrule, Discoveryrules, 'discoveryrules', True),
-        'discoveryrun':
-            (Discoveryrun, Discoveryruns, 'discoveryruns', True),
         'hostextinfo':
             (HostExtInfo, HostsExtInfo, 'hostsextinfo', True),
         'serviceextinfo':
@@ -798,8 +788,7 @@ class Config(Item):
                            'servicedependency', 'hostdependency', 'arbiter', 'scheduler',
                            'reactionner', 'broker', 'receiver', 'poller', 'realm', 'module',
                            'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
-                           'discoveryrun', 'discoveryrule', 'businessimpactmodulation',
-                           'hostextinfo', 'serviceextinfo']
+                           'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
 
     def __init__(self):
@@ -1269,9 +1258,6 @@ class Config(Item):
         self.escalations.linkify(self.timeperiods, self.contacts,
                                  self.services, self.hosts)
 
-        # Link discovery commands
-        self.discoveryruns.linkify(self.commands)
-
         # print "Realms"
         self.realms.linkify()
 
@@ -1568,10 +1554,6 @@ class Config(Item):
         # Also fill default of host/servicedep objects
         self.servicedependencies.fill_default()
         self.hostdependencies.fill_default()
-
-        # Discovery part
-        self.discoveryrules.fill_default()
-        self.discoveryruns.fill_default()
 
         # first we create missing sat, so no other sat will
         # be created after this point
@@ -1933,7 +1915,7 @@ class Config(Item):
 
         for x in ('servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
                   'reactionners', 'pollers', 'brokers', 'receivers', 'resultmodulations',
-                  'discoveryrules', 'discoveryruns', 'businessimpactmodulations'):
+                  'businessimpactmodulations'):
             try:
                 cur = getattr(self, x)
             except AttributeError:
@@ -2035,8 +2017,6 @@ class Config(Item):
         self.servicedependencies.remove_templates()
         self.hostdependencies.remove_templates()
         self.timeperiods.remove_templates()
-        self.discoveryrules.remove_templates()
-        self.discoveryruns.remove_templates()
 
 
     # Add an error in the configuration error list so we can print them
@@ -2433,8 +2413,6 @@ class Config(Item):
                          "resultmodulations",
                          "businessimpactmodulations",
                          "escalations",
-                         "discoveryrules",
-                         "discoveryruns",
                          "schedulers",
                          "realms",
                          ):
