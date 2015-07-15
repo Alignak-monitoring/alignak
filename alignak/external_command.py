@@ -54,7 +54,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides ExternalCommand and ExternalCommandManager classes
+Used to process command sent by users
 
+"""
 import os
 import time
 import re
@@ -71,16 +74,23 @@ from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
 
 
-""" TODO: Add some comment about this class for the doc"""
 class ExternalCommand:
+    """ExternalCommand class is only an object with a cmd_line attribute.
+    All parsing and execution is done in manager
+
+    """
     my_type = 'externalcommand'
 
     def __init__(self, cmd_line):
         self.cmd_line = cmd_line
 
 
-""" TODO: Add some comment about this class for the doc"""
+
 class ExternalCommandManager:
+    """ExternalCommandManager class managed all external command sent to Alignak
+    It basically parses arguments and execute the right function
+
+    """
 
     commands = {
         'CHANGE_CONTACT_MODSATTR':
@@ -460,16 +470,37 @@ class ExternalCommandManager:
         self.current_timestamp = 0
 
     def load_scheduler(self, scheduler):
+        """Setter for sched attribute
+
+        :param scheduler: scheduler to set
+        :return: None
+        """
         self.sched = scheduler
 
     def load_arbiter(self, arbiter):
+        """Setter for arbiter attribute
+
+        :param arbiter: arbiter to set
+        :return: None
+        """
         self.arbiter = arbiter
 
     def load_receiver(self, receiver):
+        """Setter for receiver attribute
+
+        :param receiver: receiver to set
+        :return: None
+        """
         self.receiver = receiver
 
 
     def open(self):
+        """Create if necessary and open a pipe
+        (Won't work under Windows)
+
+        :return: pipe file descriptor
+        :rtype: file
+        """
         # At the first open del and create the fifo
         if self.fifo is None:
             if os.path.exists(self.pipe_path):
@@ -488,6 +519,11 @@ class ExternalCommandManager:
 
 
     def get(self):
+        """Get external commands from fifo
+
+        :return: external commands
+        :rtype: list[alignak.external_command.ExternalCommand]
+        """
         buf = os.read(self.fifo, 8096)
         r = []
         fullbuf = len(buf) == 8096 and True or False
@@ -510,6 +546,13 @@ class ExternalCommandManager:
 
 
     def resolve_command(self, excmd):
+        """Parse command and dispatch it (to sched for example) if necessary
+        If the command is not global it will be executed.
+
+        :param excmd: external command to handle
+        :type excmd: alignak.external_command.ExternalCommand
+        :return: None
+        """
         # Maybe the command is invalid. Bailout
         try:
             command = excmd.cmd_line
@@ -544,10 +587,16 @@ class ExternalCommandManager:
                 self.dispatch_global_command(command)
 
 
-    # Ok the command is not for every one, so we search
-    # by the hostname which scheduler have the host. Then send
-    # the command
     def search_host_and_dispatch(self, host_name, command, extcmd):
+        """Try to dispatch a command for a specific host (so specfic sched)
+        because this command is related to a host (change notification interval for example)
+
+        :param host_name: host name to search
+        :param command: command line
+        :param extcmd:  external command object (the object will be added to sched commands list)
+        :type extcmd: alignak.external_command.ExternalCommand
+        :return: None
+        """
         logger.debug("Calling search_host_and_dispatch for %s", host_name)
         host_found = False
 
@@ -583,10 +632,14 @@ class ExternalCommandManager:
                 logger.warning("Passive check result was received for host '%s', "
                                "but the host could not be found!", host_name)
 
-    # Takes a PROCESS_SERVICE_CHECK_RESULT
-    #  external command line and returns an unknown_[type]_check_result brok
     @staticmethod
     def get_unknown_check_result_brok(cmd_line):
+        """Create unknown check result brok and fill it with command data
+
+        :param cmd_line: command line to extract data
+        :return: unknown check result brok
+        :rtype: alignak.objects.brok.Brok
+        """
 
         match = re.match(
             '^\[([0-9]{10})] PROCESS_(SERVICE)_CHECK_RESULT;'
@@ -618,8 +671,13 @@ class ExternalCommandManager:
 
         return b
 
-    # The command is global, so sent it to every schedulers
     def dispatch_global_command(self, command):
+        """Send command to scheduler, it's a global one
+
+        :param command: command to send
+        :type command: alignak.external_command.ExternalCommand
+        :return: None
+        """
         for sched in self.conf.schedulers:
             logger.debug("Sending a command '%s' to scheduler %s", command, sched)
             if sched.alive:
@@ -627,8 +685,18 @@ class ExternalCommandManager:
                 sched.external_commands.append(command)
 
 
-    # We need to get the first part, the command name, and the reference ext command object
     def get_command_and_args(self, command, extcmd=None):
+        """Parse command and get args
+
+        :param command: command line to parse
+        :type command: str
+        :param extcmd: external command object (used to dispatch)
+        :return: Dict containing command and arg ::
+
+        {'global': False, 'c_name': c_name, 'args': args}
+
+        :rtype: dict | None
+        """
         # safe_print("Trying to resolve", command)
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
@@ -803,132 +871,386 @@ class ExternalCommandManager:
             logger.debug("Sorry, the arguments are not corrects (%s)", str(args))
             return None
 
-    # CHANGE_CONTACT_MODSATTR;<contact_name>;<value>
-    def CHANGE_CONTACT_MODSATTR(self, contact, value):  # TODO
+    def CHANGE_CONTACT_MODSATTR(self, contact, value):
+        """Change contact modified service attribute value
+        Format of the line that triggers function call::
+
+        CHANGE_CONTACT_MODSATTR;<contact_name>;<value>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param value: new value to set
+        :return: None
+        """
         contact.modified_service_attributes = long(value)
 
-    # CHANGE_CONTACT_MODHATTR;<contact_name>;<value>
-    def CHANGE_CONTACT_MODHATTR(self, contact, value):  # TODO
+    def CHANGE_CONTACT_MODHATTR(self, contact, value):
+        """Change contact modified host attribute value
+        Format of the line that triggers function call::
+
+        CHANGE_CONTACT_MODHATTR;<contact_name>;<value>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param value: new value to set
+        :return: None
+        """
         contact.modified_host_attributes = long(value)
 
-    # CHANGE_CONTACT_MODATTR;<contact_name>;<value>
     def CHANGE_CONTACT_MODATTR(self, contact, value):
+        """Change contact modified attribute value
+        Format of the line that triggers function call::
+
+        CHANGE_CONTACT_MODATTR;<contact_name>;<value>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param value: new value to set
+        :return: None
+        """
         contact.modified_attributes = long(value)
 
-    # CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD;<contact_name>;<notification_timeperiod>
     def CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD(self, contact, notification_timeperiod):
+        """Change contact host notification timeperiod value
+        Format of the line that triggers function call::
+
+        CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD;<contact_name>;<notification_timeperiod>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param notification_timeperiod: timeperiod to set
+        :type notification_timeperiod: alignak.objects.timeperiod.Timeperiod
+        :return: None
+        """
         contact.modified_host_attributes |= DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         contact.host_notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(contact)
 
-    # ADD_SVC_COMMENT;<host_name>;<service_description>;<persistent>;<author>;<comment>
     def ADD_SVC_COMMENT(self, service, persistent, author, comment):
+        """Add a service comment
+        Format of the line that triggers function call::
+
+        ADD_SVC_COMMENT;<host_name>;<service_description>;<persistent>;<author>;<comment>
+
+        :param service: service to add the comment
+        :type service: alignak.objects.service.Service
+        :param persistent: is comment persistent (for reboot) or not
+        :type persistent: bool
+        :param author: author name
+        :param comment: text comment
+        :return: None
+        """
         c = Comment(service, persistent, author, comment, 2, 1, 1, False, 0)
         service.add_comment(c)
         self.sched.add(c)
 
-    # ADD_HOST_COMMENT;<host_name>;<persistent>;<author>;<comment>
     def ADD_HOST_COMMENT(self, host, persistent, author, comment):
+        """Add a host comment
+        Format of the line that triggers function call::
+
+        ADD_HOST_COMMENT;<host_name>;<persistent>;<author>;<comment>
+
+        :param host: host to add the comment
+        :type host: alignak.objects.host.Host
+        :param persistent: is comment persistent (for reboot) or not
+        :type persistent: bool
+        :param author: author name
+        :param comment: text comment
+        :return: None
+        """
         c = Comment(host, persistent, author, comment, 1, 1, 1, False, 0)
         host.add_comment(c)
         self.sched.add(c)
 
-    # ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;
-    # <sticky>;<notify>;<persistent>;<author>;<comment>
     def ACKNOWLEDGE_SVC_PROBLEM(self, service, sticky, notify, persistent, author, comment):
+        """Acknowledge a service problem
+        Format of the line that triggers function call::
+
+        ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;<sticky>;<notify>;<persistent>;
+        <author>;<comment>
+
+        :param service: service to acknowledge the problem
+        :type service: alignak.objects.service.Service
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :return: None
+        """
         service.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    # ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent>;<author>;<comment>
-    # TODO: add a better ACK management
     def ACKNOWLEDGE_HOST_PROBLEM(self, host, sticky, notify, persistent, author, comment):
+        """Acknowledge a host problem
+        Format of the line that triggers function call::
+
+        ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent>;<author>;<comment>
+
+        :param host: host to acknowledge the problem
+        :type host: alignak.objects.host.Host
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :return: None
+        TODO: add a better ACK management
+        """
         host.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    # ACKNOWLEDGE_SVC_PROBLEM_EXPIRE;<host_name>;<service_description>;
-    # <sticky>;<notify>;<persistent>;<end_time>;<author>;<comment>
     def ACKNOWLEDGE_SVC_PROBLEM_EXPIRE(self, service, sticky, notify,
                                        persistent, end_time, author, comment):
+        """Acknowledge a service problem with expire time for this acknowledgement
+        Format of the line that triggers function call::
+
+        ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;<sticky>;<notify>;<persistent>;
+        <end_time>;<author>;<comment>
+
+        :param service: service to acknowledge the problem
+        :type service: alignak.objects.service.Service
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
+        :type end_time: int
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :return: None
+        """
         service.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
 
-    # ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;<host_name>;<sticky>;
-    # <notify>;<persistent>;<end_time>;<author>;<comment>
-    # TODO: add a better ACK management
     def ACKNOWLEDGE_HOST_PROBLEM_EXPIRE(self, host, sticky, notify,
                                         persistent, end_time, author, comment):
+        """Acknowledge a host problem with expire time for this acknowledgement
+        Format of the line that triggers function call::
+
+        ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent>;<end_time>;
+        <author>;<comment>
+
+        :param host: host to acknowledge the problem
+        :type host: alignak.objects.host.Host
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
+        :type end_time: int
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :return: None
+        TODO: add a better ACK management
+        """
         host.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
 
-    # CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD;<contact_name>;<notification_timeperiod>
     def CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD(self, contact, notification_timeperiod):
+        """Change contact service notification timeperiod value
+        Format of the line that triggers function call::
+
+        CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD;<contact_name>;<notification_timeperiod>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param notification_timeperiod: timeperiod to set
+        :type notification_timeperiod: alignak.objects.timeperiod.Timeperiod
+        :return: None
+        """
         contact.modified_service_attributes |= \
             DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         contact.service_notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(contact)
 
-    # CHANGE_CUSTOM_CONTACT_VAR;<contact_name>;<varname>;<varvalue>
     def CHANGE_CUSTOM_CONTACT_VAR(self, contact, varname, varvalue):
+        """Change custom contact variable
+        Format of the line that triggers function call::
+
+        CHANGE_CUSTOM_CONTACT_VAR;<contact_name>;<varname>;<varvalue>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :param varname: variable name to change
+        :param varvalue: variable new value
+        :return: None
+        """
         contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         contact.customs[varname.upper()] = varvalue
 
-    # CHANGE_CUSTOM_HOST_VAR;<host_name>;<varname>;<varvalue>
     def CHANGE_CUSTOM_HOST_VAR(self, host, varname, varvalue):
+        """Change custom host variable
+        Format of the line that triggers function call::
+
+        CHANGE_CUSTOM_HOST_VAR;<host_name>;<varname>;<varvalue>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param varname: variable name to change
+        :param varvalue: variable new value
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         host.customs[varname.upper()] = varvalue
 
-    # CHANGE_CUSTOM_SVC_VAR;<host_name>;<service_description>;<varname>;<varvalue>
     def CHANGE_CUSTOM_SVC_VAR(self, service, varname, varvalue):
+        """Change custom service variable
+        Format of the line that triggers function call::
+
+        CHANGE_CUSTOM_SVC_VAR;<host_name>;<service_description>;<varname>;<varvalue>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param varname: variable name to change
+        :param varvalue: variable new value
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         service.customs[varname.upper()] = varvalue
 
-    # CHANGE_GLOBAL_HOST_EVENT_HANDLER;<event_handler_command>
     def CHANGE_GLOBAL_HOST_EVENT_HANDLER(self, event_handler_command):
-        # TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        """DOES NOTHING (should change global host event handler)
+        Format of the line that triggers function call::
+
+        CHANGE_GLOBAL_HOST_EVENT_HANDLER;<event_handler_command>
+
+        :param event_handler_command: new event handler
+        :return: None
+        TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        """
         pass
 
-    # CHANGE_GLOBAL_SVC_EVENT_HANDLER;<event_handler_command> # TODO
     def CHANGE_GLOBAL_SVC_EVENT_HANDLER(self, event_handler_command):
-        # TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        """DOES NOTHING (should change global service event handler)
+        Format of the line that triggers function call::
+
+        CHANGE_GLOBAL_SVC_EVENT_HANDLER;<event_handler_command>
+
+        :param event_handler_command: new event handler
+        :return: None
+        TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        """
         pass
 
-    # CHANGE_HOST_CHECK_COMMAND;<host_name>;<check_command>
     def CHANGE_HOST_CHECK_COMMAND(self, host, check_command):
+        """Modify host check command
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_CHECK_COMMAND;<host_name>;<check_command>
+
+        :param host: host to modify check command
+        :type host: alignak.objects.host.Host
+        :param check_command: command line
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         host.check_command = CommandCall(self.commands, check_command, poller_tag=host.poller_tag)
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_HOST_CHECK_TIMEPERIOD;<host_name>;<timeperiod>
     def CHANGE_HOST_CHECK_TIMEPERIOD(self, host, timeperiod):
-        # TODO is timeperiod a string or a Timeperiod object?
+        """Modify host check timeperiod
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_CHECK_TIMEPERIOD;<host_name>;<timeperiod>
+
+        :param host: host to modify check timeperiod
+        :type host: alignak.objects.host.Host
+        :param timeperiod: timeperiod object
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_TIMEPERIOD"].value
         host.check_period = timeperiod
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_HOST_EVENT_HANDLER;<host_name>;<event_handler_command>
     def CHANGE_HOST_EVENT_HANDLER(self, host, event_handler_command):
+        """Modify host event handler
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_EVENT_HANDLER;<host_name>;<event_handler_command>
+
+        :param host: host to modify event handler
+        :type host: alignak.objects.host.Host
+        :param event_handler_command: event handler command line
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         host.event_handler = CommandCall(self.commands, event_handler_command)
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_HOST_MODATTR;<host_name>;<value>
     def CHANGE_HOST_MODATTR(self, host, value):
+        """Change host modified attributes
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_MODATTR;<host_name>;<value>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param value: new value to set
+        :return: None
+        """
         host.modified_attributes = long(value)
 
-    # CHANGE_MAX_HOST_CHECK_ATTEMPTS;<host_name>;<check_attempts>
     def CHANGE_MAX_HOST_CHECK_ATTEMPTS(self, host, check_attempts):
+        """Modify max host check attempt
+        Format of the line that triggers function call::
+
+        CHANGE_MAX_HOST_CHECK_ATTEMPTS;<host_name>;<check_attempts>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param check_attempts: new value to set
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
         host.max_check_attempts = check_attempts
         if host.state_type == 'HARD' and host.state == 'UP' and host.attempt > 1:
             host.attempt = host.max_check_attempts
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_MAX_SVC_CHECK_ATTEMPTS;<host_name>;<service_description>;<check_attempts>
     def CHANGE_MAX_SVC_CHECK_ATTEMPTS(self, service, check_attempts):
+        """Modify max service check attempt
+        Format of the line that triggers function call::
+
+        CHANGE_MAX_SVC_CHECK_ATTEMPTS;<host_name>;<service_description>;<check_attempts>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param check_attempts: new value to set
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
         service.max_check_attempts = check_attempts
         if service.state_type == 'HARD' and service.state == 'OK' and service.attempt > 1:
             service.attempt = service.max_check_attempts
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_NORMAL_HOST_CHECK_INTERVAL;<host_name>;<check_interval>
     def CHANGE_NORMAL_HOST_CHECK_INTERVAL(self, host, check_interval):
+        """Modify host check interval
+        Format of the line that triggers function call::
+
+        CHANGE_NORMAL_HOST_CHECK_INTERVAL;<host_name>;<check_interval>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param check_interval: new value to set
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_NORMAL_CHECK_INTERVAL"].value
         old_interval = host.check_interval
         host.check_interval = check_interval
@@ -938,8 +1260,17 @@ class ExternalCommandManager:
             host.schedule(force=False, force_time=int(time.time()))
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_NORMAL_SVC_CHECK_INTERVAL;<host_name>;<service_description>;<check_interval>
     def CHANGE_NORMAL_SVC_CHECK_INTERVAL(self, service, check_interval):
+        """Modify service check interval
+        Format of the line that triggers function call::
+
+        CHANGE_NORMAL_SVC_CHECK_INTERVAL;<host_name>;<service_description>;<check_interval>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param check_interval: new value to set
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_NORMAL_CHECK_INTERVAL"].value
         old_interval = service.check_interval
         service.check_interval = check_interval
@@ -949,39 +1280,94 @@ class ExternalCommandManager:
             service.schedule(force=False, force_time=int(time.time()))
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_RETRY_HOST_CHECK_INTERVAL;<host_name>;<check_interval>
     def CHANGE_RETRY_HOST_CHECK_INTERVAL(self, host, check_interval):
+        """Modify host retry interval
+        Format of the line that triggers function call::
+
+        CHANGE_RETRY_HOST_CHECK_INTERVAL;<host_name>;<check_interval>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param check_interval: new value to set
+        :return: None
+        """
         host.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
         host.retry_interval = check_interval
         self.sched.get_and_register_status_brok(host)
 
-    # CHANGE_RETRY_SVC_CHECK_INTERVAL;<host_name>;<service_description>;<check_interval>
     def CHANGE_RETRY_SVC_CHECK_INTERVAL(self, service, check_interval):
+        """Modify service retry interval
+        Format of the line that triggers function call::
+
+        CHANGE_RETRY_SVC_CHECK_INTERVAL;<host_name>;<service_description>;<check_interval>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param check_interval: new value to set
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
         service.retry_interval = check_interval
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_SVC_CHECK_COMMAND;<host_name>;<service_description>;<check_command>
     def CHANGE_SVC_CHECK_COMMAND(self, service, check_command):
+        """Modify service check command
+        Format of the line that triggers function call::
+
+        CHANGE_SVC_CHECK_COMMAND;<host_name>;<service_description>;<check_command>
+
+        :param service: service to modify check command
+        :type service: alignak.objects.service.Service
+        :param check_command: command line
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         service.check_command = CommandCall(self.commands, check_command,
                                             poller_tag=service.poller_tag)
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_SVC_CHECK_TIMEPERIOD;<host_name>;<service_description>;<check_timeperiod>
     def CHANGE_SVC_CHECK_TIMEPERIOD(self, service, check_timeperiod):
+        """Modify service check timeperiod
+        Format of the line that triggers function call::
+
+        CHANGE_SVC_CHECK_TIMEPERIOD;<host_name>;<service_description>;<check_timeperiod>
+
+        :param service: service to modify check timeperiod
+        :type service: alignak.objects.service.Service
+        :param timeperiod: timeperiod object
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_TIMEPERIOD"].value
         service.check_period = check_timeperiod
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_SVC_EVENT_HANDLER;<host_name>;<service_description>;<event_handler_command>
     def CHANGE_SVC_EVENT_HANDLER(self, service, event_handler_command):
+        """Modify service event handler
+        Format of the line that triggers function call::
+
+        CHANGE_SVC_EVENT_HANDLER;<host_name>;<service_description>;<event_handler_command>
+
+        :param service: service to modify event handler
+        :type service: alignak.objects.service.Service
+        :param event_handler_command: event handler command line
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         service.event_handler = CommandCall(self.commands, event_handler_command)
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_SVC_MODATTR;<host_name>;<service_description>;<value>
     def CHANGE_SVC_MODATTR(self, service, value):
+        """Change service modified attributes
+        Format of the line that triggers function call::
+
+        CHANGE_SVC_MODATTR;<host_name>;<service_description>;<value>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param value: new value to set
+        :return: None
+        """
         # This is not enough.
         # We need to also change each of the needed attributes.
         previous_value = service.modified_attributes
@@ -1010,106 +1396,254 @@ class ExternalCommandManager:
         # And we need to push the information to the scheduler.
         self.sched.get_and_register_status_brok(service)
 
-    # CHANGE_SVC_NOTIFICATION_TIMEPERIOD;<host_name>;
-    # <service_description>;<notification_timeperiod>
     def CHANGE_SVC_NOTIFICATION_TIMEPERIOD(self, service, notification_timeperiod):
+        """Change service notification timeperiod
+        Format of the line that triggers function call::
+
+        CHANGE_SVC_NOTIFICATION_TIMEPERIOD;<host_name>;<service_description>;
+        <notification_timeperiod>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param notification_timeperiod: timeperiod to set
+        :type notification_timeperiod: alignak.objects.timeperiod.Timeperiod
+        :return: None
+        """
         service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         service.notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(service)
 
-    # DELAY_HOST_NOTIFICATION;<host_name>;<notification_time>
     def DELAY_HOST_NOTIFICATION(self, host, notification_time):
+        """Modify host first notification delay
+        Format of the line that triggers function call::
+
+        DELAY_HOST_NOTIFICATION;<host_name>;<notification_time>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :param notification_time: new value to set
+        :return: None
+        """
         host.first_notification_delay = notification_time
         self.sched.get_and_register_status_brok(host)
 
-    # DELAY_SVC_NOTIFICATION;<host_name>;<service_description>;<notification_time>
     def DELAY_SVC_NOTIFICATION(self, service, notification_time):
+        """Modify service first notification delay
+        Format of the line that triggers function call::
+
+        DELAY_SVC_NOTIFICATION;<host_name>;<service_description>;<notification_time>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :param notification_time: new value to set
+        :return: None
+        """
         service.first_notification_delay = notification_time
         self.sched.get_and_register_status_brok(service)
 
-    # DEL_ALL_HOST_COMMENTS;<host_name>
     def DEL_ALL_HOST_COMMENTS(self, host):
+        """Delete all host comments
+        Format of the line that triggers function call::
+
+        DEL_ALL_HOST_COMMENTS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for c in host.comments:
             self.DEL_HOST_COMMENT(c.id)
 
-    # DEL_ALL_HOST_COMMENTS;<host_name>
     def DEL_ALL_HOST_DOWNTIMES(self, host):
+        """Delete all host downtimes
+        Format of the line that triggers function call::
+
+        DEL_ALL_HOST_DOWNTIMES;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for dt in host.downtimes:
             self.DEL_HOST_DOWNTIME(dt.id)
 
-    # DEL_ALL_SVC_COMMENTS;<host_name>;<service_description>
     def DEL_ALL_SVC_COMMENTS(self, service):
+        """Delete all service comments
+        Format of the line that triggers function call::
+
+        DEL_ALL_SVC_COMMENTS;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         for c in service.comments:
             self.DEL_SVC_COMMENT(c.id)
 
-    # DEL_ALL_SVC_COMMENTS;<host_name>;<service_description>
     def DEL_ALL_SVC_DOWNTIMES(self, service):
+        """Delete all service downtimes
+        Format of the line that triggers function call::
+
+        DEL_ALL_SVC_DOWNTIMES;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         for dt in service.downtimes:
             self.DEL_SVC_DOWNTIME(dt.id)
 
-    # DEL_CONTACT_DOWNTIME;<downtime_id>
     def DEL_CONTACT_DOWNTIME(self, downtime_id):
+        """Delete a contact downtime
+        Format of the line that triggers function call::
+
+        DEL_CONTACT_DOWNTIME;<downtime_id>
+
+        :param downtime_id: downtime id to delete
+        :return: None
+        """
         if downtime_id in self.sched.contact_downtimes:
             self.sched.contact_downtimes[downtime_id].cancel()
 
-    # DEL_HOST_COMMENT;<comment_id>
     def DEL_HOST_COMMENT(self, comment_id):
+        """Delete a host comment
+        Format of the line that triggers function call::
+
+        DEL_HOST_COMMENT;<comment_id>
+
+        :param comment_id: comment id to delete
+        :return: None
+        """
         if comment_id in self.sched.comments:
             self.sched.comments[comment_id].can_be_deleted = True
 
-    # DEL_HOST_DOWNTIME;<downtime_id>
     def DEL_HOST_DOWNTIME(self, downtime_id):
+        """Delete a host downtime
+        Format of the line that triggers function call::
+
+        DEL_HOST_DOWNTIME;<downtime_id>
+
+        :param downtime_id: downtime id to delete
+        :return: None
+        """
         if downtime_id in self.sched.downtimes:
             self.sched.downtimes[downtime_id].cancel()
 
-    # DEL_SVC_COMMENT;<comment_id>
     def DEL_SVC_COMMENT(self, comment_id):
+        """Delete a service comment
+        Format of the line that triggers function call::
+
+        DEL_SVC_COMMENT;<comment_id>
+
+        :param comment_id: comment id to delete
+        :return: None
+        """
         if comment_id in self.sched.comments:
             self.sched.comments[comment_id].can_be_deleted = True
 
-    # DEL_SVC_DOWNTIME;<downtime_id>
     def DEL_SVC_DOWNTIME(self, downtime_id):
+        """Delete a service downtime
+        Format of the line that triggers function call::
+
+        DEL_SVC_DOWNTIME;<downtime_id>
+
+        :param downtime_id: downtime id to delete
+        :return: None
+        """
         if downtime_id in self.sched.downtimes:
             self.sched.downtimes[downtime_id].cancel()
 
-    # DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST;<host_name>
     def DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST(self, host):
+        """DOES NOTHING (should disable notification beyond a host)
+        Format of the line that triggers function call::
+
+        DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        TODO: Implement it
+        """
         pass
 
-    # DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS;<contactgroup_name>
     def DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS(self, contactgroup):
+        """Disable host notifications for a contactgroup
+        Format of the line that triggers function call::
+
+        DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS;<contactgroup_name>
+
+        :param contactgroup: contactgroup to disable
+        :type contactgroup: alignak.objects.contactgroup.Contactgroup
+        :return: None
+        """
         for contact in contactgroup:
             self.DISABLE_CONTACT_HOST_NOTIFICATIONS(contact)
 
-    # DISABLE_CONTACTGROUP_SVC_NOTIFICATIONS;<contactgroup_name>
     def DISABLE_CONTACTGROUP_SVC_NOTIFICATIONS(self, contactgroup):
+        """Disable service notifications for a contactgroup
+        Format of the line that triggers function call::
+
+        DISABLE_CONTACTGROUP_SVC_NOTIFICATIONS;<contactgroup_name>
+
+        :param contactgroup: contactgroup to disable
+        :type contactgroup: alignak.objects.contactgroup.Contactgroup
+        :return: None
+        """
         for contact in contactgroup:
             self.DISABLE_CONTACT_SVC_NOTIFICATIONS(contact)
 
-    # DISABLE_CONTACT_HOST_NOTIFICATIONS;<contact_name>
     def DISABLE_CONTACT_HOST_NOTIFICATIONS(self, contact):
+        """Disable host notifications for a contact
+        Format of the line that triggers function call::
+
+        DISABLE_CONTACT_HOST_NOTIFICATIONS;<contact_name>
+
+        :param contact: contact to disable
+        :type contact: alignak.objects.contact.Contact
+        :return: None
+        """
         if contact.host_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.host_notifications_enabled = False
             self.sched.get_and_register_status_brok(contact)
 
-    # DISABLE_CONTACT_SVC_NOTIFICATIONS;<contact_name>
     def DISABLE_CONTACT_SVC_NOTIFICATIONS(self, contact):
+        """Disable service notifications for a contact
+        Format of the line that triggers function call::
+
+        DISABLE_CONTACT_SVC_NOTIFICATIONS;<contact_name>
+
+        :param contact: contact to disable
+        :type contact: alignak.objects.contact.Contact
+        :return: None
+        """
         if contact.service_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.service_notifications_enabled = False
             self.sched.get_and_register_status_brok(contact)
 
-    # DISABLE_EVENT_HANDLERS
     def DISABLE_EVENT_HANDLERS(self):
+        """Disable event handlers (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_EVENT_HANDLERS
+
+        :return: None
+        """
         if self.conf.enable_event_handlers:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             self.conf.enable_event_handlers = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_FAILURE_PREDICTION
     def DISABLE_FAILURE_PREDICTION(self):
+        """Disable failure prediction (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_FAILURE_PREDICTION
+
+        :return: None
+        """
         if self.conf.enable_failure_prediction:
             self.conf.modified_attributes |= \
                 DICT_MODATTR["MODATTR_FAILURE_PREDICTION_ENABLED"].value
@@ -1117,8 +1651,14 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_FLAP_DETECTION
     def DISABLE_FLAP_DETECTION(self):
+        """Disable flap detection (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_FLAP_DETECTION
+
+        :return: None
+        """
         if self.conf.enable_flap_detection:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             self.conf.enable_flap_detection = False
@@ -1136,59 +1676,139 @@ class ExternalCommandManager:
                     host.flapping_changes = []
                     self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_HOSTGROUP_HOST_CHECKS;<hostgroup_name>
     def DISABLE_HOSTGROUP_HOST_CHECKS(self, hostgroup):
+        """Disable host checks for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_HOST_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.DISABLE_HOST_CHECK(host)
 
-    # DISABLE_HOSTGROUP_HOST_NOTIFICATIONS;<hostgroup_name>
     def DISABLE_HOSTGROUP_HOST_NOTIFICATIONS(self, hostgroup):
+        """Disable host notifications for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_HOST_NOTIFICATIONS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.DISABLE_HOST_NOTIFICATIONS(host)
 
-    # DISABLE_HOSTGROUP_PASSIVE_HOST_CHECKS;<hostgroup_name>
     def DISABLE_HOSTGROUP_PASSIVE_HOST_CHECKS(self, hostgroup):
+        """Disable host passive checks for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_PASSIVE_HOST_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.DISABLE_PASSIVE_HOST_CHECKS(host)
 
-    # DISABLE_HOSTGROUP_PASSIVE_SVC_CHECKS;<hostgroup_name>
     def DISABLE_HOSTGROUP_PASSIVE_SVC_CHECKS(self, hostgroup):
+        """Disable service passive checks for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_PASSIVE_SVC_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.DISABLE_PASSIVE_SVC_CHECKS(service)
 
-    # DISABLE_HOSTGROUP_SVC_CHECKS;<hostgroup_name>
     def DISABLE_HOSTGROUP_SVC_CHECKS(self, hostgroup):
+        """Disable service checks for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_SVC_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.DISABLE_SVC_CHECK(service)
 
-    # DISABLE_HOSTGROUP_SVC_NOTIFICATIONS;<hostgroup_name>
     def DISABLE_HOSTGROUP_SVC_NOTIFICATIONS(self, hostgroup):
+        """Disable service notifications for a hostgroup
+        Format of the line that triggers function call::
+
+        DISABLE_HOSTGROUP_SVC_NOTIFICATIONS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to disable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.DISABLE_SVC_NOTIFICATIONS(service)
 
-    # DISABLE_HOST_AND_CHILD_NOTIFICATIONS;<host_name>
     def DISABLE_HOST_AND_CHILD_NOTIFICATIONS(self, host):
+        """DOES NOTHING (Should disable host notifications and its child)
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_AND_CHILD_NOTIFICATIONS;<host_name
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         pass
 
-    # DISABLE_HOST_CHECK;<host_name>
     def DISABLE_HOST_CHECK(self, host):
+        """Disable checks for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_CHECK;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if host.active_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             host.disable_active_checks()
             self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_HOST_EVENT_HANDLER;<host_name>
     def DISABLE_HOST_EVENT_HANDLER(self, host):
+        """Disable event handlers for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_EVENT_HANDLER;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if host.event_handler_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             host.event_handler_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_HOST_FLAP_DETECTION;<host_name>
     def DISABLE_HOST_FLAP_DETECTION(self, host):
+        """Disable flap detection for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_FLAP_DETECTION;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if host.flap_detection_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             host.flap_detection_enabled = False
@@ -1198,94 +1818,208 @@ class ExternalCommandManager:
                 host.flapping_changes = []
             self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_HOST_FRESHNESS_CHECKS
     def DISABLE_HOST_FRESHNESS_CHECKS(self):
+        """Disable freshness checks (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_FRESHNESS_CHECKS
+
+        :return: None
+        """
         if self.conf.check_host_freshness:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             self.conf.check_host_freshness = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_HOST_NOTIFICATIONS;<host_name>
     def DISABLE_HOST_NOTIFICATIONS(self, host):
+        """Disable notifications for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_NOTIFICATIONS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if host.notifications_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             host.notifications_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_HOST_SVC_CHECKS;<host_name>
     def DISABLE_HOST_SVC_CHECKS(self, host):
+        """Disable service checks for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_SVC_CHECKS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for s in host.services:
             self.DISABLE_SVC_CHECK(s)
 
-    # DISABLE_HOST_SVC_NOTIFICATIONS;<host_name>
     def DISABLE_HOST_SVC_NOTIFICATIONS(self, host):
+        """Disable services notifications for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_SVC_NOTIFICATIONS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for s in host.services:
             self.DISABLE_SVC_NOTIFICATIONS(s)
             self.sched.get_and_register_status_brok(s)
 
-    # DISABLE_NOTIFICATIONS
     def DISABLE_NOTIFICATIONS(self):
+        """Disable notifications (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_NOTIFICATIONS
+
+        :return: None
+        """
         if self.conf.enable_notifications:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             self.conf.enable_notifications = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_PASSIVE_HOST_CHECKS;<host_name>
     def DISABLE_PASSIVE_HOST_CHECKS(self, host):
+        """Disable passive checks for a host
+        Format of the line that triggers function call::
+
+        DISABLE_PASSIVE_HOST_CHECKS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if host.passive_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             host.passive_checks_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    # DISABLE_PASSIVE_SVC_CHECKS;<host_name>;<service_description>
     def DISABLE_PASSIVE_SVC_CHECKS(self, service):
+        """Disable passive checks for a service
+        Format of the line that triggers function call::
+
+        DISABLE_PASSIVE_SVC_CHECKS;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if service.passive_checks_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             service.passive_checks_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    # DISABLE_PERFORMANCE_DATA
     def DISABLE_PERFORMANCE_DATA(self):
+        """Disable performance data processing (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_PERFORMANCE_DATA
+
+        :return: None
+        """
         if self.conf.process_performance_data:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
             self.conf.process_performance_data = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_SERVICEGROUP_HOST_CHECKS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_HOST_CHECKS(self, servicegroup):
+        """Disable host checks for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_HOST_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_HOST_CHECK(service.host)
 
-    # DISABLE_SERVICEGROUP_HOST_NOTIFICATIONS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_HOST_NOTIFICATIONS(self, servicegroup):
+        """Disable host notifications for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_HOST_NOTIFICATIONS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_HOST_NOTIFICATIONS(service.host)
 
-    # DISABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS(self, servicegroup):
+        """Disable passive host checks for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_PASSIVE_HOST_CHECKS(service.host)
 
-    # DISABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS(self, servicegroup):
+        """Disable passive service checks for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_PASSIVE_SVC_CHECKS(service)
 
-    # DISABLE_SERVICEGROUP_SVC_CHECKS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_SVC_CHECKS(self, servicegroup):
+        """Disable service checks for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_SVC_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_SVC_CHECK(service)
 
-    # DISABLE_SERVICEGROUP_SVC_NOTIFICATIONS;<servicegroup_name>
     def DISABLE_SERVICEGROUP_SVC_NOTIFICATIONS(self, servicegroup):
+        """Disable service notifications for a servicegroup
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICEGROUP_SVC_NOTIFICATIONS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to disable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.DISABLE_SVC_NOTIFICATIONS(service)
 
-    # DISABLE_SERVICE_FLAP_DETECTION;<host_name>;<service_description>
     def DISABLE_SERVICE_FLAP_DETECTION(self, service):
+        """Disable flap detection for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICE_FLAP_DETECTION;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if service.flap_detection_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             service.flap_detection_enabled = False
@@ -1295,77 +2029,168 @@ class ExternalCommandManager:
                 service.flapping_changes = []
             self.sched.get_and_register_status_brok(service)
 
-    # DISABLE_SERVICE_FRESHNESS_CHECKS
     def DISABLE_SERVICE_FRESHNESS_CHECKS(self):
+        """Disable service freshness checks (globally)
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICE_FRESHNESS_CHECKS
+
+        :return: None
+        """
         if self.conf.check_service_freshness:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             self.conf.check_service_freshness = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # DISABLE_SVC_CHECK;<host_name>;<service_description>
     def DISABLE_SVC_CHECK(self, service):
+        """Disable checks for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SVC_CHECK;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if service.active_checks_enabled:
             service.disable_active_checks()
             service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.sched.get_and_register_status_brok(service)
 
-    # DISABLE_SVC_EVENT_HANDLER;<host_name>;<service_description>
     def DISABLE_SVC_EVENT_HANDLER(self, service):
+        """Disable event handlers for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SVC_EVENT_HANDLER;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if service.event_handler_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    # DISABLE_SVC_FLAP_DETECTION;<host_name>;<service_description>
     def DISABLE_SVC_FLAP_DETECTION(self, service):
+        """Disable flap detection for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SVC_FLAP_DETECTION;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         self.DISABLE_SERVICE_FLAP_DETECTION(service)
 
-    # DISABLE_SVC_NOTIFICATIONS;<host_name>;<service_description>
     def DISABLE_SVC_NOTIFICATIONS(self, service):
+        """Disable notifications for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SVC_NOTIFICATIONS;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if service.notifications_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    # ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST;<host_name>
     def ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST(self, host):
+        """DOES NOTHING (should enable notification beyond a host)
+        Format of the line that triggers function call::
+
+        ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        TODO: Implement it
+        """
         pass
 
-    # ENABLE_CONTACTGROUP_HOST_NOTIFICATIONS;<contactgroup_name>
     def ENABLE_CONTACTGROUP_HOST_NOTIFICATIONS(self, contactgroup):
+        """Enable host notifications for a contactgroup
+        Format of the line that triggers function call::
+
+        ENABLE_CONTACTGROUP_HOST_NOTIFICATIONS;<contactgroup_name>
+
+        :param contactgroup: contactgroup to enable
+        :type contactgroup: alignak.objects.contactgroup.Contactgroup
+        :return: None
+        """
         for contact in contactgroup:
             self.ENABLE_CONTACT_HOST_NOTIFICATIONS(contact)
 
-    # ENABLE_CONTACTGROUP_SVC_NOTIFICATIONS;<contactgroup_name>
     def ENABLE_CONTACTGROUP_SVC_NOTIFICATIONS(self, contactgroup):
+        """Enable service notifications for a contactgroup
+        Format of the line that triggers function call::
+
+        ENABLE_CONTACTGROUP_SVC_NOTIFICATIONS;<contactgroup_name>
+
+        :param contactgroup: contactgroup to enable
+        :type contactgroup: alignak.objects.contactgroup.Contactgroup
+        :return: None
+        """
         for contact in contactgroup:
             self.ENABLE_CONTACT_SVC_NOTIFICATIONS(contact)
 
-    # ENABLE_CONTACT_HOST_NOTIFICATIONS;<contact_name>
     def ENABLE_CONTACT_HOST_NOTIFICATIONS(self, contact):
+        """Enable host notifications for a contact
+        Format of the line that triggers function call::
+
+        ENABLE_CONTACT_HOST_NOTIFICATIONS;<contact_name>
+
+        :param contact: contact to enable
+        :type contact: alignak.objects.contact.Contact
+        :return: None
+        """
         if not contact.host_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.host_notifications_enabled = True
             self.sched.get_and_register_status_brok(contact)
 
-    # ENABLE_CONTACT_SVC_NOTIFICATIONS;<contact_name>
     def ENABLE_CONTACT_SVC_NOTIFICATIONS(self, contact):
+        """Enable service notifications for a contact
+        Format of the line that triggers function call::
+
+        DISABLE_CONTACT_SVC_NOTIFICATIONS;<contact_name>
+
+        :param contact: contact to enable
+        :type contact: alignak.objects.contact.Contact
+        :return: None
+        """
         if not contact.service_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.service_notifications_enabled = True
             self.sched.get_and_register_status_brok(contact)
 
-    # ENABLE_EVENT_HANDLERS
     def ENABLE_EVENT_HANDLERS(self):
+        """Enable event handlers (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_EVENT_HANDLERS
+
+        :return: None
+        """
         if not self.conf.enable_event_handlers:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             self.conf.enable_event_handlers = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_FAILURE_PREDICTION
     def ENABLE_FAILURE_PREDICTION(self):
+        """Enable failure prediction (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_FAILURE_PREDICTION
+
+        :return: None
+        """
         if not self.conf.enable_failure_prediction:
             self.conf.modified_attributes |= \
                 DICT_MODATTR["MODATTR_FAILURE_PREDICTION_ENABLED"].value
@@ -1373,201 +2198,449 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_FLAP_DETECTION
     def ENABLE_FLAP_DETECTION(self):
+        """Enable flap detection (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_FLAP_DETECTION
+
+        :return: None
+        """
         if not self.conf.enable_flap_detection:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             self.conf.enable_flap_detection = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_HOSTGROUP_HOST_CHECKS;<hostgroup_name>
     def ENABLE_HOSTGROUP_HOST_CHECKS(self, hostgroup):
+        """Enable host checks for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_HOST_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.ENABLE_HOST_CHECK(host)
 
-    # ENABLE_HOSTGROUP_HOST_NOTIFICATIONS;<hostgroup_name>
     def ENABLE_HOSTGROUP_HOST_NOTIFICATIONS(self, hostgroup):
+        """Enable host notifications for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_HOST_NOTIFICATIONS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.ENABLE_HOST_NOTIFICATIONS(host)
 
-    # ENABLE_HOSTGROUP_PASSIVE_HOST_CHECKS;<hostgroup_name>
     def ENABLE_HOSTGROUP_PASSIVE_HOST_CHECKS(self, hostgroup):
+        """Enable host passive checks for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_PASSIVE_HOST_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             self.ENABLE_PASSIVE_HOST_CHECKS(host)
 
-    # ENABLE_HOSTGROUP_PASSIVE_SVC_CHECKS;<hostgroup_name>
     def ENABLE_HOSTGROUP_PASSIVE_SVC_CHECKS(self, hostgroup):
+        """Enable service passive checks for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_PASSIVE_SVC_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.ENABLE_PASSIVE_SVC_CHECKS(service)
 
-    # ENABLE_HOSTGROUP_SVC_CHECKS;<hostgroup_name>
     def ENABLE_HOSTGROUP_SVC_CHECKS(self, hostgroup):
+        """Enable service checks for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_SVC_CHECKS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.ENABLE_SVC_CHECK(service)
 
-    # ENABLE_HOSTGROUP_SVC_NOTIFICATIONS;<hostgroup_name>
     def ENABLE_HOSTGROUP_SVC_NOTIFICATIONS(self, hostgroup):
+        """Enable service notifications for a hostgroup
+        Format of the line that triggers function call::
+
+        ENABLE_HOSTGROUP_SVC_NOTIFICATIONS;<hostgroup_name>
+
+        :param hostgroup: hostgroup to enable
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :return: None
+        """
         for host in hostgroup:
             for service in host.services:
                 self.ENABLE_SVC_NOTIFICATIONS(service)
 
-    # ENABLE_HOST_AND_CHILD_NOTIFICATIONS;<host_name>
     def ENABLE_HOST_AND_CHILD_NOTIFICATIONS(self, host):
+        """DOES NOTHING (Should enable host notifications and its child)
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_AND_CHILD_NOTIFICATIONS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         pass
 
-    # ENABLE_HOST_CHECK;<host_name>
     def ENABLE_HOST_CHECK(self, host):
+        """Enable checks for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_CHECK;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if not host.active_checks_enabled:
             host.active_checks_enabled = True
             host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.sched.get_and_register_status_brok(host)
 
-    # ENABLE_HOST_EVENT_HANDLER;<host_name>
     def ENABLE_HOST_EVENT_HANDLER(self, host):
+        """Enable event handlers for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_EVENT_HANDLER;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if not host.event_handler_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             host.event_handler_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    # ENABLE_HOST_FLAP_DETECTION;<host_name>
     def ENABLE_HOST_FLAP_DETECTION(self, host):
+        """Enable flap detection for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_FLAP_DETECTION;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if not host.flap_detection_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             host.flap_detection_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    # ENABLE_HOST_FRESHNESS_CHECKS
     def ENABLE_HOST_FRESHNESS_CHECKS(self):
+        """Enable freshness checks (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_FRESHNESS_CHECKS
+
+        :return: None
+        """
         if not self.conf.check_host_freshness:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             self.conf.check_host_freshness = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_HOST_NOTIFICATIONS;<host_name>
     def ENABLE_HOST_NOTIFICATIONS(self, host):
+        """Enable notifications for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_NOTIFICATIONS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if not host.notifications_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             host.notifications_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    # ENABLE_HOST_SVC_CHECKS;<host_name>
     def ENABLE_HOST_SVC_CHECKS(self, host):
+        """Enable service checks for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_SVC_CHECKS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for s in host.services:
             self.ENABLE_SVC_CHECK(s)
 
-    # ENABLE_HOST_SVC_NOTIFICATIONS;<host_name>
     def ENABLE_HOST_SVC_NOTIFICATIONS(self, host):
+        """Enable services notifications for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_SVC_NOTIFICATIONS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         for s in host.services:
             self.ENABLE_SVC_NOTIFICATIONS(s)
             self.sched.get_and_register_status_brok(s)
 
-    # ENABLE_NOTIFICATIONS
     def ENABLE_NOTIFICATIONS(self):
+        """Enable notifications (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_NOTIFICATIONS
+
+        :return: None
+        """
         if not self.conf.enable_notifications:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             self.conf.enable_notifications = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_PASSIVE_HOST_CHECKS;<host_name>
     def ENABLE_PASSIVE_HOST_CHECKS(self, host):
+        """Enable passive checks for a host
+        Format of the line that triggers function call::
+
+        ENABLE_PASSIVE_HOST_CHECKS;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         if not host.passive_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             host.passive_checks_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    # ENABLE_PASSIVE_SVC_CHECKS;<host_name>;<service_description>
     def ENABLE_PASSIVE_SVC_CHECKS(self, service):
+        """Enable passive checks for a service
+        Format of the line that triggers function call::
+
+        ENABLE_PASSIVE_SVC_CHECKS;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if not service.passive_checks_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             service.passive_checks_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    # ENABLE_PERFORMANCE_DATA
     def ENABLE_PERFORMANCE_DATA(self):
+        """Enable performance data processing (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_PERFORMANCE_DATA
+
+        :return: None
+        """
         if not self.conf.process_performance_data:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
             self.conf.process_performance_data = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_SERVICEGROUP_HOST_CHECKS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_HOST_CHECKS(self, servicegroup):
+        """Enable host checks for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_HOST_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_HOST_CHECK(service.host)
 
-    # ENABLE_SERVICEGROUP_HOST_NOTIFICATIONS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_HOST_NOTIFICATIONS(self, servicegroup):
+        """Enable host notifications for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_HOST_NOTIFICATIONS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_HOST_NOTIFICATIONS(service.host)
 
-    # ENABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS(self, servicegroup):
+        """Enable passive host checks for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_PASSIVE_HOST_CHECKS(service.host)
 
-    # ENABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS(self, servicegroup):
+        """Enable passive service checks for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_PASSIVE_SVC_CHECKS(service)
 
-    # ENABLE_SERVICEGROUP_SVC_CHECKS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_SVC_CHECKS(self, servicegroup):
+        """Enable service checks for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_SVC_CHECKS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_SVC_CHECK(service)
 
-    # ENABLE_SERVICEGROUP_SVC_NOTIFICATIONS;<servicegroup_name>
     def ENABLE_SERVICEGROUP_SVC_NOTIFICATIONS(self, servicegroup):
+        """Enable service notifications for a servicegroup
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICEGROUP_SVC_NOTIFICATIONS;<servicegroup_name>
+
+        :param servicegroup: servicegroup to enable
+        :type servicegroup: alignak.objects.servicegroup.Servicegroup
+        :return: None
+        """
         for service in servicegroup:
             self.ENABLE_SVC_NOTIFICATIONS(service)
 
-    # ENABLE_SERVICE_FRESHNESS_CHECKS
     def ENABLE_SERVICE_FRESHNESS_CHECKS(self):
+        """Enable service freshness checks (globally)
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICE_FRESHNESS_CHECKS
+
+        :return: None
+        """
         if not self.conf.check_service_freshness:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             self.conf.check_service_freshness = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # ENABLE_SVC_CHECK;<host_name>;<service_description>
     def ENABLE_SVC_CHECK(self, service):
+        """Enable checks for a service
+        Format of the line that triggers function call::
+
+        ENABLE_SVC_CHECK;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if not service.active_checks_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             service.active_checks_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    # ENABLE_SVC_EVENT_HANDLER;<host_name>;<service_description>
     def ENABLE_SVC_EVENT_HANDLER(self, service):
+        """Enable event handlers for a service
+        Format of the line that triggers function call::
+
+        ENABLE_SVC_EVENT_HANDLER;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if not service.event_handler_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    # ENABLE_SVC_FLAP_DETECTION;<host_name>;<service_description>
     def ENABLE_SVC_FLAP_DETECTION(self, service):
+        """Enable flap detection for a service
+        Format of the line that triggers function call::
+
+        ENABLE_SVC_FLAP_DETECTION;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if not service.flap_detection_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             service.flap_detection_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    # ENABLE_SVC_NOTIFICATIONS;<host_name>;<service_description>
     def ENABLE_SVC_NOTIFICATIONS(self, service):
+        """Enable notifications for a service
+        Format of the line that triggers function call::
+
+        ENABLE_SVC_NOTIFICATIONS;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         if not service.notifications_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    # PROCESS_FILE;<file_name>;<delete>
     def PROCESS_FILE(self, file_name, delete):
+        """DOES NOTHING (should process a file)
+        Format of the line that triggers function call::
+
+        PROCESS_FILE;<file_name>;<delete>
+
+        :param file_name:  file to process
+        :param delete: delete after processing
+        :return: None
+        """
         pass
 
-    # TODO: say that check is PASSIVE
-    # PROCESS_HOST_CHECK_RESULT;<host_name>;<status_code>;<plugin_output>
     def PROCESS_HOST_CHECK_RESULT(self, host, status_code, plugin_output):
+        """Process host check result
+        Format of the line that triggers function call::
+
+        PROCESS_HOST_CHECK_RESULT;<host_name>;<status_code>;<plugin_output>
+
+        :param host: host to process check to
+        :type host: alignak.objects.host.Host
+        :param status_code: exit code of plugin
+        :param plugin_output: plugin output
+        :return: None
+        TODO: say that check is PASSIVE
+        """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
             naglog_result(
@@ -1600,12 +2673,31 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             # Ok now this result will be read by scheduler the next loop
 
-    # PROCESS_HOST_OUTPUT;<host_name>;<plugin_output>
     def PROCESS_HOST_OUTPUT(self, host, plugin_output):
+        """Process host output
+        Format of the line that triggers function call::
+
+        PROCESS_HOST_OUTPUT;<host_name>;<plugin_output>
+
+        :param host: host to process check to
+        :type host: alignak.objects.host.Host
+        :param plugin_output: plugin output
+        :return: None
+        """
         self.PROCESS_HOST_CHECK_RESULT(host, host.state_id, plugin_output)
 
-    # PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<return_code>;<plugin_output>
     def PROCESS_SERVICE_CHECK_RESULT(self, service, return_code, plugin_output):
+        """Process service check result
+        Format of the line that triggers function call::
+
+        PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<return_code>;<plugin_output>
+
+        :param service: service to process check to
+        :type service: alignak.objects.service.Service
+        :param return_code: exit code of plugin
+        :param plugin_output: plugin output
+        :return: None
+        """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
             naglog_result('info', 'PASSIVE SERVICE CHECK: %s;%s;%d;%s'
@@ -1639,24 +2731,61 @@ class ExternalCommandManager:
             # Ok now this result will be reap by scheduler the next loop
 
 
-    # PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<plugin_output>
     def PROCESS_SERVICE_OUTPUT(self, service, plugin_output):
+        """Process service output
+        Format of the line that triggers function call::
+
+        PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<plugin_output>
+
+        :param service: service to process check to
+        :type service: alignak.objects.service.Service
+        :param plugin_output: plugin output
+        :return: None
+        """
         self.PROCESS_SERVICE_CHECK_RESULT(service, service.state_id, plugin_output)
 
-    # READ_STATE_INFORMATION
     def READ_STATE_INFORMATION(self):
+        """DOES NOTHING (What it is supposed to do?)
+        Format of the line that triggers function call::
+
+        READ_STATE_INFORMATION
+
+        :return: None
+        """
         pass
 
-    # REMOVE_HOST_ACKNOWLEDGEMENT;<host_name>
     def REMOVE_HOST_ACKNOWLEDGEMENT(self, host):
+        """Remove an acknowledgment on a host
+        Format of the line that triggers function call::
+
+        REMOVE_HOST_ACKNOWLEDGEMENT;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         host.unacknowledge_problem()
 
-    # REMOVE_SVC_ACKNOWLEDGEMENT;<host_name>;<service_description>
     def REMOVE_SVC_ACKNOWLEDGEMENT(self, service):
+        """Remove an acknowledgment on a service
+        Format of the line that triggers function call::
+
+        REMOVE_SVC_ACKNOWLEDGEMENT;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         service.unacknowledge_problem()
 
-    # RESTART_PROGRAM
     def RESTART_PROGRAM(self):
+        """Restart Alignak
+        Format of the line that triggers function call::
+
+        RESTART_PROGRAM
+
+        :return: None
+        """
         restart_cmd = self.commands.find_by_name('restart-alignak')
         if not restart_cmd:
             logger.error("Cannot restart Alignak : missing command named"
@@ -1679,8 +2808,14 @@ class ExternalCommandManager:
         # Ok here the command succeed, we can now wait our death
         naglog_result('info', "%s" % (e.output))
 
-    # RELOAD_CONFIG
     def RELOAD_CONFIG(self):
+        """Reload Alignak configuration
+        Format of the line that triggers function call::
+
+        RELOAD_CONFIG
+
+        :return: None
+        """
         reload_cmd = self.commands.find_by_name('reload-alignak')
         if not reload_cmd:
             logger.error("Cannot restart Alignak : missing command"
@@ -1703,71 +2838,182 @@ class ExternalCommandManager:
         # Ok here the command succeed, we can now wait our death
         naglog_result('info', "%s" % (e.output))
 
-    # SAVE_STATE_INFORMATION
     def SAVE_STATE_INFORMATION(self):
+        """DOES NOTHING (What it is supposed to do?)
+        Format of the line that triggers function call::
+
+        SAVE_STATE_INFORMATION
+
+        :return: None
+        """
         pass
 
-    # SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;
-    # <fixed>;<trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME(self, host, start_time, end_time,
                                              fixed, trigger_id, duration, author, comment):
+        """DOES NOTHING (Should create host downtime and start it?)
+        Format of the line that triggers function call::
+
+        SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;
+        <fixed>;<trigger_id>;<duration>;<author>;<comment>
+
+        :return: None
+        """
         pass
 
-    # SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;
-    # <trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME(self, host, start_time, end_time, fixed,
                                                        trigger_id, duration, author, comment):
+        """DOES NOTHING (Should create triggered host downtime and start it?)
+        Format of the line that triggers function call::
+
+        SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;
+        <trigger_id>;<duration>;<author>;<comment>
+
+        :return: None
+        """
         pass
 
-    # SCHEDULE_CONTACT_DOWNTIME;<contact_name>;<start_time>;<end_time>;<author>;<comment>
     def SCHEDULE_CONTACT_DOWNTIME(self, contact, start_time, end_time, author, comment):
+        """Schedule contact downtime
+        Format of the line that triggers function call::
+
+        SCHEDULE_CONTACT_DOWNTIME;<contact_name>;<start_time>;<end_time>;<author>;<comment>
+
+        :param contact: contact to put in downtime
+        :type contact: alignak.objects.contact.Contact
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param author: downtime author
+        :param comment: text comment
+        :return: None
+        """
         dt = ContactDowntime(contact, start_time, end_time, author, comment)
         contact.add_downtime(dt)
         self.sched.add(dt)
         self.sched.get_and_register_status_brok(contact)
 
-    # SCHEDULE_FORCED_HOST_CHECK;<host_name>;<check_time>
     def SCHEDULE_FORCED_HOST_CHECK(self, host, check_time):
+        """Schedule a forced check on a host
+        Format of the line that triggers function call::
+
+        SCHEDULE_FORCED_HOST_CHECK;<host_name>;<check_time>
+
+        :param host: host to check
+        :type host: alignak.object.host.Host
+        :param check_time: time to check
+        :return: None
+        """
         host.schedule(force=True, force_time=check_time)
         self.sched.get_and_register_status_brok(host)
 
-    # SCHEDULE_FORCED_HOST_SVC_CHECKS;<host_name>;<check_time>
     def SCHEDULE_FORCED_HOST_SVC_CHECKS(self, host, check_time):
+        """Schedule a forced check on all services of a host
+        Format of the line that triggers function call::
+
+        SCHEDULE_FORCED_HOST_SVC_CHECKS;<host_name>;<check_time>
+
+        :param host: host to check
+        :type host: alignak.object.host.Host
+        :param check_time: time to check
+        :return: None
+        """
         for s in host.services:
             self.SCHEDULE_FORCED_SVC_CHECK(s, check_time)
             self.sched.get_and_register_status_brok(s)
 
-    # SCHEDULE_FORCED_SVC_CHECK;<host_name>;<service_description>;<check_time>
     def SCHEDULE_FORCED_SVC_CHECK(self, service, check_time):
+        """Schedule a forced check on a service
+        Format of the line that triggers function call::
+
+        SCHEDULE_FORCED_SVC_CHECK;<host_name>;<service_description>;<check_time>
+
+        :param service: service to check
+        :type service: alignak.object.service.Service
+        :param check_time: time to check
+        :return: None
+        """
         service.schedule(force=True, force_time=check_time)
         self.sched.get_and_register_status_brok(service)
 
-    # SCHEDULE_HOSTGROUP_HOST_DOWNTIME;<hostgroup_name>;<start_time>;<end_time>;
-    # <fixed>;<trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_HOSTGROUP_HOST_DOWNTIME(self, hostgroup, start_time, end_time, fixed,
                                          trigger_id, duration, author, comment):
+        """Schedule a downtime for each host of a hostgroup
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOSTGROUP_HOST_DOWNTIME;<hostgroup_name>;<start_time>;<end_time>;
+        <fixed>;<trigger_id>;<duration>;<author>;<comment>
+
+        :param hostgroup: hostgroup to schedule
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: dowtime comment
+        :return: None
+        """
         for host in hostgroup:
             self.SCHEDULE_HOST_DOWNTIME(host, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment)
 
-    # SCHEDULE_HOSTGROUP_SVC_DOWNTIME;<hostgroup_name>;<start_time>;<end_time>;<fixed>;
-    # <trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_HOSTGROUP_SVC_DOWNTIME(self, hostgroup, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment):
+        """Schedule a downtime for each service of each host of a hostgroup
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOSTGROUP_SVC_DOWNTIME;;<hostgroup_name>;<start_time>;<end_time>;<fixed>;
+        <trigger_id>;<duration>;<author>;<comment>
+
+        :param hostgroup: hostgroup to schedule
+        :type hostgroup: alignak.objects.hostgroup.Hostgroup
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         for host in hostgroup:
             for s in host.services:
                 self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
                                            trigger_id, duration, author, comment)
 
-    # SCHEDULE_HOST_CHECK;<host_name>;<check_time>
     def SCHEDULE_HOST_CHECK(self, host, check_time):
+        """Schedule a check on a host
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOST_CHECK;<host_name>;<check_time>
+
+        :param host: host to check
+        :type host: alignak.object.host.Host
+        :param check_time: time to check
+        :return: None
+        """
         host.schedule(force=False, force_time=check_time)
         self.sched.get_and_register_status_brok(host)
 
-    # SCHEDULE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;
-    # <trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_HOST_DOWNTIME(self, host, start_time, end_time, fixed,
                                trigger_id, duration, author, comment):
+        """Schedule a host downtime
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOST_DOWNTIME;<host_name>;<start_time>;<end_time>;<fixed>;
+        <trigger_id>;<duration>;<author>;<comment>
+
+        :param host: host to schedule downtime
+        :type host: alignak.object.host.Host
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         dt = Downtime(host, start_time, end_time, fixed, trigger_id, duration, author, comment)
         host.add_downtime(dt)
         self.sched.add(dt)
@@ -1775,46 +3021,124 @@ class ExternalCommandManager:
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(dt)
 
-    # SCHEDULE_HOST_SVC_CHECKS;<host_name>;<check_time>
     def SCHEDULE_HOST_SVC_CHECKS(self, host, check_time):
+        """Schedule a check on all services of a host
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOST_SVC_CHECKS;<host_name>;<check_time>
+
+        :param host: host to check
+        :type host: alignak.object.host.Host
+        :param check_time: time to check
+        :return: None
+        """
         for s in host.services:
             self.SCHEDULE_SVC_CHECK(s, check_time)
             self.sched.get_and_register_status_brok(s)
 
-    # SCHEDULE_HOST_SVC_DOWNTIME;<host_name>;<start_time>;<end_time>;
-    # <fixed>;<trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_HOST_SVC_DOWNTIME(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
+        """Schedule a service downtime for each service of a host
+        Format of the line that triggers function call::
+
+        SCHEDULE_HOST_SVC_DOWNTIME;<host_name>;<start_time>;<end_time>;
+        <fixed>;<trigger_id>;<duration>;<author>;<comment>
+
+        :param host: host to schedule downtime
+        :type host: alignak.object.host.Host
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         for s in host.services:
             self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
-    # SCHEDULE_SERVICEGROUP_HOST_DOWNTIME;<servicegroup_name>;<start_time>;<end_time>;<fixed>;
-    # <trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_SERVICEGROUP_HOST_DOWNTIME(self, servicegroup, start_time, end_time,
                                             fixed, trigger_id, duration, author, comment):
+        """Schedule a host downtime for each host of services in a servicegroup
+        Format of the line that triggers function call::
+
+        SCHEDULE_SERVICEGROUP_HOST_DOWNTIME;<servicegroup_name>;<start_time>;<end_time>;<fixed>;
+        <trigger_id>;<duration>;<author>;<comment>
+
+        :param servicegroup: servicegroup to schedule downtime
+        :type servicegroup: alignak.object.servicegroup.Servicegroup
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         for h in [s.host for s in servicegroup.get_services()]:
             self.SCHEDULE_HOST_DOWNTIME(h, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment)
 
-    # SCHEDULE_SERVICEGROUP_SVC_DOWNTIME;<servicegroup_name>;<start_time>;<end_time>;
-    # <fixed>;<trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_SERVICEGROUP_SVC_DOWNTIME(self, servicegroup, start_time, end_time,
                                            fixed, trigger_id, duration, author, comment):
+        """Schedule a service downtime for each service of a servicegroup
+        Format of the line that triggers function call::
+
+        SCHEDULE_SERVICEGROUP_SVC_DOWNTIME;<servicegroup_name>;<start_time>;<end_time>;
+        <fixed>;<trigger_id>;<duration>;<author>;<comment>
+
+        :param servicegroup: servicegroup to schedule downtime
+        :type servicegroup: alignak.object.servicegroup.Servicegroup
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         for s in servicegroup.get_services():
             self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
-    # SCHEDULE_SVC_CHECK;<host_name>;<service_description>;<check_time>
     def SCHEDULE_SVC_CHECK(self, service, check_time):
+        """Schedule a check on a service
+        Format of the line that triggers function call::
+
+        SCHEDULE_SVC_CHECK;<host_name>;<service_description>;<check_time>
+
+        :param service: service to check
+        :type service: alignak.object.service.Service
+        :param check_time: time to check
+        :return: None
+        """
         service.schedule(force=False, force_time=check_time)
         self.sched.get_and_register_status_brok(service)
 
 
-    # SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description><start_time>;<end_time>;
-    # <fixed>;<trigger_id>;<duration>;<author>;<comment>
     def SCHEDULE_SVC_DOWNTIME(self, service, start_time, end_time, fixed,
                               trigger_id, duration, author, comment):
+        """Schedule a service downtime
+        Format of the line that triggers function call::
+
+        SCHEDULE_SVC_DOWNTIME;<host_name>;<service_description><start_time>;<end_time>;
+        <fixed>;<trigger_id>;<duration>;<author>;<comment>
+
+        :param service: service to check
+        :type service: alignak.object.service.Service
+        :param start_time: downtime start time
+        :param end_time: downtime end time
+        :param fixed: is downtime fixed
+        :param trigger_id: downtime id that triggered this one
+        :param duration: downtime duration
+        :param author: downtime author
+        :param comment: downtime comment
+        :return: None
+        """
         dt = Downtime(service, start_time, end_time, fixed, trigger_id, duration, author, comment)
         service.add_downtime(dt)
         self.sched.add(dt)
@@ -1822,161 +3146,336 @@ class ExternalCommandManager:
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(dt)
 
-    # SEND_CUSTOM_HOST_NOTIFICATION;<host_name>;<options>;<author>;<comment>
     def SEND_CUSTOM_HOST_NOTIFICATION(self, host, options, author, comment):
+        """DOES NOTHING (Should send a custom notification)
+        Format of the line that triggers function call::
+
+        SEND_CUSTOM_HOST_NOTIFICATION;<host_name>;<options>;<author>;<comment>
+
+        :param host: host to send notif for
+        :param options: notification options
+        :param author: notification author
+        :param comment: notification text
+        :return:
+        """
         pass
 
-    # SEND_CUSTOM_SVC_NOTIFICATION;<host_name>;<service_description>;<options>;<author>;<comment>
     def SEND_CUSTOM_SVC_NOTIFICATION(self, service, options, author, comment):
+        """DOES NOTHING (Should send a custom notification)
+        Format of the line that triggers function call::
+
+        SEND_CUSTOM_SVC_NOTIFICATION;<host_name>;<service_description>;<options>;<author>;<comment>>
+
+        :param service: service to send notif for
+        :param options: notification options
+        :param author: notification author
+        :param comment: notification text
+        :return: None
+        """
         pass
 
-    # SET_HOST_NOTIFICATION_NUMBER;<host_name>;<notification_number>
     def SET_HOST_NOTIFICATION_NUMBER(self, host, notification_number):
+        """DOES NOTHING (Should set host notification number)
+        Format of the line that triggers function call::
+
+        SET_HOST_NOTIFICATION_NUMBER;<host_name>;<notification_number>
+
+        :param host: host to edit
+        :param notification_number: new value to set
+        :return: None
+        """
         pass
 
-    # SET_SVC_NOTIFICATION_NUMBER;<host_name>;<service_description>;<notification_number>
     def SET_SVC_NOTIFICATION_NUMBER(self, service, notification_number):
+        """DOES NOTHING (Should set host notification number)
+        Format of the line that triggers function call::
+
+        SET_SVC_NOTIFICATION_NUMBER;<host_name>;<service_description>;<notification_number>
+
+        :param service: service to edit
+        :param notification_number: new value to set
+        :return: None
+        """
         pass
 
-    # SHUTDOWN_PROGRAM
     def SHUTDOWN_PROGRAM(self):
+        """DOES NOTHING (Should shutdown Alignak)
+        Format of the line that triggers function call::
+
+        SHUTDOWN_PROGRAM
+
+        :return: None
+        """
         pass
 
-    # START_ACCEPTING_PASSIVE_HOST_CHECKS
     def START_ACCEPTING_PASSIVE_HOST_CHECKS(self):
+        """Enable passive host check submission (globally)
+        Format of the line that triggers function call::
+
+        START_ACCEPTING_PASSIVE_HOST_CHECKS
+
+        :return: None
+        """
         if not self.conf.accept_passive_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_host_checks = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # START_ACCEPTING_PASSIVE_SVC_CHECKS
     def START_ACCEPTING_PASSIVE_SVC_CHECKS(self):
+        """Enable passive service check submission (globally)
+        Format of the line that triggers function call::
+
+        START_ACCEPTING_PASSIVE_SVC_CHECKS
+
+        :return: None
+        """
         if not self.conf.accept_passive_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_service_checks = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # START_EXECUTING_HOST_CHECKS
     def START_EXECUTING_HOST_CHECKS(self):
+        """Enable host check execution (globally)
+        Format of the line that triggers function call::
+
+        START_EXECUTING_HOST_CHECKS
+
+        :return: None
+        """
         if not self.conf.execute_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_host_checks = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # START_EXECUTING_SVC_CHECKS
     def START_EXECUTING_SVC_CHECKS(self):
+        """Enable service check execution (globally)
+        Format of the line that triggers function call::
+
+        START_EXECUTING_SVC_CHECKS
+
+        :return: None
+        """
         if not self.conf.execute_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_service_checks = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # START_OBSESSING_OVER_HOST;<host_name>
     def START_OBSESSING_OVER_HOST(self, host):
+        """Enable obssessing over host for a host
+        Format of the line that triggers function call::
+
+        START_OBSESSING_OVER_HOST;<host_name>
+
+        :param host: host to obssess over
+        :type host: alignak.objects.host.Host
+
+        :return: None
+        """
         if not host.obsess_over_host:
             host.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             host.obsess_over_host = True
             self.sched.get_and_register_status_brok(host)
 
-    # START_OBSESSING_OVER_HOST_CHECKS
     def START_OBSESSING_OVER_HOST_CHECKS(self):
+        """Enable obssessing over host check (globally)
+        Format of the line that triggers function call::
+
+        START_OBSESSING_OVER_HOST_CHECKS
+
+        :return: None
+        """
         if not self.conf.obsess_over_hosts:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             self.conf.obsess_over_hosts = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # START_OBSESSING_OVER_SVC;<host_name>;<service_description>
     def START_OBSESSING_OVER_SVC(self, service):
+        """Enable obssessing over service for a service
+        Format of the line that triggers function call::
+
+        START_OBSESSING_OVER_SVC;<host_name>;<service_description>
+
+        :param service: service to obssess over
+        :type service: alignak.objects.service.Service
+
+        :return: None
+        """
         if not service.obsess_over_service:
             service.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             service.obsess_over_service = True
             self.sched.get_and_register_status_brok(service)
 
-    # START_OBSESSING_OVER_SVC_CHECKS
     def START_OBSESSING_OVER_SVC_CHECKS(self):
+        """Enable obssessing over service check (globally)
+        Format of the line that triggers function call::
+
+        START_OBSESSING_OVER_SVC_CHECKS
+
+        :return: None
+        """
         if not self.conf.obsess_over_services:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             self.conf.obsess_over_services = True
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_ACCEPTING_PASSIVE_HOST_CHECKS
     def STOP_ACCEPTING_PASSIVE_HOST_CHECKS(self):
+        """Disable passive host check submission (globally)
+        Format of the line that triggers function call::
+
+        STOP_ACCEPTING_PASSIVE_HOST_CHECKS
+
+        :return: None
+        """
         if self.conf.accept_passive_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_host_checks = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_ACCEPTING_PASSIVE_SVC_CHECKS
     def STOP_ACCEPTING_PASSIVE_SVC_CHECKS(self):
+        """Disable passive service check submission (globally)
+        Format of the line that triggers function call::
+
+        STOP_ACCEPTING_PASSIVE_SVC_CHECKS
+
+        :return: None
+        """
         if self.conf.accept_passive_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_service_checks = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_EXECUTING_HOST_CHECKS
     def STOP_EXECUTING_HOST_CHECKS(self):
+        """Disable host check execution (globally)
+        Format of the line that triggers function call::
+
+        STOP_EXECUTING_HOST_CHECKS
+
+        :return: None
+        """
         if self.conf.execute_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_host_checks = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_EXECUTING_SVC_CHECKS
     def STOP_EXECUTING_SVC_CHECKS(self):
+        """Disable service check execution (globally)
+        Format of the line that triggers function call::
+
+        STOP_EXECUTING_SVC_CHECKS
+
+        :return: None
+        """
         if self.conf.execute_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_service_checks = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_OBSESSING_OVER_HOST;<host_name>
     def STOP_OBSESSING_OVER_HOST(self, host):
+        """Disable obssessing over host for a host
+        Format of the line that triggers function call::
+
+        STOP_OBSESSING_OVER_HOST;<host_name>
+
+        :param host: host to obssess over
+        :type host: alignak.objects.host.Host
+
+        :return: None
+        """
         if host.obsess_over_host:
             host.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             host.obsess_over_host = False
             self.sched.get_and_register_status_brok(host)
 
-    # STOP_OBSESSING_OVER_HOST_CHECKS
     def STOP_OBSESSING_OVER_HOST_CHECKS(self):
+        """Disable obssessing over host check (globally)
+        Format of the line that triggers function call::
+
+        STOP_OBSESSING_OVER_HOST_CHECKS
+
+        :return: None
+        """
         if self.conf.obsess_over_hosts:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             self.conf.obsess_over_hosts = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # STOP_OBSESSING_OVER_SVC;<host_name>;<service_description>
     def STOP_OBSESSING_OVER_SVC(self, service):
+        """Disable obssessing over service for a service
+        Format of the line that triggers function call::
+
+        STOP_OBSESSING_OVER_SVC;<host_name>;<service_description>
+
+        :param service: service to obssess over
+        :type service: alignak.objects.service.Service
+
+        :return: None
+        """
         if service.obsess_over_service:
             service.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             service.obsess_over_service = False
             self.sched.get_and_register_status_brok(service)
 
-    # STOP_OBSESSING_OVER_SVC_CHECKS
     def STOP_OBSESSING_OVER_SVC_CHECKS(self):
+        """Disable obssessing over service check (globally)
+        Format of the line that triggers function call::
+
+        STOP_OBSESSING_OVER_SVC_CHECKS
+
+        :return: None
+        """
         if self.conf.obsess_over_services:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
             self.conf.obsess_over_services = False
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    # Now the alignak specific ones
-    # LAUNCH_SVC_EVENT_HANDLER;<host_name>;<service_description>
     def LAUNCH_SVC_EVENT_HANDLER(self, service):
+        """Launch event handler for a service
+        Format of the line that triggers function call::
+
+        LAUNCH_SVC_EVENT_HANDLER;<host_name>;<service_description>
+
+        :param service: service to execute the event handler
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
         service.get_event_handlers(externalcmd=True)
 
-    # LAUNCH_SVC_EVENT_HANDLER;<host_name>;<service_description>
     def LAUNCH_HOST_EVENT_HANDLER(self, host):
+        """Launch event handler for a service
+        Format of the line that triggers function call::
+
+        LAUNCH_HOST_EVENT_HANDLER;<host_name>
+
+        :param host: host to execute the event handler
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
         host.get_event_handlers(externalcmd=True)
 
-    # ADD_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
     def ADD_SIMPLE_HOST_DEPENDENCY(self, son, father):
+        """Add a host dependency between son and father
+        Format of the line that triggers function call::
+
+        ADD_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
+
+        :param son: son of dependency
+        :type son: alignak.objects.host.Host
+        :param father: father of dependency
+        :type father: alignak.objects.host.Host
+        :return: None
+        """
         if not son.is_linked_with_host(father):
             logger.debug("Doing simple link between %s and %s", son.get_name(), father.get_name())
             # Flag them so the modules will know that a topology change
@@ -1989,8 +3488,18 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
-    # DEL_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
     def DEL_HOST_DEPENDENCY(self, son, father):
+        """Delete a host dependency between son and father
+        Format of the line that triggers function call::
+
+        DEL_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
+
+        :param son: son of dependency
+        :type son: alignak.objects.host.Host
+        :param father: father of dependency
+        :type father: alignak.objects.host.Host
+        :return: None
+        """
         if son.is_linked_with_host(father):
             logger.debug("Removing simple link between %s and %s",
                          son.get_name(), father.get_name())
@@ -2003,8 +3512,18 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
-    # ADD_SIMPLE_POLLER;realm_name;poller_name;address;port
     def ADD_SIMPLE_POLLER(self, realm_name, poller_name, address, port):
+        """Add a poller
+        Format of the line that triggers function call::
+
+        ADD_SIMPLE_POLLER;realm_name;poller_name;address;port
+
+        :param realm_name: realm for the new poller
+        :param poller_name: new poller name
+        :param address: new poller address
+        :param port: new poller port
+        :return: None
+        """
         logger.debug("I need to add the poller (%s, %s, %s, %s)",
                      realm_name, poller_name, address, port)
 
