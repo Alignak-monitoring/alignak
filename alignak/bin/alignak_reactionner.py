@@ -75,8 +75,11 @@ from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak import __version__
 
 
-# Protect for windows multiprocessing that will RELAUNCH all
 def main():
+    """Parse args and run main daemon function
+
+    :return: None
+    """
     parser = optparse.OptionParser(
         "%prog [options]", version="%prog " + __version__)
     parser.add_option('-c', '--config',

@@ -77,6 +77,10 @@ from alignak.daemons.arbiterdaemon import Arbiter
 
 
 def main():
+    """Parse args and run main daemon function
+
+    :return: None
+    """
     parser = optparse.OptionParser(
         "%prog [options] -c configfile [-c additional_config_file]",
         version="%prog: " + __version__)
