@@ -49,7 +49,11 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide a lot of utility functions.
+You can find functions for time management, type management (pythonization),
+macros solving, sorting, parsing, file handling, filters.
 
+"""
 import time
 import re
 import copy
@@ -73,9 +77,13 @@ except Exception, exp:
 
 
 # ########## Strings #############
-# Try to print strings, but if there is an utf8 error, go in simple ascii mode
-# (Like if the terminal do not have en_US.UTF8 as LANG for example)
 def safe_print(*args):
+    """Try to print strings, but if there is an utf8 error, go in simple ascii mode
+    (Like if the terminal do not have en_US.UTF8 as LANG for example)
+
+    :param args: args to print
+    :return: None
+    """
     l = []
     for e in args:
         # If we got an str, go in unicode, and if we cannot print
@@ -103,6 +111,20 @@ def safe_print(*args):
 
 def split_semicolon(line, maxsplit=None):
     """Split a line on semicolons characters but not on the escaped semicolons
+
+    :param line: line to split
+    :param maxsplit: maximum of split to dot
+    :return: splitted line
+    :rtype: list
+
+    >>> split_semicolon('a,b;c;;g')
+    ['a,b', 'c', '', 'g']
+
+    >>> split_semicolon('a,b;c;;g', 2)
+    ['a,b', 'c', ';g']
+
+    >>> split_semicolon('a,b;c\;;g', 2)
+    ['a,b', 'c;', 'g']
     """
     # Split on ';' character
     splitted_line = line.split(';')
@@ -144,8 +166,13 @@ def split_semicolon(line, maxsplit=None):
 
 
 
-# Json-ify the objects
 def jsonify_r(obj):
+    """Convert an object into json (recursively on attribute)
+
+    :param obj: obj to jsonify
+    :return: json representation of obj
+    :rtype: dict
+    """
     res = {}
     cls = obj.__class__
     if not hasattr(cls, 'properties'):
@@ -203,6 +230,15 @@ def jsonify_r(obj):
 # ################################## TIME ##################################
 
 def get_end_of_day(year, month_id, day):
+    """Get the timestamp of the end (local) of a specific day
+
+    :param year: date year
+    :param month_id: date month (int)
+    :param day: date day
+    :return: timestamp
+
+    TODO: Missing timezone
+    """
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
@@ -210,22 +246,47 @@ def get_end_of_day(year, month_id, day):
 
 
 def print_date(t):
+    """Get date (local) in asc format from timestamp
+
+    example : 'Thu Jan  1 01:00:00 1970' (for t=0 in a EUW server)
+
+    :param t: timestamp
+    :return: formatted time
+    TODO: Missing timezone
+    """
     return time.asctime(time.localtime(t))
 
 
 
 def get_day(t):
+    """Get timestamp of the beginning of the day (local) given by t
+
+    :param t: time to get day from
+    :return: timestamp
+    TODO: Missing timezone
+    """
     return int(t - get_sec_from_morning(t))
 
 
-# Same but for week day
 def get_wday(t):
+    """Get week day from date
+
+    :param t: timestamp date
+    :return: weekday (0-6)
+    TODO: Missing timezone
+    """
     t_lt = time.localtime(t)
     return t_lt.tm_wday
 
 
 
 def get_sec_from_morning(t):
+    """Get the numbers of seconds elapsed since the beginning of the day (local) given by t
+
+    :param t: time to get amount of second from
+    :return: timestamp
+    TODO: Missing timezone
+    """
     t_lt = time.localtime(t)
     h = t_lt.tm_hour
     m = t_lt.tm_min
@@ -235,6 +296,15 @@ def get_sec_from_morning(t):
 
 
 def get_start_of_day(year, month_id, day):
+    """Get the timestamp of the beginning (local) of a specific day
+
+    :param year: date year
+    :param month_id: date month (int)
+    :param day: date day
+    :return: timestamp
+
+    TODO: Missing timezone
+    """
     start_time = (year, month_id, day, 00, 00, 00, 0, 0, -1)
     try:
         start_time_epoch = time.mktime(start_time)
@@ -245,8 +315,19 @@ def get_start_of_day(year, month_id, day):
     return start_time_epoch
 
 
-# change a time in seconds like 3600 into a format: 0d 1h 0m 0s
 def format_t_into_dhms_format(t):
+    """ Convert an amount of second into day, hour, min and sec
+
+    :param t: seconds
+    :return: 'Ad Bh Cm Ds'
+
+    >>> format_t_into_dhms_format(456189)
+    '5d 6h 43m 9s'
+
+    >>> format_t_into_dhms_format(3600)
+    '0d 1h 0m 0s'
+
+    """
     s = t
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
@@ -255,20 +336,54 @@ def format_t_into_dhms_format(t):
 
 
 # ################################ Pythonization ###########################
-# first change to float so manage for example 25.0 to 25
 def to_int(val):
+    """Convert val to int (or raise Exception)
+
+    :param val: value to convert
+    :return: int(float(val))
+    """
     return int(float(val))
 
 
 def to_float(val):
+    """Convert val to float (or raise Exception)
+
+    :param val: value to convert
+    :return: float(val)
+    """
     return float(val)
 
 
 def to_char(val):
+    """Get first cher of val (or raise Exception)
+
+    :param val: value we get head
+    :return: val[0]
+    """
     return val[0]
 
 
 def to_split(val, split_on_coma=True):
+    """Try to split a string with comma separator.
+    If val is already a list return it
+    If we don't have to split just return [val]
+    If split gives only [''] empty it
+
+    :param val: value to split
+    :return: splitted value on comma
+
+    >>> to_split('a,b,c')
+    ['a', 'b', 'c']
+
+    >>> to_split('a,b,c', False)
+    ['a,b,c']
+
+    >>> to_split(['a,b,c'])
+    ['a,b,c']
+
+    >>> to_split('')
+    []
+    """
     if isinstance(val, list):
         return val
     if not split_on_coma:
@@ -280,6 +395,22 @@ def to_split(val, split_on_coma=True):
 
 
 def list_split(val, split_on_coma=True):
+    """Try to split a each member of a list with comma separator.
+    If we don't have to split just return val
+
+    :param val: value to split
+    :return: list with splitted member on comma
+
+    >>> list_split(['a,b,c'], False)
+    ['a,b,c']
+
+    >>> list_split(['a,b,c'])
+    ['a', 'b', 'c']
+
+    >>> list_split('')
+    []
+
+    """
     if not split_on_coma:
         return val
     new_val = []
@@ -289,6 +420,20 @@ def list_split(val, split_on_coma=True):
 
 
 def to_best_int_float(val):
+    """Get best type for value between int and float
+
+    :param val: value
+    :return: int(float(val)) if int(float(val)) == float(val), else float(val)
+
+    >>> to_best_int_float("20.1")
+    20.1
+
+    >>> to_best_int_float("20.0")
+    20
+
+    >>> to_best_int_float("20")
+    20
+    """
     i = int(float(val))
     f = float(val)
     # If the f is a .0 value,
@@ -300,6 +445,11 @@ def to_best_int_float(val):
 
 # bool('0') = true, so...
 def to_bool(val):
+    """Convert value to bool
+
+    :param val: value to convert
+    :return: True if val == '1' or val == 'on' or val == 'true' or val == 'True', else False
+    """
     if val == '1' or val == 'on' or val == 'true' or val == 'True':
         return True
     else:
@@ -307,6 +457,11 @@ def to_bool(val):
 
 
 def from_bool_to_string(b):
+    """Convert a bool to a string representation
+
+    :param b: bool to convert
+    :return: if b '1' ,else '0'
+    """
     if b:
         return '1'
     else:
@@ -314,6 +469,11 @@ def from_bool_to_string(b):
 
 
 def from_bool_to_int(b):
+    """Convert a bool to a int representation
+
+    :param b: bool to convert
+    :return: if b 1 ,else 0
+    """
     if b:
         return 1
     else:
@@ -321,11 +481,21 @@ def from_bool_to_int(b):
 
 
 def from_list_to_split(val):
+    """Convert list into a comma separated string
+
+    :param val: value to convert
+    :return: comma separated string
+    """
     val = ','.join(['%s' % v for v in val])
     return val
 
 
 def from_float_to_int(val):
+    """Convert float to int
+
+    :param val: value to convert
+    :return: int(val)
+    """
     val = int(val)
     return val
 
@@ -335,27 +505,47 @@ def from_float_to_int(val):
 # ref is the item like a service, and value
 # if the value to preprocess
 
-# Just a string list of all names, with ,
 def to_list_string_of_names(ref, tab):
+    """Convert list into a comma separated list of element name
+
+    :param ref: Not used
+    :param tab: list to parse
+    :return: comma separated string of names
+    """
     return ",".join([e.get_name() for e in tab])
 
 
-# Just a list of names
 def to_list_of_names(ref, tab):
+    """Convert list into a list of element name
+
+    :param ref: Not used
+    :param tab: list to parse
+    :return: list of names
+    """
     return [e.get_name() for e in tab]
 
 
-# This will give a string if the value exists
-# or '' if not
 def to_name_if_possible(ref, value):
+    """Try to get value name (call get_name method)
+
+    :param ref: Not used
+    :param value: value to name
+    :return: name or ''
+    """
     if value:
         return value.get_name()
     return ''
 
 
-# take a list of hosts and return a list
-# of all host_names
+
 def to_hostnames_list(ref, tab):
+    """Convert Host list into a list of  host_name
+
+    :param ref: Not used
+    :param tab: Host list
+    :type tab: list[alignak.objects.host.Host]
+    :return: host_name list
+    """
     r = []
     for h in tab:
         if hasattr(h, 'host_name'):
@@ -363,10 +553,16 @@ def to_hostnames_list(ref, tab):
     return r
 
 
-# Will create a dict with 2 lists:
-# *services: all services of the tab
-# *hosts: all hosts of the tab
 def to_svc_hst_distinct_lists(ref, tab):
+    """create a dict with 2 lists::
+
+    * services: all services of the tab
+    * hosts: all hosts of the tab
+
+    :param ref: Not used
+    :param tab: list of Host and Service
+    :return: dict with hosts and services names
+    """
     r = {'hosts': [], 'services': []}
     for e in tab:
         cls = e.__class__
@@ -379,15 +575,23 @@ def to_svc_hst_distinct_lists(ref, tab):
     return r
 
 
-# Will expand the value with macros from the
-# host/service ref before brok it
 def expand_with_macros(ref, value):
+    """Expand the value with macros from the
+       host/service ref before brok it
+
+    :param ref: host or service
+    :param value: value to expand macro
+    :return: value with macro replaced
+    """
     return MacroResolver().resolve_simple_macros_in_string(value, ref.get_data_for_checks())
 
 
-# Just get the string name of the object
-# (like for realm)
 def get_obj_name(obj):
+    """Get object name (call get_name) if not a string
+
+    :param obj: obj we wan the name
+    :return: object name
+    """
     # Maybe we do not have a real object but already a string. If so
     # return the string
     if isinstance(obj, basestring):
@@ -395,37 +599,64 @@ def get_obj_name(obj):
     return obj.get_name()
 
 
-# Same as before, but call with object,prop instead of just value
-# But if we got an attribute error, return ''
 def get_obj_name_two_args_and_void(obj, value):
+    """Get value name (call get_name) if not a string
+
+    :param obj: Not used
+    :param value: value to name
+    :return: value name
+    """
     try:
         return value.get_name()
     except AttributeError:
         return ''
 
 
-# Get the full name if there is one
 def get_obj_full_name(obj):
+    """Wrapepr to call obj.get_full_name or obj.get_name
+
+    :param obj: object name
+    :return: object name
+    """
     try:
         return obj.get_full_name()
     except Exception:
         return obj.get_name()
 
 
-# return the list of keys of the custom dict
-# but without the _ before
 def get_customs_keys(d):
+    """Get a list of keys of the custom dict
+    without the first char
+
+    Used for macros (_name key)
+
+    :param d: dict to parse
+    :type d: dict
+    :return: list of keys
+    :rtype: list
+    """
     return [k[1:] for k in d.keys()]
 
 
-# return the values of the dict
 def get_customs_values(d):
+    """Wrapper for values() method
+
+    :param d: dict
+    :return: d.values
+    TODO: Remove it?
+    """
     return d.values()
 
 
-# Checks that a parameter has an unique value. If it's a list, the last
-# value set wins.
 def unique_value(val):
+    """Get last elem of val if it is a list
+    Else return val
+    Used in parsing, if we set several time a parameter we only take the last one
+
+    :param val: val to edit
+    :return: single value
+    TODO: Raise erro/warning instead of silently removing something
+    """
     if isinstance(val, list):
         if val:
             return val[-1]
@@ -437,6 +668,12 @@ def unique_value(val):
 
 # ##################### Sorting ################
 def scheduler_no_spare_first(x, y):
+    """Compare two satellite link based on spare attribute(sched usually)
+
+    :param x: first link to compare
+    :param y: second link to compare
+    :return: x > y (1) if x.spare and not y.spare, x == y (0) if both spare, x < y (-1) else
+    """
     if x.spare and not y.spare:
         return 1
     elif x.spare and y.spare:
@@ -445,8 +682,17 @@ def scheduler_no_spare_first(x, y):
         return -1
 
 
-# -1 is x first, 0 equal, 1 is y first
 def alive_then_spare_then_deads(x, y):
+    """Compare two satellite link
+    based on alive attribute then spare attribute
+
+    :param x: first link to compare
+    :param y: second link to compare
+    :return: x > y (1) if x alive and not y or both alive but x not spare
+             x == y (0) if both alive and spare
+             x < y (-1) else
+    TODO: Rework it
+    """
     # First are alive
     if x.alive and not y.alive:
         return -1
@@ -465,8 +711,13 @@ def alive_then_spare_then_deads(x, y):
     return 0
 
 
-# -1 is x first, 0 equal, 1 is y first
 def sort_by_ids(x, y):
+    """Compare x, y base on their id
+
+    :param x: first elem to compare
+    :param y: second elem to compare
+    :return: x > y (1) if x.id > y.id, x == y (0) if id equals, x < y (-1) else
+    """
     if x.id < y.id:
         return -1
     if x.id > y.id:
@@ -475,11 +726,16 @@ def sort_by_ids(x, y):
     return 0
 
 
-# From a tab, get the avg, min, max
-# for the tab values, but not the lower ones
-# and higher ones that are too distinct
-# than major ones
 def nighty_five_percent(t):
+    """
+    From a tab, get the avg, min, max
+    for the tab values, but not the lower ones
+    and higher ones that are too distinct
+    than major ones
+
+    :param t: list of value to compute
+    :return: tuple containing average, min and max value
+    """
     t2 = copy.copy(t)
     t2.sort()
 
@@ -508,6 +764,12 @@ def nighty_five_percent(t):
 
 # #################### Cleaning ##############
 def strip_and_uniq(tab):
+    """Strip every element of a list and keep unique values
+
+    :param tab: lsit to strip
+    :return: stripped list with unique values
+    :type: list
+    """
     new_tab = set()
     for elt in tab:
         val = elt.strip()
@@ -520,6 +782,8 @@ def strip_and_uniq(tab):
 
 
 def expand_xy_pattern(pattern):
+    """Yield element in nodeset value for pattern
+    """
     ns = NodeSet(str(pattern))
     if len(ns) > 1:
         for elem in ns:
@@ -529,14 +793,18 @@ def expand_xy_pattern(pattern):
         yield pattern
 
 
-# This function is used to generate all pattern change as
-# recursive list.
-# for example, for a [(1,3),(1,4),(1,5)] xy_couples,
-# it will generate a 60 item list with:
-# Rule: [1, '[1-5]', [1, '[1-4]', [1, '[1-3]', []]]]
-# Rule: [1, '[1-5]', [1, '[1-4]', [2, '[1-3]', []]]]
-# ...
 def got_generation_rule_pattern_change(xy_couples):
+    """generate all pattern change as recursive list.
+
+    For example, for a [(1,3),(1,4),(1,5)] xy_couples,
+    it will generate a 60 item list with:
+    Rule: [1, '[1-5]', [1, '[1-4]', [1, '[1-3]', []]]]
+    Rule: [1, '[1-5]', [1, '[1-4]', [2, '[1-3]', []]]]
+    [...]
+
+    :param xy_couples: list of 2-tuple integer
+    :return: list of rules
+    """
     res = []
     xy_cpl = xy_couples
     if xy_couples == []:
@@ -552,15 +820,22 @@ def got_generation_rule_pattern_change(xy_couples):
     return res
 
 
-# this function apply a recursive pattern change
-# generate by the got_generation_rule_pattern_change
-# function.
-# It take one entry of this list, and apply
-# recursively the change to s like:
-# s = "Unit [1-3] Port [1-4] Admin [1-5]"
-# rule = [1, '[1-5]', [2, '[1-4]', [3, '[1-3]', []]]]
-# output = Unit 3 Port 2 Admin 1
 def apply_change_recursive_pattern_change(s, rule):
+    """Apply a recursive pattern change
+    generate by the got_generation_rule_pattern_change function.
+
+    It take one entry of this list, and apply recursively the change to string
+
+    :param s: string to edit
+    :param rule: rule to apply
+    :return: modified string with rule values
+
+    >>> apply_change_recursive_pattern_change("Unit [1-3] Port [1-4] Admin [1-5]", \
+                                              [1, '[1-5]', [2, '[1-4]', [3, '[1-3]', []]]] \
+                                            )
+    'Unit 3 Port 2 Admin 1'
+
+    """
     # print "Try to change %s" % s, 'with', rule
     # new_s = s
     (i, m, t) = rule
@@ -571,11 +846,6 @@ def apply_change_recursive_pattern_change(s, rule):
         return s
     return apply_change_recursive_pattern_change(s, t)
 
-# For service generator, get dict from a _custom properties
-# as _disks   C$(80%!90%),D$(80%!90%)$,E$(80%!90%)$
-# return {'C': '80%!90%', 'D': '80%!90%', 'E': '80%!90%'}
-# And if we have a key that look like [X-Y] we will expand it
-# into Y-X+1 keys
 GET_KEY_VALUE_SEQUENCE_ERROR_NOERROR = 0
 GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX = 1
 GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT = 2
@@ -583,6 +853,23 @@ GET_KEY_VALUE_SEQUENCE_ERROR_NODE = 3
 
 
 def get_key_value_sequence(entry, default_value=None):
+    """Parse a key value config entry (used in duplicate foreach)
+
+    If we have a key that look like [X-Y] we will expand it into Y-X+1 keys
+
+    :param entry: line to parse
+    :param default_value: default value if nothing specified
+
+    Example ::
+    get_key_value_sequence("var$(/var)$,root $(/)$")
+
+    ([{'KEY': 'var', 'VALUE': '/var', 'VALUE1': '/var'},
+    {'KEY': 'root', 'VALUE': '/', 'VALUE1': '/'}],
+    0)
+
+    :return: tuple with a list of dict and error code
+
+    """
     array1 = []
     array2 = []
     conf_entry = entry
@@ -721,10 +1008,15 @@ def get_key_value_sequence(entry, default_value=None):
 
 
 # ############################## Files management #######################
-# We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
-# /tmp/toto/toto2/ will really exists so we can copy it. Try to make if if need
-# and return True/False if succeed
 def expect_file_dirs(root, path):
+    """We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
+    /tmp/toto/toto2/ will really exists so we can copy it. Try to make if  needed
+
+
+    :param root: root directory
+    :param path: path to verify
+    :return: True on success, False otherwise
+    """
     dirs = os.path.normpath(path).split('/')
     dirs = [d for d in dirs if d != '']
     # We will create all directory until the last one
@@ -749,24 +1041,45 @@ def expect_file_dirs(root, path):
 # should return a boolean value that indicates if the inscance mached the
 # filter
 def filter_any(name):
+    """Filter for host
+    Filter nothing
+
+    :param name: name to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept all"""
         return True
 
     return inner_filter
 
 
 def filter_none(name):
+    """Filter for host
+    Filter all
+
+    :param name: name to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept nothing"""
         return False
 
     return inner_filter
 
 
 def filter_host_by_name(name):
+    """Filter for host
+    Filter on name
+
+    :param name: name to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept if host_name == name"""
         if host is None:
             return False
         return host.host_name == name
@@ -775,9 +1088,16 @@ def filter_host_by_name(name):
 
 
 def filter_host_by_regex(regex):
+    """Filter for host
+    Filter on regex
+
+    :param regex: regex to filter
+    :return: Filter
+    """
     host_re = re.compile(regex)
 
     def inner_filter(host):
+        """Inner filter for host. Accept if regex match host_name"""
         if host is None:
             return False
         return host_re.match(host.host_name) is not None
@@ -786,8 +1106,15 @@ def filter_host_by_regex(regex):
 
 
 def filter_host_by_group(group):
+    """Filter for host
+    Filter on group
+
+    :param group: gruoup to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept if group in host.hostgroups"""
         if host is None:
             return False
         return group in [g.hostgroup_name for g in host.hostgroups]
@@ -796,8 +1123,15 @@ def filter_host_by_group(group):
 
 
 def filter_host_by_tag(tpl):
+    """Filter for host
+    Filter on tag
+
+    :param tpl: tag to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept if tag in host.tags"""
         if host is None:
             return False
         return tpl in [t.strip() for t in host.tags]
@@ -807,8 +1141,15 @@ def filter_host_by_tag(tpl):
 
 
 def filter_service_by_name(name):
+    """Filter for service
+    Filter on name
+
+    :param name: name to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if service_description == name"""
         if service is None:
             return False
         return service.service_description == name
@@ -817,9 +1158,16 @@ def filter_service_by_name(name):
 
 
 def filter_service_by_regex_name(regex):
+    """Filter for service
+    Filter on regex
+
+    :param regex: regex to filter
+    :return: Filter
+    """
     host_re = re.compile(regex)
 
     def inner_filter(service):
+        """Inner filter for service. Accept if regex match service_description"""
         if service is None:
             return False
         return host_re.match(service.service_description) is not None
@@ -828,8 +1176,15 @@ def filter_service_by_regex_name(regex):
 
 
 def filter_service_by_host_name(host_name):
+    """Filter for service
+    Filter on host_name
+
+    :param host_name: host_name to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if service.host.host_name == host_name"""
         if service is None or service.host is None:
             return False
         return service.host.host_name == host_name
@@ -838,9 +1193,16 @@ def filter_service_by_host_name(host_name):
 
 
 def filter_service_by_regex_host_name(regex):
+    """Filter for service
+    Filter on regex host_name
+
+    :param regex: regex to filter
+    :return: Filter
+    """
     host_re = re.compile(regex)
 
     def inner_filter(service):
+        """Inner filter for service. Accept if regex match service.host.host_name"""
         if service is None or service.host is None:
             return False
         return host_re.match(service.host.host_name) is not None
@@ -849,8 +1211,15 @@ def filter_service_by_regex_host_name(regex):
 
 
 def filter_service_by_hostgroup_name(group):
+    """Filter for service
+    Filter on hostgroup
+
+    :param hostgroup: hostgroup to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if hostgroup in service.host.hostgroups"""
         if service is None or service.host is None:
             return False
         return group in [g.hostgroup_name for g in service.host.hostgroups]
@@ -859,8 +1228,15 @@ def filter_service_by_hostgroup_name(group):
 
 
 def filter_service_by_host_tag_name(tpl):
+    """Filter for service
+    Filter on tag
+
+    :param tpl: tag to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if tpl in service.host.tags"""
         if service is None or service.host is None:
             return False
         return tpl in [t.strip() for t in service.host.tags]
@@ -869,8 +1245,15 @@ def filter_service_by_host_tag_name(tpl):
 
 
 def filter_service_by_servicegroup_name(group):
+    """Filter for service
+    Filter on group
+
+    :param group: group to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if group in service.servicegroups"""
         if service is None:
             return False
         return group in [g.servicegroup_name for g in service.servicegroups]
@@ -879,8 +1262,15 @@ def filter_service_by_servicegroup_name(group):
 
 
 def filter_host_by_bp_rule_label(label):
+    """Filter for host
+    Filter on label
+
+    :param label: label to filter
+    :return: Filter
+    """
 
     def inner_filter(host):
+        """Inner filter for host. Accept if label in host.labels"""
         if host is None:
             return False
         return label in host.labels
@@ -889,8 +1279,15 @@ def filter_host_by_bp_rule_label(label):
 
 
 def filter_service_by_host_bp_rule_label(label):
+    """Filter for service
+    Filter on label
+
+    :param label: label to filter
+    :return: Filter
+    """
 
     def inner_filter(service):
+        """Inner filter for service. Accept if label in service.host.labels"""
         if service is None or service.host is None:
             return False
         return label in service.host.labels
@@ -899,7 +1296,14 @@ def filter_service_by_host_bp_rule_label(label):
 
 
 def filter_service_by_bp_rule_label(label):
+    """Filter for service
+    Filter on label
+
+    :param label: label to filter
+    :return: Filter
+    """
     def inner_filter(service):
+        """Inner filter for service. Accept if label in service.labels"""
         if service is None:
             return False
         return label in service.labels
@@ -908,6 +1312,11 @@ def filter_service_by_bp_rule_label(label):
 
 
 def is_complex_expr(expr):
+    """Check if expression in complex
+
+    :param expr: expression to parse
+    :return: True if '(', ')', '&', '|', '!' or '*' are in expr
+    """
     for m in '()&|!*':
         if m in expr:
             return True
