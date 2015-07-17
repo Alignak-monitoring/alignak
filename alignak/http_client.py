@@ -44,7 +44,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides HTTPClient class. Used by daemon to connect to HTTP servers (other daemons)
 
+"""
 import cPickle
 import warnings
 import zlib
@@ -56,6 +58,9 @@ from alignak.log import logger
 
 
 class HTTPException(Exception):
+    """Simple HTTP Exception
+
+    """
     pass
 
 
@@ -63,6 +68,10 @@ HTTPExceptions = (HTTPException,)
 
 
 class HTTPClient(object):
+    """HTTPClient class use python request to communicate over HTTP
+    Basically used to get / post to other daemons
+
+    """
     def __init__(self, address='', port=0, use_ssl=False, timeout=3,
                  data_timeout=120, uri='', strong_ssl=False, proxy=''):
         self.address = address
@@ -80,6 +89,7 @@ class HTTPClient(object):
 
     @property
     def con(self):
+        """Deprecated properrty of HTTPClient"""
         warnings.warn("HTTPClient.con is deprecated attribute, "
                       "please use HTTPClient.connection instead.",
                       DeprecationWarning, stacklevel=2)
@@ -87,15 +97,31 @@ class HTTPClient(object):
 
     @property
     def connection(self):
+        """Get connection attribute"""
         return self._requests_con
 
     def make_uri(self, path):
+        """Create uri from path
+
+        :param path: path to make uri
+        :return: self.uri + path
+        """
         return '%s%s' % (self.uri, path)
 
     def make_timeout(self, wait):
+        """Get timeout depending on wait time
+
+        :param wait: wait is short or long (else)
+        :return: self.timeout if wait is short, self.data_timeout otherwise
+        """
         return self.timeout if wait == 'short' else self.data_timeout
 
     def set_proxy(self, proxy):
+        """Set HTTP proxy
+
+        :param proxy: proxy url
+        :return: None
+        """
         if proxy:
             logger.debug('PROXY SETTING PROXY %s', proxy)
             self._requests_con.proxies = {
@@ -104,6 +130,13 @@ class HTTPClient(object):
             }
 
     def get(self, path, args={}, wait='short'):
+        """Do a GET HTTP request
+
+        :param path: path to do the request
+        :param args: args to add in the request
+        :param wait: timeout policy (short / long)
+        :return: Content of the HTTP response if server returned 200
+        """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
@@ -115,6 +148,13 @@ class HTTPClient(object):
             raise HTTPException('Request error to %s: %s' % (uri, err))
 
     def post(self, path, args, wait='short'):
+        """Do a POST HTTP request
+
+        :param path: path to do the request
+        :param args: args to add in the request
+        :param wait: timeout policy (short / long)
+        :return: Content of the HTTP response if server returned 200
+        """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         for (k, v) in args.iteritems():
@@ -128,6 +168,14 @@ class HTTPClient(object):
         return rsp.content
 
     def put(self, path, data, wait='short'):
+        """Do a PUT HTTP request
+
+        :param path: path to do the request
+        :param data: data to send in the request
+        :param args: args to add in the request
+        :param wait: timeout policy (short / long)
+        :return: Content of the HTTP response if server returned 200
+        """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
