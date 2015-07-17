@@ -1,4 +1,6 @@
+"""This module provides CustomModule class. Used to customize a module namespace
 
+"""
 from types import ModuleType
 
 class CustomModule(ModuleType):
