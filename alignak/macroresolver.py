@@ -65,7 +65,7 @@ from alignak.borg import Borg
 
 
 class MacroResolver(Borg):
-    """Please Add a Docstring to describe the class here"""
+    """MacroResolver class is used to resolve macros (in command call). See above for details"""
 
     my_type = 'macroresolver'
     # Global macros
@@ -106,9 +106,15 @@ class MacroResolver(Borg):
         'SERVICEACKCOMMENT'
     ]
 
-    # This must be called ONCE. It just put links for elements
-    # by scheduler
+
     def init(self, conf):
+        """Init macroresolver instance with conf.
+        Must be called once.
+
+        :param conf: conf to load
+        :return: None
+        """
+
         # For searching class and elements for ondemand
         # we need link to types
         self.conf = conf
@@ -133,11 +139,18 @@ class MacroResolver(Borg):
         # self.cache = {}
 
 
-    # Return all macros of a string, so cut the $
-    # And create a dict with it:
-    # val: value, not set here
-    # type: type of macro, like class one, or ARGN one
     def _get_macros(self, s):
+        """Get all macros of a string
+        Cut '$' char and create a dict with the following structure::
+
+        { 'MacroSTR1' : {'val': '', 'type': 'unknown'}
+          'MacroSTR2' : {'val': '', 'type': 'unknown'}
+        }
+
+        :param s: string to parse
+        :return: dict with macro parsed as key
+        :rtype: dict
+        """
         # if s in self.cache:
         #    return self.cache[s]
 
@@ -156,10 +169,15 @@ class MacroResolver(Borg):
             del macros['']
         return macros
 
-    # Get a value from a property of a element
-    # Prop can be a function or a property
-    # So we call it or not
     def _get_value_from_element(self, elt, prop):
+        """Get value from a element's property
+        the property may be a function to call.
+
+        :param elt: element
+        :param prop: element property
+        :return: getattr(elt, prop) or getattr(elt, prop)() (call)
+        :rtype: unicode
+        """
         try:
             value = getattr(elt, prop)
             if callable(value):
@@ -176,15 +194,28 @@ class MacroResolver(Borg):
                 return ''
 
 
-    # For some macros, we need to delete unwanted characters
     def _delete_unwanted_caracters(self, s):
+        """Remove not wanted char from string
+        unwanted char are illegal_macro_output_chars attribute
+
+        :param s: string to remove char from
+        :return:
+        """
         for c in self.illegal_macro_output_chars:
             s = s.replace(c, '')
         return s
 
-    # return a dict with all environment variable came from
-    # the macros of the datas object
     def get_env_macros(self, data):
+        """Get all environment macros from data
+        For each object in data ::
+
+        * Fetch all macros in object.__class__.macros
+        * Fetch all customs macros in o.custom
+
+        :param data: data to get macro
+        :return: dict with macro name as key and macro value as value
+        :rtype: dict
+        """
         env = {}
 
         for o in data:
@@ -205,9 +236,14 @@ class MacroResolver(Borg):
 
         return env
 
-    # This function will look at elements in data (and args if it filled)
-    # to replace the macros in c_line with real value.
     def resolve_simple_macros_in_string(self, c_line, data, args=None):
+        """Replace macro in the command line with the real value
+
+        :param c_line: command line to modify
+        :param data: objects list, use to look for a specific macro
+        :param args: args given to the command line, used to get "ARGN" macros.
+        :return: command line with '$MACRO$' replaced with values
+        """
         # Now we prepare the classes for looking at the class.macros
         data.append(self)  # For getting global MACROS
         if hasattr(self, 'conf'):
@@ -290,19 +326,31 @@ class MacroResolver(Borg):
         # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
-    # Resolve a command with macro by looking at data classes.macros
-    # And get macro from item properties.
     def resolve_command(self, com, data):
+        """Resolve command macros with data
+
+        :param com: check / event handler or command call object
+        :param data: objects list, use to look for a specific macro
+        :return: command line with '$MACRO$' replaced with values
+        """
         c_line = com.command.command_line
         return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
 
-    # For all Macros in macros, set the type by looking at the
-    # MACRO name (ARGN? -> argn_type,
-    # HOSTBLABLA -> class one and set Host in class)
-    # _HOSTTOTO -> HOST CUSTOM MACRO TOTO
-    # $SERVICESTATEID:srv-1:Load$ -> MACRO SERVICESTATEID of
-    # the service Load of host srv-1
     def _get_type_of_macro(self, macros, clss):
+        """Set macros types
+
+        Example::
+
+        ARG\d -> ARGN,
+        HOSTBLABLA -> class one and set Host in class)
+        _HOSTTOTO -> HOST CUSTOM MACRO TOTO
+        SERVICESTATEID:srv-1:Load$ -> MACRO SERVICESTATEID of the service Load of host srv-1
+
+        :param macros: macros list
+        :type macros: list[str]
+        :param clss: classes list, used to tag class macros
+        :return: None
+        """
         for macro in macros:
             # ARGN Macros
             if re.match('ARG\d', macro):
@@ -335,8 +383,15 @@ class MacroResolver(Borg):
                     macros[macro]['class'] = cls
                     continue
 
-    # Resolve MACROS for the ARGN
     def _resolve_argn(self, macro, args):
+        """Get argument from macro name
+        ie : $ARG3$ -> args[2]
+
+
+        :param macro: macro to parse
+        :param args: args given to command line
+        :return: argument at position N-1 in args table (where N is the int parsed)
+        """
         # first, get the number of args
         id = None
         r = re.search('ARG(?P<id>\d+)', macro)
@@ -347,8 +402,13 @@ class MacroResolver(Borg):
             except IndexError:
                 return ''
 
-    # Resolve on-demand macro, quite hard in fact
     def _resolve_ondemand(self, macro, data):
+        """Get on demand macro value
+
+        :param macro: macro to parse
+        :param data: data to get value from
+        :return: macro value
+        """
         # print "\nResolving macro", macro
         elts = macro.split(':')
         nb_parts = len(elts)
@@ -397,48 +457,108 @@ class MacroResolver(Borg):
         return ''
 
 
-    # Get Fri 15 May 11:42:39 CEST 2009
     def _get_long_date_time(self):
+        """Get long date time
+
+        Example : Fri 15 May 11:42:39 CEST 2009
+
+        :return: long date local time
+        TODO: Should be moved to util
+        TODO: Should consider timezone
+        """
         return time.strftime("%a %d %b %H:%M:%S %Z %Y").decode('UTF-8', 'ignore')
 
 
-    # Get 10-13-2000 00:30:28
     def _get_short_date_time(self):
+        """Get short date time
+
+        Example : 10-13-2000 00:30:28
+
+        :return: short date local time
+        TODO: Should be moved to util
+        TODO: Should consider timezone
+        """
         return time.strftime("%d-%m-%Y %H:%M:%S")
 
 
-    # Get 10-13-2000
     def _get_date(self):
+        """Get date
+
+        Example : 10-13-2000
+
+        :return: local date
+        TODO: Should be moved to util
+        TODO: Should consider timezone
+        """
         return time.strftime("%d-%m-%Y")
 
 
-    # Get 00:30:28
     def _get_time(self):
+        """Get date time
+
+        Example : 00:30:28
+
+        :return: date local time
+        TODO: Should be moved to util
+        TODO: Should consider timezone
+        """
         return time.strftime("%H:%M:%S")
 
 
-    # Get epoch time
     def _get_timet(self):
+        """Get epoch time
+
+        Example : 1437143291
+
+        :return: timestamp
+        TODO: Should be moved to util
+        TODO: Should consider timezone
+        """
         return str(int(time.time()))
 
     def _tot_hosts_by_state(self, state):
+        """Generic function to get the number of host in the specified state
+
+        :param state: state to filter on
+        :return: number of host in state *state*
+        TODO: Should be moved
+        """
         return sum(1 for h in self.hosts if h.state == state)
 
     _get_total_hosts_up = lambda s: s._tot_hosts_by_state('UP')
     _get_total_hosts_down = lambda s: s._tot_hosts_by_state('DOWN')
     _get_total_hosts_unreachable = lambda s: s._tot_hosts_by_state('UNREACHABLE')
 
-    # TODO
     def _get_total_hosts_unreachable_unhandled(self):
+        """DOES NOTHING( Should get the number of unreachable hosts not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_total_hosts_problems(self):
+        """Get the number of hosts that are a problem
+
+        :return: number of hosts with is_problem attribute True
+        """
         return sum(1 for h in self.hosts if h.is_problem)
 
     def _get_total_hosts_problems_unhandled(self):
+        """DOES NOTHING( Should get the number of host problems not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _tot_services_by_state(self, state):
+        """Generic function to get the number of service in the specified state
+
+        :param state: state to filter on
+        :return: number of service in state *state*
+        TODO: Should be moved
+        """
         return sum(1 for s in self.services if s.state == state)
 
     _get_total_service_ok = lambda s: s._tot_services_by_state('OK')
@@ -449,24 +569,57 @@ class MacroResolver(Borg):
 
     _get_total_service_unknown = lambda s: s._tot_services_by_state('UNKNOWN')
 
-    # TODO
     def _get_total_services_warning_unhandled(self):
+        """DOES NOTHING (Should get the number of warning services not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_total_services_critical_unhandled(self):
+        """DOES NOTHING (Should get the number of critical services not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_total_services_unknown_unhandled(self):
+        """DOES NOTHING (Should get the number of unknown services not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_total_service_problems(self):
+        """Get the number of services that are a problem
+
+        :return: number of services with is_problem attribute True
+        """
         return sum(1 for s in self.services if s.is_problem)
 
     def _get_total_service_problems_unhandled(self):
+        """DOES NOTHING (Should get the number of service problems not handled)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_process_start_time(self):
+        """DOES NOTHING ( Should get process start time)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
 
     def _get_events_start_time(self):
+        """DOES NOTHING ( Should get events start time)
+
+        :return: 0 always
+        TODO: Implement this
+        """
         return 0
