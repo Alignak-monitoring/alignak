@@ -44,28 +44,46 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This modules provide Graph class. Used to check for loop into dependencies
 
+"""
 class Graph:
 
     """Graph is a class to make graph things like DFS checks or accessibility
     Why use an atomic bomb when a little hammer is enough?
+    Graph are oriented.
 
     """
 
     def __init__(self):
         self.nodes = {}
 
-    # Do not call twice...
     def add_node(self, node):
+        """Create the node key into the mode dict with [] value
+
+        :param node: node to add
+        :return: None
+        """
         self.nodes[node] = []
 
-    # Just loop over nodes
     def add_nodes(self, nodes):
+        """Add several nodes into the nodes dict
+
+        :param nodes: nodes to add
+        :type nodes: list
+        :return: None
+        """
         for node in nodes:
             self.add_node(node)
 
-    # Add an edge to the graph from->to
     def add_edge(self, from_node, to_node):
+        """Add edge between two node
+        The edge is oriented
+
+        :param from_node: node where edge starts
+        :param to_node:  node where edge ends
+        :return: None
+        """
         # Maybe to_node is unknown
         if to_node not in self.nodes:
             self.add_node(to_node)
@@ -76,8 +94,12 @@ class Graph:
         except KeyError, exp:
             self.nodes[from_node] = [to_node]
 
-    # Return all nodes that are in a loop. So if return [], no loop
     def loop_check(self):
+        """Check if we have a loop in the graph
+
+        :return: Nodes in loop
+        :rtype: list
+        """
         in_loop = []
         # Add the tag for dfs check
         for node in self.nodes:
@@ -98,12 +120,19 @@ class Graph:
 
         return in_loop
 
-    # DFS_UNCHECKED default value
-    # DFS_TEMPORARY_CHECKED check just one time
-    # DFS_OK no problem for node and its children
-    # DFS_NEAR_LOOP has trouble sons
-    # DFS_LOOP_INSIDE is a part of a loop!
     def dfs_loop_search(self, root):
+        """Main algorithm to look for loop.
+        It tags nodes and find ones stucked in loop.
+
+        * Init all nodes with DFS_UNCHECKED value
+        * DFS_TEMPORARY_CHECKED means we found it once
+        * DFS_OK : this node (and all sons) are fine
+        * DFS_NEAR_LOOP : One froblem was found in of of the son
+        * DFS_LOOP_INSIDE : This node is part of a loop
+
+        :param root: Root of the dependency tree
+        :return: None
+        """
         # Make the root temporary checked
         root.dfs_loop_status = 'DFS_TEMPORARY_CHECKED'
 
@@ -135,12 +164,15 @@ class Graph:
         if root.dfs_loop_status == 'DFS_TEMPORARY_CHECKED':
             root.dfs_loop_status = 'DFS_OK'
 
-    # Get accessibility packs of the graph: in one pack,
-    # element are related in a way. Between packs, there is no relation
-    # at all.
-    # TODO: Make it work for directional graph too
-    # Because for now, edge must be father->son AND son->father
     def get_accessibility_packs(self):
+        """Get accessibility packs of the graph:
+        in one pack element are related in a way. Between packs, there is no relation at all.
+        TODO: Make it work for directional graph too
+        Because for now, edge must be father->son AND son->father
+
+        :return: packs of nodes
+        :rtype: list
+        """
         packs = []
         # Add the tag for dfs check
         for node in self.nodes:
@@ -157,8 +189,13 @@ class Graph:
 
         return packs
 
-    # Return all my children, and all my grandchildren
     def dfs_get_all_childs(self, root):
+        """Recursively get all sons of this node
+
+        :param root: node to get sons
+        :return: sons
+        :rtype: list
+        """
         root.dfs_loop_status = 'DFS_CHECKED'
 
         ret = set()
