@@ -64,9 +64,15 @@ metric_pattern = \
     )
 
 
-# If we can return an int or a float, or None
-# if we can't
 def guess_int_or_float(val):
+    """Wrapper for Util.to_best_int_float
+    Basically cast into float or int and compare value
+    If they are equal then there is no coma so return integer
+
+    :param val: value to cast
+    :return: value casted into int, float or None
+    :rtype: int | float | NoneType
+    """
     try:
         return to_best_int_float(val)
     except Exception, exp:
