@@ -44,14 +44,6 @@ alignak.misc.logevent module
     :undoc-members:
     :show-inheritance:
 
-alignak.misc.md5crypt module
-----------------------------
-
-.. automodule:: alignak.misc.md5crypt
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.misc.perfdata module
 ----------------------------
 
@@ -72,14 +64,6 @@ alignak.misc.sorter module
 --------------------------
 
 .. automodule:: alignak.misc.sorter
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.misc.termcolor module
------------------------------
-
-.. automodule:: alignak.misc.termcolor
     :members:
     :undoc-members:
     :show-inheritance:

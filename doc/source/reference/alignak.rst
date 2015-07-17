@@ -7,9 +7,7 @@ Subpackages
 .. toctree::
 
     alignak.bin
-    alignak.clients
     alignak.daemons
-    alignak.discovery
     alignak.misc
     alignak.objects
     alignak.webui
@@ -193,14 +191,6 @@ alignak.downtime module
     :undoc-members:
     :show-inheritance:
 
-alignak.easter module
----------------------
-
-.. automodule:: alignak.easter
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.eventhandler module
 ---------------------------
 
@@ -261,14 +251,6 @@ alignak.macroresolver module
 ----------------------------
 
 .. automodule:: alignak.macroresolver
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.memoized module
------------------------
-
-.. automodule:: alignak.memoized
     :members:
     :undoc-members:
     :show-inheritance:
@@ -381,14 +363,6 @@ alignak.shinken_import_hook module
 ----------------------------------
 
 .. automodule:: alignak.shinken_import_hook
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.sorteddict module
--------------------------
-
-.. automodule:: alignak.sorteddict
     :members:
     :undoc-members:
     :show-inheritance:

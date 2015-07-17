@@ -68,22 +68,6 @@ alignak.objects.contactgroup module
     :undoc-members:
     :show-inheritance:
 
-alignak.objects.discoveryrule module
-------------------------------------
-
-.. automodule:: alignak.objects.discoveryrule
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.objects.discoveryrun module
------------------------------------
-
-.. automodule:: alignak.objects.discoveryrun
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.objects.escalation module
 ---------------------------------
 

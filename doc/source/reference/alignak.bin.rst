@@ -20,14 +20,6 @@ alignak.bin.alignak_broker module
     :undoc-members:
     :show-inheritance:
 
-alignak.bin.alignak_discovery module
-------------------------------------
-
-.. automodule:: alignak.bin.alignak_discovery
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.bin.alignak_poller module
 ---------------------------------
 
