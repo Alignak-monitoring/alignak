@@ -103,20 +103,23 @@ try:
 
     def get_cur_user():
         """Wrapper for getpwuid
-        :return: user
+
+        :return: user name
         :rtype: str
         """
         return pwd.getpwuid(os.getuid()).pw_name
 
     def get_cur_group():
         """Wrapper for getgrgid
-        :return: group
+
+        :return: group name
         :rtype: str
         """
         return grp.getgrgid(os.getgid()).gr_name
 
     def get_all_groups():
         """Wrapper for getgrall
+
         :return: all groups
         :rtype: list
         """
@@ -125,6 +128,7 @@ except ImportError, exp:  # Like in nt system or Android
     # temporary workaround:
     def get_cur_user():
         """Fake getpwuid
+
         :return: alignak
         :rtype: str
         """
@@ -132,6 +136,7 @@ except ImportError, exp:  # Like in nt system or Android
 
     def get_cur_group():
         """Fake getgrgid
+
         :return: alignak
         :rtype: str
         """
@@ -139,6 +144,7 @@ except ImportError, exp:  # Like in nt system or Android
 
     def get_all_groups():
         """Fake getgrall
+
         :return: []
         :rtype: list
         """
@@ -161,7 +167,7 @@ class InvalidPidFile(Exception):
 
 
 class Interface(object):
-    """Interface for Inter satellites communications"""
+    """Interface for inter satellites communications"""
 
     #  'app' is to be set to the owner of this interface.
     def __init__(self, app):
@@ -172,11 +178,10 @@ class Interface(object):
             self.start_time, random.randint(0, 100000000)
         )
 
-
     def ping(self):
         """Test the connection to the daemon. Returns: pong
 
-        :return: pong
+        :return: string 'pong'
         :rtype: str
         """
         return "pong"
@@ -199,7 +204,6 @@ class Interface(object):
         return self.running_id
     get_running_id.need_lock = False
 
-
     def put_conf(self, conf):
         """Send a new configuration to the daemon (internal)
 
@@ -209,15 +213,14 @@ class Interface(object):
         self.app.new_conf = conf
     put_conf.method = 'post'
 
-
     def wait_new_conf(self):
-        """Ask the daemon to wait a new conf
+        """Ask the daemon to wait a new conf.
+        Reset cur_conf to wait new one
 
-        :return: Reset cur_conf to wait new one
+        :return: None
         """
         self.app.cur_conf = None
     wait_new_conf.need_lock = False
-
 
     def have_conf(self):
         """Get the daemon cur_conf state
@@ -228,7 +231,6 @@ class Interface(object):
         return self.app.cur_conf is not None
     have_conf.need_lock = False
 
-
     def set_log_level(self, loglevel):
         """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
@@ -237,7 +239,6 @@ class Interface(object):
         :return: None
         """
         return logger.setLevel(loglevel)
-
 
     def get_log_level(self):
         """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
@@ -260,11 +261,11 @@ class Interface(object):
         """
         return self.app.http_daemon.registered_fun_names
 
-
     def api_full(self):
         """List the api methods and their parameters
 
         :return: a list of methods and parameters
+        :rtype: dict
         """
         res = {}
         for (fname, f) in self.app.http_daemon.registered_fun.iteritems():
@@ -383,7 +384,6 @@ class Daemon(object):
         os.umask(UMASK)
         self.set_exit_handler()
 
-
     # At least, lose the local log file if needed
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -391,6 +391,8 @@ class Daemon(object):
          - Close the http socket
          - Shutdown the manager
          - Stop and join all started "modules"
+
+        :return: None
         """
         logger.info("%s : Doing stop ..", self)
 
@@ -432,7 +434,6 @@ class Daemon(object):
 
         logger.info("%s : All stop done.", self)
 
-
     def request_stop(self):
         """Remove pid and stop daemon
 
@@ -444,7 +445,6 @@ class Daemon(object):
         print("Stopping daemon. Exiting")
         sys.exit(0)
 
-
     def look_for_early_exit(self):
         """Stop the daemon if it is not enabled
 
@@ -454,7 +454,6 @@ class Daemon(object):
             logger.info('This daemon is disabled in configuration. Bailing out')
             self.request_stop()
 
-
     def do_loop_turn(self):
         """Abstract method for deamon loop turn.
         It must be overridden by class inheriting from Daemon
@@ -462,7 +461,6 @@ class Daemon(object):
         :return: None
         """
         raise NotImplementedError()
-
 
     def do_mainloop(self):
         """ Main loop for alignak daemon (except scheduler)
@@ -483,7 +481,6 @@ class Daemon(object):
                 break
         self.request_stop()
 
-
     def do_load_modules(self):
         """Wrapper for calling load_and_init method of modules_manager attribute
 
@@ -493,17 +490,15 @@ class Daemon(object):
         logger.info("I correctly loaded the modules: [%s]",
                     ','.join([inst.get_name() for inst in self.modules_manager.instances]))
 
-
-
     def add(self, elt):
         """ Abstract method for adding brok
          It is overridden in subclasses of Daemon
 
         :param elt: element to add
+        :type elt:
         :return: None
         """
         pass
-
 
     def dump_memory(self):
         """Try to dump memory
@@ -520,7 +515,6 @@ class Daemon(object):
         except ImportError:
             logger.warning('I do not have the module guppy for memory dump, please install it')
 
-
     def load_config_file(self):
         """Parse config file and ensure full path in variables
 
@@ -532,9 +526,8 @@ class Daemon(object):
             # the config file by reference
             self.relative_paths_to_full(os.path.dirname(self.config_file))
 
-
     def load_modules_manager(self):
-        """Instanciate Modulesmanager and load the SyncManager (multiprecessing)
+        """Instanciate Modulesmanager and load the SyncManager (multiprocessing)
 
         :return: None
         """
@@ -546,8 +539,6 @@ class Daemon(object):
         self.modules_manager.set_max_queue_size(getattr(self, 'max_queue_size', 0))
         # And make the module manager load the sub-process Queue() manager
         self.modules_manager.load_manager(self.manager)
-
-
 
     def change_to_workdir(self):
         """Change working directory to working attribute
@@ -561,9 +552,8 @@ class Daemon(object):
             raise InvalidWorkDir(e)
         self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
 
-
     def unlink(self):
-        """Remove the daemon's pidfile
+        """Remove the daemon's pid file
 
         :return: None
         """
@@ -572,7 +562,6 @@ class Daemon(object):
             os.unlink(self.pidfile)
         except Exception, e:
             logger.error("Got an error unlinking our pidfile: %s", e)
-
 
     def register_local_log(self):
         """Open local log file for logging purpose
@@ -589,7 +578,6 @@ class Daemon(object):
                 sys.exit(2)
             logger.info("Using the local log file '%s'", self.local_log)
 
-
     def check_shm(self):
         """ Check /dev/shm right permissions
 
@@ -605,9 +593,8 @@ class Daemon(object):
                                 "Please make it read writable: %s", shm_path, shm_path)
                 sys.exit(2)
 
-
     def __open_pidfile(self, write=False):
-        """Open pidfile in read or write mod
+        """Open pid file in read or write mod
 
         :param write: boolean to open file in write mod (true = write)
         :type write: bool
@@ -626,11 +613,10 @@ class Daemon(object):
         except Exception as err:
             raise InvalidPidFile(err)
 
-
     def check_parallel_run(self):
-        """Check (in pidfile) if there isn't already a daemon running.
+        """Check (in pid file) if there isn't already a daemon running.
         If yes and do_replace: kill it.
-        Keep in self.fpid the File object to the pidfile. Will be used by writepid.
+        Keep in self.fpid the File object to the pid file. Will be used by writepid.
 
         :return: None
         """
@@ -676,12 +662,11 @@ class Daemon(object):
         # because the previous instance should have deleted it!!
         self.__open_pidfile(write=True)
 
-
     def write_pid(self, pid=None):
         """ Write pid to pidfile
 
         :param pid: pid of the process
-        :type pid: int
+        :type pid: None | int
         :return: None
         """
         if pid is None:
@@ -691,7 +676,6 @@ class Daemon(object):
         self.fpid.write("%d" % (pid))
         self.fpid.close()
         del self.fpid  # no longer needed
-
 
     def close_fds(self, skip_close_fds):
         """Close all the process file descriptors.
@@ -716,7 +700,6 @@ class Daemon(object):
                 os.close(fd)
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
-
 
     def daemonize(self, skip_close_fds=None):
         """Go in "daemon" mode: close unused fds, redirect stdout/err,
@@ -795,10 +778,12 @@ class Daemon(object):
         del self.debug_output
         self.set_proctitle()
 
-
     if is_android:
         def _create_manager(self):
-            """Fake _create_manager for android"""
+            """Fake _create_manager for android
+
+            :return: None
+            """
             pass
     else:
         # The Manager is a sub-process, so we must be sure it won't have
@@ -817,13 +802,13 @@ class Daemon(object):
                 manager.start()
             return manager
 
-
     def do_daemon_init_and_start(self, fake=False):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-        :param use_communication: if evaluate as True: the communication channel will be created.
         :param fake: use for test to do not launch runonly feature, like the stats reaper thread.
+        :type fake: bool
+        :return: None
         """
         self.change_to_user_group()
         self.change_to_workdir()
@@ -862,7 +847,6 @@ class Daemon(object):
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
         self.http_thread.daemon = True
         self.http_thread.start()
-
 
     def setup_communication_daemon(self):
         """ Setup HTTP server daemon to listen
@@ -910,8 +894,11 @@ class Daemon(object):
         """ Global loop part : wait for socket to be ready
 
         :param socks: a socket file descriptor list
+        :type socks:
         :param timeout: timeout to read from fd
+        :type timeout: int
         :return: A list of socket file descriptor ready to read
+        :rtype: list
         """
         # some os are not managing void socks list, so catch this
         # and just so a simple sleep instead
@@ -933,6 +920,7 @@ class Daemon(object):
         If the directory do not exist, we must exit!
 
         :return: modules_dir path
+        :rtype: str
         """
         modules_dir = getattr(self, 'modules_dir', None)
         if not modules_dir:
@@ -949,7 +937,6 @@ class Daemon(object):
                                "Please fix your configuration" % (modules_dir,))
         return modules_dir
 
-
     def check_and_del_zombie_modules(self):
         """Check alive instance and try to restart the dead ones
 
@@ -960,12 +947,11 @@ class Daemon(object):
         # and try to restart previous dead :)
         self.modules_manager.try_to_restart_deads()
 
-
     def find_uid_from_name(self):
         """Wrapper for getpwnam : get the uid of user attribute
 
         :return: Uid of user attribute
-        :rtype: str
+        :rtype: str | None
         """
         try:
             return getpwnam(self.user)[2]
@@ -977,7 +963,7 @@ class Daemon(object):
         """Wrapper for getgrnam : get the uid of user attribute
 
         :return: Uid of user attribute
-        :rtype: str
+        :rtype: str | None
         """
         try:
             return getgrnam(self.group)[2]
@@ -1046,7 +1032,6 @@ class Daemon(object):
                          self.user, self.group, e.strerror, e.errno)
             sys.exit(2)
 
-
     def parse_config_file(self):
         """Parse self.config_file and get all properties in it.
         If some properties need a pythonization, we do it.
@@ -1080,13 +1065,12 @@ class Daemon(object):
                 value = entry.pythonize(entry.default)
                 setattr(self, prop, value)
 
-
-
     def relative_paths_to_full(self, reference_path):
         """Set a full path from a relative one with che config file as reference
         TODO: This should be done in pythonize method of Properties.
 
         :param reference_path: reference path for reading full path
+        :type reference_path: str
         :return: None
         """
         # print "Create relative paths with", reference_path
@@ -1101,7 +1085,6 @@ class Daemon(object):
                 setattr(self, prop, path)
                 # print "Setting %s for %s" % (path, prop)
 
-
     def manage_signal(self, sig, frame):
         """Manage signals caught by the daemon
         signal.SIGUSR1 : dump_memory
@@ -1109,7 +1092,9 @@ class Daemon(object):
         signal.SIGTERM, signal.SIGINT : terminate process
 
         :param sig: signal caught by daemon
+        :type sig: str
         :param frame: current stack frame
+        :type frame:
         :return: None
         """
         logger.debug("I'm process %d and I received signal %s", os.getpid(), str(sig))
@@ -1119,7 +1104,6 @@ class Daemon(object):
             self.need_objects_dump = True
         else:  # Ok, really ask us to die :)
             self.interrupted = True
-
 
     def set_exit_handler(self):
         """Set the signal handler to manage_signal (defined in this class)
@@ -1157,7 +1141,6 @@ class Daemon(object):
                 "Alignak Team",
                 "License: AGPL"]
 
-
     def print_header(self):
         """Log headers generated in get_header()
 
@@ -1165,7 +1148,6 @@ class Daemon(object):
         """
         for line in self.get_header():
             logger.info(line)
-
 
     def http_daemon_thread(self):
         """Main fonction of the http daemon thread will loop forever unless we stop the root daemon
@@ -1188,19 +1170,21 @@ class Daemon(object):
             # Hard mode exit from a thread
             os._exit(2)
 
-
     def handleRequests(self, timeout, suppl_socks=None):
         """ Wait up to timeout to handle the requests.
         If suppl_socks is given it also looks for activity on that list of fd.
 
         :param timeout: timeout to wait for activity
+        :type timeout: int
         :param suppl_socks: list of fd to wait for activity
+        :type suppl_socks: None | list
         :return:Returns a 3-tuple:
         * If timeout: first arg is 0, second is [], third is possible system time change value
         *  If not timeout (== some fd got activity):
             - first arg is elapsed time since wait,
             - second arg is sublist of suppl_socks that got activity.
             - third arg is possible system time change value, or 0 if no change
+        :rtype: tuple
         """
         if suppl_socks is None:
             suppl_socks = []
@@ -1228,7 +1212,6 @@ class Daemon(object):
             elapsed = 0.01  # but we absolutely need to return!= 0 to indicate that we got activity
         return elapsed, ins, tcdiff
 
-
     def check_for_system_time_change(self):
         """
         Check if our system time change. If so, change our
@@ -1250,18 +1233,20 @@ class Daemon(object):
 
         return difference
 
-
     def compensate_system_time_change(self, difference):
-        """Default action for system time change. Actually a log is done"""
+        """Default action for system time change. Actually a log is done
+
+        :return: None
+        """
 
         logger.warning('A system time change of %s has been detected.  Compensating...', difference)
-
 
     def wait_for_initial_conf(self, timeout=1.0):
         """Wait conf from arbiter.
         Basically sleep 1.0 and check if new_conf is here
 
         :param timeout: timeout to wait from socket read
+        :type timeout: int
         :return: None
         TODO: Clean this
         """
@@ -1278,12 +1263,12 @@ class Daemon(object):
             sys.stdout.write(".")
             sys.stdout.flush()
 
-
     def hook_point(self, hook_name):
         """Used to call module function that may define a hook fonction
         for hook_name
 
         :param hook_name: function name we may hook in module
+        :type hook_name: str
         :return: None
         """
         _t = time.time()
@@ -1299,7 +1284,6 @@ class Daemon(object):
                     self.modules_manager.set_to_restart(inst)
         statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t)
 
-
     def get_retention_data(self):
         """Basic function to get retention data,
         Maybe be overridden by subclasses to implement real get
@@ -1309,7 +1293,6 @@ class Daemon(object):
         """
         return []
 
-
     # Save, to get back all data
     def restore_retention_data(self, data):
         """Basic function to save retention data,
@@ -1318,7 +1301,6 @@ class Daemon(object):
         :return: None
         """
         pass
-
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
@@ -1363,6 +1345,7 @@ class Daemon(object):
         """Log generic message when getting an unrecoverable error
 
         :param trace: stack trace of the Exception
+        :type trace:
         :return: None
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
@@ -1372,9 +1355,11 @@ class Daemon(object):
         logger.critical("Back trace of the error: %s", trace)
 
     def get_objects_from_from_queues(self):
-        ''' Get objects from "from" queues and add them.
+        """ Get objects from "from" queues and add them.
+
         :return: True if we got some objects, False otherwise.
-        '''
+        :rtype: bool
+        """
         had_some_objects = False
         for queue in self.modules_manager.get_external_from_queues():
             while True:

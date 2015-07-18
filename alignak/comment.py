@@ -45,16 +45,13 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provide Comment class, used to attach comments to hosts / services
-
-"""
+"""This module provide Comment class, used to attach comments to hosts / services"""
 import time
 
 
 class Comment:
     """Comment class implements comments for monitoring purpose.
-    It contains data like author, type, expire_time, peristent etc..
-
+    It contains data like author, type, expire_time, persistent etc..
     """
     id = 1
 
@@ -141,6 +138,9 @@ class Comment:
     def __getstate__(self):
         """Call by pickle to dataify the comment
         because we DO NOT WANT REF in this pickleisation!
+
+        :return: dictionary of properties
+        :rtype: dict
         """
         cls = self.__class__
         # id is not in *_properties
@@ -151,7 +151,12 @@ class Comment:
         return res
 
     def __setstate__(self, state):
-        """Inverted function of getstate"""
+        """Inverted function of getstate
+
+        :param state: it's the state
+        :type state: dict
+        :return: None
+        """
         cls = self.__class__
 
         # Maybe it's not a dict but a list like in the old 0.4 format
@@ -170,7 +175,12 @@ class Comment:
             cls.id = self.id + 1
 
     def __setstate_deprecated__(self, state):
-        """In 1.0 we move to a dict save."""
+        """In 1.0 we move to a dict save.
+
+        :param state: it's the state
+        :type state: dict
+        :return: None
+        """
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!

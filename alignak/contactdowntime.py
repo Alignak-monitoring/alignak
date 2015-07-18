@@ -44,15 +44,16 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provides ContactDowntime class which implement downtimes for contact
+"""This module provides ContactDowntime class which implement downtime for contact
 
 """
 import time
 from alignak.log import logger
 
+
 class ContactDowntime:
     """ContactDowntime class allows a contact to be in downtime. During this time
-    the contact wont get notifications
+    the contact won't get notifications
 
     """
     id = 1
@@ -89,7 +90,6 @@ class ContactDowntime:
         self.is_in_effect = False
         self.can_be_deleted = False
         # self.add_automatic_comment()
-
 
     def check_activation(self):
         """Enter or exit downtime if necessary
@@ -149,6 +149,7 @@ class ContactDowntime:
         because we DO NOT WANT REF in this pickleisation!
 
         :return: data pickled
+        :rtype: list
         """
         # print "Asking a getstate for a downtime on", self.ref.get_dbg_name()
         cls = self.__class__
@@ -165,6 +166,7 @@ class ContactDowntime:
         """Inverted function of getstate
 
         :param state: state to set
+        :type state: list
         :return: None
         """
         cls = self.__class__

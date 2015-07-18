@@ -146,8 +146,10 @@ class Check(Action):
     def copy_shell(self):
         """return a copy of the check but just what is important for execution
         So we remove the ref and all
-        """
 
+        :return: a copy of check
+        :rtype: object
+        """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Check('', '', '', '', '', id=self.id))
 
@@ -172,7 +174,9 @@ class Check(Action):
         """Check if the check can be launched
 
         :param t: time to compare with t_to_go attribute
+        :type t: int
         :return: True if t > self.t_to_go, False otherwise
+        :rtype: bool
         """
         return t > self.t_to_go
 

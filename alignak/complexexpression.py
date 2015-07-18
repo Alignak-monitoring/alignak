@@ -48,6 +48,7 @@ expression (business rules)
 from alignak.util import strip_and_uniq
 from alignak.dependencynode import DependencyNode
 
+
 class ComplexExpressionNode(object):
     """
     ComplexExpressionNode is a node class for complex_expression(s)
@@ -144,7 +145,6 @@ class ComplexExpressionNode(object):
         return valid
 
 
-
 class ComplexExpressionFactory(object):
     """ComplexExpressionFactory provides complex expression parsing functions
 
@@ -158,6 +158,7 @@ class ComplexExpressionFactory(object):
         """Parse and build recursively a tree of ComplexExpressionNode from pattern
 
         :param pattern: pattern to parse
+        :type pattern: str
         :return: root node of parsed tree
         :type: alignak.complexexpression.ComplexExpressionNode
         """
@@ -292,6 +293,7 @@ class ComplexExpressionFactory(object):
         """Get a list of host corresponding to the pattern regarding the context
 
         :param pattern: pattern to find
+        :type pattern: str
         :return: Host list matching pattern (hostgroup name, template, all)
         :rtype: list[alignak.objects.host.Host]
         """

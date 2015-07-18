@@ -84,11 +84,12 @@ shellchars = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
 
 
 def no_block_read(output):
-    """Try to read a fd in a non blocking mode
+    """Try to read a file descriptor in a non blocking mode
 
     :param output: file or socket to read from
-    :type: file
+    :type output: file
     :return: data read from fd
+    :rtype: str
     """
     fd = output.fileno()
     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
@@ -113,7 +114,8 @@ class __Action(object):
         """Set Action.id to the maximum of itself and _id
 
         :param _id: action id to compare (from a previous run usually)
-        :return:
+        :type _id: int
+        :return: None
         """
         Action.id = max(Action.id, _id)
 
@@ -128,12 +130,14 @@ class __Action(object):
 
     def get_local_environnement(self):
         """
-
-        Mix the env and the environment variables into a new local
-        env dict.
+        Mix the environment and the environment variables into a new local
+        environment dictionary
 
         Note: We cannot just update the global os.environ because this
         would effect all other checks.
+
+        :return: local environment variables
+        :rtype: dict
         """
         # Do not use copy.copy() here, as the resulting copy still
         # changes the real environment (it is still a os._Environment
@@ -147,8 +151,10 @@ class __Action(object):
     def execute(self):
         """Start this action command. The command will be executed in a
         subprocess.
-        """
 
+        :return: None or str 'toomanyopenfiles'
+        :rtype: None | str
+        """
         self.status = 'launched'
         self.check_time = time.time()
         self.wait_time = 0.0001
@@ -165,10 +171,11 @@ class __Action(object):
 
 
     def get_outputs(self, out, max_plugins_output_length):
-        """Get outputs from single output (splt perfdata etc)
-        Edit output, perf_data and long_output attributes
+        """Get outputs from single output (split perfdata etc).
+        Edit output, perf_data and long_output attributes.
 
         :param out: output data of a check
+        :type out: str
         :param max_plugins_output_length: max plugin data length
         :type max_plugins_output_length: int
         :return: None
@@ -297,9 +304,13 @@ class __Action(object):
 
 
     def copy_shell__(self, new_i):
-        """
-        Copy all attributes listed in 'only_copy_prop' from `self` to
+        """Copy all attributes listed in 'only_copy_prop' from `self` to
         `new_i`.
+
+        :param new_i: object to
+        :type new_i: object
+        :return: object with new properties added
+        :rtype: object
         """
         for prop in only_copy_prop:
             setattr(new_i, prop, getattr(self, prop))
@@ -311,7 +322,7 @@ class __Action(object):
         Shell characters are : '!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
                                '|', '{', '}', ';', '<', '>', '?', '`'
 
-        :return: True if one shell char is found, False otherzise
+        :return: True if one shell character is found, False otherwise
         :rtype: bool
         """
         for c in self.command:

@@ -46,7 +46,7 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-"""This modules provide CommandCall class which is a absraction for dealing with command line
+"""This modules provide CommandCall class which is a abstraction for dealing with command line
 (resolve macro, parse commands etc)
 
 """
@@ -123,6 +123,8 @@ class CommandCall(DummyCommandCall):
     def get_command_and_args(self):
         """We want to get the command and the args with ! splitting.
         but don't forget to protect against the \! to do not split them
+
+        :return: None
         """
 
         # First protect
@@ -155,6 +157,9 @@ class CommandCall(DummyCommandCall):
     def __getstate__(self):
         """Call by pickle to dataify the comment
         because we DO NOT WANT REF in this pickleisation!
+
+        :return: dictionary with properties
+        :rtype: dict
         """
         cls = self.__class__
         # id is not in *_properties
@@ -167,7 +172,10 @@ class CommandCall(DummyCommandCall):
         return res
 
     def __setstate__(self, state):
-        """Inverted function of getstate"""
+        """Inverted function of getstate
+
+        :return: None
+        """
         cls = self.__class__
         # We move during 1.0 to a dict state
         # but retention file from 0.8 was tuple
@@ -187,6 +195,9 @@ class CommandCall(DummyCommandCall):
         'command_line': u'/usr/local/nagios/bin/rss-multiuser',
         'module_type': 'fork', 'command_name': u'notify-by-rss'})
 
+        :param state: state dictionary
+        :type state: dict
+        :return: None
         TODO: Clean this
         """
         for d in state:

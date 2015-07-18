@@ -101,9 +101,13 @@ class Acknowledge:
         self.author = author
         self.comment = comment
 
-    # Call by pickle for dataify the ackn
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle for dataify the acknowledge
+        because we DO NOT WANT REF in this pickleisation!
+
+        :return: dictionary of properties
+        :rtype: dict
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -112,8 +116,14 @@ class Acknowledge:
                 res[prop] = getattr(self, prop)
         return res
 
-    # Inversed function of getstate
     def __setstate__(self, state):
+        """
+        Inversed function of getstate
+
+        :param state: it's the state
+        :type state: dict
+        :return: None
+        """
         cls = self.__class__
         self.id = state['id']
         for prop in cls.properties:

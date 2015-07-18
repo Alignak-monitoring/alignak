@@ -64,10 +64,15 @@ class AutoSlots(type):
         Host, so we must tag them in properties with no_slots
 
         :param cls: AutoSlots
+        :type cls: object
         :param name: string of the Class (like Service)
+        :type name: str
         :param bases: Classes of which Class inherits (like SchedulingItem)
-        :param dct:  new Class dict (like all method of Service)
-        :return: None
+        :type bases: object
+        :param dct: new Class dict (like all method of Service)
+        :type dct: object
+        :return: new object
+        :rtype: object
         """
         # Thanks to Bertrand Mathieu to the set idea
         slots = dct.get('__slots__', set())

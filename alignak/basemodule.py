@@ -137,6 +137,8 @@ class BaseModule(object):
         """Handle this module "post" init ; just before it'll be started.
         Like just open necessaries file(s), database(s),
         or whatever the module will need.
+
+        :return: None
         """
         pass
 
@@ -146,6 +148,7 @@ class BaseModule(object):
         Used to know what daemon has loaded this module
 
         :param daemon_name: value to set
+        :type daemon_name: str
         :return: None
         """
         self.loaded_into = daemon_name
@@ -156,6 +159,10 @@ class BaseModule(object):
         Create the shared queues that will be used by alignak daemon
         process and this module process.
         But clear queues if they were already set before recreating new one.
+
+        :param manager: None on android, otherwise Manager() object
+        :type manager: None | object
+        :return: None
         """
         self.clear_queues(manager)
         # If no Manager() object, go with classic Queue()
@@ -170,7 +177,8 @@ class BaseModule(object):
     def clear_queues(self, manager):
         """Release the resources associated to the queues of this instance
 
-        :param manager: queue manager
+        :param manager: None on android, otherwise Manager() object
+        :type manager: None | object
         :return: None
         """
         for q in (self.to_q, self.from_q):
@@ -190,7 +198,7 @@ class BaseModule(object):
         """Wrapper for _main function.
         Catch and raise any exception occurring in the main function
 
-        :return:
+        :return: None
         """
         try:
             self._main()
@@ -206,6 +214,7 @@ class BaseModule(object):
         Finally start process.
 
         :param http_daemon: Not used here but can be used in other modules
+        :type http_daemon: None | object
         :return: None
         """
 
@@ -233,6 +242,8 @@ class BaseModule(object):
     def __kill(self):
         """Sometime terminate() is not enough, we must "help"
         external modules to die...
+
+        :return: None
         """
 
         if os.name == 'nt':
@@ -247,7 +258,10 @@ class BaseModule(object):
 
 
     def stop_process(self):
-        """Request the module process to stop and release it"""
+        """Request the module process to stop and release it
+
+        :return: None
+        """
         if self.process:
             logger.info("I'm stopping module %r (pid=%s)",
                         self.get_name(), self.process.pid)
@@ -270,11 +284,18 @@ class BaseModule(object):
         """Wrapper to access name attribute
 
         :return: module name
+        :rtype: str
         """
         return self.name
 
     def has(self, prop):
-        """The classic has: do we have a prop or not?"""
+        """The classic has: do we have a prop or not?
+
+        :param prop: property name
+        :type prop: str
+        :return: True if has a property, otherwise False
+        :rtype: bool
+        """
         return hasattr(self, prop)
 
 
@@ -285,6 +306,7 @@ class BaseModule(object):
         :param b: brok to check
         :type b: alignak.brok.Brok
         :return: True if the module wants the brok, False otherwise
+        :rtype: bool
         """
         return True
 
@@ -292,6 +314,11 @@ class BaseModule(object):
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
         There a lot of different possible broks to manage.
+
+        :param brok:
+        :type brok:
+        :return:
+        :rtype:
         """
         manage = getattr(self, 'manage_' + brok.type + '_brok', None)
         if manage:
@@ -305,7 +332,9 @@ class BaseModule(object):
         Set interrupted attribute to True and return
 
         :param sig: signal sent
+        :type sig:
         :param frame: frame before catching signal
+        :type frame:
         :return: None
         """
         self.interrupted = True
@@ -316,6 +345,7 @@ class BaseModule(object):
         for sigs signals or signal.SIGINT and signal.SIGTERM if sigs is None
 
         :param sigs: signals to handle
+        :type sigs:
         :return: None
         """
         if sigs is None:
@@ -331,12 +361,16 @@ class BaseModule(object):
         """Called just before the module will exit
         Put in this method all you need to cleanly
         release all open resources used by your module
+
+        :return: None
         """
         pass
 
     def do_loop_turn(self):
         """For external modules only:
         implement in this method the body of you main loop
+
+        :return: None
         """
         raise NotImplementedError()
 
@@ -344,12 +378,16 @@ class BaseModule(object):
         """Wrapper for setproctitle method
 
         :param name: module name
+        :type name: str
         :return: None
         """
         setproctitle("alignak-%s module: %s" % (self.loaded_into, name))
 
     def _main(self):
-        """module "main" method. Only used by external modules."""
+        """module "main" method. Only used by external modules.
+
+        :return: None
+        """
         self.set_proctitle(self.name)
 
         # TODO: fix this hack:
