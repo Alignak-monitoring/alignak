@@ -89,7 +89,11 @@ class HTTPClient(object):
 
     @property
     def con(self):
-        """Deprecated properrty of HTTPClient"""
+        """Deprecated properrty of HTTPClient
+
+        :return: connection
+        :rtype: object
+        """
         warnings.warn("HTTPClient.con is deprecated attribute, "
                       "please use HTTPClient.connection instead.",
                       DeprecationWarning, stacklevel=2)
@@ -97,14 +101,20 @@ class HTTPClient(object):
 
     @property
     def connection(self):
-        """Get connection attribute"""
+        """Get connection attribute
+
+        :return:
+        :rtype:
+        """
         return self._requests_con
 
     def make_uri(self, path):
         """Create uri from path
 
         :param path: path to make uri
+        :type path: str
         :return: self.uri + path
+        :rtype: str
         """
         return '%s%s' % (self.uri, path)
 
@@ -112,7 +122,9 @@ class HTTPClient(object):
         """Get timeout depending on wait time
 
         :param wait: wait is short or long (else)
+        :type wait: int
         :return: self.timeout if wait is short, self.data_timeout otherwise
+        :rtype: int
         """
         return self.timeout if wait == 'short' else self.data_timeout
 
@@ -120,6 +132,7 @@ class HTTPClient(object):
         """Set HTTP proxy
 
         :param proxy: proxy url
+        :type proxy: str
         :return: None
         """
         if proxy:
@@ -133,9 +146,12 @@ class HTTPClient(object):
         """Do a GET HTTP request
 
         :param path: path to do the request
+        :type path: str
         :param args: args to add in the request
+        :type args: dict
         :param wait: timeout policy (short / long)
-        :return: Content of the HTTP response if server returned 200
+        :type wait: int
+        :return: None
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
@@ -151,9 +167,13 @@ class HTTPClient(object):
         """Do a POST HTTP request
 
         :param path: path to do the request
+        :type path: str
         :param args: args to add in the request
+        :type args: dict
         :param wait: timeout policy (short / long)
+        :type wait: int
         :return: Content of the HTTP response if server returned 200
+        :rtype: str
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
@@ -171,10 +191,15 @@ class HTTPClient(object):
         """Do a PUT HTTP request
 
         :param path: path to do the request
+        :type path: str
         :param data: data to send in the request
+        :type data:
         :param args: args to add in the request
+        :type args:
         :param wait: timeout policy (short / long)
+        :type wait: int
         :return: Content of the HTTP response if server returned 200
+        :rtype: str
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)

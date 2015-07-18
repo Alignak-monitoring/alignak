@@ -21,8 +21,11 @@ class Finder(object):
         """Find module based on the fullname and path given
 
         :param fullname: module full name
+        :type fullname: str
         :param path: path to find (not used, only for signature)
-        :return: module or None
+        :type path: str
+        :return: module | None
+        :rtype: object
         """
         hookable_names = ['shinken', 'shinken_modules', 'shinken_test']
         if fullname in hookable_names or fullname.startswith('shinken.'):
@@ -32,7 +35,9 @@ class Finder(object):
         """Load module
 
         :param name: module to load
+        :type name: str
         :return: module
+        :rtype: object
         """
         mod = sys.modules.get(name)
         if mod is None:

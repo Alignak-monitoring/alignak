@@ -85,7 +85,6 @@ class ExternalCommand:
         self.cmd_line = cmd_line
 
 
-
 class ExternalCommandManager:
     """ExternalCommandManager class managed all external command sent to Alignak
     It basically parses arguments and execute the right function
@@ -470,9 +469,10 @@ class ExternalCommandManager:
         self.current_timestamp = 0
 
     def load_scheduler(self, scheduler):
-        """Setter for sched attribute
+        """Setter for scheduler attribute
 
         :param scheduler: scheduler to set
+        :type scheduler: object
         :return: None
         """
         self.sched = scheduler
@@ -481,6 +481,7 @@ class ExternalCommandManager:
         """Setter for arbiter attribute
 
         :param arbiter: arbiter to set
+        :type arbiter: object
         :return: None
         """
         self.arbiter = arbiter
@@ -489,10 +490,10 @@ class ExternalCommandManager:
         """Setter for receiver attribute
 
         :param receiver: receiver to set
+        :type receiver: object
         :return: None
         """
         self.receiver = receiver
-
 
     def open(self):
         """Create if necessary and open a pipe
@@ -516,7 +517,6 @@ class ExternalCommandManager:
                     return None
         self.fifo = os.open(self.pipe_path, os.O_NONBLOCK)
         return self.fifo
-
 
     def get(self):
         """Get external commands from fifo
@@ -543,7 +543,6 @@ class ExternalCommandManager:
             # re-opened in the main loop.
             os.close(self.fifo)
         return r
-
 
     def resolve_command(self, excmd):
         """Parse command and dispatch it (to sched for example) if necessary
@@ -586,13 +585,14 @@ class ExternalCommandManager:
                 command = r['cmd']
                 self.dispatch_global_command(command)
 
-
     def search_host_and_dispatch(self, host_name, command, extcmd):
-        """Try to dispatch a command for a specific host (so specfic sched)
+        """Try to dispatch a command for a specific host (so specific scheduler)
         because this command is related to a host (change notification interval for example)
 
         :param host_name: host name to search
+        :type host_name: str
         :param command: command line
+        :type command: str
         :param extcmd:  external command object (the object will be added to sched commands list)
         :type extcmd: alignak.external_command.ExternalCommand
         :return: None
@@ -637,6 +637,7 @@ class ExternalCommandManager:
         """Create unknown check result brok and fill it with command data
 
         :param cmd_line: command line to extract data
+        :type cmd_line: str
         :return: unknown check result brok
         :rtype: alignak.objects.brok.Brok
         """
@@ -684,13 +685,13 @@ class ExternalCommandManager:
                 # sched.run_external_command(command)
                 sched.external_commands.append(command)
 
-
     def get_command_and_args(self, command, extcmd=None):
         """Parse command and get args
 
         :param command: command line to parse
         :type command: str
         :param extcmd: external command object (used to dispatch)
+        :type extcmd: None | object
         :return: Dict containing command and arg ::
 
         {'global': False, 'c_name': c_name, 'args': args}
@@ -880,6 +881,7 @@ class ExternalCommandManager:
         :param contact: contact to edit
         :type contact: alignak.objects.contact.Contact
         :param value: new value to set
+        :type value: str
         :return: None
         """
         contact.modified_service_attributes = long(value)
@@ -893,6 +895,7 @@ class ExternalCommandManager:
         :param contact: contact to edit
         :type contact: alignak.objects.contact.Contact
         :param value: new value to set
+        :type value:str
         :return: None
         """
         contact.modified_host_attributes = long(value)
@@ -906,6 +909,7 @@ class ExternalCommandManager:
         :param contact: contact to edit
         :type contact: alignak.objects.contact.Contact
         :param value: new value to set
+        :type value: str
         :return: None
         """
         contact.modified_attributes = long(value)
@@ -937,7 +941,9 @@ class ExternalCommandManager:
         :param persistent: is comment persistent (for reboot) or not
         :type persistent: bool
         :param author: author name
+        :type author: str
         :param comment: text comment
+        :type comment: str
         :return: None
         """
         c = Comment(service, persistent, author, comment, 2, 1, 1, False, 0)
@@ -955,7 +961,9 @@ class ExternalCommandManager:
         :param persistent: is comment persistent (for reboot) or not
         :type persistent: bool
         :param author: author name
+        :type author: str
         :param comment: text comment
+        :type comment: str
         :return: None
         """
         c = Comment(host, persistent, author, comment, 1, 1, 1, False, 0)
@@ -1087,7 +1095,9 @@ class ExternalCommandManager:
         :param contact: contact to edit
         :type contact: alignak.objects.contact.Contact
         :param varname: variable name to change
+        :type varname: str
         :param varvalue: variable new value
+        :type varvalue: str
         :return: None
         """
         contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
@@ -1102,7 +1112,9 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param varname: variable name to change
+        :type varname: str
         :param varvalue: variable new value
+        :type varvalue: str
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
@@ -1117,7 +1129,9 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param varname: variable name to change
+        :type varvalue: str
         :param varvalue: variable new value
+        :type varname: str
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
@@ -1130,6 +1144,7 @@ class ExternalCommandManager:
         CHANGE_GLOBAL_HOST_EVENT_HANDLER;<event_handler_command>
 
         :param event_handler_command: new event handler
+        :type event_handler_command:
         :return: None
         TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         """
@@ -1142,6 +1157,7 @@ class ExternalCommandManager:
         CHANGE_GLOBAL_SVC_EVENT_HANDLER;<event_handler_command>
 
         :param event_handler_command: new event handler
+        :type event_handler_command:
         :return: None
         TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         """
@@ -1156,6 +1172,7 @@ class ExternalCommandManager:
         :param host: host to modify check command
         :type host: alignak.objects.host.Host
         :param check_command: command line
+        :type check_command:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
@@ -1187,6 +1204,7 @@ class ExternalCommandManager:
         :param host: host to modify event handler
         :type host: alignak.objects.host.Host
         :param event_handler_command: event handler command line
+        :type event_handler_command:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
@@ -1202,6 +1220,7 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param value: new value to set
+        :type value: str
         :return: None
         """
         host.modified_attributes = long(value)
@@ -1215,6 +1234,7 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param check_attempts: new value to set
+        :type check_attempts: int
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
@@ -1232,6 +1252,7 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param check_attempts: new value to set
+        :type check_attempts: int
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
@@ -1249,6 +1270,7 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param check_interval: new value to set
+        :type check_interval:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_NORMAL_CHECK_INTERVAL"].value
@@ -1269,6 +1291,7 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param check_interval: new value to set
+        :type check_interval:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_NORMAL_CHECK_INTERVAL"].value
@@ -1289,6 +1312,7 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param check_interval: new value to set
+        :type check_interval:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
@@ -1304,6 +1328,7 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param check_interval: new value to set
+        :type check_interval:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
@@ -1319,6 +1344,7 @@ class ExternalCommandManager:
         :param service: service to modify check command
         :type service: alignak.objects.service.Service
         :param check_command: command line
+        :type check_command:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
@@ -1351,6 +1377,7 @@ class ExternalCommandManager:
         :param service: service to modify event handler
         :type service: alignak.objects.service.Service
         :param event_handler_command: event handler command line
+        :type event_handler_command:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
@@ -1366,6 +1393,7 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param value: new value to set
+        :type value: str
         :return: None
         """
         # This is not enough.
@@ -1422,6 +1450,7 @@ class ExternalCommandManager:
         :param host: host to edit
         :type host: alignak.objects.host.Host
         :param notification_time: new value to set
+        :type notification_time:
         :return: None
         """
         host.first_notification_delay = notification_time
@@ -1436,6 +1465,7 @@ class ExternalCommandManager:
         :param service: service to edit
         :type service: alignak.objects.service.Service
         :param notification_time: new value to set
+        :type notification_time:
         :return: None
         """
         service.first_notification_delay = notification_time
@@ -1481,7 +1511,7 @@ class ExternalCommandManager:
             self.DEL_SVC_COMMENT(c.id)
 
     def DEL_ALL_SVC_DOWNTIMES(self, service):
-        """Delete all service downtimes
+        """Delete all service downtime
         Format of the line that triggers function call::
 
         DEL_ALL_SVC_DOWNTIMES;<host_name>;<service_description>
@@ -1500,6 +1530,7 @@ class ExternalCommandManager:
         DEL_CONTACT_DOWNTIME;<downtime_id>
 
         :param downtime_id: downtime id to delete
+        :type downtime_id: int
         :return: None
         """
         if downtime_id in self.sched.contact_downtimes:
@@ -1512,6 +1543,7 @@ class ExternalCommandManager:
         DEL_HOST_COMMENT;<comment_id>
 
         :param comment_id: comment id to delete
+        :type comment_id: int
         :return: None
         """
         if comment_id in self.sched.comments:
@@ -1524,6 +1556,7 @@ class ExternalCommandManager:
         DEL_HOST_DOWNTIME;<downtime_id>
 
         :param downtime_id: downtime id to delete
+        :type downtime_id: int
         :return: None
         """
         if downtime_id in self.sched.downtimes:
@@ -1536,6 +1569,7 @@ class ExternalCommandManager:
         DEL_SVC_COMMENT;<comment_id>
 
         :param comment_id: comment id to delete
+        :type comment_id: int
         :return: None
         """
         if comment_id in self.sched.comments:
@@ -1548,6 +1582,7 @@ class ExternalCommandManager:
         DEL_SVC_DOWNTIME;<downtime_id>
 
         :param downtime_id: downtime id to delete
+        :type downtime_id: int
         :return: None
         """
         if downtime_id in self.sched.downtimes:
@@ -2623,7 +2658,9 @@ class ExternalCommandManager:
         PROCESS_FILE;<file_name>;<delete>
 
         :param file_name:  file to process
+        :type file_name: str
         :param delete: delete after processing
+        :type delete:
         :return: None
         """
         pass
@@ -2637,7 +2674,9 @@ class ExternalCommandManager:
         :param host: host to process check to
         :type host: alignak.objects.host.Host
         :param status_code: exit code of plugin
+        :type status_code: int
         :param plugin_output: plugin output
+        :type plugin_output: str
         :return: None
         TODO: say that check is PASSIVE
         """
@@ -2682,6 +2721,7 @@ class ExternalCommandManager:
         :param host: host to process check to
         :type host: alignak.objects.host.Host
         :param plugin_output: plugin output
+        :type plugin_output: str
         :return: None
         """
         self.PROCESS_HOST_CHECK_RESULT(host, host.state_id, plugin_output)
@@ -2695,7 +2735,9 @@ class ExternalCommandManager:
         :param service: service to process check to
         :type service: alignak.objects.service.Service
         :param return_code: exit code of plugin
+        :type return_code: int
         :param plugin_output: plugin output
+        :type plugin_output: str
         :return: None
         """
         # raise a PASSIVE check only if needed
@@ -2730,7 +2772,6 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             # Ok now this result will be reap by scheduler the next loop
 
-
     def PROCESS_SERVICE_OUTPUT(self, service, plugin_output):
         """Process service output
         Format of the line that triggers function call::
@@ -2740,6 +2781,7 @@ class ExternalCommandManager:
         :param service: service to process check to
         :type service: alignak.objects.service.Service
         :param plugin_output: plugin output
+        :type plugin_output: str
         :return: None
         """
         self.PROCESS_SERVICE_CHECK_RESULT(service, service.state_id, plugin_output)
@@ -2881,9 +2923,13 @@ class ExternalCommandManager:
         :param contact: contact to put in downtime
         :type contact: alignak.objects.contact.Contact
         :param start_time: downtime start time
+        :type start_time: int
         :param end_time: downtime end time
+        :type end_time: int
         :param author: downtime author
+        :type author: str
         :param comment: text comment
+        :type comment: str
         :return: None
         """
         dt = ContactDowntime(contact, start_time, end_time, author, comment)
@@ -2900,6 +2946,7 @@ class ExternalCommandManager:
         :param host: host to check
         :type host: alignak.object.host.Host
         :param check_time: time to check
+        :type check_time: int
         :return: None
         """
         host.schedule(force=True, force_time=check_time)
@@ -2914,6 +2961,7 @@ class ExternalCommandManager:
         :param host: host to check
         :type host: alignak.object.host.Host
         :param check_time: time to check
+        :type check_time: int
         :return: None
         """
         for s in host.services:
@@ -2929,6 +2977,7 @@ class ExternalCommandManager:
         :param service: service to check
         :type service: alignak.object.service.Service
         :param check_time: time to check
+        :type check_time: int
         :return: None
         """
         service.schedule(force=True, force_time=check_time)
@@ -2945,12 +2994,19 @@ class ExternalCommandManager:
         :param hostgroup: hostgroup to schedule
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed:
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
-        :param comment: dowtime comment
+        :type author: str
+        :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         for host in hostgroup:
@@ -2968,12 +3024,19 @@ class ExternalCommandManager:
         :param hostgroup: hostgroup to schedule
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed:
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         for host in hostgroup:
@@ -2990,6 +3053,7 @@ class ExternalCommandManager:
         :param host: host to check
         :type host: alignak.object.host.Host
         :param check_time: time to check
+        :type check_time:
         :return: None
         """
         host.schedule(force=False, force_time=check_time)
@@ -3006,12 +3070,19 @@ class ExternalCommandManager:
         :param host: host to schedule downtime
         :type host: alignak.object.host.Host
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed: bool
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         dt = Downtime(host, start_time, end_time, fixed, trigger_id, duration, author, comment)
@@ -3030,6 +3101,7 @@ class ExternalCommandManager:
         :param host: host to check
         :type host: alignak.object.host.Host
         :param check_time: time to check
+        :type check_time:
         :return: None
         """
         for s in host.services:
@@ -3047,12 +3119,19 @@ class ExternalCommandManager:
         :param host: host to schedule downtime
         :type host: alignak.object.host.Host
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed: bool
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         for s in host.services:
@@ -3070,12 +3149,19 @@ class ExternalCommandManager:
         :param servicegroup: servicegroup to schedule downtime
         :type servicegroup: alignak.object.servicegroup.Servicegroup
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed: bool
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         for h in [s.host for s in servicegroup.get_services()]:
@@ -3093,12 +3179,19 @@ class ExternalCommandManager:
         :param servicegroup: servicegroup to schedule downtime
         :type servicegroup: alignak.object.servicegroup.Servicegroup
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed: bool
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         for s in servicegroup.get_services():
@@ -3114,11 +3207,11 @@ class ExternalCommandManager:
         :param service: service to check
         :type service: alignak.object.service.Service
         :param check_time: time to check
+        :type check_time:
         :return: None
         """
         service.schedule(force=False, force_time=check_time)
         self.sched.get_and_register_status_brok(service)
-
 
     def SCHEDULE_SVC_DOWNTIME(self, service, start_time, end_time, fixed,
                               trigger_id, duration, author, comment):
@@ -3131,12 +3224,19 @@ class ExternalCommandManager:
         :param service: service to check
         :type service: alignak.object.service.Service
         :param start_time: downtime start time
+        :type start_time:
         :param end_time: downtime end time
+        :type end_time:
         :param fixed: is downtime fixed
+        :type fixed: bool
         :param trigger_id: downtime id that triggered this one
+        :type trigger_id: int
         :param duration: downtime duration
+        :type duration: int
         :param author: downtime author
+        :type author: str
         :param comment: downtime comment
+        :type comment: str
         :return: None
         """
         dt = Downtime(service, start_time, end_time, fixed, trigger_id, duration, author, comment)
@@ -3153,10 +3253,14 @@ class ExternalCommandManager:
         SEND_CUSTOM_HOST_NOTIFICATION;<host_name>;<options>;<author>;<comment>
 
         :param host: host to send notif for
+        :type host: alignak.object.host.Host
         :param options: notification options
+        :type options:
         :param author: notification author
+        :type author: str
         :param comment: notification text
-        :return:
+        :type comment: str
+        :return: None
         """
         pass
 
@@ -3167,9 +3271,13 @@ class ExternalCommandManager:
         SEND_CUSTOM_SVC_NOTIFICATION;<host_name>;<service_description>;<options>;<author>;<comment>>
 
         :param service: service to send notif for
+        :type service: alignak.object.service.Service
         :param options: notification options
+        :type options:
         :param author: notification author
+        :type author: str
         :param comment: notification text
+        :type comment: str
         :return: None
         """
         pass
@@ -3181,7 +3289,9 @@ class ExternalCommandManager:
         SET_HOST_NOTIFICATION_NUMBER;<host_name>;<notification_number>
 
         :param host: host to edit
+        :type host: alignak.object.host.Host
         :param notification_number: new value to set
+        :type notification_number:
         :return: None
         """
         pass
@@ -3193,7 +3303,9 @@ class ExternalCommandManager:
         SET_SVC_NOTIFICATION_NUMBER;<host_name>;<service_description>;<notification_number>
 
         :param service: service to edit
+        :type service: alignak.object.service.Service
         :param notification_number: new value to set
+        :type notification_number:
         :return: None
         """
         pass
@@ -3265,14 +3377,13 @@ class ExternalCommandManager:
             self.sched.get_and_register_update_program_status_brok()
 
     def START_OBSESSING_OVER_HOST(self, host):
-        """Enable obssessing over host for a host
+        """Enable obsessing over host for a host
         Format of the line that triggers function call::
 
         START_OBSESSING_OVER_HOST;<host_name>
 
-        :param host: host to obssess over
+        :param host: host to obsess over
         :type host: alignak.objects.host.Host
-
         :return: None
         """
         if not host.obsess_over_host:
@@ -3302,7 +3413,6 @@ class ExternalCommandManager:
 
         :param service: service to obssess over
         :type service: alignak.objects.service.Service
-
         :return: None
         """
         if not service.obsess_over_service:
@@ -3381,14 +3491,13 @@ class ExternalCommandManager:
             self.sched.get_and_register_update_program_status_brok()
 
     def STOP_OBSESSING_OVER_HOST(self, host):
-        """Disable obssessing over host for a host
+        """Disable obsessing over host for a host
         Format of the line that triggers function call::
 
         STOP_OBSESSING_OVER_HOST;<host_name>
 
-        :param host: host to obssess over
+        :param host: host to obsess over
         :type host: alignak.objects.host.Host
-
         :return: None
         """
         if host.obsess_over_host:
@@ -3418,7 +3527,6 @@ class ExternalCommandManager:
 
         :param service: service to obssess over
         :type service: alignak.objects.service.Service
-
         :return: None
         """
         if service.obsess_over_service:
@@ -3519,9 +3627,13 @@ class ExternalCommandManager:
         ADD_SIMPLE_POLLER;realm_name;poller_name;address;port
 
         :param realm_name: realm for the new poller
+        :type realm_name: str
         :param poller_name: new poller name
+        :type poller_name: str
         :param address: new poller address
+        :type address: str
         :param port: new poller port
+        :type port: int
         :return: None
         """
         logger.debug("I need to add the poller (%s, %s, %s, %s)",

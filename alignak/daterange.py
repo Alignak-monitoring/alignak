@@ -57,14 +57,20 @@ import re
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
 from alignak.log import logger
 
+
 def find_day_by_weekday_offset(year, month, weekday, offset):
     """Get the day number based on a date and offset
 
     :param year: date year
+    :type year: int
     :param month: date month
+    :type month: int
     :param weekday: date week day
+    :type weekday: int
     :param offset: offset (-1 is last, 1 is first etc)
+    :type offset: int
     :return: day number in the month
+    :rtype: int
 
     >>> find_day_by_weekday_offset(2010, "july", "tuesday", -1)
     27
@@ -105,9 +111,13 @@ def find_day_by_offset(year, month, offset):
     """Get the month day based on date and offset
 
     :param year: date year
+    :type year: int
     :param month: date month
+    :type month: int
     :param offset: offset in day to compute (usually negative)
+    :type offset: int
     :return: day number in the month
+    :rtype: int
 
     >>> find_day_by_offset(2015, "july", -1)
     31
@@ -132,7 +142,8 @@ class Timerange(object):
         """Entry is like 00:00-24:00
 
         :param entry: time range entry
-        :return: Timerange insntace
+        :return: Timerange instance
+        :rtype: object
         """
         pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
         m = re.match(pattern, entry)
@@ -166,7 +177,9 @@ class Timerange(object):
         """Check if time is valid for this Timerange
 
         :param t: time to check
+        :type t: int
         :return: True if time is valid (in interval), False otherwise
+        :rtype: bool
         """
         sec_from_morning = get_sec_from_morning(t)
         return (self.is_valid and
@@ -178,9 +191,9 @@ class Timerange(object):
         """Getter for is_valid attribute
 
         :return: True if Timerange is valid, False otherwise
+        :rtype: bool
         """
         return self.is_valid
-
 
 
 class Daterange(object):
@@ -208,18 +221,30 @@ class Daterange(object):
         """
 
         :param syear: start year
+        :type syear: int
         :param smon: start month
+        :type smon: int
         :param smday: start day (number)
+        :type smday: int
         :param swday: start day (week day id)
+        :type smday: int
         :param swday_offset: offset in the month (1 is first, -1 last)
+        :type swday_offset: int
         :param eyear: end year
+        :type eyear:
         :param emon: end month
+        :type emon:
         :param emday: end day
+        :type emday:
         :param ewday: end day (week day id)
+        :type ewday: int
         :param ewday_offset: offset in the month (1 is first, -1 last)
+        :type ewday_offset: int
         :param skip_interval: interval to skip ( /3 => every 3 days)
+        :type skip_interval: str
         :param other: other timerange
-        :return: Daterange instance
+        :type other:
+        :return: None
         """
         self.syear = int(syear)
         self.smon = smon
@@ -242,11 +267,11 @@ class Daterange(object):
         # TODO: What's the point of returning '' always
         return ''  # str(self.__dict__)
 
-
     def is_correct(self):
         """Check if each timerange of this datarange is correct
 
-        :return: True if timeranges are correct, False otherwise
+        :return: True if timerange are correct, False otherwise
+        :rtype: bool
         """
         for tr in self.timeranges:
             if not tr.is_correct():
@@ -258,6 +283,7 @@ class Daterange(object):
         """Get month id from month name
 
         :param month: month name
+        :type month: str
         :return: month id
         :rtype: int
 
@@ -271,6 +297,7 @@ class Daterange(object):
         """Get month name from month id
 
         :param month_id: month id
+        :type month_id: int
         :return: month name
         :rtype: str
 
@@ -284,6 +311,7 @@ class Daterange(object):
         """Get weekday id from weekday name
 
         :param weekday: weekday name
+        :type weekday: str
         :return: weekday id
         :rtype: int
 
@@ -297,6 +325,7 @@ class Daterange(object):
         """Get weekday name from weekday id
 
         :param weekday_id: weekday id
+        :type weekday_id: int
         :return: weekday name
         :rtype: int
 
@@ -309,7 +338,8 @@ class Daterange(object):
         """Generic function to get start time and end time
 
         :param ref: time in seconds
-        :return: tuple with start and end time
+        :type ref: int
+        :return: None
         """
         logger.warning("Calling function get_start_and_end_time which is not implemented")
         raise NotImplementedError()
@@ -320,6 +350,7 @@ class Daterange(object):
         :param t: time to check
         :type t: int
         :return: True if one of the timerange is valid for t, False otherwise
+        :rtype: bool
         """
         # print "****Look for time valid for", time.asctime(time.localtime(t))
         if self.is_time_day_valid(t):
@@ -358,6 +389,7 @@ class Daterange(object):
 
         :param t: base time to look for the next one
         :return: time where a timerange is valid
+        :rtype: int
         """
         if self.is_time_valid(t):
             return t
@@ -369,7 +401,9 @@ class Daterange(object):
         """Check if t is within start time and end time of the DateRange
 
         :param t: time to check
+        :type t: int
         :return: True if t in range, False otherwise
+        :rtype: bool
         """
         (start_time, end_time) = self.get_start_and_end_time(t)
         if start_time <= t <= end_time:
@@ -378,10 +412,12 @@ class Daterange(object):
             return False
 
     def is_time_day_invalid(self, t):
-        """Reverse of is_time_day_valid
+        """Check if t is out of start time and end time of the DateRange
 
         :param t: time to check
+        :type t: int
         :return: False if t in range, True otherwise
+        :rtype: bool
         TODO: Remove this function. Duplication
         """
         (start_time, end_time) = self.get_start_and_end_time(t)
@@ -394,7 +430,9 @@ class Daterange(object):
         """Get the next valid timerange (next timerange start in timeranges attribute)
 
         :param t: base time
+        :type t: int
         :return: next time when a timerange is valid
+        :rtype: None | int
         """
         # print "Look for get_next_future_timerange_valid for t", t, time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(t)
@@ -411,8 +449,10 @@ class Daterange(object):
     def get_next_future_timerange_invalid(self, t):
         """Get next invalid time for timeranges
 
-        :param t:
+        :param t: time to check
+        :type t: int
         :return: next time when a timerange is not valid
+        :rtype: None | int
         TODO: Looks like this function is buggy, start time should not be
         included in returned values
         """
@@ -461,8 +501,9 @@ class Daterange(object):
         """Get next valid time for time range
 
         :param t: time we compute from
+        :type t: int
         :return: timestamp of the next valid time (LOCAL TIME)
-        :rtype: int
+        :rtype: int | None
         """
         # print "\tDR Get next valid from:", time.asctime(time.localtime(t))
         # print "DR Get next valid from:", t
@@ -549,6 +590,7 @@ class Daterange(object):
         """Get next invalid time for time range
 
         :param t: time we compute from
+        :type t: int
         :return: timestamp of the next invalid time (LOCAL TIME)
         :rtype: int
         """
@@ -596,8 +638,6 @@ class Daterange(object):
             return None
 
 
-
-
 class CalendarDaterange(Daterange):
     """CalendarDaterange is for calendar entry (YYYY-MM-DD - YYYY-MM-DD)
 
@@ -606,7 +646,9 @@ class CalendarDaterange(Daterange):
         """Specific function to get start time and end time for CalendarDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tuple
         """
         start_time = get_start_of_day(self.syear, int(self.smon), self.smday)
         end_time = get_end_of_day(self.eyear, int(self.emon), self.emday)
@@ -643,7 +685,9 @@ class StandardDaterange(Daterange):
         """Specific function to get start time and end time for StandardDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tuple
         """
         now = time.localtime(ref)
         self.syear = now.tm_year
@@ -684,7 +728,9 @@ class MonthWeekDayDaterange(Daterange):
         """Specific function to get start time and end time for MonthWeekDayDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tutle
         """
         now = time.localtime(ref)
 
@@ -732,7 +778,9 @@ class MonthDateDaterange(Daterange):
         """Specific function to get start time and end time for MonthDateDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tuple
         """
         now = time.localtime(ref)
         if self.syear == 0:
@@ -776,7 +824,9 @@ class WeekDayDaterange(Daterange):
         """Specific function to get start time and end time for WeekDayDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tuple
         """
         now = time.localtime(ref)
 
@@ -842,7 +892,9 @@ class MonthDayDaterange(Daterange):
         """Specific function to get start time and end time for MonthDayDaterange
 
         :param ref: time in seconds
+        :type ref: int
         :return: tuple with start and end time
+        :rtype: tuple
         """
         now = time.localtime(ref)
         if self.syear == 0:

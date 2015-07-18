@@ -148,6 +148,7 @@ class Downtime:
         Used to add another downtime to activate
 
         :param other_downtime: other downtime to activate/cancel
+        :type other_downtime:
         :return: None
         """
         self.activate_me.append(other_downtime)
@@ -156,6 +157,7 @@ class Downtime:
         """Getter for is_in_effect attribute
 
         :return: True if downtime is in effect, False otherwise
+        :rtype: bool
         """
         return self.is_in_effect
 
@@ -183,7 +185,7 @@ class Downtime:
     def exit(self):
         """Remove ref in scheduled downtime and raise downtime log entry (exit)
 
-        :return: [], always
+        :return: [], always | None
         :rtype: list
         TODO: res is useless
         """
@@ -277,15 +279,15 @@ class Downtime:
             self.extra_comment.can_be_deleted = True
         # self.ref.del_comment(self.comment_id)
 
-
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
         in props of properties or running_properties
 
         :param data: data to fill
+        :type data:
         :param brok_type: type of brok
-        :return: brok with wanted data
-        :rtype: alignak.brok.Brok
+        :type brok_type: str
+        :return: None
         TODO: Duplicate from Notification.fill_data_brok_from
         """
         cls = self.__class__
@@ -348,10 +350,12 @@ class Downtime:
         if self.id >= cls.id:
             cls.id = self.id + 1
 
-
     def __setstate_deprecated__(self, state):
         """In 1.0 we move to a dict save.
 
+        :param state: it's the state
+        :type state: dict
+        :return: None
         TODO: REMOVE THIS"""
         cls = self.__class__
         # Check if the len of this state is like the previous,

@@ -99,9 +99,11 @@ class Scheduler(object):
     raise alert, enter downtime etc."""
 
     def __init__(self, scheduler_daemon):
-        '''
+        """
+        :param scheduler_daemon: schedulerdaemon
         :type scheduler_daemon: alignak.daemons.schedulerdaemon.Alignak
-        '''
+        :return: None
+        """
         self.sched_daemon = scheduler_daemon
         # When set to false by us, we die and arbiter launch a new Scheduler
         self.must_run = True
@@ -185,7 +187,6 @@ class Scheduler(object):
         self.pollers = {}
         self.reactionners = {}
 
-
     def reset(self):
         """Reset scheduler::
 
@@ -205,8 +206,7 @@ class Scheduler(object):
     def iter_hosts_and_services(self):
         """Create an iterator for hosts and services
 
-        :return: schedulingitems iterator
-        :rtype: generator
+        :return: None
         """
         for what in (self.hosts, self.services):
             for elt in what:
@@ -260,13 +260,14 @@ class Scheduler(object):
                                          self.conf.retention_update_interval * 60)
         self.update_recurrent_works_tick('clean_queues', self.conf.cleaning_queues_interval)
 
-
     def update_recurrent_works_tick(self, f_name, new_tick):
         """Modify the tick value for a recurrent work
         A tick is an amount of loop of the scheduler before executing the recurrent work
 
         :param f_name: recurrent work name
+        :type f_name: str
         :param new_tick: new value
+        :type new_tick: str
         :return: None
         """
         for i in self.recurrent_works:
@@ -275,17 +276,17 @@ class Scheduler(object):
                 logger.debug("Changing the tick to %d for the function %s", new_tick, name)
                 self.recurrent_works[i] = (name, f, new_tick)
 
-
     def load_satellites(self, pollers, reactionners):
         """Setter for pollers and reactionners attributes
 
         :param pollers: pollers value to set
+        :type pollers:
         :param reactionners: reactionners value to set
+        :type reactionners:
         :return: None
         """
         self.pollers = pollers
         self.reactionners = reactionners
-
 
     def die(self):
         """Set must_run attribute to False
@@ -293,7 +294,6 @@ class Scheduler(object):
         :return: None
         """
         self.must_run = False
-
 
     def dump_objects(self):
         """Dump scheduler objects into a dump (temp) file
@@ -322,7 +322,6 @@ class Scheduler(object):
         except Exception, exp:
             logger.error("Error in writing the dump file %s : %s", p, str(exp))
 
-
     def dump_config(self):
         """Dump scheduler config into a dump (temp) file
 
@@ -348,9 +347,8 @@ class Scheduler(object):
         """
         self.external_command = e
 
-
     def run_external_commands(self, cmds):
-        """Run external commands Abiter/Receiver sent
+        """Run external commands Arbiter/Receiver sent
 
         :param cmds: commands to run
         :type cmds: list
@@ -359,17 +357,16 @@ class Scheduler(object):
         for command in cmds:
             self.run_external_command(command)
 
-
     def run_external_command(self, command):
         """Run a single external command
 
         :param command: command line to run
+        :type command: str
         :return: None
         """
         logger.debug("scheduler resolves command '%s'", command)
         ext_cmd = ExternalCommand(command)
         self.external_command.resolve_command(ext_cmd)
-
 
     def add_Brok(self, brok, bname=None):
         """Add a brok into brokers list
@@ -378,6 +375,7 @@ class Scheduler(object):
         :param brok: brok to add
         :type brok: alignak.brok.Brok
         :param bname: broker name for the brok
+        :type bname: str
         :return: None
         """
         # For brok, we TAG brok with our instance_id
@@ -398,7 +396,6 @@ class Scheduler(object):
                 # connection will get all
                 self.broks[brok.id] = brok
 
-
     def add_Notification(self, notif):
         """Add a notification into actions list
 
@@ -411,7 +408,6 @@ class Scheduler(object):
         if notif.contact is not None:
             b = notif.get_initial_status_brok()
             self.add(b)
-
 
     def add_Check(self, c):
         """Add a check into checks list
@@ -426,7 +422,6 @@ class Scheduler(object):
         b = c.ref.get_next_schedule_brok()
         self.add(b)
 
-
     def add_EventHandler(self, action):
         """Add a event handler into actions list
 
@@ -436,7 +431,6 @@ class Scheduler(object):
         """
         # print "Add an event Handler", elt.id
         self.actions[action.id] = action
-
 
     def add_Downtime(self, dt):
         """Add a downtime into downtimes list
@@ -449,7 +443,6 @@ class Scheduler(object):
         if dt.extra_comment:
             self.add_Comment(dt.extra_comment)
 
-
     def add_ContactDowntime(self, contact_dt):
         """Add a contact downtime into contact_downtimes list
 
@@ -458,7 +451,6 @@ class Scheduler(object):
         :return: None
         """
         self.contact_downtimes[contact_dt.id] = contact_dt
-
 
     def add_Comment(self, comment):
         """Add a comment into comments list
@@ -471,7 +463,6 @@ class Scheduler(object):
         b = comment.ref.get_update_status_brok()
         self.add(b)
 
-
     def add_ExternalCommand(self, ext_cmd):
         """Resolve external command
 
@@ -480,7 +471,6 @@ class Scheduler(object):
         :return: None
         """
         self.external_command.resolve_command(ext_cmd)
-
 
     def add(self, elt):
         """Generic function to add objects into scheduler internal lists::
@@ -492,6 +482,7 @@ class Scheduler(object):
         ContactDowntime -> self.contact_downtimes
 
         :param elt: element to add
+        :type elt:
         :return: None
         """
         f = self.__add_actions.get(elt.__class__, None)
@@ -515,11 +506,11 @@ class Scheduler(object):
         ExternalCommand:    add_ExternalCommand,
     }
 
-
     def hook_point(self, hook_name):
         """Generic function to call modules methods if such method is avalaible
 
         :param hook_name: function name to call
+        :type hook_name: str
         :return:None
         TODO: find a way to merge this and the version in daemon.py
         """
@@ -541,7 +532,6 @@ class Scheduler(object):
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
                     self.sched_daemon.modules_manager.set_to_restart(inst)
-
 
     def clean_queues(self):
         """Reduces internal list size to max allowed
@@ -617,7 +607,6 @@ class Scheduler(object):
             logger.warning("We drop %d checks, %d broks and %d actions",
                            nb_checks_drops, nb_broks_drops, nb_actions_drops)
 
-
     def clean_caches(self):
         """Clean timperiods caches
 
@@ -625,7 +614,6 @@ class Scheduler(object):
         """
         for tp in self.timeperiods:
             tp.clean_cache()
-
 
     def get_and_register_status_brok(self, item):
         """Get a update status brok for item and add it
@@ -637,7 +625,6 @@ class Scheduler(object):
         b = item.get_update_status_brok()
         self.add(b)
 
-
     def get_and_register_check_result_brok(self, item):
         """Get a check result brok for item and add it
 
@@ -648,39 +635,38 @@ class Scheduler(object):
         b = item.get_check_result_brok()
         self.add(b)
 
-
     def del_downtime(self, dt_id):
         """Delete a downtime
 
         :param dt_id: downtime id to delete
+        :type dt_id: int
         :return: None
         """
         if dt_id in self.downtimes:
             self.downtimes[dt_id].ref.del_downtime(dt_id)
             del self.downtimes[dt_id]
 
-
     def del_contact_downtime(self, dt_id):
         """Delete a contact downtime
 
         :param dt_id: contact downtime id to delete
+        :type dt_id: int
         :return: None
         """
         if dt_id in self.contact_downtimes:
             self.contact_downtimes[dt_id].ref.del_downtime(dt_id)
             del self.contact_downtimes[dt_id]
 
-
     def del_comment(self, c_id):
         """Delete a comment
 
         :param c_id: comment id to delete
+        :type c_id: int
         :return: None
         """
         if c_id in self.comments:
             self.comments[c_id].ref.del_comment(c_id)
             del self.comments[c_id]
-
 
     def check_for_expire_acknowledge(self):
         """Iter over host and service and check if any acknowledgement has expired
@@ -689,7 +675,6 @@ class Scheduler(object):
         """
         for elt in self.iter_hosts_and_services():
             elt.check_for_expire_acknowledge()
-
 
     def update_business_values(self):
         """Iter over host and service and update business_impact
@@ -721,7 +706,6 @@ class Scheduler(object):
                     # print "The elements", i.get_name(),
                     # print "change it's business_impact value from", was, "to", new
                     self.get_and_register_status_brok(elt)
-
 
     def scatter_master_notifications(self):
         """Generate children notifications from master notifications
@@ -786,21 +770,26 @@ class Scheduler(object):
                         item.remove_in_progress_notification(a)
                         self.actions[a.id].status = 'zombie'
 
-
-    # Called by poller to get checks
-    # Can get checks and actions (notifications and co)
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=['None'], reactionner_tags=['None'],
                           worker_name='none', module_types=['fork']
                           ):
         """Get actions/checks for reactionner/poller
+        Called by poller to get checks
+        Can get checks and actions (notifications and co)
 
         :param do_checks: do we get checks ?
+        :type do_checks: bool
         :param do_actions: do we get actions ?
+        :type do_actions: bool
         :param poller_tags: poller tags to filter
+        :type poller_tags: list
         :param reactionner_tags: reactionner tags to filter
+        :type reactionner_tags: list
         :param worker_name: worker name to fill check/action (to remember it)
+        :type worker_name: str
         :param module_types: module type to filter
+        :type module_types: list
         :return: Check/Action list with poller/reactionner tags matching and module type matching
         :rtype: list
         """
@@ -853,11 +842,11 @@ class Scheduler(object):
                         res.append(new_a)
         return res
 
-
     def put_results(self, c):
         """Get result from pollers/reactionners (actives ones)
 
         :param c: check / action / eventhandler to handle
+        :type c:
         :return: None
         """
         if c.is_a == 'notification':
@@ -937,11 +926,11 @@ class Scheduler(object):
         else:
             logger.error("The received result type in unknown! %s", str(c.is_a))
 
-
     def get_links_from_type(self, type):
         """Get poller link or reactionner link depending on the wanted type
 
         :param type: type we want
+        :type type: str
         :return: links wanted
         :rtype: alignak.objects.pollerlink.PollerLinks |
                 alignak.objects.reactionnerlink.ReactionnerLinks | None
@@ -951,12 +940,13 @@ class Scheduler(object):
             return t[type]
         return None
 
-
     def is_connection_try_too_close(self, elt):
         """Check if last connection was too early for element
 
         :param elt: element to check
+        :type elt:
         :return: True if  now - last_connection < 5, False otherwise
+        :rtype: bool
         """
         now = time.time()
         last_connection = elt['last_connection']
@@ -964,13 +954,14 @@ class Scheduler(object):
             return True
         return False
 
-
     def pynag_con_init(self, id, type='poller'):
         """Init or reinit connection to a poller or reactionner
         Used for passive daemons
 
         :param id: daemon id to connect to
+        :type id: int
         :param type: daemon type to connect to
+        :type type: str
         :return: None
         """
         # Get good links tab for looping..
@@ -1016,7 +1007,6 @@ class Scheduler(object):
             return
 
         logger.info("Connection OK to the %s %s", type, links[id]['name'])
-
 
     def push_actions_to_passives_satellites(self):
         """Send actions/checks to passive poller/reactionners
@@ -1073,7 +1063,6 @@ class Scheduler(object):
                     return
             else:  # no connection? try to reconnect
                 self.pynag_con_init(p['instance_id'], type='reactionner')
-
 
     def get_actions_from_passives_satellites(self):
         """Get actions/checks results from passive poller/reactionners
@@ -1154,7 +1143,6 @@ class Scheduler(object):
             else:  # no connection, try reinit
                 self.pynag_con_init(p['instance_id'], type='reactionner')
 
-
     def manage_internal_checks(self):
         """Run internal checks
 
@@ -1169,11 +1157,11 @@ class Scheduler(object):
                 # like for all checks
                 c.status = 'waitconsume'
 
-
     def get_broks(self, bname):
         """Send broks to a specific broker
 
         :param bname: broker name to send broks
+        :type bname: str
         :return: list of brok for this broker
         :rtype: list[alignak.brok.Brok]
         """
@@ -1189,7 +1177,6 @@ class Scheduler(object):
 
         return res
 
-
     def reset_topology_change_flag(self):
         """Set topology_change attribute to False in all hosts and services
 
@@ -1200,14 +1187,13 @@ class Scheduler(object):
         for i in self.services:
             i.topology_change = False
 
-
     def update_retention_file(self, forced=False):
         """Call hook point 'save_retention'.
         Retention modules will write back retention (to file, db etc)
 
         :param forced: if update forced?
         :type forced: bool
-        :return:
+        :return: None
         """
         # If we set the update to 0, we do not want of this
         # if we do not forced (like at stopping)
@@ -1216,17 +1202,15 @@ class Scheduler(object):
 
         self.hook_point('save_retention')
 
-
     def retention_load(self):
         """Call hook point 'load_retention'.
         Retention modules will read retention (from file, db etc)
 
         :param forced: if update forced?
         :type forced: bool
-        :return:
+        :return: None
         """
         self.hook_point('load_retention')
-
 
     def get_retention_data(self):
         """Get all host and service data in order to store it after
@@ -1300,7 +1284,6 @@ class Scheduler(object):
             all_data['services'][(s.host.host_name, s.service_description)] = d
         return all_data
 
-
     def restore_retention_data(self, data):
         """Restore retention data
 
@@ -1309,7 +1292,8 @@ class Scheduler(object):
         by retention
 
         :param data:
-        :return:
+        :type data:
+        :return: None
         """
 
         ret_hosts = data['hosts']
@@ -1437,13 +1421,14 @@ class Scheduler(object):
                             new_notified_contacts.add(c)
                     s.notified_contacts = new_notified_contacts
 
-
     def fill_initial_broks(self, bname, with_logs=False):
         """Create initial broks for a specific broker
 
         :param bname: broker name
+        :type bname: str
         :param with_logs: tell if we write a log line for hosts/services
                initial states
+        :type with_logs: bool
         :return: None
         """
         # First a Brok for delete all from my instance_id
@@ -1487,7 +1472,6 @@ class Scheduler(object):
         logger.info("[%s] Created %d initial Broks for broker %s",
                     self.instance_name, len(self.brokers[bname]['broks']), bname)
 
-
     def get_and_register_program_status_brok(self):
         """Create and add a program_status brok
 
@@ -1495,7 +1479,6 @@ class Scheduler(object):
         """
         b = self.get_program_status_brok()
         self.add(b)
-
 
     def get_and_register_update_program_status_brok(self):
         """Create and add a update_program_status brok
@@ -1506,12 +1489,11 @@ class Scheduler(object):
         b.type = 'update_program_status'
         self.add(b)
 
-
     def get_program_status_brok(self):
         """Create a program status brok
 
         :return: Brok with program status data
-        :rtype: alingak.brok.Brok
+        :rtype: alignak.brok.Brok
         TODO: GET REAL VALUES
         """
         now = int(time.time())
@@ -1548,7 +1530,6 @@ class Scheduler(object):
         b = Brok('program_status', data)
         return b
 
-
     def consume_results(self):
         """Handle results waiting in waiting_results list.
         Check ref will call consume result and update their status
@@ -1571,7 +1552,6 @@ class Scheduler(object):
                 item = c.ref
                 item.consume_result(c)
 
-
         # All 'finished' checks (no more dep) raise checks they depends on
         for c in self.checks.values():
             if c.status == 'havetoresolvedep':
@@ -1587,7 +1567,6 @@ class Scheduler(object):
                 item = c.ref
                 item.consume_result(c)
 
-
     def delete_zombie_checks(self):
         """Remove checks that have a zombie status (usually timeouts)
 
@@ -1602,7 +1581,6 @@ class Scheduler(object):
         # *pat pat* GFTO, thks :)
         for id in id_to_del:
             del self.checks[id]  # ZANKUSEN!
-
 
     def delete_zombie_actions(self):
         """Remove actions that have a zombie status (usually timeouts)
@@ -1699,12 +1677,11 @@ class Scheduler(object):
         for b in broks:
             self.add(b)
 
-
     def schedule(self):
         """Iter over all hosts and services and call schedule method
         (schedule next check)
 
-        :return:
+        :return: None
         """
         # ask for service and hosts their next check
         for elt in self.iter_hosts_and_services():
@@ -1724,7 +1701,6 @@ class Scheduler(object):
             # We take all, we can clear it
             elt.actions = []
 
-
     def get_new_broks(self):
         """Iter over all hosts and services to add new broks in internal lists
 
@@ -1738,7 +1714,6 @@ class Scheduler(object):
             # We take all, we can clear it
             elt.broks = []
 
-
     def check_freshness(self):
         """Iter over all hosts and services to check freshness
 
@@ -1749,7 +1724,6 @@ class Scheduler(object):
             c = elt.do_check_freshness()
             if c is not None:
                 self.add(c)
-
 
     def check_orphaned(self):
         """Check for orphaned checks/actions::
@@ -1785,7 +1759,6 @@ class Scheduler(object):
             logger.warning("%d actions never came back for the satellite '%s'."
                            "I reenable them for polling", worker_names[w], w)
 
-
     def send_broks_to_modules(self):
         """Put broks into module queues
         Only broks without sent_to_sched_externals to True are sent
@@ -1808,11 +1781,13 @@ class Scheduler(object):
             b.sent_to_sched_externals = True
         logger.debug("Time to send %s broks (after %d secs)", nb_sent, time.time() - t0)
 
-
     def get_objects_from_from_queues(self):
-        ''' Same behavior than Daemon.get_objects_from_from_queues(). '''
-        return self.sched_daemon.get_objects_from_from_queues()
+        """Same behavior than Daemon.get_objects_from_from_queues().
 
+        :return:
+        :rtype:
+        """
+        return self.sched_daemon.get_objects_from_from_queues()
 
     def get_checks_status_counts(self, checks=None):
         """ Compute the counts of the different checks status and
@@ -1821,7 +1796,10 @@ class Scheduler(object):
 
         :checks: None or the checks you want to count their statuses.
                  If None then self.checks is used.
+
         :param checks: NoneType | dict
+        :type checks: None | dict
+        :return:
         :rtype: defaultdict(int)
         """
         if checks is None:
@@ -1854,9 +1832,7 @@ class Scheduler(object):
            }
 
         :rtype: dict
-
         """
-
         now = int(time.time())
 
         res = self.sched_daemon.get_stats_struct()
@@ -1934,7 +1910,6 @@ class Scheduler(object):
         # takethe first 10 ones for the put
         res['commands'] = p[:10]
         return res
-
 
     def run(self):
         """Main scheduler function::
@@ -2074,7 +2049,6 @@ class Scheduler(object):
                 self.need_objects_dump = False
 
             self.hook_point('scheduler_tick')
-
 
         # WE must save the retention at the quit BY OURSELF
         # because our daemon will not be able to do it for us

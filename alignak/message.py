@@ -47,6 +47,7 @@
 
 """
 
+
 class Message:
     """This is a simple message class for communications between actionners and
     workers
@@ -68,6 +69,7 @@ class Message:
         """Getter of _type attribute
 
         :return: Message type
+        :rtype: str
         """
         return self._type
 
@@ -75,6 +77,7 @@ class Message:
         """Getter of _data attribute
 
         :return: Message data
+        :rtype: str
         """
         return self._data
 
@@ -82,6 +85,7 @@ class Message:
         """Getter of _from attribute
 
         :return: Message from (worker name)
+        :rtype: str
         """
         return self._from
 
@@ -89,6 +93,7 @@ class Message:
         """String representation of message
 
         :return: "Message from %d (%s), Type: %s Data: %s" (from, source, type, data)
+        :rtype: str
         TODO: Rename this __str__
         """
         return "Message from %d (%s), Type: %s Data: %s" % (

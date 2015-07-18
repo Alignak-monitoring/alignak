@@ -47,6 +47,8 @@
 """This modules provide Graph class. Used to check for loop into dependencies
 
 """
+
+
 class Graph:
 
     """Graph is a class to make graph things like DFS checks or accessibility
@@ -62,6 +64,7 @@ class Graph:
         """Create the node key into the mode dict with [] value
 
         :param node: node to add
+        :type node: object
         :return: None
         """
         self.nodes[node] = []
@@ -70,7 +73,7 @@ class Graph:
         """Add several nodes into the nodes dict
 
         :param nodes: nodes to add
-        :type nodes: list
+        :type nodes: object
         :return: None
         """
         for node in nodes:
@@ -81,7 +84,9 @@ class Graph:
         The edge is oriented
 
         :param from_node: node where edge starts
-        :param to_node:  node where edge ends
+        :type from_node: object
+        :param to_node: node where edge ends
+        :type to_node: object
         :return: None
         """
         # Maybe to_node is unknown
@@ -131,6 +136,7 @@ class Graph:
         * DFS_LOOP_INSIDE : This node is part of a loop
 
         :param root: Root of the dependency tree
+        :type root:
         :return: None
         """
         # Make the root temporary checked
@@ -193,6 +199,7 @@ class Graph:
         """Recursively get all sons of this node
 
         :param root: node to get sons
+        :type root:
         :return: sons
         :rtype: list
         """

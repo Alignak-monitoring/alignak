@@ -30,7 +30,9 @@ def deprecation(msg, stacklevel=4):
     """Raise deprecation warning with message and level
 
     :param msg: message to print
+    :type msg: str
     :param stacklevel: stack level
+    :type stacklevel: int
     :return: None
     """
     warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel)
@@ -40,6 +42,7 @@ def make_deprecated_daemon_link(new_module):
     """Import daemon link from the new location and raise deprecation
 
     :param new_module: new link to replace the old one
+    :type new_module:
     :return: None
     """
     stack = inspect.stack()

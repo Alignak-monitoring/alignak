@@ -609,7 +609,7 @@ class SchedulingItem(Item):
         :param force: tell if we forced this object to schedule a check
         :type force: bool
         :param force_time: time we would like the check to be scheduled
-        :type force_time: int
+        :type force_time: None | int
         :return: None
         """
         # if last_chk == 0 put in a random way so all checks

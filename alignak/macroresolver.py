@@ -49,14 +49,14 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
 This class resolve Macro in commands by looking at the macros list
 in Class of elements. It give a property that call be callable or not.
 It not callable, it's a simple property and replace the macro with the value
 If callable, it's a method that is called to get the value. for example, to
 get the number of service in a host, you call a method to get the
 len(host.services)
-'''
+"""
 
 import re
 import time
@@ -106,12 +106,12 @@ class MacroResolver(Borg):
         'SERVICEACKCOMMENT'
     ]
 
-
     def init(self, conf):
         """Init macroresolver instance with conf.
         Must be called once.
 
         :param conf: conf to load
+        :type conf:
         :return: None
         """
 
@@ -138,7 +138,6 @@ class MacroResolver(Borg):
         # Try cache :)
         # self.cache = {}
 
-
     def _get_macros(self, s):
         """Get all macros of a string
         Cut '$' char and create a dict with the following structure::
@@ -148,6 +147,7 @@ class MacroResolver(Borg):
         }
 
         :param s: string to parse
+        :type s: str
         :return: dict with macro parsed as key
         :rtype: dict
         """
@@ -174,9 +174,11 @@ class MacroResolver(Borg):
         the property may be a function to call.
 
         :param elt: element
+        :type elt: object
         :param prop: element property
+        :type prop: str
         :return: getattr(elt, prop) or getattr(elt, prop)() (call)
-        :rtype: unicode
+        :rtype: str
         """
         try:
             value = getattr(elt, prop)
@@ -199,7 +201,9 @@ class MacroResolver(Borg):
         unwanted char are illegal_macro_output_chars attribute
 
         :param s: string to remove char from
-        :return:
+        :type s: str
+        :return: string cleaned
+        :rtype: str
         """
         for c in self.illegal_macro_output_chars:
             s = s.replace(c, '')
@@ -213,6 +217,7 @@ class MacroResolver(Borg):
         * Fetch all customs macros in o.custom
 
         :param data: data to get macro
+        :type data:
         :return: dict with macro name as key and macro value as value
         :rtype: dict
         """
@@ -240,9 +245,13 @@ class MacroResolver(Borg):
         """Replace macro in the command line with the real value
 
         :param c_line: command line to modify
+        :type c_line: str
         :param data: objects list, use to look for a specific macro
+        :type data:
         :param args: args given to the command line, used to get "ARGN" macros.
+        :type args:
         :return: command line with '$MACRO$' replaced with values
+        :rtype: str
         """
         # Now we prepare the classes for looking at the class.macros
         data.append(self)  # For getting global MACROS
@@ -330,8 +339,11 @@ class MacroResolver(Borg):
         """Resolve command macros with data
 
         :param com: check / event handler or command call object
+        :type com: object
         :param data: objects list, use to look for a specific macro
+        :type data:
         :return: command line with '$MACRO$' replaced with values
+        :rtype: str
         """
         c_line = com.command.command_line
         return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
@@ -349,6 +361,7 @@ class MacroResolver(Borg):
         :param macros: macros list
         :type macros: list[str]
         :param clss: classes list, used to tag class macros
+        :type clss:
         :return: None
         """
         for macro in macros:
@@ -387,10 +400,12 @@ class MacroResolver(Borg):
         """Get argument from macro name
         ie : $ARG3$ -> args[2]
 
-
         :param macro: macro to parse
+        :type macro:
         :param args: args given to command line
+        :type args:
         :return: argument at position N-1 in args table (where N is the int parsed)
+        :rtype: None | str
         """
         # first, get the number of args
         id = None
@@ -406,8 +421,11 @@ class MacroResolver(Borg):
         """Get on demand macro value
 
         :param macro: macro to parse
+        :type macro:
         :param data: data to get value from
+        :type data:
         :return: macro value
+        :rtype: str
         """
         # print "\nResolving macro", macro
         elts = macro.split(':')
@@ -456,18 +474,17 @@ class MacroResolver(Borg):
             return val
         return ''
 
-
     def _get_long_date_time(self):
         """Get long date time
 
         Example : Fri 15 May 11:42:39 CEST 2009
 
         :return: long date local time
+        :rtype: str
         TODO: Should be moved to util
         TODO: Should consider timezone
         """
         return time.strftime("%a %d %b %H:%M:%S %Z %Y").decode('UTF-8', 'ignore')
-
 
     def _get_short_date_time(self):
         """Get short date time
@@ -475,11 +492,11 @@ class MacroResolver(Borg):
         Example : 10-13-2000 00:30:28
 
         :return: short date local time
+        :rtype: str
         TODO: Should be moved to util
         TODO: Should consider timezone
         """
         return time.strftime("%d-%m-%Y %H:%M:%S")
-
 
     def _get_date(self):
         """Get date
@@ -487,11 +504,11 @@ class MacroResolver(Borg):
         Example : 10-13-2000
 
         :return: local date
+        :rtype: str
         TODO: Should be moved to util
         TODO: Should consider timezone
         """
         return time.strftime("%d-%m-%Y")
-
 
     def _get_time(self):
         """Get date time
@@ -499,11 +516,11 @@ class MacroResolver(Borg):
         Example : 00:30:28
 
         :return: date local time
+        :rtype: str
         TODO: Should be moved to util
         TODO: Should consider timezone
         """
         return time.strftime("%H:%M:%S")
-
 
     def _get_timet(self):
         """Get epoch time
@@ -511,6 +528,7 @@ class MacroResolver(Borg):
         Example : 1437143291
 
         :return: timestamp
+        :rtype: str
         TODO: Should be moved to util
         TODO: Should consider timezone
         """
@@ -520,7 +538,9 @@ class MacroResolver(Borg):
         """Generic function to get the number of host in the specified state
 
         :param state: state to filter on
+        :type state:
         :return: number of host in state *state*
+        :rtype: int
         TODO: Should be moved
         """
         return sum(1 for h in self.hosts if h.state == state)
@@ -533,6 +553,7 @@ class MacroResolver(Borg):
         """DOES NOTHING( Should get the number of unreachable hosts not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -541,6 +562,7 @@ class MacroResolver(Borg):
         """Get the number of hosts that are a problem
 
         :return: number of hosts with is_problem attribute True
+        :rtype: int
         """
         return sum(1 for h in self.hosts if h.is_problem)
 
@@ -548,6 +570,7 @@ class MacroResolver(Borg):
         """DOES NOTHING( Should get the number of host problems not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -556,7 +579,9 @@ class MacroResolver(Borg):
         """Generic function to get the number of service in the specified state
 
         :param state: state to filter on
+        :type state:
         :return: number of service in state *state*
+        :rtype: int
         TODO: Should be moved
         """
         return sum(1 for s in self.services if s.state == state)
@@ -573,6 +598,7 @@ class MacroResolver(Borg):
         """DOES NOTHING (Should get the number of warning services not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -581,6 +607,7 @@ class MacroResolver(Borg):
         """DOES NOTHING (Should get the number of critical services not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -589,6 +616,7 @@ class MacroResolver(Borg):
         """DOES NOTHING (Should get the number of unknown services not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -597,6 +625,7 @@ class MacroResolver(Borg):
         """Get the number of services that are a problem
 
         :return: number of services with is_problem attribute True
+        :rtype: int
         """
         return sum(1 for s in self.services if s.is_problem)
 
@@ -604,6 +633,7 @@ class MacroResolver(Borg):
         """DOES NOTHING (Should get the number of service problems not handled)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -612,6 +642,7 @@ class MacroResolver(Borg):
         """DOES NOTHING ( Should get process start time)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0
@@ -620,6 +651,7 @@ class MacroResolver(Borg):
         """DOES NOTHING ( Should get events start time)
 
         :return: 0 always
+        :rtype: int
         TODO: Implement this
         """
         return 0

@@ -69,8 +69,8 @@ class Load:
 
 
     def update_load(self, new_val, forced_interval=None):
-        """
-        Update load with the new value
+        """Update load with the new value
+
         :param new_val: value used to compute new load
         :type new_val: int
         :param forced_interval: boolean indicating if we force the interval for the value
@@ -98,8 +98,7 @@ class Load:
             pass
 
     def get_load(self):
-        """
-        Get actual load. val attribute accessor
+        """Get actual load. val attribute accessor
 
         :return: the load value
         :rtype: int

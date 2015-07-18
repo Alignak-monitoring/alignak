@@ -65,7 +65,6 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
 """
 
 
-
 # Try to see if we are in an android device or not
 is_android = True
 try:
@@ -117,13 +116,13 @@ class IForArbiter(Interface):
         """Remove a scheduler connection (internal)
 
         :param sched_id: scheduler id to remove
+        :type sched_id: int
         :return: None
         """
         try:
             del self.app.schedulers[sched_id]
         except KeyError:
             pass
-
 
     def what_i_managed(self):
         """Arbiter ask me which scheduler id I manage
@@ -144,14 +143,13 @@ class IForArbiter(Interface):
         self.app.schedulers.clear()
         self.app.cur_conf = None
 
-
     def push_broks(self, broks):
         """Push broks objects to the daemon (internal)
         Only used on a Broker daemon by the Arbiter
 
         :param broks: Brok list
         :type broks: list
-        :return:
+        :return: None
         """
         with self.app.arbiter_broks_lock:
             self.app.arbiter_broks.extend(broks.values())
@@ -164,6 +162,7 @@ class IForArbiter(Interface):
         Use a lock for this call (not a global one, just for this method)
 
         :return: Pickled external command list
+        :rtype: str
         """
         with self.app.external_commands_lock:
             cmds = self.app.get_external_commands()
@@ -171,16 +170,15 @@ class IForArbiter(Interface):
         return raw
     get_external_commands.need_lock = False
 
-
     def got_conf(self):
         """'Does the daemon got configuration (receiver)
         Only use for a Receiver daemon
 
-        :return: True if conf is not None, False otherzise
+        :return: True if conf is not None, False otherwise
+        :rtype: bool
         """
         return self.app.cur_conf is not None
     got_conf.need_lock = False
-
 
     def push_host_names(self, sched_id, hnames):
         """Push hostname/scheduler links
@@ -195,7 +193,6 @@ class IForArbiter(Interface):
         self.app.push_host_names(sched_id, hnames)
     push_host_names.method = 'post'
 
-
 class ISchedulers(Interface):
     """Interface for Schedulers
     If we are passive, they connect to this and send/get actions
@@ -209,6 +206,7 @@ class ISchedulers(Interface):
         :param actions: list of action to add
         :type actions: list
         :param sched_id: id of the scheduler sending actions
+        :type sched_id: int
         :return:None
         """
         self.app.add_actions(actions, int(sched_id))
@@ -219,7 +217,9 @@ class ISchedulers(Interface):
         for the scheduler with id = sched_id
 
         :param sched_id: id of the scheduler
+        :type sched_id: int
         :return: serialized list
+        :rtype: str
         """
         # print "A scheduler ask me the returns", sched_id
         ret = self.app.get_return_for_passive(int(sched_id))
@@ -239,10 +239,10 @@ class IBroks(Interface):
         """Get broks from the daemon
 
         :return: Brok list serialized and b64encoded
+        :rtype: str
         """
         res = self.app.get_broks()
         return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-
 
 
 class IStats(Interface):
@@ -275,8 +275,6 @@ class IStats(Interface):
         return res
 
 
-
-
 class BaseSatellite(Daemon):
     """Base Satellite class.
     Subclassed by Alignak (scheduler), Broker and Satellite
@@ -298,7 +296,6 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         self.external_commands_lock = threading.RLock()
 
-
     def watch_for_new_conf(self, timeout):
         """Triggered by Arbiter get to make the satellite wait new conf
         Timeout is short is (1.0 or 0)
@@ -310,7 +307,6 @@ class BaseSatellite(Daemon):
         """
         self.handleRequests(timeout)
 
-
     def do_stop(self):
         """Unregister http functions and call super(BaseSatellite, self).do_stop()
 
@@ -320,7 +316,6 @@ class BaseSatellite(Daemon):
             logger.info("[%s] Stopping all network connections", self.name)
             self.http_daemon.unregister(self.interface)
         super(BaseSatellite, self).do_stop()
-
 
     def what_i_managed(self):
         """Get the managed configuration by this satellite
@@ -333,7 +328,6 @@ class BaseSatellite(Daemon):
             r[k] = v['push_flavor']
         return r
 
-
     def get_external_commands(self):
         """Get the external commands
 
@@ -343,8 +337,6 @@ class BaseSatellite(Daemon):
         res = self.external_commands
         self.external_commands = []
         return res
-
-
 
 
 class Satellite(BaseSatellite):
@@ -377,11 +369,11 @@ class Satellite(BaseSatellite):
         self.returns_queue = None
         self.q_by_mod = {}
 
-
     def pynag_con_init(self, id):
         """Wrapped function for do_pynag_con_init
 
         :param id: scheduler id to connect to
+        :type id: int
         :return: scheduler connection object or None
         :rtype: alignak.http_client.HTTPClient
         """
@@ -391,11 +383,17 @@ class Satellite(BaseSatellite):
         return r
 
     def do_pynag_con_init(self, id):
-        '''Initialize a connection with scheduler having 'id'
+        """Initialize a connection with scheduler having 'id'
         Return the new connection to the scheduler if it succeeded,
             else: any error OR sched is inactive: return None.
         NB: if sched is inactive then None is directly returned.
-        '''
+
+
+        :param id: scheduler id to connect to
+        :type id: int
+        :return: scheduler connection object or None
+        :rtype: alignak.http_client.HTTPClient
+        """
         sched = self.schedulers[id]
         if not sched['active']:
             return
@@ -546,6 +544,7 @@ class Satellite(BaseSatellite):
         """Get returns of passive actions for a specific scheduler
 
         :param sched_id: scheduler id
+        :type sched_id: int
         :return: Action list
         :rtype: list
         """
@@ -568,7 +567,9 @@ class Satellite(BaseSatellite):
 
         :param module_name: the module name related to the worker
                             default is "fork" for no module
+        :type module_name: str
         :param mortal: make the Worker mortal or not. Default True
+        :type mortal: bool
         :param __warned: Remember the module we warned about.
                          This param is a tuple and as it is only init once (the default value)
                          we use this python behavior that make this set grows with module_name
@@ -625,7 +626,6 @@ class Satellite(BaseSatellite):
         # Ok, all is good. Start it!
         w.start()
 
-
     def do_stop(self):
         """Stop all workers modules and sockets
 
@@ -648,12 +648,12 @@ class Satellite(BaseSatellite):
         # And then call our master stop from satellite code
         super(Satellite, self).do_stop()
 
-
     def add(self, elt):
         """Add an object to the satellite one
         Handles brok and externalcommand
 
         :param elt: object to add
+        :type elt: object
         :return: None
         """
         cls_type = elt.__class__.my_type
@@ -667,7 +667,6 @@ class Satellite(BaseSatellite):
             with self.external_commands_lock:
                 self.external_commands.append(elt)
 
-
     def get_broks(self):
         """Get brok list from satellite
 
@@ -678,10 +677,10 @@ class Satellite(BaseSatellite):
         self.broks.clear()
         return res
 
-
     def check_and_del_zombie_workers(self):
         """Check if worker are fine and kill them if not.
         Dispatch the actions in the worker to another one
+
         :return: None
         """
         # In android, we are using threads, so there is not active_children call
@@ -720,9 +719,9 @@ class Satellite(BaseSatellite):
             # So now we can really forgot it
             del self.workers[id]
 
-
     def adjust_worker_number_by_load(self):
         """Try to create the minimum workers specified in the configuration
+
         :return: None
         """
         to_del = []
@@ -763,12 +762,12 @@ class Satellite(BaseSatellite):
             del self.q_by_mod[mod]
         # TODO: if len(workers) > 2*wish, maybe we can kill a worker?
 
-
     def _got_queue_from_action(self, a):
         """Find a queue for the action depending on the module.
         The id is found with a modulo on action id
 
         :param a: the action that need a queue to be assigned
+        :type a: object
         :return: worker id and queue. (0, None) if no queue for the module_type
         :rtype: tuple
         """
@@ -788,7 +787,6 @@ class Satellite(BaseSatellite):
         # return the id of the worker (i), and its queue
         return (i, q)
 
-
     def add_actions(self, lst, sched_id):
         """Add a list of actions to the satellite queues
 
@@ -807,7 +805,6 @@ class Satellite(BaseSatellite):
             a.status = 'queue'
             self.assign_to_a_queue(a)
 
-
     def assign_to_a_queue(self, a):
         """Take an action and put it to a queue
 
@@ -822,7 +819,6 @@ class Satellite(BaseSatellite):
         if q is not None:
             q.put(msg)
 
-
     def get_new_actions(self):
         """ Wrapper function for do_get_new_actions
         For stats purpose
@@ -830,17 +826,16 @@ class Satellite(BaseSatellite):
         :return: None
         TODO: Use a decorator
         """
-
         _t = time.time()
         self.do_get_new_actions()
         statsmgr.incr('core.get-new-actions', time.time() - _t)
-
 
     def do_get_new_actions(self):
         """Get new actions from schedulers
         Create a Message and put into the module queue
         REF: doc/alignak-action-queues.png (1)
-        :return:
+
+        :return: None
         """
         # Here are the differences between a
         # poller and a reactionner:
@@ -898,7 +893,6 @@ class Satellite(BaseSatellite):
                 logger.error("A satellite raised an unknown exception: %s (%s)", exp, type(exp))
                 raise
 
-
     def get_returns_queue_len(self):
         """Wrapper for returns_queue.qsize method. Return queue length
 
@@ -906,7 +900,6 @@ class Satellite(BaseSatellite):
         :rtype: int
         """
         return self.returns_queue.qsize()
-
 
     def get_returns_queue_item(self):
         """Wrapper for returns_queue.get method. Return an queue element
@@ -916,10 +909,10 @@ class Satellite(BaseSatellite):
         """
         return self.returns_queue.get()
 
-
     def clean_previous_run(self):
         """Clean variables from previous configuration,
         such as schedulers, broks and external commands
+
         :return: None
         """
         # Clean all lists
@@ -927,7 +920,6 @@ class Satellite(BaseSatellite):
         self.broks.clear()
         with self.external_commands_lock:
             self.external_commands = self.external_commands[:]
-
 
     def do_loop_turn(self):
         """Satellite main loop::
@@ -1045,7 +1037,6 @@ class Satellite(BaseSatellite):
         # Say to modules it's a new tick :)
         self.hook_point('tick')
 
-
     def do_post_daemon_init(self):
         """Do this satellite (poller or reactionner) post "daemonize" init:
         we must register our interfaces for 3 possible callers: arbiter,
@@ -1077,7 +1068,6 @@ class Satellite(BaseSatellite):
         # socket timeouts.
         import socket
         socket.setdefaulttimeout(None)
-
 
     def setup_new_conf(self):
         """Setup new conf received from Arbiter
@@ -1220,7 +1210,6 @@ class Satellite(BaseSatellite):
                 logger.info("[%s] Got module: %s ", self.name, module.module_type)
                 self.q_by_mod[module.module_type] = {}
 
-
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
         This may be overridden in subclasses
@@ -1240,7 +1229,6 @@ class Satellite(BaseSatellite):
            }
 
         :rtype: dict
-
         """
         now = int(time.time())
         # call the daemon one
@@ -1256,7 +1244,6 @@ class Satellite(BaseSatellite):
             _type, self.name, len(self.external_commands), now))
 
         return res
-
 
     def main(self):
         """Main satellite function. Do init and then mainloop

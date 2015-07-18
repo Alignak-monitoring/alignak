@@ -89,35 +89,34 @@ class ModulesManager(object):
         self.max_queue_size = 0
         self.manager = None
 
-
     def load_manager(self, manager):
         """Setter for manager attribute
 
         :param manager: value to set
+        :type manager: str
         :return: None
         """
         self.manager = manager
-
 
     def set_modules(self, modules):
         """Setter for modules and allowed_type attributes
         Allowed type attribute is set based on module type in modules arg
 
         :param modules: value to set to module
+        :type modules:
         :return: None
         """
         self.modules = modules
         self.allowed_types = [uniform_module_type(mod.module_type) for mod in modules]
 
-
     def set_max_queue_size(self, max_queue_size):
         """Setter for max_queue_size attribute
 
         :param max_queue_size: value to set
+        :type max_queue_size: int
         :return: None
         """
         self.max_queue_size = max_queue_size
-
 
     def load_and_init(self):
         """Import, instanciate & "init" the modules we have been requested
@@ -127,14 +126,16 @@ class ModulesManager(object):
         self.load()
         self.get_instances()
 
-
     @classmethod
     def try_best_load(cls, name, package=None):
         """Try to load module in the bast way possible (using importlib)
 
         :param name: module name to load
+        :type name: str
         :param package: package name to load module from
-        :return: module
+        :type package:
+        :return: None | module
+        :rtype:
         """
         try:
             mod = importlib.import_module(name, package)
@@ -152,14 +153,14 @@ class ModulesManager(object):
             return
         return mod
 
-
     @classmethod
     def try_very_bad_load(cls, mod_dir):
         """Try to load module in a bad way (Inserting mod_dir to sys.path)
         then try to import module (module.py file) in this directory with importlib
 
         :param mod_dir: module directory to load
-        :return: module
+        :type mod_dir: str
+        :return: None
         """
         prev_module = sys.modules.get('module')  # cache locally any previously imported 'module' ..
         logger.warning(
@@ -181,14 +182,16 @@ class ModulesManager(object):
             if prev_module is not None:  # and restore it after we have loaded our one (or not)
                 sys.modules['module'] = prev_module
 
-
     @classmethod
     def try_load(cls, mod_name, mod_dir=None):
         """Try in three different ways to load a module
 
         :param mod_name: module name to load
+        :type mod_name: str
         :param mod_dir: module directory where module is
+        :type mod_dir: str | None
         :return: module
+        :rtype: object
         """
         msg = ''
         mod = cls.try_best_load(mod_name)
@@ -205,7 +208,6 @@ class ModulesManager(object):
         if msg:
             logger.info(msg, mod_name)
         return mod
-
 
     def load(self):
         """Try to import the requested modules ; put the imported modules in self.imported_modules.
@@ -248,13 +250,13 @@ class ModulesManager(object):
                 logger.warning("The module type %s for %s was not found in modules!",
                                module_type, mod_conf.get_name())
 
-
     def try_instance_init(self, inst, late_start=False):
         """Try to "init" the given module instance.
 
-
         :param inst: instance to init
+        :type inst: object
         :param late_start: If late_start, don't look for last_init_try
+        :type late_start: bool
         :return: True on successful init. False if instance init method raised any Exception.
         :rtype: bool
         """
@@ -283,11 +285,11 @@ class ModulesManager(object):
             return False
         return True
 
-
     def clear_instances(self, insts=None):
         """Request to "remove" the given instances list or all if not provided
 
         :param insts: instances to remove (all if None)
+        :type insts:
         :return: None
         """
         if insts is None:
@@ -295,15 +297,14 @@ class ModulesManager(object):
         for i in insts:
             self.remove_instance(i)
 
-
     def set_to_restart(self, inst):
         """Put an instance to the restart queue
 
         :param inst: instance to restart
+        :type inst: object
         :return: None
         """
         self.to_restart.append(inst)
-
 
     def get_instances(self):
         """Create, init and then returns the list of module instances that the caller needs.
@@ -313,6 +314,7 @@ class ModulesManager(object):
         Arbiter call this method with start_external=False
 
         :return: module instances list
+        :rtype: list
         """
         self.clear_instances()
         for (mod_conf, module) in self.modules_assoc:
@@ -341,11 +343,11 @@ class ModulesManager(object):
 
         return self.instances
 
-
     def start_external_instances(self, late_start=False):
         """Launch external instances that are load correctly
 
         :param late_start: If late_start, don't look for last_init_try
+        :type late_start: bool
         :return: None
         """
         for inst in [inst for inst in self.instances if inst.is_external]:
@@ -360,12 +362,12 @@ class ModulesManager(object):
             logger.info("Starting external module %s", inst.get_name())
             inst.start()
 
-
     def remove_instance(self, inst):
         """Request to cleanly remove the given instance.
         If instance is external also shutdown it cleanly
 
         :param inst: instance to remove
+        :type inst: object
         :return: None
         """
         # External instances need to be close before (process + queues)
@@ -378,7 +380,6 @@ class ModulesManager(object):
 
         # Then do not listen anymore about it
         self.instances.remove(inst)
-
 
     def check_alive_instances(self):
         """Check alive isntances.
@@ -417,7 +418,6 @@ class ModulesManager(object):
                     inst.clear_queues(self.manager)
                     self.to_restart.append(inst)
 
-
     def try_to_restart_deads(self):
         """Try to reinit and restart dead instances
 
@@ -436,11 +436,11 @@ class ModulesManager(object):
             else:
                 self.to_restart.append(inst)
 
-
     def get_internal_instances(self, phase=None):
         """Get a list of internal instances (in a specific phase)
 
         :param phase: phase to filter (never used)
+        :type phase:
         :return: internal instances list
         :rtype: list
         """
@@ -449,11 +449,11 @@ class ModulesManager(object):
                 if not inst.is_external and phase in inst.phases
                 and inst not in self.to_restart]
 
-
     def get_external_instances(self, phase=None):
         """Get a list of external instances (in a specific phase)
 
         :param phase: phase to filter (never used)
+        :type phase:
         :return: external instances list
         :rtype: list
         """
@@ -461,7 +461,6 @@ class ModulesManager(object):
                 for inst in self.instances
                 if inst.is_external and phase in inst.phases
                 and inst not in self.to_restart]
-
 
     def get_external_to_queues(self):
         """Get a list of queue to external instances
@@ -473,7 +472,6 @@ class ModulesManager(object):
                 for inst in self.instances
                 if inst.is_external and inst not in self.to_restart]
 
-
     def get_external_from_queues(self):
         """Get a list of queue from external instances
 
@@ -483,7 +481,6 @@ class ModulesManager(object):
         return [inst.from_q
                 for inst in self.instances
                 if inst.is_external and inst not in self.to_restart]
-
 
     def stop_all(self):
         """Stop all module instances

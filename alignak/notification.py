@@ -197,16 +197,15 @@ class Notification(Action):
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Notification('', '', '', '', '', '', '', id=self.id))
 
-
     def is_launchable(self, t):
         """Check if this notification can be launched base on time
 
         :param t: time to compare
+        :type t: int
         :return: True if t >= self.t_to_go, False otherwise
         :rtype: bool
         """
         return t >= self.t_to_go
-
 
     def is_administrative(self):
         """Check if this notification is "administrative"
@@ -219,12 +218,10 @@ class Notification(Action):
         else:
             return True
 
-
     def __str__(self):
         return "Notification %d status:%s command:%s ref:%s t_to_go:%s" % \
                (self.id, self.status, self.command, getattr(self, 'ref', 'unknown'),
                 time.asctime(time.localtime(self.t_to_go)))
-
 
     def get_id(self):
         """Getter to id attribute
@@ -233,7 +230,6 @@ class Notification(Action):
         :rtype: int
         """
         return self.id
-
 
     def get_return_from(self, n):
         """Setter of exit_status and execution_time attributes
@@ -245,13 +241,14 @@ class Notification(Action):
         self.exit_status = n.exit_status
         self.execution_time = n.execution_time
 
-
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
         in props of properties or running_properties
 
         :param data: data to fill
+        :type data:
         :param brok_type: type of brok
+        :type brok_type:
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
@@ -260,7 +257,6 @@ class Notification(Action):
         for prop, entry in cls.properties.items():
             if brok_type in entry.fill_brok:
                 data[prop] = getattr(self, prop)
-
 
     def get_initial_status_brok(self):
         """Get a initial status brok
@@ -273,7 +269,6 @@ class Notification(Action):
         self.fill_data_brok_from(data, 'full_status')
         b = Brok('notification_raise', data)
         return b
-
 
     def __getstate__(self):
         """Call by pickle for dataify the comment
@@ -290,7 +285,6 @@ class Notification(Action):
                 res[prop] = getattr(self, prop)
 
         return res
-
 
     def __setstate__(self, state):
         """Inverted function of getstate

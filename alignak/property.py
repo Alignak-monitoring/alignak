@@ -83,7 +83,6 @@ class Property(object):
     Same semantic for all subclasses (except UnusedProp): The property
     is required if, and only if, the default value is `None`.
 
-
     """
 
     def __init__(self, default=none_object, class_inherit=None,
@@ -160,7 +159,9 @@ class Property(object):
         """Generic pythonize method
 
         :param val: value to python
+        :type val:
         :return: the value itself
+        :rtype:
         """
         return val
 
@@ -183,7 +184,8 @@ class UnusedProp(Property):
         why it's no more useful
 
         :param text:
-        :return:
+        :type text: None | str
+        :return: None
         """
 
         if text is None:
@@ -211,6 +213,7 @@ class BoolProp(Property):
         """Convert value into a boolean
 
         :param val: value to convert
+        :type val:
         :return: boolean corresponding to value ::
 
         {'1': True, 'yes': True, 'true': True, 'on': True,
@@ -237,6 +240,7 @@ class IntegerProp(Property):
         * Then call float(int(val))
 
         :param val: value to convert
+        :type val:
         :return: integer corresponding to value
         :rtype: int
         """
@@ -254,6 +258,7 @@ class FloatProp(Property):
         * Then call float(val)
 
         :param val: value to convert
+        :type val:
         :return: float corresponding to value
         :rtype: float
         """
@@ -271,6 +276,7 @@ class CharProp(Property):
         * Then take the first char of val (first elem)
 
         :param val: value to convert
+        :type val:
         :return: char corresponding to value
         :rtype: str
         """
@@ -287,6 +293,7 @@ class StringProp(Property):
         * If value is a list, try to take the last element
 
         :param val: value to convert
+        :type val:
         :return: str corresponding to value
         :rtype: str
         """
@@ -312,6 +319,7 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
+        :type val:
         :return: list corresponding to value
         :rtype: list
         """
@@ -331,6 +339,7 @@ class LogLevelProp(StringProp):
         * get logging level base on the value
 
         :param val: value to convert
+        :type val:
         :return: log level corresponding to value
         :rtype: str
         """
@@ -364,6 +373,7 @@ class DictProp(Property):
         * split "key=value" string and convert to { key:value }
 
         :param val: value to convert
+        :type val:
         :return: log level corresponding to value
         :rtype: str
         """
@@ -407,6 +417,7 @@ class AddrProp(Property):
         * match ip address and port (if available)
 
         :param val: value to convert
+        :type val:
         :return: address/port corresponding to value
         :rtype: dict
         """
@@ -431,7 +442,9 @@ class ToGuessProp(Property):
         does nothing otherwise
 
         :param val: value to convert
+        :type val:
         :return: converted value
+        :rtype:
         """
         if isinstance(val, list) and len(set(val)) == 1:
             # If we have a list with a unique value just use it
@@ -450,6 +463,7 @@ class IntListProp(ListProp):
         * Convert each element into a int
 
         :param val: value to convert
+        :type val:
         :return: integer list corresponding to value
         :rtype: list[int]
         """

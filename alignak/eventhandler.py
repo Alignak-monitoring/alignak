@@ -119,7 +119,6 @@ class EventHandler(Action):
         self.reactionner_tag = reactionner_tag
         self.is_snapshot = is_snapshot
 
-
     def copy_shell(self):
         """Get a copy o this event handler with minimal values (default, id, is snapshot)
 
@@ -128,7 +127,6 @@ class EventHandler(Action):
         """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(EventHandler('', id=self.id, is_snapshot=self.is_snapshot))
-
 
     def get_return_from(self, e):
         """Setter of the following attributes::
@@ -151,31 +149,30 @@ class EventHandler(Action):
         self.execution_time = getattr(e, 'execution_time', 0.0)
         self.perf_data = getattr(e, 'perf_data', '')
 
-
     def get_outputs(self, out, max_plugins_output_length):
         """Setter of output attribute
 
         :param out: new output
+        :type out:
         :param max_plugins_output_length: not use
+        :type max_plugins_output_length:
         :return: None
         """
         self.output = out
-
 
     def is_launchable(self, t):
         """Check if this event handler can be launched base on time
 
         :param t: time to compare
+        :type t: int
         :return: True if t >= self.t_to_go, False otherwise
         :rtype: bool
         TODO: Duplicate from Notification.is_launchable
         """
         return t >= self.t_to_go
 
-
     def __str__(self):
         return "Check %d status:%s command:%s" % (self.id, self.status, self.command)
-
 
     def get_id(self):
         """Getter to id attribute
@@ -185,7 +182,6 @@ class EventHandler(Action):
         TODO: Duplicate from Notification.get_id
         """
         return self.id
-
 
     def __getstate__(self):
         """Call by pickle for dataify the comment
@@ -202,7 +198,6 @@ class EventHandler(Action):
                 res[prop] = getattr(self, prop)
 
         return res
-
 
     def __setstate__(self, state):
         """Inverted function of getstate

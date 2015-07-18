@@ -82,6 +82,7 @@ def safe_print(*args):
     (Like if the terminal do not have en_US.UTF8 as LANG for example)
 
     :param args: args to print
+    :type args:
     :return: None
     """
     l = []
@@ -113,7 +114,9 @@ def split_semicolon(line, maxsplit=None):
     """Split a line on semicolons characters but not on the escaped semicolons
 
     :param line: line to split
+    :type line: str
     :param maxsplit: maximum of split to dot
+    :type maxsplitL int
     :return: splitted line
     :rtype: list
 
@@ -165,11 +168,11 @@ def split_semicolon(line, maxsplit=None):
     return splitted_line
 
 
-
 def jsonify_r(obj):
     """Convert an object into json (recursively on attribute)
 
     :param obj: obj to jsonify
+    :type obj: object
     :return: json representation of obj
     :rtype: dict
     """
@@ -229,13 +232,18 @@ def jsonify_r(obj):
 
 # ################################## TIME ##################################
 
+
 def get_end_of_day(year, month_id, day):
     """Get the timestamp of the end (local) of a specific day
 
     :param year: date year
+    :type year: int
     :param month_id: date month (int)
+    :type month_id: int
     :param day: date day
+    :type day: int
     :return: timestamp
+    :rtype: int
 
     TODO: Missing timezone
     """
@@ -244,25 +252,27 @@ def get_end_of_day(year, month_id, day):
     return end_time_epoch
 
 
-
 def print_date(t):
     """Get date (local) in asc format from timestamp
 
     example : 'Thu Jan  1 01:00:00 1970' (for t=0 in a EUW server)
 
     :param t: timestamp
+    :type t; int
     :return: formatted time
+    :rtype: int
     TODO: Missing timezone
     """
     return time.asctime(time.localtime(t))
-
 
 
 def get_day(t):
     """Get timestamp of the beginning of the day (local) given by t
 
     :param t: time to get day from
+    :type t: int
     :return: timestamp
+    :rtype: int
     TODO: Missing timezone
     """
     return int(t - get_sec_from_morning(t))
@@ -272,19 +282,22 @@ def get_wday(t):
     """Get week day from date
 
     :param t: timestamp date
+    :type t: int
     :return: weekday (0-6)
+    :rtype: int
     TODO: Missing timezone
     """
     t_lt = time.localtime(t)
     return t_lt.tm_wday
 
 
-
 def get_sec_from_morning(t):
     """Get the numbers of seconds elapsed since the beginning of the day (local) given by t
 
     :param t: time to get amount of second from
+    :type t: int
     :return: timestamp
+    :rtype: int
     TODO: Missing timezone
     """
     t_lt = time.localtime(t)
@@ -294,14 +307,17 @@ def get_sec_from_morning(t):
     return h * 3600 + m * 60 + s
 
 
-
 def get_start_of_day(year, month_id, day):
     """Get the timestamp of the beginning (local) of a specific day
 
     :param year: date year
+    :type year: int
     :param month_id: date month (int)
+    :type month_id: int
     :param day: date day
+    :type day: int
     :return: timestamp
+    :rtype: int
 
     TODO: Missing timezone
     """
@@ -319,7 +335,9 @@ def format_t_into_dhms_format(t):
     """ Convert an amount of second into day, hour, min and sec
 
     :param t: seconds
+    :type t: int
     :return: 'Ad Bh Cm Ds'
+    :rtype: str
 
     >>> format_t_into_dhms_format(456189)
     '5d 6h 43m 9s'
@@ -340,7 +358,9 @@ def to_int(val):
     """Convert val to int (or raise Exception)
 
     :param val: value to convert
+    :type val:
     :return: int(float(val))
+    :rtype: int
     """
     return int(float(val))
 
@@ -349,16 +369,20 @@ def to_float(val):
     """Convert val to float (or raise Exception)
 
     :param val: value to convert
+    :type val:
     :return: float(val)
+    :rtype: float
     """
     return float(val)
 
 
 def to_char(val):
-    """Get first cher of val (or raise Exception)
+    """Get first character of val (or raise Exception)
 
     :param val: value we get head
+    :type val:
     :return: val[0]
+    :rtype: str
     """
     return val[0]
 
@@ -370,7 +394,11 @@ def to_split(val, split_on_coma=True):
     If split gives only [''] empty it
 
     :param val: value to split
+    :type val:
+    :param split_on_coma:
+    :type split_on_coma: bool
     :return: splitted value on comma
+    :rtype: list
 
     >>> to_split('a,b,c')
     ['a', 'b', 'c']
@@ -399,7 +427,11 @@ def list_split(val, split_on_coma=True):
     If we don't have to split just return val
 
     :param val: value to split
+    :type val:
+    :param split_on_coma:
+    :type split_on_coma: bool
     :return: list with splitted member on comma
+    :rtype: list
 
     >>> list_split(['a,b,c'], False)
     ['a,b,c']
@@ -423,7 +455,9 @@ def to_best_int_float(val):
     """Get best type for value between int and float
 
     :param val: value
+    :type val:
     :return: int(float(val)) if int(float(val)) == float(val), else float(val)
+    :rtype: int | float
 
     >>> to_best_int_float("20.1")
     20.1
@@ -448,7 +482,9 @@ def to_bool(val):
     """Convert value to bool
 
     :param val: value to convert
+    :type val:
     :return: True if val == '1' or val == 'on' or val == 'true' or val == 'True', else False
+    :rtype: bool
     """
     if val == '1' or val == 'on' or val == 'true' or val == 'True':
         return True
@@ -460,7 +496,9 @@ def from_bool_to_string(b):
     """Convert a bool to a string representation
 
     :param b: bool to convert
+    :type b: bool
     :return: if b '1' ,else '0'
+    :rtype: str
     """
     if b:
         return '1'
@@ -472,7 +510,9 @@ def from_bool_to_int(b):
     """Convert a bool to a int representation
 
     :param b: bool to convert
+    :type b: bool
     :return: if b 1 ,else 0
+    :rtype: int
     """
     if b:
         return 1
@@ -484,7 +524,9 @@ def from_list_to_split(val):
     """Convert list into a comma separated string
 
     :param val: value to convert
+    :type val:
     :return: comma separated string
+    :rtype: str
     """
     val = ','.join(['%s' % v for v in val])
     return val
@@ -494,7 +536,9 @@ def from_float_to_int(val):
     """Convert float to int
 
     :param val: value to convert
+    :type val: float
     :return: int(val)
+    :rtype: int
     """
     val = int(val)
     return val
@@ -509,8 +553,11 @@ def to_list_string_of_names(ref, tab):
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
+    :type ref:
     :param tab: list to parse
+    :type tab: list
     :return: comma separated string of names
+    :rtype: str
     """
     return ",".join([e.get_name() for e in tab])
 
@@ -519,8 +566,11 @@ def to_list_of_names(ref, tab):
     """Convert list into a list of element name
 
     :param ref: Not used
+    :type ref:
     :param tab: list to parse
+    :type tab: list
     :return: list of names
+    :rtype: list
     """
     return [e.get_name() for e in tab]
 
@@ -529,8 +579,11 @@ def to_name_if_possible(ref, value):
     """Try to get value name (call get_name method)
 
     :param ref: Not used
+    :type ref:
     :param value: value to name
+    :type value: str
     :return: name or ''
+    :rtype: str
     """
     if value:
         return value.get_name()
@@ -542,9 +595,11 @@ def to_hostnames_list(ref, tab):
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
+    :type ref:
     :param tab: Host list
     :type tab: list[alignak.objects.host.Host]
     :return: host_name list
+    :rtype: list
     """
     r = []
     for h in tab:
@@ -560,8 +615,11 @@ def to_svc_hst_distinct_lists(ref, tab):
     * hosts: all hosts of the tab
 
     :param ref: Not used
+    :type ref:
     :param tab: list of Host and Service
+    :type tab: list
     :return: dict with hosts and services names
+    :rtype: dict
     """
     r = {'hosts': [], 'services': []}
     for e in tab:
@@ -580,8 +638,11 @@ def expand_with_macros(ref, value):
        host/service ref before brok it
 
     :param ref: host or service
+    :type ref:
     :param value: value to expand macro
+    :type value:
     :return: value with macro replaced
+    :rtype:
     """
     return MacroResolver().resolve_simple_macros_in_string(value, ref.get_data_for_checks())
 
@@ -590,7 +651,9 @@ def get_obj_name(obj):
     """Get object name (call get_name) if not a string
 
     :param obj: obj we wan the name
+    :type obj: object
     :return: object name
+    :rtype: str
     """
     # Maybe we do not have a real object but already a string. If so
     # return the string
@@ -603,8 +666,11 @@ def get_obj_name_two_args_and_void(obj, value):
     """Get value name (call get_name) if not a string
 
     :param obj: Not used
+    :type obj: object
     :param value: value to name
+    :type value:
     :return: value name
+    :rtype: str
     """
     try:
         return value.get_name()
@@ -616,7 +682,9 @@ def get_obj_full_name(obj):
     """Wrapepr to call obj.get_full_name or obj.get_name
 
     :param obj: object name
+    :type obj: object
     :return: object name
+    :rtype: str
     """
     try:
         return obj.get_full_name()
@@ -642,7 +710,9 @@ def get_customs_values(d):
     """Wrapper for values() method
 
     :param d: dict
+    :type d: dict
     :return: d.values
+    :rtype:
     TODO: Remove it?
     """
     return d.values()
@@ -654,7 +724,9 @@ def unique_value(val):
     Used in parsing, if we set several time a parameter we only take the last one
 
     :param val: val to edit
+    :type val:
     :return: single value
+    :rtype: str
     TODO: Raise erro/warning instead of silently removing something
     """
     if isinstance(val, list):
@@ -668,11 +740,14 @@ def unique_value(val):
 
 # ##################### Sorting ################
 def scheduler_no_spare_first(x, y):
-    """Compare two satellite link based on spare attribute(sched usually)
+    """Compare two satellite link based on spare attribute(scheduler usually)
 
     :param x: first link to compare
+    :type x:
     :param y: second link to compare
+    :type y:
     :return: x > y (1) if x.spare and not y.spare, x == y (0) if both spare, x < y (-1) else
+    :rtype: int
     """
     if x.spare and not y.spare:
         return 1
@@ -687,10 +762,13 @@ def alive_then_spare_then_deads(x, y):
     based on alive attribute then spare attribute
 
     :param x: first link to compare
+    :type x:
     :param y: second link to compare
+    :type y:
     :return: x > y (1) if x alive and not y or both alive but x not spare
              x == y (0) if both alive and spare
              x < y (-1) else
+    :rtype: int
     TODO: Rework it
     """
     # First are alive
@@ -715,8 +793,11 @@ def sort_by_ids(x, y):
     """Compare x, y base on their id
 
     :param x: first elem to compare
+    :type x: int
     :param y: second elem to compare
+    :type y: int
     :return: x > y (1) if x.id > y.id, x == y (0) if id equals, x < y (-1) else
+    :rtype: int
     """
     if x.id < y.id:
         return -1
@@ -734,7 +815,9 @@ def nighty_five_percent(t):
     than major ones
 
     :param t: list of value to compute
+    :type t:
     :return: tuple containing average, min and max value
+    :rtype: tuple
     """
     t2 = copy.copy(t)
     t2.sort()
@@ -766,9 +849,10 @@ def nighty_five_percent(t):
 def strip_and_uniq(tab):
     """Strip every element of a list and keep unique values
 
-    :param tab: lsit to strip
+    :param tab: list to strip
+    :type tab: list
     :return: stripped list with unique values
-    :type: list
+    :rtype: list
     """
     new_tab = set()
     for elt in tab:
@@ -783,6 +867,10 @@ def strip_and_uniq(tab):
 
 def expand_xy_pattern(pattern):
     """Yield element in nodeset value for pattern
+
+    :param pattern:
+    :type pattern: str
+    :return: Nome
     """
     ns = NodeSet(str(pattern))
     if len(ns) > 1:
@@ -803,7 +891,9 @@ def got_generation_rule_pattern_change(xy_couples):
     [...]
 
     :param xy_couples: list of 2-tuple integer
+    :type xy_couples: list
     :return: list of rules
+    :rtype: list
     """
     res = []
     xy_cpl = xy_couples
@@ -827,8 +917,11 @@ def apply_change_recursive_pattern_change(s, rule):
     It take one entry of this list, and apply recursively the change to string
 
     :param s: string to edit
+    :type s: str
     :param rule: rule to apply
+    :type rule:
     :return: modified string with rule values
+    :rtype: str
 
     >>> apply_change_recursive_pattern_change("Unit [1-3] Port [1-4] Admin [1-5]", \
                                               [1, '[1-5]', [2, '[1-4]', [3, '[1-3]', []]]] \
@@ -858,6 +951,7 @@ def get_key_value_sequence(entry, default_value=None):
     If we have a key that look like [X-Y] we will expand it into Y-X+1 keys
 
     :param entry: line to parse
+    :type entry: str
     :param default_value: default value if nothing specified
 
     Example ::
@@ -867,8 +961,9 @@ def get_key_value_sequence(entry, default_value=None):
     {'KEY': 'root', 'VALUE': '/', 'VALUE1': '/'}],
     0)
 
+    :type default_value:
     :return: tuple with a list of dict and error code
-
+    :rtype: tuple
     """
     array1 = []
     array2 = []
@@ -1012,10 +1107,12 @@ def expect_file_dirs(root, path):
     """We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
     /tmp/toto/toto2/ will really exists so we can copy it. Try to make if  needed
 
-
     :param root: root directory
+    :type root: str
     :param path: path to verify
+    :type path: str
     :return: True on success, False otherwise
+    :rtype: bool
     """
     dirs = os.path.normpath(path).split('/')
     dirs = [d for d in dirs if d != '']
@@ -1045,7 +1142,9 @@ def filter_any(name):
     Filter nothing
 
     :param name: name to filter
+    :type name: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1060,7 +1159,9 @@ def filter_none(name):
     Filter all
 
     :param name: name to filter
+    :type name: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1075,7 +1176,9 @@ def filter_host_by_name(name):
     Filter on name
 
     :param name: name to filter
+    :type name: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1092,7 +1195,9 @@ def filter_host_by_regex(regex):
     Filter on regex
 
     :param regex: regex to filter
+    :type regex: str
     :return: Filter
+    :rtype: bool
     """
     host_re = re.compile(regex)
 
@@ -1109,8 +1214,10 @@ def filter_host_by_group(group):
     """Filter for host
     Filter on group
 
-    :param group: gruoup to filter
+    :param group: group name to filter
+    :type group: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1127,7 +1234,9 @@ def filter_host_by_tag(tpl):
     Filter on tag
 
     :param tpl: tag to filter
+    :type tpl: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1139,13 +1248,14 @@ def filter_host_by_tag(tpl):
     return inner_filter
 
 
-
 def filter_service_by_name(name):
     """Filter for service
     Filter on name
 
     :param name: name to filter
+    :type name: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1162,7 +1272,9 @@ def filter_service_by_regex_name(regex):
     Filter on regex
 
     :param regex: regex to filter
+    :type regex: str
     :return: Filter
+    :rtype: bool
     """
     host_re = re.compile(regex)
 
@@ -1180,7 +1292,9 @@ def filter_service_by_host_name(host_name):
     Filter on host_name
 
     :param host_name: host_name to filter
+    :type host_name: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1197,7 +1311,9 @@ def filter_service_by_regex_host_name(regex):
     Filter on regex host_name
 
     :param regex: regex to filter
+    :type regex: str
     :return: Filter
+    :rtype: bool
     """
     host_re = re.compile(regex)
 
@@ -1214,8 +1330,10 @@ def filter_service_by_hostgroup_name(group):
     """Filter for service
     Filter on hostgroup
 
-    :param hostgroup: hostgroup to filter
+    :param group: hostgroup to filter
+    :type group: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1232,7 +1350,9 @@ def filter_service_by_host_tag_name(tpl):
     Filter on tag
 
     :param tpl: tag to filter
+    :type tpl: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1249,7 +1369,9 @@ def filter_service_by_servicegroup_name(group):
     Filter on group
 
     :param group: group to filter
+    :type group: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1266,7 +1388,9 @@ def filter_host_by_bp_rule_label(label):
     Filter on label
 
     :param label: label to filter
+    :type label: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(host):
@@ -1283,7 +1407,9 @@ def filter_service_by_host_bp_rule_label(label):
     Filter on label
 
     :param label: label to filter
+    :type label: str
     :return: Filter
+    :rtype: bool
     """
 
     def inner_filter(service):
@@ -1300,7 +1426,9 @@ def filter_service_by_bp_rule_label(label):
     Filter on label
 
     :param label: label to filter
+    :type label: str
     :return: Filter
+    :rtype: bool
     """
     def inner_filter(service):
         """Inner filter for service. Accept if label in service.labels"""
@@ -1315,7 +1443,9 @@ def is_complex_expr(expr):
     """Check if expression in complex
 
     :param expr: expression to parse
+    :type expr: str
     :return: True if '(', ')', '&', '|', '!' or '*' are in expr
+    :rtype: bool
     """
     for m in '()&|!*':
         if m in expr:

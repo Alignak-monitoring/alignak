@@ -66,6 +66,7 @@ class ModulesContext(object):
         """Setter for modulesdir attribute
 
         :param modulesdir: value to set
+        :type modulesdir: srt
         :return: None
         """
         self.modules_dir = modulesdir
@@ -73,7 +74,8 @@ class ModulesContext(object):
     def get_modulesdir(self):
         """Getter for modulesdir attribute
 
-        :return: None
+        :return: folder of modules
+        :rtype: str
         """
         return self.modules_dir
 
@@ -81,7 +83,9 @@ class ModulesContext(object):
         """Get and load a module
 
         :param mod_name: module name to get
-        :return: module or None
+        :type mod_name: str
+        :return: module
+        :rtype: object
         """
         if self.modules_dir and self.modules_dir not in sys.path:
             sys.path.append(self.modules_dir)
@@ -97,6 +101,5 @@ class ModulesContext(object):
             return mod
         # otherwise simply try new and old style:
         return ModulesManager.try_load(mod_name, mod_dir)
-
 
 modulesctx = ModulesContext()

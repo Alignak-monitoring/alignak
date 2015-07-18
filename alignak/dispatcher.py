@@ -145,7 +145,6 @@ class Dispatcher:
         for rec in self.receivers:
             rec.need_conf = True
 
-
     def check_alive(self):
         """Check all daemons state (alive or not)
         and send conf if necessary
@@ -167,7 +166,6 @@ class Dispatcher:
             if arb != self.arbiter and arb.spare:
                 arb.update_infos()
                 # print "Arb", arb.get_name(), "alive?", arb.alive, arb.__dict__
-
 
     def check_dispatch(self):
         """Check if all active items are still alive
@@ -283,7 +281,6 @@ class Dispatcher:
                     self.dispatch_ok = False  # so we will redispatch all
                     rec.need_conf = True
 
-
     def check_bad_dispatch(self):
         """Check if we have a bad dispatch
         For example : a spare started but the master was still alive
@@ -340,13 +337,13 @@ class Dispatcher:
                                         id, satellite.get_name())
                             satellite.remove_from_conf(id)
 
-
     def get_scheduler_ordered_list(self, r):
         """Get sorted scheduler list for a specific realm
 
         :param r: realm we want scheduler from
+        :type r: object
         :return: sorted scheduler list
-        :rtype: list[alignak.objecs.schedulerlink.SchedulerLink]
+        :rtype: list[alignak.objects.schedulerlink.SchedulerLink]
         """
         # get scheds, alive and no spare first
         scheds = []
@@ -371,7 +368,6 @@ class Dispatcher:
         print_sched.reverse()
 
         return scheds
-
 
     def dispatch(self):
         """Dispatch configuration to other daemons

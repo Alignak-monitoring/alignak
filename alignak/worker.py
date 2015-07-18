@@ -75,6 +75,7 @@ import cStringIO
 from alignak.log import logger
 from alignak.misc.common import setproctitle
 
+
 class Worker:
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
@@ -120,19 +121,19 @@ class Worker:
     def is_mortal(self):
         """
         Accessor to _mortal attribute
+
         :return: A boolean indicating if the worker is mortal or not.
         :rtype: bool
         """
         return self._mortal
 
-
     def start(self):
         """
         Start the worker. Wrapper for calling start method of the process attribute
+
         :return: None
         """
         self._process.start()
-
 
     def terminate(self):
         """
@@ -207,6 +208,7 @@ class Worker:
         Wrapper for calling put method of the _c attribute
 
         :param msg: the message to put in queue
+        :type msg: str
         :return: None
         """
         self._c.put(msg)
@@ -243,7 +245,6 @@ class Worker:
         except IOError, exp:
             return
 
-
     def launch_new_checks(self):
         """
         Launch checks that are in status
@@ -262,7 +263,6 @@ class Worker:
                     # We should die as soon as we return all checks
                     logger.error("[%d] I am dying Too many open files %s ... ", self.id, chk)
                     self.i_am_dying = True
-
 
     def manage_finished_checks(self):
         """
@@ -318,7 +318,6 @@ class Worker:
         else:
             return 0
 
-
     def work(self, s, returns_queue, c):
         """
         Wrapper function for work in order to catch the exception
@@ -343,7 +342,6 @@ class Worker:
             output.close()
             # Ok I die now
             raise
-
 
     def do_work(self, s, returns_queue, c):
         """

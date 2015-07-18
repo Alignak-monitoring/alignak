@@ -81,7 +81,6 @@ def unpad(padded):
     return padded[:-pad]
 
 
-
 class Stats(object):
     """Stats class to export data into a statsd format
 
@@ -101,7 +100,6 @@ class Stats(object):
         self.statsd_sock = None
         self.statsd_addr = None
 
-
     def launch_reaper_thread(self):
         """Launch thread that collects data
 
@@ -111,7 +109,6 @@ class Stats(object):
         self.reaper_thread.daemon = True
         self.reaper_thread.start()
 
-
     def register(self, app, name, _type, api_key='', secret='', http_proxy='',
                  statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
                  statsd_enabled=False):
@@ -120,14 +117,23 @@ class Stats(object):
         :param app: application (arbiter, scheduler..)
         :type app: alignak.daemon.Daemon
         :param name: daemon name
+        :type name: str
         :param _type: daemon type
+        :type _type:
         :param api_key: api_key to post data
-        :param secret:  secret to post data
+        :type api_key: str
+        :param secret: secret to post data
+        :type secret: str
         :param http_proxy: proxy http if necessary
+        :type http_proxy: str
         :param statsd_host: host to post data
+        :type statsd_host: str
         :param statsd_port: port to post data
+        :type statsd_port: int
         :param statsd_prefix: prefix to add to metric
+        :type statsd_prefix: str
         :param statsd_enabled: bool to enable statsd
+        :type statsd_enabled: bool
         :return: None
         """
         self.app = app
@@ -151,7 +157,6 @@ class Stats(object):
         # Also load the proxy if need
         self.con.set_proxy(self.http_proxy)
 
-
     def load_statsd(self):
         """Create socket connection to statsd host
 
@@ -164,12 +169,13 @@ class Stats(object):
             logger.error('Cannot create statsd socket: %s' % exp)
             return
 
-
     def incr(self, k, v):
         """Increments a key with value
 
         :param k: key to edit
+        :type k: str
         :param v: value to add
+        :type v: int
         :return: None
         """
         _min, _max, nb, _sum = self.stats.get(k, (None, None, 0, 0))
@@ -191,12 +197,13 @@ class Stats(object):
                 pass  # cannot send? ok not a huge problem here and cannot
                 # log because it will be far too verbose :p
 
-
     def _encrypt(self, data):
         """Cypher data
 
         :param data: data to cypher
+        :type data: str
         :return: cyphered data
+        :rtype: str
         """
         m = hashlib.md5()
         m.update(self.secret)
@@ -212,8 +219,6 @@ class Stats(object):
 
         encrypted = aes.encrypt(data)
         return base64.urlsafe_b64encode(encrypted)
-
-
 
     def reaper(self):
         """Get data from daemon and send it to the statsd daemon

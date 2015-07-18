@@ -61,12 +61,20 @@ class DBSqlite(DB):
         self.db_path = db_path
 
     def connect_database(self):
-        """Create the database connection"""
+        """Create the database connection
+
+        :return: None
+        """
         self.db = sqlite3.connect(self.db_path)
         self.db_cursor = self.db.cursor()
 
     def execute_query(self, query):
-        """Just run the query"""
+        """Just run the query
+
+        :param query: the query
+        :type query: str
+        :return: None
+        """
         logger.debug("[SqliteDB] Info: I run query '%s'", query)
         self.db_cursor.execute(query)
         self.db.commit()
