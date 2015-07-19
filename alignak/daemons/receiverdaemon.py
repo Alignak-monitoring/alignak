@@ -72,13 +72,14 @@ from alignak.http_client import HTTPExceptions
 from alignak.daemon import Interface
 from alignak.stats import statsmgr
 
+
 class IStats(Interface):
     """
     Interface for various stats about broker activity
     """
 
     def get_raw_stats(self):
-        """        Get raw stats from the daemon::
+        """Get raw stats from the daemon::
 
         * command_buffer_size: external command buffer size
 
@@ -89,20 +90,25 @@ class IStats(Interface):
         res = {'command_buffer_size': len(app.external_commands)}
         return res
 
+
 class IBroks(Interface):
     """ Interface for Brokers:
-They connect here and get all broks (data for brokers). Data must be ORDERED!
-(initial status BEFORE update...) """
+    They connect here and get all broks (data for brokers). Data must be ORDERED!
+    (initial status BEFORE update...)
+    """
 
     def get_broks(self, bname):
         """Wrapper of get_brok for app attribute
 
         :param bname: Useless. TODO: Remove it
+        :type bname: str
         :return: base64 zlib compress pickled broks
+        :rtype: str
         """
         res = self.app.get_broks()
         return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
     get_broks.encode = 'raw'
+
 
 class Receiver(Satellite):
     """Receiver class. Referenced as "app" in most Interface
@@ -156,6 +162,7 @@ class Receiver(Satellite):
         Handles brok and externalcommand
 
         :param elt: object to add
+        :type elt: object
         :return: None
         """
         cls_type = elt.__class__.my_type
@@ -167,7 +174,6 @@ class Receiver(Satellite):
         elif cls_type == 'externalcommand':
             logger.debug("Enqueuing an external command: %s", str(ExternalCommand.__dict__))
             self.unprocessed_external_commands.append(elt)
-
 
     def push_host_names(self, sched_id, hnames):
         """Link hostnames to scheduler id.
@@ -182,7 +188,6 @@ class Receiver(Satellite):
         for h in hnames:
             self.host_assoc[h] = sched_id
 
-
     def get_sched_from_hname(self, hname):
         """Get scheduler linked to the given host_name
 
@@ -195,7 +200,6 @@ class Receiver(Satellite):
         e = self.schedulers.get(i, None)
         return e
 
-
     def manage_brok(self, b):
         """Send brok to modules. Modules have to implement their own manage_brok function.
         They usually do if they inherits from basemodule
@@ -203,7 +207,6 @@ class Receiver(Satellite):
 
         :param b: brok to manage
         :type b: alignak.brok.Brok
-
         :return: None
         """
         to_del = []
@@ -220,7 +223,6 @@ class Receiver(Satellite):
         # Now remove mod that raise an exception
         self.modules_manager.clear_instances(to_del)
 
-
     def do_stop(self):
         """Stop the Receiver
         Wait for children to stop and call super(Receiver, self).do_stop()
@@ -233,7 +235,6 @@ class Receiver(Satellite):
             a.terminate()
             a.join(1)
         super(Receiver, self).do_stop()
-
 
     def setup_new_conf(self):
         """Receiver custom setup_new_conf method
@@ -324,8 +325,6 @@ class Receiver(Satellite):
                 # And then we connect to it :)
                 self.pynag_con_init(sched_id)
 
-
-
         logger.debug("[%s] Sending us configuration %s", self.name, conf)
 
         if not self.have_modules:
@@ -340,13 +339,12 @@ class Receiver(Satellite):
             os.environ['TZ'] = use_timezone
             time.tzset()
 
-
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
         with external command list if the receiver is in direct routing.
         If not in direct_routing just clear the unprocessed_external_command list and return
 
-        :return: BIbe
+        :return: None
         """
         # If we are not in a direct routing mode, just bailout after
         # faking resolving the commands
@@ -401,11 +399,10 @@ class Receiver(Satellite):
                 for extcmd in extcmds:
                     self.external_commands.append(extcmd)
 
-
     def do_loop_turn(self):
         """Receiver daemon main loop
 
-        :return:
+        :return: None
         """
         sys.stdout.write(".")
         sys.stdout.flush()
@@ -431,7 +428,6 @@ class Receiver(Satellite):
             # print "watch new conf 1: begin", len(self.broks)
             self.watch_for_new_conf(1.0)
             # print "get enw broks watch new conf 1: end", len(self.broks)
-
 
     def main(self):
         """Main receiver function
@@ -493,7 +489,6 @@ class Receiver(Satellite):
             self.print_unrecoverable(traceback.format_exc())
             raise
 
-
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
         This may be overridden in subclasses
@@ -514,7 +509,6 @@ class Receiver(Satellite):
            }
 
         :rtype: dict
-
         """
         now = int(time.time())
         # call the daemon one

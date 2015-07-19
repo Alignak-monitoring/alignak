@@ -101,8 +101,11 @@ class IChecks(Interface):
         :param reactionner_tags: reactionner tags to filter on this reactionner
         :type reactionner_tags: list
         :param worker_name: Worker name asking (so that the scheduler add it to actions objects)
+        :type worker_name: str
         :param module_types: Module type to filter actions/checks
+        :type module_types: list
         :return: base64 zlib compress pickled check/action list
+        :rtype: str
         """
         # print "We ask us checks"
         do_checks = (do_checks == 'True')
@@ -116,12 +119,13 @@ class IChecks(Interface):
         # return zlib.compress(cPickle.dumps(res), 2)
     get_checks.encode = 'raw'
 
-
     def put_results(self, results):
         """Put results to scheduler, used by poller and reactionners
 
         :param results: results to handle
+        :type results:
         :return: True or ?? (if lock acquire fails)
+        :rtype: bool
         """
         nb_received = len(results)
         self.app.nb_check_received += nb_received
@@ -151,6 +155,7 @@ class IBroks(Interface):
         :param bname: broker name, used to filter broks
         :type bname: str
         :return: 64 zlib compress pickled brok list
+        :rtype: str
         """
         # Maybe it was not registered as it should, if so,
         # do it for it
@@ -166,7 +171,6 @@ class IBroks(Interface):
         return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
         # return zlib.compress(cPickle.dumps(res), 2)
     get_broks.encode = 'raw'
-
 
     def fill_initial_broks(self, bname):
         """Get initial_broks type broks from scheduler, used by brokers
@@ -226,7 +230,6 @@ class IStats(Interface):
         return res
 
 
-
 class IForArbiter(IArb):
     """ Interface for Arbiter. We ask him a for a conf and after that listen for instructions
         from the arbiter. The arbiter is the interface to the administrator, so we must listen
@@ -243,7 +246,6 @@ class IForArbiter(IArb):
         self.app.sched.run_external_commands(cmds)
     run_external_commands.method = 'POST'
 
-
     def put_conf(self, conf):
         """Post conf to scheduler (from arbiter)
 
@@ -255,7 +257,6 @@ class IForArbiter(IArb):
         super(IForArbiter, self).put_conf(conf)
     put_conf.method = 'POST'
 
-
     def wait_new_conf(self):
         """Ask to scheduler to wait for new conf (HTTP GET from arbiter)
 
@@ -266,7 +267,7 @@ class IForArbiter(IArb):
         super(IForArbiter, self).wait_new_conf()
 
 
-'''
+"""
 class Injector(Interface):
     # A broker ask us broks
     def inject(self, bincode):
@@ -281,8 +282,7 @@ class Injector(Interface):
             return result
         except NameError, exp:
             return None
-'''
-
+"""
 
 
 class Alignak(BaseSatellite):
@@ -320,7 +320,6 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.brokers = {}
 
-
     def do_stop(self):
         """Unregister http functions and call super(BaseSatellite, self).do_stop()
 
@@ -332,7 +331,6 @@ class Alignak(BaseSatellite):
             if self.ichecks:
                 self.http_daemon.unregister(self.ichecks)
         super(Alignak, self).do_stop()
-
 
     def compensate_system_time_change(self, difference):
         """Compensate a system time change of difference for all hosts/services/checks/notifs
@@ -413,7 +411,9 @@ class Alignak(BaseSatellite):
         signal.SIGTERM, signal.SIGINT : terminate process
 
         :param sig: signal caught by daemon
+        :type sig: str
         :param frame: current stack frame
+        :type frame:
         :return: None
         TODO: Refactor with Daemon one
         """
@@ -427,7 +427,6 @@ class Alignak(BaseSatellite):
             self.sched.die()
             self.must_run = False
             Daemon.manage_signal(self, sig, frame)
-
 
     def do_loop_turn(self):
         """Scheduler loop turn
@@ -443,7 +442,6 @@ class Alignak(BaseSatellite):
         self.setup_new_conf()
         logger.info("New configuration loaded")
         self.sched.run()
-
 
     def setup_new_conf(self):
         """Setup new conf received for scheduler
@@ -603,28 +601,25 @@ class Alignak(BaseSatellite):
         # and set ourself in it
         self.schedulers = {self.conf.instance_id: self.sched}
 
-
     def what_i_managed(self):
         """Get my managed dict (instance id and push_flavor)
 
         :return: dict containing instance_id key and push flavor value
-        :return: dict
+        :rtype: dict
         """
         if hasattr(self, 'conf'):
             return {self.conf.instance_id: self.conf.push_flavor}
         else:
             return {}
 
-    # our main function, launch after the init
     def main(self):
-        """Main function for Scheduler::
+        """Main function for Scheduler, launch after the init::
 
         * Init daemon
         * Load module manager
         * Register http interfaces
         * Launch main loop
         * Catch any Exception that occurs
-
 
         :return: None
         TODO : WTF I register then unregister self.interface ??
