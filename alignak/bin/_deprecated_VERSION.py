@@ -17,7 +17,11 @@ class DeprecatedAlignakBin(CustomModule):
     @property
     def VERSION(self):
         """Any code importing, or using, `VERSION` from alignak.bin will have
-        this deprecation warning emitted, *if* deprecation warnings are enabled."""
+        this deprecation warning emitted, *if* deprecation warnings are enabled.
+
+        :return: version number
+        :rtype: str
+        """
         warnings.warn(
             '`alignak.bin.VERSION` is deprecated version attribute'
             ' and will be removed in a future release.\n'

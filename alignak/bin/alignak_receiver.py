@@ -41,7 +41,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
  This class is an interface for the Receiver
  The receiver listens to the Arbiter for the configuration sent through
  the given port as first argument.
@@ -51,7 +51,7 @@
  listening the arbiter (one a timeout)
  In case the arbiter has a new conf to send, the receiver forget its old
  schedulers (and their associated broks) and take the new ones instead.
-'''
+"""
 
 import os
 import sys

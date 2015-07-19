@@ -43,7 +43,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
  This class is an interface for the Broker
  The broker listens to the Arbiter for the configuration sent through
  the given port as first argument.
@@ -53,7 +53,7 @@
  listening the arbiter (one a timeout)
  In case the arbiter has a new conf to send, the broker forget its old
  schedulers (and their associated broks) and take the new ones instead.
-'''
+"""
 
 import os
 import sys
@@ -62,6 +62,7 @@ import optparse
 
 from alignak.daemons.brokerdaemon import Broker
 from alignak import __version__
+
 
 def main():
     """Parse args and run main daemon function

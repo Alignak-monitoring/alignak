@@ -73,7 +73,7 @@
 # If the implementation is easy to explain, it may be a good idea.
 # Namespaces are one honking great idea -- let's do more of those!
 
-'''
+"""
  This class is the application in charge of scheduling
  The scheduler listens to the Arbiter for the configuration sent through
  the given port as first argument.
@@ -84,7 +84,7 @@
  listening the arbiter (one a timeout)
  In case the arbiter has a new conf to send, the scheduler is stopped
  and a new one is created.
-'''
+"""
 import os
 import sys
 import optparse
