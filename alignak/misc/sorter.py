@@ -64,6 +64,7 @@ def hst_srv_sort(s1, s2):
       * -1 if s1 > s2
       * 0 if s1 == s2 (not true)
       * 1 if s1 < s2
+    :rtype: int
     """
     if s1.business_impact > s2.business_impact:
         return -1
@@ -105,6 +106,7 @@ def worse_first(s1, s2):
       * -1 if s1 > s2
       * 0 if s1 == s2 (not true)
       * 1 if s1 < s2
+    :rtype: int
     """
     # Ok, we compute a importance value so
     # For host, the order is UP, UNREACH, DOWN
@@ -149,6 +151,7 @@ def last_state_change_earlier(s1, s2):
       * -1 if s1 > s2
       * 0 if s1 == s2 (not true)
       * 1 if s1 < s2
+    :rtype: int
     """
     # ok, here, same business_impact
     # Compare warn and crit state

@@ -75,7 +75,6 @@ from alignak.util import safe_print
 from alignak.message import Message
 
 
-
 class Regenerator(object):
     """
     Class for a Regenerator.
@@ -121,7 +120,6 @@ class Regenerator(object):
         # The Queue where to launch message, will be fill from the broker
         self.from_q = None
 
-
     def load_external_queue(self, from_q):
         """
         Load an external queue for sending messages
@@ -132,7 +130,6 @@ class Regenerator(object):
         :return: None
         """
         self.from_q = from_q
-
 
     def load_from_scheduler(self, sched):
         """
@@ -169,7 +166,6 @@ class Regenerator(object):
             self.realms.add(h.realm)
             break
 
-
     def want_brok(self, brok):
         """
         Function to tell whether we need a specific type of brok or not.
@@ -193,16 +189,18 @@ class Regenerator(object):
         # Not in don't want? so want! :)
         return True
 
-
     def manage_brok(self, brok):
-        """
-        Look for a manager function for a brok, and call it
+        """Look for a manager function for a brok, and call it
+
+        :param brok:
+        :type brok: object
+        :return:
+        :rtype:
         """
         manage = getattr(self, 'manage_' + brok.type + '_brok', None)
         # If we can and want it, got for it :)
         if manage and self.want_brok(brok):
             return manage(brok)
-
 
     def update_element(self, e, data):
         """
@@ -216,7 +214,6 @@ class Regenerator(object):
         """
         for prop in data:
             setattr(e, prop, data[prop])
-
 
     def all_done_linking(self, inst_id):
         """
@@ -428,7 +425,6 @@ class Regenerator(object):
         del self.inp_services[inst_id]
         del self.inp_servicegroups[inst_id]
 
-
     def linkify_a_command(self, o, prop):
         """
         Replace the command_name by the command object in o.prop
@@ -436,6 +432,7 @@ class Regenerator(object):
         :param o: A host or a service
         :type o: alignak.objects.schedulingitem.SchedulingItem
         :param prop: an attribute to replace ("check_command" or "event_handler")
+        :type prop: str
         :return: None
         """
         cc = getattr(o, prop, None)
@@ -455,6 +452,7 @@ class Regenerator(object):
         :type o: alignak.objects.notificationway.NotificationWay
         :param prop: an attribute to replace
                      ('host_notification_commands' or 'service_notification_commands')
+        :type prop: str
         :return: None
         """
         v = getattr(o, prop, None)
@@ -476,6 +474,7 @@ class Regenerator(object):
         :type o: alignak.objects.notificationway.NotificationWay
         :param prop: an attribute to replace
                      ('host_notification_period' or 'service_notification_period')
+        :type prop: str
         :return: None
         """
         t = getattr(o, prop, None)
@@ -494,6 +493,7 @@ class Regenerator(object):
         :type o: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
                      ('notification_period' or 'check_period')
+        :type prop: str
         :return: None
         """
         tpname = getattr(o, prop, None)
@@ -510,6 +510,7 @@ class Regenerator(object):
         :param o: A host or a service
         :type o: alignak.objects.SchedulingItem
         :param prop: an attribute to replace ('contacts')
+        :type prop: str
         :return: None
         """
         v = getattr(o, prop)
@@ -532,6 +533,7 @@ class Regenerator(object):
         :type o: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
             ('impacts', 'source_problems', 'parent_dependencies' or 'child_dependencies'))
+        :type prop: str
         :return: None
         """
         v = getattr(o, prop)
@@ -562,6 +564,7 @@ class Regenerator(object):
         :type o: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
             (''parents' 'childs')
+        :type prop: str
         :return: None
         """
         v = getattr(o, prop)
@@ -648,7 +651,6 @@ class Regenerator(object):
         for sg in self.servicegroups:
             sg.members = [s for s in sg.members if s.instance_id != c_id]
 
-
     def manage_initial_host_status_brok(self, b):
         """
         Manage initial_host_status brok : Update host object
@@ -678,7 +680,6 @@ class Regenerator(object):
 
         # Ok, put in in the in progress hosts
         inp_hosts[h.id] = h
-
 
     def manage_initial_hostgroup_status_brok(self, b):
         """
@@ -711,7 +712,6 @@ class Regenerator(object):
         # so now only save it
         inp_hostgroups[hg.id] = hg
 
-
     def manage_initial_service_status_brok(self, b):
         """
         Manage initial_service_status brok : Update service object
@@ -743,7 +743,6 @@ class Regenerator(object):
         # Ok, put in in the in progress hosts
         inp_services[s.id] = s
 
-
     def manage_initial_servicegroup_status_brok(self, b):
         """
         Manage initial_servicegroup_status brok : Update servicegroup object
@@ -774,7 +773,6 @@ class Regenerator(object):
         # We will link hosts into hostgroups later
         # so now only save it
         inp_servicegroups[sg.id] = sg
-
 
     def manage_initial_contact_status_brok(self, b):
         """
@@ -832,7 +830,6 @@ class Regenerator(object):
 
         c.notificationways = new_notifways
 
-
     def manage_initial_contactgroup_status_brok(self, b):
         """
         Manage initial_contactgroup_status brok : Update contactgroup object
@@ -864,7 +861,6 @@ class Regenerator(object):
         # so now only save it
         inp_contactgroups[cg.id] = cg
 
-
     def manage_initial_timeperiod_status_brok(self, b):
         """
         Manage initial_timeperiod_status brok : Update timeperiod object
@@ -887,7 +883,6 @@ class Regenerator(object):
             self.update_element(tp, data)
             self.timeperiods.add_item(tp)
 
-
     def manage_initial_command_status_brok(self, b):
         """
         Manage initial_command_status brok : Update command object
@@ -909,7 +904,6 @@ class Regenerator(object):
             self.update_element(c, data)
             self.commands.add_item(c)
 
-
     def manage_initial_scheduler_status_brok(self, b):
         """
         Manage initial_scheduler_status brok : Update scheduler object
@@ -928,7 +922,6 @@ class Regenerator(object):
         # print "CMD:", c
         self.schedulers[scheduler_name] = sched
         print "scheduler added"
-
 
     def manage_initial_poller_status_brok(self, b):
         """
@@ -949,7 +942,6 @@ class Regenerator(object):
         self.pollers[poller_name] = poller
         print "poller added"
 
-
     def manage_initial_reactionner_status_brok(self, b):
         """
         Manage initial_reactionner_status brok : Update reactionner object
@@ -968,7 +960,6 @@ class Regenerator(object):
         # print "CMD:", c
         self.reactionners[reactionner_name] = reac
         print "reactionner added"
-
 
     def manage_initial_broker_status_brok(self, b):
         """
@@ -989,7 +980,6 @@ class Regenerator(object):
         self.brokers[broker_name] = broker
         print "broker added"
 
-
     def manage_initial_receiver_status_brok(self, b):
         """
         Manage initial_receiver_status brok : Update receiver object
@@ -1008,8 +998,6 @@ class Regenerator(object):
         # print "CMD:", c
         self.receivers[receiver_name] = receiver
         print "receiver added"
-
-
 
     def manage_initial_broks_done_brok(self, b):
         """
@@ -1054,7 +1042,6 @@ class Regenerator(object):
         # Ok, good conf, we can update it
         c = self.configs[c_id]
         self.update_element(c, data)
-
 
     def manage_update_host_status_brok(self, b):
         """
@@ -1104,7 +1091,6 @@ class Regenerator(object):
             for dtc in h.downtimes + h.comments:
                 dtc.ref = h
 
-
     def manage_update_service_status_brok(self, b):
         """
         Manage update_service_status brok : Update service object
@@ -1150,7 +1136,6 @@ class Regenerator(object):
             for dtc in s.downtimes + s.comments:
                 dtc.ref = s
 
-
     def manage_update_broker_status_brok(self, b):
         """
         Manage update_broker_status brok : Update broker object
@@ -1166,7 +1151,6 @@ class Regenerator(object):
             self.update_element(s, data)
         except Exception:
             pass
-
 
     def manage_update_receiver_status_brok(self, b):
         """
@@ -1184,7 +1168,6 @@ class Regenerator(object):
         except Exception:
             pass
 
-
     def manage_update_reactionner_status_brok(self, b):
         """
         Manage update_reactionner_status brok : Update reactionner object
@@ -1201,7 +1184,6 @@ class Regenerator(object):
         except Exception:
             pass
 
-
     def manage_update_poller_status_brok(self, b):
         """
         Manage update_poller_status brok : Update poller object
@@ -1217,7 +1199,6 @@ class Regenerator(object):
             self.update_element(s, data)
         except Exception:
             pass
-
 
     def manage_update_scheduler_status_brok(self, b):
         """
@@ -1256,13 +1237,13 @@ class Regenerator(object):
             self.before_after_hook(b, h)
             self.update_element(h, data)
 
-
     def manage_host_next_schedule_brok(self, b):
         """
         Manage initial_timeperiod_status brok : Same as manage_host_check_result_brok
+
+        :return: None
         """
         self.manage_host_check_result_brok(b)
-
 
     def manage_service_check_result_brok(self, b):
         """
@@ -1280,10 +1261,11 @@ class Regenerator(object):
             self.before_after_hook(b, s)
             self.update_element(s, data)
 
-
-    # A service check update have just arrived, we UPDATE data info with this
     def manage_service_next_schedule_brok(self, b):
         """
         Manage service_next_schedule brok : Same as manage_service_check_result_brok
+        A service check update have just arrived, we UPDATE data info with this
+
+        :return: None
         """
         self.manage_service_check_result_brok(b)

@@ -59,6 +59,7 @@ from alignak.util import safe_print
 from alignak.misc.sorter import hst_srv_sort, last_state_change_earlier
 from alignak.misc.filter import only_related_to
 
+
 class DataManager(object):
     """
     DataManager provide a set of accessor to Alignak objects
@@ -71,7 +72,7 @@ class DataManager(object):
         """
         Set the regenerator attribute
 
-        :param rg:
+        :param rg: regenerator object
         :type rg: alignak.misc.regenerator.Regenerator
         :return: None
         """
@@ -82,6 +83,7 @@ class DataManager(object):
         Get a specific host from Alignak
 
         :param hname: A host name (a casual string)
+        :type hname: str
         :return: the Host object with host_name=hname
         :rtype: alignak.objects.host.Host
         """
@@ -92,8 +94,10 @@ class DataManager(object):
 
     def get_service(self, hname, sdesc):
         """
-        :param hname: A host name (a casual string)
-        :param sdesc: A service description (a casual string)
+        :param hname: A host name
+        :type hname: str
+        :param sdesc: A service description
+        :type sdesc: str
         :return: the Service object with host_name=hname and service_description=sdec
         :rtype: alignak.objects.service.Service
         """
@@ -117,7 +121,8 @@ class DataManager(object):
         """
         Get a specific contact
 
-        :param name: A contact name (casual string)
+        :param name: A contact name
+        :type name: str
         :return: the Contact object with contact_name=name
         :rtype: alignak.objects.contact.Contact
         """
@@ -128,7 +133,8 @@ class DataManager(object):
         """
         Get a specific contact group
 
-        :param name: A contactgroup name (casual string)
+        :param name: A contactgroup name
+        :type name: str
         :return: the Contact object with contactgroup_name=name
         :rtype: alignak.objects.contactgroup.Contactgroup
         """
@@ -157,7 +163,8 @@ class DataManager(object):
         """
         Get a specific host group
 
-        :param name: A hostgroup name (casual string)
+        :param name: A hostgroup name
+        :type name: str
         :return: the Contact object with hostgroup_name=name
         :rtype: alignak.objects.hostgroup.Hostgroup
         """
@@ -176,7 +183,8 @@ class DataManager(object):
         """
         Get a specific service group
 
-        :param name: A servicegroup name (casual string)
+        :param name: A servicegroup name
+        :type name: str
         :return: the Contact object with servicegroup_name=name
         :rtype: alignak.objects.servicegroup.Servicegroup
         """
@@ -187,7 +195,8 @@ class DataManager(object):
         Get hostgroups sorted by names, and zero size in the end
         if selected one, put it in the first place
 
-        :param selected: A hostgroup name (casual string)
+        :param selected: A hostgroup name
+        :type selected: str
         :return: A sorted hostgroup list
         :rtype: list
         """
@@ -281,7 +290,7 @@ class DataManager(object):
         Get program start time
 
         :return: Timestamp representing start time
-        :rtype: int
+        :rtype: int | None
         """
         for c in self.rg.configs.values():
             return c.program_start
@@ -297,13 +306,14 @@ class DataManager(object):
         return self.rg.realms
 
     def get_realm(self, r):
-        # TODO : Remove this
         """
         Get a specific realm, but this will return None always
 
-        :param name: A realm name (casual string)
+        :param name: A realm name
+        :type name: str
         :return: the Realm object with realm_name=name (that's not true)
-        :rtype: alignak.objects.realm.Realm
+        :rtype: alignak.objects.realm.Realm | None
+        TODO: Remove this
         """
         if r in self.rg.realms:
             return r
@@ -327,7 +337,8 @@ class DataManager(object):
         """
         Get hosts tagged with a specific tag
 
-        :param name: A tag name (casual string)
+        :param name: A tag name
+        :type name: str
         :return:  Hosts list with tag in host tags
         :rtype: alignak.objects.host.Host
         """
@@ -382,7 +393,9 @@ class DataManager(object):
         * Sort items by default
 
         :param to_sort: if false, won't sort results
+        :type to_sort: bool
         :param get_acknowledged: if true will include acknowledged items
+        :type get_acknowledged: bool
         :return: A list of host and service
         :rtype: list
         """
@@ -449,6 +462,7 @@ class DataManager(object):
         Get the number of problems (host or service)
 
         :return: An integer representing the number of non acknowledged problems
+        :rtype: int
         """
         return len(self.get_all_problems(to_sort=False))
 
@@ -456,8 +470,10 @@ class DataManager(object):
         """
         Get the number of problems (host or service) including acknowledged ones for a specific user
 
-        :param user: A contact (Ui user maybe) (casual string)
+        :param user: A contact (Ui user maybe)
+        :type user: str
         :return: A list of host and service with acknowledged problem for contact=user
+        :rtype: list
         """
         res = []
         res.extend([s for s in self.rg.services
@@ -471,6 +487,7 @@ class DataManager(object):
         Get the number of impacts (host or service)
 
         :return: An integer representing the number of impact items
+        :rtype: int
         """
         return len(self.get_all_impacts())
 
@@ -479,6 +496,7 @@ class DataManager(object):
         Get the number of hosts and services (sum)
 
         :return: An integer representing the number of items
+        :rtype: int
         """
         return len(self.rg.services) + len(self.rg.hosts)
 
@@ -512,6 +530,7 @@ class DataManager(object):
         Used for aggregation
 
         :return: An integer between 0 and 2
+        :rtype: int
         """
         h_states = [h.state_id for h in self.rg.hosts
                     if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
@@ -537,6 +556,7 @@ class DataManager(object):
         Used for aggregation
 
         :return: An integer between 0 and 2
+        :rtype: int
         """
         h_states = [h.state_id for h in self.rg.hosts if h.is_problem and h.state_id in [1, 2]]
         s_states = [s.state_id for s in self.rg.services if s.is_problem and s.state_id in [1, 2]]
@@ -559,6 +579,7 @@ class DataManager(object):
         * not OK state
 
         :return: An integer representing the percentage of services fulfilling the above condition
+        :rtype: int
         """
         all_services = self.rg.services
         problem_services = []
@@ -577,6 +598,7 @@ class DataManager(object):
         * not OK state
 
         :return: An integer representing the percentage of hosts fulfilling the above condition
+        :rtype: int
         """
         all_hosts = self.rg.hosts
         problem_hosts = []
@@ -598,6 +620,7 @@ class DataManager(object):
 
         :return: An integer representing the number of hosts and services
          fulfilling the above condition
+         :rtype: int
         """
         h_states = [h.state_id for h in self.rg.hosts
                     if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
