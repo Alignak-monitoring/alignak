@@ -48,7 +48,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DBMysql class to access MYSQL databases
 
+"""
 import MySQLdb
 from MySQLdb import IntegrityError
 from MySQLdb import ProgrammingError
@@ -72,6 +74,8 @@ class DBMysql(DB):
 
     def connect_database(self):
         """Create the database connection
+
+        :return: None
         TODO: finish (begin :) ) error catch and conf parameters...
         Import to catch exception
         """
@@ -93,6 +97,13 @@ class DBMysql(DB):
 
     def execute_query(self, query, do_debug=False):
         """Just run the query
+
+        :param query: the query
+        :type query: str
+        :param do_debug: execute in debug or not
+        :type do_debug: bool
+        :return: True if query execution is ok, otherwise False
+        :rtype: bool
         TODO: finish catch
         """
         if do_debug:

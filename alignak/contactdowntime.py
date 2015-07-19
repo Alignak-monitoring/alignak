@@ -44,12 +44,18 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides ContactDowntime class which implement downtime for contact
 
+"""
 import time
 from alignak.log import logger
 
-""" TODO: Add some comment about this class for the doc"""
+
 class ContactDowntime:
+    """ContactDowntime class allows a contact to be in downtime. During this time
+    the contact won't get notifications
+
+    """
     id = 1
 
     # Just to list the properties we will send as pickle
@@ -85,9 +91,11 @@ class ContactDowntime:
         self.can_be_deleted = False
         # self.add_automatic_comment()
 
-
-    # Check if we came into the activation of this downtime
     def check_activation(self):
+        """Enter or exit downtime if necessary
+
+        :return: None
+        """
         now = time.time()
         was_is_in_effect = self.is_in_effect
         self.is_in_effect = (self.start_time <= now <= self.end_time)
@@ -102,27 +110,47 @@ class ContactDowntime:
             self.exit()
 
     def in_scheduled_downtime(self):
+        """Getter for is_in_effect attribute
+
+        :return: True if downtime is active, False otherwise
+        :rtype: bool
+        """
         return self.is_in_effect
 
-    # The referenced host/service object enters now a (or another) scheduled
-    # downtime. Write a log message only if it was not already in a downtime
     def enter(self):
+        """Wrapper to call raise_enter_downtime_log_entry for ref (host/service)
+
+        :return: None
+        """
         self.ref.raise_enter_downtime_log_entry()
 
-    # The end of the downtime was reached.
     def exit(self):
+        """Wrapper to call raise_exit_downtime_log_entry for ref (host/service)
+        set can_be_deleted to True
+
+        :return: None
+        """
         self.ref.raise_exit_downtime_log_entry()
         self.can_be_deleted = True
 
-    # A scheduled downtime was prematurely canceled
     def cancel(self):
+        """Wrapper to call raise_cancel_downtime_log_entry for ref (host/service)
+        set can_be_deleted to True
+        set is_in_effect to False
+
+        :return: None
+        """
         self.is_in_effect = False
         self.ref.raise_cancel_downtime_log_entry()
         self.can_be_deleted = True
 
-    # Call by pickle to dataify the comment
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle to dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+
+        :return: data pickled
+        :rtype: list
+        """
         # print "Asking a getstate for a downtime on", self.ref.get_dbg_name()
         cls = self.__class__
         # id is not in *_properties
@@ -134,8 +162,13 @@ class ContactDowntime:
         res.reverse()
         return res
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Inverted function of getstate
+
+        :param state: state to set
+        :type state: list
+        :return: None
+        """
         cls = self.__class__
         self.id = state.pop()
         for prop in cls.properties:

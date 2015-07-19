@@ -52,6 +52,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+"""This module provides a system-independent Action class. Action class is used
+for handling check and notification execution (handle output, execute process, kill process..)
+
+"""
 import os
 import time
 import shlex
@@ -79,8 +83,14 @@ shellchars = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
                    '|', '{', '}', ';', '<', '>', '?', '`')
 
 
-# Try to read a fd in a non blocking mode
 def no_block_read(output):
+    """Try to read a file descriptor in a non blocking mode
+
+    :param output: file or socket to read from
+    :type output: file
+    :return: data read from fd
+    :rtype: str
+    """
     fd = output.fileno()
     fl = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
@@ -99,30 +109,35 @@ class __Action(object):
     """
     id = 0
 
-    # Ok when we load a previous created element, we should
-    # not start at 0 for new object, so we must raise the Action.id
-    # if need
     @staticmethod
     def assume_at_least_id(_id):
+        """Set Action.id to the maximum of itself and _id
+
+        :param _id: action id to compare (from a previous run usually)
+        :type _id: int
+        :return: None
+        """
         Action.id = max(Action.id, _id)
 
 
     def set_type_active(self):
-        "Dummy function, only useful for checks"
+        """Dummy function, only useful for checks"""
         pass
 
     def set_type_passive(self):
-        "Dummy function, only useful for checks"
+        """Dummy function, only useful for checks"""
         pass
 
     def get_local_environnement(self):
         """
-
-        Mix the env and the environment variables into a new local
-        env dict.
+        Mix the environment and the environment variables into a new local
+        environment dictionary
 
         Note: We cannot just update the global os.environ because this
         would effect all other checks.
+
+        :return: local environment variables
+        :rtype: dict
         """
         # Do not use copy.copy() here, as the resulting copy still
         # changes the real environment (it is still a os._Environment
@@ -134,11 +149,12 @@ class __Action(object):
 
 
     def execute(self):
-        """
-        Start this action command. The command will be executed in a
+        """Start this action command. The command will be executed in a
         subprocess.
-        """
 
+        :return: None or str 'toomanyopenfiles'
+        :rtype: None | str
+        """
         self.status = 'launched'
         self.check_time = time.time()
         self.wait_time = 0.0001
@@ -155,6 +171,15 @@ class __Action(object):
 
 
     def get_outputs(self, out, max_plugins_output_length):
+        """Get outputs from single output (split perfdata etc).
+        Edit output, perf_data and long_output attributes.
+
+        :param out: output data of a check
+        :type out: str
+        :param max_plugins_output_length: max plugin data length
+        :type max_plugins_output_length: int
+        :return: None
+        """
         # Squeeze all output after max_plugins_output_length
         out = out[:max_plugins_output_length]
         # manage escaped pipes
@@ -190,6 +215,12 @@ class __Action(object):
 
 
     def check_finished(self, max_plugins_output_length):
+        """Handle action if it is finished (get stdout, stderr, exit code...)
+
+        :param max_plugins_output_length: max plugin data length
+        :type max_plugins_output_length: int
+        :return: None
+        """
         # We must wait, but checks are variable in time
         # so we do not wait the same for an little check
         # than a long ping. So we do like TCP: slow start with *2
@@ -273,9 +304,13 @@ class __Action(object):
 
 
     def copy_shell__(self, new_i):
-        """
-        Copy all attributes listed in 'only_copy_prop' from `self` to
+        """Copy all attributes listed in 'only_copy_prop' from `self` to
         `new_i`.
+
+        :param new_i: object to
+        :type new_i: object
+        :return: object with new properties added
+        :rtype: object
         """
         for prop in only_copy_prop:
             setattr(new_i, prop, getattr(self, prop))
@@ -283,6 +318,13 @@ class __Action(object):
 
 
     def got_shell_characters(self):
+        """Check if the command_attribute has shell characters
+        Shell characters are : '!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
+                               '|', '{', '}', ';', '<', '>', '?', '`'
+
+        :return: True if one shell character is found, False otherwise
+        :rtype: bool
+        """
         for c in self.command:
             if c in shellchars:
                 return True
@@ -297,11 +339,22 @@ class __Action(object):
 if os.name != 'nt':
 
     class Action(__Action):
+        """Action class for *NIX systems
 
-        # We allow direct launch only for 2.7 and higher version
-        # because if a direct launch crash, under this the file handles
-        # are not releases, it's not good.
+        """
+
         def execute__(self, force_shell=sys.version_info < (2, 7)):
+            """Execute action in a subprocess
+
+            :param force_shell: if True, force execution in a shell
+            :type force_shell: bool
+            :return: None or str 'toomanyopenfiles'
+            TODO: Clean this
+            """
+            # We allow direct launch only for 2.7 and higher version
+            # because if a direct launch crash, under this the file handles
+            # are not releases, it's not good.
+
             # If the command line got shell characters, we should go
             # in a shell mode. So look at theses parameters
             force_shell |= self.got_shell_characters()
@@ -351,6 +404,10 @@ if os.name != 'nt':
                     return 'toomanyopenfiles'
 
         def kill__(self):
+            """Kill the action and close fds
+
+            :return: None
+            """
             # We kill a process group because we launched them with
             # preexec_fn=os.setsid and so we can launch a whole kill
             # tree instead of just the first one
@@ -370,8 +427,15 @@ else:
 
 
     class Action(__Action):
+        """Action class for Windows systems
+
+        """
 
         def execute__(self):
+            """Execute action in a subprocess
+
+            :return: None
+            """
             # 2.7 and higher Python version need a list of args for cmd
             # 2.4->2.6 accept just the string command
             if sys.version_info < (2, 7):
@@ -396,4 +460,9 @@ else:
                 self.execution_time = time.time() - self.check_time
 
         def kill__(self):
+            """Wrapped to call TerminateProcess
+
+            :return: None
+            TODO: This look like python2.5 style. Maybe we change that.
+            """
             TerminateProcess(int(self.process._handle), -1)

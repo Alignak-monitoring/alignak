@@ -57,7 +57,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module IForArbiter and Arbiter classes used to
+communicate with HA Arbiter or some external tools
+"""
 import sys
 import os
 import time
@@ -80,13 +83,20 @@ from alignak.external_command import ExternalCommand
 from alignak.property import BoolProp
 from alignak.util import jsonify_r
 
-# Interface for the other Arbiter
-# It connects, and together we decide who's the Master and who's the Slave, etc.
-# Here is a also a function to get a new conf from the master
-class IForArbiter(Interface):
 
-    doc = 'Does the daemon got a configuration (internal)'
+class IForArbiter(Interface):
+    """Interface for HA Arbiter. The Slave/Master arbiter can get /push conf
+
+    """
+
     def have_conf(self, magic_hash):
+        """Does the daemon got a configuration (internal) (HTTP GET)
+
+        :param magic_hash: magic hash of configuration
+        :type magic_hash: int
+        :return: True if the arbiter has the specified conf, False otherwise
+        :rtype: bool
+        """
         # Beware, we got an str in entry, not an int
         magic_hash = int(magic_hash)
         # I've got a conf and a good one
@@ -94,27 +104,32 @@ class IForArbiter(Interface):
             return True
         else:  # I've no conf or a bad one
             return False
-    have_conf.doc = doc
 
-
-    doc = 'Put a new configuration to the daemon'
-    # The master Arbiter is sending us a new conf in a pickle way. Ok, we take it
     def put_conf(self, conf):
+        """HTTP POST to the arbiter with the new conf (master send to slave)
+
+        :param conf: pickled the new configuration
+        :type conf:
+        :return: None
+        """
         super(IForArbiter, self).put_conf(conf)
         self.app.must_run = False
     put_conf.method = 'POST'
-    put_conf.doc = doc
 
-
-    doc = 'Get the managed configuration (internal)'
     def get_config(self):
+        """Get the managed configuration (internal) (HTTP GET)
+
+        :return: Currently managed configuration
+        :rtype: object
+        """
         return self.app.conf
-    get_config.doc = doc
 
-
-    doc = 'Ask the daemon to do not run'
-    # The master arbiter asks me not to run!
     def do_not_run(self):
+        """Master tells to slave to not run (HTTP GET)
+        Master will ignore this call
+
+        :return: None
+        """
         # If I'm the master, ignore the command
         if self.app.is_master:
             logger.debug("Received message to not run. "
@@ -125,12 +140,19 @@ class IForArbiter(Interface):
             self.app.last_master_speack = time.time()
             self.app.must_run = False
     do_not_run.need_lock = False
-    do_not_run.doc = doc
 
-
-    doc = 'Get the satellite names sort by type'
-    # Here a function called by check_alignak to get daemons list
     def get_satellite_list(self, daemon_type=''):
+        """Get the satellite names sorted by type (HTTP GET)
+
+        :param daemon_type: daemon type to filter
+        :type daemon_type: str
+        :return: dict with key *daemon_type* and value list of daemon name
+        Example ::
+
+         {'poller': ['Poller1', 'Poller2']}
+
+        :rtype: dict
+        """
         res = {}
         for t in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
                   'broker']:
@@ -144,20 +166,32 @@ class IForArbiter(Interface):
                 if hasattr(dae, daemon_name_attr):
                     satellite_list.append(getattr(dae, daemon_name_attr))
         return res
-    get_satellite_list.doc = doc
 
-
-    doc = 'Dummy call for the arbiter'
-    # Dummy call. We are the master, we manage what we want
     def what_i_managed(self):
+        """Dummy call for the arbiter
+
+        :return: {}, always
+        :rtype: dict
+        """
         return {}
     what_i_managed.need_lock = False
-    what_i_managed.doc = doc
 
-
-    doc = 'Return all the data of the satellites'
-    # We will try to export all data from our satellites, but only the json-able fields
     def get_all_states(self):
+        """Return all the data of satellites
+
+        :return: dict containing satellites data
+        Output looks like this ::
+
+        {'arbiter' : [{'schedproperty1':'value1' ..}, {'pollerproperty1', 'value11' ..}, ..],
+        'scheduler': [..],
+        'poller': [..],
+        'reactionner': [..],
+        'receiver': [..],
+         'broker: [..]'
+        }
+
+        :rtype: dict
+        """
         res = {}
         for t in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
                   'broker']:
@@ -183,13 +217,16 @@ class IForArbiter(Interface):
                                 logger.debug('%s', exp)
                 lst.append(e)
         return res
-    get_all_states.doc = doc
 
-
-    # Try to give some properties of our objects
-    doc = 'Dump all objects of the type in [hosts, services, contacts, ' \
-          'commands, hostgroups, servicegroups]'
     def get_objects_properties(self, table):
+        """'Dump all objects of the type in
+        [hosts, services, contacts, commands, hostgroups, servicegroups]
+
+        :param table: table name
+        :type table: str
+        :return: list all properties of all objects
+        :rtype: list
+        """
         logger.debug('ASK:: table= %s', str(table))
         objs = getattr(self.app.conf, table, None)
         logger.debug("OBJS:: %s", str(objs))
@@ -200,11 +237,12 @@ class IForArbiter(Interface):
             l = jsonify_r(obj)
             res.append(l)
         return res
-    get_objects_properties.doc = doc
 
 
-# Main Arbiter Class
 class Arbiter(Daemon):
+    """Arbiter class. Referenced as "app" in most Interface
+
+    """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
                  debug_file, profile=None, analyse=None, migrate=None, arb_name=''):
@@ -236,9 +274,14 @@ class Arbiter(Daemon):
         self.conf = Config()
 
 
-
-    # Use for adding things like broks
     def add(self, b):
+        """Generic function to add objects to queues.
+        Only manage Broks and ExternalCommand
+
+        :param b: objects to add
+        :type b: alignak.brok.Brok | alignak.external_command.ExternalCommand
+        :return: None
+        """
         if isinstance(b, Brok):
             self.broks[b.id] = b
         elif isinstance(b, ExternalCommand):
@@ -246,13 +289,11 @@ class Arbiter(Daemon):
         else:
             logger.warning('Cannot manage object type %s (%s)', type(b), b)
 
-    # We must push our broks to the broker
-    # because it's stupid to make a crossing connection
-    # so we find the broker responsible for our broks,
-    # and we send it to him
-    # TODO: better find the broker, here it can be dead?
-    # or not the good one?
     def push_broks_to_broker(self):
+        """Send all broks from arbiter internal list to broker
+
+        :return: None
+        """
         for brk in self.conf.brokers:
             # Send only if alive of course
             if brk.manage_arbiters and brk.alive:
@@ -261,9 +302,11 @@ class Arbiter(Daemon):
                     # They are gone, we keep none!
                     self.broks.clear()
 
-    # We must take external_commands from all satellites
-    # like brokers, pollers, reactionners or receivers
     def get_external_commands_from_satellites(self):
+        """Get external commands from all other satellites
+
+        :return: None
+        """
         sat_lists = [self.conf.brokers, self.conf.receivers,
                      self.conf.pollers, self.conf.reactionners]
         for lst in sat_lists:
@@ -274,8 +317,12 @@ class Arbiter(Daemon):
                     for new_cmd in new_cmds:
                         self.external_commands.append(new_cmd)
 
-    # Our links to satellites can raise broks. We must send them
     def get_broks_from_satellitelinks(self):
+        """Get broks from my internal satellitelinks (satellite status)
+
+        :return: None
+        TODO: Why satellitelink obj have broks and not the app itself?
+        """
         tabs = [self.conf.brokers, self.conf.schedulers,
                 self.conf.pollers, self.conf.reactionners,
                 self.conf.receivers]
@@ -285,8 +332,11 @@ class Arbiter(Daemon):
                 for b in new_broks:
                     self.add(b)
 
-    # Our links to satellites can raise broks. We must send them
     def get_initial_broks_from_satellitelinks(self):
+        """Get initial broks from my internal satellitelinks (satellite status)
+
+        :return: None
+        """
         tabs = [self.conf.brokers, self.conf.schedulers,
                 self.conf.pollers, self.conf.reactionners,
                 self.conf.receivers]
@@ -295,19 +345,45 @@ class Arbiter(Daemon):
                 b = s.get_initial_status_brok()
                 self.add(b)
 
-
-    # Load the external commander
     def load_external_command(self, e):
+        """Set external_command attribute to the external command manager
+        and fifo attribute to a new fifo fd
+
+        :param e: External command manager to set
+        :type e: alignak.external_command.ExternalCommandManager
+        :return: None
+        TODO: Is fifo useful?
+        """
         self.external_command = e
         self.fifo = e.open()
 
-
     def get_daemon_links(self, daemon_type):
+        """Get the name of arbiter link (here arbiters)
+
+        :param daemon_type: daemon type
+        :type daemon_type: str
+        :return: named used to stroke this deamon type links
+        :rtype: str
+        """
         # the attribute name to get these differs for schedulers and arbiters
         return daemon_type + 's'
 
-
     def load_config_file(self):
+        """Load main configuration file (alignak.cfg)::
+
+        * Read all files given in the -c parameters
+        * Read all .cfg files in  cfg_dir
+        * Read all files in cfg_file
+        * Create objects (Arbiter, Module)
+        * Set HTTP links info (ssl etc)
+        * Load its own modules
+        * Execute read_configuration hook (for arbiter modules)
+        * Create all objects (Service, Host, Realms ...)
+        * "Compile" configuration (Linkify, explode, apply inheritance, fill default values ...)
+        * Cut conf into parts and prepare it for sending
+
+        :return: None
+        """
         logger.info("Loading configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
@@ -520,8 +596,15 @@ class Arbiter(Daemon):
 
         logger.info("Configuration Loaded")
 
-
     def load_modules_configuration_objects(self, raw_objects):
+        """Load configuration objects from arbiter modules
+        If module implements get_objects arbiter will call it and add create
+        objects
+
+        :param raw_objects: raw objects we got from reading config files
+        :type raw_objects: dict
+        :return: None
+        """
         # Now we ask for configuration modules if they
         # got items for us
         for inst in self.modules_manager.instances:
@@ -556,10 +639,11 @@ class Arbiter(Daemon):
                         logger.debug("Added %i objects to %s from module %s",
                                      len(r[prop]), k, inst.get_name())
 
-
-
     def launch_analyse(self):
+        """Print the number of objects we have for each type.
 
+        :return: None
+        """
         logger.info("We are doing an statistic analysis on the dump file %s", self.analyse)
         stats = {}
         types = ['hosts', 'services', 'contacts', 'timeperiods', 'commands', 'arbiters',
@@ -581,8 +665,12 @@ class Arbiter(Daemon):
         f.write(s)
         f.close()
 
-
     def go_migrate(self):
+        """Migrate configuration
+
+        :return: None
+        TODO: Remove it
+        """
         print "***********" * 5
         print "WARNING : this feature is NOT supported in this version!"
         print "***********" * 5
@@ -621,10 +709,19 @@ class Arbiter(Daemon):
         # Ok we can exit now
         sys.exit(0)
 
-
-
-    # Main loop function
     def main(self):
+        """Main arbiter function::
+
+        * Set logger
+        * Log Alignak headers
+        * Init daemon
+        * Register interface
+        * Launch modules
+        * Load retention
+        * Do mainloop
+
+        :return: None
+        """
         try:
             # Setting log level
             logger.setLevel('INFO')
@@ -665,9 +762,11 @@ class Arbiter(Daemon):
             self.print_unrecoverable(traceback.format_exc())
             raise
 
-
     def setup_new_conf(self):
-        """ Setup a new conf received from a Master arbiter. """
+        """ Setup a new conf received from a Master arbiter.
+
+        :return: None
+        """
         conf = self.new_conf
         if not conf:
             return
@@ -682,8 +781,12 @@ class Arbiter(Daemon):
             else:
                 arb.is_me = lambda x: False  # and we know who we are not, just keep it.
 
-
     def do_loop_turn(self):
+        """Loop turn for Arbiter
+        If master, run, else wait for master death
+
+        :return: None
+        """
         # If I am a spare, I wait for the master arbiter to send me
         # true conf.
         if self.me.spare:
@@ -694,9 +797,11 @@ class Arbiter(Daemon):
             # Main loop
             self.run()
 
-
-    # We wait (block) for arbiter to send us something
     def wait_for_master_death(self):
+        """Wait for a master timeout and take the lead if necessary
+
+        :return: None
+        """
         logger.info("Waiting for master death")
         timeout = 1.0
         self.last_master_speack = time.time()
@@ -707,7 +812,6 @@ class Arbiter(Daemon):
             if not arb.spare:
                 master_timeout = arb.check_interval * arb.max_check_attempts
         logger.info("I'll wait master for %d seconds", master_timeout)
-
 
         while not self.interrupted:
             elapsed, _, tcdiff = self.handleRequests(timeout)
@@ -737,10 +841,11 @@ class Arbiter(Daemon):
                 self.must_run = True
                 break
 
-
-    # Take all external commands, make packs and send them to
-    # the schedulers
     def push_external_commands_to_schedulers(self):
+        """Send external commands to schedulers
+
+        :return: None
+        """
         # Now get all external commands and put them into the
         # good schedulers
         for ext_cmd in self.external_commands:
@@ -755,16 +860,24 @@ class Arbiter(Daemon):
             # clean them
             sched.external_commands = []
 
-
-    # We will log if there are time period activations
-    # change as NOTICE in logs.
     def check_and_log_tp_activation_change(self):
+        """Raise log for timeperiod change (useful for debug)
+
+        :return: None
+        """
         for tp in self.conf.timeperiods:
             tp.check_and_log_activation_change()
 
-
-    # Main function
     def run(self):
+        """Run Arbiter daemon ::
+
+        * Dispatch conf
+        * Get initial brok from links
+        * Load external command manager
+        * Principal loop (send broks, external command, re dispatch etc.)
+
+        :return:None
+        """
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
@@ -878,32 +991,60 @@ class Arbiter(Daemon):
                 self.dump_memory()
                 self.need_dump_memory = False
 
-
     def get_daemons(self, daemon_type):
-        """ Returns the daemons list defined in our conf for the given type """
+        """Returns the daemons list defined in our conf for the given type
+
+        :param daemon_type: deamon type needed
+        :type daemon_type: str
+        :return: attribute value if exist
+        :rtype: str | None
+        """
         # shouldn't the 'daemon_types' (whatever it is above) be always present?
         return getattr(self.conf, daemon_type + 's', None)
 
-
-    # Helper functions for retention modules
-    # So we give our broks and external commands
     def get_retention_data(self):
+        """Get data for retention
+
+        :return: broks and external commands in a dict
+        :rtype: dict
+        """
         r = {}
         r['broks'] = self.broks
         r['external_commands'] = self.external_commands
         return r
 
-
-    # Get back our data from a retention module
     def restore_retention_data(self, data):
+        """Restore data from retention (broks, and external commands)
+
+        :param data: data to restore
+        :type data: dict
+        :return: None
+        """
         broks = data['broks']
         external_commands = data['external_commands']
         self.broks.update(broks)
         self.external_commands.extend(external_commands)
 
-
-    # stats threads is asking us a main structure for stats
     def get_stats_struct(self):
+        """Get state of modules and create a scheme for stats data of daemon
+
+        :return: A dict with the following structure
+        ::
+
+           { 'metrics': ['arbiter.%s.external-commands.queue %d %d'],
+             'version': __version__,
+             'name': self.name,
+             'type': 'arbiter',
+             'hosts': len(self.conf.hosts)
+             'services': len(self.conf.services)
+             'modules':
+                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                        ]
+           }
+
+        :rtype: dict
+        """
         now = int(time.time())
         # call the daemon one
         res = super(Arbiter, self).get_stats_struct()

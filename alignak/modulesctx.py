@@ -41,7 +41,12 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+""" This module provides ModulesContext class that allow Alignak module
+to load other module.
+This will become deprecated with namespace in Alignak
+and keep for backward compatibility with Shinken.
 
+"""
 import os
 import sys
 
@@ -50,17 +55,38 @@ from alignak.modulesmanager import ModulesManager
 
 
 class ModulesContext(object):
+    """ModulesContext class is used to load modules in Alignak
+    from modules_dir defined in configuration
+
+    """
     def __init__(self):
         self.modules_dir = None
 
     def set_modulesdir(self, modulesdir):
+        """Setter for modulesdir attribute
+
+        :param modulesdir: value to set
+        :type modulesdir: srt
+        :return: None
+        """
         self.modules_dir = modulesdir
 
     def get_modulesdir(self):
+        """Getter for modulesdir attribute
+
+        :return: folder of modules
+        :rtype: str
+        """
         return self.modules_dir
 
-    # Useful for a module to load another one, and get a handler to it
     def get_module(self, mod_name):
+        """Get and load a module
+
+        :param mod_name: module name to get
+        :type mod_name: str
+        :return: module
+        :rtype: object
+        """
         if self.modules_dir and self.modules_dir not in sys.path:
             sys.path.append(self.modules_dir)
         if self.modules_dir:
@@ -75,6 +101,5 @@ class ModulesContext(object):
             return mod
         # otherwise simply try new and old style:
         return ModulesManager.try_load(mod_name, mod_dir)
-
 
 modulesctx = ModulesContext()

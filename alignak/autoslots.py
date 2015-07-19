@@ -53,16 +53,27 @@
 
 
 class AutoSlots(type):
+    """AutoSlots inherit from type, it's compulsory for metaclass statement
 
-    # new is call when we create a new Class
-    # that have metaclass = AutoSlots
-    # CLS is AutoSlots
-    # name is string of the Class (like Service)
-    # bases are the Classes of which Class inherits (like SchedulingItem)
-    # dct is the new Class dict (like all method of Service)
-    # Some properties names are not allowed in __slots__ like 2d_coords of
-    # Host, so we must tag them in properties with no_slots
+    """
+
+
     def __new__(cls, name, bases, dct):
+        """Called when we create a new Class
+        Some properties names are not allowed in __slots__ like 2d_coords of
+        Host, so we must tag them in properties with no_slots
+
+        :param cls: AutoSlots
+        :type cls: object
+        :param name: string of the Class (like Service)
+        :type name: str
+        :param bases: Classes of which Class inherits (like SchedulingItem)
+        :type bases: object
+        :param dct: new Class dict (like all method of Service)
+        :type dct: object
+        :return: new object
+        :rtype: object
+        """
         # Thanks to Bertrand Mathieu to the set idea
         slots = dct.get('__slots__', set())
         # Now get properties from properties and running_properties

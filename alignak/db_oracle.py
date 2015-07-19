@@ -46,7 +46,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DBOracle class to access Oracle databases
 
+"""
 # Failed to import will be catch by __init__.py
 from cx_Oracle import connect as connect_function
 from cx_Oracle import IntegrityError as IntegrityError_exp
@@ -79,9 +81,10 @@ class DBOracle(DB):
 
     def connect_database(self):
         """Create the database connection
+
+        :return: None
         TODO: finish (begin :) ) error catch and conf parameters...
         """
-
         connstr = '%s/%s@%s' % (self.user, self.password, self.database)
 
         self.db = connect_function(connstr)
@@ -90,6 +93,10 @@ class DBOracle(DB):
 
     def execute_query(self, query):
         """ Execute a query against an Oracle database.
+
+        :param query: the query
+        :type query: str
+        :return: None
         """
         logger.debug("[DBOracle] Execute Oracle query %s\n", query)
         try:

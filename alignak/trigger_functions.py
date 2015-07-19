@@ -48,7 +48,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide a set of function for triggers
+Basically used to handle perfdata, exit status and output
 
+"""
 import time
 import re
 
@@ -73,9 +76,16 @@ class declared(object):
         logger.debug("Calling %s with arguments %s", self.f.func_name, args)
         return self.f(*args)
 
+
 @declared
 def up(obj, output):
     """ Set a host in UP state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 0)
 
@@ -83,6 +93,12 @@ def up(obj, output):
 @declared
 def down(obj, output):
     """ Set a host in DOWN state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 1)
 
@@ -90,6 +106,12 @@ def down(obj, output):
 @declared
 def ok(obj, output):
     """ Set a service in OK state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 0)
 
@@ -97,6 +119,12 @@ def ok(obj, output):
 @declared
 def warning(obj, output):
     """ Set a service in WARNING state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 1)
 
@@ -104,6 +132,12 @@ def warning(obj, output):
 @declared
 def critical(obj, output):
     """ Set a service in CRITICAL state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 2)
 
@@ -111,6 +145,12 @@ def critical(obj, output):
 @declared
 def unknown(obj, output):
     """ Set a service in UNKNOWN state
+
+    :param obj: object
+    :type obj: object
+    :param output:
+    :type output:
+    :return: None
     """
     set_value(obj, output, None, 3)
 
@@ -118,6 +158,16 @@ def unknown(obj, output):
 @declared
 def set_value(obj_ref, output=None, perfdata=None, return_code=None):
     """ Set output, state and perfdata to a service or host
+
+    :param obj_ref:
+    :type obj_ref: object
+    :param output:
+    :type output: None | str
+    :param perfdata:
+    :type perfdata: None | str
+    :param return_code:
+    :type return_code: None | str
+    :return: None
     """
     obj = get_object(obj_ref)
     if not obj:
@@ -159,6 +209,12 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
 @declared
 def perf(obj_ref, metric_name):
     """ Get perf data from a service
+
+    :param obj_ref:
+    :type obj_ref: object
+    :param metric_name:
+    :type metric_name: str
+    :return: None
     """
     obj = get_object(obj_ref)
     p = PerfDatas(obj.perf_data)
@@ -171,7 +227,16 @@ def perf(obj_ref, metric_name):
 
 @declared
 def get_custom(obj_ref, cname, default=None):
-    """ Get custom varialbe from a service or a host
+    """ Get custom variable from a service or a host
+
+    :param obj_ref:
+    :type obj_ref: object
+    :param cname:
+    :type cname: str
+    :param default:
+    :type default:
+    :return:
+    :rtype:
     """
     obj = get_objects(obj_ref)
     if not obj:
@@ -186,6 +251,13 @@ def get_custom(obj_ref, cname, default=None):
 def perfs(objs_ref, metric_name):
     """ TODO: check this description
         Get perfdatas from multiple services/hosts
+
+    :param obj_ref:
+    :type obj_ref: object
+    :param metric_name:
+    :type metric_name: str
+    :return: list of metrics
+    :rtype: list
     """
     objs = get_objects(objs_ref)
     r = []
@@ -198,6 +270,11 @@ def perfs(objs_ref, metric_name):
 @declared
 def allperfs(obj_ref):
     """ Get all perfdatas from a service or a host
+
+    :param obj_ref:
+    :type obj_ref: object
+    :return: dictionary with perfdatas
+    :rtype: dict
     """
     obj = get_object(obj_ref)
     p = PerfDatas(obj.perf_data)
@@ -208,6 +285,11 @@ def allperfs(obj_ref):
 @declared
 def get_object(ref):
     """ Retrive object (service/host) from name
+
+    :param ref:
+    :type ref:
+    :return:
+    :rtype:
     """
     # Maybe it's already a real object, if so, return it :)
     if not isinstance(ref, basestring):
@@ -226,6 +308,11 @@ def get_object(ref):
 def get_objects(ref):
     """ TODO: check this description
         Retrive objects (service/host) from names
+
+    :param ref:
+    :type ref:
+    :return:
+    :rtype: str
     """
     # Maybe it's already a real object, if so, return it :)
     if not isinstance(ref, basestring):

@@ -47,7 +47,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This modules provides Downtime class, used to implements downtime monitoring concept.
+See detailed concepts below
 
+"""
 import datetime
 import time
 from alignak.comment import Comment
@@ -55,19 +58,20 @@ from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.brok import Brok
 from alignak.log import logger
 
-""" Schedules downtime for a specified service. If the "fixed" argument is set
- to one (1), downtime will start and end at the times specified by the
- "start" and "end" arguments.
- Otherwise, downtime will begin between the "start" and "end" times and last
- for "duration" seconds. The "start" and "end" arguments are specified
- in time_t format (seconds since the UNIX epoch). The specified service
- downtime can be triggered by another downtime entry if the "trigger_id"
- is set to the ID of another scheduled downtime entry.
- Set the "trigger_id" argument to zero (0) if the downtime for the
- specified service should not be triggered by another downtime entry.
 
-"""
 class Downtime:
+    """ Schedules downtime for a specified service. If the "fixed" argument is set
+    to one (1), downtime will start and end at the times specified by the
+    "start" and "end" arguments.
+    Otherwise, downtime will begin between the "start" and "end" times and last
+    for "duration" seconds. The "start" and "end" arguments are specified
+    in time_t format (seconds since the UNIX epoch). The specified service
+    downtime can be triggered by another downtime entry if the "trigger_id"
+    is set to the ID of another scheduled downtime entry.
+    Set the "trigger_id" argument to zero (0) if the downtime for the
+    specified service should not be triggered by another downtime entry.
+
+    """
     id = 1
 
     # Just to list the properties we will send as pickle
@@ -140,14 +144,30 @@ class Downtime:
             active, type, self.id, time.ctime(self.start_time), time.ctime(self.end_time))
 
     def trigger_me(self, other_downtime):
+        """Wrapper to activate_me.append function
+        Used to add another downtime to activate
+
+        :param other_downtime: other downtime to activate/cancel
+        :type other_downtime:
+        :return: None
+        """
         self.activate_me.append(other_downtime)
 
     def in_scheduled_downtime(self):
+        """Getter for is_in_effect attribute
+
+        :return: True if downtime is in effect, False otherwise
+        :rtype: bool
+        """
         return self.is_in_effect
 
-    # The referenced host/service object enters now a (or another) scheduled
-    # downtime. Write a log message only if it was not already in a downtime
     def enter(self):
+        """Set ref in scheduled downtime and raise downtime log entry (start)
+
+        :return: [], always
+        :rtype: list
+        TODO: res is useless
+        """
         res = []
         self.is_in_effect = True
         if self.fixed is False:
@@ -162,8 +182,13 @@ class Downtime:
             res.extend(dt.enter())
         return res
 
-    # The end of the downtime was reached.
     def exit(self):
+        """Remove ref in scheduled downtime and raise downtime log entry (exit)
+
+        :return: [], always | None
+        :rtype: list
+        TODO: res is useless
+        """
         res = []
         if self.is_in_effect is True:
             # This was a fixed or a flexible+triggered downtime
@@ -186,8 +211,13 @@ class Downtime:
         self.ref.in_scheduled_downtime_during_last_check = True
         return res
 
-    # A scheduled downtime was prematurely canceled
     def cancel(self):
+        """Remove ref in scheduled downtime and raise downtime log entry (cancel)
+
+        :return: [], always
+        :rtype: list
+        TODO: res is useless
+        """
         res = []
         self.is_in_effect = False
         self.ref.scheduled_downtime_depth -= 1
@@ -204,8 +234,11 @@ class Downtime:
             res.extend(dt.cancel())
         return res
 
-    # Scheduling a downtime creates a comment automatically
     def add_automatic_comment(self):
+        """Add comment on ref for downtime
+
+        :return: None
+        """
         if self.fixed is True:
             text = (
                 "This %s has been scheduled for fixed downtime from %s to %s. "
@@ -236,16 +269,27 @@ class Downtime:
         self.ref.add_comment(c)
 
     def del_automatic_comment(self):
+        """Remove automatic comment on ref previously created
+
+        :return: None
+        """
         # Extra comment can be None if we load it from a old version of Alignak
         # TODO: remove it in a future version when every one got upgrade
         if self.extra_comment is not None:
             self.extra_comment.can_be_deleted = True
         # self.ref.del_comment(self.comment_id)
 
-
-    # Fill data with info of item by looking at brok_type
-    # in props of properties or running_properties
     def fill_data_brok_from(self, data, brok_type):
+        """Fill data with info of item by looking at brok_type
+        in props of properties or running_properties
+
+        :param data: data to fill
+        :type data:
+        :param brok_type: type of brok
+        :type brok_type: str
+        :return: None
+        TODO: Duplicate from Notification.fill_data_brok_from
+        """
         cls = self.__class__
         # Now config properties
         for prop, entry in cls.properties.items():
@@ -253,17 +297,27 @@ class Downtime:
                 if brok_type in entry['fill_brok']:
                     data[prop] = getattr(self, prop)
 
-    # Get a brok with initial status
     def get_initial_status_brok(self):
+        """Get a initial status brok
+
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        TODO: Duplicate from Notification.fill_data_brok_from
+        """
         data = {'id': self.id}
 
         self.fill_data_brok_from(data, 'full_status')
         b = Brok('downtime_raise', data)
         return b
 
-    # Call by pickle for dataify the downtime
-    # because we DO NOT WANT REF in this pickleisation!
     def __getstate__(self):
+        """Call by pickle for dataify the comment
+        because we DO NOT WANT REF in this pickleisation!
+
+        :return: dict containing notification data
+        :rtype: dict
+        TODO: REMOVE THIS
+        """
         cls = self.__class__
         # id is not in *_properties
         res = {'id': self.id}
@@ -272,8 +326,14 @@ class Downtime:
                 res[prop] = getattr(self, prop)
         return res
 
-    # Inverted function of getstate
     def __setstate__(self, state):
+        """Inverted function of getstate
+
+        :param state: state to restore
+        :type state: dict
+        :return: None
+        TODO: REMOVE THIS
+        """
         cls = self.__class__
 
         # Maybe it's not a dict but a list like in the old 0.4 format
@@ -290,11 +350,13 @@ class Downtime:
         if self.id >= cls.id:
             cls.id = self.id + 1
 
-    # This function is DEPRECATED and will be removed in a future version of
-    # Alignak. It should not be useful any more after a first load/save pass.
-
-    # Inversed function of getstate
     def __setstate_deprecated__(self, state):
+        """In 1.0 we move to a dict save.
+
+        :param state: it's the state
+        :type state: dict
+        :return: None
+        TODO: REMOVE THIS"""
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!

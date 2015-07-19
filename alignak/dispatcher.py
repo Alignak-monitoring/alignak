@@ -68,8 +68,11 @@ from alignak.log import logger
 random.seed()
 
 
-# Dispatcher Class
 class Dispatcher:
+    """Dispatcher is in charge of sending configuration to other daemon.
+    It has to handle spare, realms, poller tags etc.
+
+    """
 
     # Load all elements, set them as not assigned
     # and add them to elements, so loop will be easier :)
@@ -142,9 +145,12 @@ class Dispatcher:
         for rec in self.receivers:
             rec.need_conf = True
 
-
-    # checks alive elements
     def check_alive(self):
+        """Check all daemons state (alive or not)
+        and send conf if necessary
+
+        :return: None
+        """
         for elt in self.elements:
             # print "Updating elements", elt.get_name(), elt.__dict__
             elt.update_infos()
@@ -161,11 +167,12 @@ class Dispatcher:
                 arb.update_infos()
                 # print "Arb", arb.get_name(), "alive?", arb.alive, arb.__dict__
 
-
-    # Check if all active items are still alive
-    # the result goes into self.dispatch_ok
-    # TODO: finish need conf
     def check_dispatch(self):
+        """Check if all active items are still alive
+
+        :return: None
+        TODO: finish need conf
+        """
         # Check if the other arbiter has a conf, but only if I am a master
         for arb in self.arbiters:
             # If not me and I'm a master
@@ -274,15 +281,13 @@ class Dispatcher:
                     self.dispatch_ok = False  # so we will redispatch all
                     rec.need_conf = True
 
-
-    # Imagine a world where... oh no, wait...
-    # Imagine a master got the conf and the network is down
-    # a spare takes it (good :) ). Like the Empire, the master
-    # strikes back! It was still alive! (like Elvis). It still got conf
-    # and is running! not good!
-    # Bad dispatch: a link that has a conf but I do not allow this
-    # so I ask it to wait a new conf and stop kidding.
     def check_bad_dispatch(self):
+        """Check if we have a bad dispatch
+        For example : a spare started but the master was still alive
+        We need ask the spare to wait a new conf
+
+        :return: None
+        """
         for elt in self.elements:
             if hasattr(elt, 'conf'):
                 # If element has a conf, I do not care, it's a good dispatch
@@ -332,10 +337,14 @@ class Dispatcher:
                                         id, satellite.get_name())
                             satellite.remove_from_conf(id)
 
-
-    # Make an ORDERED list of schedulers so we can
-    # send them conf in this order for a specific realm
     def get_scheduler_ordered_list(self, r):
+        """Get sorted scheduler list for a specific realm
+
+        :param r: realm we want scheduler from
+        :type r: object
+        :return: sorted scheduler list
+        :rtype: list[alignak.objects.schedulerlink.SchedulerLink]
+        """
         # get scheds, alive and no spare first
         scheds = []
         for s in r.schedulers:
@@ -360,10 +369,12 @@ class Dispatcher:
 
         return scheds
 
-
-    # Manage the dispatch
-    # REF: doc/alignak-conf-dispatching.png (3)
     def dispatch(self):
+        """Dispatch configuration to other daemons
+        REF: doc/alignak-conf-dispatching.png (3)
+
+        :return: None
+        """
         # Ok, we pass at least one time in dispatch, so now errors are True errors
         self.first_dispatch_done = True
 

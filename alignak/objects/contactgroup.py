@@ -52,7 +52,9 @@
 
 # Contactgroups are groups for contacts
 # They are just used for the config read and explode by elements
-
+"""
+This module provide Contactgroup and Contactgroups class used to manage contact groups
+"""
 from itemgroup import Itemgroup, Itemgroups
 
 from alignak.property import IntegerProp, StringProp
@@ -60,6 +62,9 @@ from alignak.log import logger
 
 
 class Contactgroup(Itemgroup):
+    """Class to manage a group of contacts
+    A Contactgroup is used to manage a group of contacts
+    """
     id = 1
     my_type = 'contactgroup'
 
@@ -76,24 +81,47 @@ class Contactgroup(Itemgroup):
     }
 
     def get_contacts(self):
+        """
+        Get list of contacts of this group
+
+        :return: list of contacts
+        :rtype: list[alignak.objects.contact.Contact]
+        """
         if getattr(self, 'members', None) is not None:
             return [m.strip() for m in self.members]
         else:
             return []
 
     def get_name(self):
+        """
+        Get name of group
+
+        :return: Name of contactgroup
+        :rtype: str
+        """
         return getattr(self, 'contactgroup_name', 'UNNAMED-CONTACTGROUP')
 
     def get_contactgroup_members(self):
+        """
+        Get contactgroup members
+
+        :return: list of hosts
+        :rtype: list
+        """
         if self.has('contactgroup_members'):
             return [m.strip() for m in self.contactgroup_members.split(',')]
         else:
             return []
 
-    # We fillfull properties with template ones if need
-    # Because hostgroup we call may not have it's members
-    # we call get_hosts_by_explosion on it
     def get_contacts_by_explosion(self, contactgroups):
+        """
+        Get hosts of this group
+
+        :param contactgroups: Contactgroups object, use to look for a specific one
+        :type contactgroups: alignak.objects.contactgroup.Contactgroups
+        :return: list of contact of this group
+        :rtype: list[alignak.objects.contact.Contact]
+        """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
         self.already_explode = True
@@ -126,24 +154,55 @@ class Contactgroup(Itemgroup):
 
 
 class Contactgroups(Itemgroups):
+    """Class to manage list of Contactgroup
+    Contactgroups is used to regroup all Contactgroup
+
+    """
     name_property = "contactgroup_name"  # is used for finding contactgroup
     inner_class = Contactgroup
 
     def get_members_by_name(self, cgname):
+        """
+        Get all members by name given in parameter
+
+        :param cgname: name of members
+        :type cgname: str
+        :return: list of contacts with this name
+        :rtype: list[alignak.objects.contact.Contact]
+        """
         cg = self.find_by_name(cgname)
         if cg is None:
             return []
         return cg.get_contacts()
 
     def add_contactgroup(self, cg):
+        """Wrapper for add_item method
+        Add a contactgroup to the contactgroup list
+
+        :param cg: contact group to add
+        :type cg:
+        :return: None
+        """
         self.add_item(cg)
 
     def linkify(self, contacts):
+        """Create link between objects::
+
+        * contactgroups -> contacts
+
+        :param contacts: contacts to link
+        :type contacts: alignak.objects.contact.Contacts
+        :return: None
+        """
         self.linkify_cg_by_cont(contacts)
 
-    # We just search for each host the id of the host
-    # and replace the name by the id
     def linkify_cg_by_cont(self, contacts):
+        """Link the contacts with contactgroups
+
+        :param contacts: realms object to link with
+        :type contacts: alignak.objects.contact.Contacts
+        :return: None
+        """
         for cg in self:
             mbrs = cg.get_contacts()
 
@@ -166,9 +225,16 @@ class Contactgroups(Itemgroups):
             # We find the id, we replace the names
             cg.replace_members(new_mbrs)
 
-    # Add a contact string to a contact member
-    # if the contact group do not exist, create it
     def add_member(self, cname, cgname):
+        """Add a contact string to a contact member
+        if the contact group do not exist, create it
+
+        :param cname: contact name
+        :type cname: str
+        :param cgname: contact group name
+        :type cgname: strr
+        :return: None
+        """
         cg = self.find_by_name(cgname)
         # if the id do not exist, create the cg
         if cg is None:
@@ -177,8 +243,12 @@ class Contactgroups(Itemgroups):
         else:
             cg.add_string_member(cname)
 
-    # Use to fill members with contactgroup_members
     def explode(self):
+        """
+        Fill members with contactgroup_members
+
+        :return:None
+        """
         # We do not want a same hg to be explode again and again
         # so we tag it
         for tmp_cg in self.items.values():

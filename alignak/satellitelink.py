@@ -18,9 +18,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-'''alignak.satellitelink is deprecated. Please use alignak.objects.satellitelink now.'''
+"""alignak.satellitelink is deprecated. Please use alignak.objects.satellitelink now."""
 
 from alignak.old_daemon_link import deprecation, make_deprecated
+"""TODO: make_deprecated is not found"""
 
 deprecation(__doc__)
 

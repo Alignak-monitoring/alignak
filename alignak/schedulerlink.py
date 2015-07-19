@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-'''alignak.schedulerlink is deprecated. Please use alignak.objects.schedulerlink now.'''
+"""alignak.schedulerlink is deprecated. Please use alignak.objects.schedulerlink now."""
 
 from alignak.old_daemon_link import make_deprecated_daemon_link
 

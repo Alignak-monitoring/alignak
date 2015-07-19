@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-'''alignak.reactionnerlink is deprecated. Please use alignak.objects.reactionnerlink now.'''
+"""alignak.reactionnerlink is deprecated. Please use alignak.objects.reactionnerlink now."""
 
 from alignak.old_daemon_link import make_deprecated_daemon_link
 

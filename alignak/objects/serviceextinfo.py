@@ -59,6 +59,16 @@ from alignak.property import StringProp, ListProp
 
 
 class ServiceExtInfo(Item):
+    """ServiceExtInfo class is made to handle some parameters of SchedulingItem::
+
+    * notes
+    * notes_url
+    * icon_image
+    * icon_image_alt
+
+    TODO: Is this class really necessary?
+
+    """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
     __metaclass__ = AutoSlots
@@ -108,17 +118,26 @@ class ServiceExtInfo(Item):
 #                        |___/
 ######
 
-
-    # Check is required prop are set:
-    # host_name is needed
     def is_correct(self):
+        """
+        Check if this object is correct
+
+        :return: True, always.
+        :rtype: bool
+        TODO: Clean this function
+        """
         state = True
         cls = self.__class__
 
         return state
 
-    # For get a nice name
     def get_name(self):
+        """Accessor to host_name attribute or name if first not defined
+
+        :return: host name (no sense)
+        :rtype: str
+        TODO: Clean this function
+        """
         if not self.is_tpl():
             try:
                 return self.host_name
@@ -130,23 +149,40 @@ class ServiceExtInfo(Item):
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
 
-    # For debugging purpose only
     def get_dbg_name(self):
+        """Get the host name for debugging (host_name)
+
+        :return: service extinfo  host name
+        :rtype: str
+        TODO: Remove this function, get_name is doing it
+        """
         return self.host_name
 
-    # Same but for clean call, no debug
     def get_full_name(self):
+        """Get the full name for debugging (host_name)
+
+        :return: service extinfo  host name
+        :rtype: str
+        TODO: Remove this function, get_name is doing it
+        """
         return self.host_name
 
 
-# Class for the hosts lists. It's mainly for configuration
-# part
 class ServicesExtInfo(Items):
+    """ServicesExtInfo manage ServiceExtInfo and propagate properties (listed before)
+    into Services if necessary
+
+    """
     name_property = "host_name"  # use for the search by name
     inner_class = ServiceExtInfo  # use for know what is in items
 
-    # Merge extended host information into host
     def merge(self, services):
+        """Merge extended host information into services
+
+        :param services: services list, to look for a specific one
+        :type services: alignak.objects.service.Services
+        :return: None
+        """
         for ei in self:
             if hasattr(ei, 'register') and not getattr(ei, 'register'):
                 # We don't have to merge template
@@ -159,6 +195,14 @@ class ServicesExtInfo(Items):
                     self.merge_extinfo(s, ei)
 
     def merge_extinfo(self, service, extinfo):
+        """Merge extended host information into a service
+
+        :param service: the service to edit
+        :type service: alignak.objects.service.Service
+        :param extinfo: the external info we get data from
+        :type extinfo: alignak.objects.serviceextinfo.ServiceExtInfo
+        :return: None
+        """
         properties = ['notes', 'notes_url', 'icon_image', 'icon_image_alt']
         # service properties have precedence over serviceextinfo properties
         for p in properties:

@@ -48,14 +48,20 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Check classe which is a simple abstraction for monitoring checks
 
+"""
 from alignak.action import Action
 from alignak.property import BoolProp, IntegerProp, FloatProp
 from alignak.property import StringProp
 
 
 class Check(Action):
-    """ ODO: Add some comment about this class for the doc"""
+    """Check class implements monitoring concepts of checks :(status, state, output)
+    Check instance are used to store monitoring plugins data (exit status, output)
+    and used by schedule to raise alert, reschedule check etc.
+
+    """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
 
@@ -140,12 +146,20 @@ class Check(Action):
     def copy_shell(self):
         """return a copy of the check but just what is important for execution
         So we remove the ref and all
-        """
 
+        :return: a copy of check
+        :rtype: object
+        """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Check('', '', '', '', '', id=self.id))
 
     def get_return_from(self, c):
+        """Update check data from action (notification for instance)
+
+        :param c: action to get data from
+        :type c: alignak.action.Action
+        :return: None
+        """
         self.exit_status = c.exit_status
         self.output = c.output
         self.long_output = c.long_output
@@ -157,6 +171,13 @@ class Check(Action):
 
 
     def is_launchable(self, t):
+        """Check if the check can be launched
+
+        :param t: time to compare with t_to_go attribute
+        :type t: int
+        :return: True if t > self.t_to_go, False otherwise
+        :rtype: bool
+        """
         return t > self.t_to_go
 
     def __str__(self):
@@ -164,13 +185,31 @@ class Check(Action):
                (self.id, self.status, self.command, self.ref)
 
     def get_id(self):
+        """Getter for id attribute
+
+        :return: id
+        :rtype: int
+        """
         return self.id
 
     def set_type_active(self):
+        """Set check_type attribute to 0
+
+        :return: None
+        """
         self.check_type = 0
 
     def set_type_passive(self):
+        """Set check_type attribute to 1
+
+        :return: None
+        """
         self.check_type = 1
 
     def is_dependent(self):
+        """Getter for dependency_check attribute
+
+        :return: True if this check was created for dependent one, False otherwise
+        :rtype: bool
+        """
         return self.dependency_check

@@ -45,6 +45,9 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provide DB class which is a generic class to access relational databases
+
+"""
 
 class DB(object):
     """DB is a generic class for SQL Database"""
@@ -53,7 +56,13 @@ class DB(object):
         self.table_prefix = table_prefix
 
     def stringify(self, val):
-        """Get a unicode from a value"""
+        """Get a unicode from a value
+
+        :param val: value to 'unicode'
+        :type val: str
+        :return: value in unicode
+        :rtype: str
+        """
         # If raw string, go in unicode
         if isinstance(val, str):
             val = val.decode('utf8', 'ignore').replace("'", "''")
@@ -65,7 +74,15 @@ class DB(object):
         return val
 
     def create_insert_query(self, table, data):
-        """Create a INSERT query in table with all data of data (a dict)"""
+        """Create a INSERT query in table with all data of data (a dict)
+
+        :param table: table of DB
+        :type table: str
+        :param data: dictionary of data to insert
+        :type data: dict
+        :return: the query
+        :rtype: str
+        """
         query = u"INSERT INTO %s " % (self.table_prefix + table)
         props_str = u' ('
         values_str = u' ('
@@ -99,6 +116,15 @@ class DB(object):
     def create_update_query(self, table, data, where_data):
         """Create a update query of table with data, and use where data for
         the WHERE clause
+
+        :param table: table of the DB
+        :type table: str
+        :param data: dictionary of data to update
+        :type data: dict
+        :param where_data: dictionary of data for search
+        :type where_data: dict
+        :return: the query
+        :rtype: str
         """
         query = u"UPDATE %s set " % (self.table_prefix + table)
 
@@ -151,9 +177,17 @@ class DB(object):
         return query
 
     def fetchone(self):
-        """Just get an entry"""
+        """Just get an entry
+
+        :return: an entry
+        :rtype: tuple | None
+        """
         return self.db_cursor.fetchone()
 
     def fetchall(self):
-        """Get all entry"""
+        """Get all entry
+
+        :return: all entries
+        :rtype: tuple | None
+        """
         return self.db_cursor.fetchall()

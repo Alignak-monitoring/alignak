@@ -51,7 +51,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
+"""
+This module provide logging facilities for Alignak.
+There is a custom log handler that create broks for every log emited with level < debug
+"""
 import logging
 import sys
 import os
@@ -63,7 +66,6 @@ from termcolor import cprint
 
 
 from brok import Brok
-
 
 
 # obj = None
@@ -79,6 +81,7 @@ humanFormatter = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d
 humanFormatter_named = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
                                  '%a %b %d %H:%M:%S %Y')
 nagFormatter = Formatter('[%(created)i] %(message)s')
+
 
 class BrokHandler(Handler):
     """
@@ -104,6 +107,9 @@ class BrokHandler(Handler):
 
 
 class ColorStreamHandler(StreamHandler):
+    """
+    This log handler provides colored logs when logs are emitted to a tty.
+    """
     def emit(self, record):
         try:
             msg = self.format(record)
@@ -127,10 +133,13 @@ class Log(logging.Logger):
         self.pre_log_buffer = []
         self.log_set = log_set
 
-
     def setLevel(self, level):
         """ Set level of logger and handlers.
         The logger need the lowest level (see link above)
+
+        :param level: logger/handler level
+        :type level: int
+        :return: None
         """
         if not isinstance(level, int):
             level = getattr(logging, level, None)
@@ -144,10 +153,15 @@ class Log(logging.Logger):
                 continue
             handler.setLevel(level)
 
-
     def load_obj(self, object, name_=None):
         """ We load the object where we will put log broks
         with the 'add' method
+
+        :param object: object instance
+        :type object: object
+        :param name_: name of object
+        :type name_: str | None
+        :return: None
         """
         global _brokhandler_
         _brokhandler_ = BrokHandler(object)
@@ -162,7 +176,6 @@ class Log(logging.Logger):
             _brokhandler_.setFormatter(defaultFormatter)
         self.addHandler(_brokhandler_)
 
-
     def register_local_log(self, path, level=None, purge_buffer=True):
         """The alignak logging wrapper can write to a local file if needed
         and return the file descriptor so we can avoid to
@@ -171,6 +184,14 @@ class Log(logging.Logger):
         Add logging to a local log-file.
 
         The file will be rotated once a day
+
+        :param path: path of log
+        :type path: str
+        :param level: level of log
+        :type level: None | int
+        :param purge_buffer: True if want purge the buffer, otherwise False
+        :type purge_buffer: bool
+        :return:
         """
         self.log_set = True
         # Todo : Create a config var for backup count
@@ -195,13 +216,16 @@ class Log(logging.Logger):
         # Todo : Do we need this now we use logging?
         return handler.stream.fileno()
 
-
     def set_human_format(self, on=True):
         """
         Set the output as human format.
 
         If the optional parameter `on` is False, the timestamps format
         will be reset to the default format.
+
+        :param on: True if want timestamp in human format, otherwise False
+        :type on: bool
+        :return: None
         """
         global human_timestamp_log
         human_timestamp_log = bool(on)
@@ -217,19 +241,32 @@ class Log(logging.Logger):
             else:
                 handler.setFormatter(human_timestamp_log and humanFormatter or defaultFormatter)
 
-
-    # Stack logs if we don't open a log file so we will be able to flush them
-    # Stack max 500 logs (no memory leak please...)
     def _stack(self, level, args, kwargs):
+        """
+        Stack logs if we don't open a log file so we will be able to flush them
+        Stack max 500 logs (no memory leak please...)
+
+        :param level: level log
+        :type level: int
+        :param args: arguments
+        :type args:
+        :param kwargs:
+        :type kwargs:
+        :return: None
+        """
         if self.log_set:
             return
         self.pre_log_buffer.append((level, args, kwargs))
         if len(self.pre_log_buffer) > 500:
             self.pre_log_buffer = self.pre_log_buffer[2:]
 
-
-    # Ok, we are opening a log file, flush all the logs now
     def _destack(self):
+        """
+        DIRTY HACK : log should be always written to a file.
+        we are opening a log file, flush all the logs now
+
+        :return: None
+        """
         for (level, args, kwargs) in self.pre_log_buffer:
             f = getattr(logging.Logger, level, None)
             if f is None:
@@ -237,29 +274,22 @@ class Log(logging.Logger):
                 continue
             f(self, *args, **kwargs)
 
-
     def debug(self, *args, **kwargs):
         self._stack('debug', args, kwargs)
         logging.Logger.debug(self, *args, **kwargs)
-
 
     def info(self, *args, **kwargs):
         self._stack('info', args, kwargs)
         # super(logging.Logger, self).info(*args, **kwargs)
         logging.Logger.info(self, *args, **kwargs)
 
-
-
     def warning(self, *args, **kwargs):
         self._stack('warning', args, kwargs)
         logging.Logger.warning(self, *args, **kwargs)
 
-
     def error(self, *args, **kwargs):
         self._stack('error', args, kwargs)
         logging.Logger.error(self, *args, **kwargs)
-
-
 
 
 # --- create the main logger ---
@@ -272,7 +302,6 @@ if hasattr(sys.stdout, 'isatty'):
     else:
         csh.setFormatter(defaultFormatter)
     logger.addHandler(csh)
-
 
 def naglog_result(level, result, *args):
     """

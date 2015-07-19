@@ -51,7 +51,11 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides property classes.
+It is used during configuration parsing to ensure attribute type in objects.
+Each class implements a pythonize method that cast data into the wanted type.
 
+"""
 import re
 
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
@@ -78,7 +82,6 @@ class Property(object):
 
     Same semantic for all subclasses (except UnusedProp): The property
     is required if, and only if, the default value is `None`.
-
 
     """
 
@@ -153,6 +156,13 @@ class Property(object):
         self.split_on_coma = split_on_coma
 
     def pythonize(self, val):
+        """Generic pythonize method
+
+        :param val: value to python
+        :type val:
+        :return: the value itself
+        :rtype:
+        """
         return val
 
 
@@ -165,11 +175,18 @@ class UnusedProp(Property):
 
     """
 
-    # Since this property is not used, there is no use for other
-    # parameters than 'text'.
-    # 'text' a some usage text if present, will print it to explain
-    # why it's no more useful
     def __init__(self, text=None):
+        """Create a new Unused property
+
+        Since this property is not used, there is no use for other
+        parameters than 'text'.
+       'text' a some usage text if present, will print it to explain
+        why it's no more useful
+
+        :param text:
+        :type text: None | str
+        :return: None
+        """
 
         if text is None:
             text = ("This parameter is no longer useful in the "
@@ -193,6 +210,17 @@ class BoolProp(Property):
 
     @staticmethod
     def pythonize(val):
+        """Convert value into a boolean
+
+        :param val: value to convert
+        :type val:
+        :return: boolean corresponding to value ::
+
+        {'1': True, 'yes': True, 'true': True, 'on': True,
+         '0': False, 'no': False, 'false': False, 'off': False}
+
+        :rtype: bool
+        """
         if isinstance(val, bool):
             return val
         val = unique_value(val).lower()
@@ -203,33 +231,72 @@ class BoolProp(Property):
 
 
 class IntegerProp(Property):
-    """Please Add a Docstring to describe the class here"""
+    """Integer property"""
 
     def pythonize(self, val):
+        """Convert value into an integer::
+
+        * If value is a list, try to take the last element
+        * Then call float(int(val))
+
+        :param val: value to convert
+        :type val:
+        :return: integer corresponding to value
+        :rtype: int
+        """
         val = unique_value(val)
         return to_int(val)
 
 
 class FloatProp(Property):
-    """Please Add a Docstring to describe the class here"""
+    """Float property"""
 
     def pythonize(self, val):
+        """Convert value into a float::
+
+        * If value is a list, try to take the last element
+        * Then call float(val)
+
+        :param val: value to convert
+        :type val:
+        :return: float corresponding to value
+        :rtype: float
+        """
         val = unique_value(val)
         return to_float(val)
 
 
 class CharProp(Property):
-    """Please Add a Docstring to describe the class here"""
+    """One character string property"""
 
     def pythonize(self, val):
+        """Convert value into a char ::
+
+        * If value is a list try, to take the last element
+        * Then take the first char of val (first elem)
+
+        :param val: value to convert
+        :type val:
+        :return: char corresponding to value
+        :rtype: str
+        """
         val = unique_value(val)
         return to_char(val)
 
 
 class StringProp(Property):
-    """Please Add a Docstring to describe the class here"""
+    """String property"""
 
     def pythonize(self, val):
+        """Convert value into a string::
+
+        * If value is a list, try to take the last element
+
+        :param val: value to convert
+        :type val:
+        :return: str corresponding to value
+        :rtype: str
+        """
         val = unique_value(val)
         return val
 
@@ -243,9 +310,19 @@ class ConfigPathProp(StringProp):
 
 
 class ListProp(Property):
-    """Please Add a Docstring to describe the class here"""
+    """List property"""
 
     def pythonize(self, val):
+        """Convert value into a list::
+
+        * split value (or each element if value is a list) on coma char
+        * strip split values
+
+        :param val: value to convert
+        :type val:
+        :return: list corresponding to value
+        :rtype: list
+        """
         if isinstance(val, list):
             return [s.strip() for s in list_split(val, self.split_on_coma)]
         else:
@@ -256,11 +333,24 @@ class LogLevelProp(StringProp):
     """ A string property representing a logging level """
 
     def pythonize(self, val):
+        """Convert value into a log level property::
+
+        * If value is a list, try to take the last element
+        * get logging level base on the value
+
+        :param val: value to convert
+        :type val:
+        :return: log level corresponding to value
+        :rtype: str
+        """
         val = unique_value(val)
         return logging.getLevelName(val)
 
 
 class DictProp(Property):
+    """Dict property
+
+    """
     def __init__(self, elts_prop=None, *args, **kwargs):
         """Dictionary of values.
              If elts_prop is not None, must be a Property subclass
@@ -277,8 +367,24 @@ class DictProp(Property):
             self.elts_prop = elts_prop()
 
     def pythonize(self, val):
+        """Convert value into a dict::
+
+        * If value is a list, try to take the last element
+        * split "key=value" string and convert to { key:value }
+
+        :param val: value to convert
+        :type val:
+        :return: log level corresponding to value
+        :rtype: str
+        """
         val = unique_value(val)
         def split(kv):
+            """Split key-value string into (key,value)
+
+            :param kv: key value string
+            :return: key, value
+            :rtype: tuple
+            """
             m = re.match("^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
             if m is None:
                 raise ValueError
@@ -305,9 +411,15 @@ class AddrProp(Property):
     """Address property (host + port)"""
 
     def pythonize(self, val):
-        """
-            i.e: val = "192.168.10.24:445"
-            NOTE: port is optional
+        """Convert value into a address ip format::
+
+        * If value is a list, try to take the last element
+        * match ip address and port (if available)
+
+        :param val: value to convert
+        :type val:
+        :return: address/port corresponding to value
+        :rtype: dict
         """
         val = unique_value(val)
         m = re.match("^([^:]*)(?::(\d+))?$", val)
@@ -326,6 +438,14 @@ class ToGuessProp(Property):
 
     @staticmethod
     def pythonize(val):
+        """If value is a single list element just return the element
+        does nothing otherwise
+
+        :param val: value to convert
+        :type val:
+        :return: converted value
+        :rtype:
+        """
         if isinstance(val, list) and len(set(val)) == 1:
             # If we have a list with a unique value just use it
             return val[0]
@@ -337,6 +457,16 @@ class ToGuessProp(Property):
 class IntListProp(ListProp):
     """Integer List property"""
     def pythonize(self, val):
+        """Convert value into a integer list::
+
+        * Try to convert into a list
+        * Convert each element into a int
+
+        :param val: value to convert
+        :type val:
+        :return: integer list corresponding to value
+        :rtype: list[int]
+        """
         val = super(IntListProp, self).pythonize(val)
         try:
             return [int(e) for e in val]
@@ -345,4 +475,7 @@ class IntListProp(ListProp):
 
 
 class PythonizeError(Exception):
+    """Simple Exception raise during pythonize call
+
+    """
     pass

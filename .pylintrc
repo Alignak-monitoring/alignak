@@ -21,13 +21,6 @@ persistent=yes
 # usually to register additional checkers.
 load-plugins=
 
-# DEPRECATED
-include-ids=no
-
-# DEPRECATED
-symbols=no
-
-
 [MESSAGES CONTROL]
 
 # Enable the message, report, category or checker with the given id(s). You can

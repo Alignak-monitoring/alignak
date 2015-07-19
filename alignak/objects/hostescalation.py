@@ -46,7 +46,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Hostescalation and Hostescalations classes that
+implements host escalation for notification. Basically used for parsing.
 
+"""
 from item import Item, Items
 from escalation import Escalation
 
@@ -54,6 +57,11 @@ from alignak.property import IntegerProp, StringProp, ListProp
 
 
 class Hostescalation(Item):
+    """Hostescalation class is used to implement notification escalation for hosts
+
+    TODO: Why this class does not inherit from alignak.objects.Escalation.
+          Maybe we can merge it
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'hostescalation'
 
@@ -72,17 +80,30 @@ class Hostescalation(Item):
         'last_notification_time': IntegerProp(),
     })
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Get escalation name
+
+        :return: name
+        :rtype: str
+        TODO: Remove this function
+        """
         return ''
 
 
 class Hostescalations(Items):
+    """Hostescalations manage a list of Hostescalation objects, used for parsing configuration
+
+    """
     name_property = ""
     inner_class = Hostescalation
 
-    # We look for contacts property in contacts and
     def explode(self, escalations):
+        """Create instance of Escalation for each HostEscalation object
+
+        :param escalations: list of escalation, used to add new ones
+        :type escalations: alignak.objects.escalation.Escalations
+        :return: None
+        """
         # Now we explode all escalations (host_name, service_description) to escalations
         for es in self:
             properties = es.__class__.properties

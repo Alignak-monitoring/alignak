@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-'''alignak.arbiterlink is deprecated. Please use alignak.objects.arbiterlink now.'''
+"""alignak.arbiterlink is deprecated. Please use alignak.objects.arbiterlink now."""
 
 from alignak.old_daemon_link import make_deprecated_daemon_link
 

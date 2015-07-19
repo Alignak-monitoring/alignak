@@ -17,17 +17,34 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+"""This module used to provide daemon links. They have been moved to objects now
+You will get deprecation warning if you use it
 
+"""
 import sys
 import inspect
 import warnings
 
 
 def deprecation(msg, stacklevel=4):
+    """Raise deprecation warning with message and level
+
+    :param msg: message to print
+    :type msg: str
+    :param stacklevel: stack level
+    :type stacklevel: int
+    :return: None
+    """
     warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel)
 
 
 def make_deprecated_daemon_link(new_module):
+    """Import daemon link from the new location and raise deprecation
+
+    :param new_module: new link to replace the old one
+    :type new_module:
+    :return: None
+    """
     stack = inspect.stack()
     full_mod_name = stack[1][0].f_locals['__name__']
     mod_name = full_mod_name.split('.')[-1]

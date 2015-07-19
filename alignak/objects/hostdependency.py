@@ -51,7 +51,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Hostdependency and Hostdependencies classes that
+implements dependencies between hosts. Basically used for parsing.
 
+"""
 from item import Item, Items
 
 from alignak.property import BoolProp, StringProp, ListProp
@@ -59,6 +62,10 @@ from alignak.log import logger
 
 
 class Hostdependency(Item):
+    """Hostdependency class is a simple implementation of host dependency as
+    defined in a monitoring context (dependency period, notification_failure_criteria ..)
+
+    """
     id = 0
     my_type = 'hostdependency'
 
@@ -84,9 +91,13 @@ class Hostdependency(Item):
         'dependency_period':             StringProp(default='')
     })
 
-    # Give a nice name output, for debugging purpose
-    # (debugging happens more often than expected...)
     def get_name(self):
+        """Get name based on dependent_host_name and host_name attributes
+        Each attribute is substituted by 'unknown' if attribute does not exist
+
+        :return: dependent_host_name/host_name
+        :rtype: str
+        """
         dependent_host_name = 'unknown'
         if getattr(self, 'dependent_host_name', None):
             dependent_host_name = getattr(
@@ -99,14 +110,31 @@ class Hostdependency(Item):
 
 
 class Hostdependencies(Items):
+    """Hostdependencies manage a list of Hostdependency objects, used for parsing configuration
+
+    """
     inner_class = Hostdependency  # use for know what is in items
 
     def delete_hostsdep_by_id(self, ids):
+        """Delete a list of hostdependency
+
+        :param ids: ids list to delete
+        :type ids: list
+        :return: None
+        """
         for id in ids:
             del self[id]
 
-    # We create new hostdep if necessary (host groups and co)
     def explode(self, hostgroups):
+        """Explode all host dependency for each member of hostgroups
+        Each member of dependent hostgroup or hostgroup in dependency have to get a copy of
+        host dependencies (quite complex to parse)
+
+
+        :param hostgroups: used to look for hostgroup
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :return: None
+        """
         # The "old" dependencies will be removed. All dependencies with
         # more than one host or a host group will be in it
         hstdep_to_remove = []
@@ -161,11 +189,29 @@ class Hostdependencies(Items):
         self.delete_hostsdep_by_id(hstdep_to_remove)
 
     def linkify(self, hosts, timeperiods):
+        """Create link between objects::
+
+         * hostdependency -> host
+         * hostdependency -> timeperiods
+
+        :param hosts: hosts to link
+        :type hosts: alignak.objects.host.Hosts
+        :param timeperiods: timeperiods to link
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         self.linkify_hd_by_h(hosts)
         self.linkify_hd_by_tp(timeperiods)
         self.linkify_h_by_hd()
 
     def linkify_hd_by_h(self, hosts):
+        """Replace dependent_host_name and host_name
+        in host dependency by the real object
+
+        :param hosts: host list, used to look for a specific one
+        :type hosts: alignak.objects.host.Hosts
+        :return: None
+        """
         for hd in self:
             try:
                 h_name = hd.host_name
@@ -185,9 +231,13 @@ class Hostdependencies(Items):
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hd.configuration_errors.append(err)
 
-    # We just search for each hostdep the id of the host
-    # and replace the name by the id
     def linkify_hd_by_tp(self, timeperiods):
+        """Replace dependency_period by a real object in host dependency
+
+        :param timeperiods: list of timeperiod, used to look for a specific one
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         for hd in self:
             try:
                 tp_name = hd.dependency_period
@@ -196,8 +246,11 @@ class Hostdependencies(Items):
             except AttributeError, exp:
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
-    # We backport host dep to host. So HD is not need anymore
     def linkify_h_by_hd(self):
+        """Add dependency in host objects
+
+        :return: None
+        """
         for hd in self:
             # if the host dep conf is bad, pass this one
             if getattr(hd, 'host_name', None) is None or\
@@ -214,5 +267,13 @@ class Hostdependencies(Items):
             )
 
     def is_correct(self):
+        """Check if this host configuration is correct ::
+
+        * All required parameter are specified
+        * Go through all configuration warnings and errors that could have been raised earlier
+
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
+        """
         r = super(Hostdependencies, self).is_correct()
         return r and self.no_loop_in_parents("host_name", "dependent_host_name")

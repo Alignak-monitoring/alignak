@@ -44,3 +44,6 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""Daemon package init, nothing necessary to do here
+
+"""

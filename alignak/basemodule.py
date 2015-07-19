@@ -66,17 +66,17 @@ from alignak.misc.common import setproctitle
 
 # TODO: use a class for defining the module "properties" instead of
 # plain dict??  Like:
-'''
+"""
 class ModuleProperties(object):
     def __init__(self, type, phases, external=False)
         self.type = type
         self.phases = phases
         self.external = external
-'''
+"""
 # and  have the new modules instanciate this like follow:
-'''
+"""
 properties = ModuleProperties('the_module_type', the_module_phases, is_mod_ext)
-'''
+"""
 
 # The `properties dict defines what the module can do and
 # if it's an external module or not.
@@ -93,19 +93,19 @@ properties = {
 
 
 class BaseModule(object):
-    """This is the base class for the alignak modules.
-    Modules can be used by the different alignak daemons/services
+    """This is the base class for the Alignak modules.
+    Modules can be used by the different Alignak daemons/services
     for different tasks.
-    Example of task that a alignak module can do:
+    Example of task that a Alignak module can do:
 
     - load additional configuration objects.
     - recurrently save hosts/services status/perfdata
-       informations in different format.
+       information in different format.
     - ...
     """
 
     def __init__(self, mod_conf):
-        """Instanciate a new module.
+        """Instantiate a new module.
         There can be many instance of the same type.
         'mod_conf' is module configuration object
         for this new module instance.
@@ -137,11 +137,20 @@ class BaseModule(object):
         """Handle this module "post" init ; just before it'll be started.
         Like just open necessaries file(s), database(s),
         or whatever the module will need.
+
+        :return: None
         """
         pass
 
 
     def set_loaded_into(self, daemon_name):
+        """Setter for loaded_into attribute
+        Used to know what daemon has loaded this module
+
+        :param daemon_name: value to set
+        :type daemon_name: str
+        :return: None
+        """
         self.loaded_into = daemon_name
 
 
@@ -150,6 +159,10 @@ class BaseModule(object):
         Create the shared queues that will be used by alignak daemon
         process and this module process.
         But clear queues if they were already set before recreating new one.
+
+        :param manager: None on android, otherwise Manager() object
+        :type manager: None | object
+        :return: None
         """
         self.clear_queues(manager)
         # If no Manager() object, go with classic Queue()
@@ -162,7 +175,12 @@ class BaseModule(object):
 
 
     def clear_queues(self, manager):
-        """Release the resources associated to the queues of this instance"""
+        """Release the resources associated to the queues of this instance
+
+        :param manager: None on android, otherwise Manager() object
+        :type manager: None | object
+        :return: None
+        """
         for q in (self.to_q, self.from_q):
             if q is None:
                 continue
@@ -177,6 +195,11 @@ class BaseModule(object):
 
 
     def start_module(self):
+        """Wrapper for _main function.
+        Catch and raise any exception occurring in the main function
+
+        :return: None
+        """
         try:
             self._main()
         except Exception as e:
@@ -184,8 +207,16 @@ class BaseModule(object):
             raise e
 
 
-    # Start this module process if it's external. if not -> donothing
     def start(self, http_daemon=None):
+        """Actually restart the process if the module is external
+        Try first to stop the process and create a new Process instance
+        with target start_module.
+        Finally start process.
+
+        :param http_daemon: Not used here but can be used in other modules
+        :type http_daemon: None | object
+        :return: None
+        """
 
         if not self.is_external:
             return
@@ -211,6 +242,8 @@ class BaseModule(object):
     def __kill(self):
         """Sometime terminate() is not enough, we must "help"
         external modules to die...
+
+        :return: None
         """
 
         if os.name == 'nt':
@@ -225,7 +258,10 @@ class BaseModule(object):
 
 
     def stop_process(self):
-        """Request the module process to stop and release it"""
+        """Request the module process to stop and release it
+
+        :return: None
+        """
         if self.process:
             logger.info("I'm stopping module %r (pid=%s)",
                         self.get_name(), self.process.pid)
@@ -243,24 +279,46 @@ class BaseModule(object):
             self.process = None
 
 
-    # TODO: are these 2 methods really needed?
+
     def get_name(self):
+        """Wrapper to access name attribute
+
+        :return: module name
+        :rtype: str
+        """
         return self.name
 
     def has(self, prop):
-        """The classic has: do we have a prop or not?"""
+        """The classic has: do we have a prop or not?
+
+        :param prop: property name
+        :type prop: str
+        :return: True if has a property, otherwise False
+        :rtype: bool
+        """
         return hasattr(self, prop)
 
 
-    # For in scheduler modules, we will not send all broks to external
-    # modules, only what they really want
     def want_brok(self, b):
+        """Generic function to check if the module need a specific brok
+        In this case it is always True
+
+        :param b: brok to check
+        :type b: alignak.brok.Brok
+        :return: True if the module wants the brok, False otherwise
+        :rtype: bool
+        """
         return True
 
 
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
         There a lot of different possible broks to manage.
+
+        :param brok:
+        :type brok:
+        :return:
+        :rtype:
         """
         manage = getattr(self, 'manage_' + brok.type + '_brok', None)
         if manage:
@@ -270,10 +328,26 @@ class BaseModule(object):
 
 
     def manage_signal(self, sig, frame):
+        """Generic function to handle signals
+        Set interrupted attribute to True and return
+
+        :param sig: signal sent
+        :type sig:
+        :param frame: frame before catching signal
+        :type frame:
+        :return: None
+        """
         self.interrupted = True
 
 
     def set_signal_handler(self, sigs=None):
+        """Set the signal handler function (manage_signal)
+        for sigs signals or signal.SIGINT and signal.SIGTERM if sigs is None
+
+        :param sigs: signals to handle
+        :type sigs:
+        :return: None
+        """
         if sigs is None:
             sigs = (signal.SIGINT, signal.SIGTERM)
 
@@ -287,20 +361,33 @@ class BaseModule(object):
         """Called just before the module will exit
         Put in this method all you need to cleanly
         release all open resources used by your module
+
+        :return: None
         """
         pass
 
     def do_loop_turn(self):
         """For external modules only:
         implement in this method the body of you main loop
+
+        :return: None
         """
         raise NotImplementedError()
 
     def set_proctitle(self, name):
+        """Wrapper for setproctitle method
+
+        :param name: module name
+        :type name: str
+        :return: None
+        """
         setproctitle("alignak-%s module: %s" % (self.loaded_into, name))
 
     def _main(self):
-        """module "main" method. Only used by external modules."""
+        """module "main" method. Only used by external modules.
+
+        :return: None
+        """
         self.set_proctitle(self.name)
 
         # TODO: fix this hack:

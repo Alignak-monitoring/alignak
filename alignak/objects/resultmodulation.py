@@ -49,7 +49,10 @@
 
 # The resultmodulation class is used for in scheduler modulation of results
 # like the return code or the output.
-
+"""
+This module provide Resultmodulation and Resultmodulations classes used to describe
+the modulation of a check command. Modulation occurs on a modulation period (Timeperiod)
+"""
 import time
 
 from item import Item, Items
@@ -58,6 +61,10 @@ from alignak.property import StringProp, IntegerProp, IntListProp
 
 
 class Resultmodulation(Item):
+    """Resultmodulation class is simply a modulation of a check result exit code
+    during a modulation_period.
+
+    """
     id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'resultmodulation'
 
@@ -69,12 +76,26 @@ class Resultmodulation(Item):
         'modulation_period':     StringProp(default=None),
     })
 
-    # For debugging purpose only (nice name)
     def get_name(self):
+        """Accessor to resultmodulation_name attribute
+
+        :return: result modulation name
+        :rtype: str
+        """
         return self.resultmodulation_name
 
-    # Make the return code modulation if need
     def module_return(self, return_code):
+        """Module the exit code if necessary ::
+
+        * modulation_period is legit
+        * exit_code_modulation
+        * return_code in exit_codes_match
+
+        :param return_code: actual code returned by the check
+        :type return_code: int
+        :return: return_code modulated if necessary (exit_code_modulation)
+        :rtype: int
+        """
         # Only if in modulation_period of modulation_period == None
         if self.modulation_period is None or self.modulation_period.is_time_valid(time.time()):
             # Try to change the exit code only if a new one is defined
@@ -85,9 +106,12 @@ class Resultmodulation(Item):
 
         return return_code
 
-    # We override the pythonize because we have special cases that we do not want
-    # to be do at running
     def pythonize(self):
+        """Pythonization function for Resultmodulation.
+        We override it because we need to convert exit code into integers
+
+        :return: None
+        """
         # First apply Item pythonize
         super(Resultmodulation, self).pythonize()
 
@@ -102,15 +126,29 @@ class Resultmodulation(Item):
 
 
 class Resultmodulations(Items):
+    """Resultmodulations class allowed to handle easily several CheckModulation objects
+
+    """
     name_property = "resultmodulation_name"
     inner_class = Resultmodulation
 
     def linkify(self, timeperiods):
+        """Wrapper for linkify_rm_by_tp
+        Replace check_period by real Timeperiod object into each Resultmodulation
+
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         self.linkify_rm_by_tp(timeperiods)
 
-    # We just search for each timeperiod the tp
-    # and replace the name by the tp
     def linkify_rm_by_tp(self, timeperiods):
+        """Replace check_period by real Timeperiod object into each Resultmodulation
+
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
         for rm in self:
             mtp_name = rm.modulation_period.strip()
 

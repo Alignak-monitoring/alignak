@@ -42,7 +42,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
  This class is an application that launches actions like
  notifications or event handlers
  The reactionner listens to the Arbiter for the configuration sent through
@@ -53,7 +53,7 @@
  on listening the arbiter (one a timeout)
  In case the arbiter has a new conf to send, the reactionner forget its old
  schedulers (and the associated actions) and take the new ones instead.
-'''
+"""
 
 import sys
 import os
@@ -75,8 +75,11 @@ from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak import __version__
 
 
-# Protect for windows multiprocessing that will RELAUNCH all
 def main():
+    """Parse args and run main daemon function
+
+    :return: None
+    """
     parser = optparse.OptionParser(
         "%prog [options]", version="%prog " + __version__)
     parser.add_option('-c', '--config',

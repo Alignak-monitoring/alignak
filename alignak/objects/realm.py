@@ -50,7 +50,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Realm and Realms classes that
+implements realm for Alignak. Basically used for parsing.
 
+"""
 import copy
 
 from item import Item
@@ -61,7 +64,12 @@ from alignak.log import logger
 # It change from hostgroup Class because there is no members
 # properties, just the realm_members that we rewrite on it.
 
+
 class Realm(Itemgroup):
+    """Realm class is used to implement realm. It is basically a set of Host or Service
+    assigned to a specific set of Scheduler/Poller (other daemon are optional)
+
+    """
     id = 1  # zero is always a little bit special... like in database
     my_type = 'realm'
 
@@ -91,24 +99,54 @@ class Realm(Itemgroup):
     }
 
     def get_name(self):
+        """Accessor to realm_name attribute
+
+        :return: realm name
+        :rtype: str
+        """
         return self.realm_name
 
     def get_realms(self):
+        """
+        Get list of members of this realm
+
+        :return: list of realm (members)
+        :rtype: list
+        TODO: Duplicate of get_realm_members
+        """
         return self.realm_members
 
     def add_string_member(self, member):
+        """Add a realm to realm_members attribute
+
+        :param member: realm name to add
+        :type member:
+        :return: None
+        TODO : Clean this self.members != self.realm_members?
+        """
         self.realm_members.append(member)
 
     def get_realm_members(self):
+        """
+        Get list of members of this realm
+
+        :return: list of realm (members)
+        :rtype: list
+        """
         if self.has('realm_members'):
             return [r.strip() for r in self.realm_members]
         else:
             return []
 
-    # We fillfull properties with template ones if need
-    # Because hostgroup we call may not have it's members
-    # we call get_hosts_by_explosion on it
     def get_realms_by_explosion(self, realms):
+        """Get all members of this realm including members of sub-realms
+
+        :param realms: realms list, used to look for a specific one
+        :type realms: alignak.objects.realm.Realms
+        :return: list of members and add realm to realm_members attribute
+        :rtype: list
+        TODO: Clean this function that silently edit realm_members.
+        """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
         self.already_explode = True
@@ -142,6 +180,14 @@ class Realm(Itemgroup):
             return []
 
     def get_all_subs_satellites_by_type(self, sat_type):
+        """Get all satellites of the wated type in this realm recursively
+
+        :param sat_type: satelitte type wanted (scheduler, poller ..)
+        :type sat_type:
+        :return: list of satellite in this realm
+        :rtype: list
+        TODO: Make this generic
+        """
         r = copy.copy(getattr(self, sat_type))
         for p in self.realm_members:
             tmps = p.get_all_subs_satellites_by_type(sat_type)
@@ -150,6 +196,11 @@ class Realm(Itemgroup):
         return r
 
     def count_reactionners(self):
+        """ Set the number of reactionners in this realm.
+
+        :return: None
+        TODO: Make this generic
+        """
         self.nb_reactionners = 0
         for reactionner in self.reactionners:
             if not reactionner.spare:
@@ -160,6 +211,10 @@ class Realm(Itemgroup):
                     self.nb_reactionners += 1
 
     def count_pollers(self):
+        """ Set the number of pollers in this realm.
+
+        :return: None
+        """
         self.nb_pollers = 0
         for poller in self.pollers:
             if not poller.spare:
@@ -170,6 +225,11 @@ class Realm(Itemgroup):
                     self.nb_pollers += 1
 
     def count_brokers(self):
+        """ Set the number of brokers in this realm.
+
+        :return: None
+        TODO: Make this generic
+        """
         self.nb_brokers = 0
         for broker in self.brokers:
             if not broker.spare:
@@ -180,6 +240,11 @@ class Realm(Itemgroup):
                     self.nb_brokers += 1
 
     def count_receivers(self):
+        """ Set the number of receivers in this realm.
+
+        :return: None
+        TODO: Make this generic
+        """
         self.nb_receivers = 0
         for receiver in self.receivers:
             if not receiver.spare:
@@ -189,17 +254,29 @@ class Realm(Itemgroup):
                 if not receiver.spare and receiver.manage_sub_realms:
                     self.nb_receivers += 1
 
-    # Return the list of satellites of a certain type
-    # like reactionner -> self.reactionners
     def get_satellties_by_type(self, type):
+        """Generic function to access one of the satellite attribute
+        ie : self.pollers, self.reactionners ...
+
+        :param type: satellite type wanted
+        :type type: str
+        :return: self.*type*s
+        :rtype: list
+        """
+
         if hasattr(self, type + 's'):
             return getattr(self, type + 's')
         else:
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return []
 
-
     def fill_potential_satellites_by_type(self, sat_type):
+        """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
+
+        :param sat_type: satellite type wanted
+        :type sat_type: str
+        :return: None
+        """
         setattr(self, 'potential_%s' % sat_type, [])
         for satellite in getattr(self, sat_type):
             getattr(self, 'potential_%s' % sat_type).append(satellite)
@@ -208,30 +285,50 @@ class Realm(Itemgroup):
                 if satellite.manage_sub_realms:
                     getattr(self, 'potential_%s' % sat_type).append(satellite)
 
-
-
-    # Return the list of potentials satellites of a certain type
-    # like reactionner -> self.potential_reactionners
     def get_potential_satellites_by_type(self, type):
+        """Generic function to access one of the potential satellite attribute
+        ie : self.potential_pollers, self.potential_reactionners ...
+
+        :param type: satellite type wanted
+        :type type: str
+        :return: self.potential_*type*s
+        :rtype: list
+        """
         if hasattr(self, 'potential_' + type + 's'):
             return getattr(self, 'potential_' + type + 's')
         else:
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return []
 
-
-    # Return the list of potentials satellites of a certain type
-    # like reactionner -> self.nb_reactionners
     def get_nb_of_must_have_satellites(self, type):
+        """Generic function to access one of the number satellite attribute
+        ie : self.nb_pollers, self.nb_reactionners ...
+
+        :param type: satellite type wanted
+        :type type: str
+        :return: self.nb_*type*s
+        :rtype: int
+        """
         if hasattr(self, 'nb_' + type + 's'):
             return getattr(self, 'nb_' + type + 's')
         else:
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return 0
 
-
     # Fill dict of realms for managing the satellites confs
     def prepare_for_satellites_conf(self):
+        """Init the following attributes::
+
+        * to_satellites (with *satellite type* keys)
+        * to_satellites_need_dispatch (with *satellite type* keys)
+        * to_satellites_managed_by (with *satellite type* keys)
+        * nb_*satellite type*s
+        * self.potential_*satellite type*s
+
+        (satellite type are reactionner, poller, broker and receiver)
+
+        :return: None
+        """
         self.to_satellites = {}
         self.to_satellites['reactionner'] = {}
         self.to_satellites['poller'] = {}
@@ -269,10 +366,16 @@ class Realm(Itemgroup):
              )
         logger.info(s)
 
-
-    # TODO: find a better name...
-    # TODO: and if he goes active?
     def fill_broker_with_poller_reactionner_links(self, broker):
+        """Fill brokerlink object with satellite data
+
+        :param broker: broker link we want to fill
+        :type broker: alignak.objects.brokerlink.Brokerlink
+        :return: None
+        """
+
+        # TODO: find a better name...
+        # TODO: and if he goes active?
         # First we create/void theses links
         broker.cfg['pollers'] = {}
         broker.cfg['reactionners'] = {}
@@ -308,10 +411,12 @@ class Realm(Itemgroup):
                 cfg = r.give_satellite_cfg()
                 broker.cfg['receivers'][r.id] = cfg
 
-
-    # Get a conf package of satellites links that can be useful for
-    # a scheduler
     def get_satellites_links_for_scheduler(self):
+        """Get a configuration dict with pollers and reactionners data
+
+        :return: dict containing pollers and reactionners config (key is satellite id)
+        :rtype: dict
+        """
         cfg = {}
 
         # First we create/void theses links
@@ -332,17 +437,40 @@ class Realm(Itemgroup):
 
 
 class Realms(Itemgroups):
+    """Realms manage a list of Realm objects, used for parsing configuration
+
+    """
     name_property = "realm_name"  # is used for finding hostgroups
     inner_class = Realm
 
     def get_members_by_name(self, pname):
+        """Get realm_members for a specific realm
+
+        :param pname: realm name
+        :type: str
+        :return: list of realm members
+        :rtype: list
+        """
         realm = self.find_by_name(pname)
         if realm is None:
             return []
         return realm.get_realms()
 
-
     def linkify(self):
+        """Links sub-realms (parent / son),
+        add new realm_members,
+        and init each realm following attributes ::
+
+        * pollers      : []
+        * schedulers   : []
+        * reactionners.: []
+        * brokers:     : []
+        * receivers:   : []
+        * packs:       : []
+        * confs:       : {}
+
+        :return: None
+        """
         self.linkify_p_by_p()
 
         # prepare list of satellites and confs
@@ -355,10 +483,12 @@ class Realms(Itemgroups):
             p.packs = []
             p.confs = {}
 
-
-    # We just search for each realm the others realms
-    # and replace the name by the realm
     def linkify_p_by_p(self):
+        """Links sub-realms (parent / son)
+        and add new realm_members
+
+        :return: None
+        """
         for p in self.items.values():
             mbrs = p.get_realm_members()
             # The new member list, in id
@@ -380,18 +510,25 @@ class Realms(Itemgroups):
         for p in self.items.values():
             self.recur_higer_realms(p, p.realm_members)
 
-
-    # I add the R realm in the sons.higer_realms, and
-    # also in the son.sons and so on
     def recur_higer_realms(self, r, sons):
+        """Add sub-realms (parent / son)
+
+        :param r: parent realm
+        :type r: alignak.objects.realm.Realm
+        :param sons: sons realm
+        :type sons: list[alignak.objects.realm.Realm]
+        :return: None
+        """
         for sub_p in sons:
             sub_p.higher_realms.append(r)
             # and call for our sons too
             self.recur_higer_realms(r, sub_p.realm_members)
 
-
-    # Use to fill members with hostgroup_members
     def explode(self):
+        """Explode realms with each realm_members
+
+        :return: None
+        """
         # We do not want a same hg to be explode again and again
         # so we tag it
         for tmp_p in self.items.values():
@@ -410,14 +547,21 @@ class Realms(Itemgroups):
                 del tmp_p.rec_tag
             del tmp_p.already_explode
 
-
     def get_default(self):
+        """Get the default realm
+
+        :return: Default realm of Alignak configuration
+        :rtype: alignak.objects.realm.Realm | None
+        """
         for r in self:
             if getattr(r, 'default', False):
                 return r
         return None
 
-
     def prepare_for_satellites_conf(self):
+        """Wrapper to loop over each reach and call Realm.prepare_for_satellites_conf()
+
+        :return: None
+        """
         for r in self:
             r.prepare_for_satellites_conf()

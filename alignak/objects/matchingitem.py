@@ -45,10 +45,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
  This is a utility class for factorizing matching functions for
  discovery runners and rules.
-'''
+"""
 
 import re
 
@@ -56,12 +56,23 @@ from item import Item
 
 
 class MatchingItem(Item):
+    """
+    MatchingItem class provide function for regular expression matching
+    """
 
-    # Try to see if the key,value is matching one or
-    # our rule. If value got ',' we must look for each value
-    # If one match, we quit
-    # We can find in matches or not_matches
     def is_matching(self, key, value, look_in='matches'):
+        """Try to see if the key,value is matching one or
+        our rule.
+
+        :param key: key to find in dict
+        :type key:
+        :param value: value to find at dict[key]
+        :type value:
+        :param look_in: the attribute dict to look in (matches or not_matches)
+        :type look_in: str
+        :return: True if  dict[key] match in value, otherwise False
+        :rtype: bool
+        """
         if look_in == 'matches':
             d = self.matches
         else:
@@ -92,9 +103,15 @@ class MatchingItem(Item):
                         return True
         return False
 
-    # Look if we match all discovery data or not
-    # a disco data look as a list of (key, values)
     def is_matching_disco_datas(self, datas):
+        """Check if data match one of our matching attribute (matches or not_matches)
+
+        :param datas: data to parse
+        :type datas:
+        :return: True if we match one pattern in matches and no pattern in not_matches,
+                 otherwise False
+        :rtype: bool
+        """
         # If we got not data, no way we can match
         if len(datas) == 0:
             return False

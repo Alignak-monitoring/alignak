@@ -43,6 +43,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Message class. Used for communication between daemon process (with queues)
+
+"""
+
 
 class Message:
     """This is a simple message class for communications between actionners and
@@ -62,14 +66,35 @@ class Message:
         self.source = source
 
     def get_type(self):
+        """Getter of _type attribute
+
+        :return: Message type
+        :rtype: str
+        """
         return self._type
 
     def get_data(self):
+        """Getter of _data attribute
+
+        :return: Message data
+        :rtype: str
+        """
         return self._data
 
     def get_from(self):
+        """Getter of _from attribute
+
+        :return: Message from (worker name)
+        :rtype: str
+        """
         return self._from
 
     def str(self):
+        """String representation of message
+
+        :return: "Message from %d (%s), Type: %s Data: %s" (from, source, type, data)
+        :rtype: str
+        TODO: Rename this __str__
+        """
         return "Message from %d (%s), Type: %s Data: %s" % (
             self._from, self.source, self._type, self._data)

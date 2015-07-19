@@ -42,6 +42,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This module lists provide facilities to parse log type Broks.
+The supported event are listed in the event_type variable
+"""
 
 import re
 
@@ -120,9 +124,10 @@ event_types = {
 }
 
 
-# Class for parsing event logs
-# Populates self.data with the log type's properties
 class LogEvent:
+    """Class for parsing event logs
+    Populates self.data with the log type's properties
+    """
 
     def __init__(self, log):
         self.data = {}

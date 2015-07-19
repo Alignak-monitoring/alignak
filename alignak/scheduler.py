@@ -60,7 +60,12 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""This module provides Scheduler class.
+It is used to schedule checks, create broks for monitoring event,
+handle downtime, problems / acknowledgment etc.
+The major part of monitoring "intelligence" is in this module.
 
+"""
 import time
 import os
 import cStringIO
@@ -90,12 +95,15 @@ from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 
 class Scheduler(object):
-    """Please Add a Docstring to describe the class here"""
+    """Scheduler class. Mostly handle scheduling items (host service) to schedule check
+    raise alert, enter downtime etc."""
 
     def __init__(self, scheduler_daemon):
-        '''
+        """
+        :param scheduler_daemon: schedulerdaemon
         :type scheduler_daemon: alignak.daemons.schedulerdaemon.Alignak
-        '''
+        :return: None
+        """
         self.sched_daemon = scheduler_daemon
         # When set to false by us, we die and arbiter launch a new Scheduler
         self.must_run = True
@@ -179,8 +187,14 @@ class Scheduler(object):
         self.pollers = {}
         self.reactionners = {}
 
-
     def reset(self):
+        """Reset scheduler::
+
+        * Remove waiting results
+        * Clear check, actions, downtimes, comments, broks lists
+
+        :return: None
+        """
         self.must_run = True
         with self.waiting_results_lock:
             del self.waiting_results[:]
@@ -190,14 +204,21 @@ class Scheduler(object):
             o.clear()
 
     def iter_hosts_and_services(self):
+        """Create an iterator for hosts and services
+
+        :return: None
+        """
         for what in (self.hosts, self.services):
             for elt in what:
                 yield elt
 
-    # Load conf for future use
-    # we are in_test if the data are from an arbiter object like,
-    # so only for tests
     def load_conf(self, conf):
+        """Load configuration received from Arbiter
+
+        :param conf: configuration to laod
+        :type conf: alignak.objects.config.Config
+        :return: None
+        """
         self.program_start = int(time.time())
         self.conf = conf
         self.hostgroups = conf.hostgroups
@@ -239,31 +260,46 @@ class Scheduler(object):
                                          self.conf.retention_update_interval * 60)
         self.update_recurrent_works_tick('clean_queues', self.conf.cleaning_queues_interval)
 
-
-    # Update the 'tick' for a function call in our
-    # recurrent work
     def update_recurrent_works_tick(self, f_name, new_tick):
+        """Modify the tick value for a recurrent work
+        A tick is an amount of loop of the scheduler before executing the recurrent work
+
+        :param f_name: recurrent work name
+        :type f_name: str
+        :param new_tick: new value
+        :type new_tick: str
+        :return: None
+        """
         for i in self.recurrent_works:
             (name, f, old_tick) = self.recurrent_works[i]
             if name == f_name:
                 logger.debug("Changing the tick to %d for the function %s", new_tick, name)
                 self.recurrent_works[i] = (name, f, new_tick)
 
-
-    # Load the pollers from our app master
     def load_satellites(self, pollers, reactionners):
+        """Setter for pollers and reactionners attributes
+
+        :param pollers: pollers value to set
+        :type pollers:
+        :param reactionners: reactionners value to set
+        :type reactionners:
+        :return: None
+        """
         self.pollers = pollers
         self.reactionners = reactionners
 
-
-    # Oh... Arbiter want us to die... To launch a new Scheduler
-    # "Mais qu'a-t-il de plus que je n'ais pas?"
-    # "But.. On which point it is better than me?"
     def die(self):
+        """Set must_run attribute to False
+
+        :return: None
+        """
         self.must_run = False
 
-
     def dump_objects(self):
+        """Dump scheduler objects into a dump (temp) file
+
+        :return: None
+        """
         d = tempfile.gettempdir()
         p = os.path.join(d, 'scheduler-obj-dump-%d' % time.time())
         logger.info('Opening the DUMP FILE %s', p)
@@ -286,8 +322,11 @@ class Scheduler(object):
         except Exception, exp:
             logger.error("Error in writing the dump file %s : %s", p, str(exp))
 
-
     def dump_config(self):
+        """Dump scheduler config into a dump (temp) file
+
+        :return: None
+        """
         d = tempfile.gettempdir()
         p = os.path.join(d, 'scheduler-conf-dump-%d' % time.time())
         logger.info('Opening the DUMP FILE %s', p)
@@ -299,29 +338,46 @@ class Scheduler(object):
         except Exception, exp:
             logger.error("Error in writing the dump file %s : %s", p, str(exp))
 
-    # Load the external command
     def load_external_command(self, e):
+        """Setter for external_command attribute
+
+        :param e: new value
+        :type e: alignak.external_command.ExternalCommandManager
+        :return: None
+        """
         self.external_command = e
 
-
-    # We've got activity in the fifo, we get and run commands
     def run_external_commands(self, cmds):
+        """Run external commands Arbiter/Receiver sent
+
+        :param cmds: commands to run
+        :type cmds: list
+        :return: None
+        """
         for command in cmds:
             self.run_external_command(command)
 
-
     def run_external_command(self, command):
+        """Run a single external command
+
+        :param command: command line to run
+        :type command: str
+        :return: None
+        """
         logger.debug("scheduler resolves command '%s'", command)
         ext_cmd = ExternalCommand(command)
         self.external_command.resolve_command(ext_cmd)
 
-
-    # Add_Brok is a bit more complex than the others, because
-    # on starting, the broks are put in a global queue : self.broks
-    # then when the first broker connect, it will generate initial_broks
-    # in it's own queue (so bname != None).
-    # and when in "normal" run, we just need to put the brok to all queues
     def add_Brok(self, brok, bname=None):
+        """Add a brok into brokers list
+        It can be for a specific one, all brokers or none (startup)
+
+        :param brok: brok to add
+        :type brok: alignak.brok.Brok
+        :param bname: broker name for the brok
+        :type bname: str
+        :return: None
+        """
         # For brok, we TAG brok with our instance_id
         brok.instance_id = self.instance_id
         # Maybe it's just for one broker
@@ -340,57 +396,95 @@ class Scheduler(object):
                 # connection will get all
                 self.broks[brok.id] = brok
 
-
     def add_Notification(self, notif):
+        """Add a notification into actions list
+
+        :param notif: notification to add
+        :type notif: alignak.notification.Notification
+        :return: None
+        """
         self.actions[notif.id] = notif
         # A notification ask for a brok
         if notif.contact is not None:
             b = notif.get_initial_status_brok()
             self.add(b)
 
-
     def add_Check(self, c):
+        """Add a check into checks list
+
+        :param c: check to add
+        :type c: alignak.check.Check
+        :return: None
+        """
         self.checks[c.id] = c
         # A new check means the host/service changes its next_check
         # need to be refreshed
         b = c.ref.get_next_schedule_brok()
         self.add(b)
 
-
     def add_EventHandler(self, action):
+        """Add a event handler into actions list
+
+        :param action: event handler to add
+        :type action: alignak.eventhandler.EventHandler
+        :return: None
+        """
         # print "Add an event Handler", elt.id
         self.actions[action.id] = action
 
-
     def add_Downtime(self, dt):
+        """Add a downtime into downtimes list
+
+        :param dt: downtime to add
+        :type dt: alignak.downtime.Downtime
+        :return: None
+        """
         self.downtimes[dt.id] = dt
         if dt.extra_comment:
             self.add_Comment(dt.extra_comment)
 
-
     def add_ContactDowntime(self, contact_dt):
+        """Add a contact downtime into contact_downtimes list
+
+        :param contact_dt: contact downtime to add
+        :type contact_dt: alignak.contactdowntime.ContactDowntime
+        :return: None
+        """
         self.contact_downtimes[contact_dt.id] = contact_dt
 
-
     def add_Comment(self, comment):
+        """Add a comment into comments list
+
+        :param comment: comment to add
+        :type comment: alignak.comment.Comment
+        :return: None
+        """
         self.comments[comment.id] = comment
         b = comment.ref.get_update_status_brok()
         self.add(b)
 
-
-    # Ok one of our modules send us a command? just run it!
     def add_ExternalCommand(self, ext_cmd):
+        """Resolve external command
+
+        :param ext_cmd: extermal command to run
+        :type excmd: alignak.external_command.ExternalCommand
+        :return: None
+        """
         self.external_command.resolve_command(ext_cmd)
 
-
-    # Schedulers have some queues. We can simplify call by adding
-    # elements into the proper queue just by looking at their type
-    # Brok -> self.broks
-    # Check -> self.checks
-    # Notification -> self.actions
-    # Downtime -> self.downtimes
-    # ContactDowntime -> self.contact_downtimes
     def add(self, elt):
+        """Generic function to add objects into scheduler internal lists::
+
+        Brok -> self.broks
+        Check -> self.checks
+        Notification -> self.actions
+        Downtime -> self.downtimes
+        ContactDowntime -> self.contact_downtimes
+
+        :param elt: element to add
+        :type elt:
+        :return: None
+        """
         f = self.__add_actions.get(elt.__class__, None)
         if f:
             # print("found action for %s: %s" % (elt.__class__.__name__, f.__name__))
@@ -412,11 +506,14 @@ class Scheduler(object):
         ExternalCommand:    add_ExternalCommand,
     }
 
-
-    # We call the function of modules that got the
-    # hook function
-    # TODO: find a way to merge this and the version in daemon.py
     def hook_point(self, hook_name):
+        """Generic function to call modules methods if such method is avalaible
+
+        :param hook_name: function name to call
+        :type hook_name: str
+        :return:None
+        TODO: find a way to merge this and the version in daemon.py
+        """
         for inst in self.sched_daemon.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
             logger.debug("hook_point: %s: %s %s",
@@ -436,11 +533,14 @@ class Scheduler(object):
                     output.close()
                     self.sched_daemon.modules_manager.set_to_restart(inst)
 
-
-    # Ours queues may explode if no one ask us for elements
-    # It's very dangerous: you can crash your server... and it's a bad thing :)
-    # So we 'just' keep last elements: 5 of max is a good overhead
     def clean_queues(self):
+        """Reduces internal list size to max allowed
+
+        * checks and broks : 5 * length of hosts + services
+        * actions : 5 * length of hosts + services + contacts
+
+        :return: None
+        """
         # if we set the interval at 0, we bail out
         if self.conf.cleaning_queues_interval == 0:
             return
@@ -507,59 +607,80 @@ class Scheduler(object):
             logger.warning("We drop %d checks, %d broks and %d actions",
                            nb_checks_drops, nb_broks_drops, nb_actions_drops)
 
-
-    # For tunning purpose we use caches but we do not want them to explode
-    # So we clean them
     def clean_caches(self):
+        """Clean timperiods caches
+
+        :return: None
+        """
         for tp in self.timeperiods:
             tp.clean_cache()
 
-
-    # Ask item (host or service) an update_status
-    # and add it to our broks queue
     def get_and_register_status_brok(self, item):
+        """Get a update status brok for item and add it
+
+        :param item: item to get brok from
+        :type item: alignak.objects.item.Item
+        :return: None
+        """
         b = item.get_update_status_brok()
         self.add(b)
 
-
-    # Ask item (host or service) a check_result_brok
-    # and add it to our broks queue
     def get_and_register_check_result_brok(self, item):
+        """Get a check result brok for item and add it
+
+        :param item: item to get brok from
+        :type item: alignak.objects.schedulingitem.SchedulingItem
+        :return: None
+        """
         b = item.get_check_result_brok()
         self.add(b)
 
-
-    # We do not want this downtime id
     def del_downtime(self, dt_id):
+        """Delete a downtime
+
+        :param dt_id: downtime id to delete
+        :type dt_id: int
+        :return: None
+        """
         if dt_id in self.downtimes:
             self.downtimes[dt_id].ref.del_downtime(dt_id)
             del self.downtimes[dt_id]
 
-
-    # We do not want this downtime id
     def del_contact_downtime(self, dt_id):
+        """Delete a contact downtime
+
+        :param dt_id: contact downtime id to delete
+        :type dt_id: int
+        :return: None
+        """
         if dt_id in self.contact_downtimes:
             self.contact_downtimes[dt_id].ref.del_downtime(dt_id)
             del self.contact_downtimes[dt_id]
 
-
-    # We do not want this comment id
     def del_comment(self, c_id):
+        """Delete a comment
+
+        :param c_id: comment id to delete
+        :type c_id: int
+        :return: None
+        """
         if c_id in self.comments:
             self.comments[c_id].ref.del_comment(c_id)
             del self.comments[c_id]
 
-
-    # We are looking for outdated acks, and if so, remove them
     def check_for_expire_acknowledge(self):
+        """Iter over host and service and check if any acknowledgement has expired
+
+        :return: None
+        """
         for elt in self.iter_hosts_and_services():
             elt.check_for_expire_acknowledge()
 
-
-    # We update all business_impact to look at new modulation
-    # start for impacts, and so update broks status and
-    # problems value too
     def update_business_values(self):
+        """Iter over host and service and update business_impact
+
+        :return: None
+        """
         for elt in self.iter_hosts_and_services():
             if not elt.is_problem:
                 was = elt.business_impact
@@ -586,10 +707,13 @@ class Scheduler(object):
                     # print "change it's business_impact value from", was, "to", new
                     self.get_and_register_status_brok(elt)
 
-
-    # Each second we search for master notification that are scatterisable and we do the job
-    # we take the sons and we put them into our actions queue
     def scatter_master_notifications(self):
+        """Generate children notifications from master notifications
+        Also update notification number
+        Master notification are not launched by reactionners, only children ones
+
+        :return: None
+        """
         now = time.time()
         for a in self.actions.values():
             # We only want notifications
@@ -646,13 +770,29 @@ class Scheduler(object):
                         item.remove_in_progress_notification(a)
                         self.actions[a.id].status = 'zombie'
 
-
-    # Called by poller to get checks
-    # Can get checks and actions (notifications and co)
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=['None'], reactionner_tags=['None'],
                           worker_name='none', module_types=['fork']
                           ):
+        """Get actions/checks for reactionner/poller
+        Called by poller to get checks
+        Can get checks and actions (notifications and co)
+
+        :param do_checks: do we get checks ?
+        :type do_checks: bool
+        :param do_actions: do we get actions ?
+        :type do_actions: bool
+        :param poller_tags: poller tags to filter
+        :type poller_tags: list
+        :param reactionner_tags: reactionner tags to filter
+        :type reactionner_tags: list
+        :param worker_name: worker name to fill check/action (to remember it)
+        :type worker_name: str
+        :param module_types: module type to filter
+        :type module_types: list
+        :return: Check/Action list with poller/reactionner tags matching and module type matching
+        :rtype: list
+        """
         res = []
         now = time.time()
 
@@ -702,9 +842,13 @@ class Scheduler(object):
                         res.append(new_a)
         return res
 
-
-    # Called by poller and reactionner to send result
     def put_results(self, c):
+        """Get result from pollers/reactionners (actives ones)
+
+        :param c: check / action / eventhandler to handle
+        :type c:
+        :return: None
+        """
         if c.is_a == 'notification':
             # We will only see childnotifications here
             try:
@@ -782,27 +926,44 @@ class Scheduler(object):
         else:
             logger.error("The received result type in unknown! %s", str(c.is_a))
 
-
-    # Get the good tabs for links regarding to the kind. If unknown, return None
     def get_links_from_type(self, type):
+        """Get poller link or reactionner link depending on the wanted type
+
+        :param type: type we want
+        :type type: str
+        :return: links wanted
+        :rtype: alignak.objects.pollerlink.PollerLinks |
+                alignak.objects.reactionnerlink.ReactionnerLinks | None
+        """
         t = {'poller': self.pollers, 'reactionner': self.reactionners}
         if type in t:
             return t[type]
         return None
 
-
-    # Check if we do not connect to often to this
     def is_connection_try_too_close(self, elt):
+        """Check if last connection was too early for element
+
+        :param elt: element to check
+        :type elt:
+        :return: True if  now - last_connection < 5, False otherwise
+        :rtype: bool
+        """
         now = time.time()
         last_connection = elt['last_connection']
         if now - last_connection < 5:
             return True
         return False
 
-
-    # initialize or re-initialize connection with a poller
-    # or a reactionner
     def pynag_con_init(self, id, type='poller'):
+        """Init or reinit connection to a poller or reactionner
+        Used for passive daemons
+
+        :param id: daemon id to connect to
+        :type id: int
+        :param type: daemon type to connect to
+        :type type: str
+        :return: None
+        """
         # Get good links tab for looping..
         links = self.get_links_from_type(type)
         if links is None:
@@ -847,9 +1008,11 @@ class Scheduler(object):
 
         logger.info("Connection OK to the %s %s", type, links[id]['name'])
 
-
-    # We should push actions to our passives satellites
     def push_actions_to_passives_satellites(self):
+        """Send actions/checks to passive poller/reactionners
+
+        :return: None
+        """
         # We loop for our passive pollers or reactionners
         for p in filter(lambda p: p['passive'], self.pollers.values()):
             logger.debug("I will send actions to the poller %s", str(p))
@@ -901,9 +1064,11 @@ class Scheduler(object):
             else:  # no connection? try to reconnect
                 self.pynag_con_init(p['instance_id'], type='reactionner')
 
-
-    # We should get returns from satellites
     def get_actions_from_passives_satellites(self):
+        """Get actions/checks results from passive poller/reactionners
+
+        :return: None
+        """
         # We loop for our passive pollers
         for p in [p for p in self.pollers.values() if p['passive']]:
             logger.debug("I will get actions from the poller %s", str(p))
@@ -978,10 +1143,11 @@ class Scheduler(object):
             else:  # no connection, try reinit
                 self.pynag_con_init(p['instance_id'], type='reactionner')
 
-
-    # Some checks are purely internal, like business based one
-    # simply ask their ref to manage it when it's ok to run
     def manage_internal_checks(self):
+        """Run internal checks
+
+        :return: None
+        """
         now = time.time()
         for c in self.checks.values():
             # must be ok to launch, and not an internal one (business rules based)
@@ -991,10 +1157,14 @@ class Scheduler(object):
                 # like for all checks
                 c.status = 'waitconsume'
 
-
-    # Call by brokers to have broks
-    # We give them, and clean them!
     def get_broks(self, bname):
+        """Send broks to a specific broker
+
+        :param bname: broker name to send broks
+        :type bname: str
+        :return: list of brok for this broker
+        :rtype: list[alignak.brok.Brok]
+        """
         # If we are here, we are sure the broker entry exists
         res = self.brokers[bname]['broks']
         # They are gone, we keep none!
@@ -1007,22 +1177,24 @@ class Scheduler(object):
 
         return res
 
-
-    # An element can have its topology changed by an external command
-    # if so a brok will be generated with this flag. No need to reset all of
-    # them.
     def reset_topology_change_flag(self):
+        """Set topology_change attribute to False in all hosts and services
+
+        :return: None
+        """
         for i in self.hosts:
             i.topology_change = False
         for i in self.services:
             i.topology_change = False
 
-
-    # Update the retention file and give all te data in
-    # a dict so the read function can pickup what it wants
-    # For now compression is not used, but it can be added easily
-    # just uncomment :)
     def update_retention_file(self, forced=False):
+        """Call hook point 'save_retention'.
+        Retention modules will write back retention (to file, db etc)
+
+        :param forced: if update forced?
+        :type forced: bool
+        :return: None
+        """
         # If we set the update to 0, we do not want of this
         # if we do not forced (like at stopping)
         if self.conf.retention_update_interval == 0 and not forced:
@@ -1030,16 +1202,23 @@ class Scheduler(object):
 
         self.hook_point('save_retention')
 
-
-    # Load the retention file and get status from it. It does not get all checks in progress
-    # for the moment, just the status and the notifications.
     def retention_load(self):
+        """Call hook point 'load_retention'.
+        Retention modules will read retention (from file, db etc)
+
+        :param forced: if update forced?
+        :type forced: bool
+        :return: None
+        """
         self.hook_point('load_retention')
 
-
-    # Helper function for module, will give the host and service
-    # data
     def get_retention_data(self):
+        """Get all host and service data in order to store it after
+        The module is in charge of that
+
+        :return: dict containing host and service data
+        :rtype: dict
+        """
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1105,14 +1284,17 @@ class Scheduler(object):
             all_data['services'][(s.host.host_name, s.service_description)] = d
         return all_data
 
-
-    # Get back our broks from a retention module :)
     def restore_retention_data(self, data):
-        # Now load interesting properties in hosts/services
-        # Tagging retention=False prop that not be directly load
-        # Items will be with theirs status, but not in checking, so
-        # a new check will be launched like with a normal beginning (random distributed
-        # scheduling)
+        """Restore retention data
+
+        Data coming from retention will override data coming from configuration
+        It is kinda confusing when you modify an attribute (external command) and it get saved
+        by retention
+
+        :param data:
+        :type data:
+        :return: None
+        """
 
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
@@ -1239,10 +1421,16 @@ class Scheduler(object):
                             new_notified_contacts.add(c)
                     s.notified_contacts = new_notified_contacts
 
-
-    # Fill the self.broks with broks of self (process id, and co)
-    # broks of service and hosts (initial status)
     def fill_initial_broks(self, bname, with_logs=False):
+        """Create initial broks for a specific broker
+
+        :param bname: broker name
+        :type bname: str
+        :param with_logs: tell if we write a log line for hosts/services
+               initial states
+        :type with_logs: bool
+        :return: None
+        """
         # First a Brok for delete all from my instance_id
         b = Brok('clean_all_my_instance_id', {'instance_id': self.instance_id})
         self.add_Brok(b, bname)
@@ -1284,23 +1472,30 @@ class Scheduler(object):
         logger.info("[%s] Created %d initial Broks for broker %s",
                     self.instance_name, len(self.brokers[bname]['broks']), bname)
 
-
-    # Crate a brok with program status info
     def get_and_register_program_status_brok(self):
+        """Create and add a program_status brok
+
+        :return: None
+        """
         b = self.get_program_status_brok()
         self.add(b)
 
-
-    # Crate a brok with program status info
     def get_and_register_update_program_status_brok(self):
+        """Create and add a update_program_status brok
+
+        :return: None
+        """
         b = self.get_program_status_brok()
         b.type = 'update_program_status'
         self.add(b)
 
-
-    # Get a brok with program status
-    # TODO: GET REAL VALUES
     def get_program_status_brok(self):
+        """Create a program status brok
+
+        :return: Brok with program status data
+        :rtype: alignak.brok.Brok
+        TODO: GET REAL VALUES
+        """
         now = int(time.time())
         data = {"is_running": 1,
                 "instance_id": self.instance_id,
@@ -1335,10 +1530,12 @@ class Scheduler(object):
         b = Brok('program_status', data)
         return b
 
-
-    # Called every 1sec to consume every result in services or hosts
-    # with these results, they are OK, CRITICAL, UP/DOWN, etc...
     def consume_results(self):
+        """Handle results waiting in waiting_results list.
+        Check ref will call consume result and update their status
+
+        :return: None
+        """
         # All results are in self.waiting_results
         # We need to get them first
         with self.waiting_results_lock:
@@ -1355,7 +1552,6 @@ class Scheduler(object):
                 item = c.ref
                 item.consume_result(c)
 
-
         # All 'finished' checks (no more dep) raise checks they depends on
         for c in self.checks.values():
             if c.status == 'havetoresolvedep':
@@ -1371,10 +1567,11 @@ class Scheduler(object):
                 item = c.ref
                 item.consume_result(c)
 
-
-    # Called every 1sec to delete all checks in a zombie state
-    # zombie = not useful anymore
     def delete_zombie_checks(self):
+        """Remove checks that have a zombie status (usually timeouts)
+
+        :return: None
+        """
         # print "**********Delete zombies checks****"
         id_to_del = []
         for c in self.checks.values():
@@ -1385,10 +1582,11 @@ class Scheduler(object):
         for id in id_to_del:
             del self.checks[id]  # ZANKUSEN!
 
-
-    # Called every 1sec to delete all actions in a zombie state
-    # zombie = not useful anymore
     def delete_zombie_actions(self):
+        """Remove actions that have a zombie status (usually timeouts)
+
+        :return: None
+        """
         # print "**********Delete zombies actions****"
         id_to_del = []
         for a in self.actions.values():
@@ -1399,9 +1597,14 @@ class Scheduler(object):
         for id in id_to_del:
             del self.actions[id]  # ZANKUSEN!
 
-    # Check for downtimes start and stop, and register
-    # them if needed
     def update_downtimes_and_comments(self):
+        """Iter over all hosts and services::
+
+        * Update downtime status (start / stop) regarding maintenance period
+        * Register new comments in comments list
+
+        :return: None
+        """
         broks = []
         now = time.time()
 
@@ -1474,16 +1677,22 @@ class Scheduler(object):
         for b in broks:
             self.add(b)
 
-
-    # Main schedule function to make the regular scheduling
     def schedule(self):
+        """Iter over all hosts and services and call schedule method
+        (schedule next check)
+
+        :return: None
+        """
         # ask for service and hosts their next check
         for elt in self.iter_hosts_and_services():
             elt.schedule()
 
-    # Main actions reaper function: it get all new checks,
-    # notification and event handler from hosts and services
     def get_new_actions(self):
+        """Call 'get_new_actions' hook point
+        Iter over all hosts and services to add new actions in internal lists
+
+        :return: None
+        """
         self.hook_point('get_new_actions')
         # ask for service and hosts their next check
         for elt in self.iter_hosts_and_services():
@@ -1492,9 +1701,11 @@ class Scheduler(object):
             # We take all, we can clear it
             elt.actions = []
 
-
-    # Similar as above, but for broks
     def get_new_broks(self):
+        """Iter over all hosts and services to add new broks in internal lists
+
+        :return: None
+        """
         # ask for service and hosts their broks waiting
         # be eaten
         for elt in self.iter_hosts_and_services():
@@ -1503,23 +1714,26 @@ class Scheduler(object):
             # We take all, we can clear it
             elt.broks = []
 
-
-    # Raises checks for no fresh states for services and hosts
     def check_freshness(self):
+        """Iter over all hosts and services to check freshness
+
+        :return: None
+        """
         # print "********** Check freshness******"
         for elt in self.iter_hosts_and_services():
             c = elt.do_check_freshness()
             if c is not None:
                 self.add(c)
 
-
-    # Check for orphaned checks: checks that never returns back
-    # so if inpoller and t_to_go < now - 300s: pb!
-    # Warn only one time for each "worker"
-    # XXX I think we should make "time_to_orphanage" configurable
-    #     each action type, each for notification, event_handler & check
-    #     I think it will be a little more useful that way, not sure tho
     def check_orphaned(self):
+        """Check for orphaned checks/actions::
+
+        * status == 'inpoller' and t_to_go < now - time_to_orphanage (300 by default)
+
+        if so raise a logger warning
+
+        :return: None
+        """
         worker_names = {}
         now = int(time.time())
         for c in self.checks.values():
@@ -1545,9 +1759,13 @@ class Scheduler(object):
             logger.warning("%d actions never came back for the satellite '%s'."
                            "I reenable them for polling", worker_names[w], w)
 
-
-    # Each loop we are going to send our broks to our modules (if need)
     def send_broks_to_modules(self):
+        """Put broks into module queues
+        Only broks without sent_to_sched_externals to True are sent
+        Only modules that ask for broks will get some
+
+        :return: None
+        """
         t0 = time.time()
         nb_sent = 0
         for mod in self.sched_daemon.modules_manager.get_external_instances():
@@ -1563,12 +1781,13 @@ class Scheduler(object):
             b.sent_to_sched_externals = True
         logger.debug("Time to send %s broks (after %d secs)", nb_sent, time.time() - t0)
 
-
-    # special one for scheduler ; see Daemon.get_objects_from_from_queues()
     def get_objects_from_from_queues(self):
-        ''' Same behavior than Daemon.get_objects_from_from_queues(). '''
-        return self.sched_daemon.get_objects_from_from_queues()
+        """Same behavior than Daemon.get_objects_from_from_queues().
 
+        :return:
+        :rtype:
+        """
+        return self.sched_daemon.get_objects_from_from_queues()
 
     def get_checks_status_counts(self, checks=None):
         """ Compute the counts of the different checks status and
@@ -1577,7 +1796,10 @@ class Scheduler(object):
 
         :checks: None or the checks you want to count their statuses.
                  If None then self.checks is used.
+
         :param checks: NoneType | dict
+        :type checks: None | dict
+        :return:
         :rtype: defaultdict(int)
         """
         if checks is None:
@@ -1587,8 +1809,30 @@ class Scheduler(object):
             res[chk.status] += 1
         return res
 
-    # stats threads is asking us a main structure for stats
     def get_stats_struct(self):
+        """Get state of modules and create a scheme for stats data of daemon
+
+        :return: A dict with the following structure
+        ::
+
+           { 'metrics': ['scheduler.%s.checks.%s %d %d', 'scheduler.%s.%s.queue %d %d',
+                         'scheduler.%s.%s %d %d', 'scheduler.%s.latency.min %f %d',
+                         'scheduler.%s.latency.avg %f %d', 'scheduler.%s.latency.max %f %d'],
+             'version': __version__,
+             'name': instance_name,
+             'type': 'scheduler',
+             'modules': [
+                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                        ]
+             'latency':  {'avg': lat_avg, 'min': lat_min, 'max': lat_max}
+             'host': len(self.hosts),
+             'services': len(self.services),
+             'commands': [{'cmd': c, 'u_time': u_time, 's_time': s_time}, ...] (10 first)
+           }
+
+        :rtype: dict
+        """
         now = int(time.time())
 
         res = self.sched_daemon.get_stats_struct()
@@ -1651,6 +1895,12 @@ class Scheduler(object):
             u_time, s_time = e
             p.append({'cmd': c, 'u_time': u_time, 's_time': s_time})
         def p_sort(e1, e2):
+            """Compare elems by u_time param
+
+            :param e1: first elem to compare
+            :param e2: second elem to compare
+            :return: 1 if e1['u_time'] > e2['u_time'], -1 if e1['u_time'] < e2['u_time'], else 0
+            """
             if e1['u_time'] > e2['u_time']:
                 return 1
             if e1['u_time'] < e2['u_time']:
@@ -1661,9 +1911,25 @@ class Scheduler(object):
         res['commands'] = p[:10]
         return res
 
-
-    # Main function
     def run(self):
+        """Main scheduler function::
+
+        * Load retention
+        * Call 'pre_scheduler_mod_start' hook point
+        * Start modules
+        * Schedule first checks
+        * Init connection with pollers/reactionners
+        * Run main loop
+
+            * Do recurrent works
+            * Push/Get actions to passive satellites
+            * Update stats
+            * Call 'scheduler_tick' hook point
+
+        * Save retention (on quit)
+
+        :return: None
+        """
         # Then we see if we've got info in the retention file
         self.retention_load()
 
@@ -1783,7 +2049,6 @@ class Scheduler(object):
                 self.need_objects_dump = False
 
             self.hook_point('scheduler_tick')
-
 
         # WE must save the retention at the quit BY OURSELF
         # because our daemon will not be able to do it for us
