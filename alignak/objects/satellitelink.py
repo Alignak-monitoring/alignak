@@ -56,8 +56,6 @@ from alignak.log import logger
 from alignak.http_client import HTTPClient, HTTPExceptions
 
 
-
-
 class SatelliteLink(Item):
     """SatelliteLink is a common Class for links between
     Arbiter and other satellites. Used by the Dispatcher object.
@@ -133,11 +131,12 @@ class SatelliteLink(Item):
                 - satellitemap attribute of SatelliteLink is the map
                   defined IN THE satellite configuration
                   but for creating connections, we need the have the satellitemap of the Arbiter
+
+        :return: None
         """
         self.arb_satmap = {'address': self.address, 'port': self.port, 'use_ssl': self.use_ssl,
                            'hard_ssl_name_check': self.hard_ssl_name_check}
         self.arb_satmap.update(satellitemap)
-
 
     def create_connection(self):
         """Initialize HTTP connection with a satellite (con attribute) and
@@ -152,12 +151,12 @@ class SatelliteLink(Item):
                               )
         self.uri = self.con.uri
 
-
     def put_conf(self, conf):
         """Send the conf (serialized) to the satellite
         HTTP request to the satellite (POST / put_conf)
 
         :param conf: The conf to send (data depend on the satellite)
+        :type conf:
         :return: None
         """
         if self.con is None:
@@ -177,7 +176,6 @@ class SatelliteLink(Item):
             logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
             return False
 
-
     def get_all_broks(self):
         """Get and clean all of our broks
 
@@ -188,11 +186,11 @@ class SatelliteLink(Item):
         self.broks = []
         return res
 
-
     def set_alive(self):
         """Set alive, reachable, and reset attempts.
         If we change state, raise a status brok update
 
+        :return: None
         """
         was_alive = self.alive
         self.alive = True
@@ -204,7 +202,6 @@ class SatelliteLink(Item):
         if not was_alive:
             b = self.get_update_status_brok()
             self.broks.append(b)
-
 
     def set_dead(self):
         """Set the satellite into dead state:
@@ -227,7 +224,6 @@ class SatelliteLink(Item):
             b = self.get_update_status_brok()
             self.broks.append(b)
 
-
     def add_failed_check_attempt(self, reason=''):
         """Go in reachable=False and add a failed attempt
         if we reach the max, go dead
@@ -247,7 +243,6 @@ class SatelliteLink(Item):
         # check when we just go HARD (dead)
         if self.attempt == self.max_check_attempts:
             self.set_dead()
-
 
     def update_infos(self):
         """Update satellite info each self.check_interval seconds
@@ -272,7 +267,6 @@ class SatelliteLink(Item):
         b = self.get_update_status_brok()
         self.broks.append(b)
 
-
     def known_conf_managed_push(self, cfg_id, push_flavor):
         """The elements just got a new conf_id, we put it in our list
          because maybe the satellite is too busy to answer now
@@ -281,10 +275,9 @@ class SatelliteLink(Item):
         :type cfg_id: int
         :param push_flavor: push_flavor we pushed earlier to the satellite
         :type push_flavor: int
-        :return:
+        :return: None
         """
         self.managed_confs[cfg_id] = push_flavor
-
 
     def ping(self):
         """Send a HTTP request to the satellite (GET /ping)
@@ -314,11 +307,11 @@ class SatelliteLink(Item):
         except HTTPExceptions, exp:
             self.add_failed_check_attempt(reason=str(exp))
 
-
     def wait_new_conf(self):
         """Send a HTTP request to the satellite (GET /wait_new_conf)
 
-        :return: None
+        :return: True if wait new conf, otherwise False
+        :rtype: bool
         """
         if self.con is None:
             self.create_connection()
@@ -328,7 +321,6 @@ class SatelliteLink(Item):
         except HTTPExceptions, exp:
             self.con = None
             return False
-
 
     def have_conf(self, magic_hash=None):
         """Send a HTTP request to the satellite (GET /have_conf)
@@ -359,7 +351,6 @@ class SatelliteLink(Item):
             self.con = None
             return False
 
-
     def got_conf(self):
         """Send a HTTP request to the satellite (GET /got_conf)
         Used to know if the satellite has a conf
@@ -386,7 +377,6 @@ class SatelliteLink(Item):
             self.con = None
             return False
 
-
     def remove_from_conf(self, sched_id):
         """Send a HTTP request to the satellite (GET /remove_from_conf)
         Tell a satellite to remove a scheduler from conf
@@ -394,7 +384,7 @@ class SatelliteLink(Item):
         :param sched_id: scheduler id to remove
         :type sched_id: int
         :return: True on success, False on failure, None if can't connect
-        :rtype: bool
+        :rtype: bool | None
         TODO: Return False instead of None
         """
         if self.con is None:
@@ -410,7 +400,6 @@ class SatelliteLink(Item):
         except HTTPExceptions, exp:
             self.con = None
             return False
-
 
     def update_managed_list(self):
         """Send a HTTP request to the satellite (GET /what_i_managed)
@@ -458,12 +447,13 @@ class SatelliteLink(Item):
                   (self.get_name(), exp, type(exp), exp.__dict__)
             self.managed_confs = {}
 
-
     def do_i_manage(self, cfg_id, push_flavor):
         """Tell if the satellite is managing cfg_id with push_flavor
 
         :param cfg_id: config id
+        :type cfg_id: int
         :param push_flavor: flavor id, random it generated at parsing
+        :type push_flavor: int
         :return: True if the satellite has push_flavor in managed_confs[cfg_id]
         :rtype: bool
         """
@@ -473,7 +463,6 @@ class SatelliteLink(Item):
         # maybe it's in but with a false push_flavor. check it :)
         return self.managed_confs[cfg_id] == push_flavor
 
-
     def push_broks(self, broks):
         """Send a HTTP request to the satellite (GET /ping)
         and THEN Send a HTTP request to the satellite (POST /push_broks)
@@ -482,7 +471,7 @@ class SatelliteLink(Item):
 
         :param broks: Brok list to send
         :type broks: list
-        :return: True on surcces, False on failure
+        :return: True on success, False on failure
         :rtype: bool
         """
         if self.con is None:
@@ -500,7 +489,6 @@ class SatelliteLink(Item):
         except HTTPExceptions, exp:
             self.con = None
             return False
-
 
     def get_external_commands(self):
         """Send a HTTP request to the satellite (GET /ping)
@@ -534,7 +522,6 @@ class SatelliteLink(Item):
             self.con = None
             return []
 
-
     def prepare_for_conf(self):
         """Init cfg dict attribute with __class__.properties
         and extra __class__ attribute
@@ -557,7 +544,6 @@ class SatelliteLink(Item):
         self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
         self.cfg['global']['statsd_enabled'] = cls.statsd_enabled
 
-
     def add_global_conf_parameters(self, params):
         """Add some extra params in cfg dict attribute.
         Some attributes are in the global configuration
@@ -569,7 +555,6 @@ class SatelliteLink(Item):
         for prop in params:
             self.cfg['global'][prop] = params[prop]
 
-
     def get_my_type(self):
         """Get the satellite type. Accessor to __class__.mytype
         ie : poller, scheduler, receiver, broker, arbiter or reactionner
@@ -578,7 +563,6 @@ class SatelliteLink(Item):
         :rtype: str
         """
         return self.__class__.my_type
-
 
     def give_satellite_cfg(self):
         """Get a configuration for this satellite.
@@ -600,7 +584,6 @@ class SatelliteLink(Item):
                 'api_key': self.__class__.api_key,
                 'secret':  self.__class__.secret,
                 }
-
 
     def __getstate__(self):
         """Used by pickle to serialize
@@ -631,7 +614,6 @@ class SatelliteLink(Item):
 
         :param state: new satellite state
         :type state: dict
-
         :return: None
         """
         cls = self.__class__

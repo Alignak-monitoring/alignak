@@ -111,7 +111,7 @@ class Servicegroup(Itemgroup):
         Get list of members of this servicegroup
 
         :return: list of services (members)
-        :rtype: list
+        :rtype: list | str
         """
         if self.has('servicegroup_members'):
             return [m.strip() for m in self.servicegroup_members.split(',')]
@@ -174,6 +174,7 @@ class Servicegroups(Itemgroups):
         :type hosts: object
         :param services: services object
         :type services: object
+        :return: None
         """
         self.linkify_sg_by_srv(hosts, services)
 
@@ -188,6 +189,7 @@ class Servicegroups(Itemgroups):
         :type hosts: object
         :param services: services object
         :type services: object
+        :return: None
         """
         for sg in self:
             mbrs = sg.get_services()
@@ -235,6 +237,7 @@ class Servicegroups(Itemgroups):
         :type cname: str
         :param sgname: servicegroup name
         :type sgname: str
+        :return: None
         """
         sg = self.find_by_name(sgname)
         # if the id do not exist, create the cg
@@ -247,6 +250,8 @@ class Servicegroups(Itemgroups):
     def explode(self):
         """
         Get services and put them in members container
+
+        :return: None
         """
         # We do not want a same hg to be explode again and again
         # so we tag it

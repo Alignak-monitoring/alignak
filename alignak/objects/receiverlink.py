@@ -71,6 +71,8 @@ class ReceiverLink(SatelliteLink):
     def register_to_my_realm(self):
         """
         Add this reactionner to the realm
+
+        :return: None
         """
         self.realm.receivers.append(self)
 
@@ -82,6 +84,7 @@ class ReceiverLink(SatelliteLink):
         :type sched_id: int
         :param hnames: list of host names
         :type hnames: list
+        :return: None
         """
         try:
             if self.con is None:

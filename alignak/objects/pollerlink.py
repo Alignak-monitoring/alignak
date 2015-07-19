@@ -70,6 +70,8 @@ class PollerLink(SatelliteLink):
     def register_to_my_realm(self):
         """
         Add this relation to the realm
+
+        :return: None
         """
         self.realm.pollers.append(self)
 

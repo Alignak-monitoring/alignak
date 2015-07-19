@@ -89,12 +89,14 @@ class SchedulingItem(Item):
     current_event_id = 0
     current_problem_id = 0
 
-
     def __getstate__(self):
         """Call by pickle to data-ify the host
         we do a dict because list are too dangerous for
         retention save and co :( even if it's more
         extensive
+
+        :return: dictionary with attributes
+        :rtype: dict
         """
         cls = self.__class__
         # id is not in *_properties
@@ -221,7 +223,7 @@ class SchedulingItem(Item):
     def add_attempt(self):
         """Add an attempt when a object is a non-ok state
 
-        :return:
+        :return: None
         """
         self.attempt += 1
         self.attempt = min(self.attempt, self.max_check_attempts)
@@ -229,7 +231,7 @@ class SchedulingItem(Item):
     def is_max_attempts(self):
         """Check if max check attempt is reached
 
-        :return: True if self.attempt >= self.max_check_attempts, else otherwise
+        :return: True if self.attempt >= self.max_check_attempts, otherwise False
         :rtype: bool
         """
         return self.attempt >= self.max_check_attempts
@@ -238,7 +240,7 @@ class SchedulingItem(Item):
         """Check freshness and schedule a check now if necessary.
 
         :return: A check or None
-        :rtype: NoneType | Check
+        :rtype: None | object
         """
         now = time.time()
         # Before, check if class (host or service) have check_freshness OK
@@ -531,7 +533,8 @@ class SchedulingItem(Item):
         :type status: list
         :param inherit_parents: recurse over parents
         :type inherit_parents: bool
-        :return: True if one state matched the status list, False otherwise
+        :return: True if one state matched the status list, otherwise False
+        :rtype: bool
         """
         # Do I raise dep?
         for s in status:
@@ -556,7 +559,8 @@ class SchedulingItem(Item):
         """Check if there is some host/service that this object depend on
         has a state in the status list .
 
-        :return: True if this object has a check dependency, False otherwise
+        :return: True if this object has a check dependency, otherwise False
+        :rtype: bool
         """
         now = time.time()
         for (dep, status, type, tp, inh_parent) in self.chk_depend_of:
@@ -572,6 +576,7 @@ class SchedulingItem(Item):
         * dep.last_state_update < now - cls.cached_check_horizon (check of dependency is "old")
 
         :param ref_check: Check we want to get dependency from
+        :type ref_check:
         :return: Checks that depend on ref_check
         :rtype: list[alignak.objects.check.Check]
         """
@@ -698,12 +703,12 @@ class SchedulingItem(Item):
         # Get the command to launch, and put it in queue
         self.launch_check(self.next_chk, force=force)
 
-
     def compensate_system_time_change(self, difference):
         """If a system time change occurs we have to update
         properties time related to reflect change
 
         :param difference: difference between new time and old time
+        :type difference:
         :return: None
         """
         # We only need to change some value
@@ -712,7 +717,6 @@ class SchedulingItem(Item):
             # Do not go below 1970 :)
             val = max(0, val + difference)  # diff may be negative
             setattr(self, p, val)
-
 
     def disable_active_checks(self):
         """Disable active checks for this host/service
@@ -729,7 +733,6 @@ class SchedulingItem(Item):
             c.execution_time = 0
             c.perf_data = self.perf_data
 
-
     def remove_in_progress_check(self, c):
         """Remove check from check in progress
 
@@ -742,7 +745,6 @@ class SchedulingItem(Item):
             self.checks_in_progress.remove(c)
         self.update_in_checking()
 
-
     def update_in_checking(self):
         """Update in_checking attribute.
         Object is in checking if we have checks in check_in_progress list
@@ -751,17 +753,16 @@ class SchedulingItem(Item):
         """
         self.in_checking = (len(self.checks_in_progress) != 0)
 
-
     def remove_in_progress_notification(self, n):
         """Remove a notification and mark them as zombie
 
         :param n: the notification to remove
+        :type n:
         :return: None
         """
         if n.id in self.notifications_in_progress:
             n.status = 'zombie'
             del self.notifications_in_progress[n.id]
-
 
     def remove_in_progress_notifications(self):
         """Remove all notifications from notifications_in_progress
@@ -770,7 +771,6 @@ class SchedulingItem(Item):
         """
         for n in self.notifications_in_progress.values():
             self.remove_in_progress_notification(n)
-
 
     def get_event_handlers(self, externalcmd=False):
         """Raise event handlers if NONE of the following conditions is met::
@@ -886,7 +886,6 @@ class SchedulingItem(Item):
         if status_updated is True:
             self.broks.append(self.get_update_status_brok())
 
-
     def update_hard_unknown_phase_state(self):
         """Update in_hard_unknown_reach_phase attribute and
         was_in_hard_unknown_reach_phase
@@ -923,7 +922,6 @@ class SchedulingItem(Item):
         if not self.in_hard_unknown_reach_phase and self.was_in_hard_unknown_reach_phase:
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
-
 
     def consume_result(self, c):
         """Consume a check return and send action in return
@@ -1341,7 +1339,8 @@ class SchedulingItem(Item):
 
         :param n: notification we would like to escalate
         :type n: alignak.objects.notification.Notification
-        :return: True if notification can be escalated, False otherwise
+        :return: True if notification can be escalated, otherwise False
+        :rtype: bool
         """
         cls = self.__class__
 
@@ -1571,14 +1570,19 @@ class SchedulingItem(Item):
         return childnotifications
 
     def launch_check(self, t, ref_check=None, force=False, dependent=False):
-        '''
+        """Launch a check (command)
+
+        :param t:
         :type t: int
-        :type ref_check: __builtin__.NoneType |
+        :param ref_check:
+        :type ref_check:
+        :param force:
         :type force: bool
+        :param dependent:
         :type dependent: bool
-        :return:
-        :rtype:  NoneType | Check
-        '''
+        :return: None or alignak.check.Check
+        :rtype: None | alignak.check.Check
+        """
         c = None
         cls = self.__class__
 
@@ -1717,7 +1721,6 @@ class SchedulingItem(Item):
             # ok we can put it in our temp action queue
             self.actions.append(e)
 
-
     def create_business_rules(self, hosts, services, running=False):
         """Create business rules if necessary (cmd contains bp_rule)
 
@@ -1729,7 +1732,6 @@ class SchedulingItem(Item):
         :type running: bool
         :return: None
         """
-
         cmdCall = getattr(self, 'check_command', None)
 
         # If we do not have a command, we bailout
@@ -1787,6 +1789,9 @@ class SchedulingItem(Item):
               "$STATUS$ [ $($TATUS$: $HOSTNAME$,$SERVICEDESC$ )$ ]"
           Would return
               "CRITICAL [ CRITICAL: host1,srv1 WARNING: host2,srv2  ]"
+
+        :return: status for business rules
+        :rtype: str
         """
         got_business_rule = getattr(self, 'got_business_rule', False)
         # Checks that the service is a business rule.
@@ -1827,14 +1832,13 @@ class SchedulingItem(Item):
         output = m.resolve_simple_macros_in_string(template_string, data)
         return output.strip()
 
-
     def business_rule_notification_is_blocked(self):
         """Process business rule notifications behaviour. If all problems have
         been acknowledged, no notifications should be sent if state is not OK.
-        By default, downtimes are ignored, unless explicitely told to be treated
+        By default, downtimes are ignored, unless explicitly told to be treated
         as acknowledgements through with the business_rule_downtime_as_ack set.
 
-        :return: True if all source problem are acknowledged, False otherwise
+        :return: True if all source problem are acknowledged, otherwise False
         :rtype: bool
         """
         # Walks through problems to check if all items in non ok are
@@ -1908,7 +1912,6 @@ class SchedulingItem(Item):
         c.exit_status = state
         # print "DBG, setting state", state
 
-
     def create_business_rules_dependencies(self):
         """If I'm a business rule service/host, I register myself to the
         elements I will depend on, so They will have ME as an impact
@@ -1932,7 +1935,10 @@ class SchedulingItem(Item):
                     e.notification_options = self.business_rule_service_notification_options
 
     def rebuild_ref(self):
-        """ Rebuild the possible reference a schedulingitem can have """
+        """ Rebuild the possible reference a schedulingitem can have
+
+        :return: None
+        """
         for g in self.comments, self.downtimes:
             for o in g:
                 o.ref = self

@@ -106,6 +106,7 @@ class Packs(Items):
 
         :param path: Path where file of pack are
         :type path: str
+        :return: None
         """
         # Now walk for it
         for root, dirs, files in os.walk(path):
@@ -130,6 +131,7 @@ class Packs(Items):
         :type buf: str
         :param name: name of file
         :type name: str
+        :return: None
         """
         if not json:
             logger.warning("[Pack] cannot load the pack file '%s': missing json lib", name)

@@ -180,7 +180,6 @@ class Hostgroups(Itemgroups):
             return []
         return hg.get_hosts()
 
-
     def linkify(self, hosts=None, realms=None):
         """
         Make link of hosts / realms
@@ -189,6 +188,7 @@ class Hostgroups(Itemgroups):
         :type hosts: alignak.objects.hostgroup.Hostgroups
         :param realms: object Realms
         :type realms: alignak.objects.realm.Realms
+        :return: None
         """
         self.linkify_hg_by_hst(hosts)
         self.linkify_hg_by_realms(realms)
@@ -201,6 +201,7 @@ class Hostgroups(Itemgroups):
 
         :param hosts: object Hosts
         :type hosts: object
+        :return: None
         """
         for hg in self:
             mbrs = hg.get_hosts()
@@ -240,6 +241,7 @@ class Hostgroups(Itemgroups):
 
         :param realms: object Realms
         :type realms: object
+        :return: None
         """
         # Now we explode the realm value if we've got one
         # The group realm must not override a host one (warning?)
@@ -282,6 +284,7 @@ class Hostgroups(Itemgroups):
         :type hname: str
         :param hgname:hostgroup name
         :type hgname: str
+        :return: None
         """
         hg = self.find_by_name(hgname)
         # if the id do not exist, create the hg
@@ -294,6 +297,8 @@ class Hostgroups(Itemgroups):
     def explode(self):
         """
         Fill members with hostgroup_members
+
+        :return: None
         """
         # We do not want a same hg to be explode again and again
         # so we tag it

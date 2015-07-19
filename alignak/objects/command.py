@@ -159,11 +159,13 @@ class Command(Item):
                 # elif 'default' in entry[prop]:
                 #    data[prop] = entry.default
 
-
     def __getstate__(self):
         """
         Call by pickle to dataify the comment
         because we DO NOT WANT REF in this pickleisation!
+
+        :return: dictionary with properties
+        :rtype: dict
         """
         cls = self.__class__
         # id is not in *_properties
@@ -177,6 +179,10 @@ class Command(Item):
     def __setstate__(self, state):
         """
         Inversed function of getstate
+
+        :param state:
+        :type state:
+        :return: None
         """
         cls = self.__class__
         # We move during 1.0 to a dict state
@@ -196,6 +202,10 @@ class Command(Item):
         ({'id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
         'command_line': u'/usr/local/nagios/bin/rss-multiuser',
         'module_type': 'fork', 'command_name': u'notify-by-rss'})
+
+        :param state: state dictionary
+        :type state: dict
+        :return: None
         """
         for d in state:
             for k, v in d.items():

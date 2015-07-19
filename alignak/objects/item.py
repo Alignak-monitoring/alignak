@@ -189,7 +189,6 @@ class Item(object):
             else:
                 setattr(self, key, val)
 
-
     def compact_unique_attr_value(self, val):
         """
         Get value of first element of list if val is a list
@@ -213,6 +212,8 @@ class Item(object):
         """
         Init the running_properties.
         Each instance have own property.
+
+        :return: None
         """
         for prop, entry in self.__class__.running_properties.items():
             # Copy is slow, so we check type
@@ -250,6 +251,8 @@ class Item(object):
     def clean(self):
         """
         Clean properties only need when initilize & configure
+
+        :return: None
         """
         for name in ('imported_from', 'use', 'plus', 'templates',):
             try:
@@ -284,6 +287,8 @@ class Item(object):
     def fill_default(self):
         """
         Define properties with default value when not defined
+
+        :return: None
         """
         cls = self.__class__
 
@@ -299,6 +304,7 @@ class Item(object):
         :type cls: object
         :param conf: current object (child)
         :type conf: object
+        :return: None
         """
         for prop, entry in conf.properties.items():
             # If we have a class_inherit, and the arbiter really send us it
@@ -461,14 +467,13 @@ class Item(object):
             self.customs[prop] = cust_in_plus[prop]
         return self.customs
 
-
     def has_plus(self, prop):
         """
         Check if self.plus list have this property
 
         :param prop: property to check
         :type prop: str
-        :return: True is self.plus have this property, else False
+        :return: True is self.plus have this property, otherwise False
         :rtype: bool
         """
         try:
@@ -476,7 +481,6 @@ class Item(object):
         except KeyError:
             return False
         return True
-
 
     def get_all_plus_and_delete(self):
         """
@@ -490,7 +494,6 @@ class Item(object):
         for prop in props:
             res[prop] = self.get_plus_and_delete(prop)
         return res
-
 
     def get_plus_and_delete(self, prop):
         """
@@ -506,12 +509,11 @@ class Item(object):
         del self.plus[prop]
         return val
 
-
     def is_correct(self):
         """
         Check if this object is correct
 
-        :return: True if it's correct, else False
+        :return: True if it's correct, otherwise False
         :rtype: bool
         """
         state = True
@@ -530,12 +532,13 @@ class Item(object):
 
         return state
 
-
     def old_properties_names_to_new(self):
         """
         This function is used by service and hosts to transform Nagios2 parameters to Nagios3
         ones, like normal_check_interval to check_interval. There is a old_parameters tab
         in Classes that give such modifications to do.
+
+        :return: None
         """
         old_properties = getattr(self.__class__, "old_properties", {})
         for old_name, new_name in old_properties.items():
@@ -550,7 +553,7 @@ class Item(object):
         """
         Get properties => values of this object
 
-        :return: dictionnary of properties => values
+        :return: dictionary of properties => values
         :rtype: dict
         """
         r = {}
@@ -566,13 +569,13 @@ class Item(object):
                 r[prop] = v
         return r
 
-
     def add_downtime(self, downtime):
         """
         Add a downtime in this object
 
         :param downtime: a Downtime object
         :type downtime: object
+        :return: None
         """
         self.downtimes.append(downtime)
 
@@ -582,6 +585,7 @@ class Item(object):
 
         :param downtime_id: id of the downtime to delete
         :type downtime_id: int
+        :return: None
         """
         d_to_del = None
         for dt in self.downtimes:
@@ -597,6 +601,7 @@ class Item(object):
 
         :param comment: a Comment object
         :type comment: object
+        :return: None
         """
         self.comments.append(comment)
 
@@ -606,6 +611,7 @@ class Item(object):
 
         :param comment_id: id of the comment to delete
         :type comment_id: int
+        :return: None
         """
         c_to_del = None
         for c in self.comments:
@@ -631,6 +637,7 @@ class Item(object):
         :type comment: str
         :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
         :type end_time: int
+        :return: None
         """
         if self.state != self.ok_up:
             if notify:
@@ -654,6 +661,8 @@ class Item(object):
     def check_for_expire_acknowledge(self):
         """
         If have acknowledge and is expired, delete it
+
+        :return: None
         """
         if (self.acknowledgement and
                 self.acknowledgement.end_time != 0 and
@@ -664,6 +673,8 @@ class Item(object):
         """
         Remove the acknowledge, reset the flag. The comment is deleted except if the acknowledge
         is defined to be persistent
+
+        :return: None
         """
         if self.problem_has_been_acknowledged:
             logger.debug("[item::%s] deleting acknowledge of %s",
@@ -682,6 +693,8 @@ class Item(object):
     def unacknowledge_problem_if_not_sticky(self):
         """
         Remove the acknowledge if it is not sticky
+
+        :return: None
         """
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
@@ -691,6 +704,8 @@ class Item(object):
         """
         Flatten some properties tagged by the 'conf_send_preparation' because
         they are too 'linked' to be send like that (like realms)
+
+        :return: None
         """
         cls = self.__class__
 
@@ -743,6 +758,7 @@ class Item(object):
         :type data: object
         :param brok_type: name of brok_type
         :type brok_type: var
+        :return: None
         """
         cls = self.__class__
         # Now config properties
@@ -830,6 +846,7 @@ class Item(object):
         :type commands: object
         :param prop: property name
         :type prop: str
+        :return: None
         """
         if hasattr(self, prop):
             command = getattr(self, prop).strip()
@@ -852,6 +869,7 @@ class Item(object):
 
         :param triggers: trigger object
         :type triggers: object
+        :return: None
         """
         src = getattr(self, 'trigger', '')
         if src:
@@ -870,6 +888,7 @@ class Item(object):
 
         :param triggers: Triggers object
         :type triggers: object
+        :return: None
         """
         # Get our trigger string and trigger names in the same list
         self.triggers.extend([self.trigger_name])
@@ -893,7 +912,7 @@ class Item(object):
         """
         Dump properties
 
-        :return: dictionnary with properties
+        :return: dictionary with properties
         :rtype: dict
         """
         dmp = {}
@@ -921,7 +940,6 @@ class Item(object):
         name = getattr(self, 'name', None)
         host_name = getattr(self, 'host_name', None)
         return '%s(host_name=%s)' % (name or 'no-name', host_name or '')
-
 
 
 class Items(object):
@@ -960,6 +978,7 @@ class Items(object):
         :type items: object
         :param index_items: Flag indicating if the items should be indexed on the fly.
         :type index_items: bool
+        :return: None
         """
         for i in items:
             if i.is_tpl():
@@ -1028,16 +1047,18 @@ class Items(object):
 
         :param tpl: The template to add
         :type tpl: object
+        :return: None
         """
         tpl = self.index_template(tpl)
         self.templates[tpl.id] = tpl
 
     def index_template(self, tpl):
         """
-        Indexes a template by `name` into the `name_to_template` dictionnary.
+        Indexes a template by `name` into the `name_to_template` dictionary.
 
         :param tpl: The template to index
         :type tpl: object
+        :return: None
         """
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
@@ -1056,6 +1077,7 @@ class Items(object):
 
         :param tpl: The template to remove
         :type tpl: object
+        :return: None
         """
         try:
             del self.templates[tpl.id]
@@ -1069,6 +1091,7 @@ class Items(object):
 
         :param tpl: The template to un-index
         :type tpl: object
+        :return: None
         """
         name = getattr(tpl, 'name', '')
         try:
@@ -1084,6 +1107,7 @@ class Items(object):
         :type item: object
         :param index: Flag indicating if the item should be indexed
         :type index: bool
+        :return: None
         """
         name_property = getattr(self.__class__, "name_property", None)
         if index is True and name_property:
@@ -1096,6 +1120,7 @@ class Items(object):
 
         :param item: object to remove
         :type item: object
+        :return: None
         """
         self.unindex_item(item)
         self.items.pop(item.id, None)
@@ -1140,6 +1165,7 @@ class Items(object):
         Un-index an item from our name_to_item dict.
         :param item: the item to un-index
         :type item: object
+        :return: None
         """
         name_property = getattr(self.__class__, "name_property", None)
         if name_property is None:
@@ -1177,11 +1203,10 @@ class Items(object):
 
         :param name: name of item
         :type name: str
-        :return: name of the item
+        :return: item
         :rtype: alignak.objects.item.Item
         """
         return self.name_to_item.get(name, None)
-
 
     def find_by_filter(self, filters):
         """
@@ -1206,6 +1231,8 @@ class Items(object):
     def prepare_for_sending(self):
         """
         flatten some properties
+
+        :return: None
         """
         for i in self:
             i.prepare_for_conf_sending()
@@ -1213,6 +1240,8 @@ class Items(object):
     def old_properties_names_to_new(self):
         """
         Convert old Nagios2 names to Nagios3 new names
+
+        :return: None
         """
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
@@ -1221,6 +1250,8 @@ class Items(object):
     def pythonize(self):
         """
         Pythonize items
+
+        :return: None
         """
         for id in self.items:
             self.items[id].pythonize()
@@ -1232,7 +1263,7 @@ class Items(object):
         :param name: name of template
         :type name: str
         :return: name of template found
-        :rtype: str or None
+        :rtype: str | None
         """
         return self.name_to_template.get(name, None)
 
@@ -1252,13 +1283,13 @@ class Items(object):
             all_tags.extend(self.get_all_tags(t))
         return list(set(all_tags))
 
-
     def linkify_item_templates(self, item):
         """
         Link templates
 
         :param item: an item
         :type item: object
+        :return: None
         """
         tpls = []
         tpl_names = item.get_templates()
@@ -1287,6 +1318,8 @@ class Items(object):
     def linkify_templates(self):
         """
         Link all templates, and create the template graph too
+
+        :return: None
         """
         # First we create a list of all templates
         for i in itertools.chain(self.items.itervalues(),
@@ -1299,7 +1332,7 @@ class Items(object):
         """
         Check if all items are correct (no error)
 
-        :return: True if correct, else False
+        :return: True if correct, otherwise False
         :rtype: bool
         """
         # we are ok at the beginning. Hope we still ok at the end...
@@ -1345,12 +1378,16 @@ class Items(object):
     def remove_templates(self):
         """
         Remove templates
+
+        :return: None
         """
         del self.templates
 
     def clean(self):
         """
         Request to remove the unnecessary attributes/others from our items
+
+        :return: None
         """
         for i in self:
             i.clean()
@@ -1359,6 +1396,8 @@ class Items(object):
     def fill_default(self):
         """
         Define properties for each items with default value when not defined
+
+        :return: None
         """
         for i in self:
             i.fill_default()
@@ -1375,8 +1414,8 @@ class Items(object):
 
         :param prop: property
         :type prop: str
+        :return: None
         """
-
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
             i.get_property_by_inheritance(prop)
@@ -1390,6 +1429,8 @@ class Items(object):
     def apply_inheritance(self):
         """
         For all items and templates inherite properties and custom variables.
+
+        :return: None
         """
         # We check for all Class properties if the host has it
         # if not, it check all host templates for a value
@@ -1406,6 +1447,7 @@ class Items(object):
 
         :param contacts: all contacts object
         :type contacts: object
+        :return: None
         """
         for i in self:
             if hasattr(i, 'contacts'):
@@ -1431,6 +1473,7 @@ class Items(object):
 
         :param escalations: all escalations object
         :type escalations: object
+        :return: None
         """
         for i in self:
             if hasattr(i, 'escalations'):
@@ -1452,6 +1495,7 @@ class Items(object):
 
         :param resultmodulations: all resultmodulations object
         :type resultmodulations: object
+        :return: None
         """
         for i in self:
             if hasattr(i, 'resultmodulations'):
@@ -1474,6 +1518,7 @@ class Items(object):
 
         :param business_impact_modulations: all business impacts object
         :type business_impact_modulations: object
+        :return: None
         """
         for i in self:
             if hasattr(i, 'business_impact_modulations'):
@@ -1498,6 +1543,7 @@ class Items(object):
         :type item: object
         :param contactgroups: all contactgroups object
         :type contactgroups: object
+        :return: None
         """
         if hasattr(item, 'contact_groups'):
             # TODO : See if we can remove this if
@@ -1530,6 +1576,7 @@ class Items(object):
         :type timeperiods: object
         :param prop: property name
         :type prop: str
+        :return: None
         """
         for i in self:
             if hasattr(i, prop):
@@ -1582,6 +1629,7 @@ class Items(object):
         :type commands: object
         :param prop: property name
         :type prop: str
+        :return: None
         """
         for i in self:
             if hasattr(i, prop):
@@ -1592,7 +1640,6 @@ class Items(object):
                     # TODO: catch None?
                     setattr(i, prop, cmdCall)
                 else:
-
                     setattr(i, prop, None)
 
     def linkify_command_list_with_commands(self, commands, prop):
@@ -1603,6 +1650,7 @@ class Items(object):
         :type commands: object
         :param prop: property name
         :type prop: str
+        :return: None
         """
         for i in self:
             if hasattr(i, prop):
@@ -1623,6 +1671,7 @@ class Items(object):
 
         :param triggers: triggers object
         :type triggers: object
+        :return: None
         """
         for i in self:
             i.linkify_with_triggers(triggers)
@@ -1633,6 +1682,7 @@ class Items(object):
 
         :param checkmodulations: checkmodulations object
         :type checkmodulations: object
+        :return: None
         """
         for i in self:
             if not hasattr(i, 'checkmodulations'):
@@ -1649,13 +1699,13 @@ class Items(object):
             # Get the list, but first make elements uniq
             i.checkmodulations = new_checkmodulations
 
-
     def linkify_with_macromodulations(self, macromodulations):
         """
         Link macromodulations
 
         :param macromodulations: macromodulations object
         :type macromodulations: object
+        :return: None
         """
         for i in self:
             if not hasattr(i, 'macromodulations'):
@@ -1678,6 +1728,7 @@ class Items(object):
 
         :param modules: modules object (all modules)
         :type modules: object
+        :return: None
         """
         for s in self:
             new_modules = []
@@ -1764,6 +1815,7 @@ class Items(object):
         :type hosts: object
         :param hostgroups: hostgroups object
         :type hostgroups: object
+        :return: None
         """
         hnames_list = []
         # Gets item's hostgroup_name
@@ -1810,6 +1862,7 @@ class Items(object):
 
         :param triggers: triggers object
         :type triggers: object
+        :return: None
         """
         for i in self:
             i.explode_trigger_string_into_triggers(triggers)
@@ -1829,7 +1882,7 @@ class Items(object):
         :type attr1: str
         :param attr2: attribute name
         :type attr2: str
-        :return: True if no loop, else false
+        :return: True if no loop, otherwise false
         :rtype: bool
         """
         # Ok, we say "from now, no loop :) "

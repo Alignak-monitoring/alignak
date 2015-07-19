@@ -114,7 +114,6 @@ class Escalation(Item):
         * status does not matches escalation_options ('WARNING' <=> 'w' ...)
         * escalation_period is not legit for this time (now usually)
 
-
         :param t: timestamp to check if timeperiod is valid
         :type t: int
         :param status: item status (one of the small_states key)
@@ -125,7 +124,8 @@ class Escalation(Item):
         :type in_notif_time: int
         :param interval: time interval length
         :type interval: int
-        :return: True if no condition has been fulfilled
+        :return: True if no condition has been fulfilled, otherwise False
+        :rtype: bool
         """
         small_states = {
             'WARNING': 'w',    'UNKNOWN': 'u',     'CRITICAL': 'c',
@@ -169,11 +169,15 @@ class Escalation(Item):
         Only legit for time based escalation
 
         :param t_wished: time we would like to send a new notification (usually now)
+        :type t_wished:
         :param status: status of the host or service
+        :type status:
         :param creation_time: time the notification was created
+        :type creation_time:
         :param interval: time interval length
+        :type interval: int
         :return: timestamp for next notification or None
-        :rtype: int
+        :rtype: int | None
         """
         small_states = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
                         'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
@@ -201,11 +205,10 @@ class Escalation(Item):
         # Ok so I ask for my start as a possibility for the next notification time
         return start
 
-
     def is_correct(self):
         """Check if all elements got a good configuration
 
-        :return: True if the configuration is correct else False
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True

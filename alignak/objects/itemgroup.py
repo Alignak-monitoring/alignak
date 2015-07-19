@@ -99,7 +99,6 @@ class Itemgroup(Item):
 
             setattr(self, key, val)
 
-
     def copy_shell(self):
         """
         Copy the groups properties EXCEPT the members.
@@ -107,6 +106,7 @@ class Itemgroup(Item):
 
         :return: Itemgroup object
         :rtype: object
+        :return: None
         """
         cls = self.__class__
         old_id = cls.id
@@ -130,12 +130,15 @@ class Itemgroup(Item):
 
         :param members: list of members
         :type members: list
+        :return: None
         """
         self.members = members
 
     def fill_default(self):
         """
         Put property and it default value for properties not defined and not required
+
+        :return: None
         """
         cls = self.__class__
         for prop, entry in cls.properties.items():
@@ -149,6 +152,7 @@ class Itemgroup(Item):
 
         :param member: member name
         :type member: str
+        :return: None
         """
         add_fun = list.extend if isinstance(member, list) else list.append
         if not hasattr(self, "members"):
@@ -161,6 +165,7 @@ class Itemgroup(Item):
 
         :param member: member name
         :type member: str
+        :return: None
         """
         add_fun = list.extend if isinstance(member, list) else list.append
         if not self.unknown_members:
@@ -181,7 +186,7 @@ class Itemgroup(Item):
         Check if a group is valid.
         Valid mean all members exists, so list of unknown_members is empty
 
-        :return: true if group is correct
+        :return: True if group is correct, otherwise False
         :rtype: bool
         """
         res = True
@@ -199,18 +204,16 @@ class Itemgroup(Item):
 
         return res
 
-
     def has(self, prop):
         """
         Check if self have a property
 
         :param prop: property name
         :type prop: string
-        :return: true if self has this attribute
+        :return: True if self has this attribute, otherwise False
         :rtype: bool
         """
         return hasattr(self, prop)
-
 
     def get_initial_status_brok(self):
         """
@@ -219,6 +222,7 @@ class Itemgroup(Item):
 
         :return:Brok object
         :rtype: object
+        :return: None
         """
         cls = self.__class__
         data = {}
@@ -246,20 +250,21 @@ class Itemgroups(Items):
         """
         Put property and it default value for properties not defined and not required in
         each itemgroup
+
+        :return: None
         """
         for i in self:
             i.fill_default()
-
 
     def add(self, ig):
         """
         Add an item (itemgroup) to Itemgroups
 
         :param ig: an item
-        :type ig:
+        :type ig: alignak.objects.itemgroup.Itemgroup
+        :return: None
         """
         self.add_item(ig)
-
 
     def get_members_by_name(self, gname):
         """

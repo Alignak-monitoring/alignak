@@ -180,7 +180,8 @@ class Contactgroups(Itemgroups):
         Add a contactgroup to the contactgroup list
 
         :param cg: contact group to add
-        :return:
+        :type cg:
+        :return: None
         """
         self.add_item(cg)
 

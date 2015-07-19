@@ -133,9 +133,13 @@ class Servicedependencies(Items):
         * inherits_parent is True
 
         :param dep_host_name: dependent host name
+        :type dep_host_name: str
         :param dep_service_description: dependent service description
+        :type dep_service_description: str
         :param par_host_name: host name
+        :type par_host_name: str
         :param par_service_description: service description
+        :type par_service_description: str
         :return: None
         """
         # We create a "standard" service_dep
@@ -191,7 +195,6 @@ class Servicedependencies(Items):
         """Explode all service dependency for each member of hostgroups
         Each member of dependent hostgroup or hostgroup in dependency have to get a copy of
         service dependencies (quite complex to parse)
-
 
         :param hostgroups: used to look for hostgroup
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
@@ -391,7 +394,7 @@ class Servicedependencies(Items):
         * All required parameter are specified
         * Go through all configuration warnings and errors that could have been raised earlier
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         r = super(Servicedependencies, self).is_correct()

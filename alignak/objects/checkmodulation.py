@@ -86,18 +86,17 @@ class CheckModulation(Item):
         """
         return self.checkmodulation_name
 
-
     def get_check_command(self, t_to_go):
         """Get the check_command if we are in the check period modulation
 
         :param t_to_go: time to check if we are in the timeperiod
+        :type t_to_go:
         :return: A check command if we are in the check period, None otherwise
         :rtype: alignak.objects.command.Command
         """
         if not self.check_period or self.check_period.is_time_valid(t_to_go):
             return self.check_command
         return None
-
 
     def is_correct(self):
         """Check if the CheckModulation definition is correct::
@@ -106,6 +105,7 @@ class CheckModulation(Item):
         * Raise previous configuration errors
 
         :return: True if the definition is correct, False otherwise
+        :rtype: bool
         """
         state = True
         cls = self.__class__
@@ -151,7 +151,6 @@ class CheckModulations(Items):
     name_property = "checkmodulation_name"
     inner_class = CheckModulation
 
-
     def linkify(self, timeperiods, commands):
         """Replace check_period by real Timeperiod object into each CheckModulation
         Replace check_command by real Command object into each CheckModulation
@@ -164,7 +163,6 @@ class CheckModulations(Items):
         """
         self.linkify_with_timeperiods(timeperiods, 'check_period')
         self.linkify_one_command_with_commands(commands, 'check_command')
-
 
     def new_inner_member(self, name=None, params={}):
         """Create a CheckModulation object and add it to items

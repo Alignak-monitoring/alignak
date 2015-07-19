@@ -104,12 +104,16 @@ class Modules(Items):
     def linkify(self):
         """
         Link modules
+
+        :return: None
         """
         self.linkify_s_by_plug()
 
     def linkify_s_by_plug(self):
         """
         Link modules
+
+        :return: None
         """
         for s in self:
             new_modules = []
@@ -131,9 +135,10 @@ class Modules(Items):
                     s.configuration_errors.append(err)
             s.modules = new_modules
 
-
     def explode(self):
         """
         Explode but not explode because this function is empty
+
+        :return: None
         """
         pass

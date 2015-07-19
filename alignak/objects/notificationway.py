@@ -133,7 +133,8 @@ class NotificationWay(Item):
         :type business_impact: int
         :param cmd: command launched to notify the contact
         :type cmd: str
-        :return: True if no condition is matched, False otherwise
+        :return: True if no condition is matched, otherwise False
+        :rtype: bool
         TODO: Simplify function
         """
         if not self.service_notifications_enabled:
@@ -170,7 +171,6 @@ class NotificationWay(Item):
 
         return False
 
-
     def want_host_notification(self, t, state, type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
@@ -192,7 +192,8 @@ class NotificationWay(Item):
         :type business_impact: int
         :param cmd: command launched to notify the contact
         :type cmd: str
-        :return: True if no condition is matched, False otherwise
+        :return: True if no condition is matched, otherwise False
+        :rtype: bool
         TODO: Simplify function
         """
         if not self.host_notifications_enabled:
@@ -227,11 +228,11 @@ class NotificationWay(Item):
 
         return False
 
-
     def get_notification_commands(self, type):
         """Get notification commands for object type
 
         :param type: object type (host or service)
+        :type type: str
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
@@ -240,14 +241,13 @@ class NotificationWay(Item):
         notif_commands = getattr(self, notif_commands_prop)
         return notif_commands
 
-
     def is_correct(self):
         """Check if this host configuration is correct ::
 
         * All required parameter are specified
         * Go through all configuration warnings and errors that could have been raised earlier
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
@@ -258,7 +258,6 @@ class NotificationWay(Item):
             state = False
             for err in self.configuration_errors:
                 logger.error("[item::%s] %s", self.get_name(), err)
-
 
         # A null notif way is a notif way that will do nothing (service = n, hot =n)
         is_null_notifway = False
@@ -329,7 +328,6 @@ class NotificationWays(Items):
     name_property = "notificationway_name"
     inner_class = NotificationWay
 
-
     def linkify(self, timeperiods, commands):
         """Create link between objects::
 
@@ -347,13 +345,14 @@ class NotificationWays(Items):
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
-
     def new_inner_member(self, name=None, params={}):
         """Create new instance of NotificationWay with given name and parameters
         and add it to the item list
 
         :param name: notification way name
+        :type name: str
         :param params: notification wat parameters
+        :type params: dict
         :return: None
         """
         if name is None:

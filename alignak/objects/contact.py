@@ -165,7 +165,8 @@ class Contact(Item):
         :type business_impact: int
         :param cmd: command launched to notify the contact
         :type cmd: str
-        :return: True if contact wants notification, False otherwise
+        :return: True if contact wants notification, otherwise False
+        :rtype: bool
         """
         if not self.service_notifications_enabled:
             return False
@@ -198,7 +199,8 @@ class Contact(Item):
         :type business_impact: int
         :param cmd: command launch to notify the contact
         :type cmd: str
-        :return: True if contact wants notification, False otherwise
+        :return: True if contact wants notification, otherwise False
+        :rtype: bool
         """
         if not self.host_notifications_enabled:
             return False
@@ -222,6 +224,7 @@ class Contact(Item):
         """Get notification commands for object type
 
         :param type: object type (host or service)
+        :type type: object
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
@@ -238,7 +241,7 @@ class Contact(Item):
         * All required parameter are specified
         * Go through all configuration warnings and errors that could have been raised earlier
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
@@ -359,7 +362,6 @@ class Contacts(Items):
             # Get the list, but first make elements uniq
             i.notificationways = list(set(new_notificationways))
 
-
     def explode(self, contactgroups, notificationways):
         """Explode all contact for each contactsgroup
 
@@ -367,7 +369,7 @@ class Contacts(Items):
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
         :param notificationways: notificationways to explode
         :type notificationways: alignak.objects.notificationway.Notificationways
-        :return:
+        :return: None
         """
         # Contactgroups property need to be fullfill for got the informations
         self.apply_partial_inheritance('contactgroups')

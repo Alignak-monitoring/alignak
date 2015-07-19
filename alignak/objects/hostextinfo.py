@@ -126,7 +126,6 @@ class HostExtInfo(Item):
 #                        |___/
 ######
 
-
     def is_correct(self):
         """
         Check if this object is correct
@@ -162,6 +161,7 @@ class HostExtInfo(Item):
         """Get the host name for debugging (host_name)
 
         :return: service extinfo  host name
+        :rtype: str
         TODO: Remove this function, get_name is doing it
         """
         return self.host_name
@@ -170,6 +170,7 @@ class HostExtInfo(Item):
         """Get the full name for debugging (host_name)
 
         :return: service extinfo  host name
+        :rtype: str
         TODO: Remove this function, get_name is doing it
         """
         return self.host_name

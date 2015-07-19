@@ -69,7 +69,6 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-
     def get_config(self):
         """
         Get the config of the arbiter
@@ -78,7 +77,6 @@ class ArbiterLink(SatelliteLink):
         :rtype: object
         """
         return self.con.get('get_config')
-
 
     def is_me(self, lookup_name):
         """
@@ -149,7 +147,7 @@ class ArbiterLink(SatelliteLink):
         :type daemon_type: str
         :param name: Name of daemon
         :type name: str
-        :return: dictionnary of status
+        :return: dictionary of status
         :rtype: dict
         """
         if self.con is None:
@@ -166,7 +164,7 @@ class ArbiterLink(SatelliteLink):
         Get states of all satellites
 
         :return: list of all states
-        :rtype: list/None
+        :rtype: list | None
         """
         if self.con is None:
             self.create_connection()
@@ -186,7 +184,7 @@ class ArbiterLink(SatelliteLink):
         :param properties: list of properties
         :type properties: list
         :return: list of objects
-        :rtype: list/None
+        :rtype: list | None
         """
         if self.con is None:
             self.create_connection()
@@ -213,5 +211,6 @@ class ArbiterLinks(SatelliteLinks):
 
         :param modules: list of modules
         :type modules: list
+        :return: None
         """
         self.linkify_s_by_plug(modules)

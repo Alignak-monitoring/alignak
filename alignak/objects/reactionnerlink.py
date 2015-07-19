@@ -68,6 +68,8 @@ class ReactionnerLink(SatelliteLink):
     def register_to_my_realm(self):
         """
         Add this reactionner to the realm
+
+        :return: None
         """
         self.realm.reactionners.append(self)
 

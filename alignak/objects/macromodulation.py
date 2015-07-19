@@ -91,7 +91,7 @@ class MacroModulation(Item):
         """
         Know if this macro is active for this correct period
 
-        :return: True is we are in the period, else return False
+        :return: True is we are in the period, otherwise False
         :rtype: bool
         """
         now = int(time.time())
@@ -103,7 +103,7 @@ class MacroModulation(Item):
         """
         Check if the macromodulation is valid and have all properties defined
 
-        :return: True if valide, else return False
+        :return: True if valide, otherwise False
         :rtype: bool
         """
         state = True
@@ -143,5 +143,6 @@ class MacroModulations(Items):
 
         :param timeperiods: Timeperiod object
         :type timeperiods: object
+        :return: None
         """
         self.linkify_with_timeperiods(timeperiods, 'modulation_period')

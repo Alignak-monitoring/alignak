@@ -100,6 +100,7 @@ class Trigger(Item):
         """Execute the trigger
 
         :param myself: self object but self will be use after exec (locals)
+        :type myself: object
         :param ctx: host or service object
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
@@ -117,7 +118,6 @@ class Trigger(Item):
             set_value(self, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
                          '%s' % (self.host_name, myself.trigger_name, err, traceback.format_exc()))
-
 
     def __getstate__(self):
         return {'trigger_name': self.trigger_name,
@@ -142,6 +142,7 @@ class Triggers(Items):
         and create trigger objects
 
         :param path: path to start
+        :type path: str
         :return: None
         """
         # Now walk for it

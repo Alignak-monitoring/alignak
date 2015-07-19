@@ -45,10 +45,10 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-'''
+"""
  This is a utility class for factorizing matching functions for
  discovery runners and rules.
-'''
+"""
 
 import re
 
@@ -65,9 +65,13 @@ class MatchingItem(Item):
         our rule.
 
         :param key: key to find in dict
+        :type key:
         :param value: value to find at dict[key]
+        :type value:
         :param look_in: the attribute dict to look in (matches or not_matches)
-        :return: True if  dict[key] match in value, False otherwise
+        :type look_in: str
+        :return: True if  dict[key] match in value, otherwise False
+        :rtype: bool
         """
         if look_in == 'matches':
             d = self.matches
@@ -103,8 +107,10 @@ class MatchingItem(Item):
         """Check if data match one of our matching attribute (matches or not_matches)
 
         :param datas: data to parse
+        :type datas:
         :return: True if we match one pattern in matches and no pattern in not_matches,
-                 False otherwise
+                 otherwise False
+        :rtype: bool
         """
         # If we got not data, no way we can match
         if len(datas) == 0:

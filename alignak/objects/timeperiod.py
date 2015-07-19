@@ -207,6 +207,7 @@ class Timeperiod(Item):
         unresolved values (example: sunday ETCETC)
 
         :param items: The Timeperiods object.
+        :type items: object
         :return: None
         """
         # Ok, I do not have prop, Maybe my templates do?
@@ -234,7 +235,6 @@ class Timeperiod(Item):
         for other in self.unresolved:
             r[other] = ''
         return r
-
 
     def is_time_valid(self, t):
         """
@@ -271,6 +271,8 @@ class Timeperiod(Item):
     # will give the first time > t which is not valid
     def get_not_in_min_from_t(self, f):
         """
+
+        :return: None
         TODO: not used, so delete it
         """
         pass
@@ -313,6 +315,8 @@ class Timeperiod(Item):
         -1: default value when start
         0: when timeperiod end
         1: when timeperiod start
+
+        :return: None
         """
         now = int(time.time())
 
@@ -340,6 +344,8 @@ class Timeperiod(Item):
     def clean_cache(self):
         """
         Clean cache with entries older than now because not used in future ;)
+
+        :return: None
         """
         now = int(time.time())
         t_to_del = []
@@ -430,7 +436,7 @@ class Timeperiod(Item):
 
     def get_next_invalid_time_from_t(self, t):
         """
-        Get next invalide time from the cache
+        Get next invalid time from the cache
 
         :param t: number of seconds
         :type t: int
@@ -605,8 +611,8 @@ class Timeperiod(Item):
         :type dateranges: list
         :param entry: property of timeperiod
         :type entry: string
+        :return: None
         """
-
         res = re.search(
             '(\d{4})-(\d{2})-(\d{2}) - (\d{4})-(\d{2})-(\d{2}) / (\d+)[\s\t]*([0-9:, -]+)', entry
         )
@@ -861,7 +867,9 @@ class Timeperiod(Item):
 
     def apply_inheritance(self):
         """
-        inherite no properties and no custom variables for timeperiod
+        Inherite no properties and no custom variables for timeperiod
+
+        :return: None
         """
         pass
 
@@ -869,7 +877,9 @@ class Timeperiod(Item):
         """
         Try to resolv all unresolved elements
 
-        :param : Timeperiods object
+        :param timeperiods: Timeperiods object
+        :type timeperiods:
+        :return: None
         """
         for entry in self.unresolved:
             # print "Revolving entry", entry
@@ -881,6 +891,8 @@ class Timeperiod(Item):
         Will make timeperiod in exclude with id of the timeperiods
 
         :param timeperiods: Timeperiods object
+        :type timeperiods:
+        :return: None
         """
         new_exclude = []
         if self.has('exclude') and self.exclude != []:
@@ -918,6 +930,7 @@ class Timeperiod(Item):
         :type data: dict
         :param brok_type: brok type
         :type brok_type: string
+        :return: None
         """
         cls = self.__class__
         # Now config properties
@@ -929,7 +942,6 @@ class Timeperiod(Item):
                     data[prop] = getattr(self, prop)
                 elif entry.has_default:
                     data[prop] = entry.default
-
 
 
 class Timeperiods(Items):
@@ -945,6 +957,8 @@ class Timeperiods(Items):
     def explode(self):
         """
         Try to resolv each timeperiod
+
+        :return: None
         """
         for id in self.items:
             tp = self.items[id]
@@ -953,6 +967,8 @@ class Timeperiods(Items):
     def linkify(self):
         """
         Check exclusion for each timeperiod
+
+        :return: None
         """
         for id in self.items:
             tp = self.items[id]
@@ -961,6 +977,8 @@ class Timeperiods(Items):
     def apply_inheritance(self):
         """
         The only interesting property to inherit is exclude
+
+        :return: None
         """
         self.apply_partial_inheritance('exclude')
         for i in self:
@@ -974,6 +992,9 @@ class Timeperiods(Items):
     def is_correct(self):
         """
         check if each properties of timeperiods are valid
+
+        :return: True if is correct, otherwise False
+        :rtype: bool
         """
         r = True
         # We do not want a same hg to be explode again and again
@@ -995,7 +1016,6 @@ class Timeperiods(Items):
             r &= tp.is_correct()
 
         return r
-
 
 
 if __name__ == '__main__':

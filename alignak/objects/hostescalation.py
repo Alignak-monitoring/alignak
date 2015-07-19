@@ -83,7 +83,8 @@ class Hostescalation(Item):
     def get_name(self):
         """Get escalation name
 
-        :return: ''
+        :return: name
+        :rtype: str
         TODO: Remove this function
         """
         return ''

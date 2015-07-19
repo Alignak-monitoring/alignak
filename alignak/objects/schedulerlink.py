@@ -82,7 +82,9 @@ class SchedulerLink(SatelliteLink):
         Run external commands
 
         :param commands:
-        :return: False, None or str
+        :type commands:
+        :return: False, None
+        :rtype: bool | None
         TODO: need recode this fonction because return types are too many
         """
         if self.con is None:
@@ -100,6 +102,8 @@ class SchedulerLink(SatelliteLink):
     def register_to_my_realm(self):
         """
         Add this reactionner to the realm
+
+        :return: None
         """
         self.realm.schedulers.append(self)
 
@@ -107,7 +111,7 @@ class SchedulerLink(SatelliteLink):
         """
         Get configuration of the scheduler satellite
 
-        :return: dictionnary of scheduler information
+        :return: dictionary of scheduler information
         :rtype: dict
         """
         return {'port': self.port, 'address': self.address,
@@ -121,7 +125,7 @@ class SchedulerLink(SatelliteLink):
         Some parameters can give as 'overridden parameters' like use_timezone
         so they will be mixed (in the scheduler) with the standard conf sent by the arbiter
 
-        :return: dictionnary of properties
+        :return: dictionary of properties
         :rtype: dict
         """
         r = {}

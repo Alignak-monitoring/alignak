@@ -643,14 +643,15 @@ class Service(SchedulingItem):
         """Get servicegroups list
 
         :return: comma separated list of servicegroups
+        :rtype: str
         """
         return ','.join([sg.get_name() for sg in self.servicegroups])
-
 
     def get_dbg_name(self):
         """Get the full name for debugging (host_name/service_description)
 
         :return: service full name
+        :rtype: str
         TODO: Remove this function
         """
         return "%s/%s" % (self.host.host_name, self.service_description)
@@ -659,6 +660,7 @@ class Service(SchedulingItem):
         """Get the full name for debugging (host_name/service_description)
 
         :return: service full name
+        :rtype: str
         """
         if self.host and hasattr(self.host, 'host_name') and hasattr(self, 'service_description'):
             return "%s/%s" % (self.host.host_name, self.service_description)
@@ -668,6 +670,7 @@ class Service(SchedulingItem):
         """Wrapper to access get_realm method of host attribute
 
         :return: service realm (host one)
+        :rtype: None | alignak.objects.realm.Realm
         """
         if self.host is None:
             return None
@@ -677,6 +680,7 @@ class Service(SchedulingItem):
         """Wrapper to access hostgroups attribute of host attribute
 
         :return: service hostgroups (host one)
+        :rtype: alignak.objects.hostgroup.Hostgroups
         """
         return self.host.hostgroups
 
@@ -684,6 +688,7 @@ class Service(SchedulingItem):
         """Wrapper to access tags attribute of host attribute
 
         :return: service tags (host one)
+        :rtype: alignak.objects.tag.Tags
         """
         return self.host.tags
 
@@ -691,6 +696,7 @@ class Service(SchedulingItem):
         """Accessor to tags attribute
 
         :return: service tags
+        :rtype: alignak.objects.tag.Tags
         """
         return self.tags
 
@@ -883,10 +889,13 @@ class Service(SchedulingItem):
         srv.register_son_in_parent_child_dependencies(self)
 
     def duplicate(self, host):
-        ''' For a given host, look for all copy we must create for for_each property
+        """For a given host, look for all copy we must create for for_each property
+
+        :param host: alignak host object
         :type host: alignak.objects.host.Host
-        :return Service
-        '''
+        :return: list
+        :rtype: list
+        """
 
         # In macro, it's all in UPPER case
         prop = self.duplicate_foreach.strip().upper()
@@ -978,7 +987,10 @@ class Service(SchedulingItem):
 ####
 
     def set_unreachable(self):
-        "Does nothing. Unreachable means nothing for a service"
+        """Does nothing. Unreachable means nothing for a service
+
+        :return: None
+        """
         pass
 
     def set_impact_state(self):
@@ -1072,7 +1084,8 @@ class Service(SchedulingItem):
 
         :param status: status to compare ( "o", "c", "w", "u"). Usually comes from config files
         :type status: str
-        :return: True if status <=> self.status, False otherwise
+        :return: True if status <=> self.status, otherwise False
+        :rtype: bool
         """
         if status == self.state:
             return True
@@ -1090,7 +1103,7 @@ class Service(SchedulingItem):
     def last_time_non_ok_or_up(self):
         """Get the last time the service was in a non-OK state
 
-        :return: self.last_time_down if self.last_time_down > self.last_time_up, 0 otherwise
+        :return: self.last_time_down if self.last_time_down > self.last_time_up, otherwise 0
         :rtype: int
         """
         non_ok_times = filter(lambda x: x > self.last_time_ok, [self.last_time_warning,
@@ -1137,7 +1150,9 @@ class Service(SchedulingItem):
                    (threshold=0d 1h 0m 0s). ..."
 
         :param t_stale_by: time in seconds the service has been in a stale state
+        :type t_stale_by: int
         :param t_threshold: threshold (seconds) to trigger this log entry
+        :type t_threshold: int
         :return: None
         """
         logger.warning("The results of service '%s' on host '%s' are stale "
@@ -1187,7 +1202,6 @@ class Service(SchedulingItem):
                                          self.state, self.state_type,
                                          self.attempt, command.get_name()))
 
-
     def raise_snapshot_log_entry(self, command):
         """Raise SERVICE SNAPSHOT entry (critical level)
         Format is : "SERVICE SNAPSHOT: *host.get_name()*;*self.get_name()*;*state*;*state_type*;
@@ -1202,7 +1216,6 @@ class Service(SchedulingItem):
             naglog_result('critical', "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s"
                           % (self.host.get_name(), self.get_name(),
                              self.state, self.state_type, self.attempt, command.get_name()))
-
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT START entry (critical level)
@@ -1223,7 +1236,6 @@ class Service(SchedulingItem):
                                   % (self.host.get_name(), self.get_name(),
                                      change_ratio, threshold))
 
-
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT STOPPED entry (critical level)
         Format is : "SERVICE FLAPPING ALERT: *host.get_name()*;*self.get_name()*;STOPPED;
@@ -1234,7 +1246,9 @@ class Service(SchedulingItem):
                    flapping (50.6% change >= 50.0% threshold)"
 
         :param change_ratio: percent of changing state
+        :type change_ratio: float
         :param threshold: threshold (percent) to trigger this log entry
+        :type threshold: float
         :return: None
         """
         naglog_result('critical', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
@@ -1341,7 +1355,9 @@ class Service(SchedulingItem):
         """Get data for a notification
 
         :param contact: The contact to return
+        :type contact:
         :param n: the notification to return
+        :type n:
         :return: list containing the service, the host and the given parameters
         :rtype: list
         """
@@ -1356,7 +1372,6 @@ class Service(SchedulingItem):
         :type n: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
-
         """
         return not contact.want_service_notification(self.last_chk, self.state,
                                                      n.type, self.business_impact, n.command_call)
@@ -1438,8 +1453,11 @@ class Service(SchedulingItem):
         * linked host is in downtime
 
         :param type: notification type
+        :type type:
         :param t_wished: the time we should like to notify the host (mostly now)
-        :return: True if ONE of the above condition was met, False otherwise
+        :type t_wished: float
+        :return: True if ONE of the above condition was met, otherwise False
+        :rtype: bool
         TODO: Refactor this, a lot of code duplication with Host.notification_is_blocked_by_item
         """
         if t_wished is None:
@@ -1608,6 +1626,8 @@ class Services(Items):
         attribute: `host_name` and `service_description`.
 
         :param tpl: The template to add
+        :type tpl:
+        :return: None
         """
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
@@ -1627,8 +1647,13 @@ class Services(Items):
         This implementation takes into account that a service has two naming
         attribute: `host_name` and `service_description`.
 
-        :param item:    The item to add
-        :param index:   Flag indicating if the item should be indexed
+        :param item: The item to add
+        :type item:
+        :param index: Flag indicating if the item should be indexed
+        :type index: bool
+        :param was_partial: True if was partial, otherwise False
+        :type was_partial: bool
+        :return: None
         """
         objcls = self.inner_class.my_type
         hname = getattr(item, 'host_name', '')
@@ -1672,7 +1697,6 @@ class Services(Items):
         objcls, hname, hgname, sdesc, in_file = var_tuple
         use = getattr(item, 'use', [])
 
-
         if use == []:
             mesg = "a %s has been defined without host_name nor " \
                    "hostgroups nor service_description and " \
@@ -1699,6 +1723,7 @@ class Services(Items):
         override this function from SchedulingItem
 
         :param prop: property to inherit from
+        :type prop: str
         :return: None
         """
         for i in itertools.chain(self.items.itervalues(),
@@ -1715,6 +1740,8 @@ class Services(Items):
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
             variables.
+
+        :return: None
         """
         # We check for all Class properties if the host has it
         # if not, it check all host templates for a value
@@ -1745,11 +1772,11 @@ class Services(Items):
         for i in self:
             i.tags = self.get_all_tags(i)
 
-
     def find_srvs_by_hostname(self, host_name):
         """Get all services from a host based on a host_name
 
         :param host_name: the host name we want services
+        :type host_name: str
         :return: list of services
         :rtype: list[alignak.objects.service.Service]
         """
@@ -1764,7 +1791,9 @@ class Services(Items):
         """Get a specific service based on a host_name and service_description
 
         :param host_name: host name linked to needed service
+        :type host_name: str
         :param sdescr:  service name we need
+        :type sdescr: str
         :return: the service found or None
         :rtype: alignak.objects.service.Service
         """
@@ -1871,7 +1900,6 @@ class Services(Items):
                 # Pythonize the value because here value is str.
                 setattr(service, prop, service.properties[prop].pythonize(value))
 
-
     def optimize_service_search(self, hosts):
         """Setter for hosts attribute
 
@@ -1909,7 +1937,6 @@ class Services(Items):
                     continue
             except AttributeError, exp:
                 pass  # Will be catch at the is_correct moment
-
 
     def linkify_s_by_sg(self, servicegroups):
         """Link services with servicegroups
@@ -1969,7 +1996,6 @@ class Services(Items):
         for s in self:
             s.fill_daddy_dependency()
 
-
     def clean(self):
         """Remove services without host object linked to
 
@@ -1982,14 +2008,17 @@ class Services(Items):
         for sid in to_del:
             del self.items[sid]
 
-
     def explode_services_from_hosts(self, hosts, s, hnames):
         """
         Explodes a service based on a lis of hosts.
 
-        :param hosts:   The hosts container
-        :param s:       The base service to explode
-        :param hnames:  The host_name list to exlode sevice on
+        :param hosts: The hosts container
+        :type hosts:
+        :param s: The base service to explode
+        :type s:
+        :param hnames:  The host_name list to explode service on
+        :type hnames: str
+        :return: None
         """
         duplicate_for_hosts = []  # get the list of our host_names if more than 1
         not_hosts = []  # the list of !host_name so we remove them after
@@ -2029,16 +2058,17 @@ class Services(Items):
             self.add_item(new_s)
 
     def _local_create_service(self, hosts, host_name, service):
-        '''Create a new service based on a host_name and service instance.
+        """Create a new service based on a host_name and service instance.
 
-        :param hosts:       The hosts items instance.
-        :type hosts:        alignak.objects.host.Hosts
-        :param host_name:   The host_name to create a new service.
-        :param service:     The service to be used as template.
-        :type service:      Service
-        :return:            The new service created.
-        :rtype:             Service
-        '''
+        :param hosts: The hosts items instance.
+        :type hosts: alignak.objects.host.Hosts
+        :param host_name: The host_name to create a new service.
+        :type host_name: str
+        :param service: The service to be used as template.
+        :type service: Service
+        :return: The new service created.
+        :rtype: alignak.objects.service.Service
+        """
         h = hosts.find_by_name(host_name.strip())
         if h.is_excluded_for(service):
             return
@@ -2049,16 +2079,16 @@ class Services(Items):
         self.add_item(new_s)
         return new_s
 
-
     def explode_services_from_templates(self, hosts, service):
         """
         Explodes services from templates. All hosts holding the specified
         templates are bound the service.
 
-        :param hosts:   The hosts container.
-        :type hosts:    alignak.objects.host.Hosts
+        :param hosts: The hosts container.
+        :type hosts: alignak.objects.host.Hosts
         :param service: The service to explode.
-        :type service:  Service
+        :type service: alignak.objects.service.Service
+        :return: None
         """
         hname = getattr(service, "host_name", None)
         if not hname:
@@ -2076,16 +2106,15 @@ class Services(Items):
                 for name in hosts.find_hosts_that_use_template(hname):
                     self._local_create_service(hosts, name, service)
 
-
     def explode_services_duplicates(self, hosts, s):
         """
         Explodes services holding a `duplicate_foreach` clause.
 
-        :param hosts:   The hosts container
-        :param s:       The service to explode
-        :type s:        Service
+        :param hosts: The hosts container
+        :type hosts: alignak.objects.host.Hosts
+        :param s: The service to explode
+        :type s: alignak.objects.service.Service
         """
-
         hname = getattr(s, "host_name", None)
         if hname is None:
             return
@@ -2112,8 +2141,11 @@ class Services(Items):
         Registers a service into the service groups declared in its
         `servicegroups` attribute.
 
-        :param s:   The service to register
-        :param servicegroups:   The servicegroups container
+        :param s: The service to register
+        :type s:
+        :param servicegroups: The servicegroups container
+        :type servicegroups:
+        :return: None
         """
         if hasattr(s, 'service_description'):
             sname = s.service_description
@@ -2131,8 +2163,11 @@ class Services(Items):
         """
         Registers a service dependencies.
 
-        :param s:                   The service to register
+        :param s: The service to register
+        :type s:
         :param servicedependencies: The servicedependencies container
+        :type servicedependencies:
+        :return: None
         """
         # We explode service_dependencies into Servicedependency
         # We just create serviceDep with goods values (as STRING!),
@@ -2162,17 +2197,22 @@ class Services(Items):
         """
         Explodes services, from host_name, hostgroup_name, and from templetes.
 
-        :param hosts:               The hosts container
-        :param hostgroups:          The hostgoups container
-        :param contactgroups:       The concactgoups container
-        :param servicegroups:       The servicegoups container
+        :param hosts: The hosts container
+        :type hosts:
+        :param hostgroups: The hostgoups container
+        :type hostgroups:
+        :param contactgroups: The concactgoups container
+        :type contactgroups:
+        :param servicegroups: The servicegoups container
+        :type servicegroups:
         :param servicedependencies: The servicedependencies container
-        :param triggers:            The triggers container
+        :type servicedependencies:
+        :param triggers: The triggers container
+        :type triggers:
+        :return: None
         """
-
         # items::explode_trigger_string_into_triggers
         self.explode_trigger_string_into_triggers(triggers)
-
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
@@ -2226,7 +2266,6 @@ class Services(Items):
         for s in self:
             self.register_service_into_servicegroups(s, servicegroups)
             self.register_service_dependencies(s, servicedependencies)
-
 
     def create_business_rules(self, hosts, services):
         """

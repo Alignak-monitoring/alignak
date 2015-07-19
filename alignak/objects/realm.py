@@ -64,6 +64,7 @@ from alignak.log import logger
 # It change from hostgroup Class because there is no members
 # properties, just the realm_members that we rewrite on it.
 
+
 class Realm(Itemgroup):
     """Realm class is used to implement realm. It is basically a set of Host or Service
     assigned to a specific set of Scheduler/Poller (other daemon are optional)
@@ -119,6 +120,7 @@ class Realm(Itemgroup):
         """Add a realm to realm_members attribute
 
         :param member: realm name to add
+        :type member:
         :return: None
         TODO : Clean this self.members != self.realm_members?
         """
@@ -181,6 +183,7 @@ class Realm(Itemgroup):
         """Get all satellites of the wated type in this realm recursively
 
         :param sat_type: satelitte type wanted (scheduler, poller ..)
+        :type sat_type:
         :return: list of satellite in this realm
         :rtype: list
         TODO: Make this generic
@@ -256,6 +259,7 @@ class Realm(Itemgroup):
         ie : self.pollers, self.reactionners ...
 
         :param type: satellite type wanted
+        :type type: str
         :return: self.*type*s
         :rtype: list
         """
@@ -266,11 +270,11 @@ class Realm(Itemgroup):
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return []
 
-
     def fill_potential_satellites_by_type(self, sat_type):
         """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
 
         :param sat_type: satellite type wanted
+        :type sat_type: str
         :return: None
         """
         setattr(self, 'potential_%s' % sat_type, [])
@@ -281,13 +285,12 @@ class Realm(Itemgroup):
                 if satellite.manage_sub_realms:
                     getattr(self, 'potential_%s' % sat_type).append(satellite)
 
-
-
     def get_potential_satellites_by_type(self, type):
         """Generic function to access one of the potential satellite attribute
         ie : self.potential_pollers, self.potential_reactionners ...
 
         :param type: satellite type wanted
+        :type type: str
         :return: self.potential_*type*s
         :rtype: list
         """
@@ -297,12 +300,12 @@ class Realm(Itemgroup):
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return []
 
-
     def get_nb_of_must_have_satellites(self, type):
         """Generic function to access one of the number satellite attribute
         ie : self.nb_pollers, self.nb_reactionners ...
 
         :param type: satellite type wanted
+        :type type: str
         :return: self.nb_*type*s
         :rtype: int
         """
@@ -311,7 +314,6 @@ class Realm(Itemgroup):
         else:
             logger.debug("[realm] do not have this kind of satellites: %s", type)
             return 0
-
 
     # Fill dict of realms for managing the satellites confs
     def prepare_for_satellites_conf(self):
@@ -364,7 +366,6 @@ class Realm(Itemgroup):
              )
         logger.info(s)
 
-
     def fill_broker_with_poller_reactionner_links(self, broker):
         """Fill brokerlink object with satellite data
 
@@ -409,7 +410,6 @@ class Realm(Itemgroup):
             for r in self.get_all_subs_satellites_by_type('receivers'):
                 cfg = r.give_satellite_cfg()
                 broker.cfg['receivers'][r.id] = cfg
-
 
     def get_satellites_links_for_scheduler(self):
         """Get a configuration dict with pollers and reactionners data
@@ -456,7 +456,6 @@ class Realms(Itemgroups):
             return []
         return realm.get_realms()
 
-
     def linkify(self):
         """Links sub-realms (parent / son),
         add new realm_members,
@@ -483,7 +482,6 @@ class Realms(Itemgroups):
             p.receivers = []
             p.packs = []
             p.confs = {}
-
 
     def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
@@ -512,7 +510,6 @@ class Realms(Itemgroups):
         for p in self.items.values():
             self.recur_higer_realms(p, p.realm_members)
 
-
     def recur_higer_realms(self, r, sons):
         """Add sub-realms (parent / son)
 
@@ -526,7 +523,6 @@ class Realms(Itemgroups):
             sub_p.higher_realms.append(r)
             # and call for our sons too
             self.recur_higer_realms(r, sub_p.realm_members)
-
 
     def explode(self):
         """Explode realms with each realm_members
@@ -551,18 +547,16 @@ class Realms(Itemgroups):
                 del tmp_p.rec_tag
             del tmp_p.already_explode
 
-
     def get_default(self):
         """Get the default realm
 
         :return: Default realm of Alignak configuration
-        :rtype: alignak.objects.realm.Realm
+        :rtype: alignak.objects.realm.Realm | None
         """
         for r in self:
             if getattr(r, 'default', False):
                 return r
         return None
-
 
     def prepare_for_satellites_conf(self):
         """Wrapper to loop over each reach and call Realm.prepare_for_satellites_conf()

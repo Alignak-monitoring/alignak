@@ -797,7 +797,6 @@ class Config(Item):
                            'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
                            'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
-
     def __init__(self):
         self.params = {}
         self.resource_macros_names = []
@@ -820,7 +819,6 @@ class Config(Item):
         :rtype: str
         """
         return 'global configuration file'
-
 
     def fill_resource_macros_names_macros(self):
         """ fill the macro dict will all value
@@ -856,11 +854,11 @@ class Config(Item):
 
         return clean_p
 
-
     def load_params(self, params):
         """Load parameters from main configuration file
 
         :param params: parameters list (converted right at the beginning)
+        :type params:
         :return: None
         """
         clean_params = self.clean_params(params)
@@ -895,6 +893,7 @@ class Config(Item):
         """Split the line on withespaces and remove empty chunks
 
         :param line: the line to split
+        :type line: str
         :return: list of strings
         :rtype: list
         """
@@ -1115,7 +1114,6 @@ class Config(Item):
         if tmp_type not in objectscfg:
             objectscfg[tmp_type] = []
 
-
         objectscfg[tmp_type].append(tmp)
         objects = {}
 
@@ -1157,7 +1155,6 @@ class Config(Item):
         echo_obj = {'command_name': '_echo', 'command_line': '_echo'}
         raw_objects['command'].append(echo_obj)
 
-
     def create_objects(self, raw_objects):
         """Create real 'object' from dicts of prop/value
 
@@ -1178,13 +1175,13 @@ class Config(Item):
             if t not in early_created_types:
                 self.create_objects_for_type(raw_objects, t)
 
-
     def create_objects_for_type(self, raw_objects, type):
         """Generic function to create object regarding the type
 
         :param raw_objects: Raw object we need to instantiate objects
         :type raw_objects: dict
         :param type: the object type we want to create
+        :type type: object
         :return: None
         """
         types_creations = self.__class__.types_creations
@@ -1209,9 +1206,11 @@ class Config(Item):
         # we create the objects Class and we set it in prop
         setattr(self, prop, clss(lst, initial_index))
 
-
     def early_arbiter_linking(self):
-        """ Prepare the arbiter for early operations """
+        """ Prepare the arbiter for early operations
+
+        :return: None
+        """
 
         if len(self.arbiters) == 0:
             logger.warning("There is no arbiter, I add one in localhost:7770")
@@ -1227,7 +1226,6 @@ class Config(Item):
         # First fill default
         self.arbiters.fill_default()
         self.modules.fill_default()
-
 
         # print "****************** Linkify ******************"
         self.arbiters.linkify(self.modules)
@@ -1251,7 +1249,10 @@ class Config(Item):
 
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
-        with all it's services in it """
+        with all it's services in it
+
+        :return: None
+        """
 
         self.services.optimize_service_search(self.hosts)
 
@@ -1497,7 +1498,6 @@ class Config(Item):
             # Shutdown the manager, the sub-process should be gone now
             m.shutdown()
 
-
     def notice_about_useless_parameters(self):
         """Used to warn about useless parameter and print why it's not use.
 
@@ -1509,7 +1509,6 @@ class Config(Item):
                 if isinstance(entry, UnusedProp):
                     logger.warning("The parameter %s is useless and can be removed "
                                    "from the configuration (Reason: %s)", prop, entry.text)
-
 
     def warn_about_unmanaged_parameters(self):
         """used to raise warning if the user got parameter
@@ -1537,14 +1536,12 @@ class Config(Item):
                            "Ask for it on the developer mailinglist %s or submit a pull "
                            "request on the Alignak github ", mailing_list_uri)
 
-
     def override_properties(self):
         """Wrapper for calling override_properties method of services attribute
 
         :return:
         """
         self.services.override_properties(self.hosts)
-
 
     def explode(self):
         """Use to fill groups values on hosts and create new services
@@ -1591,15 +1588,13 @@ class Config(Item):
         # print "Realms"
         self.realms.explode()
 
-
     def apply_dependencies(self):
         """Creates dependencies links between elements.
 
-        :return:
+        :return: None
         """
         self.hosts.apply_dependencies()
         self.services.apply_dependencies()
-
 
     def apply_inheritance(self):
         """Apply inheritance over templates
@@ -1642,7 +1637,6 @@ class Config(Item):
         self.hostescalations.apply_inheritance()
         self.escalations.apply_inheritance()
 
-
     def apply_implicit_inheritance(self):
         """Wrapper for calling apply_implicit_inheritance method of services attributes
         Implicit inheritance is between host and service (like notification parameters etc)
@@ -1651,7 +1645,6 @@ class Config(Item):
         """
         # print "Services"
         self.services.apply_implicit_inheritance(self.hosts)
-
 
     def fill_default(self):
         """Fill objects properties with default value if necessary
@@ -1701,7 +1694,6 @@ class Config(Item):
         # Now fill some fields we can predict (like address for hosts)
         self.fill_predictive_missing_parameters()
 
-
     def fill_predictive_missing_parameters(self):
         """Wrapper for calling fill_predictive_missing_parameters method of hosts attribute
         Here is a special functions to fill some special
@@ -1711,7 +1703,6 @@ class Config(Item):
         :return: None
         """
         self.hosts.fill_predictive_missing_parameters()
-
 
     def fill_default_realm(self):
         """Check if a realm is defined, if not
@@ -1732,7 +1723,6 @@ class Config(Item):
                     if not hasattr(elt, 'realm'):
                         elt.realm = 'Default'
                         logger.info("Tagging %s with realm %s", elt.get_name(), default.get_name())
-
 
     def fill_default_satellites(self):
         """If a satellite is missing, we add them in the localhost
@@ -1762,13 +1752,13 @@ class Config(Item):
                             'manage_arbiters': '1'})
             self.brokers = BrokerLinks([b])
 
-
     def got_broker_module_type_defined(self, mod_type):
         """Check if a module type is defined in one of the brokers
 
         :param mod_type: module type to search
+        :type mod_type: str
         :return: True if mod_type is found else False
-        :rtype: False
+        :rtype: bool
         """
         for b in self.brokers:
             for m in b.modules:
@@ -1776,13 +1766,13 @@ class Config(Item):
                     return True
         return False
 
-
     def got_scheduler_module_type_defined(self, mod_type):
         """Check if a module type is defined in one of the schedulers
 
         :param mod_type: module type to search
+        :type mod_type: str
         :return: True if mod_type is found else False
-        :rtype: False
+        :rtype: bool
         TODO: Factorize it with got_broker_module_type_defined
         """
         for b in self.schedulers:
@@ -1791,14 +1781,14 @@ class Config(Item):
                     return True
         return False
 
-
     def got_arbiter_module_type_defined(self, mod_type):
         """Check if a module type is defined in one of the arbiters
         Also check the module_name
 
         :param mod_type: module type to search
+        :type mod_type: str
         :return: True if mod_type is found else False
-        :rtype: False
+        :rtype: bool
         TODO: Factorize it with got_broker_module_type_defined:
         """
         for a in self.arbiters:
@@ -1815,7 +1805,6 @@ class Config(Item):
                             return True
         return False
 
-
     def create_business_rules(self):
         """Create business rules for hosts and services
 
@@ -1823,7 +1812,6 @@ class Config(Item):
         """
         self.hosts.create_business_rules(self.hosts, self.services)
         self.services.create_business_rules(self.hosts, self.services)
-
 
     def create_business_rules_dependencies(self):
         """Create business rules dependencies for hosts and services
@@ -1833,10 +1821,12 @@ class Config(Item):
         self.hosts.create_business_rules_dependencies()
         self.services.create_business_rules_dependencies()
 
-
     def hack_old_nagios_parameters(self):
         """ Create some 'modules' from all nagios parameters if they are set and
-        the modules are not created """
+        the modules are not created
+
+        :return: None
+        """
         # We list all modules we will add to brokers
         mod_to_add = []
         mod_to_add_to_schedulers = []
@@ -1947,11 +1937,12 @@ class Config(Item):
                 for b in self.schedulers:
                     b.modules.append(m)
 
-
     def hack_old_nagios_parameters_for_arbiter(self):
         """ Create some 'modules' from all nagios parameters if they are set and
         the modules are not created
         This one is only for arbiter
+
+        :return: None
         TODO: Factorize with hack_old_nagios_parameters"""
         # We list all modules we will add to arbiters
         mod_to_add = []
@@ -1980,7 +1971,6 @@ class Config(Item):
                     a.modules = getattr(a, 'modules', []) + [data['module_name']]
                 self.modules.add_item(mod)
 
-
     def propagate_timezone_option(self):
         """Set our timezone value and give it too to unset satellites
 
@@ -1997,9 +1987,11 @@ class Config(Item):
                     if s.use_timezone == 'NOTSET':
                         setattr(s, 'use_timezone', self.use_timezone)
 
-
     def linkify_templates(self):
-        """ Like for normal object, we link templates with each others """
+        """ Like for normal object, we link templates with each others
+
+        :return: None
+        """
         self.hosts.linkify_templates()
         self.contacts.linkify_templates()
         self.services.linkify_templates()
@@ -2013,11 +2005,10 @@ class Config(Item):
         self.serviceescalations.linkify_templates()
         self.hostescalations.linkify_templates()
 
-
     def check_error_on_hard_unmanaged_parameters(self):
         """Some parameters are just not managed like O*HP commands  and regexp capabilities
 
-        :return: True if we encounter an error else False
+        :return: True if we encounter an error, otherwise False
         :rtype: bool
         """
         r = True
@@ -2031,7 +2022,6 @@ class Config(Item):
         #      logger.error("ocsp_command parameter is not managed.")
         #      r &= False
         return r
-
 
     def is_correct(self):
         """Check if all elements got a good configuration
@@ -2120,7 +2110,6 @@ class Config(Item):
                                "got this tag" % tag)
                 r = False
 
-
         # Check that all hosts involved in business_rules are from the same realm
         for l in [self.services, self.hosts]:
             for e in l:
@@ -2152,7 +2141,6 @@ class Config(Item):
 
         self.conf_is_correct = r
 
-
     def explode_global_conf(self):
         """Explode parameters like cached_service_check_horizon in the
         Service class in a cached_check_horizon manner, o*hp commands etc
@@ -2164,7 +2152,6 @@ class Config(Item):
                 ReceiverLink, ArbiterLink, HostExtInfo]
         for cls in clss:
             cls.load_global_conf(self)
-
 
     def remove_templates(self):
         """Clean useless elements like templates because they are not needed anymore
@@ -2178,19 +2165,18 @@ class Config(Item):
         self.hostdependencies.remove_templates()
         self.timeperiods.remove_templates()
 
-
     def add_error(self, txt):
         """Add an error in the configuration error list so we can print them
          all in one place
 
         :param txt: Text error
+        :type txt: str
         :return: None
         """
         err = txt
         self.configuration_errors.append(err)
 
         self.conf_is_correct = False
-
 
     def show_errors(self):
         """Loop over configuration_errors and log them
@@ -2200,7 +2186,6 @@ class Config(Item):
         for err in self.configuration_errors:
             logger.error(err)
 
-
     def create_packs(self, nb_packs):
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
@@ -2209,7 +2194,8 @@ class Config(Item):
         REF: doc/pack-creation.pn
 
         :param nb_packs: the number of packs to create (number of scheduler basically)
-        :return:
+        :type nb_packs: int
+        :return: None
         """
         # We create a graph with host in nodes
         g = Graph()
@@ -2418,7 +2404,6 @@ class Config(Item):
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-
     def cut_into_parts(self):
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
@@ -2566,7 +2551,6 @@ class Config(Item):
         for i in self.confs:
             self.confs[i].instance_id = i
             random.seed(time.time())
-
 
     def dump(self, f=None):
         """Dump configuration to a file in a JSON format
