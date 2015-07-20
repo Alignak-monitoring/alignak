@@ -1037,7 +1037,6 @@ def get_key_value_sequence(entry, default_value=None):
                 got_xy = (len(ns) != 1)
             except NodeSetParseRangeError:
                 return (None, GET_KEY_VALUE_SEQUENCE_ERROR_NODE)
-                pass  # go in the next key
 
         # Now we've got our couples of X-Y. If no void,
         # we were with a "key generator"
