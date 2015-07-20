@@ -16,7 +16,7 @@ script:
   - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
   - nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
   - coverage combine
-  - cd .. && pep8 --max-line-length=100 --ignore=E303,E302,E301,E241 --exclude='*.pyc' alignak/*
+  - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
   - pylint --rcfile=.pylintrc --disable=all --enable=C0111 --enable=W0403 --enable=W0106 -r no alignak/*
   - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_all_setup.sh; fi
 # specific call to launch coverage data into coveralls.io

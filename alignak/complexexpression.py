@@ -85,7 +85,6 @@ class ComplexExpressionNode(object):
 
             return set(self.content)
 
-
         # first got the not ones in a list, and the other in the other list
         not_nodes = [s for s in self.sons if s.not_value]
         positiv_nodes = [s for s in self.sons if not s.not_value]  # ok a not not is hard to read..
@@ -305,7 +304,6 @@ class ComplexExpressionFactory(object):
             obj = [h.host_name for h in self.all_elements.items.values()
                    if getattr(h, 'host_name', '') != '' and not h.is_tpl()]
             return obj, error
-
 
         # Ok a more classic way
 

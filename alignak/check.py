@@ -142,7 +142,6 @@ class Check(Action):
         self.from_trigger = from_trigger
         self.dependency_check = dependency_check
 
-
     def copy_shell(self):
         """return a copy of the check but just what is important for execution
         So we remove the ref and all
@@ -168,7 +167,6 @@ class Check(Action):
         self.perf_data = c.perf_data
         self.u_time = c.u_time
         self.s_time = c.s_time
-
 
     def is_launchable(self, t):
         """Check if the check can be launched

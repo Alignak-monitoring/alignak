@@ -304,7 +304,6 @@ class Broker(BaseSatellite):
             links[id]['con'] = None
             return
 
-
         try:
             # initial ping must be quick
             con.get('ping')
@@ -922,7 +921,6 @@ class Broker(BaseSatellite):
                 return
 
             self.setup_new_conf()
-
 
             # Do the modules part, we have our modules in self.modules
             # REF: doc/broker-modules.png (1)

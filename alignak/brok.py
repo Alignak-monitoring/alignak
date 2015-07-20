@@ -67,10 +67,8 @@ class Brok:
         self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
         self.prepared = False
 
-
     def __str__(self):
         return str(self.__dict__) + '\n'
-
 
     def prepare(self):
         """Unpickle data from data attribute and add instance_id key if necessary

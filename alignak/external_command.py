@@ -2754,7 +2754,6 @@ class ExternalCommandManager:
             if self.current_timestamp < service.last_chk:
                 return
 
-
             c = service.launch_check(now, force=True)
             # Should not be possible to not find the check, but if so, don't crash
             if not c:

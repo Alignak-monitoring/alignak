@@ -195,7 +195,6 @@ class MacroResolver(Borg):
             else:
                 return ''
 
-
     def _delete_unwanted_caracters(self, s):
         """Remove not wanted char from string
         unwanted char are illegal_macro_output_chars attribute

@@ -65,7 +65,6 @@ import base64
 from multiprocessing import process
 
 
-
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
@@ -527,7 +526,6 @@ class Alignak(BaseSatellite):
             uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
             self.reactionners[reac_id]['uri'] = uri
             self.reactionners[reac_id]['last_connection'] = 0
-
 
         # First mix conf and override_conf to have our definitive conf
         for prop in self.override_conf:

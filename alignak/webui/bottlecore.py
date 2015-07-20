@@ -81,13 +81,11 @@ if py3k:  # pragma: no cover
     # See Request.POST
     from io import BytesIO
 
-
     def touni(x, enc='utf8', err='strict'):
         """ Convert anything to unicode """
         return str(x, enc, err) if isinstance(x, bytes) else str(x)
     if sys.version_info < (3, 2, 0):
         from io import TextIOWrapper
-
 
         class NCTextIOWrapper(TextIOWrapper):
             ''' Garbage collecting an io.TextIOWrapper(buffer) instance closes
@@ -100,7 +98,6 @@ else:
     json_loads = json_lds
     from StringIO import StringIO as BytesIO
     bytes = str
-
 
     def touni(x, enc='utf8', err='strict'):
         """ Convert anything to unicode """
@@ -209,6 +206,7 @@ class HeaderProperty(object):
 # Exceptions and Events ########################################################
 ###############################################################################
 
+
 class BottleException(Exception):
     """ A base class for exceptions used by bottle. """
     pass
@@ -245,6 +243,7 @@ class HTTPError(HTTPResponse):
 ###############################################################################
 # Routing ######################################################################
 ###############################################################################
+
 
 class RouteError(BottleException):
     """ This is a base class for all routing related exceptions """
@@ -439,6 +438,7 @@ class Router(object):
 ###############################################################################
 # Application Object ###########################################################
 ###############################################################################
+
 
 class Bottle(object):
     """ WSGI application """
@@ -805,6 +805,7 @@ class Bottle(object):
 # HTTP and WSGI Tools ##########################################################
 ###############################################################################
 
+
 class BaseRequest(DictMixin):
     """ A wrapper for WSGI environment dictionaries that adds a lot of
         convenient access methods and properties. Most of them are read-only."""
@@ -1097,13 +1098,17 @@ class BaseRequest(DictMixin):
 
     def __getitem__(self, key):
         return self.environ[key]
+
     def __delitem__(self, key):
         self[key] = ""
         del(self.environ[key])
+
     def __iter__(self):
         return iter(self.environ)
+
     def __len__(self):
         return len(self.environ)
+
     def keys(self):
         return self.environ.keys()
 
@@ -1221,10 +1226,13 @@ class BaseResponse(object):
 
     def __contains__(self, name):
         return _hkey(name) in self._headers
+
     def __delitem__(self, name):
         del self._headers[_hkey(name)]
+
     def __getitem__(self, name):
         return self._headers[_hkey(name)][-1]
+
     def __setitem__(self, name, value):
         self._headers[_hkey(name)] = [str(value)]
 
@@ -1345,6 +1353,7 @@ Response = LocalResponse
 ###############################################################################
 # Plugins ######################################################################
 ###############################################################################
+
 
 class JSONPlugin(object):
     name = 'json'
@@ -1497,6 +1506,7 @@ class _ImportRedirect(object):
 # Common Utilities #############################################################
 ###############################################################################
 
+
 class MultiDict(DictMixin):
     """ This dict stores multiple values per key, but behaves exactly like a
         normal dict in that it returns only the newest value for any given key.
@@ -1508,20 +1518,28 @@ class MultiDict(DictMixin):
 
     def __len__(self):
         return len(self.dict)
+
     def __iter__(self):
         return iter(self.dict)
+
     def __contains__(self, key):
         return key in self.dict
+
     def __delitem__(self, key):
         del self.dict[key]
+
     def __getitem__(self, key):
         return self.dict[key][-1]
+
     def __setitem__(self, key, value):
         self.append(key, value)
+
     def iterkeys(self):
         return self.dict.iterkeys()
+
     def itervalues(self):
         return (v[-1] for v in self.dict.itervalues())
+
     def iteritems(self):
         return ((k, v[-1]) for (k, v) in self.dict.iteritems())
 
@@ -1567,10 +1585,13 @@ class HeaderDict(MultiDict):
 
     def __contains__(self, key):
         return _hkey(key) in self.dict
+
     def __delitem__(self, key):
         del self.dict[_hkey(key)]
+
     def __getitem__(self, key):
         return self.dict[_hkey(key)][-1]
+
     def __setitem__(self, key, value):
         self.dict[_hkey(key)] = [str(value)]
 
@@ -1638,8 +1659,10 @@ class WSGIHeaderDict(DictMixin):
 
     def keys(self):
         return list(self)
+
     def __len__(self):
         return len(list(self))
+
     def __contains__(self, key):
         return self._ekey(key) in self.environ
 
@@ -1678,6 +1701,7 @@ class WSGIFileWrapper(object):
 ###############################################################################
 # Application Helper ###########################################################
 ###############################################################################
+
 
 def abort(code=500, text='Unknown Error: Application stopped.'):
     """ Aborts execution and causes a HTTP error. """
@@ -1738,6 +1762,7 @@ def static_file(filename, root, mimetype='auto', download=False):
 ###############################################################################
 # HTTP Utilities and MISC (TODO) ###############################################
 ###############################################################################
+
 
 def debug(mode=True):
     """ Change the debug level.
@@ -1852,6 +1877,7 @@ def path_shift(script_name, path_info, shift=1):
 # Decorators
 # TODO: Replace default_app() with app()
 
+
 def validate(**vkargs):
     """
     Validates and manipulates keyword arguments by user defined callables.
@@ -1906,6 +1932,7 @@ del name
 # Server Adapter ###############################################################
 ###############################################################################
 
+
 class ServerAdapter(object):
     quiet = False
 
@@ -1940,6 +1967,7 @@ class FlupFCGIServer(ServerAdapter):
         kwargs = {'bindAddress': (self.host, self.port)}
         kwargs.update(self.options)  # allow to override bindAddress and others
         flup.server.fcgi.WSGIServer(handler, **kwargs).run()
+
 
 class FlupSCGIServer(ServerAdapter):
     def run(self, handler):  # pragma: no cover
@@ -2170,6 +2198,7 @@ server_names = {
 # Application Control ##########################################################
 ###############################################################################
 
+
 def _load(target, **vars):
     """ Fetch something from a module. The exact behavior depends on the
         target string:
@@ -2355,6 +2384,7 @@ def _reloader_observer(server, app, interval):
 ###############################################################################
 # Template Adapters ############################################################
 ###############################################################################
+
 
 class TemplateError(HTTPError):
     def __init__(self, message):

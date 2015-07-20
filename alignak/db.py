@@ -49,6 +49,7 @@
 
 """
 
+
 class DB(object):
     """DB is a generic class for SQL Database"""
 

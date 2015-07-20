@@ -273,7 +273,6 @@ class Arbiter(Daemon):
         self.interface = IForArbiter(self)
         self.conf = Config()
 
-
     def add(self, b):
         """Generic function to add objects to queues.
         Only manage Broks and ExternalCommand

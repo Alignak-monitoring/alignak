@@ -94,6 +94,7 @@ from alignak.http_client import HTTPClient, HTTPExceptions
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 
+
 class Scheduler(object):
     """Scheduler class. Mostly handle scheduling items (host service) to schedule check
     raise alert, enter downtime etc."""
@@ -900,7 +901,6 @@ class Scheduler(object):
                 self.checks[c.id].status = 'waitconsume'
             except KeyError, exp:
                 pass
-
 
         elif c.is_a == 'eventhandler':
             try:
@@ -1894,6 +1894,7 @@ class Scheduler(object):
         for (c, e) in all_commands.iteritems():
             u_time, s_time = e
             p.append({'cmd': c, 'u_time': u_time, 's_time': s_time})
+
         def p_sort(e1, e2):
             """Compare elems by u_time param
 

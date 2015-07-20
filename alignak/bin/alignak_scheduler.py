@@ -43,8 +43,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-
-
 # For the Alignak application, I try to respect
 # The Zen of Python, by Tim Peters. It's just some
 # very goods ideas that make Python programming very fun

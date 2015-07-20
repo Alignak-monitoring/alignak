@@ -117,7 +117,6 @@ def main():
 
     opts, args = parser.parse_args()
 
-
     if not opts.config_files:
         parser.error("Requires at least one config file (option -c/--config")
     if args:

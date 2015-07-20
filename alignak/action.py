@@ -100,8 +100,6 @@ def no_block_read(output):
         return ''
 
 
-
-
 class __Action(object):
     """
     This abstract class is used just for having a common id for both
@@ -118,7 +116,6 @@ class __Action(object):
         :return: None
         """
         Action.id = max(Action.id, _id)
-
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
@@ -147,7 +144,6 @@ class __Action(object):
             local_env[p] = self.env[p].encode('utf8')
         return local_env
 
-
     def execute(self):
         """Start this action command. The command will be executed in a
         subprocess.
@@ -168,7 +164,6 @@ class __Action(object):
         self.stderrdata = ''
 
         return self.execute__()  # OS specific part
-
 
     def get_outputs(self, out, max_plugins_output_length):
         """Get outputs from single output (split perfdata etc).
@@ -213,7 +208,6 @@ class __Action(object):
         # long_output is all non output and perfline, join with \n
         self.long_output = '\n'.join(long_output)
 
-
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
 
@@ -238,7 +232,6 @@ class __Action(object):
             if fcntl:
                 self.stdoutdata += no_block_read(self.process.stdout)
                 self.stderrdata += no_block_read(self.process.stderr)
-
 
             if (now - self.check_time) > self.timeout:
                 self.kill__()
@@ -302,7 +295,6 @@ class __Action(object):
         self.u_time = n_child_utime - child_utime
         self.s_time = n_child_stime - child_stime
 
-
     def copy_shell__(self, new_i):
         """Copy all attributes listed in 'only_copy_prop' from `self` to
         `new_i`.
@@ -315,7 +307,6 @@ class __Action(object):
         for prop in only_copy_prop:
             setattr(new_i, prop, getattr(self, prop))
         return new_i
-
 
     def got_shell_characters(self):
         """Check if the command_attribute has shell characters
@@ -374,7 +365,6 @@ if os.name != 'nt':
                     self.execution_time = time.time() - self.check_time
                     return
 
-
             # Now: GO for launch!
             # logger.debug("Launching: %s" % (self.command.encode('utf8', 'ignore')))
 
@@ -424,7 +414,6 @@ else:
 
     import ctypes
     TerminateProcess = ctypes.windll.kernel32.TerminateProcess
-
 
     class Action(__Action):
         """Action class for Windows systems

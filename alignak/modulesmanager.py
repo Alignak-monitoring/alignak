@@ -332,7 +332,6 @@ class ModulesManager(object):
                 inst.set_loaded_into(self.modules_type)
                 self.instances.append(inst)
 
-
         for inst in self.instances:
             # External are not init now, but only when they are started
             if not inst.is_external and not self.try_instance_init(inst):

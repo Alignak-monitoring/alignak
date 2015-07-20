@@ -59,6 +59,7 @@ from MySQLdb import ProgrammingError
 from alignak.db import DB
 from alignak.log import logger
 
+
 class DBMysql(DB):
     """DBMysql is a MySQL access database class"""
 

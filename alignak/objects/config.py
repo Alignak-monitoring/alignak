@@ -1469,6 +1469,7 @@ class Config(Item):
             # Now pickle the whole configuration into one big pickle object, for the arbiter spares
             whole_queue = m.list()
             t0 = time.time()
+
             def create_whole_conf_pack(whole_queue, self):
                 """The function that just compute the whole conf pickle string, but n a children
                 """
@@ -1832,7 +1833,6 @@ class Config(Item):
         mod_to_add = []
         mod_to_add_to_schedulers = []
 
-
         # For status_dat
         if (hasattr(self, 'status_file') and
                 self.status_file != '' and
@@ -1919,7 +1919,6 @@ class Config(Item):
                         'template': self.host_perfdata_file_template}
                 mod = Module(data)
                 mod_to_add.append(mod)
-
 
         # We add them to the brokers if we need it
         if mod_to_add != []:
@@ -2250,7 +2249,6 @@ class Config(Item):
                     if e != h:
                         links.add((e, h))
 
-
         # Now we create links in the graph. With links (set)
         # We are sure to call the less add_edge
         for (dep, h) in links:
@@ -2539,7 +2537,6 @@ class Config(Item):
                     nhg = cfg.servicegroups.find_by_name(ohg.get_name())
                     nhgs.append(nhg)
                 h.servicegroups = nhgs
-
 
         # Now we fill other_elements by host (service are with their host
         # so they are not tagged)

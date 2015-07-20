@@ -55,6 +55,7 @@ from alignak.action import Action
 from alignak.property import IntegerProp, StringProp, FloatProp, BoolProp
 from alignak.autoslots import AutoSlots
 
+
 class EventHandler(Action):
     """Notification class, inherits from action class. Used to execute action
     when a host or a service is in a bad state

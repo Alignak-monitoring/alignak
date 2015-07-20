@@ -312,7 +312,6 @@ class Regenerator(object):
                 new_members.append(s)
             sg.members = new_members
 
-
         # Merge SERVICEGROUPS with real ones
         for inpsg in inp_servicegroups:
             sgname = inpsg.servicegroup_name
@@ -361,7 +360,6 @@ class Regenerator(object):
             # We can really declare this host OK now
             self.services.add_item(s, index=True)
 
-
         # Add realm of theses hosts. Only the first is useful
         for h in inp_hosts:
             self.realms.add(h.realm)
@@ -376,7 +374,6 @@ class Regenerator(object):
             self.linkify_host_and_hosts(h, 'childs')
             self.linkify_dict_srv_and_hosts(h, 'parent_dependencies')
             self.linkify_dict_srv_and_hosts(h, 'child_dependencies')
-
 
         # Now services too
         for s in inp_services:

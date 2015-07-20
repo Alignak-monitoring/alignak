@@ -303,6 +303,7 @@ if hasattr(sys.stdout, 'isatty'):
         csh.setFormatter(defaultFormatter)
     logger.addHandler(csh)
 
+
 def naglog_result(level, result, *args):
     """
     Function use for old Nag compatibility. We to set format properly for this call only.

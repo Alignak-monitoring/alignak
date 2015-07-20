@@ -655,7 +655,6 @@ class CalendarDaterange(Daterange):
         return (start_time, end_time)
 
 
-
 class StandardDaterange(Daterange):
     """StandardDaterange is for standard entry (weekday - weekday)
 

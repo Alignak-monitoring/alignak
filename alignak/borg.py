@@ -47,6 +47,7 @@
 
 """
 
+
 class Borg(object):
     """Borg class define a simple __shared_state class attribute.
     __dict__ points to this value when calling __init__

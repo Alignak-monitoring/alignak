@@ -193,7 +193,6 @@ class Hostgroups(Itemgroups):
         self.linkify_hg_by_hst(hosts)
         self.linkify_hg_by_realms(realms)
 
-
     def linkify_hg_by_hst(self, hosts):
         """
         We just search for each hostgroup the id of the hosts
