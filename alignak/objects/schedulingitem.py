@@ -1827,7 +1827,7 @@ class SchedulingItem(Item):
             children_output = "all checks were successful."
 
         # Replaces children output string
-        template_string = re.sub("\$\(.*\)\$", children_output, output_template)
+        template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
         data = self.get_data_for_checks()
         output = m.resolve_simple_macros_in_string(template_string, data)
         return output.strip()
