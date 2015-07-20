@@ -70,6 +70,7 @@ try:
     from OpenSSL import SSL
     from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
     # Create 'safe' SSL adapter by disabling SSLv2/SSLv3 connections
+
     class pyOpenSSLAdapterSafe(pyOpenSSLAdapter):
         def get_context(self):
             c = pyOpenSSLAdapter.get_context(self)
@@ -91,16 +92,12 @@ from alignak.webui import bottlecore as bottle
 bottle.debug(True)
 
 
-
 class InvalidWorkDir(Exception):
     pass
 
 
 class PortNotFree(Exception):
     pass
-
-
-
 
 
 # CherryPy is allowing us to have a HTTP 1.1 server, and so have a KeepAlive
@@ -124,7 +121,6 @@ class CherryPyServer(bottle.ServerAdapter):
         return server
 
 
-
 class CherryPyBackend(object):
     def __init__(self, host, port, use_ssl, ca_cert, ssl_key,
                  ssl_cert, hard_ssl_name_check, daemon_thread_pool_size):
@@ -142,11 +138,9 @@ class CherryPyBackend(object):
             # must be a problem with workdir:
             raise InvalidWorkDir(e)
 
-
     # When call, it do not have a socket
     def get_sockets(self):
         return []
-
 
     # We stop our processing, but also try to hard close our socket as cherrypy is not doing it...
     def stop(self):
@@ -157,7 +151,6 @@ class CherryPyBackend(object):
             self.srv.stop()
         except Exception, exp:
             logger.warning('Cannot stop the CherryPy backend : %s', exp)
-
 
     # Will run and LOCK
     def run(self):
@@ -231,13 +224,11 @@ class WSGIREFBackend(object):
             # must be a problem with workdir:
             raise e
 
-
     def get_sockets(self):
         if self.srv.socket:
             return [self.srv.socket]
         else:
             return []
-
 
     def get_socks_activity(self, socks, timeout):
         try:
@@ -249,7 +240,6 @@ class WSGIREFBackend(object):
             raise
         return ins
 
-
     # We are asking us to stop, so we close our sockets
     def stop(self):
         self.stop_requested = True
@@ -259,7 +249,6 @@ class WSGIREFBackend(object):
             except Exception:
                 pass
             self.srv.socket = None
-
 
     # Manually manage the number of threads
     def run(self):
@@ -302,7 +291,6 @@ class WSGIREFBackend(object):
 
     def handle_one_request_thread(self, sock):
         self.srv.handle_request()
-
 
 
 class HTTPDaemon(object):
@@ -386,6 +374,7 @@ class HTTPDaemon(object):
                 # WARNING : we MUST do a 2 levels function here, or the f_wrapper
                 # will be uniq and so will link to the last function again
                 # and again
+
                 def register_callback(fname, args, f, obj, lock):
                     def f_wrapper():
                         t0 = time.time()
@@ -468,10 +457,8 @@ class HTTPDaemon(object):
                 return "OK"
             bottle.route('/', callback=slash)
 
-
         def unregister(self, obj):
             return
-
 
         def handleRequests(self, s):
             self.srv.handle_request()

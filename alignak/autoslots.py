@@ -57,7 +57,6 @@ class AutoSlots(type):
 
     """
 
-
     def __new__(cls, name, bases, dct):
         """Called when we create a new Class
         Some properties names are not allowed in __slots__ like 2d_coords of

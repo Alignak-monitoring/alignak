@@ -391,7 +391,6 @@ class Item(object):
                         new_val.extend(value)
                         value = new_val
 
-
                 # Ok, we can set it
                 setattr(self, prop, value)
 

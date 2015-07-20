@@ -193,6 +193,7 @@ class IForArbiter(Interface):
         self.app.push_host_names(sched_id, hnames)
     push_host_names.method = 'post'
 
+
 class ISchedulers(Interface):
     """Interface for Schedulers
     If we are passive, they connect to this and send/get actions

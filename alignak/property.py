@@ -378,6 +378,7 @@ class DictProp(Property):
         :rtype: str
         """
         val = unique_value(val)
+
         def split(kv):
             """Split key-value string into (key,value)
 

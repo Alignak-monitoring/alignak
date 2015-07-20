@@ -132,7 +132,6 @@ class BaseModule(object):
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
-
     def init(self):
         """Handle this module "post" init ; just before it'll be started.
         Like just open necessaries file(s), database(s),
@@ -141,7 +140,6 @@ class BaseModule(object):
         :return: None
         """
         pass
-
 
     def set_loaded_into(self, daemon_name):
         """Setter for loaded_into attribute
@@ -152,7 +150,6 @@ class BaseModule(object):
         :return: None
         """
         self.loaded_into = daemon_name
-
 
     def create_queues(self, manager=None):
         """The manager is None on android, but a true Manager() elsewhere
@@ -173,7 +170,6 @@ class BaseModule(object):
             self.from_q = manager.Queue()
             self.to_q = manager.Queue()
 
-
     def clear_queues(self, manager):
         """Release the resources associated to the queues of this instance
 
@@ -193,7 +189,6 @@ class BaseModule(object):
             #    q._callmethod('join_thread')
         self.to_q = self.from_q = None
 
-
     def start_module(self):
         """Wrapper for _main function.
         Catch and raise any exception occurring in the main function
@@ -205,7 +200,6 @@ class BaseModule(object):
         except Exception as e:
             logger.error('[%s] %s', self.name, traceback.format_exc())
             raise e
-
 
     def start(self, http_daemon=None):
         """Actually restart the process if the module is external
@@ -238,7 +232,6 @@ class BaseModule(object):
         self.properties['process'] = p  # TODO: temporary
         logger.info("%s is now started ; pid=%d", self.name, p.pid)
 
-
     def __kill(self):
         """Sometime terminate() is not enough, we must "help"
         external modules to die...
@@ -255,7 +248,6 @@ class BaseModule(object):
             # You do not let me another choice guy...
             if self.process.is_alive():
                 os.kill(self.process.pid, signal.SIGKILL)
-
 
     def stop_process(self):
         """Request the module process to stop and release it
@@ -278,8 +270,6 @@ class BaseModule(object):
 
             self.process = None
 
-
-
     def get_name(self):
         """Wrapper to access name attribute
 
@@ -298,7 +288,6 @@ class BaseModule(object):
         """
         return hasattr(self, prop)
 
-
     def want_brok(self, b):
         """Generic function to check if the module need a specific brok
         In this case it is always True
@@ -309,7 +298,6 @@ class BaseModule(object):
         :rtype: bool
         """
         return True
-
 
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
@@ -326,7 +314,6 @@ class BaseModule(object):
             brok.prepare()
             return manage(brok)
 
-
     def manage_signal(self, sig, frame):
         """Generic function to handle signals
         Set interrupted attribute to True and return
@@ -338,7 +325,6 @@ class BaseModule(object):
         :return: None
         """
         self.interrupted = True
-
 
     def set_signal_handler(self, sigs=None):
         """Set the signal handler function (manage_signal)
@@ -355,7 +341,6 @@ class BaseModule(object):
             signal.signal(sig, self.manage_signal)
 
     set_exit_handler = set_signal_handler
-
 
     def do_stop(self):
         """Called just before the module will exit
@@ -400,7 +385,6 @@ class BaseModule(object):
         self.main()
         self.do_stop()
         logger.info("[%s]: exiting now..", self.name)
-
 
     # TODO: apparently some modules would uses "work" as the main method??
     work = _main

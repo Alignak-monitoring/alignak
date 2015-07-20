@@ -590,7 +590,6 @@ def to_name_if_possible(ref, value):
     return ''
 
 
-
 def to_hostnames_list(ref, tab):
     """Convert Host list into a list of  host_name
 
