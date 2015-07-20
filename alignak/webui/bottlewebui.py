@@ -2,6 +2,7 @@
 to avoid code duplication
 
 """
+# pylint: disable=W0614
 from .bottlecore import *
 
 
