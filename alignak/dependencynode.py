@@ -412,7 +412,7 @@ class DependencyNodeFactory(object):
         :return: end of the line (without X of :)
         :rtype: str
         """
-        p = "^(-?\d+%?),*(-?\d*%?),*(-?\d*%?) *of: *(.+)"
+        p = r"^(-?\d+%?),*(-?\d*%?),*(-?\d*%?) *of: *(.+)"
         r = re.compile(p)
         m = r.search(pattern)
         if m is not None:

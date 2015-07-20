@@ -121,14 +121,14 @@ class CommandCall(DummyCommandCall):
                 self.reactionner_tag = self.command.reactionner_tag
 
     def get_command_and_args(self):
-        """We want to get the command and the args with ! splitting.
+        r"""We want to get the command and the args with ! splitting.
         but don't forget to protect against the \! to do not split them
 
         :return: None
         """
 
         # First protect
-        p_call = self.call.replace('\!', '___PROTECT_EXCLAMATION___')
+        p_call = self.call.replace(r'\!', '___PROTECT_EXCLAMATION___')
         tab = p_call.split('!')
         self.command = tab[0]
         # Reverse the protection

@@ -178,7 +178,7 @@ class __Action(object):
         # Squeeze all output after max_plugins_output_length
         out = out[:max_plugins_output_length]
         # manage escaped pipes
-        out = out.replace('\|', '___PROTECT_PIPE___')
+        out = out.replace(r'\|', '___PROTECT_PIPE___')
         # Then cuts by lines
         elts = out.split('\n')
         # For perf data

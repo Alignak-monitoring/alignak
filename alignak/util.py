@@ -111,7 +111,7 @@ def safe_print(*args):
 
 
 def split_semicolon(line, maxsplit=None):
-    """Split a line on semicolons characters but not on the escaped semicolons
+    r"""Split a line on semicolons characters but not on the escaped semicolons
 
     :param line: line to split
     :type line: str
@@ -126,7 +126,7 @@ def split_semicolon(line, maxsplit=None):
     >>> split_semicolon('a,b;c;;g', 2)
     ['a,b', 'c', ';g']
 
-    >>> split_semicolon('a,b;c\;;g', 2)
+    >>> split_semicolon(r'a,b;c\;;g', 2)
     ['a,b', 'c;', 'g']
     """
     # Split on ';' character
@@ -976,9 +976,9 @@ def get_key_value_sequence(entry, default_value=None):
     # match a whole sequence of key$(value1..n)$
     all_keyval_pattern = re.compile('(?x)^(' + keyval_pattern_txt + ')+$')
     # match a single value
-    value_pattern = re.compile('(?:\$\((?P<val>.*?)\)\$)')
+    value_pattern = re.compile(r'(?:\$\((?P<val>.*?)\)\$)')
     # match a sequence of values
-    all_value_pattern = re.compile('^(?:\$\(.*?\)\$)+$')
+    all_value_pattern = re.compile(r'^(?:\$\(.*?\)\$)+$')
 
     if all_keyval_pattern.match(conf_entry):
         for mat in re.finditer(keyval_pattern, conf_entry):
@@ -1018,7 +1018,7 @@ def get_key_value_sequence(entry, default_value=None):
 
     if NodeSet is None:
         # The pattern that will say if we have a [X-Y] key.
-        pat = re.compile('\[(\d*)-(\d*)\]')
+        pat = re.compile(r'\[(\d*)-(\d*)\]')
 
     for r in array1:
 

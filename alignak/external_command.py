@@ -643,12 +643,12 @@ class ExternalCommandManager:
         """
 
         match = re.match(
-            '^\[([0-9]{10})] PROCESS_(SERVICE)_CHECK_RESULT;'
-            '([^\;]*);([^\;]*);([^\;]*);([^\|]*)(?:\|(.*))?', cmd_line)
+            r'^\[([0-9]{10})] PROCESS_(SERVICE)_CHECK_RESULT;'
+            r'([^\;]*);([^\;]*);([^\;]*);([^\|]*)(?:\|(.*))?', cmd_line)
         if not match:
             match = re.match(
-                '^\[([0-9]{10})] PROCESS_(HOST)_CHECK_RESULT;'
-                '([^\;]*);([^\;]*);([^\|]*)(?:\|(.*))?', cmd_line)
+                r'^\[([0-9]{10})] PROCESS_(HOST)_CHECK_RESULT;'
+                r'([^\;]*);([^\;]*);([^\|]*)(?:\|(.*))?', cmd_line)
 
         if not match:
             return None

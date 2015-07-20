@@ -386,7 +386,7 @@ class DictProp(Property):
             :return: key, value
             :rtype: tuple
             """
-            m = re.match("^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
+            m = re.match(r"^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
             if m is None:
                 raise ValueError
 
@@ -423,7 +423,7 @@ class AddrProp(Property):
         :rtype: dict
         """
         val = unique_value(val)
-        m = re.match("^([^:]*)(?::(\d+))?$", val)
+        m = re.match(r"^([^:]*)(?::(\d+))?$", val)
         if m is None:
             raise ValueError
 

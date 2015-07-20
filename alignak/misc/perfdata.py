@@ -54,13 +54,13 @@ This module provide classes to handle performance data from monitoring plugin ou
 import re
 from alignak.util import to_best_int_float
 
-perfdata_split_pattern = re.compile('([^=]+=\S+)')
+perfdata_split_pattern = re.compile(r'([^=]+=\S+)')
 # TODO: Improve this regex to not match strings like this:
 # 'metric=45+e-456.56unit;50;80;0;45+-e45e-'
 metric_pattern = \
     re.compile(
-        '^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*)'
-        ';?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*'
+        r'^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*)'
+        r';?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*'
     )
 
 

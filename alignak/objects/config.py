@@ -979,7 +979,7 @@ class Config(Item):
                     # Now walk for it.
                     for root, dirs, files in os.walk(cfg_dir_name, followlinks=True):
                         for file in files:
-                            if re.search("\.cfg$", file):
+                            if re.search(r"\.cfg$", file):
                                 if self.read_config_silent == 0:
                                     logger.info("Processing object config file '%s'",
                                                 os.path.join(root, file))
@@ -1062,34 +1062,34 @@ class Config(Item):
             line = split_semicolon(line)[0].strip()
 
             # A backslash means, there is more to come
-            if re.search("\\\s*$", line) is not None:
+            if re.search(r"\\\s*$", line) is not None:
                 continuation_line = True
-                line = re.sub("\\\s*$", "", line)
-                line = re.sub("^\s+", " ", line)
+                line = re.sub(r"\\\s*$", "", line)
+                line = re.sub(r"^\s+", " ", line)
                 tmp_line += line
                 continue
             elif continuation_line:
                 # Now the continuation line is complete
-                line = re.sub("^\s+", "", line)
+                line = re.sub(r"^\s+", "", line)
                 line = tmp_line + line
                 tmp_line = ''
                 continuation_line = False
             # } alone in a line means stop the object reading
-            if re.search("^\s*}\s*$", line) is not None:
+            if re.search(r"^\s*}\s*$", line) is not None:
                 in_define = False
 
             # { alone in a line can mean start object reading
-            if re.search("^\s*\{\s*$", line) is not None and almost_in_define:
+            if re.search(r"^\s*\{\s*$", line) is not None and almost_in_define:
                 almost_in_define = False
                 in_define = True
                 continue
 
-            if re.search("^\s*#|^\s*$|^\s*}", line) is not None:
+            if re.search(r"^\s*#|^\s*$|^\s*}", line) is not None:
                 pass
             # A define must be catch and the type save
             # The old entry must be save before
             elif re.search("^define", line) is not None:
-                if re.search(".*\{.*$", line) is not None:
+                if re.search(r".*\{.*$", line) is not None:
                     in_define = True
                 else:
                     almost_in_define = True
@@ -1100,7 +1100,7 @@ class Config(Item):
                 tmp = []
                 tmp.append("imported_from " + filefrom + ':%d' % line_nb)
                 # Get new type
-                elts = re.split('\s', line)
+                elts = re.split(r'\s', line)
                 # Maybe there was space before and after the type
                 # so we must get all and strip it
                 tmp_type = ' '.join(elts[1:]).strip()

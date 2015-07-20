@@ -51,14 +51,14 @@ import re
 
 event_type_pattern = \
     re.compile(
-        '^\[[0-9]{10}] (?:HOST|SERVICE) (ALERT|NOTIFICATION|FLAPPING|DOWNTIME)(?: ALERT)?:.*'
+        r'^\[[0-9]{10}] (?:HOST|SERVICE) (ALERT|NOTIFICATION|FLAPPING|DOWNTIME)(?: ALERT)?:.*'
     )
 event_types = {
     'NOTIFICATION': {
         # ex: "[1402515279] SERVICE NOTIFICATION:
         # admin;localhost;check-ssh;CRITICAL;notify-service-by-email;Connection refused"
-        'pattern': '\[([0-9]{10})\] (HOST|SERVICE) (NOTIFICATION): '
-        '([^\;]*);([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*)',
+        'pattern': r'\[([0-9]{10})\] (HOST|SERVICE) (NOTIFICATION): '
+        r'([^\;]*);([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*)',
         'properties': [
             'time',
             'notification_type',  # 'SERVICE' (or could be 'HOST')
@@ -74,8 +74,8 @@ event_types = {
     'ALERT': {
         # ex: "[1329144231] SERVICE ALERT:
         #  dfw01-is02-006;cpu load maui;WARNING;HARD;4;WARNING - load average: 5.04, 4.67, 5.04"
-        'pattern': '^\[([0-9]{10})] (HOST|SERVICE) (ALERT): '
-                   '([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*);([^\;]*)',
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (ALERT): '
+                   r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*);([^\;]*);([^\;]*)',
         'properties': [
             'time',
             'alert_type',  # 'SERVICE' (or could be 'HOST')
@@ -91,8 +91,8 @@ event_types = {
     'DOWNTIME': {
         # ex: "[1279250211] HOST DOWNTIME ALERT:
         # maast64;STARTED; Host has entered a period of scheduled downtime"
-        'pattern': '^\[([0-9]{10})\] (HOST|SERVICE) (DOWNTIME) ALERT: '
-        '([^\;]*);(STARTED|STOPPED|CANCELLED);(.*)',
+        'pattern': r'^\[([0-9]{10})\] (HOST|SERVICE) (DOWNTIME) ALERT: '
+        r'([^\;]*);(STARTED|STOPPED|CANCELLED);(.*)',
         'properties': [
             'time',
             'downtime_type',  # '(SERVICE or could be 'HOST')
@@ -109,8 +109,8 @@ event_types = {
 
         # host flapping ex: "[1375301662] HOST FLAPPING ALERT:
         # hostbw;STARTED; Host appears to have started flapping (20.1% change > 20.0% threshold)"
-        'pattern': '^\[([0-9]{10})] (HOST|SERVICE) (FLAPPING) ALERT: '
-        '([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (FLAPPING) ALERT: '
+        r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
         'properties': [
             'time',
             'alert_type',  # 'SERVICE' or 'HOST'
