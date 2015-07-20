@@ -266,24 +266,6 @@ class IForArbiter(IArb):
         super(IForArbiter, self).wait_new_conf()
 
 
-"""
-class Injector(Interface):
-    # A broker ask us broks
-    def inject(self, bincode):
-
-        # first we need to get a real code object
-        import marshal
-        print "Calling Inject mode"
-        code = marshal.loads(bincode)
-        result = None
-        exec code
-        try:
-            return result
-        except NameError, exp:
-            return None
-"""
-
-
 class Alignak(BaseSatellite):
     """Scheduler class. Referenced as "app" in most Interface
 

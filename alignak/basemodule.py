@@ -64,19 +64,6 @@ import alignak.http_daemon
 from alignak.log import logger
 from alignak.misc.common import setproctitle
 
-# TODO: use a class for defining the module "properties" instead of
-# plain dict??  Like:
-"""
-class ModuleProperties(object):
-    def __init__(self, type, phases, external=False)
-        self.type = type
-        self.phases = phases
-        self.external = external
-"""
-# and  have the new modules instanciate this like follow:
-"""
-properties = ModuleProperties('the_module_type', the_module_phases, is_mod_ext)
-"""
 
 # The `properties dict defines what the module can do and
 # if it's an external module or not.
