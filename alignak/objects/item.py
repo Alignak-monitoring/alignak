@@ -1848,8 +1848,8 @@ class Items(object):
                 except KeyError:
                     pass
             elif h == '*':
-                [hnames.add(h.host_name) for h in hosts.items.itervalues()
-                 if getattr(h, 'host_name', '')]
+                hnames.update([h.host_name for h in hosts.items.itervalues()
+                              if getattr(h, 'host_name', '')])
             # Else it's a host to add, but maybe it's ALL
             else:
                 hnames.add(h)
