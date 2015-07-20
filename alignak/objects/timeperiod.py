@@ -123,7 +123,7 @@ action or not if we are in right period
 import time
 import re
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.daterange import Daterange, CalendarDaterange
 from alignak.daterange import StandardDaterange, MonthWeekDayDaterange

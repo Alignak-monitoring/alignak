@@ -81,31 +81,32 @@ from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
 
-from item import Item
-from timeperiod import Timeperiod, Timeperiods
-from service import Service, Services
-from command import Command, Commands
-from resultmodulation import Resultmodulation, Resultmodulations
-from businessimpactmodulation import Businessimpactmodulation, Businessimpactmodulations
-from escalation import Escalation, Escalations
-from serviceescalation import Serviceescalation, Serviceescalations
-from hostescalation import Hostescalation, Hostescalations
-from host import Host, Hosts
-from hostgroup import Hostgroup, Hostgroups
-from realm import Realm, Realms
-from contact import Contact, Contacts
-from contactgroup import Contactgroup, Contactgroups
-from notificationway import NotificationWay, NotificationWays
-from checkmodulation import CheckModulation, CheckModulations
-from macromodulation import MacroModulation, MacroModulations
-from servicegroup import Servicegroup, Servicegroups
-from servicedependency import Servicedependency, Servicedependencies
-from hostdependency import Hostdependency, Hostdependencies
-from module import Module, Modules
-from hostextinfo import HostExtInfo, HostsExtInfo
-from serviceextinfo import ServiceExtInfo, ServicesExtInfo
-from trigger import Triggers
-from pack import Packs
+from alignak.objects.item import Item
+from alignak.objects.timeperiod import Timeperiod, Timeperiods
+from alignak.objects.service import Service, Services
+from alignak.objects.command import Command, Commands
+from alignak.objects.resultmodulation import Resultmodulation, Resultmodulations
+from alignak.objects.businessimpactmodulation import Businessimpactmodulation, \
+    Businessimpactmodulations
+from alignak.objects.escalation import Escalation, Escalations
+from alignak.objects.serviceescalation import Serviceescalation, Serviceescalations
+from alignak.objects.hostescalation import Hostescalation, Hostescalations
+from alignak.objects.host import Host, Hosts
+from alignak.objects.hostgroup import Hostgroup, Hostgroups
+from alignak.objects.realm import Realm, Realms
+from alignak.objects.contact import Contact, Contacts
+from alignak.objects.contactgroup import Contactgroup, Contactgroups
+from alignak.objects.notificationway import NotificationWay, NotificationWays
+from alignak.objects.checkmodulation import CheckModulation, CheckModulations
+from alignak.objects.macromodulation import MacroModulation, MacroModulations
+from alignak.objects.servicegroup import Servicegroup, Servicegroups
+from alignak.objects.servicedependency import Servicedependency, Servicedependencies
+from alignak.objects.hostdependency import Hostdependency, Hostdependencies
+from alignak.objects.module import Module, Modules
+from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
+from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
+from alignak.objects.trigger import Triggers
+from alignak.objects.pack import Packs
 from alignak.util import split_semicolon
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks

@@ -55,7 +55,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 """
 
 
-from itemgroup import Itemgroup, Itemgroups
+from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
 from alignak.property import StringProp, IntegerProp

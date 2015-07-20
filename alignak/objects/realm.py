@@ -56,8 +56,8 @@ implements realm for Alignak. Basically used for parsing.
 """
 import copy
 
-from item import Item
-from itemgroup import Itemgroup, Itemgroups
+from alignak.objects.item import Item
+from alignak.objects.itemgroup import Itemgroup, Itemgroups
 from alignak.property import BoolProp, IntegerProp, StringProp, DictProp, ListProp
 from alignak.log import logger
 

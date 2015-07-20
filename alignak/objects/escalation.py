@@ -54,7 +54,7 @@
 implements escalation for notification. Basically used for parsing.
 
 """
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp

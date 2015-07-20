@@ -65,7 +65,7 @@ from logging.handlers import TimedRotatingFileHandler
 from termcolor import cprint
 
 
-from brok import Brok
+from alignak.brok import Brok
 
 
 # obj = None

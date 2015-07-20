@@ -50,7 +50,7 @@ warning level in some periods (like the night)
 
 import time
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
 from alignak.log import logger

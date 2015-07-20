@@ -69,8 +69,8 @@ scheduling/consume check smart things :)
 import time
 import itertools
 
-from item import Items
-from schedulingitem import SchedulingItem
+from alignak.objects.item import Items
+from alignak.objects.schedulingitem import SchedulingItem
 
 from alignak.autoslots import AutoSlots
 from alignak.util import (format_t_into_dhms_format, to_hostnames_list, get_obj_name,

@@ -53,7 +53,7 @@ no use in running part
 """
 
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.autoslots import AutoSlots
 from alignak.util import to_hostnames_list

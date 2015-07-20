@@ -67,7 +67,7 @@ import random
 import time
 import traceback
 
-from item import Item
+from alignak.objects.item import Item
 
 from alignak.check import Check
 from alignak.notification import Notification

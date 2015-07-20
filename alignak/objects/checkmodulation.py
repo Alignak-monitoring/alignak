@@ -48,7 +48,7 @@
 This module provide CheckModulation and CheckModulations classes used to describe
 the modulation of a check command. Modulation occurs on a check period (Timeperiod)
 """
-from item import Item, Items
+from alignak.objects.item import Item, Items
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
 from alignak.log import logger
