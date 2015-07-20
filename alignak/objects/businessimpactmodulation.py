@@ -55,7 +55,7 @@ the modulation of a business impact. Modulation occurs on a modulation period (T
 """
 import time
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, IntegerProp
 

@@ -54,7 +54,7 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp
 from alignak.util import strip_and_uniq

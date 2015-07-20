@@ -51,7 +51,7 @@
 """
 import time
 
-from action import Action
+from alignak.action import Action
 from alignak.property import IntegerProp, StringProp, FloatProp, BoolProp
 from alignak.autoslots import AutoSlots
 

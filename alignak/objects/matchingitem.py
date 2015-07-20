@@ -52,7 +52,7 @@
 
 import re
 
-from item import Item
+from alignak.objects.item import Item
 
 
 class MatchingItem(Item):

@@ -50,8 +50,8 @@
 implements host escalation for notification. Basically used for parsing.
 
 """
-from item import Item, Items
-from escalation import Escalation
+from alignak.objects.item import Item, Items
+from alignak.objects.escalation import Escalation
 
 from alignak.property import IntegerProp, StringProp, ListProp
 

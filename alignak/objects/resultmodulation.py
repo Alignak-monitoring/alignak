@@ -55,7 +55,7 @@ the modulation of a check command. Modulation occurs on a modulation period (Tim
 """
 import time
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, IntegerProp, IntListProp
 

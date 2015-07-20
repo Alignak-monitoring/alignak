@@ -55,7 +55,7 @@
 """
 This module provide Contactgroup and Contactgroups class used to manage contact groups
 """
-from itemgroup import Itemgroup, Itemgroups
+from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.property import IntegerProp, StringProp
 from alignak.log import logger

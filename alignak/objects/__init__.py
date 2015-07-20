@@ -54,28 +54,29 @@ The objects package contains definition classes of the different objects
  """
 
 
-from item import Item, Items
-from timeperiod import Timeperiod, Timeperiods
-from schedulingitem import SchedulingItem
-from matchingitem import MatchingItem
-from service import Service, Services
-from command import Command, Commands
-from resultmodulation import Resultmodulation, Resultmodulations
-from escalation import Escalation, Escalations
-from serviceescalation import Serviceescalation, Serviceescalations
-from hostescalation import Hostescalation, Hostescalations
-from host import Host, Hosts
-from hostgroup import Hostgroup, Hostgroups
-from realm import Realm, Realms
-from contact import Contact, Contacts
-from contactgroup import Contactgroup, Contactgroups
-from notificationway import NotificationWay, NotificationWays
-from servicegroup import Servicegroup, Servicegroups
-from servicedependency import Servicedependency, Servicedependencies
-from hostdependency import Hostdependency, Hostdependencies
-from module import Module, Modules
-from trigger import Trigger, Triggers
-from businessimpactmodulation import Businessimpactmodulation, Businessimpactmodulations
-from macromodulation import MacroModulation, MacroModulations
+from alignak.objects.item import Item, Items
+from alignak.objects.timeperiod import Timeperiod, Timeperiods
+from alignak.objects.schedulingitem import SchedulingItem
+from alignak.objects.matchingitem import MatchingItem
+from alignak.objects.service import Service, Services
+from alignak.objects.command import Command, Commands
+from alignak.objects.resultmodulation import Resultmodulation, Resultmodulations
+from alignak.objects.escalation import Escalation, Escalations
+from alignak.objects.serviceescalation import Serviceescalation, Serviceescalations
+from alignak.objects.hostescalation import Hostescalation, Hostescalations
+from alignak.objects.host import Host, Hosts
+from alignak.objects.hostgroup import Hostgroup, Hostgroups
+from alignak.objects.realm import Realm, Realms
+from alignak.objects.contact import Contact, Contacts
+from alignak.objects.contactgroup import Contactgroup, Contactgroups
+from alignak.objects.notificationway import NotificationWay, NotificationWays
+from alignak.objects.servicegroup import Servicegroup, Servicegroups
+from alignak.objects.servicedependency import Servicedependency, Servicedependencies
+from alignak.objects.hostdependency import Hostdependency, Hostdependencies
+from alignak.objects.module import Module, Modules
+from alignak.objects.trigger import Trigger, Triggers
+from alignak.objects.businessimpactmodulation import Businessimpactmodulation, \
+    Businessimpactmodulations
+from alignak.objects.macromodulation import MacroModulation, MacroModulations
 
 # from config import Config

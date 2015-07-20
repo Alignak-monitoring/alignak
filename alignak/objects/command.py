@@ -54,7 +54,7 @@ This module provide Command class used to define external commands to
 check if something is ok or not
 """
 
-from item import Item, Items
+from alignak.objects.item import Item, Items
 from alignak.brok import Brok
 from alignak.property import StringProp, IntegerProp, BoolProp
 from alignak.autoslots import AutoSlots
