@@ -370,6 +370,9 @@ class Daemon(object):
         # Flag to dump objects or not
         self.need_objects_dump = False
 
+        # Flag to reload configuration
+        self.need_config_reload = False
+
         # Keep a trace of the local_log file desc if needed
         self.local_log_fd = None
 
@@ -476,6 +479,9 @@ class Daemon(object):
             if self.need_objects_dump:
                 logger.debug('Dumping objects')
                 self.need_objects_dump = False
+            if self.need_config_reload:
+                logger.debug('Reloading configuration')
+                self.need_config_reload= False
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
                 break
@@ -1102,6 +1108,8 @@ class Daemon(object):
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
             self.need_objects_dump = True
+        elif sig == signal.SIGHUP:  # if HUP, reload configuration in arbiter
+            self.need_config_reload= True
         else:  # Ok, really ask us to die :)
             self.interrupted = True
 
