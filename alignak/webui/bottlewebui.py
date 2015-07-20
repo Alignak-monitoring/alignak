@@ -1,4 +1,4 @@
-"""This package is a subclasse of bottle available in Bottle class
+"""This package is a subclass of bottle available in Bottle class
 to avoid code duplication
 
 """
@@ -6,7 +6,7 @@ from .bottlecore import *
 
 
 class Bottle(Bottle):
-    """Bottle subclass Botlle in bottlecore so that we don't duplicate files
+    """Bottle subclass Bottle in bottlecore so that we don't duplicate files
 
     """
 
