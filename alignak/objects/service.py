@@ -947,9 +947,9 @@ class Service(SchedulingItem):
                                                                               key_value[key]))
                     if hasattr(self, 'service_dependencies'):
                         for i, sd in enumerate(new_s.service_dependencies):
-                                new_s.service_dependencies[i] = sd.replace(
-                                    '$' + key + '$', key_value[key]
-                                )
+                            new_s.service_dependencies[i] = sd.replace(
+                                '$' + key + '$', key_value[key]
+                            )
                 # And then add in our list this new service
                 duplicates.append(new_s)
         else:
