@@ -481,7 +481,7 @@ class Daemon(object):
                 self.need_objects_dump = False
             if self.need_config_reload:
                 logger.debug('Reloading configuration')
-                self.need_config_reload= False
+                self.need_config_reload = False
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
                 break
@@ -1109,7 +1109,7 @@ class Daemon(object):
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
             self.need_objects_dump = True
         elif sig == signal.SIGHUP:  # if HUP, reload configuration in arbiter
-            self.need_config_reload= True
+            self.need_config_reload = True
         else:  # Ok, really ask us to die :)
             self.interrupted = True
 
