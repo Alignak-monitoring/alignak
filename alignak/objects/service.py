@@ -1677,7 +1677,7 @@ class Services(Items):
             item = self.index_item(item)
         self.items[item.id] = item
 
-    def add_partial_service(self, item, index=True, var_tuple=None):
+    def add_partial_service(self, item, index=True, var_tuple=tuple()):
         """Add a partial service.
         ie : A service that does not have service_description or host_name/host_group
         We have to index them differently and try to inherit from our template to get one
@@ -1692,7 +1692,7 @@ class Services(Items):
         :type var_tuple: tuple
         :return: None
         """
-        if var_tuple is None:
+        if len(var_tuple) == 0:
             return
 
         objcls, hname, hgname, sdesc, in_file = var_tuple
