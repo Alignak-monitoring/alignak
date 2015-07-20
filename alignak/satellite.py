@@ -339,6 +339,14 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         return res
 
+    def do_loop_turn(self):
+        """Abstract method for satellite loop turn.
+        It must be overridden by class inheriting from Daemon
+
+        :return: None
+        """
+        raise NotImplementedError()
+
 
 class Satellite(BaseSatellite):
     """Satellite class.
