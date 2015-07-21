@@ -72,7 +72,7 @@ except ImportError:
 
 
 from alignak.daemons.reactionnerdaemon import Reactionner
-from alignak import __version__
+from alignak.version import VERSION
 
 
 def main():
@@ -81,7 +81,7 @@ def main():
     :return: None
     """
     parser = optparse.OptionParser(
-        "%prog [options]", version="%prog " + __version__)
+        "%prog [options]", version="%prog " + VERSION)
     parser.add_option('-c', '--config',
                       dest="config_file", metavar="INI-CONFIG-FILE",
                       help='Config file')

@@ -508,7 +508,7 @@ class Scheduler(object):
     }
 
     def hook_point(self, hook_name):
-        """Generic function to call modules methods if such method is avalaible
+        """Generic function to call modules methods if such method is available
 
         :param hook_name: function name to call
         :type hook_name: str

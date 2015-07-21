@@ -158,7 +158,7 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
-from alignak import __version__
+from alignak.version import VERSION
 
 
 class InvalidPidFile(Exception):
@@ -1136,7 +1136,7 @@ class Daemon(object):
         :return: A string list containing project name, version, licence etc.
         :rtype: list
         """
-        return ["Alignak %s" % __version__,
+        return ["Alignak %s" % VERSION,
                 "Copyright (c) 2015-2015:",
                 "Alignak Team",
                 "License: AGPL"]
@@ -1321,7 +1321,7 @@ class Daemon(object):
         :rtype: dict
 
         """
-        r = {'metrics': [], 'version': __version__, 'name': '', 'type': '', 'modules':
+        r = {'metrics': [], 'version': VERSION, 'name': '', 'type': '', 'modules':
              {'internal': {}, 'external': {}}}
         modules = r['modules']
 
