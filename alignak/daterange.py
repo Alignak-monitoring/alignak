@@ -196,72 +196,10 @@ class Timerange(object):
         return self.is_valid
 
 
-class Daterange(object):
-    """Daterange class provides function to deal with a range of dates
+class AbstractDaterange(object):
+    """AbstractDaterange class provides functions to deal with a range of dates
     It is subclassed for more granularity (weekday, month ...)
-
-    Daterange instantiate Timerange objects
-
     """
-
-    weekdays = {  # NB : 0 based : 0 == monday
-        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
-        'friday': 4, 'saturday': 5, 'sunday': 6
-    }
-    months = {  # NB : 1 based : 1 == january..
-        'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5,
-        'june': 6, 'july': 7, 'august': 8, 'september': 9,
-        'october': 10, 'november': 11, 'december': 12
-    }
-    rev_weekdays = dict((v, k) for k, v in weekdays.items())
-    rev_months = dict((v, k) for k, v in months.items())
-
-    def __init__(self, syear, smon, smday, swday, swday_offset,
-                 eyear, emon, emday, ewday, ewday_offset, skip_interval, other):
-        """
-
-        :param syear: start year
-        :type syear: int
-        :param smon: start month
-        :type smon: int
-        :param smday: start day (number)
-        :type smday: int
-        :param swday: start day (week day id)
-        :type smday: int
-        :param swday_offset: offset in the month (1 is first, -1 last)
-        :type swday_offset: int
-        :param eyear: end year
-        :type eyear:
-        :param emon: end month
-        :type emon:
-        :param emday: end day
-        :type emday:
-        :param ewday: end day (week day id)
-        :type ewday: int
-        :param ewday_offset: offset in the month (1 is first, -1 last)
-        :type ewday_offset: int
-        :param skip_interval: interval to skip ( /3 => every 3 days)
-        :type skip_interval: str
-        :param other: other timerange
-        :type other:
-        :return: None
-        """
-        self.syear = int(syear)
-        self.smon = smon
-        self.smday = int(smday)
-        self.swday = swday
-        self.swday_offset = int(swday_offset)
-        self.eyear = int(eyear)
-        self.emon = emon
-        self.emday = int(emday)
-        self.ewday = ewday
-        self.ewday_offset = int(ewday_offset)
-        self.skip_interval = int(skip_interval)
-        self.other = other
-        self.timeranges = []
-
-        for timeinterval in other.split(','):
-            self.timeranges.append(Timerange(timeinterval.strip()))
 
     def __str__(self):
         # TODO: What's the point of returning '' always
@@ -638,6 +576,72 @@ class Daterange(object):
             return None
 
 
+class Daterange(AbstractDaterange):
+    """Daterange  subclasses AbstractDaterange and
+    instantiates Timerange objects
+    """
+
+    weekdays = {  # NB : 0 based : 0 == monday
+        'monday': 0, 'tuesday': 1, 'wednesday': 2, 'thursday': 3,
+        'friday': 4, 'saturday': 5, 'sunday': 6
+    }
+    months = {  # NB : 1 based : 1 == january..
+        'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5,
+        'june': 6, 'july': 7, 'august': 8, 'september': 9,
+        'october': 10, 'november': 11, 'december': 12
+    }
+    rev_weekdays = dict((v, k) for k, v in weekdays.items())
+    rev_months = dict((v, k) for k, v in months.items())
+
+    def __init__(self, syear, smon, smday, swday, swday_offset,
+                 eyear, emon, emday, ewday, ewday_offset, skip_interval, other):
+        """
+
+        :param syear: start year
+        :type syear: int
+        :param smon: start month
+        :type smon: int
+        :param smday: start day (number)
+        :type smday: int
+        :param swday: start day (week day id)
+        :type smday: int
+        :param swday_offset: offset in the month (1 is first, -1 last)
+        :type swday_offset: int
+        :param eyear: end year
+        :type eyear:
+        :param emon: end month
+        :type emon:
+        :param emday: end day
+        :type emday:
+        :param ewday: end day (week day id)
+        :type ewday: int
+        :param ewday_offset: offset in the month (1 is first, -1 last)
+        :type ewday_offset: int
+        :param skip_interval: interval to skip ( /3 => every 3 days)
+        :type skip_interval: str
+        :param other: other timerange
+        :type other:
+        :return: None
+        """
+        super(Daterange, self).__init__()
+        self.syear = int(syear)
+        self.smon = smon
+        self.smday = int(smday)
+        self.swday = swday
+        self.swday_offset = int(swday_offset)
+        self.eyear = int(eyear)
+        self.emon = emon
+        self.emday = int(emday)
+        self.ewday = ewday
+        self.ewday_offset = int(ewday_offset)
+        self.skip_interval = int(skip_interval)
+        self.other = other
+        self.timeranges = []
+
+        for timeinterval in other.split(','):
+            self.timeranges.append(Timerange(timeinterval.strip()))
+
+
 class CalendarDaterange(Daterange):
     """CalendarDaterange is for calendar entry (YYYY-MM-DD - YYYY-MM-DD)
 
@@ -655,7 +659,7 @@ class CalendarDaterange(Daterange):
         return (start_time, end_time)
 
 
-class StandardDaterange(Daterange):
+class StandardDaterange(AbstractDaterange):
     """StandardDaterange is for standard entry (weekday - weekday)
 
     """
@@ -677,7 +681,7 @@ class StandardDaterange(Daterange):
         if not b:
             logger.error("Error: %s is not a valid day", self.day)
         # Check also if Daterange is correct.
-        b &= Daterange.is_correct(self)
+        b &= super(StandardDaterange, self).is_correct()
         return b
 
     def get_start_and_end_time(self, ref=None):

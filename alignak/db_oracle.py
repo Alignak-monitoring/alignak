@@ -74,10 +74,10 @@ class DBOracle(DB):
     """Manage connection and query execution against Oracle databases."""
 
     def __init__(self, user, password, database, table_prefix=''):
+        super(DBOracle, self).__init__(table_prefix)
         self.user = user
         self.password = password
         self.database = database
-        self.table_prefix = table_prefix
 
     def connect_database(self):
         """Create the database connection

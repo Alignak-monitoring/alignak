@@ -187,15 +187,16 @@ class UnusedProp(Property):
         :type text: None | str
         :return: None
         """
+        super(UnusedProp, self).__init__(default=none_object,
+                                         class_inherit=[],
+                                         managed=True)
 
         if text is None:
             text = ("This parameter is no longer useful in the "
                     "Alignak architecture.")
         self.text = text
-        self.has_default = False
-        self.class_inherit = []
         self.unused = True
-        self.managed = True
+
 
 _boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
                    '0': False, 'no': False, 'false': False, 'off': False}

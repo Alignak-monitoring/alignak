@@ -82,7 +82,8 @@ class PropertiesTester(object):
             if hasattr(item.properties[name], 'default'):
                 if item.properties[name].default != value:
                     print "%s, %s: %s, %s" % (name, value, item.properties[name].default, value)
-                self.assertEqual(item.properties[name].default, value)
+                if not item.properties[name].unused:
+                    self.assertEqual(item.properties[name].default, value)
 
     def test_all_props_are_tested(self):
         item = self.item # shortcut

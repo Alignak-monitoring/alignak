@@ -57,6 +57,7 @@ class DBSqlite(DB):
     """DBSqlite is a sqlite access database class"""
 
     def __init__(self, db_path, table_prefix=''):
+        super(DBSqlite, self).__init__(table_prefix)
         self.table_prefix = table_prefix
         self.db_path = db_path
 

@@ -163,34 +163,29 @@ class Timeperiod(Item):
         self.unresolved = []
         self.dateranges = []
         self.exclude = ''
-        self.customs = {}
-        self.plus = {}
+
         self.invalid_entries = []
-        for key in params:
-            # timeperiod objects are too complicated to support multi valued
-            # attributes. we do as usual, last set value wins.
-            if isinstance(params[key], list):
-                if params[key]:
-                    params[key] = params[key][-1]
-                else:
-                    params[key] = ''
-
-            if key in [
-                    'name', 'alias', 'timeperiod_name', 'exclude',
-                    'use', 'register', 'imported_from', 'is_active', 'dateranges']:
-                setattr(self, key, self.properties[key].pythonize(params[key]))
-            elif key.startswith('_'):
-                self.customs[key.upper()] = params[key]
-            else:
-                self.unresolved.append(key + ' ' + params[key])
-
         self.cache = {}  # For tunning purpose only
         self.invalid_cache = {}  # same but for invalid search
-        self.configuration_errors = []
-        self.configuration_warnings = []
-        # By default the tp is None so we know we just start
         self.is_active = None
         self.tags = set()
+
+        # Get standard params
+        standard_params = dict([(k, v) for k, v in params.items()
+                               if k in self.__class__.properties])
+        # Get timeperiod params (monday, tuesday, ...)
+        timeperiod_params = dict([(k, v) for k, v in params.items()
+                                  if k not in self.__class__.properties])
+        # Handle standard params
+        super(Timeperiod, self).__init__(params=standard_params)
+        # Handle timeperiod params
+        for key, value in timeperiod_params.items():
+            if isinstance(value, list):
+                if value:
+                    value = value[-1]
+                else:
+                    value = ''
+            self.unresolved.append(key + ' ' + value)
 
     def get_name(self):
         """

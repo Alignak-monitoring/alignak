@@ -91,22 +91,8 @@ class Command(Item):
     })
 
     def __init__(self, params={}):
-        setattr(self, 'id', self.__class__.id)
-        # self.id = self.__class__.id
-        self.__class__.id += 1
 
-        self.init_running_properties()
-
-        self.customs = {}
-
-        for key in params:
-            # delistify attributes if there is only one value
-            params[key] = self.compact_unique_attr_value(params[key])
-            # Manage customs values
-            if key.startswith('_'):
-                self.customs[key.upper()] = params[key]
-            else:
-                setattr(self, key, params[key])
+        super(Command, self).__init__(params)
 
         if not hasattr(self, 'timeout'):
             self.timeout = '-1'
