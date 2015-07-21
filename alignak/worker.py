@@ -230,7 +230,7 @@ class Worker:
         :return: None
         """
         try:
-            while(len(self.checks) < self.processes_by_worker):
+            while len(self.checks) < self.processes_by_worker:
                 # print "I", self.id, "wait for a message"
                 msg = self.s.get(block=False)
                 if msg is not None:

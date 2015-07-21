@@ -2873,7 +2873,7 @@ class ExternalCommandManager:
             e.check_finished(64000)
         if e.status == 'timeout' or e.exit_status != 0:
             logger.error("Cannot reload Alignak configuration: the 'reload-alignak' command failed"
-                         " with the error code '%d' and the text '%s'." % (e.exit_status, e.output))
+                         " with the error code '%d' and the text '%s'.", e.exit_status, e.output)
             return
         # Ok here the command succeed, we can now wait our death
         naglog_result('info', "%s" % (e.output))

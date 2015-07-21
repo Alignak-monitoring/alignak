@@ -138,6 +138,7 @@ class Config(Item):
     """
     cache_path = "objects.cache"
     my_type = "config"
+    id = 1
 
     # Properties:
     # *required: if True, there is not default, and the config must put them
@@ -799,6 +800,7 @@ class Config(Item):
                            'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
     def __init__(self):
+        super(Config, self).__init__()
         self.params = {}
         self.resource_macros_names = []
         # By default the conf is correct
@@ -1403,7 +1405,7 @@ class Config(Item):
             logger.debug("[config] time to serialize the global conf : %s (size:%s)",
                          time.time() - t0, len(whole_conf_pack))
             self.whole_conf_pack = whole_conf_pack
-            logger.debug("[config]serializing total: %s" % (time.time() - t1))
+            logger.debug("[config]serializing total: %s", (time.time() - t1))
 
         else:
             logger.info('Using the multiprocessing serialization pass')
