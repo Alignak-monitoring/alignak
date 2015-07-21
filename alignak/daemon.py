@@ -1115,7 +1115,8 @@ class Daemon(object):
 
     def set_exit_handler(self):
         """Set the signal handler to manage_signal (defined in this class)
-        Only set handlers for signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2
+        Only set handlers for signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2,
+        signal.SIGHUP
 
         :return: None
         """
@@ -1128,7 +1129,8 @@ class Daemon(object):
                 version = ".".join(map(str, sys.version_info[:2]))
                 raise Exception("pywin32 not installed for Python " + version)
         else:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2):
+            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2,
+                        signal.SIGHUP):
                 signal.signal(sig, func)
 
     def set_proctitle(self):
