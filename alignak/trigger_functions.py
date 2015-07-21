@@ -238,7 +238,10 @@ def get_custom(obj_ref, cname, default=None):
     :return:
     :rtype:
     """
-    obj = get_objects(obj_ref)
+    objs = get_objects(obj_ref)
+    if len(objs) != 1:
+        return default
+    obj = objs[0]
     if not obj:
         return default
     cname = cname.upper().strip()
@@ -311,17 +314,17 @@ def get_objects(ref):
 
     :param ref:
     :type ref:
-    :return:
-    :rtype: str
+    :return: list of object (service/host)
+    :rtype: list
     """
     # Maybe it's already a real object, if so, return it :)
     if not isinstance(ref, basestring):
-        return ref
+        return [ref]
 
     name = ref
     # Maybe there is no '*'? if so, it's one element
     if '*' not in name:
-        return get_object(name)
+        return [get_object(name)]
 
     # Ok we look for spliting the host or service thing
     hname = ''
