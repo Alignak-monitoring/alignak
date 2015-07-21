@@ -149,7 +149,7 @@ class Timerange(object):
         m = re.match(pattern, entry)
         self.is_valid = m is not None
         if self.is_valid:
-            self.hstart, self.mstart, self.hend, self.mend = map(int, m.groups())
+            self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in m.groups()]
 
     def __str__(self):
         return str(self.__dict__)
