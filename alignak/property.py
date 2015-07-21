@@ -398,7 +398,7 @@ class DictProp(Property):
             )
 
         if val is None:
-            return(dict())
+            return dict()
 
         if self.elts_prop is None:
             return val

@@ -60,6 +60,7 @@
 """
 This module provides abstraction for creating daemon in Alignak
 """
+from __future__ import print_function
 import os
 import errno
 import sys
@@ -689,7 +690,7 @@ class Daemon(object):
         # relative to pwd
         import resource
         maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
-        if (maxfd == resource.RLIM_INFINITY):
+        if maxfd == resource.RLIM_INFINITY:
             maxfd = 1024
 
         # Iterate through and close all file descriptors.
