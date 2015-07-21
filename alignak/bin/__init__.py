@@ -59,7 +59,7 @@ elif sys.version_info >= (3,):
     sys.exit("Alignak is not yet compatible with Python 3.x, sorry")
 
 
-from ._deprecated_VERSION import DeprecatedAlignakBin
+from alignak.bin._deprecated_VERSION import DeprecatedAlignakBin
 
 
 # in order to have available any attribute/value assigned in this module namespace,

@@ -5,7 +5,7 @@ It will raise a warning to notify user/dev
 """
 import warnings
 
-from .. import __version__
+from alignak.version import VERSION
 from alignak.misc.custom_module import CustomModule
 
 
@@ -27,4 +27,4 @@ class DeprecatedAlignakBin(CustomModule):
             ' and will be removed in a future release.\n'
             'You must use `alignak.__version__` attribute by now.\n'
             'Please update your code accordingly.', DeprecationWarning, stacklevel=2)
-        return __version__
+        return VERSION
