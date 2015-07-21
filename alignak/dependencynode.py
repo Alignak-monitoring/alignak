@@ -683,8 +683,8 @@ class DependencyNodeFactory(object):
                 host_expr = elts[0]
                 filters.extend(self.get_host_filters(host_expr))
                 items = hosts.find_by_filter(filters)
-        except re.error, e:
-            error = "Business rule uses invalid regex %s: %s" % (pattern, e)
+        except re.error, regerr:
+            error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:
             if not items:
                 error = "Business rule got an empty result for pattern %s" % pattern

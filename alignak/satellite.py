@@ -339,6 +339,14 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         return res
 
+    def do_loop_turn(self):
+        """Abstract method for satellite loop turn.
+        It must be overridden by class inheriting from Daemon
+
+        :return: None
+        """
+        raise NotImplementedError()
+
 
 class Satellite(BaseSatellite):
     """Satellite class.
@@ -742,20 +750,6 @@ class Satellite(BaseSatellite):
                 except NotWorkerMod:
                     to_del.append(mod)
                     break
-            """
-            # Try to really adjust load if necessary
-            if self.get_max_q_len(mod) > self.max_q_size:
-                if len(self.q_by_mod[mod]) >= self.max_workers:
-                    logger.info("Cannot add a new %s worker, even if load is high. "
-                                "Consider changing your max_worker parameter") % mod
-                else:
-                    try:
-                        self.create_and_launch_worker(module_name=mod)
-                    # Maybe this modules is not a true worker one.
-                    # if so, just delete if from q_by_mod
-                    except NotWorkerMod:
-                        to_del.append(mod)
-            """
 
         for mod in to_del:
             logger.debug("[%s] The module %s is not a worker one, "

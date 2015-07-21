@@ -57,13 +57,13 @@ class AutoSlots(type):
 
     """
 
-    def __new__(cls, name, bases, dct):
+    def __new__(mcs, name, bases, dct):
         """Called when we create a new Class
         Some properties names are not allowed in __slots__ like 2d_coords of
         Host, so we must tag them in properties with no_slots
 
-        :param cls: AutoSlots
-        :type cls: object
+        :param mcs: AutoSlots
+        :type mcs: object
         :param name: string of the Class (like Service)
         :type name: str
         :param bases: Classes of which Class inherits (like SchedulingItem)
@@ -85,4 +85,4 @@ class AutoSlots(type):
             slots.update((p for p in props
                           if not props[p].no_slots))
         dct['__slots__'] = tuple(slots)
-        return type.__new__(cls, name, bases, dct)
+        return type.__new__(mcs, name, bases, dct)

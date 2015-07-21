@@ -76,7 +76,6 @@ class EventHandler(Action):
         'output':         StringProp(default=''),
         'long_output':    StringProp(default=''),
         't_to_go':        StringProp(default=0),
-        'check_time':     StringProp(default=0),
         'execution_time': FloatProp(default=0),
         'u_time':         FloatProp(default=0.0),
         's_time':         FloatProp(default=0.0),

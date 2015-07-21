@@ -2583,7 +2583,7 @@ class Config(Item):
                               (o["host_name"], o["service_description"]))
             elif hasattr(container, "name_property"):
                 np = container.name_property
-                objs = sorted(objs, key=lambda o: getattr(o, np, ''))
+                objs = sorted(objs, key=lambda o, prop=np: getattr(o, prop, ''))
             dmp[category] = objs
 
         if f is None:
