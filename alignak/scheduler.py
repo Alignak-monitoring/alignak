@@ -1014,7 +1014,9 @@ class Scheduler(object):
         :return: None
         """
         # We loop for our passive pollers or reactionners
-        for p in filter(lambda p: p['passive'], self.pollers.values()):
+        for p in self.pollers.values():
+            if not p['passive']:
+                continue
             logger.debug("I will send actions to the poller %s", str(p))
             con = p['con']
             poller_tags = p['poller_tags']
@@ -1039,7 +1041,9 @@ class Scheduler(object):
 
         # TODO:factorize
         # We loop for our passive reactionners
-        for p in filter(lambda p: p['passive'], self.reactionners.values()):
+        for p in self.reactionners.values():
+            if not p['passive']:
+                continue
             logger.debug("I will send actions to the reactionner %s", str(p))
             con = p['con']
             reactionner_tags = p['reactionner_tags']

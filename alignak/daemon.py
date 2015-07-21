@@ -1117,7 +1117,7 @@ class Daemon(object):
                 import win32api
                 win32api.SetConsoleCtrlHandler(func, True)
             except ImportError:
-                version = ".".join(map(str, sys.version_info[:2]))
+                version = ".".join([str(i) for i in sys.version_info[:2]])
                 raise Exception("pywin32 not installed for Python " + version)
         else:
             for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2):

@@ -1106,9 +1106,10 @@ class Service(SchedulingItem):
         :return: self.last_time_down if self.last_time_down > self.last_time_up, otherwise 0
         :rtype: int
         """
-        non_ok_times = filter(lambda x: x > self.last_time_ok, [self.last_time_warning,
-                                                                self.last_time_critical,
-                                                                self.last_time_unknown])
+        non_ok_times = [x for x in [self.last_time_warning,
+                                    self.last_time_critical,
+                                    self.last_time_unknown]
+                        if x > self.last_time_ok]
         if len(non_ok_times) == 0:
             last_time_non_ok = 0  # program_start would be better
         else:

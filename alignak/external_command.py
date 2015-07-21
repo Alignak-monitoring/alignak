@@ -579,8 +579,7 @@ class ExternalCommandManager:
                 c_name = r['c_name']
                 args = r['args']
                 logger.debug("Got commands %s %s", c_name, str(args))
-                f = getattr(self, c_name)
-                apply(f, args)
+                getattr(self, c_name)(*args)
             else:
                 command = r['cmd']
                 self.dispatch_global_command(command)
