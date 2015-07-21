@@ -856,7 +856,7 @@ def strip_and_uniq(tab):
     new_tab = set()
     for elt in tab:
         val = elt.strip()
-        if (val != ''):
+        if val != '':
             new_tab.add(val)
     return list(new_tab)
 
