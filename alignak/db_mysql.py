@@ -65,12 +65,12 @@ class DBMysql(DB):
 
     def __init__(self, host, user, password, database, character_set,
                  table_prefix='', port=3306):
+        super(DBMysql, self).__init__(table_prefix='')
         self.host = host
         self.user = user
         self.password = password
         self.database = database
         self.character_set = character_set
-        self.table_prefix = table_prefix
         self.port = port
 
     def connect_database(self):

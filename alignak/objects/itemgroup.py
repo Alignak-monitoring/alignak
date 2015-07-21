@@ -77,28 +77,6 @@ class Itemgroup(Item):
         'unknown_members': ListProp(default=None),
     })
 
-    def __init__(self, params={}):
-        self.id = self.__class__.id
-        self.__class__.id += 1
-        cls = self.__class__
-        self.init_running_properties()
-
-        for key in params:
-
-            if key in self.properties:
-                val = self.properties[key].pythonize(params[key])
-            elif key in self.running_properties:
-                warning = "using a the running property %s in a config file" % key
-                self.configuration_warnings.append(warning)
-                val = self.running_properties[key].pythonize(params[key])
-            else:
-                warning = "Guessing the property %s type because it is not in %s object properties" % \
-                          (key, cls.__name__)
-                self.configuration_warnings.append(warning)
-                val = ToGuessProp.pythonize(params[key])
-
-            setattr(self, key, val)
-
     def copy_shell(self):
         """
         Copy the groups properties EXCEPT the members.
