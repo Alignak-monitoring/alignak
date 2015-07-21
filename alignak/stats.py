@@ -166,7 +166,7 @@ class Stats(object):
             self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
             self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         except (socket.error, socket.gaierror), exp:
-            logger.error('Cannot create statsd socket: %s' % exp)
+            logger.error('Cannot create statsd socket: %s', exp)
             return
 
     def incr(self, k, v):
@@ -266,15 +266,16 @@ class Stats(object):
             # logger.debug('REAPER whole struct %s' % struct)
             j = json.dumps(struct)
             if AES is not None and self.secret != '':
-                logger.debug('Stats PUT to kernel.alignak.io/api/v1/put/ with %s %s' % (
-                    self.api_key, self.secret))
+                logger.debug('Stats PUT to kernel.alignak.io/api/v1/put/ with %s %s',
+                             self.api_key,
+                             self.secret)
 
                 # assume a %16 length messagexs
                 encrypted_text = self._encrypt(j)
                 try:
                     r = self.con.put('/api/v1/put/?api_key=%s' % (self.api_key), encrypted_text)
                 except HTTPException, exp:
-                    logger.error('Stats REAPER cannot put to the metric server %s' % exp)
+                    logger.error('Stats REAPER cannot put to the metric server %s', exp)
             time.sleep(60)
 
 

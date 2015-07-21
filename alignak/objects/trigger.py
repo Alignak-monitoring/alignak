@@ -117,7 +117,7 @@ class Trigger(Item):
         except Exception as err:
             set_value(self, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
-                         '%s' % (self.host_name, myself.trigger_name, err, traceback.format_exc()))
+                         '%s', self.host_name, myself.trigger_name, err, traceback.format_exc())
 
     def __getstate__(self):
         return {'trigger_name': self.trigger_name,

@@ -912,11 +912,11 @@ class Scheduler(object):
                 _type = 'event handler'
                 if c.is_snapshot:
                     _type = 'snapshot'
-                logger.warning("%s %s command '%s ' timed out after %d seconds" %
-                               (self.actions[c.id].ref.__class__.my_type.capitalize(),
-                                _type,
-                                self.actions[c.id].command,
-                                int(c.execution_time)))
+                logger.warning("%s %s command '%s ' timed out after %d seconds",
+                               self.actions[c.id].ref.__class__.my_type.capitalize(),
+                               _type,
+                               self.actions[c.id].command,
+                               int(c.execution_time))
 
             # If it's a snapshot we should get the output an export it
             if c.is_snapshot:
