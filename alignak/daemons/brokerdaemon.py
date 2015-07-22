@@ -76,7 +76,7 @@ from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
 from alignak.http_client import HTTPClient, HTTPExceptions
-from alignak.daemon import Daemon, Interface
+from alignak.daemon import Interface
 
 
 class IStats(Interface):

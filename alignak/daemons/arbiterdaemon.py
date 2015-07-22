@@ -68,7 +68,6 @@ import traceback
 import socket
 import cStringIO
 import cPickle
-import copy
 import json
 
 from alignak.objects.config import Config

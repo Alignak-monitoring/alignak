@@ -56,7 +56,6 @@ from alignak.property import StringProp, IntegerProp
 from alignak.log import logger
 
 from .itemgroup import Itemgroup, Itemgroups
-from .service import Service
 
 
 class Servicegroup(Itemgroup):

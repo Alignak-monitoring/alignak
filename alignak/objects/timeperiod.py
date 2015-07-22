@@ -129,7 +129,6 @@ from alignak.daterange import Daterange, CalendarDaterange
 from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
-from alignak.brok import Brok
 from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
 from alignak.log import logger, naglog_result
 

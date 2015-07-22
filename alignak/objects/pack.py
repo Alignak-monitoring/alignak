@@ -51,7 +51,6 @@
 This module provide Pack and Packs classes used to define 'group' of configurations
 """
 
-import time
 import os
 import re
 try:

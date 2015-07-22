@@ -60,15 +60,19 @@ import os
 import optparse
 
 # Try to see if we are in an android device or not
-is_android = True
+import imp
 try:
-    import android
+    imp.find_module('android')
+    is_android = True
+except ImportError:
+    is_android = False
+
+
+if is_android is not None:
     # Add our main script dir
     if os.path.exists('/sdcard/sl4a/scripts/'):
         sys.path.append('/sdcard/sl4a/scripts/')
         os.chdir('/sdcard/sl4a/scripts/')
-except ImportError:
-    is_android = False
 
 
 from alignak.daemons.reactionnerdaemon import Reactionner

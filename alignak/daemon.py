@@ -77,8 +77,9 @@ import inspect
 from Queue import Empty
 
 # Try to see if we are in an android device or not
+import imp
 try:
-    import android
+    imp.find_module('android')
     is_android = True
 except ImportError:
     is_android = False

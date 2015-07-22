@@ -71,10 +71,6 @@ import time
 import re
 import itertools
 
-try:
-    from ClusterShell.NodeSet import NodeSet, NodeSetParseRangeError
-except ImportError:
-    NodeSet = None
 
 from alignak.objects.item import Items
 from alignak.objects.schedulingitem import SchedulingItem

@@ -8,7 +8,7 @@ import setuptools
 # Fix for debian 7 python that raise error on at_exit at the end of setup.py
 # (cf http://bugs.python.org/issue15881)
 try:
-    import multiprocessing
+    import multiprocessing  # pylint: disable=W0611
 except ImportError:
     pass
 

@@ -59,7 +59,7 @@ This module provide Itemgroup and Itemgroups class used to define group of items
 from alignak.objects.item import Item, Items
 
 from alignak.brok import Brok
-from alignak.property import StringProp, ListProp, ToGuessProp
+from alignak.property import ListProp
 from alignak.log import logger
 
 

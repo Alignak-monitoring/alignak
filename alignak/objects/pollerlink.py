@@ -46,7 +46,7 @@ between the modules Arbiter and Poller
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import IntegerProp, StringProp, ListProp
 
 
 class PollerLink(SatelliteLink):
