@@ -54,8 +54,6 @@
  schedulers (and the associated checks) and take the new ones instead.
 """
 
-import sys
-import os
 import optparse
 
 

@@ -58,7 +58,7 @@ import cStringIO
 
 import importlib
 
-from os.path import join, isdir, abspath, dirname
+from os.path import join, isdir, abspath
 from os import listdir
 
 from alignak.basemodule import BaseModule

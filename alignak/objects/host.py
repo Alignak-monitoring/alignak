@@ -67,7 +67,6 @@ scheduling/consume check smart things :)
 """
 
 import time
-import itertools
 
 from alignak.objects.item import Items
 from alignak.objects.schedulingitem import SchedulingItem
@@ -75,9 +74,8 @@ from alignak.objects.schedulingitem import SchedulingItem
 from alignak.autoslots import AutoSlots
 from alignak.util import (format_t_into_dhms_format, to_hostnames_list, get_obj_name,
                           to_svc_hst_distinct_lists, to_list_string_of_names, to_list_of_names,
-                          to_name_if_possible, strip_and_uniq)
+                          to_name_if_possible)
 from alignak.property import BoolProp, IntegerProp, FloatProp, CharProp, StringProp, ListProp
-from alignak.graph import Graph
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result

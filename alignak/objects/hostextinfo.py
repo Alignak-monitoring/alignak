@@ -56,8 +56,7 @@ no use in running part
 from alignak.objects.item import Item, Items
 
 from alignak.autoslots import AutoSlots
-from alignak.util import to_hostnames_list
-from alignak.property import StringProp, ListProp
+from alignak.property import StringProp
 
 
 class HostExtInfo(Item):

@@ -46,7 +46,7 @@ This module provide ReactionnerLink and ReactionnerLinks classes used to manage 
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import IntegerProp, StringProp, ListProp
 
 
 class ReactionnerLink(SatelliteLink):

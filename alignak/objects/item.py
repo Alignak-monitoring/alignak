@@ -60,14 +60,7 @@ This class is a base class for nearly all configuration
 elements like service, hosts or contacts.
 """
 import time
-import cPickle  # for hashing compute
 import itertools
-
-# Try to import md5 function
-try:
-    from hashlib import md5
-except ImportError:
-    from md5 import md5
 
 from copy import copy
 

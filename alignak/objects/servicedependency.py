@@ -59,7 +59,6 @@ from alignak.property import BoolProp, StringProp, ListProp
 from alignak.log import logger
 
 from .item import Item, Items
-from .service import Service
 
 
 class Servicedependency(Item):

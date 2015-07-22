@@ -76,7 +76,6 @@ import cPickle
 import threading
 
 from collections import defaultdict
-from Queue import Empty
 
 from alignak.external_command import ExternalCommand
 from alignak.check import Check

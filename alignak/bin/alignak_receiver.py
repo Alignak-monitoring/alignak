@@ -53,8 +53,6 @@
  schedulers (and their associated broks) and take the new ones instead.
 """
 
-import os
-import sys
 import optparse
 
 

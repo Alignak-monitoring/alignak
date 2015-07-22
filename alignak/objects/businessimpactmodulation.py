@@ -53,7 +53,6 @@
 This module provide Businessimpactmodulation and Businessimpactmodulations classes used to describe
 the modulation of a business impact. Modulation occurs on a modulation period (Timeperiod)
 """
-import time
 
 from alignak.objects.item import Item, Items
 

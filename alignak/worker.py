@@ -52,9 +52,10 @@ This module provide Worker class. It is used to spawn new processes in Poller an
 from Queue import Empty
 
 # In android, we should use threads, not process
-is_android = True
+import imp
 try:
-    import android
+    imp.find_module('android')
+    is_android = True
 except ImportError:
     is_android = False
 

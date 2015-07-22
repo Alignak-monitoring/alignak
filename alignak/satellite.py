@@ -66,13 +66,13 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
 
 
 # Try to see if we are in an android device or not
-is_android = True
+import imp
 try:
-    import android
+    imp.find_module('android')
+    is_android = True
 except ImportError:
     is_android = False
 
-from Queue import Empty
 
 if not is_android:
     from multiprocessing import Queue, active_children, cpu_count
