@@ -1878,7 +1878,7 @@ class Services(Items):
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
                 service = self.find_srv_by_name_and_hostname(
-                    getattr(host, "host_name", ""),  sdescr
+                    getattr(host, "host_name", ""), sdescr
                 )
                 if service is None:
                     err = "Error: trying to override property '%s' on service '%s' " \
