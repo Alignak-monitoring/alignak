@@ -49,7 +49,7 @@
 import time
 
 
-class Comment:
+class Comment(object):
     """Comment class implements comments for monitoring purpose.
     It contains data like author, type, expire_time, persistent etc..
     """

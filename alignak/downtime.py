@@ -59,7 +59,7 @@ from alignak.brok import Brok
 from alignak.log import logger
 
 
-class Downtime:
+class Downtime(object):
     """ Schedules downtime for a specified service. If the "fixed" argument is set
     to one (1), downtime will start and end at the times specified by the
     "start" and "end" arguments.

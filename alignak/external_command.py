@@ -74,7 +74,7 @@ from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
 
 
-class ExternalCommand:
+class ExternalCommand(object):
     """ExternalCommand class is only an object with a cmd_line attribute.
     All parsing and execution is done in manager
 
@@ -85,7 +85,7 @@ class ExternalCommand:
         self.cmd_line = cmd_line
 
 
-class ExternalCommandManager:
+class ExternalCommandManager(object):
     """ExternalCommandManager class managed all external command sent to Alignak
     It basically parses arguments and execute the right function
 

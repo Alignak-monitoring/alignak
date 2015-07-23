@@ -77,7 +77,7 @@ from alignak.log import logger
 from alignak.misc.common import setproctitle
 
 
-class Worker:
+class Worker(object):
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
     (self.s) (slave)
