@@ -2,7 +2,8 @@
 to avoid code duplication
 
 """
-# pylint: disable=W0614
+# pylint: disable=W0614 
+# pylint: disable=E0102
 from .bottlecore import *
 
 
