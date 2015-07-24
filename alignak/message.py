@@ -48,7 +48,7 @@
 """
 
 
-class Message:
+class Message(object):
     """This is a simple message class for communications between actionners and
     workers
 
