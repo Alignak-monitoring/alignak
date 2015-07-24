@@ -51,7 +51,7 @@ import time
 from alignak.log import logger
 
 
-class ContactDowntime(object):
+class ContactDowntime:
     """ContactDowntime class allows a contact to be in downtime. During this time
     the contact won't get notifications
 
