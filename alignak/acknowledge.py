@@ -52,7 +52,7 @@ implements acknowledgment for notification. Basically used for parsing.
 """
 
 
-class Acknowledge(object):
+class Acknowledge:
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same

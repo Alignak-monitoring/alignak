@@ -79,7 +79,7 @@ def guess_int_or_float(val):
         return None
 
 
-class Metric(object):
+class Metric:
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
@@ -115,7 +115,7 @@ class Metric(object):
         return s
 
 
-class PerfDatas(object):
+class PerfDatas:
     """
     Class providing performance data extracted from a check output
     """

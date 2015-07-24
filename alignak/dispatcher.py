@@ -68,7 +68,7 @@ from alignak.log import logger
 random.seed()
 
 
-class Dispatcher(object):
+class Dispatcher:
     """Dispatcher is in charge of sending configuration to other daemon.
     It has to handle spare, realms, poller tags etc.
 

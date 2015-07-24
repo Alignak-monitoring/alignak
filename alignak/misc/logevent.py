@@ -124,7 +124,7 @@ event_types = {
 }
 
 
-class LogEvent(object):
+class LogEvent:
     """Class for parsing event logs
     Populates self.data with the log type's properties
     """
