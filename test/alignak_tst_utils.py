@@ -30,7 +30,7 @@ def get_free_port(on_ip='127.0.0.1'):
 
 
 def guess_sys_stdout_encoding():
-    ''' Return the best guessed encoding to be used for printing on sys.stdout. '''
+    """ Return the best guessed encoding to be used for printing on sys.stdout. """
     return (
            getattr(sys.stdout, 'encoding', None)
         or getattr(__stdout__, 'encoding', None)

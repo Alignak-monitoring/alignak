@@ -904,7 +904,7 @@ class Daemon(object):
         """
         # some os are not managing void socks list, so catch this
         # and just so a simple sleep instead
-        if socks == []:
+        if not socks:
             time.sleep(timeout)
             return []
         try:

@@ -79,10 +79,11 @@ class testSchedulerInit(AlignakTest):
             proc.wait()
         except Exception as err:
             print("prob on terminate and wait subproc: %s" % err)
-        data = {}
-        data['out'] = proc.stdout.read()
-        data['err'] = proc.stderr.read()
-        data['rc'] = proc.returncode
+        data = {
+            'out': proc.stdout.read(),
+            'err': proc.stderr.read(),
+            'rc': proc.returncode,
+        }
         return data
 
     def tearDown(self):

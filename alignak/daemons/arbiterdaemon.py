@@ -1005,9 +1005,10 @@ class Arbiter(Daemon):
         :return: broks and external commands in a dict
         :rtype: dict
         """
-        r = {}
-        r['broks'] = self.broks
-        r['external_commands'] = self.external_commands
+        r = {
+            'broks': self.broks,
+            'external_commands': self.external_commands
+        }
         return r
 
     def restore_retention_data(self, data):

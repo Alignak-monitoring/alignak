@@ -175,7 +175,7 @@ class Itemgroup(Item):
                              self.get_name(), self.__class__.my_type, m)
             res = False
 
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             for err in self.configuration_errors:
                 logger.error("[itemgroup] %s", err)
             res = False
@@ -206,7 +206,7 @@ class Itemgroup(Item):
         data = {}
         # Now config properties
         for prop, entry in cls.properties.items():
-            if entry.fill_brok != []:
+            if entry.fill_brok:
                 if self.has(prop):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place

@@ -274,7 +274,7 @@ class CLICommander(object):
             logger.info('New module parameter detected, updating the ini file')
             write_ini_file(self.cfg, self, opts)
 
-        logger.debug('We load the keywords %s' % self.keywords)
+        logger.debug('We load the keywords %s' % str(self.keywords))
 
     def loop(self):
         """

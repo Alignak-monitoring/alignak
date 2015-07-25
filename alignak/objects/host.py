@@ -722,7 +722,7 @@ class Host(SchedulingItem):
             logger.warning("[host::%s] %s", self.get_name(), err)
 
         # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.error("[host::%s] %s", self.get_name(), err)

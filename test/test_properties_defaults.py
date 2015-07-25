@@ -251,7 +251,6 @@ class TestConfig(PropertiesTester, AlignakTest):
 
         ('use_multiprocesses_serializer', False),
         ('daemon_thread_pool_size', 8),
-        ('enable_environment_macros', True),
         ('timeout_exit_status', 2),
 
         # kernel.alignak.io part

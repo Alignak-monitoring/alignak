@@ -194,7 +194,7 @@ class Worker:
         :type time: int
         :return: None
         """
-        self._idletime = self._idletime + time
+        self._idletime += time
 
     def reset_idle(self):
         """
@@ -239,7 +239,7 @@ class Worker:
                 # print "I", self.id, "I've got a message!"
         except Empty, exp:
             if len(self.checks) == 0:
-                self._idletime = self._idletime + 1
+                self._idletime += 1
                 time.sleep(1)
         # Maybe the Queue() is not available, if so, just return
         # get back to work :)

@@ -129,7 +129,6 @@ def get_cluster_discovery_output(list):
 #  execution  #
 ###############
 
-scan = []
 clSolution = clSolution_by_os[os]
 
 

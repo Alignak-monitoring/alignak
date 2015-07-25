@@ -158,7 +158,7 @@ class Timeperiod(Item):
 
     def __init__(self, params={}):
         self.id = Timeperiod.id
-        Timeperiod.id = Timeperiod.id + 1
+        Timeperiod.id += 1
         self.unresolved = []
         self.dateranges = []
         self.exclude = ''
@@ -406,13 +406,13 @@ class Timeperiod(Item):
             if local_min is None:
                 # print "Looking for next valid date"
                 exc_mins = []
-                if s_dr_mins != []:
+                if s_dr_mins:
                     for tp in self.exclude:
                         exc_mins.append(tp.get_next_invalid_time_from_t(s_dr_mins[0]))
 
                 s_exc_mins = sorted([d for d in exc_mins if d is not None])
 
-                if s_exc_mins != []:
+                if s_exc_mins:
                     local_min = s_exc_mins[0]
 
             if local_min is None:
@@ -491,7 +491,7 @@ class Timeperiod(Item):
             # for v in val_valids:
             #    print "\t", time.asctime(time.localtime(v))
 
-            if dr_mins != []:
+            if dr_mins:
                 local_min = min(dr_mins)
                 # Take the minimum valid as lower for next search
                 # local_min_valid = 0

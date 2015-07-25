@@ -281,13 +281,13 @@ def inventor(look_at):
                 except Exception, exp:
                     logger.error('Bad %s file "%s"', content_p, exp)
                     continue
-                for d in j:
+                for content in j:
                     s = ''
-                    if d['type'] == '5': # tar direcotry
+                    if content['type'] == '5': # tar direcotry
                         s += '(d)'
                     else:
                         s += '(f)'
-                    s += d['name']
+                    s += content['name']
                     print s
 
 

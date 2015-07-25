@@ -372,7 +372,7 @@ class Alignak(BaseSatellite):
                         # But it's no so simple, we must match the timeperiod
                         new_t = ref.notification_period.get_next_valid_time_from_t(new_t)
                     # And got a creation_time variable too
-                    c.creation_time = c.creation_time + difference
+                    c.creation_time += difference
 
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output

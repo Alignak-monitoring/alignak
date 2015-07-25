@@ -100,7 +100,7 @@ class LSSyncConnection:
                 logger.warning("0 size read")
                 return res  #: TODO raise an error
 
-            size = size - l
+            size -= l
             res = res + data
         return res
 
@@ -246,7 +246,7 @@ class LSAsynConnection(asyncore.dispatcher):
                 logger.warning("0 size read")
                 return res  #: TODO raise an error
 
-            size = size - l
+            size -= l
             res = res + data
         return res
 

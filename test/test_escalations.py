@@ -255,7 +255,7 @@ class TestEscalations(AlignakTest):
             svc.notification_interval = 3600
             # and we say that there is still 1hour since the notification creation
             # so it will say the notification time is huge, and so it will escalade
-            n.creation_time = n.creation_time - 3600
+            n.creation_time -= 3600
 
         self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.001)
 
@@ -283,7 +283,7 @@ class TestEscalations(AlignakTest):
         for n in svc.notifications_in_progress.values():
             # HOP, we say: it's already 3600 second since the last notif,
             n.t_to_go = time.time()
-            n.creation_time = n.creation_time - 3600
+            n.creation_time -= 3600
 
         # One more, we bypass 7200, so now it's level3
         self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
