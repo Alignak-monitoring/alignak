@@ -2013,8 +2013,8 @@ class Services(Items):
         :type hosts:
         :param s: The base service to explode
         :type s:
-        :param hnames:  The host_name list to explode service on
-        :type hnames: str
+        :param hnames: The host_name list to explode service on
+        :type hnames: list
         :return: None
         """
         duplicate_for_hosts = []  # get the list of our host_names if more than 1

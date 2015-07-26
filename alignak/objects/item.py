@@ -622,7 +622,7 @@ class Item(object):
         :param notify: if to 1, send a notification
         :type notify: integer
         :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
+        :type persistent: bool
         :param author: name of the author or the acknowledge
         :type author: str
         :param comment: comment (description) of the acknowledge
@@ -1196,7 +1196,7 @@ class Items(object):
         :param name: name of item
         :type name: str
         :return: item
-        :rtype: alignak.objects.item.Item
+        :rtype: alignak.objects.item.Item | None
         """
         return self.name_to_item.get(name, None)
 

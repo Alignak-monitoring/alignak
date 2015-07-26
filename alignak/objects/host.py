@@ -936,7 +936,7 @@ class Host(SchedulingItem):
         :param status: notification failure criteria, notification for a dependent host may vary
         :type status: list
         :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod | None
         :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
         :type inherits_parent: bool
         :return: None
