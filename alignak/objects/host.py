@@ -335,7 +335,7 @@ class Host(SchedulingItem):
         'last_state_id':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'],  retention=True),
+            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
         'last_state_change':
             FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_hard_state_change':
