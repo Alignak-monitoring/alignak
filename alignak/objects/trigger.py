@@ -113,7 +113,7 @@ class Trigger(Item):
 
         code = myself.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
         try:
-            exec code in dict(locals())
+            exec code in dict(locals())  # pylint: disable=W0122
         except Exception as err:
             set_value(self, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '

@@ -618,7 +618,7 @@ class Config(Item):
             BoolProp(default=False,
                      class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                     (BrokerLink, None), (PollerLink, None),
-                                    (ReceiverLink, None),  (ArbiterLink, None)]),
+                                    (ReceiverLink, None), (ArbiterLink, None)]),
         'ca_cert':
             StringProp(default='etc/certs/ca.pem'),
 
@@ -663,37 +663,37 @@ class Config(Item):
             StringProp(default='',
                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                       (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None),  (ArbiterLink, None)]),
+                                      (ReceiverLink, None), (ArbiterLink, None)]),
         'secret':
             StringProp(default='',
                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                       (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None),  (ArbiterLink, None)]),
+                                      (ReceiverLink, None), (ArbiterLink, None)]),
         'http_proxy':
             StringProp(default='',
                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                       (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None),  (ArbiterLink, None)]),
+                                      (ReceiverLink, None), (ArbiterLink, None)]),
 
         # and local statsd one
         'statsd_host':
             StringProp(default='localhost',
                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                       (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None),  (ArbiterLink, None)]),
+                                      (ReceiverLink, None), (ArbiterLink, None)]),
         'statsd_port':
             IntegerProp(default=8125,
                         class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                        (BrokerLink, None), (PollerLink, None),
-                                       (ReceiverLink, None),  (ArbiterLink, None)]),
+                                       (ReceiverLink, None), (ArbiterLink, None)]),
         'statsd_prefix': StringProp(default='alignak',
                                     class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                                    (BrokerLink, None), (PollerLink, None),
-                                                   (ReceiverLink, None),  (ArbiterLink, None)]),
+                                                   (ReceiverLink, None), (ArbiterLink, None)]),
         'statsd_enabled': BoolProp(default=False,
                                    class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
                                                   (BrokerLink, None), (PollerLink, None),
-                                                  (ReceiverLink, None),  (ArbiterLink, None)]),
+                                                  (ReceiverLink, None), (ArbiterLink, None)]),
     }
 
     macros = {

@@ -128,9 +128,9 @@ class Escalation(Item):
         :rtype: bool
         """
         small_states = {
-            'WARNING': 'w',    'UNKNOWN': 'u',     'CRITICAL': 'c',
-            'RECOVERY': 'r',   'FLAPPING': 'f',    'DOWNTIME': 's',
-            'DOWN': 'd',       'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'
+            'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
+            'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
+            'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'
         }
 
         # If we are not time based, we check notification numbers:
