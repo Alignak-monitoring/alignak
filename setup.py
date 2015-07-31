@@ -26,5 +26,8 @@ os.environ['PBR_VERSION'] = VERSION
 setuptools.setup(
     setup_requires=['pbr'],
     version=VERSION,
+    packages=['alignak', 'alignak.modules'],
+    namespace_packages=['alignak', 'alignak.modules'],
     pbr=True,
 )
+
