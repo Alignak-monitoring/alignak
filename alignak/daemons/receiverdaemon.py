@@ -169,7 +169,7 @@ class Receiver(Satellite):
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
-            self.broks[elt.id] = elt
+            self.broks[elt._id] = elt
             return
         elif cls_type == 'externalcommand':
             logger.debug("Enqueuing an external command: %s", str(ExternalCommand.__dict__))

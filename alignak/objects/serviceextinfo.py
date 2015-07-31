@@ -73,7 +73,7 @@ class ServiceExtInfo(Item):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    id = 1  # zero is reserved for host (primary node for parents)
+    _id = 1  # zero is reserved for host (primary node for parents)
     my_type = 'serviceextinfo'
 
     # properties defined by configuration

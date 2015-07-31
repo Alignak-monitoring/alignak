@@ -61,7 +61,7 @@ class Serviceescalation(Item):
     TODO: Why this class does not inherit from alignak.objects.Escalation.
           Maybe we can merge it
     """
-    id = 1  # zero is always special in database, so we do not take risk here
+    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'serviceescalation'
 
     properties = Item.properties.copy()
@@ -108,7 +108,7 @@ class Serviceescalations(Items):
         for es in self:
             properties = es.__class__.properties
 
-            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%d' % es.id}
+            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%d' % es._id}
             for prop in properties:
                 if hasattr(es, prop):
                     creation_dict[prop] = getattr(es, prop)

@@ -308,15 +308,15 @@ class Scheduler(object):
             f.write('Scheduler DUMP at %d\n' % time.time())
             for c in self.checks.values():
                 s = 'CHECK: %s:%s:%s:%s:%s:%s\n' % \
-                    (c.id, c.status, c.t_to_go, c.poller_tag, c.command, c.worker)
+                    (c._id, c.status, c.t_to_go, c.poller_tag, c.command, c.worker)
                 f.write(s)
             for a in self.actions.values():
                 s = '%s: %s:%s:%s:%s:%s:%s\n' % \
-                    (a.__class__.my_type.upper(), a.id, a.status,
+                    (a.__class__.my_type.upper(), a._id, a.status,
                      a.t_to_go, a.reactionner_tag, a.command, a.worker)
                 f.write(s)
             for b in self.broks.values():
-                s = 'BROK: %s:%s\n' % (b.id, b.type)
+                s = 'BROK: %s:%s\n' % (b._id, b.type)
                 f.write(s)
             f.close()
         except Exception, exp:
@@ -383,18 +383,18 @@ class Scheduler(object):
         # Maybe it's just for one broker
         if bname:
             broks = self.brokers[bname]['broks']
-            broks[brok.id] = brok
+            broks[brok._id] = brok
         else:
             # If there are known brokers, give it to them
             if len(self.brokers) > 0:
                 # Or maybe it's for all
                 for bname in self.brokers:
                     broks = self.brokers[bname]['broks']
-                    broks[brok.id] = brok
+                    broks[brok._id] = brok
             else:  # no brokers? maybe at startup for logs
                 # we will put in global queue, that the first broker
                 # connection will get all
-                self.broks[brok.id] = brok
+                self.broks[brok._id] = brok
 
     def add_Notification(self, notif):
         """Add a notification into actions list
@@ -403,7 +403,7 @@ class Scheduler(object):
         :type notif: alignak.notification.Notification
         :return: None
         """
-        self.actions[notif.id] = notif
+        self.actions[notif._id] = notif
         # A notification ask for a brok
         if notif.contact is not None:
             b = notif.get_initial_status_brok()
@@ -416,7 +416,7 @@ class Scheduler(object):
         :type c: alignak.check.Check
         :return: None
         """
-        self.checks[c.id] = c
+        self.checks[c._id] = c
         # A new check means the host/service changes its next_check
         # need to be refreshed
         b = c.ref.get_next_schedule_brok()
@@ -429,8 +429,8 @@ class Scheduler(object):
         :type action: alignak.eventhandler.EventHandler
         :return: None
         """
-        # print "Add an event Handler", elt.id
-        self.actions[action.id] = action
+        # print "Add an event Handler", elt._id
+        self.actions[action._id] = action
 
     def add_Downtime(self, dt):
         """Add a downtime into downtimes list
@@ -439,7 +439,7 @@ class Scheduler(object):
         :type dt: alignak.downtime.Downtime
         :return: None
         """
-        self.downtimes[dt.id] = dt
+        self.downtimes[dt._id] = dt
         if dt.extra_comment:
             self.add_Comment(dt.extra_comment)
 
@@ -450,7 +450,7 @@ class Scheduler(object):
         :type contact_dt: alignak.contactdowntime.ContactDowntime
         :return: None
         """
-        self.contact_downtimes[contact_dt.id] = contact_dt
+        self.contact_downtimes[contact_dt._id] = contact_dt
 
     def add_Comment(self, comment):
         """Add a comment into comments list
@@ -459,7 +459,7 @@ class Scheduler(object):
         :type comment: alignak.comment.Comment
         :return: None
         """
-        self.comments[comment.id] = comment
+        self.comments[comment._id] = comment
         b = comment.ref.get_update_status_brok()
         self.add(b)
 
@@ -556,19 +556,19 @@ class Scheduler(object):
         if len(self.checks) > max_checks:
             # keys does not ensure sorted keys. Max is slow but we have no other way.
             id_max = max(self.checks.keys())
-            to_del_checks = [c for c in self.checks.values() if c.id < id_max - max_checks]
+            to_del_checks = [c for c in self.checks.values() if c._id < id_max - max_checks]
             nb_checks_drops = len(to_del_checks)
             if nb_checks_drops > 0:
                 logger.info("I have to del some checks (%d)..., sorry", nb_checks_drops)
             for c in to_del_checks:
-                i = c.id
+                i = c._id
                 elt = c.ref
                 # First remove the link in host/service
                 elt.remove_in_progress_check(c)
                 # Then in dependent checks (I depend on, or check
                 # depend on me)
                 for dependent_checks in c.depend_on_me:
-                    dependent_checks.depend_on.remove(c.id)
+                    dependent_checks.depend_on.remove(c._id)
                 for c_temp in c.depend_on:
                     c_temp.depen_on_me.remove(c)
                 del self.checks[i]  # Final Bye bye ...
@@ -762,13 +762,13 @@ class Scheduler(object):
                         else:
                             # Wipe out this master notification. One problem notification is enough.
                             item.remove_in_progress_notification(a)
-                            self.actions[a.id].status = 'zombie'
+                            self.actions[a._id].status = 'zombie'
 
                     else:
                         # Wipe out this master notification.
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(a)
-                        self.actions[a.id].status = 'zombie'
+                        self.actions[a._id].status = 'zombie'
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=['None'], reactionner_tags=['None'],
@@ -863,10 +863,10 @@ class Scheduler(object):
                 if isinstance(c.output, str):
                     c.output = c.output.decode('utf8', 'ignore')
 
-                self.actions[c.id].get_return_from(c)
-                item = self.actions[c.id].ref
+                self.actions[c._id].get_return_from(c)
+                item = self.actions[c._id].ref
                 item.remove_in_progress_notification(c)
-                self.actions[c.id].status = 'zombie'
+                self.actions[c._id].status = 'zombie'
                 item.last_notification = c.check_time
 
                 # And we ask the item to update it's state
@@ -876,9 +876,9 @@ class Scheduler(object):
                 if timeout:
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %d seconds",
-                                   self.actions[c.id].contact.contact_name,
-                                   self.actions[c.id].ref.__class__.my_type,
-                                   self.actions[c.id].command,
+                                   self.actions[c._id].contact.contact_name,
+                                   self.actions[c._id].ref.__class__.my_type,
+                                   self.actions[c._id].command,
                                    int(execution_time))
                 elif c.exit_status != 0:
                     logger.warning("The notification command '%s' raised an error "
@@ -893,17 +893,17 @@ class Scheduler(object):
             try:
                 if c.status == 'timeout':
                     c.output = "(%s Check Timed Out)" %\
-                               self.checks[c.id].ref.__class__.my_type.capitalize()
+                               self.checks[c._id].ref.__class__.my_type.capitalize()
                     c.long_output = c.output
                     c.exit_status = self.conf.timeout_exit_status
-                self.checks[c.id].get_return_from(c)
-                self.checks[c.id].status = 'waitconsume'
+                self.checks[c._id].get_return_from(c)
+                self.checks[c._id].status = 'waitconsume'
             except KeyError, exp:
                 pass
 
         elif c.is_a == 'eventhandler':
             try:
-                old_action = self.actions[c.id]
+                old_action = self.actions[c._id]
                 old_action.status = 'zombie'
             except KeyError:  # cannot find old action
                 return
@@ -912,9 +912,9 @@ class Scheduler(object):
                 if c.is_snapshot:
                     _type = 'snapshot'
                 logger.warning("%s %s command '%s ' timed out after %d seconds",
-                               self.actions[c.id].ref.__class__.my_type.capitalize(),
+                               self.actions[c._id].ref.__class__.my_type.capitalize(),
                                _type,
-                               self.actions[c.id].command,
+                               self.actions[c._id].command,
                                int(c.execution_time))
 
             # If it's a snapshot we should get the output an export it
@@ -953,12 +953,12 @@ class Scheduler(object):
             return True
         return False
 
-    def pynag_con_init(self, id, type='poller'):
+    def pynag_con_init(self, s_id, type='poller'):
         """Init or reinit connection to a poller or reactionner
         Used for passive daemons
 
-        :param id: daemon id to connect to
-        :type id: int
+        :param s_id: daemon s_id to connect to
+        :type s_id: int
         :param type: daemon type to connect to
         :type type: str
         :return: None
@@ -971,41 +971,44 @@ class Scheduler(object):
 
         # We want only to initiate connections to the passive
         # pollers and reactionners
-        passive = links[id]['passive']
+        passive = links[s_id]['passive']
         if not passive:
             return
 
         # If we try to connect too much, we slow down our tests
-        if self.is_connection_try_too_close(links[id]):
+        if self.is_connection_try_too_close(links[s_id]):
             return
 
         # Ok, we can now update it
-        links[id]['last_connection'] = time.time()
+        links[s_id]['last_connection'] = time.time()
 
-        logger.debug("Init connection with %s", links[id]['uri'])
+        logger.debug("Init connection with %s", links[s_id]['uri'])
 
-        uri = links[id]['uri']
+        uri = links[s_id]['uri']
         try:
-            links[id]['con'] = HTTPClient(uri=uri, strong_ssl=links[id]['hard_ssl_name_check'])
-            con = links[id]['con']
+            links[s_id]['con'] = HTTPClient(uri=uri, strong_ssl=links[s_id]['hard_ssl_name_check'])
+            con = links[s_id]['con']
         except HTTPExceptions, exp:
-            logger.warning("Connection problem to the %s %s: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.warning("Connection problem to the %s %s: %s",
+                           type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             return
 
         try:
             # initial ping must be quick
             con.get('ping')
         except HTTPExceptions, exp:
-            logger.warning("Connection problem to the %s %s: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.warning("Connection problem to the %s %s: %s",
+                           type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             return
         except KeyError, exp:
-            logger.warning("The %s '%s' is not initialized: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.warning("The %s '%s' is not initialized: %s",
+                           type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             return
 
-        logger.info("Connection OK to the %s %s", type, links[id]['name'])
+        logger.info("Connection OK to the %s %s", type, links[s_id]['name'])
 
     def push_actions_to_passives_satellites(self):
         """Send actions/checks to passive poller/reactionners
@@ -1327,7 +1330,7 @@ class Scheduler(object):
                     a.ref = h
                     self.add(a)
                     # Also raises the action id, so do not overlap ids
-                    a.assume_at_least_id(a.id)
+                    a.assume_at_least_id(a._id)
                 h.update_in_checking()
                 # And also add downtimes and comments
                 for dt in h.downtimes:
@@ -1337,18 +1340,18 @@ class Scheduler(object):
                     else:
                         dt.extra_comment = None
                     # raises the downtime id to do not overlap
-                    Downtime.id = max(Downtime.id, dt.id + 1)
+                    Downtime._id = max(Downtime._id, dt._id + 1)
                     self.add(dt)
                 for c in h.comments:
                     c.ref = h
                     self.add(c)
                     # raises comment id to do not overlap ids
-                    Comment.id = max(Comment.id, c.id + 1)
+                    Comment._id = max(Comment._id, c._id + 1)
                 if h.acknowledgement is not None:
                     h.acknowledgement.ref = h
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge.id = max(Acknowledge.id, h.acknowledgement.id + 1)
+                    Acknowledge._id = max(Acknowledge._id, h.acknowledgement._id + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1390,7 +1393,7 @@ class Scheduler(object):
                     a.ref = s
                     self.add(a)
                     # Also raises the action id, so do not overlap id
-                    a.assume_at_least_id(a.id)
+                    a.assume_at_least_id(a._id)
                 s.update_in_checking()
                 # And also add downtimes and comments
                 for dt in s.downtimes:
@@ -1400,18 +1403,18 @@ class Scheduler(object):
                     else:
                         dt.extra_comment = None
                     # raises the downtime id to do not overlap
-                    Downtime.id = max(Downtime.id, dt.id + 1)
+                    Downtime._id = max(Downtime._id, dt._id + 1)
                     self.add(dt)
                 for c in s.comments:
                     c.ref = s
                     self.add(c)
                     # raises comment id to do not overlap ids
-                    Comment.id = max(Comment.id, c.id + 1)
+                    Comment._id = max(Comment._id, c._id + 1)
                 if s.acknowledgement is not None:
                     s.acknowledgement.ref = s
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge.id = max(Acknowledge.id, s.acknowledgement.id + 1)
+                    Acknowledge._id = max(Acknowledge._id, s.acknowledgement._id + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1560,7 +1563,7 @@ class Scheduler(object):
             if c.status == 'havetoresolvedep':
                 for dependent_checks in c.depend_on_me:
                     # Ok, now dependent will no more wait c
-                    dependent_checks.depend_on.remove(c.id)
+                    dependent_checks.depend_on.remove(c._id)
                 # REMOVE OLD DEP CHECK -> zombie
                 c.status = 'zombie'
 
@@ -1579,11 +1582,11 @@ class Scheduler(object):
         id_to_del = []
         for c in self.checks.values():
             if c.status == 'zombie':
-                id_to_del.append(c.id)
+                id_to_del.append(c._id)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
-        for id in id_to_del:
-            del self.checks[id]  # ZANKUSEN!
+        for c_id in id_to_del:
+            del self.checks[c_id]  # ZANKUSEN!
 
     def delete_zombie_actions(self):
         """Remove actions that have a zombie status (usually timeouts)
@@ -1594,11 +1597,11 @@ class Scheduler(object):
         id_to_del = []
         for a in self.actions.values():
             if a.status == 'zombie':
-                id_to_del.append(a.id)
+                id_to_del.append(a._id)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
-        for id in id_to_del:
-            del self.actions[id]  # ZANKUSEN!
+        for a_id in id_to_del:
+            del self.actions[a_id]  # ZANKUSEN!
 
     def update_downtimes_and_comments(self):
         """Iter over all hosts and services::
@@ -1614,8 +1617,8 @@ class Scheduler(object):
         # Look for in objects comments, and look if we already got them
         for elt in self.iter_hosts_and_services():
             for c in elt.comments:
-                if c.id not in self.comments:
-                    self.comments[c.id] = c
+                if c._id not in self.comments:
+                    self.comments[c._id] = c
 
         # Check maintenance periods
         for elt in self.iter_hosts_and_services():
@@ -1633,7 +1636,7 @@ class Scheduler(object):
                     elt.add_downtime(dt)
                     self.add(dt)
                     self.get_and_register_status_brok(elt)
-                    elt.in_maintenance = dt.id
+                    elt.in_maintenance = dt._id
             else:
                 if elt.in_maintenance not in self.downtimes:
                     # the main downtimes has expired or was manually deleted
@@ -1649,14 +1652,14 @@ class Scheduler(object):
         for dt in self.downtimes.values():
             if dt.can_be_deleted is True:
                 ref = dt.ref
-                self.del_downtime(dt.id)
+                self.del_downtime(dt._id)
                 broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
         for dt in self.contact_downtimes.values():
             if dt.can_be_deleted is True:
                 ref = dt.ref
-                self.del_contact_downtime(dt.id)
+                self.del_contact_downtime(dt._id)
                 broks.append(ref.get_update_status_brok())
 
         # Downtimes are usually accompanied by a comment.
@@ -1664,7 +1667,7 @@ class Scheduler(object):
         for c in self.comments.values():
             if c.can_be_deleted is True:
                 ref = c.ref
-                self.del_comment(c.id)
+                self.del_comment(c._id)
                 broks.append(ref.get_update_status_brok())
 
         # Check start and stop times

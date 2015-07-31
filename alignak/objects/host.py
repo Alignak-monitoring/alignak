@@ -89,7 +89,7 @@ class Host(SchedulingItem):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    id = 1  # zero is reserved for host (primary node for parents)
+    _id = 1  # zero is reserved for host (primary node for parents)
     ok_up = 'UP'
     my_type = 'host'
 
@@ -823,7 +823,7 @@ class Host(SchedulingItem):
         """
         groupname = ''
         for hg in self.hostgroups:
-            # naglog_result('info', 'get_groupname : %s %s %s' % (hg.id, hg.alias, hg.get_name()))
+            # naglog_result('info', 'get_groupname : %s %s %s' % (hg._id, hg.alias, hg.get_name()))
             # groupname = "%s [%s]" % (hg.alias, hg.get_name())
             groupname = "%s" % (hg.alias)
         return groupname

@@ -36,7 +36,7 @@ class TestReversedList(AlignakTest):
         """
 
         sg = self.sched.servicegroups.find_by_name('servicegroup_01')
-        prev_id = sg.id
+        prev_id = sg._id
 
         reg = Regenerator()
         data = {"instance_id": 0}
@@ -52,10 +52,10 @@ class TestReversedList(AlignakTest):
 
         #for service in self.sched.servicegroups:
         #    assert(service.servicegroup_name in self.sched.servicegroups.reversed_list.keys())
-        #    assert(service.id == self.sched.servicegroups.reversed_list[service.servicegroup_name])
+        #    assert(service._id == self.sched.servicegroups.reversed_list[service.servicegroup_name])
 
         sg = self.sched.servicegroups.find_by_name('servicegroup_01')
-        assert(prev_id != sg.id)
+        assert(prev_id != sg._id)
 
         for sname in [u'servicegroup_01', u'ok', u'flap', u'unknown', u'random',
                       u'servicegroup_02', u'servicegroup_03', u'warning', u'critical',

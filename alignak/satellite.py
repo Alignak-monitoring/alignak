@@ -215,7 +215,7 @@ class ISchedulers(Interface):
 
     def get_returns(self, sched_id):
         """Get actions returns (serialized)
-        for the scheduler with id = sched_id
+        for the scheduler with _id = sched_id
 
         :param sched_id: id of the scheduler
         :type sched_id: int
@@ -378,32 +378,32 @@ class Satellite(BaseSatellite):
         self.returns_queue = None
         self.q_by_mod = {}
 
-    def pynag_con_init(self, id):
+    def pynag_con_init(self, _id):
         """Wrapped function for do_pynag_con_init
 
-        :param id: scheduler id to connect to
-        :type id: int
+        :param _id: scheduler _id to connect to
+        :type _id: int
         :return: scheduler connection object or None
         :rtype: alignak.http_client.HTTPClient
         """
         _t = time.time()
-        r = self.do_pynag_con_init(id)
+        r = self.do_pynag_con_init(_id)
         statsmgr.incr('con-init.scheduler', time.time() - _t)
         return r
 
-    def do_pynag_con_init(self, id):
-        """Initialize a connection with scheduler having 'id'
+    def do_pynag_con_init(self, s_id):
+        """Initialize a connection with scheduler having '_id'
         Return the new connection to the scheduler if it succeeded,
             else: any error OR sched is inactive: return None.
         NB: if sched is inactive then None is directly returned.
 
 
-        :param id: scheduler id to connect to
-        :type id: int
+        :param s_id: scheduler s_id to connect to
+        :type s_id: int
         :return: scheduler connection object or None
         :rtype: alignak.http_client.HTTPClient
         """
-        sched = self.schedulers[id]
+        sched = self.schedulers[s_id]
         if not sched['active']:
             return
 
@@ -426,7 +426,7 @@ class Satellite(BaseSatellite):
             return
 
         # timeout of 3s by default (short one)
-        # and get the running id
+        # and get the running s_id
         try:
             new_run_id = sch_con.get('get_running_id')
             new_run_id = float(new_run_id)
@@ -626,11 +626,11 @@ class Satellite(BaseSatellite):
                    target=target, loaded_into=cls_name, http_daemon=self.http_daemon)
         w.module_name = module_name
         # save this worker
-        self.workers[w.id] = w
+        self.workers[w._id] = w
 
         # And save the Queue of this worker, with key = worker id
-        self.q_by_mod[module_name][w.id] = q
-        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, w.id)
+        self.q_by_mod[module_name][w._id] = q
+        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, w._id)
 
         # Ok, all is good. Start it!
         w.start()
@@ -669,7 +669,7 @@ class Satellite(BaseSatellite):
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
-            self.broks[elt.id] = elt
+            self.broks[elt._id] = elt
             return
         elif cls_type == 'externalcommand':
             logger.debug("Enqueuing an external command '%s'", str(elt.__dict__))
@@ -703,30 +703,30 @@ class Satellite(BaseSatellite):
             # good: we can think that we have a worker and it's not True
             # So we del it
             if not w.is_alive():
-                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, w.id)
+                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, w._id)
                 # Terminate immediately
                 w.terminate()
                 w.join(timeout=1)
-                w_to_del.append(w.id)
+                w_to_del.append(w._id)
 
         # OK, now really del workers from queues
         # And requeue the actions it was managed
-        for id in w_to_del:
-            w = self.workers[id]
+        for w_id in w_to_del:
+            w = self.workers[w_id]
 
             # Del the queue of the module queue
-            del self.q_by_mod[w.module_name][w.id]
+            del self.q_by_mod[w.module_name][w._id]
 
             for sched_id in self.schedulers:
                 sched = self.schedulers[sched_id]
                 for a in sched['actions'].values():
-                    if a.status == 'queue' and a.worker_id == id:
+                    if a.status == 'queue' and a.worker_id == w_id:
                         # Got a check that will NEVER return if we do not
                         # restart it
                         self.assign_to_a_queue(a)
 
             # So now we can really forgot it
-            del self.workers[id]
+            del self.workers[w_id]
 
     def adjust_worker_number_by_load(self):
         """Try to create the minimum workers specified in the configuration
@@ -776,7 +776,7 @@ class Satellite(BaseSatellite):
 
         # if not get a round robin index to get a queue based
         # on the action id
-        rr_idx = a.id % len(queues)
+        rr_idx = a._id % len(queues)
         (i, q) = queues[rr_idx]
 
         # return the id of the worker (i), and its queue
@@ -794,7 +794,7 @@ class Satellite(BaseSatellite):
         for a in lst:
             # First we look if we do not already have it, if so
             # do nothing, we are already working!
-            if a.id in self.schedulers[sched_id]['actions']:
+            if a._id in self.schedulers[sched_id]['actions']:
                 continue
             a.sched_id = sched_id
             a.status = 'queue'
@@ -807,7 +807,7 @@ class Satellite(BaseSatellite):
         :type a: alignak.action.Action
         :return: None
         """
-        msg = Message(id=0, type='Do', data=a)
+        msg = Message(_id=0, type='Do', data=a)
         (i, q) = self._got_queue_from_action(a)
         # Tag the action as "in the worker i"
         a.worker_id = i

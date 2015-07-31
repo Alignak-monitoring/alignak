@@ -136,7 +136,7 @@ class TestFreshness(AlignakTest):
 
         # that's what we should get after calling check_freshness():
         expected_host_next_chk = host.next_chk
-        expected_brok_id = Brok.id
+        expected_brok_id = Brok._id
 
         with mock.patch('alignak.objects.host.logger') as log_mock:
             with mock.patch('time.time', return_value=now):
@@ -164,8 +164,8 @@ class TestFreshness(AlignakTest):
         # now assert that the scheduler has also got the new check:
 
         # in its checks:
-        self.assertIn(chk.id, sched.checks)
-        self.assertIs(chk, sched.checks[chk.id])
+        self.assertIn(chk._id, sched.checks)
+        self.assertIs(chk, sched.checks[chk._id])
 
         log_mock.warning.assert_called_once_with(
             "The results of host '%s' are stale by %s "

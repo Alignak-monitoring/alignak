@@ -122,9 +122,9 @@ class Notification(Action):
         'NOTIFICATIONAUTHORALIAS':  'author_alias',
         'NOTIFICATIONCOMMENT':      'comment',
         'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       'id',
+        'HOSTNOTIFICATIONID':       '_id',
         'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    'id'
+        'SERVICENOTIFICATIONID':    '_id'
     }
 
     def __init__(self, type='PROBLEM', status='scheduled', command='UNSET',
@@ -132,15 +132,15 @@ class Notification(Action):
                  contact_name='', host_name='', service_description='',
                  reason_type=1, state=0, ack_author='', ack_data='',
                  escalated=False, contacts_notified=0,
-                 start_time=0, end_time=0, notification_type=0, id=None,
+                 start_time=0, end_time=0, notification_type=0, _id=None,
                  notif_nb=1, timeout=10, env={}, module_type='fork',
                  reactionner_tag='None', enable_environment_macros=0):
 
         self.is_a = 'notification'
         self.type = type
-        if id is None:  # id != None is for copy call only
-            self.id = Action.id
-            Action.id += 1
+        if _id is None:  # _id != None is for copy call only
+            self._id = Action._id
+            Action._id += 1
         self._in_timeout = False
         self.timeout = timeout
         self.status = status
@@ -195,7 +195,7 @@ class Notification(Action):
         :rtype: alignak.notification.Notification
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Notification('', '', '', '', '', '', '', id=self.id))
+        return self.copy_shell__(Notification('', '', '', '', '', '', '', _id=self._id))
 
     def is_launchable(self, t):
         """Check if this notification can be launched base on time
@@ -220,7 +220,7 @@ class Notification(Action):
 
     def __str__(self):
         return "Notification %d status:%s command:%s ref:%s t_to_go:%s" % \
-               (self.id, self.status, self.command, getattr(self, 'ref', 'unknown'),
+               (self._id, self.status, self.command, getattr(self, 'ref', 'unknown'),
                 time.asctime(time.localtime(self.t_to_go)))
 
     def get_id(self):
@@ -229,7 +229,7 @@ class Notification(Action):
         :return: notification id
         :rtype: int
         """
-        return self.id
+        return self._id
 
     def get_return_from(self, n):
         """Setter of exit_status and execution_time attributes
@@ -264,7 +264,7 @@ class Notification(Action):
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
-        data = {'id': self.id}
+        data = {'_id': self._id}
 
         self.fill_data_brok_from(data, 'full_status')
         b = Brok('notification_raise', data)
@@ -279,7 +279,7 @@ class Notification(Action):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -294,7 +294,7 @@ class Notification(Action):
         :return: None
         """
         cls = self.__class__
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])

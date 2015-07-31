@@ -152,7 +152,7 @@ class TestMaintPeriod(AlignakTest):
         self.assertTrue(svc3.downtimes[0].fixed)
         self.assertTrue(svc3.downtimes[0].is_in_effect)
         self.assertFalse(svc3.downtimes[0].can_be_deleted)
-        self.assertEqual(svc3.downtimes[0].id, svc3.in_maintenance)
+        self.assertEqual(svc3.downtimes[0]._id, svc3.in_maintenance)
 
         #
         # now the downtime should expire...

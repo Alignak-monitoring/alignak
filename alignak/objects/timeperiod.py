@@ -139,7 +139,7 @@ class Timeperiod(Item):
     A timeperiod is defined with range time (hours) of week to do action
     and add day exceptions (like non working days)
     """
-    id = 1
+    _id = 1
     my_type = 'timeperiod'
 
     properties = Item.properties.copy()
@@ -157,8 +157,8 @@ class Timeperiod(Item):
     running_properties = Item.running_properties.copy()
 
     def __init__(self, params={}):
-        self.id = Timeperiod.id
-        Timeperiod.id = Timeperiod.id + 1
+        self._id = Timeperiod._id
+        Timeperiod._id = Timeperiod._id + 1
         self.unresolved = []
         self.dateranges = []
         self.exclude = ''
@@ -954,8 +954,8 @@ class Timeperiods(Items):
 
         :return: None
         """
-        for id in self.items:
-            tp = self.items[id]
+        for t_id in self.items:
+            tp = self.items[t_id]
             tp.explode(self)
 
     def linkify(self):
@@ -964,8 +964,8 @@ class Timeperiods(Items):
 
         :return: None
         """
-        for id in self.items:
-            tp = self.items[id]
+        for t_id in self.items:
+            tp = self.items[t_id]
             tp.linkify(self)
 
     def apply_inheritance(self):

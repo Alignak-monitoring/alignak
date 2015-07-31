@@ -98,15 +98,15 @@ class Check(Action):
         'from_trigger':     BoolProp(default=False),
     }
 
-    def __init__(self, status, command, ref, t_to_go, dep_check=None, id=None,
+    def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
                  timeout=10, poller_tag='None', reactionner_tag='None',
                  env={}, module_type='fork', from_trigger=False, dependency_check=False):
 
         self.is_a = 'check'
         self.type = ''
-        if id is None:  # id != None is for copy call only
-            self.id = Action.id
-            Action.id += 1
+        if _id is None:  # id != None is for copy call only
+            self._id = Action._id
+            Action._id += 1
         self._in_timeout = False
         self.timeout = timeout
         self.status = status
@@ -150,7 +150,7 @@ class Check(Action):
         :rtype: object
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Check('', '', '', '', '', id=self.id))
+        return self.copy_shell__(Check('', '', '', '', '', _id=self._id))
 
     def get_return_from(self, c):
         """Update check data from action (notification for instance)
@@ -180,7 +180,7 @@ class Check(Action):
 
     def __str__(self):
         return "Check %d status:%s command:%s ref:%s" % \
-               (self.id, self.status, self.command, self.ref)
+               (self._id, self.status, self.command, self.ref)
 
     def get_id(self):
         """Getter for id attribute
@@ -188,7 +188,7 @@ class Check(Action):
         :return: id
         :rtype: int
         """
-        return self.id
+        return self._id
 
     def set_type_active(self):
         """Set check_type attribute to 0

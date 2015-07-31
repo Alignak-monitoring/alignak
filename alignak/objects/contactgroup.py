@@ -65,12 +65,12 @@ class Contactgroup(Itemgroup):
     """Class to manage a group of contacts
     A Contactgroup is used to manage a group of contacts
     """
-    id = 1
+    _id = 1
     my_type = 'contactgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'id':                   IntegerProp(default=0, fill_brok=['full_status']),
+        '_id':                   IntegerProp(default=0, fill_brok=['full_status']),
         'contactgroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
     })

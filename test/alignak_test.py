@@ -236,7 +236,7 @@ class AlignakTest(unittest.TestCase):
 
     def add(self, b):
         if isinstance(b, Brok):
-            self.broks[b.id] = b
+            self.broks[b._id] = b
             return
         if isinstance(b, ExternalCommand):
             self.sched.run_external_command(b.cmd_line)
@@ -326,7 +326,7 @@ class AlignakTest(unittest.TestCase):
             broks = self.sched.broks
         else:
             broks = self.broks
-        for brok in sorted(broks.values(), lambda x, y: x.id - y.id):
+        for brok in sorted(broks.values(), lambda x, y: x._id - y._id):
             if brok.type == 'log':
                 brok.prepare()
                 safe_print("LOG: ", brok.data['log'])
@@ -340,13 +340,13 @@ class AlignakTest(unittest.TestCase):
             actions = self.sched.actions
         else:
             actions = self.actions
-        for a in sorted(actions.values(), lambda x, y: x.id - y.id):
+        for a in sorted(actions.values(), lambda x, y: x._id - y._id):
             if a.is_a == 'notification':
                 if a.ref.my_type == "host":
                     ref = "host: %s" % a.ref.get_name()
                 else:
                     ref = "host: %s svc: %s" % (a.ref.host.get_name(), a.ref.get_name())
-                print "NOTIFICATION %d %s %s %s %s" % (a.id, ref, a.type, time.asctime(time.localtime(a.t_to_go)), a.status)
+                print "NOTIFICATION %d %s %s %s %s" % (a._id, ref, a.type, time.asctime(time.localtime(a.t_to_go)), a.status)
             elif a.is_a == 'eventhandler':
                 print "EVENTHANDLER:", a
         print "--- actions >>>----------------------------------"
@@ -386,7 +386,7 @@ class AlignakTest(unittest.TestCase):
         id_to_del = []
         for b in broks.values():
             if b.type == 'log':
-                id_to_del.append(b.id)
+                id_to_del.append(b._id)
         for id in id_to_del:
             del broks[id]
 
@@ -404,7 +404,7 @@ class AlignakTest(unittest.TestCase):
             self.assertGreaterEqual(self.count_logs(), index)
         regex = re.compile(pattern)
         lognum = 1
-        broks = sorted(self.sched.broks.values(), key=lambda x: x.id)
+        broks = sorted(self.sched.broks.values(), key=lambda x: x._id)
         for brok in broks:
             if brok.type == 'log':
                 brok.prepare()
@@ -427,7 +427,7 @@ class AlignakTest(unittest.TestCase):
     def _any_log_match(self, pattern, assert_not):
         regex = re.compile(pattern)
         broks = getattr(self, 'sched', self).broks
-        broks = sorted(broks.values(), lambda x, y: x.id - y.id)
+        broks = sorted(broks.values(), lambda x, y: x._id - y._id)
         for brok in broks:
             if brok.type == 'log':
                 brok.prepare()
@@ -453,7 +453,7 @@ class AlignakTest(unittest.TestCase):
     def get_log_match(self, pattern):
         regex = re.compile(pattern)
         res = []
-        for brok in sorted(self.sched.broks.values(), lambda x, y: x.id - y.id):
+        for brok in sorted(self.sched.broks.values(), lambda x, y: x._id - y._id):
             if brok.type == 'log':
                 if re.search(regex, brok.data['log']):
                     res.append(brok.data['log'])

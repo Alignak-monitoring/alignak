@@ -97,7 +97,7 @@ class Service(SchedulingItem):
 
     # Every service have a unique ID, and 0 is always special in
     # database and co...
-    id = 1
+    _id = 1
     # The host and service do not have the same 0 value, now yes :)
     ok_up = 'OK'
     # used by item class for format specific value like for Broks
@@ -1635,7 +1635,7 @@ class Services(Items):
             tpl.configuration_errors.append(mesg)
         elif name:
             tpl = self.index_template(tpl)
-        self.templates[tpl.id] = tpl
+        self.templates[tpl._id] = tpl
 
     def add_item(self, item, index=True, was_partial=False):
         """
@@ -1671,7 +1671,7 @@ class Services(Items):
 
         if index is True:
             item = self.index_item(item)
-        self.items[item.id] = item
+        self.items[item._id] = item
 
     def add_partial_service(self, item, index=True, var_tuple=tuple()):
         """Add a partial service.
@@ -1713,7 +1713,7 @@ class Services(Items):
             item = self.manage_conflict(item, name, partial=True)
         self.name_to_partial[name] = item
 
-        self.partial_services[item.id] = item
+        self.partial_services[item._id] = item
 
     def apply_partial_inheritance(self, prop):
         """Apply partial inheritance. Because of partial services we need to
@@ -1963,8 +1963,8 @@ class Services(Items):
         :type ids: list
         :return: None
         """
-        for id in ids:
-            del self[id]
+        for s_id in ids:
+            del self[s_id]
 
     def apply_implicit_inheritance(self, hosts):
         """Apply implicit inheritance for special properties:
@@ -2001,7 +2001,7 @@ class Services(Items):
         to_del = []
         for s in self:
             if not s.host:
-                to_del.append(s.id)
+                to_del.append(s._id)
         for sid in to_del:
             del self.items[sid]
 
@@ -2213,8 +2213,8 @@ class Services(Items):
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        for id in self.items.keys():
-            s = self.items[id]
+        for s_id in self.items.keys():
+            s = self.items[s_id]
             # items::explode_host_groups_into_hosts
             # take all hosts from our hostgroup_name into our host_name property
             self.explode_host_groups_into_hosts(s, hosts, hostgroups)
@@ -2237,15 +2237,15 @@ class Services(Items):
                 if not s.configuration_errors:
                     self.remove_item(s)
 
-        for id in self.templates.keys():
-            t = self.templates[id]
+        for s_id in self.templates.keys():
+            t = self.templates[s_id]
             self.explode_contact_groups_into_contacts(t, contactgroups)
             self.explode_services_from_templates(hosts, t)
 
         # Explode services that have a duplicate_foreach clause
-        duplicates = [s.id for s in self if getattr(s, 'duplicate_foreach', '')]
-        for id in duplicates:
-            s = self.items[id]
+        duplicates = [s._id for s in self if getattr(s, 'duplicate_foreach', '')]
+        for s_id in duplicates:
+            s = self.items[s_id]
             self.explode_services_duplicates(hosts, s)
             if not s.configuration_errors:
                 self.remove_item(s)

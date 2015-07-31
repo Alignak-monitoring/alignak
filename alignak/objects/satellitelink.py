@@ -61,7 +61,7 @@ class SatelliteLink(Item):
     Arbiter and other satellites. Used by the Dispatcher object.
 
     """
-    # id = 0 each Class will have it's own id
+    # _id = 0 each Class will have it's own id
 
     properties = Item.properties.copy()
     properties.update({
@@ -576,7 +576,7 @@ class SatelliteLink(Item):
                 'use_ssl': self.use_ssl,
                 'hard_ssl_name_check': self.hard_ssl_name_check,
                 'name': self.get_name(),
-                'instance_id': self.id,
+                'instance_id': self._id,
                 'active': True,
                 'passive': self.passive,
                 'poller_tags': getattr(self, 'poller_tags', []),
@@ -595,7 +595,7 @@ class SatelliteLink(Item):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if prop != 'realm':
                 if hasattr(self, prop):
@@ -618,7 +618,7 @@ class SatelliteLink(Item):
         """
         cls = self.__class__
 
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])

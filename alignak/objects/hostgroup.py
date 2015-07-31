@@ -67,12 +67,12 @@ class Hostgroup(Itemgroup):
     Class to manage a group of host
     A Hostgroup is used to manage a group of hosts
     """
-    id = 1  # zero is always a little bit special... like in database
+    _id = 1  # zero is always a little bit special... like in database
     my_type = 'hostgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'id':             IntegerProp(default=0, fill_brok=['full_status']),
+        '_id':             IntegerProp(default=0, fill_brok=['full_status']),
         'hostgroup_name': StringProp(fill_brok=['full_status']),
         'alias':          StringProp(fill_brok=['full_status']),
         'notes':          StringProp(default='', fill_brok=['full_status']),

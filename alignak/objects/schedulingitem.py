@@ -100,7 +100,7 @@ class SchedulingItem(Item):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -111,7 +111,7 @@ class SchedulingItem(Item):
 
     def __setstate__(self, state):
         cls = self.__class__
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
@@ -760,9 +760,9 @@ class SchedulingItem(Item):
         :type n:
         :return: None
         """
-        if n.id in self.notifications_in_progress:
+        if n._id in self.notifications_in_progress:
             n.status = 'zombie'
-            del self.notifications_in_progress[n.id]
+            del self.notifications_in_progress[n._id]
 
     def remove_in_progress_notifications(self):
         """Remove all notifications from notifications_in_progress
@@ -1021,7 +1021,7 @@ class SchedulingItem(Item):
             deps_checks = self.raise_dependencies_check(c)
             for check in deps_checks:
                 # Get checks_id of dep
-                c.depend_on.append(check.id)
+                c.depend_on.append(check._id)
             # Ok, no more need because checks are not
             # take by host/service, and not returned
 
@@ -1491,7 +1491,7 @@ class SchedulingItem(Item):
                          notif_nb=next_notif_nb)
 
         # Keep a trace in our notifications queue
-        self.notifications_in_progress[n.id] = n
+        self.notifications_in_progress[n._id] = n
         # and put it in the temp queue for scheduler
         self.actions.append(n)
 
@@ -1559,7 +1559,7 @@ class SchedulingItem(Item):
                     # the status of a service may have changed from WARNING to CRITICAL
                     self.update_notification_command(child_n)
                     self.raise_notification_log_entry(child_n)
-                    self.notifications_in_progress[child_n.id] = child_n
+                    self.notifications_in_progress[child_n._id] = child_n
                     childnotifications.append(child_n)
 
                     if n.type == 'PROBLEM':
@@ -1607,7 +1607,7 @@ class SchedulingItem(Item):
             c_in_progress = self.checks_in_progress[0]  # 0 is OK because in_checking is True
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
-            # we need another c.id
+            # we need another c._id
             command_line = c_in_progress.command
             timeout = c_in_progress.timeout
             poller_tag = c_in_progress.poller_tag
@@ -1622,7 +1622,7 @@ class SchedulingItem(Item):
                       dependency_check=True)
 
             self.actions.append(c)
-            # print "Creating new check with new id : %d, old id : %d" % (c.id, c_in_progress.id)
+            # print "Creating new check with new id : %d, old id : %d" % (c._id, c_in_progress._id)
             return c
 
         if force or (not self.is_no_check_dependent()):
