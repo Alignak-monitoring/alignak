@@ -56,7 +56,6 @@ and interfaces classes for it to communicate with other daemons
 import os
 import time
 import traceback
-import sys
 import base64
 import zlib
 import cPickle
@@ -404,8 +403,6 @@ class Receiver(Satellite):
 
         :return: None
         """
-        sys.stdout.write(".")
-        sys.stdout.flush()
 
         # Begin to clean modules
         self.check_and_del_zombie_modules()
