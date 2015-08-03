@@ -109,9 +109,9 @@ class Metric:
     def __str__(self):
         s = "%s=%s%s" % (self.name, self.value, self.uom)
         if self.warning:
-            s = s + ";%s" % (self.warning)
+            s += ";%s" % (self.warning)
         if self.critical:
-            s = s + ";%s" % (self.critical)
+            s += ";%s" % (self.critical)
         return s
 
 

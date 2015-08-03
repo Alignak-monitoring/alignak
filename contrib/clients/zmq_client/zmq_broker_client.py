@@ -63,14 +63,14 @@ if len(sys.argv) > 1:
 # Serialization method
 method = ""
 if len(sys.argv) < 2 or sys.argv[1] == "json":
-	import json
-	method = "json"
+    import json
+    method = "json"
 elif sys.argv[1] == "msgpack":
-	import msgpack
-	method = "msgpack"
+    import msgpack
+    method = "msgpack"
 else:
-	print("Invalid serialization method.")
-	sys.exit(-1)
+    print("Invalid serialization method.")
+    sys.exit(-1)
 
 # ZeroMQ endpoint
 sub_endpoint = "tcp://127.0.0.1:12345"

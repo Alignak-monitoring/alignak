@@ -106,7 +106,7 @@ __ https://alignak.readthedocs.org/en/latest/
 
 
 If you find a bug
-================================
+=================
 
 Bugs are tracked in the `issue list on GitHub`__ . Always search for existing issues before filing a new one (use the search field at the top of the page).
 When filing a new bug, please remember to include:

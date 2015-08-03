@@ -243,7 +243,7 @@ class Item(object):
 
     def clean(self):
         """
-        Clean properties only need when initilize & configure
+        Clean properties only need when initialize & configure
 
         :return: None
         """
@@ -512,7 +512,7 @@ class Item(object):
         properties = self.__class__.properties
 
         # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.error("[item::%s] %s", self.get_name(), err)
@@ -622,7 +622,7 @@ class Item(object):
         :param notify: if to 1, send a notification
         :type notify: integer
         :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
+        :type persistent: bool
         :param author: name of the author or the acknowledge
         :type author: str
         :param comment: comment (description) of the acknowledge
@@ -1196,7 +1196,7 @@ class Items(object):
         :param name: name of item
         :type name: str
         :return: item
-        :rtype: alignak.objects.item.Item
+        :rtype: alignak.objects.item.Item | None
         """
         return self.name_to_item.get(name, None)
 
@@ -1554,7 +1554,7 @@ class Items(object):
                     continue
                 cnames = contactgroups.get_members_by_name(cgname)
                 # We add contacts into our contacts
-                if cnames != []:
+                if cnames:
                     if hasattr(item, 'contacts'):
                         item.contacts.extend(cnames)
                     else:

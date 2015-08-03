@@ -329,23 +329,26 @@ class Realm(Itemgroup):
 
         :return: None
         """
-        self.to_satellites = {}
-        self.to_satellites['reactionner'] = {}
-        self.to_satellites['poller'] = {}
-        self.to_satellites['broker'] = {}
-        self.to_satellites['receiver'] = {}
+        self.to_satellites = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
 
-        self.to_satellites_need_dispatch = {}
-        self.to_satellites_need_dispatch['reactionner'] = {}
-        self.to_satellites_need_dispatch['poller'] = {}
-        self.to_satellites_need_dispatch['broker'] = {}
-        self.to_satellites_need_dispatch['receiver'] = {}
+        self.to_satellites_need_dispatch = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
 
-        self.to_satellites_managed_by = {}
-        self.to_satellites_managed_by['reactionner'] = {}
-        self.to_satellites_managed_by['poller'] = {}
-        self.to_satellites_managed_by['broker'] = {}
-        self.to_satellites_managed_by['receiver'] = {}
+        self.to_satellites_managed_by = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
 
         self.count_reactionners()
         self.fill_potential_satellites_by_type('reactionners')
@@ -417,11 +420,12 @@ class Realm(Itemgroup):
         :return: dict containing pollers and reactionners config (key is satellite id)
         :rtype: dict
         """
-        cfg = {}
 
         # First we create/void theses links
-        cfg['pollers'] = {}
-        cfg['reactionners'] = {}
+        cfg = {
+            'pollers': {},
+            'reactionners': {}
+        }
 
         # First our own level
         for p in self.pollers:

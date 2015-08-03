@@ -110,7 +110,7 @@ class MacroModulation(Item):
         cls = self.__class__
 
         # Raised all previously saw errors like unknown commands or timeperiods
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.error("[item::%s] %s", self.get_name(), err)

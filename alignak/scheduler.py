@@ -267,7 +267,7 @@ class Scheduler(object):
         :param f_name: recurrent work name
         :type f_name: str
         :param new_tick: new value
-        :type new_tick: str
+        :type new_tick: int
         :return: None
         """
         for i in self.recurrent_works:

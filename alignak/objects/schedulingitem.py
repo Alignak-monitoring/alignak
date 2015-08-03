@@ -1054,7 +1054,7 @@ class SchedulingItem(Item):
 
         # C was waitdep, but now all dep are resolved, so check for deps
         if c.status == 'waitdep':
-            if c.depend_on_me != []:
+            if c.depend_on_me:
                 c.status = 'havetoresolvedep'
             else:
                 c.status = 'zombie'

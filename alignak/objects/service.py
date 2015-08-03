@@ -728,7 +728,7 @@ class Service(SchedulingItem):
             logger.warning("[service::%s] %s", desc, err)
 
         # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.error("[service::%s] %s", self.get_full_name(), err)
@@ -1694,7 +1694,7 @@ class Services(Items):
         objcls, hname, hgname, sdesc, in_file = var_tuple
         use = getattr(item, 'use', [])
 
-        if use == []:
+        if not use:
             mesg = "a %s has been defined without host_name nor " \
                    "hostgroups nor service_description and " \
                    "there is no use to create a unique key%s" % (objcls, in_file)
@@ -2013,8 +2013,8 @@ class Services(Items):
         :type hosts:
         :param s: The base service to explode
         :type s:
-        :param hnames:  The host_name list to explode service on
-        :type hnames: str
+        :param hnames: The host_name list to explode service on
+        :type hnames: list
         :return: None
         """
         duplicate_for_hosts = []  # get the list of our host_names if more than 1

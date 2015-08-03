@@ -228,7 +228,7 @@ class Escalation(Item):
                     state = False  # Bad boy...
 
         # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.info(err)

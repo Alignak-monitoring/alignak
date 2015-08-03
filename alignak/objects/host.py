@@ -722,7 +722,7 @@ class Host(SchedulingItem):
             logger.warning("[host::%s] %s", self.get_name(), err)
 
         # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
+        if self.configuration_errors:
             state = False
             for err in self.configuration_errors:
                 logger.error("[host::%s] %s", self.get_name(), err)
@@ -936,7 +936,7 @@ class Host(SchedulingItem):
         :param status: notification failure criteria, notification for a dependent host may vary
         :type status: list
         :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :type timeperiod: alignak.objects.timeperiod.Timeperiod | None
         :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
         :type inherits_parent: bool
         :return: None

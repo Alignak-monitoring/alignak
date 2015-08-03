@@ -11,10 +11,10 @@ def get_init_scripts(config):
     if 'win' in sys.platform:
         pass
     elif 'linux' in sys.platform or 'sunos5' in sys.platform:
-        data_files = data_files + "\netc/init.d = bin/init.d/*"
-        data_files = data_files + "\netc/default = bin/default/alignak.in"
+        data_files += "\netc/init.d = bin/init.d/*"
+        data_files += "\netc/default = bin/default/alignak.in"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        data_files = data_files + "\nusr/local/etc/rc.d = bin/rc.d/*"
+        data_files += "\nusr/local/etc/rc.d = bin/rc.d/*"
     else:
         raise "Unsupported platform, sorry"
         data_files = []

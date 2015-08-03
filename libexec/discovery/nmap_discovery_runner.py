@@ -236,12 +236,12 @@ class DetectedHost:
         return '%s::macvendor=%s' % (self.get_name(), self.mac_vendor)
 
     def get_discovery_ports(self):
-        if self.open_ports == []:
+        if not self.open_ports:
             return ''
         return '%s::openports=%s' % (self.get_name(), ','.join([str(p) for p in self.open_ports]))
 
     def get_discovery_parents(self):
-        if self.parents == []:
+        if not self.parents:
             return ''
         return '%s::parents=%s' % (self.get_name(), ','.join(self.parents))
 
@@ -357,9 +357,9 @@ for h in hosts:
     if ios:
         #print os.__dict__
         cls = ios.findall('osclass')
-	# if no osclass found, try bellow the osmatch element (nmap recent versions)
-	if len(cls) == 0:
-		cls = ios.find('osmatch').findall('osclass')
+    # if no osclass found, try bellow the osmatch element (nmap recent versions)
+    if len(cls) == 0:
+        cls = ios.find('osmatch').findall('osclass')
 
         for c in cls:
             #print "Class", c.__dict__

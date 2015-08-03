@@ -342,7 +342,7 @@ class HTTPDaemon(object):
         def register(self, obj):
             methods = inspect.getmembers(obj, predicate=inspect.ismethod)
             merge = [fname for (fname, f) in methods if fname in self.registered_fun_names]
-            if merge != []:
+            if merge:
                 methods_in = [m.__name__ for m in obj.__class__.__dict__.values()
                               if inspect.isfunction(m)]
                 methods = [m for m in methods if m[0] in methods_in]

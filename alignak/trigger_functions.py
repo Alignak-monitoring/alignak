@@ -165,8 +165,8 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
     :type output: None | str
     :param perfdata:
     :type perfdata: None | str
-    :param return_code:
-    :type return_code: None | str
+    :param return_code: return code from check
+    :type return_code: None | int
     :return: None
     """
     obj = get_object(obj_ref)
@@ -177,7 +177,7 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
     if return_code is None:
         return_code = obj.state_id
 
-    logger.debug("[trigger] Setting %s %s %s for object %s",
+    logger.debug("[trigger] Setting %s %s %d for object %s",
                  output,
                  perfdata,
                  return_code,

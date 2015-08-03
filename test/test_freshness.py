@@ -89,7 +89,7 @@ class TestFreshness(AlignakTest):
         self.assertEqual(0, len(svc.actions))
 
         # We make it 10s less than it was
-        svc.last_state_update = svc.last_state_update - 10
+        svc.last_state_update -= 10
 
         #svc.check_freshness = True
         # Now we active it, with a too small value (now - 10s is still higer than now - (1 - 15, the addition time)
@@ -104,7 +104,7 @@ class TestFreshness(AlignakTest):
         self.sched.run_external_command(cmd)
 
         # Ok, now, we remove again 10s. Here we will saw the new entry
-        svc.last_state_update = svc.last_state_update - 10
+        svc.last_state_update -= 10
         svc.do_check_freshness()
         self.assertEqual(1, len(svc.actions))
         # And we check for the message in the log too

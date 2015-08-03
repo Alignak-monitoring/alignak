@@ -485,9 +485,9 @@ class TestTimeperiods(AlignakTest):
 
 
     def test_issue_1385(self):
-        '''
+        """
         https://github.com/naparuba/shinken/issues/1385
-        '''
+        """
         tp = Timeperiod()
         tp.timeperiod_name = 'mercredi2-22-02'
         tp.resolve_daterange(tp.dateranges, 'wednesday 2              00:00-02:00,22:00-24:00')

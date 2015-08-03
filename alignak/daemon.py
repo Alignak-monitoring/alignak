@@ -898,13 +898,13 @@ class Daemon(object):
         :param socks: a socket file descriptor list
         :type socks:
         :param timeout: timeout to read from fd
-        :type timeout: int
+        :type timeout: float
         :return: A list of socket file descriptor ready to read
         :rtype: list
         """
         # some os are not managing void socks list, so catch this
         # and just so a simple sleep instead
-        if socks == []:
+        if not socks:
             time.sleep(timeout)
             return []
         try:
@@ -1177,7 +1177,7 @@ class Daemon(object):
         If suppl_socks is given it also looks for activity on that list of fd.
 
         :param timeout: timeout to wait for activity
-        :type timeout: int
+        :type timeout: float
         :param suppl_socks: list of fd to wait for activity
         :type suppl_socks: None | list
         :return:Returns a 3-tuple:

@@ -896,12 +896,12 @@ def got_generation_rule_pattern_change(xy_couples):
     """
     res = []
     xy_cpl = xy_couples
-    if xy_couples == []:
+    if not xy_couples:
         return []
     (x, y) = xy_cpl[0]
     for i in xrange(x, y + 1):
         n = got_generation_rule_pattern_change(xy_cpl[1:])
-        if n != []:
+        if n:
             for e in n:
                 res.append([i, '[%d-%d]' % (x, y), e])
         else:
@@ -934,7 +934,7 @@ def apply_change_recursive_pattern_change(s, rule):
     # print "replace %s by %s" % (r'%s' % m, str(i)), 'in', s
     s = s.replace(r'%s' % m, str(i))
     # print "And got", s
-    if t == []:
+    if not t:
         return s
     return apply_change_recursive_pattern_change(s, t)
 

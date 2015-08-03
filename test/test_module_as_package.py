@@ -29,8 +29,8 @@ from alignak.modulesmanager import ModulesManager
 modules_dir = join(dirname(abspath(__file__)), 'test_module_as_package')
 
 class TestModuleManager_And_Packages(AlignakTest):
-    ''' Test to make sure that we correctly import alignak modules.
-    '''
+    """ Test to make sure that we correctly import alignak modules.
+    """
 
     def test_conflicting_modules(self):
 

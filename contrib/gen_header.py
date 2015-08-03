@@ -196,7 +196,7 @@ def gen_header(repository, contrib_d):
                 regen_file("%s/%s" % (inode[0], pyfile),
                            gen_partial_header(find_real_id(contrib_list, contrib_d)))
                 print "====" * 15, "\n"
-                if previous_file == []:
+                if not previous_file:
                     print "---------" * 30
 
 
