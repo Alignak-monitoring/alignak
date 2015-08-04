@@ -109,9 +109,9 @@ class Packs(Items):
         """
         # Now walk for it
         for root, dirs, files in os.walk(path):
-            for file in files:
-                if re.search(r"\.pack$", file):
-                    p = os.path.join(root, file)
+            for p_file in files:
+                if re.search(r"\.pack$", p_file):
+                    p = os.path.join(root, p_file)
                     try:
                         fd = open(p, 'rU')
                         buf = fd.read()
@@ -120,7 +120,7 @@ class Packs(Items):
                         logger.error("Cannot open pack file '%s' for reading: %s", p, exp)
                         # ok, skip this one
                         continue
-                    self.create_pack(buf, file[:-5])
+                    self.create_pack(buf, p_file[:-5])
 
     def create_pack(self, buf, name):
         """

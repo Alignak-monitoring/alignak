@@ -284,7 +284,7 @@ class Worker:
             if action.status in ('done', 'timeout'):
                 to_del.append(action)
                 # We answer to the master
-                # msg = Message(_id=self._id, type='Result', data=action)
+                # msg = Message(_id=self._id, _type='Result', data=action)
                 try:
                     self.returns_queue.put(action)
                 except IOError, exp:

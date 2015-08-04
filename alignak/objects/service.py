@@ -1428,7 +1428,7 @@ class Service(SchedulingItem):
         """
         return self.check_command.get_name()
 
-    def notification_is_blocked_by_item(self, type, t_wished=None):
+    def notification_is_blocked_by_item(self, n_type, t_wished=None):
         """Check if a notification is blocked by the service.
         Conditions are ONE of the following::
 
@@ -1449,8 +1449,8 @@ class Service(SchedulingItem):
         * linked host is not up
         * linked host is in downtime
 
-        :param type: notification type
-        :type type:
+        :param n_type: notification type
+        :type n_type:
         :param t_wished: the time we should like to notify the host (mostly now)
         :type t_wished: float
         :return: True if ONE of the above condition was met, otherwise False
@@ -1480,7 +1480,7 @@ class Service(SchedulingItem):
         # Block if the current status is in the notification_options w,u,c,r,f,s
         if 'n' in self.notification_options:
             return True
-        if type in ('PROBLEM', 'RECOVERY'):
+        if n_type in ('PROBLEM', 'RECOVERY'):
             if self.state == 'UNKNOWN' and 'u' not in self.notification_options:
                 return True
             if self.state == 'WARNING' and 'w' not in self.notification_options:
@@ -1489,20 +1489,20 @@ class Service(SchedulingItem):
                 return True
             if self.state == 'OK' and 'r' not in self.notification_options:
                 return True
-        if (type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
                 and 'f' not in self.notification_options):
             return True
-        if (type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
                 and 's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if type == 'ACKNOWLEDGEMENT':
+        if n_type == 'ACKNOWLEDGEMENT':
             if self.state == self.ok_up:
                 return True
 
         # When in downtime, only allow end-of-downtime notifications
-        if self.scheduled_downtime_depth > 1 and type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             return True
 
         # Block if host is in a scheduled downtime
@@ -1510,20 +1510,20 @@ class Service(SchedulingItem):
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
-        if self.scheduled_downtime_depth > 0 and type in \
+        if self.scheduled_downtime_depth > 0 and n_type in \
                 ('PROBLEM', 'RECOVERY', 'FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             return True
 
         # Block if the status is SOFT
-        if self.state_type == 'SOFT' and type == 'PROBLEM':
+        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
             return True
 
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and type != 'ACKNOWLEDGEMENT':
+        if self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
             return True
 
         # Block if flapping
-        if self.is_flapping and type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             return True
 
         # Block if host is down
@@ -1535,7 +1535,7 @@ class Service(SchedulingItem):
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked() is True \
-                and type == 'PROBLEM':
+                and n_type == 'PROBLEM':
             return True
 
         return False

@@ -99,7 +99,7 @@ class TestTimeout(AlignakTest):
         nn = n.copy_shell()
 
         # Send the job to the worker
-        msg = Message(_id=0, type='Do', data=nn)
+        msg = Message(_id=0, _type='Do', data=nn)
         to_queue.put(msg)
 
         w.checks = []

@@ -137,11 +137,11 @@ class Downtime:
         else:
             active = "inactive"
         if self.fixed is True:
-            type = "fixed"
+            d_type = "fixed"
         else:
-            type = "flexible"
+            d_type = "flexible"
         return "%s %s Downtime id=%d %s - %s" % (
-            active, type, self._id, time.ctime(self.start_time), time.ctime(self.end_time))
+            active, d_type, self._id, time.ctime(self.start_time), time.ctime(self.end_time))
 
     def get_id(self):
         """

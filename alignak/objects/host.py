@@ -891,7 +891,7 @@ class Host(SchedulingItem):
         :return: True if other in act_depend_of list, otherwise False
         :rtype: bool
         """
-        for (h, status, type, timeperiod, inherits_parent) in self.act_depend_of:
+        for (h, status, _, timeperiod, inherits_parent) in self.act_depend_of:
             if h == other:
                 return True
         return False
@@ -908,17 +908,17 @@ class Host(SchedulingItem):
         """
         to_del = []
         # First we remove in my list
-        for (h, status, type, timeperiod, inherits_parent) in self.act_depend_of:
+        for (h, status, n_type, timeperiod, inherits_parent) in self.act_depend_of:
             if h == other:
-                to_del.append((h, status, type, timeperiod, inherits_parent))
+                to_del.append((h, status, n_type, timeperiod, inherits_parent))
         for t in to_del:
             self.act_depend_of.remove(t)
 
         # And now in the father part
         to_del = []
-        for (h, status, type, timeperiod, inherits_parent) in other.act_depend_of_me:
+        for (h, status, n_type, timeperiod, inherits_parent) in other.act_depend_of_me:
             if h == self:
-                to_del.append((h, status, type, timeperiod, inherits_parent))
+                to_del.append((h, status, n_type, timeperiod, inherits_parent))
         for t in to_del:
             other.act_depend_of_me.remove(t)
 
@@ -1488,7 +1488,7 @@ class Host(SchedulingItem):
         h, m = divmod(m, 60)
         return "%02dh %02dm %02ds" % (h, m, s)
 
-    def notification_is_blocked_by_item(self, type, t_wished=None):
+    def notification_is_blocked_by_item(self, n_type, t_wished=None):
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -1507,8 +1507,8 @@ class Host(SchedulingItem):
         * business rule smart notifications is enabled and all its children have been acknowledged
           or are under downtime
 
-        :param type: notification type
-        :type type:
+        :param n_type: notification type
+        :type n_type:
         :param t_wished: the time we should like to notify the host (mostly now)
         :type t_wished: float
         :return: True if ONE of the above condition was met, otherwise False
@@ -1539,50 +1539,50 @@ class Host(SchedulingItem):
         if 'n' in self.notification_options:
             return True
 
-        if type in ('PROBLEM', 'RECOVERY'):
+        if n_type in ('PROBLEM', 'RECOVERY'):
             if self.state == 'DOWN' and 'd' not in self.notification_options:
                 return True
             if self.state == 'UP' and 'r' not in self.notification_options:
                 return True
             if self.state == 'UNREACHABLE' and 'u' not in self.notification_options:
                 return True
-        if (type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
                 and 'f' not in self.notification_options):
             return True
-        if (type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
                 and 's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if type == 'ACKNOWLEDGEMENT':
+        if n_type == 'ACKNOWLEDGEMENT':
             if self.state == self.ok_up:
                 return True
 
         # Flapping
-        if type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        if n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             # TODO block if not notify_on_flapping
             if self.scheduled_downtime_depth > 0:
                 return True
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
-        if self.scheduled_downtime_depth > 1 and type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             return True
 
         # Block if in a scheduled downtime and a problem arises
-        if self.scheduled_downtime_depth > 0 and type in ('PROBLEM', 'RECOVERY'):
+        if self.scheduled_downtime_depth > 0 and n_type in ('PROBLEM', 'RECOVERY'):
             return True
 
         # Block if the status is SOFT
-        if self.state_type == 'SOFT' and type == 'PROBLEM':
+        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
             return True
 
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and type != 'ACKNOWLEDGEMENT':
+        if self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
             return True
 
         # Block if flapping
-        if self.is_flapping and type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             return True
 
         # Block if business rule smart notifications is enabled and all its
@@ -1590,7 +1590,7 @@ class Host(SchedulingItem):
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked() is True \
-                and type == 'PROBLEM':
+                and n_type == 'PROBLEM':
             return True
 
         return False

@@ -925,18 +925,18 @@ class Scheduler(object):
         else:
             logger.error("The received result type in unknown! %s", str(c.is_a))
 
-    def get_links_from_type(self, type):
+    def get_links_from_type(self, s_type):
         """Get poller link or reactionner link depending on the wanted type
 
-        :param type: type we want
-        :type type: str
+        :param s_type: type we want
+        :type s_type: str
         :return: links wanted
         :rtype: alignak.objects.pollerlink.PollerLinks |
                 alignak.objects.reactionnerlink.ReactionnerLinks | None
         """
         t = {'poller': self.pollers, 'reactionner': self.reactionners}
-        if type in t:
-            return t[type]
+        if s_type in t:
+            return t[s_type]
         return None
 
     def is_connection_try_too_close(self, elt):
@@ -953,20 +953,20 @@ class Scheduler(object):
             return True
         return False
 
-    def pynag_con_init(self, s_id, type='poller'):
+    def pynag_con_init(self, s_id, s_type='poller'):
         """Init or reinit connection to a poller or reactionner
         Used for passive daemons
 
         :param s_id: daemon s_id to connect to
         :type s_id: int
-        :param type: daemon type to connect to
-        :type type: str
+        :param s_type: daemon type to connect to
+        :type s_type: str
         :return: None
         """
         # Get good links tab for looping..
-        links = self.get_links_from_type(type)
+        links = self.get_links_from_type(s_type)
         if links is None:
-            logger.debug("Unknown '%s' type for connection!", type)
+            logger.debug("Unknown '%s' type for connection!", s_type)
             return
 
         # We want only to initiate connections to the passive
@@ -990,7 +990,7 @@ class Scheduler(object):
             con = links[s_id]['con']
         except HTTPExceptions, exp:
             logger.warning("Connection problem to the %s %s: %s",
-                           type, links[s_id]['name'], str(exp))
+                           s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
 
@@ -999,16 +999,16 @@ class Scheduler(object):
             con.get('ping')
         except HTTPExceptions, exp:
             logger.warning("Connection problem to the %s %s: %s",
-                           type, links[s_id]['name'], str(exp))
+                           s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
         except KeyError, exp:
             logger.warning("The %s '%s' is not initialized: %s",
-                           type, links[s_id]['name'], str(exp))
+                           s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
 
-        logger.info("Connection OK to the %s %s", type, links[s_id]['name'])
+        logger.info("Connection OK to the %s %s", s_type, links[s_id]['name'])
 
     def push_actions_to_passives_satellites(self):
         """Send actions/checks to passive poller/reactionners
@@ -1039,7 +1039,7 @@ class Scheduler(object):
                     p['con'] = None
                     return
             else:  # no connection? try to reconnect
-                self.pynag_con_init(p['instance_id'], type='poller')
+                self.pynag_con_init(p['instance_id'], s_type='poller')
 
         # TODO:factorize
         # We loop for our passive reactionners
@@ -1068,7 +1068,7 @@ class Scheduler(object):
                     p['con'] = None
                     return
             else:  # no connection? try to reconnect
-                self.pynag_con_init(p['instance_id'], type='reactionner')
+                self.pynag_con_init(p['instance_id'], s_type='reactionner')
 
     def get_actions_from_passives_satellites(self):
         """Get actions/checks results from passive poller/reactionners
@@ -1117,7 +1117,7 @@ class Scheduler(object):
                     p['con'] = None
                     continue
             else:  # no connection, try reinit
-                self.pynag_con_init(p['instance_id'], type='poller')
+                self.pynag_con_init(p['instance_id'], s_type='poller')
 
         # We loop for our passive reactionners
         for p in [p for p in self.reactionners.values() if p['passive']]:
@@ -1147,7 +1147,7 @@ class Scheduler(object):
                     p['con'] = None
                     return
             else:  # no connection, try reinit
-                self.pynag_con_init(p['instance_id'], type='reactionner')
+                self.pynag_con_init(p['instance_id'], s_type='reactionner')
 
     def manage_internal_checks(self):
         """Run internal checks
@@ -1951,10 +1951,10 @@ class Scheduler(object):
 
         # Now connect to the passive satellites if needed
         for p_id in self.pollers:
-            self.pynag_con_init(p_id, type='poller')
+            self.pynag_con_init(p_id, s_type='poller')
 
         for r_id in self.reactionners:
-            self.pynag_con_init(r_id, type='reactionner')
+            self.pynag_con_init(r_id, s_type='reactionner')
 
         # Ticks are for recurrent function call like consume
         # del zombies etc

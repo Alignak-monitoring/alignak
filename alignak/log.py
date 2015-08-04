@@ -153,18 +153,18 @@ class Log(logging.Logger):
                 continue
             handler.setLevel(level)
 
-    def load_obj(self, object, name_=None):
+    def load_obj(self, obj, name_=None):
         """ We load the object where we will put log broks
         with the 'add' method
 
-        :param object: object instance
-        :type object: object
+        :param obj: object instance
+        :type obj: object
         :param name_: name of object
         :type name_: str | None
         :return: None
         """
         global _brokhandler_
-        _brokhandler_ = BrokHandler(object)
+        _brokhandler_ = BrokHandler(obj)
         if name_ is not None or self.name is not None:
             if name_ is not None:
                 self.name = name_

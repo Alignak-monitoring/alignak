@@ -254,20 +254,20 @@ class Realm(Itemgroup):
                 if not receiver.spare and receiver.manage_sub_realms:
                     self.nb_receivers += 1
 
-    def get_satellties_by_type(self, type):
+    def get_satellties_by_type(self, s_type):
         """Generic function to access one of the satellite attribute
         ie : self.pollers, self.reactionners ...
 
-        :param type: satellite type wanted
-        :type type: str
+        :param s_type: satellite type wanted
+        :type s_type: str
         :return: self.*type*s
         :rtype: list
         """
 
-        if hasattr(self, type + 's'):
-            return getattr(self, type + 's')
+        if hasattr(self, s_type + 's'):
+            return getattr(self, s_type + 's')
         else:
-            logger.debug("[realm] do not have this kind of satellites: %s", type)
+            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return []
 
     def fill_potential_satellites_by_type(self, sat_type):
@@ -285,34 +285,34 @@ class Realm(Itemgroup):
                 if satellite.manage_sub_realms:
                     getattr(self, 'potential_%s' % sat_type).append(satellite)
 
-    def get_potential_satellites_by_type(self, type):
+    def get_potential_satellites_by_type(self, s_type):
         """Generic function to access one of the potential satellite attribute
         ie : self.potential_pollers, self.potential_reactionners ...
 
-        :param type: satellite type wanted
-        :type type: str
+        :param s_type: satellite type wanted
+        :type s_type: str
         :return: self.potential_*type*s
         :rtype: list
         """
-        if hasattr(self, 'potential_' + type + 's'):
-            return getattr(self, 'potential_' + type + 's')
+        if hasattr(self, 'potential_' + s_type + 's'):
+            return getattr(self, 'potential_' + s_type + 's')
         else:
-            logger.debug("[realm] do not have this kind of satellites: %s", type)
+            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return []
 
-    def get_nb_of_must_have_satellites(self, type):
+    def get_nb_of_must_have_satellites(self, s_type):
         """Generic function to access one of the number satellite attribute
         ie : self.nb_pollers, self.nb_reactionners ...
 
-        :param type: satellite type wanted
-        :type type: str
+        :param s_type: satellite type wanted
+        :type s_type: str
         :return: self.nb_*type*s
         :rtype: int
         """
-        if hasattr(self, 'nb_' + type + 's'):
-            return getattr(self, 'nb_' + type + 's')
+        if hasattr(self, 'nb_' + s_type + 's'):
+            return getattr(self, 'nb_' + s_type + 's')
         else:
-            logger.debug("[realm] do not have this kind of satellites: %s", type)
+            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return 0
 
     # Fill dict of realms for managing the satellites confs

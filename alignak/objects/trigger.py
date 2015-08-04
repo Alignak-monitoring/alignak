@@ -147,9 +147,9 @@ class Triggers(Items):
         """
         # Now walk for it
         for root, dirs, files in os.walk(path):
-            for file in files:
-                if re.search(r"\.trig$", file):
-                    p = os.path.join(root, file)
+            for t_file in files:
+                if re.search(r"\.trig$", t_file):
+                    p = os.path.join(root, t_file)
                     try:
                         fd = open(p, 'rU')
                         buf = fd.read()
@@ -158,7 +158,7 @@ class Triggers(Items):
                         logger.error("Cannot open trigger file '%s' for reading: %s", p, exp)
                         # ok, skip this one
                         continue
-                    self.create_trigger(buf, file[:-5])
+                    self.create_trigger(buf, t_file[:-5])
 
     def create_trigger(self, src, name):
         """Create a trigger with source and name

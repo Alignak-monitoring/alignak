@@ -59,8 +59,8 @@ class Message:
     _data = None
     _from = None
 
-    def __init__(self, _id, type, data=None, source=None):
-        self._type = type
+    def __init__(self, _id, _type, data=None, source=None):
+        self._type = _type
         self._data = data
         self._from = _id
         self.source = source

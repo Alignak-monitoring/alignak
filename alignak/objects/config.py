@@ -518,8 +518,8 @@ class Config(Item):
         'enable_embedded_perl':
             BoolProp(managed=False,
                      default=True,
-                     help='It will surely never be managed, '
-                          'but it should not be useful with poller performances.'),
+                     _help='It will surely never be managed, '
+                           'but it should not be useful with poller performances.'),
         'use_embedded_perl_implicitly':
             BoolProp(managed=False, default=False),
 
@@ -541,8 +541,8 @@ class Config(Item):
         'use_regexp_matching':
             BoolProp(managed=False,
                      default=False,
-                     help='If you go some host or service definition like prod*, '
-                          'it will surely failed from now, sorry.'),
+                     _help='If you go some host or service definition like prod*, '
+                           'it will surely failed from now, sorry.'),
         'use_true_regexp_matching':
             BoolProp(managed=False, default=None),
 
@@ -918,21 +918,21 @@ class Config(Item):
         # just a first pass to get the cfg_file and all files in a buf
         res = StringIO()
 
-        for file in files:
+        for c_file in files:
             # We add a \n (or \r\n) to be sure config files are separated
             # if the previous does not finish with a line return
             res.write(os.linesep)
-            res.write('# IMPORTEDFROM=%s' % (file) + os.linesep)
+            res.write('# IMPORTEDFROM=%s' % (c_file) + os.linesep)
             if self.read_config_silent == 0:
-                logger.info("[config] opening '%s' configuration file", file)
+                logger.info("[config] opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
-                fd = open(file, 'rU')
+                fd = open(c_file, 'rU')
                 buf = fd.readlines()
                 fd.close()
-                self.config_base_dir = os.path.dirname(file)
+                self.config_base_dir = os.path.dirname(c_file)
             except IOError, exp:
-                logger.error("[config] cannot open config file '%s' for reading: %s", file, exp)
+                logger.error("[config] cannot open config file '%s' for reading: %s", c_file, exp)
                 # The configuration is invalid because we have a bad file!
                 self.conf_is_correct = False
                 continue
@@ -980,22 +980,22 @@ class Config(Item):
 
                     # Now walk for it.
                     for root, dirs, files in os.walk(cfg_dir_name, followlinks=True):
-                        for file in files:
-                            if re.search(r"\.cfg$", file):
+                        for c_file in files:
+                            if re.search(r"\.cfg$", c_file):
                                 if self.read_config_silent == 0:
                                     logger.info("Processing object config file '%s'",
-                                                os.path.join(root, file))
+                                                os.path.join(root, c_file))
                                 try:
                                     res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                              (os.path.join(root, file)) + os.linesep)
-                                    fd = open(os.path.join(root, file), 'rU')
+                                              (os.path.join(root, c_file)) + os.linesep)
+                                    fd = open(os.path.join(root, c_file), 'rU')
                                     res.write(fd.read().decode('utf8', 'replace'))
                                     # Be sure to separate files data
                                     res.write(os.linesep)
                                     fd.close()
                                 except IOError, exp:
                                     logger.error("Cannot open config file '%s' for reading: %s",
-                                                 os.path.join(root, file), exp)
+                                                 os.path.join(root, c_file), exp)
                                     # The configuration is invalid
                                     # because we have a bad file!
                                     self.conf_is_correct = False
@@ -1125,9 +1125,9 @@ class Config(Item):
         # And then update our MACRO dict
         self.fill_resource_macros_names_macros()
 
-        for type in objectscfg:
-            objects[type] = []
-            for items in objectscfg[type]:
+        for o_type in objectscfg:
+            objects[o_type] = []
+            for items in objectscfg[o_type]:
                 tmp = {}
                 for line in items:
                     elts = self._cut_line(line)
@@ -1139,7 +1139,7 @@ class Config(Item):
                     value = ' '.join(elts[1:])
                     tmp[prop].append(value)
                 if tmp != {}:
-                    objects[type].append(tmp)
+                    objects[o_type].append(tmp)
 
         return objects
 
@@ -1178,17 +1178,17 @@ class Config(Item):
             if t not in early_created_types:
                 self.create_objects_for_type(raw_objects, t)
 
-    def create_objects_for_type(self, raw_objects, type):
-        """Generic function to create object regarding the type
+    def create_objects_for_type(self, raw_objects, o_type):
+        """Generic function to create object regarding the o_type
 
         :param raw_objects: Raw object we need to instantiate objects
         :type raw_objects: dict
-        :param type: the object type we want to create
+        :param o_type: the object type we want to create
         :type type: object
         :return: None
         """
         types_creations = self.__class__.types_creations
-        t = type
+        t = o_type
         # Ex: the above code do for timeperiods:
         # timeperiods = []
         # for timeperiodcfg in objects['timeperiod']:

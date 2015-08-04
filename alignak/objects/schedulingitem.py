@@ -479,9 +479,9 @@ class SchedulingItem(Item):
         # So if one logic is Raise, is dep
         # is one network is no ok, is not dep
         # at the end, raise no dep
-        for (dep, status, type, tp, inh_par) in self.act_depend_of:
+        for (dep, status, n_type, tp, inh_par) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
-            if type == 'logic_dep':
+            if n_type == 'logic_dep':
                 for s in status:
                     if dep.is_state(s):
                         return True
@@ -509,9 +509,9 @@ class SchedulingItem(Item):
         """
         parent_is_down = []
         # We must have all parents raised to be unreachable
-        for (dep, status, type, tp, inh_par) in self.act_depend_of:
+        for (dep, status, n_type, tp, inh_par) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
-            if type == 'network_dep':
+            if n_type == 'network_dep':
                 p_is_down = False
                 dep_match = [dep.is_state(s) for s in status]
                 if True in dep_match:  # the parent match a case, so he is down
@@ -547,7 +547,7 @@ class SchedulingItem(Item):
 
         # Ok, I do not raise dep, but my dep maybe raise me
         now = time.time()
-        for (dep, status, type, tp, inh_parent) in self.chk_depend_of:
+        for (dep, status, _, tp, inh_parent) in self.chk_depend_of:
             if dep.do_i_raise_dependency(status, inh_parent):
                 if tp is None or tp.is_time_valid(now):
                     return True
@@ -563,7 +563,7 @@ class SchedulingItem(Item):
         :rtype: bool
         """
         now = time.time()
-        for (dep, status, type, tp, inh_parent) in self.chk_depend_of:
+        for (dep, status, _, tp, inh_parent) in self.chk_depend_of:
             if tp is None or tp.is_time_valid(now):
                 if dep.do_i_raise_dependency(status, inh_parent):
                     return True
@@ -583,7 +583,7 @@ class SchedulingItem(Item):
         now = time.time()
         cls = self.__class__
         checks = []
-        for (dep, status, type, tp, inh_par) in self.act_depend_of:
+        for (dep, status, _, tp, inh_par) in self.act_depend_of:
             # If the dep timeperiod is not valid, do notraise the dep,
             # None=everytime
             if tp is None or tp.is_time_valid(now):
@@ -1432,13 +1432,13 @@ class SchedulingItem(Item):
 
         return list(contacts)
 
-    def create_notifications(self, type, t_wished=None):
+    def create_notifications(self, n_type, t_wished=None):
         """Create a "master" notification here, which will later
         (immediately before the reactionner gets it) be split up
         in many "child" notifications, one for each contact.
 
-        :param type: notification type ("PROBLEM", "RECOVERY" ...)
-        :type type: str
+        :param n_type: notification type ("PROBLEM", "RECOVERY" ...)
+        :type n_type: str
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None
@@ -1450,7 +1450,7 @@ class SchedulingItem(Item):
             now = time.time()
             t_wished = now
             # if first notification, we must add first_notification_delay
-            if self.current_notification_number == 0 and type == 'PROBLEM':
+            if self.current_notification_number == 0 and n_type == 'PROBLEM':
                 last_time_non_ok_or_up = self.last_time_non_ok_or_up()
                 if last_time_non_ok_or_up == 0:
                     # this happens at initial
@@ -1466,19 +1466,19 @@ class SchedulingItem(Item):
             # We follow our order
             t = t_wished
 
-        if self.notification_is_blocked_by_item(type, t_wished) and \
+        if self.notification_is_blocked_by_item(n_type, t_wished) and \
                 self.first_notification_delay == 0 and self.notification_interval == 0:
             # If notifications are blocked on the host/service level somehow
             # and repeated notifications are not configured,
             # we can silently drop this one
             return
-        if type == 'PROBLEM':
+        if n_type == 'PROBLEM':
             # Create the notification with an incremented notification_number.
             # The current_notification_number  of the item itself will only
             # be incremented when this notification (or its children)
             # have actually be sent.
             next_notif_nb = self.current_notification_number + 1
-        elif type == 'RECOVERY':
+        elif n_type == 'RECOVERY':
             # Recovery resets the notification counter to zero
             self.current_notification_number = 0
             next_notif_nb = self.current_notification_number
@@ -1486,7 +1486,7 @@ class SchedulingItem(Item):
             # downtime/flap/etc do not change the notification number
             next_notif_nb = self.current_notification_number
 
-        n = Notification(type, 'scheduled', 'VOID', None, self, None, t,
+        n = Notification(n_type, 'scheduled', 'VOID', None, self, None, t,
                          timeout=cls.notification_timeout,
                          notif_nb=next_notif_nb)
 
