@@ -807,7 +807,7 @@ class Satellite(BaseSatellite):
         :type a: alignak.action.Action
         :return: None
         """
-        msg = Message(_id=0, type='Do', data=a)
+        msg = Message(_id=0, _type='Do', data=a)
         (i, q) = self._got_queue_from_action(a)
         # Tag the action as "in the worker i"
         a.worker_id = i

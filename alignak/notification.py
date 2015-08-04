@@ -127,7 +127,7 @@ class Notification(Action):
         'SERVICENOTIFICATIONID':    '_id'
     }
 
-    def __init__(self, type='PROBLEM', status='scheduled', command='UNSET',
+    def __init__(self, _type='PROBLEM', status='scheduled', command='UNSET',
                  command_call=None, ref=None, contact=None, t_to_go=0,
                  contact_name='', host_name='', service_description='',
                  reason_type=1, state=0, ack_author='', ack_data='',
@@ -137,7 +137,7 @@ class Notification(Action):
                  reactionner_tag='None', enable_environment_macros=0):
 
         self.is_a = 'notification'
-        self.type = type
+        self.type = _type
         if _id is None:  # _id != None is for copy call only
             self._id = Action._id
             Action._id += 1

@@ -237,42 +237,42 @@ class Broker(BaseSatellite):
             return True
         return False
 
-    def pynag_con_init(self, _id, type='scheduler'):
+    def pynag_con_init(self, _id, i_type='scheduler'):
         """Wrapper function for the real function do_
         just for timing the connection
 
         :param _id: id
         :type _id: int
-        :param type: type of item
-        :type type: str
+        :param i_type: type of item
+        :type i_type: str
         :return: do_pynag_con_init return always True, so we return always True
         :rtype: bool
         """
         _t = time.time()
-        r = self.do_pynag_con_init(_id, type)
-        statsmgr.incr('con-init.%s' % type, time.time() - _t)
+        r = self.do_pynag_con_init(_id, i_type)
+        statsmgr.incr('con-init.%s' % i_type, time.time() - _t)
         return r
 
-    def do_pynag_con_init(self, s_id, type='scheduler'):
+    def do_pynag_con_init(self, s_id, i_type='scheduler'):
         """Initialize or re-initialize connection with scheduler or arbiter if type == arbiter
 
         :param s_id: s_id
         :type s_id: int
-        :param type: type of item
-        :type type: str
+        :param i_type: type of item
+        :type i_type: str
         :return: None
         """
         # Get the good links tab for looping..
-        links = self.get_links_from_type(type)
+        links = self.get_links_from_type(i_type)
         if links is None:
-            logger.debug('Type unknown for connection! %s', type)
+            logger.debug('Type unknown for connection! %s', i_type)
             return
 
         # default timeout for daemons like pollers/reactionners/...
         timeout = 3
         data_timeout = 120
 
-        if type == 'scheduler':
+        if i_type == 'scheduler':
             # If sched is not active, I do not try to init
             # it is just useless
             is_active = links[s_id]['active']
@@ -300,7 +300,8 @@ class Broker(BaseSatellite):
         except HTTPExceptions, exp:
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
-            logger.info("Connection problem to the %s %s: %s", type, links[s_id]['name'], str(exp))
+            logger.info("Connection problem to the %s %s: %s",
+                        i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
 
@@ -315,27 +316,28 @@ class Broker(BaseSatellite):
             # So we clear all verifs, they are obsolete now.
             if new_run_id != running_id:
                 logger.debug("[%s] New running s_id for the %s %s: %s (was %s)",
-                             self.name, type, links[s_id]['name'], new_run_id, running_id)
+                             self.name, i_type, links[s_id]['name'], new_run_id, running_id)
                 links[s_id]['broks'].clear()
                 # we must ask for a new full broks if
                 # it's a scheduler
-                if type == 'scheduler':
+                if i_type == 'scheduler':
                     logger.debug("[%s] I ask for a broks generation to the scheduler %s",
                                  self.name, links[s_id]['name'])
                     con.get('fill_initial_broks', {'bname': self.name}, wait='long')
             # Ok all is done, we can save this new running s_id
             links[s_id]['running_id'] = new_run_id
         except HTTPExceptions, exp:
-            logger.info("Connection problem to the %s %s: %s", type, links[s_id]['name'], str(exp))
+            logger.info("Connection problem to the %s %s: %s",
+                        i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
         except KeyError, exp:
-            logger.info("the %s '%s' is not initialized: %s", type, links[s_id]['name'], str(exp))
+            logger.info("the %s '%s' is not initialized: %s", i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             traceback.print_stack()
             return
 
-        logger.info("Connection OK to the %s %s", type, links[s_id]['name'])
+        logger.info("Connection OK to the %s %s", i_type, links[s_id]['name'])
 
     def manage_brok(self, b):
         """Get a brok.
@@ -387,17 +389,17 @@ class Broker(BaseSatellite):
             self.add_broks_to_queue(self.arbiter_broks)
             self.arbiter_broks = []
 
-    def get_new_broks(self, type='scheduler'):
+    def get_new_broks(self, i_type='scheduler'):
         """Get new broks from daemon defined in type parameter
 
-        :param type: type of object
-        :type type: str
+        :param i_type: type of object
+        :type i_type: str
         :return: None
         """
         # Get the good links tab for looping..
-        links = self.get_links_from_type(type)
+        links = self.get_links_from_type(i_type)
         if links is None:
-            logger.debug('Type unknown for connection! %s', type)
+            logger.debug('Type unknown for connection! %s', i_type)
             return
 
         # We check for new check in each schedulers and put
@@ -426,19 +428,19 @@ class Broker(BaseSatellite):
                     self.add_broks_to_queue(tmp_broks.values())
 
                 else:  # no con? make the connection
-                    self.pynag_con_init(sched_id, type=type)
+                    self.pynag_con_init(sched_id, i_type=i_type)
             # Ok, con is not known, so we create it
             except KeyError, exp:
                 logger.debug("Key error for get_broks : %s", str(exp))
-                self.pynag_con_init(sched_id, type=type)
+                self.pynag_con_init(sched_id, i_type=i_type)
             except HTTPExceptions, exp:
                 logger.warning("Connection problem to the %s %s: %s",
-                               type, links[sched_id]['name'], str(exp))
+                               i_type, links[sched_id]['name'], str(exp))
                 links[sched_id]['con'] = None
             # scheduler must not #be initialized
             except AttributeError, exp:
                 logger.warning("The %s %s should not be initialized: %s",
-                               type, links[sched_id]['name'], str(exp))
+                               i_type, links[sched_id]['name'], str(exp))
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
@@ -703,13 +705,13 @@ class Broker(BaseSatellite):
 
         # Connection init with Schedulers
         for sched_id in self.schedulers:
-            self.pynag_con_init(sched_id, type='scheduler')
+            self.pynag_con_init(sched_id, i_type='scheduler')
 
         for pol_id in self.pollers:
-            self.pynag_con_init(pol_id, type='poller')
+            self.pynag_con_init(pol_id, i_type='poller')
 
         for rea_id in self.reactionners:
-            self.pynag_con_init(rea_id, type='reactionner')
+            self.pynag_con_init(rea_id, i_type='reactionner')
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)

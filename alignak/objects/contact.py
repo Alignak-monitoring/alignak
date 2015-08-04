@@ -152,15 +152,15 @@ class Contact(Item):
         except AttributeError:
             return 'UnnamedContact'
 
-    def want_service_notification(self, t, state, type, business_impact, cmd=None):
+    def want_service_notification(self, t, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
 
         :param t: time we want to notify the contact (usually now)
         :type t: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
-        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
-        :type type: str
+        :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type n_type: str
         :param business_impact: impact of this service
         :type business_impact: int
         :param cmd: command launched to notify the contact
@@ -179,22 +179,22 @@ class Contact(Item):
         # Now the rest is for sub notificationways. If one is OK, we are ok
         # We will filter in another phase
         for nw in self.notificationways:
-            nw_b = nw.want_service_notification(t, state, type, business_impact, cmd)
+            nw_b = nw.want_service_notification(t, state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
         # Oh... no one is ok for it? so no, sorry
         return False
 
-    def want_host_notification(self, t, state, type, business_impact, cmd=None):
+    def want_host_notification(self, t, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
 
         :param t: time we want to notify the contact (usually now)
         :type t: int
         :param state: host or service state ("UP", "DOWN" ..)
         :type state: str
-        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
-        :type type: str
+        :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type n_type: str
         :param business_impact: impact of this host
         :type business_impact: int
         :param cmd: command launch to notify the contact
@@ -213,24 +213,24 @@ class Contact(Item):
         # Now it's all for sub notificationways. If one is OK, we are OK
         # We will filter in another phase
         for nw in self.notificationways:
-            nw_b = nw.want_host_notification(t, state, type, business_impact, cmd)
+            nw_b = nw.want_host_notification(t, state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
         # Oh, nobody..so NO :)
         return False
 
-    def get_notification_commands(self, type):
+    def get_notification_commands(self, n_type):
         """Get notification commands for object type
 
-        :param type: object type (host or service)
-        :type type: object
+        :param n_type: object type (host or service)
+        :type n_type: object
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
         r = []
         # service_notification_commands for service
-        notif_commands_prop = type + '_notification_commands'
+        notif_commands_prop = n_type + '_notification_commands'
         for nw in self.notificationways:
             r.extend(getattr(nw, notif_commands_prop))
         return r

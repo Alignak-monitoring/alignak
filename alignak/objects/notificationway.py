@@ -112,7 +112,7 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, t, state, type, business_impact, cmd=None):
+    def want_service_notification(self, t, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -127,8 +127,8 @@ class NotificationWay(Item):
         :type t: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
-        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
-        :type type: str
+        :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type n_type: str
         :param business_impact: impact of this service
         :type business_impact: int
         :param cmd: command launched to notify the contact
@@ -154,24 +154,24 @@ class NotificationWay(Item):
             return False
         t = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
              'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's'}
-        if type == 'PROBLEM':
+        if n_type == 'PROBLEM':
             if state in t:
                 return b and t[state] in self.service_notification_options
-        elif type == 'RECOVERY':
-            if type in t:
-                return b and t[type] in self.service_notification_options
-        elif type == 'ACKNOWLEDGEMENT':
+        elif n_type == 'RECOVERY':
+            if n_type in t:
+                return b and t[n_type] in self.service_notification_options
+        elif n_type == 'ACKNOWLEDGEMENT':
             return b
-        elif type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             return b and 'f' in self.service_notification_options
-        elif type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             # No notification when a downtime was cancelled. Is that true??
             # According to the documentation we need to look at _host_ options
             return b and 's' in self.host_notification_options
 
         return False
 
-    def want_host_notification(self, t, state, type, business_impact, cmd=None):
+    def want_host_notification(self, t, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -186,8 +186,8 @@ class NotificationWay(Item):
         :type t: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
-        :param type: type of notification ("PROBLEM", "RECOVERY" ..)
-        :type type: str
+        :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
+        :type n_type: str
         :param business_impact: impact of this service
         :type business_impact: int
         :param cmd: command launched to notify the contact
@@ -213,31 +213,31 @@ class NotificationWay(Item):
             return False
         t = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
              'FLAPPING': 'f', 'DOWNTIME': 's'}
-        if type == 'PROBLEM':
+        if n_type == 'PROBLEM':
             if state in t:
                 return b and t[state] in self.host_notification_options
-        elif type == 'RECOVERY':
-            if type in t:
-                return b and t[type] in self.host_notification_options
-        elif type == 'ACKNOWLEDGEMENT':
+        elif n_type == 'RECOVERY':
+            if n_type in t:
+                return b and t[n_type] in self.host_notification_options
+        elif n_type == 'ACKNOWLEDGEMENT':
             return b
-        elif type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             return b and 'f' in self.host_notification_options
-        elif type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             return b and 's' in self.host_notification_options
 
         return False
 
-    def get_notification_commands(self, type):
+    def get_notification_commands(self, o_type):
         """Get notification commands for object type
 
-        :param type: object type (host or service)
-        :type type: str
+        :param o_type: object type (host or service)
+        :type o_type: str
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
         # service_notification_commands for service
-        notif_commands_prop = type + '_notification_commands'
+        notif_commands_prop = o_type + '_notification_commands'
         notif_commands = getattr(self, notif_commands_prop)
         return notif_commands
 

@@ -60,8 +60,8 @@ class Brok:
     _id = 0
     my_type = 'brok'
 
-    def __init__(self, type, data):
-        self.type = type
+    def __init__(self, _type, data):
+        self.type = _type
         self._id = self.__class__._id
         self.__class__._id += 1
         self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)

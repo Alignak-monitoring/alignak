@@ -1125,9 +1125,9 @@ class Config(Item):
         # And then update our MACRO dict
         self.fill_resource_macros_names_macros()
 
-        for type in objectscfg:
-            objects[type] = []
-            for items in objectscfg[type]:
+        for o_type in objectscfg:
+            objects[o_type] = []
+            for items in objectscfg[o_type]:
                 tmp = {}
                 for line in items:
                     elts = self._cut_line(line)
@@ -1139,7 +1139,7 @@ class Config(Item):
                     value = ' '.join(elts[1:])
                     tmp[prop].append(value)
                 if tmp != {}:
-                    objects[type].append(tmp)
+                    objects[o_type].append(tmp)
 
         return objects
 
@@ -1178,17 +1178,17 @@ class Config(Item):
             if t not in early_created_types:
                 self.create_objects_for_type(raw_objects, t)
 
-    def create_objects_for_type(self, raw_objects, type):
-        """Generic function to create object regarding the type
+    def create_objects_for_type(self, raw_objects, o_type):
+        """Generic function to create object regarding the o_type
 
         :param raw_objects: Raw object we need to instantiate objects
         :type raw_objects: dict
-        :param type: the object type we want to create
+        :param o_type: the object type we want to create
         :type type: object
         :return: None
         """
         types_creations = self.__class__.types_creations
-        t = type
+        t = o_type
         # Ex: the above code do for timeperiods:
         # timeperiods = []
         # for timeperiodcfg in objects['timeperiod']:
