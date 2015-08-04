@@ -138,7 +138,7 @@ class Config(Item):
     """
     cache_path = "objects.cache"
     my_type = "config"
-    id = 1
+    _id = 1
 
     # Properties:
     # *required: if True, there is not default, and the config must put them
@@ -2336,10 +2336,10 @@ class Config(Item):
             packindex = 0
             packindices = {}
             for s in no_spare_schedulers:
-                packindices[s.id] = packindex
+                packindices[s._id] = packindex
                 packindex += 1
                 for i in xrange(0, s.weight):
-                    weight_list.append(s.id)
+                    weight_list.append(s._id)
 
             rr = itertools.cycle(weight_list)
 
@@ -2438,7 +2438,7 @@ class Config(Item):
 
             # we need a deepcopy because each conf
             # will have new hostgroups
-            cur_conf.id = i
+            cur_conf._id = i
             cur_conf.commands = self.commands
             cur_conf.timeperiods = self.timeperiods
             # Create hostgroups with just the name and same id, but no members
@@ -2505,9 +2505,9 @@ class Config(Item):
                 mbrs_id = []
                 for h in mbrs:
                     if h is not None:
-                        mbrs_id.append(h.id)
+                        mbrs_id.append(h._id)
                 for h in cfg.hosts:
-                    if h.id in mbrs_id:
+                    if h._id in mbrs_id:
                         hg.members.append(h)
 
             # And also relink the hosts with the valid hostgroups
@@ -2526,9 +2526,9 @@ class Config(Item):
                 mbrs_id = []
                 for s in mbrs:
                     if s is not None:
-                        mbrs_id.append(s.id)
+                        mbrs_id.append(s._id)
                 for s in cfg.services:
-                    if s.id in mbrs_id:
+                    if s._id in mbrs_id:
                         sg.members.append(s)
 
             # And also relink the services with the valid servicegroups

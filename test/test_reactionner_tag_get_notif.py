@@ -81,7 +81,7 @@ class TestReactionnerTagGetNotifs(AlignakTest):
             # In fact they are already launched, so we-reenabled them :)
             print "AHAH?", a.status, a.__class__.my_type
             if a.__class__.my_type == 'notification' and (a.status == 'zombie' or a.status == ' scheduled'):
-                to_del.append(a.id)
+                to_del.append(a._id)
 
             a.status = 'scheduled'
             # And look for good tagging

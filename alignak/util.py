@@ -795,12 +795,12 @@ def sort_by_ids(x, y):
     :type x: int
     :param y: second elem to compare
     :type y: int
-    :return: x > y (1) if x.id > y.id, x == y (0) if id equals, x < y (-1) else
+    :return: x > y (1) if x._id > y._id, x == y (0) if id equals, x < y (-1) else
     :rtype: int
     """
-    if x.id < y.id:
+    if x._id < y._id:
         return -1
-    if x.id > y.id:
+    if x._id > y._id:
         return 1
     # So is equal
     return 0

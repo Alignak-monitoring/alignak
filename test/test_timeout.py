@@ -81,13 +81,13 @@ class TestTimeout(AlignakTest):
         # This testscript plays the role of the reactionner
         # Now "fork" a worker
         w = Worker(1, to_queue, from_queue, 1)
-        w.id = 1
+        w._id = 1
         w.i_am_dying = False
 
         # We prepare a notification in the to_queue
         c = Contact()
         c.contact_name = "mr.schinken"
-        n = Notification('PROBLEM', 'scheduled', 'libexec/sleep_command.sh 7', '', svc, '', '', id=1)
+        n = Notification('PROBLEM', 'scheduled', 'libexec/sleep_command.sh 7', '', svc, '', '', _id=1)
         n.status = "queue"
         #n.command = "libexec/sleep_command.sh 7"
         n.t_to_go = time.time()
@@ -99,7 +99,7 @@ class TestTimeout(AlignakTest):
         nn = n.copy_shell()
 
         # Send the job to the worker
-        msg = Message(id=0, type='Do', data=nn)
+        msg = Message(_id=0, type='Do', data=nn)
         to_queue.put(msg)
 
         w.checks = []
@@ -128,7 +128,7 @@ class TestTimeout(AlignakTest):
         control_queue.close()
 
         # Now look what the scheduler says to all this
-        self.sched.actions[n.id] = n
+        self.sched.actions[n._id] = n
         self.sched.put_results(o)
         self.show_logs()
         self.assert_any_log_match("Contact mr.schinken service notification command 'libexec/sleep_command.sh 7 ' timed out after 2 seconds")

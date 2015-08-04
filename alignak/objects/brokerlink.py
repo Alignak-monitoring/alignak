@@ -52,7 +52,7 @@ class BrokerLink(SatelliteLink):
     """
     Class to manage the broker information
     """
-    id = 0
+    _id = 0
     my_type = 'broker'
     properties = SatelliteLink.properties.copy()
     properties.update({

@@ -76,7 +76,7 @@ __all__ = ('Action', )
 
 valid_exit_status = (0, 1, 2, 3)
 
-only_copy_prop = ('id', 'status', 'command', 't_to_go', 'timeout',
+only_copy_prop = ('_id', 'status', 'command', 't_to_go', 'timeout',
                   'env', 'module_type', 'execution_time', 'u_time', 's_time')
 
 shellchars = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
@@ -105,17 +105,17 @@ class __Action(object):
     This abstract class is used just for having a common id for both
     actions and checks.
     """
-    id = 0
+    _id = 0
 
     @staticmethod
     def assume_at_least_id(_id):
-        """Set Action.id to the maximum of itself and _id
+        """Set Action._id to the maximum of itself and _id
 
         :param _id: action id to compare (from a previous run usually)
         :type _id: int
         :return: None
         """
-        Action.id = max(Action.id, _id)
+        Action._id = max(Action._id, _id)
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""

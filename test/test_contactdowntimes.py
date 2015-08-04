@@ -184,7 +184,7 @@ class TestContactDowntime(AlignakTest):
         self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL')
         self.show_and_clear_logs()
 
-        downtime_id = test_contact.downtimes[0].id
+        downtime_id = test_contact.downtimes[0]._id
         # OK, Now we cancel this downtime, we do not need it anymore
         cmd = "[%lu] DEL_CONTACT_DOWNTIME;%d" % (now, downtime_id)
         self.sched.run_external_command(cmd)

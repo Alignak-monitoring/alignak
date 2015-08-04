@@ -309,7 +309,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('id', 0),
+        ('_id', 0),
         ])
 
     def setUp(self):
@@ -478,7 +478,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('id', 0),
+        ('_id', 0),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
@@ -661,7 +661,7 @@ class TestRealm(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('id', 0),
+        ('_id', 0),
         ('realm_members', []),
         ('higher_realms', []),
         ('default', False),
@@ -785,7 +785,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('id', 0),
+        ('_id', 0),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),

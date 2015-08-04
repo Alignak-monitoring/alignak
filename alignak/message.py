@@ -59,10 +59,10 @@ class Message:
     _data = None
     _from = None
 
-    def __init__(self, id, type, data=None, source=None):
+    def __init__(self, _id, type, data=None, source=None):
         self._type = type
         self._data = data
-        self._from = id
+        self._from = _id
         self.source = source
 
     def get_type(self):

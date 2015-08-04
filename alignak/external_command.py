@@ -1481,7 +1481,7 @@ class ExternalCommandManager:
         :return: None
         """
         for c in host.comments:
-            self.DEL_HOST_COMMENT(c.id)
+            self.DEL_HOST_COMMENT(c._id)
 
     def DEL_ALL_HOST_DOWNTIMES(self, host):
         """Delete all host downtimes
@@ -1494,7 +1494,7 @@ class ExternalCommandManager:
         :return: None
         """
         for dt in host.downtimes:
-            self.DEL_HOST_DOWNTIME(dt.id)
+            self.DEL_HOST_DOWNTIME(dt._id)
 
     def DEL_ALL_SVC_COMMENTS(self, service):
         """Delete all service comments
@@ -1507,7 +1507,7 @@ class ExternalCommandManager:
         :return: None
         """
         for c in service.comments:
-            self.DEL_SVC_COMMENT(c.id)
+            self.DEL_SVC_COMMENT(c._id)
 
     def DEL_ALL_SVC_DOWNTIMES(self, service):
         """Delete all service downtime
@@ -1520,7 +1520,7 @@ class ExternalCommandManager:
         :return: None
         """
         for dt in service.downtimes:
-            self.DEL_SVC_DOWNTIME(dt.id)
+            self.DEL_SVC_DOWNTIME(dt._id)
 
     def DEL_CONTACT_DOWNTIME(self, downtime_id):
         """Delete a contact downtime
@@ -3652,7 +3652,7 @@ class ExternalCommandManager:
         p.prepare_for_conf()
         parameters = {'max_plugins_output_length': self.conf.max_plugins_output_length}
         p.add_global_conf_parameters(parameters)
-        self.arbiter.conf.pollers[p.id] = p
+        self.arbiter.conf.pollers[p._id] = p
         self.arbiter.dispatcher.elements.append(p)
         self.arbiter.dispatcher.satellites.append(p)
         r.pollers.append(p)

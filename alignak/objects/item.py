@@ -108,8 +108,8 @@ class Item(object):
         # use set attr for going into the slots
         # instead of __dict__ :)
         cls = self.__class__
-        self.id = cls.id
-        cls.id += 1
+        self._id = cls._id
+        cls._id += 1
 
         self.customs = {}  # for custom variables
         self.plus = {}  # for value with a +
@@ -261,6 +261,15 @@ class Item(object):
         :rtype: str
         """
         return getattr(self, 'name', "unknown")
+
+    def get_id(self):
+        """
+        Get the id of the item
+
+        :return: the object id
+        :rtype: int
+        """
+        return self._id
 
     def __str__(self):
         cls_name = self.__class__.__name__
@@ -581,7 +590,7 @@ class Item(object):
         """
         d_to_del = None
         for dt in self.downtimes:
-            if dt.id == downtime_id:
+            if dt._id == downtime_id:
                 d_to_del = dt
                 dt.can_be_deleted = True
         if d_to_del is not None:
@@ -607,7 +616,7 @@ class Item(object):
         """
         c_to_del = None
         for c in self.comments:
-            if c.id == comment_id:
+            if c._id == comment_id:
                 c_to_del = c
                 c.can_be_deleted = True
         if c_to_del is not None:
@@ -679,7 +688,7 @@ class Item(object):
             # find comments of non-persistent ack-comments and delete them too
             for c in self.comments:
                 if c.entry_type == 4 and not c.persistent:
-                    self.del_comment(c.id)
+                    self.del_comment(c._id)
             self.broks.append(self.get_update_status_brok())
 
     def unacknowledge_problem_if_not_sticky(self):
@@ -774,7 +783,7 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'id': self.id}
+        data = {'_id': self._id}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('initial_' + self.my_type + '_status', data)
 
@@ -785,7 +794,7 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'id': self.id}
+        data = {'_id': self._id}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('update_' + self.my_type + '_status', data)
 
@@ -868,7 +877,7 @@ class Item(object):
             # Change on the fly the characters
             src = src.replace(r'\n', '\n').replace(r'\t', '\t')
             t = triggers.create_trigger(src,
-                                        'inner-trigger-' + self.__class__.my_type + str(self.id))
+                                        'inner-trigger-' + self.__class__.my_type + str(self._id))
             if t:
                 # Maybe the trigger factory give me a already existing trigger,
                 # so my name can be dropped
@@ -1042,7 +1051,7 @@ class Items(object):
         :return: None
         """
         tpl = self.index_template(tpl)
-        self.templates[tpl.id] = tpl
+        self.templates[tpl._id] = tpl
 
     def index_template(self, tpl):
         """
@@ -1072,7 +1081,7 @@ class Items(object):
         :return: None
         """
         try:
-            del self.templates[tpl.id]
+            del self.templates[tpl._id]
         except KeyError:
             pass
         self.unindex_template(tpl)
@@ -1104,7 +1113,7 @@ class Items(object):
         name_property = getattr(self.__class__, "name_property", None)
         if index is True and name_property:
             item = self.index_item(item)
-        self.items[item.id] = item
+        self.items[item._id] = item
 
     def remove_item(self, item):
         """
@@ -1115,7 +1124,7 @@ class Items(object):
         :return: None
         """
         self.unindex_item(item)
-        self.items.pop(item.id, None)
+        self.items.pop(item._id, None)
 
     def index_item(self, item):
         """
@@ -1245,8 +1254,8 @@ class Items(object):
 
         :return: None
         """
-        for id in self.items:
-            self.items[id].pythonize()
+        for i_id in self.items:
+            self.items[i_id].pythonize()
 
     def find_tpl_by_name(self, name):
         """
@@ -1334,8 +1343,8 @@ class Items(object):
         twins = getattr(self, 'twins', None)
         if twins is not None:
             # Ok, look at no twins (it's bad!)
-            for id in twins:
-                i = self.items[id]
+            for t_id in twins:
+                i = self.items[t_id]
                 logger.warning("[items] %s.%s is duplicated from %s",
                                i.__class__.my_type,
                                i.get_name(),

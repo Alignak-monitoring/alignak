@@ -72,7 +72,7 @@ class Downtime:
     specified service should not be triggered by another downtime entry.
 
     """
-    id = 1
+    _id = 1
 
     # Just to list the properties we will send as pickle
     # so to others daemons, so all but NOT REF
@@ -99,8 +99,8 @@ class Downtime:
 
     def __init__(self, ref, start_time, end_time, fixed, trigger_id, duration, author, comment):
         now = datetime.datetime.now()
-        self.id = int(time.mktime(now.timetuple()) * 1e6 + now.microsecond)
-        self.__class__.id = self.id + 1
+        self._id = int(time.mktime(now.timetuple()) * 1e6 + now.microsecond)
+        self.__class__._id = self._id + 1
         self.ref = ref  # pointer to srv or host we are apply
         self.activate_me = []  # The other downtimes i need to activate
         self.entry_time = int(time.time())
@@ -141,7 +141,16 @@ class Downtime:
         else:
             type = "flexible"
         return "%s %s Downtime id=%d %s - %s" % (
-            active, type, self.id, time.ctime(self.start_time), time.ctime(self.end_time))
+            active, type, self._id, time.ctime(self.start_time), time.ctime(self.end_time))
+
+    def get_id(self):
+        """
+        Get the id of the item
+
+        :return: the object id
+        :rtype: int
+        """
+        return self._id
 
     def trigger_me(self, other_downtime):
         """Wrapper to activate_me.append function
@@ -264,7 +273,7 @@ class Downtime:
         else:
             comment_type = 2
         c = Comment(self.ref, False, "(Nagios Process)", text, comment_type, 2, 0, False, 0)
-        self.comment_id = c.id
+        self.comment_id = c._id
         self.extra_comment = c
         self.ref.add_comment(c)
 
@@ -304,7 +313,7 @@ class Downtime:
         :rtype: alignak.brok.Brok
         TODO: Duplicate from Notification.fill_data_brok_from
         """
-        data = {'id': self.id}
+        data = {'_id': self._id}
 
         self.fill_data_brok_from(data, 'full_status')
         b = Brok('downtime_raise', data)
@@ -320,7 +329,7 @@ class Downtime:
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -342,13 +351,13 @@ class Downtime:
             self.__setstate_deprecated__(state)
             return
 
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
 
-        if self.id >= cls.id:
-            cls.id = self.id + 1
+        if self._id >= cls._id:
+            cls._id = self._id + 1
 
     def __setstate_deprecated__(self, state):
         """In 1.0 we move to a dict save.
@@ -360,14 +369,14 @@ class Downtime:
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!
-        # -1 because of the 'id' prop
+        # -1 because of the '_id' prop
         if len(cls.properties) != (len(state) - 1):
             logger.info("Passing downtime")
             return
 
-        self.id = state.pop()
+        self._id = state.pop()
         for prop in cls.properties:
             val = state.pop()
             setattr(self, prop, val)
-        if self.id >= cls.id:
-            cls.id = self.id + 1
+        if self._id >= cls._id:
+            cls._id = self._id + 1

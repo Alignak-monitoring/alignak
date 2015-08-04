@@ -65,7 +65,7 @@ class Resultmodulation(Item):
     during a modulation_period.
 
     """
-    id = 1  # zero is always special in database, so we do not take risk here
+    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'resultmodulation'
 
     properties = Item.properties.copy()

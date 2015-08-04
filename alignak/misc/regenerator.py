@@ -631,7 +631,7 @@ class Regenerator(object):
         # Clean hosts from hosts and hostgroups
         for h in to_del_h:
             safe_print("Deleting", h.get_name())
-            del self.hosts[h.id]
+            del self.hosts[h._id]
 
         # Now clean all hostgroups too
         for hg in self.hostgroups:
@@ -642,7 +642,7 @@ class Regenerator(object):
 
         for s in to_del_srv:
             safe_print("Deleting", s.get_full_name())
-            del self.services[s.id]
+            del self.services[s._id]
 
         # Now clean service groups
         for sg in self.servicegroups:
@@ -676,7 +676,7 @@ class Regenerator(object):
             dtc.ref = h
 
         # Ok, put in in the in progress hosts
-        inp_hosts[h.id] = h
+        inp_hosts[h._id] = h
 
     def manage_initial_hostgroup_status_brok(self, b):
         """
@@ -707,7 +707,7 @@ class Regenerator(object):
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_hostgroups[hg.id] = hg
+        inp_hostgroups[hg._id] = hg
 
     def manage_initial_service_status_brok(self, b):
         """
@@ -738,7 +738,7 @@ class Regenerator(object):
             dtc.ref = s
 
         # Ok, put in in the in progress hosts
-        inp_services[s.id] = s
+        inp_services[s._id] = s
 
     def manage_initial_servicegroup_status_brok(self, b):
         """
@@ -769,7 +769,7 @@ class Regenerator(object):
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_servicegroups[sg.id] = sg
+        inp_servicegroups[sg._id] = sg
 
     def manage_initial_contact_status_brok(self, b):
         """
@@ -856,7 +856,7 @@ class Regenerator(object):
 
         # We will link contacts into contactgroups later
         # so now only save it
-        inp_contactgroups[cg.id] = cg
+        inp_contactgroups[cg._id] = cg
 
     def manage_initial_timeperiod_status_brok(self, b):
         """
@@ -1031,7 +1031,7 @@ class Regenerator(object):
             # one a minute
             if time.time() - self.last_need_data_send > 60 and self.from_q is not None:
                 print "I ask the broker for instance id data:", c_id
-                msg = Message(id=0, type='NeedData', data={'full_instance_id': c_id})
+                msg = Message(_id=0, type='NeedData', data={'full_instance_id': c_id})
                 self.from_q.put(msg)
                 self.last_need_data_send = time.time()
             return

@@ -53,7 +53,7 @@ class Comment:
     """Comment class implements comments for monitoring purpose.
     It contains data like author, type, expire_time, persistent etc..
     """
-    id = 1
+    _id = 1
 
     properties = {
         'entry_time':   None,
@@ -114,8 +114,8 @@ class Comment:
         :type expire_time: int
         :return: None
         """
-        self.id = self.__class__.id
-        self.__class__.id += 1
+        self._id = self.__class__._id
+        self.__class__._id += 1
         self.ref = ref  # pointer to srv or host we are apply
         self.entry_time = int(time.time())
         self.persistent = persistent
@@ -133,7 +133,16 @@ class Comment:
         self.can_be_deleted = False
 
     def __str__(self):
-        return "Comment id=%d %s" % (self.id, self.comment)
+        return "Comment id=%d %s" % (self._id, self.comment)
+
+    def get_id(self):
+        """
+        Get the id of the item
+
+        :return: the object id
+        :rtype: int
+        """
+        return self._id
 
     def __getstate__(self):
         """Call by pickle to dataify the comment
@@ -144,7 +153,7 @@ class Comment:
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -165,14 +174,14 @@ class Comment:
             self.__setstate_deprecated__(state)
             return
 
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
 
         # to prevent from duplicating id in comments:
-        if self.id >= cls.id:
-            cls.id = self.id + 1
+        if self._id >= cls._id:
+            cls._id = self._id + 1
 
     def __setstate_deprecated__(self, state):
         """In 1.0 we move to a dict save.
@@ -184,14 +193,14 @@ class Comment:
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!
-        # -1 because of the 'id' prop
+        # -1 because of the '_id' prop
         if len(cls.properties) != (len(state) - 1):
             self.debug("Passing comment")
             return
 
-        self.id = state.pop()
+        self._id = state.pop()
         for prop in cls.properties:
             val = state.pop()
             setattr(self, prop, val)
-        if self.id >= cls.id:
-            cls.id = self.id + 1
+        if self._id >= cls._id:
+            cls._id = self._id + 1

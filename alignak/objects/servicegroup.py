@@ -63,12 +63,12 @@ class Servicegroup(Itemgroup):
     Class to manage a servicegroup
     A servicegroup is used to group services
     """
-    id = 1  # zero is always a little bit special... like in database
+    _id = 1  # zero is always a little bit special... like in database
     my_type = 'servicegroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'id':                IntegerProp(default=0, fill_brok=['full_status']),
+        '_id':                IntegerProp(default=0, fill_brok=['full_status']),
         'servicegroup_name': StringProp(fill_brok=['full_status']),
         'alias':             StringProp(fill_brok=['full_status']),
         'notes':             StringProp(default='', fill_brok=['full_status']),

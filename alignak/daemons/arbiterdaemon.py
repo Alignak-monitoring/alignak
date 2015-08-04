@@ -280,7 +280,7 @@ class Arbiter(Daemon):
         :return: None
         """
         if isinstance(b, Brok):
-            self.broks[b.id] = b
+            self.broks[b._id] = b
         elif isinstance(b, ExternalCommand):
             self.external_commands.append(b)
         else:

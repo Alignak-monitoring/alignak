@@ -407,12 +407,12 @@ class MacroResolver(Borg):
         :rtype: None | str
         """
         # first, get the number of args
-        id = None
+        _id = None
         r = re.search(r'ARG(?P<id>\d+)', macro)
         if r is not None:
-            id = int(r.group('id')) - 1
+            _id = int(r.group('id')) - 1
             try:
-                return args[id]
+                return args[_id]
             except IndexError:
                 return ''
 

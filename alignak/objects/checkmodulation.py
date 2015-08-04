@@ -59,7 +59,7 @@ class CheckModulation(Item):
     during a check_period.
 
     """
-    id = 1  # zero is always special in database, so we do not take risk here
+    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'checkmodulation'
 
     properties = Item.properties.copy()
@@ -175,7 +175,7 @@ class CheckModulations(Items):
         TODO: Remove this default mutable argument. Usually result in unexpected behavior
         """
         if name is None:
-            name = CheckModulation.id
+            name = CheckModulation._id
         params['checkmodulation_name'] = name
         # print "Asking a new inner checkmodulation from name %s with params %s" % (name, params)
         cw = CheckModulation(params)

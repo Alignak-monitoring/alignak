@@ -60,7 +60,7 @@ class ArbiterLink(SatelliteLink):
     Class to manage the link to Arbiter daemon.
     With it, arbiter can see if a Arbiter daemon is alive, and can send it new configuration
     """
-    id = 0
+    _id = 0
     my_type = 'arbiter'
     properties = SatelliteLink.properties.copy()
     properties.update({

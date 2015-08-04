@@ -74,7 +74,7 @@ class HostExtInfo(Item):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    id = 1  # zero is reserved for host (primary node for parents)
+    _id = 1  # zero is reserved for host (primary node for parents)
     my_type = 'hostextinfo'
 
     # properties defined by configuration

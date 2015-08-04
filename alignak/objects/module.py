@@ -65,7 +65,7 @@ class Module(Item):
     """
     Class to manage a module
     """
-    id = 1  # zero is always special in database, so we do not take risk here
+    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'module'
 
     properties = Item.properties.copy()

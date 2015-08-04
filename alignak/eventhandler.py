@@ -91,15 +91,15 @@ class EventHandler(Action):
         'is_snapshot':    BoolProp(default=False),
     }
 
-    # id = 0  #Is common to Actions
-    def __init__(self, command, id=None, ref=None, timeout=10, env={},
+    # _id = 0  #Is common to Actions
+    def __init__(self, command, _id=None, ref=None, timeout=10, env={},
                  module_type='fork', reactionner_tag='None', is_snapshot=False):
         self.is_a = 'eventhandler'
         self.type = ''
         self.status = 'scheduled'
-        if id is None:  # id != None is for copy call only
-            self.id = Action.id
-            Action.id += 1
+        if _id is None:  # id != None is for copy call only
+            self._id = Action._id
+            Action._id += 1
         self.ref = ref
         self._in_timeout = False
         self.timeout = timeout
@@ -126,7 +126,7 @@ class EventHandler(Action):
         :rtype: alignak.eventhandler.EventHandler
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(EventHandler('', id=self.id, is_snapshot=self.is_snapshot))
+        return self.copy_shell__(EventHandler('', _id=self._id, is_snapshot=self.is_snapshot))
 
     def get_return_from(self, e):
         """Setter of the following attributes::
@@ -172,7 +172,7 @@ class EventHandler(Action):
         return t >= self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s" % (self.id, self.status, self.command)
+        return "Check %d status:%s command:%s" % (self._id, self.status, self.command)
 
     def get_id(self):
         """Getter to id attribute
@@ -181,7 +181,7 @@ class EventHandler(Action):
         :rtype: int
         TODO: Duplicate from Notification.get_id
         """
-        return self.id
+        return self._id
 
     def __getstate__(self):
         """Call by pickle for dataify the comment
@@ -192,7 +192,7 @@ class EventHandler(Action):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -207,7 +207,7 @@ class EventHandler(Action):
         :return: None
         """
         cls = self.__class__
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])

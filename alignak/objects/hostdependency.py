@@ -66,7 +66,7 @@ class Hostdependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    id = 0
+    _id = 0
     my_type = 'hostdependency'
 
     # F is dep of D
@@ -122,8 +122,8 @@ class Hostdependencies(Items):
         :type ids: list
         :return: None
         """
-        for id in ids:
-            del self[id]
+        for h_id in ids:
+            del self[h_id]
 
     def explode(self, hostgroups):
         """Explode all host dependency for each member of hostgroups
@@ -142,8 +142,8 @@ class Hostdependencies(Items):
         # Then for every host create a copy of the dependency with just the host
         # because we are adding services, we can't just loop in it
         hostdeps = self.items.keys()
-        for id in hostdeps:
-            hd = self.items[id]
+        for h_id in hostdeps:
+            hd = self.items[h_id]
             # We explode first the dependent (son) part
             dephnames = []
             if hasattr(hd, 'dependent_hostgroup_name'):
@@ -184,7 +184,7 @@ class Hostdependencies(Items):
                     new_hd.dependent_host_name = dephname
                     new_hd.host_name = hname
                     self.add_item(new_hd)
-            hstdep_to_remove.append(id)
+            hstdep_to_remove.append(h_id)
 
         self.delete_hostsdep_by_id(hstdep_to_remove)
 

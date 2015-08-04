@@ -56,14 +56,14 @@ class Brok:
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
     """
-    __slots__ = ('__dict__', 'id', 'type', 'data', 'prepared', 'instance_id')
-    id = 0
+    __slots__ = ('__dict__', '_id', 'type', 'data', 'prepared', 'instance_id')
+    _id = 0
     my_type = 'brok'
 
     def __init__(self, type, data):
         self.type = type
-        self.id = self.__class__.id
-        self.__class__.id += 1
+        self._id = self.__class__._id
+        self.__class__._id += 1
         self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
         self.prepared = False
 

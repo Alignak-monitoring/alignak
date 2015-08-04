@@ -58,12 +58,12 @@ class Acknowledge:
     By acknowledging the current problem, future notifications (for the same
     servicestate) are disabled.
     """
-    id = 1
+    _id = 1
 
     # Just to list the properties we will send as pickle
     # so to others daemons, all but NOT REF
     properties = {
-        'id': None,
+        '_id': None,
         'sticky': None,
         'notify': None,
         'end_time': None,
@@ -92,8 +92,8 @@ class Acknowledge:
 
     def __init__(self, ref, sticky, notify, persistent,
                  author, comment, end_time=0):
-        self.id = self.__class__.id
-        self.__class__.id += 1
+        self._id = self.__class__._id
+        self.__class__._id += 1
         self.ref = ref  # pointer to srv or host we are applied
         self.sticky = sticky
         self.notify = notify
@@ -110,7 +110,7 @@ class Acknowledge:
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'id': self.id}
+        res = {'_id': self._id}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -125,7 +125,7 @@ class Acknowledge:
         :return: None
         """
         cls = self.__class__
-        self.id = state['id']
+        self._id = state['_id']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])

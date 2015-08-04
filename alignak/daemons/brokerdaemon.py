@@ -237,27 +237,27 @@ class Broker(BaseSatellite):
             return True
         return False
 
-    def pynag_con_init(self, id, type='scheduler'):
+    def pynag_con_init(self, _id, type='scheduler'):
         """Wrapper function for the real function do_
         just for timing the connection
 
-        :param id: id
-        :type id: int
+        :param _id: id
+        :type _id: int
         :param type: type of item
         :type type: str
         :return: do_pynag_con_init return always True, so we return always True
         :rtype: bool
         """
         _t = time.time()
-        r = self.do_pynag_con_init(id, type)
+        r = self.do_pynag_con_init(_id, type)
         statsmgr.incr('con-init.%s' % type, time.time() - _t)
         return r
 
-    def do_pynag_con_init(self, id, type='scheduler'):
+    def do_pynag_con_init(self, s_id, type='scheduler'):
         """Initialize or re-initialize connection with scheduler or arbiter if type == arbiter
 
-        :param id: id
-        :type id: int
+        :param s_id: s_id
+        :type s_id: int
         :param type: type of item
         :type type: str
         :return: None
@@ -275,33 +275,33 @@ class Broker(BaseSatellite):
         if type == 'scheduler':
             # If sched is not active, I do not try to init
             # it is just useless
-            is_active = links[id]['active']
+            is_active = links[s_id]['active']
             if not is_active:
                 return
             # schedulers also got real timeout to respect
-            timeout = links[id]['timeout']
-            data_timeout = links[id]['data_timeout']
+            timeout = links[s_id]['timeout']
+            data_timeout = links[s_id]['data_timeout']
 
         # If we try to connect too much, we slow down our tests
-        if self.is_connection_try_too_close(links[id]):
+        if self.is_connection_try_too_close(links[s_id]):
             return
 
         # Ok, we can now update it
-        links[id]['last_connection'] = time.time()
+        links[s_id]['last_connection'] = time.time()
 
-        # DBG: print "Init connection with", links[id]['uri']
-        running_id = links[id]['running_id']
+        # DBG: print "Init connection with", links[s_id]['uri']
+        running_id = links[s_id]['running_id']
         # DBG: print "Running id before connection", running_id
-        uri = links[id]['uri']
+        uri = links[s_id]['uri']
         try:
-            con = links[id]['con'] = HTTPClient(uri=uri,
-                                                strong_ssl=links[id]['hard_ssl_name_check'],
-                                                timeout=timeout, data_timeout=data_timeout)
+            con = links[s_id]['con'] = HTTPClient(uri=uri,
+                                                  strong_ssl=links[s_id]['hard_ssl_name_check'],
+                                                  timeout=timeout, data_timeout=data_timeout)
         except HTTPExceptions, exp:
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
-            logger.info("Connection problem to the %s %s: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.info("Connection problem to the %s %s: %s", type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             return
 
         try:
@@ -314,28 +314,28 @@ class Broker(BaseSatellite):
             # The schedulers have been restarted: it has a new run_id.
             # So we clear all verifs, they are obsolete now.
             if new_run_id != running_id:
-                logger.debug("[%s] New running id for the %s %s: %s (was %s)",
-                             self.name, type, links[id]['name'], new_run_id, running_id)
-                links[id]['broks'].clear()
+                logger.debug("[%s] New running s_id for the %s %s: %s (was %s)",
+                             self.name, type, links[s_id]['name'], new_run_id, running_id)
+                links[s_id]['broks'].clear()
                 # we must ask for a new full broks if
                 # it's a scheduler
                 if type == 'scheduler':
                     logger.debug("[%s] I ask for a broks generation to the scheduler %s",
-                                 self.name, links[id]['name'])
+                                 self.name, links[s_id]['name'])
                     con.get('fill_initial_broks', {'bname': self.name}, wait='long')
-            # Ok all is done, we can save this new running id
-            links[id]['running_id'] = new_run_id
+            # Ok all is done, we can save this new running s_id
+            links[s_id]['running_id'] = new_run_id
         except HTTPExceptions, exp:
-            logger.info("Connection problem to the %s %s: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.info("Connection problem to the %s %s: %s", type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             return
         except KeyError, exp:
-            logger.info("the %s '%s' is not initialized: %s", type, links[id]['name'], str(exp))
-            links[id]['con'] = None
+            logger.info("the %s '%s' is not initialized: %s", type, links[s_id]['name'], str(exp))
+            links[s_id]['con'] = None
             traceback.print_stack()
             return
 
-        logger.info("Connection OK to the %s %s", type, links[id]['name'])
+        logger.info("Connection OK to the %s %s", type, links[s_id]['name'])
 
     def manage_brok(self, b):
         """Get a brok.

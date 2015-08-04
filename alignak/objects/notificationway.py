@@ -66,7 +66,7 @@ class NotificationWay(Item):
     """NotificationWay class is used to implement way of sending notifications (command, periods..)
 
     """
-    id = 1  # zero is always special in database, so we do not take risk here
+    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'notificationway'
 
     properties = Item.properties.copy()
@@ -356,7 +356,7 @@ class NotificationWays(Items):
         :return: None
         """
         if name is None:
-            name = NotificationWay.id
+            name = NotificationWay._id
         params['notificationway_name'] = name
         # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
         nw = NotificationWay(params)

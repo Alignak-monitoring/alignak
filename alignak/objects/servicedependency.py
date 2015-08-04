@@ -66,7 +66,7 @@ class Servicedependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    id = 0
+    _id = 0
     my_type = "servicedependency"
 
     # F is dep of D
@@ -121,8 +121,8 @@ class Servicedependencies(Items):
         :type ids: list
         :return: None
         """
-        for id in ids:
-            del self[id]
+        for s_id in ids:
+            del self[s_id]
 
     def add_service_dependency(self, dep_host_name, dep_service_description,
                                par_host_name, par_service_description):
@@ -206,13 +206,13 @@ class Servicedependencies(Items):
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
         servicedeps = self.items.keys()
-        for id in servicedeps:
-            sd = self.items[id]
+        for s_id in servicedeps:
+            sd = self.items[s_id]
             # Have we to explode the hostgroup into many service?
             if bool(getattr(sd, 'explode_hostgroup', 0)) and \
                hasattr(sd, 'hostgroup_name'):
                 self.explode_hostgroup(sd, hostgroups)
-                srvdep_to_remove.append(id)
+                srvdep_to_remove.append(s_id)
                 continue
 
             # Get the list of all FATHER hosts and service deps
@@ -278,7 +278,7 @@ class Servicedependencies(Items):
                     new_sd.dependent_service_description = dep_sname
                     self.add_item(new_sd)
                 # Ok so we can remove the old one
-                srvdep_to_remove.append(id)
+                srvdep_to_remove.append(s_id)
 
         self.delete_servicesdep_by_id(srvdep_to_remove)
 

@@ -55,7 +55,7 @@ class SchedulerLink(SatelliteLink):
     """
     Class to manage the scheduler information
     """
-    id = 0
+    _id = 0
 
     # Ok we lie a little here because we are a mere link in fact
     my_type = 'scheduler'
@@ -115,7 +115,7 @@ class SchedulerLink(SatelliteLink):
         :rtype: dict
         """
         return {'port': self.port, 'address': self.address,
-                'name': self.scheduler_name, 'instance_id': self.id,
+                'name': self.scheduler_name, 'instance_id': self._id,
                 'active': self.conf is not None, 'push_flavor': self.push_flavor,
                 'timeout': self.timeout, 'data_timeout': self.data_timeout,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}

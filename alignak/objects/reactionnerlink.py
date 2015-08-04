@@ -53,7 +53,7 @@ class ReactionnerLink(SatelliteLink):
     """
     Class to manage the reactionner information
     """
-    id = 0
+    _id = 0
     my_type = 'reactionner'
     properties = SatelliteLink.properties.copy()
     properties.update({

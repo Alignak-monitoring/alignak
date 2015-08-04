@@ -70,12 +70,12 @@ class Realm(Itemgroup):
     assigned to a specific set of Scheduler/Poller (other daemon are optional)
 
     """
-    id = 1  # zero is always a little bit special... like in database
+    _id = 1  # zero is always a little bit special... like in database
     my_type = 'realm'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'id':            IntegerProp(default=0, fill_brok=['full_status']),
+        '_id':            IntegerProp(default=0, fill_brok=['full_status']),
         'realm_name':    StringProp(fill_brok=['full_status']),
         # No status_broker_name because it put hosts, not host_name
         'realm_members': ListProp(default=[], split_on_coma=True),
@@ -384,32 +384,32 @@ class Realm(Itemgroup):
         # First our own level
         for p in self.pollers:
             cfg = p.give_satellite_cfg()
-            broker.cfg['pollers'][p.id] = cfg
+            broker.cfg['pollers'][p._id] = cfg
 
         for r in self.reactionners:
             cfg = r.give_satellite_cfg()
-            broker.cfg['reactionners'][r.id] = cfg
+            broker.cfg['reactionners'][r._id] = cfg
 
         for b in self.receivers:
             cfg = b.give_satellite_cfg()
-            broker.cfg['receivers'][b.id] = cfg
+            broker.cfg['receivers'][b._id] = cfg
 
         # Then sub if we must to it
         if broker.manage_sub_realms:
             # Now pollers
             for p in self.get_all_subs_satellites_by_type('pollers'):
                 cfg = p.give_satellite_cfg()
-                broker.cfg['pollers'][p.id] = cfg
+                broker.cfg['pollers'][p._id] = cfg
 
             # Now reactionners
             for r in self.get_all_subs_satellites_by_type('reactionners'):
                 cfg = r.give_satellite_cfg()
-                broker.cfg['reactionners'][r.id] = cfg
+                broker.cfg['reactionners'][r._id] = cfg
 
             # Now receivers
             for r in self.get_all_subs_satellites_by_type('receivers'):
                 cfg = r.give_satellite_cfg()
-                broker.cfg['receivers'][r.id] = cfg
+                broker.cfg['receivers'][r._id] = cfg
 
     def get_satellites_links_for_scheduler(self):
         """Get a configuration dict with pollers and reactionners data
@@ -426,11 +426,11 @@ class Realm(Itemgroup):
         # First our own level
         for p in self.pollers:
             c = p.give_satellite_cfg()
-            cfg['pollers'][p.id] = c
+            cfg['pollers'][p._id] = c
 
         for r in self.reactionners:
             c = r.give_satellite_cfg()
-            cfg['reactionners'][r.id] = c
+            cfg['reactionners'][r._id] = c
 
         # print "***** Preparing a satellites conf for a scheduler", cfg
         return cfg

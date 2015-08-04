@@ -228,7 +228,7 @@ class TestConfig(AlignakModulesTest):
     def show_broks(self, title):
         print
         print "--- ", title
-        for brok in sorted(self.sched.broks.values(), lambda x, y: x.id - y.id):
+        for brok in sorted(self.sched.broks.values(), lambda x, y: x._id - y._id):
             if re.compile('^service_').match(brok.type):
                 pass
                 #print "BROK:", brok.type
