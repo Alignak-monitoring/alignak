@@ -86,7 +86,7 @@ class Property(object):
     """
 
     def __init__(self, default=none_object, class_inherit=None,
-                 unmanaged=False, help='', no_slots=False,
+                 unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, conf_send_preparation=None,
                  brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
@@ -140,7 +140,7 @@ class Property(object):
         self.has_default = (default is not none_object)
         self.required = not self.has_default
         self.class_inherit = class_inherit or []
-        self.help = help or ''
+        self.help = _help or ''
         self.unmanaged = unmanaged
         self.no_slots = no_slots
         self.fill_brok = fill_brok or []

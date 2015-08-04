@@ -112,10 +112,10 @@ class DataManager(object):
         :return: A list containing all host and service
         :rtype: list
         """
-        all = []
-        all.extend(self.rg.hosts)
-        all.extend(self.rg.services)
-        return all
+        all_items = []
+        all_items.extend(self.rg.hosts)
+        all_items.extend(self.rg.services)
+        return all_items
 
     def get_contact(self, name):
         """

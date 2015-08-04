@@ -460,12 +460,12 @@ class MacroResolver(Borg):
                 for elt in data:
                     if elt is not None and elt.__class__ == self.host_class:
                         elt_name = elt.host_name
-            for list in self.lists_on_demand:
-                cls = list.inner_class
+            for od_list in self.lists_on_demand:
+                cls = od_list.inner_class
                 # We search our type by looking at the macro
                 if macro_name in cls.macros:
                     prop = cls.macros[macro_name]
-                    i = list.find_by_name(elt_name)
+                    i = od_list.find_by_name(elt_name)
                     if i is not None:
                         val = self._get_value_from_element(i, prop)
                         # Ok we got our value :)

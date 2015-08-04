@@ -5,6 +5,7 @@ to avoid code duplication
 # pylint: disable=W0614
 # pylint: disable=E0102
 # pylint: disable=W0401
+# pylint: disable=W0622
 from .bottlecore import *
 
 
