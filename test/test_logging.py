@@ -259,7 +259,7 @@ class TestDefaultLoggingMethods(NoSetup, AlignakTest, LogCollectMixin):
 
 
     def test_human_timestamp_format(self):
-        "test output using the human timestamp format"
+        """test output using the human timestamp format"""
         logger = self._prepare_logging()
         logger.setLevel(logging.INFO)
         logger.set_human_format(True)
@@ -270,7 +270,7 @@ class TestDefaultLoggingMethods(NoSetup, AlignakTest, LogCollectMixin):
         logger.set_human_format(False)
 
     def test_reset_human_timestamp_format(self):
-        "test output after switching of the human timestamp format"
+        """test output after switching of the human timestamp format"""
         # ensure the human timestamp format is set, ...
         self.test_human_timestamp_format()
         # ... then turn it off
@@ -299,7 +299,7 @@ class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
                               r'^\[.+?\] INFO:\s+Some log-message$'])
 
     def test_human_timestamp_format(self):
-        "test output using the human timestamp format"
+        """test output using the human timestamp format"""
         alignak_logger.setLevel(INFO)
         self._collector = Collector()
         sys.stdout = StringIO()
@@ -325,7 +325,7 @@ class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
         logger.set_human_format(False)
 
     def test_reset_human_timestamp_format(self):
-        "test output after switching of the human timestamp format"
+        """test output after switching of the human timestamp format"""
         # ensure the human timestamp format is set, ...
         self.test_human_timestamp_format()
         # ... then turn it off
@@ -431,7 +431,7 @@ class TestWithLocalLogging(NoSetup, AlignakTest, LogCollectMixin):
         logger.set_human_format(False)
 
     def test_reset_human_timestamp_format(self):
-        "test output after switching of the human timestamp format"
+        """test output after switching of the human timestamp format"""
         # ensure the human timestamp format is set, ...
         self.test_human_timestamp_format()
         # ... then turn it off

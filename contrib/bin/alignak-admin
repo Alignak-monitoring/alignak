@@ -103,14 +103,14 @@ class AlignakAdmin(cmd.Cmd):
         return
 
     def do_connect(self, line):
-        '''
+        """
         Connect to an arbiter daemon
         Syntax: connect [host]:[port]
         Ex: for Connecting to server, port 7770
         > connect server:7770
         Ex: connect to localhost, port 7770
         > connect
-        '''
+        """
         line = line.strip()
         tokens = line.split(':')
         if line == '':
@@ -135,11 +135,11 @@ class AlignakAdmin(cmd.Cmd):
             print "Connection problem"
 
     def do_status(self, line):
-        '''
+        """
         Get daemons status as the connected arbiter know. If you call it
         without an already open arbiter connection with 'connect' it will automatically
         connect to locahost:7770.
-        '''
+        """
         self.look_connection()
         if not self.arb.reachable:
             print "Cannot connect to the arbiter, bail out"
@@ -198,10 +198,10 @@ class AlignakAdmin(cmd.Cmd):
         print "+-------------------------------------------------------------------------------+"
 
     def do_getconf(self, line):
-        '''
+        """
         Get the data in the arbiter for a table and some properties
         like hosts  host_name realm
-        '''
+        """
         self.look_connection()
         if not self.arb.reachable:
             print "Cannot connect to the arbiter, bail out"
@@ -213,10 +213,10 @@ class AlignakAdmin(cmd.Cmd):
             print ' '.join(['%s' % i for i in l])
 
     def do_gethostname(self, line):
-        '''
+        """
         Return the hostname of this machine as is it look for the*
         host_name parameter of the arbiter configuration.
-        '''
+        """
         import socket
         print socket.gethostname()
 
@@ -228,9 +228,9 @@ class AlignakAdmin(cmd.Cmd):
         return True
 
     def do_easter(self, line):
-        '''
+        """
         Surprise. Look closer to the code to know what to launch with it.
-        '''
+        """
         import alignak.easter as easter
         line = line.strip()
         f = getattr(easter, line, None)
@@ -238,11 +238,11 @@ class AlignakAdmin(cmd.Cmd):
             f()
 
     def do_showconfig(self, line):
-        '''
+        """
         Display daemon configuration
         The column Default show that we are using default values when D is present
         Ex: show config poller will display configuration for all pollers
-        '''
+        """
         from alignak.objects.config import Config
 
         from alignak.objects.arbiterlink import ArbiterLink
@@ -315,12 +315,12 @@ class AlignakAdmin(cmd.Cmd):
                 print "+%s+" % ("-".center(106, '-'))
 
     def do_setloglevel(self, line):
-        '''
+        """
         Change logging level for the given daemon (change all daemons logging level if no name given).
         Allowed log level are: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
         WARNING: the change is not permanent! loglevel are reset to configuration value when daemons are restarted
-        '''
+        """
         self.look_connection()
         if not self.arb.reachable:
             print "Cannot connect to the arbiter, bail out"
