@@ -802,7 +802,7 @@ class Broker(BaseSatellite):
         for _type in types:
             _t = time.time()
             # And from schedulers
-            self.get_new_broks(type=_type)
+            self.get_new_broks(i_type=_type)
             statsmgr.incr('get-new-broks.%s' % _type, time.time() - _t)
 
         # Sort the brok list by id
