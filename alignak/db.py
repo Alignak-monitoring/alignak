@@ -102,15 +102,15 @@ class DB(object):
             val = self.stringify(val)
 
             if i == 1:
-                props_str = props_str + u"%s " % prop
-                values_str = values_str + u"'%s' " % val
+                props_str += u"%s " % prop
+                values_str += u"'%s' " % val
             else:
-                props_str = props_str + u", %s " % prop
-                values_str = values_str + u", '%s' " % val
+                props_str += u", %s " % prop
+                values_str += u", '%s' " % val
 
         # Ok we've got data, let's finish the query
-        props_str = props_str + u' )'
-        values_str = values_str + u' )'
+        props_str += u' )'
+        values_str += u' )'
         query = query + props_str + u' VALUES' + values_str
         return query
 

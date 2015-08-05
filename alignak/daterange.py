@@ -853,7 +853,7 @@ class WeekDayDaterange(Daterange):
         # Maybe end_time is before start. So look for the
         # next month
         if start_time > end_time:
-            month_end_id = month_end_id + 1
+            month_end_id += 1
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
@@ -865,8 +865,8 @@ class WeekDayDaterange(Daterange):
         now_epoch = time.mktime(now)
         # But maybe we look not enought far. We should add a month
         if end_time < now_epoch:
-            month_end_id = month_end_id + 1
-            month_start_id = month_start_id + 1
+            month_end_id += 1
+            month_start_id += 1
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
@@ -917,7 +917,7 @@ class MonthDayDaterange(Daterange):
         now_epoch = time.mktime(now)
 
         if start_time > end_time:
-            month_end_id = month_end_id + 1
+            month_end_id += 1
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
@@ -925,8 +925,8 @@ class MonthDayDaterange(Daterange):
             end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         if end_time < now_epoch:
-            month_end_id = month_end_id + 1
-            month_start_id = month_start_id + 1
+            month_end_id += 1
+            month_start_id += 1
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
