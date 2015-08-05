@@ -61,9 +61,9 @@ import re
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 import logging
 
-__all__ = ['UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
+__all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
            'CharProp', 'StringProp', 'ListProp',
-           'FULL_STATUS', 'CHECK_RESULT']
+           'FULL_STATUS', 'CHECK_RESULT')
 
 # Suggestion
 # Is this useful? see above

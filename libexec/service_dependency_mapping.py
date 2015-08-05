@@ -64,14 +64,14 @@ class ShinkenAdmin():
         self.arb_name = 'arbiter-master'
 
     def do_connect(self, verbose=False):
-        '''
+        """
         Connect to an arbiter daemon
         Syntax: connect [host]:[port]
         Ex: for Connecting to server, port 7770
         > connect server:7770
         Ex: connect to localhost, port 7770
         > connect
-        '''
+        """
     
         if verbose:
             print "Connection to %s:%s" % (self.addr, self.port)
@@ -85,10 +85,10 @@ class ShinkenAdmin():
         print "Connection OK"
     
     def getconf(self, config):
-        '''
+        """
         Get the data in the arbiter for a table and some properties
         like hosts  host_name realm
-        '''
+        """
         files = [config]
         conf = Config()
         conf.read_config_silent = 1
@@ -104,10 +104,10 @@ class ShinkenAdmin():
         return (hosts, svc_dep)
 
     def load_svc_mapping(self, hosts, svc_dep, verbose=False):
-        '''
+        """
         Make tuples mapping service dependencies. Return a list of tuples 
         and need hosts and service dependencies parameter.
-        '''
+        """
         r = []
         # Search for host matching "use" template
         for dep in svc_dep:
@@ -152,9 +152,9 @@ class ShinkenAdmin():
         return r
 
     def make_all_dep_tuples(self, hosts, parent_tuples=[()], dependent_tuples=[[()]] ):
-        '''
+        """
         List imbrication : List_by_services : [ List_by_hosts : [ Service_dependency_tuples : ( ) ] ]
-        '''
+        """
         res = []
         for ptuple in parent_tuples:
             parent = { 'host_name' : self.get_dependency_tuple_host_name(ptuple), 'svc_desc' : self.get_dependency_tuple_service_description(ptuple) }
@@ -167,9 +167,9 @@ class ShinkenAdmin():
         return res
 
     def make_dep_tuple(self, parent, dependent, ptuple, dtuple, res):
-        '''
+        """
         Search host dependency and make tuple according to it.
-        '''
+        """
         try:
             dependent_host_parent = self.get_host_dependency(dependent['host_object'])
             if parent['host_name'] == dependent_host_parent:
@@ -181,31 +181,31 @@ class ShinkenAdmin():
         return res
 
     def get_host_dependency(self, dependent_host):
-        '''
+        """
         Get parent host_name attribute of host.
-        '''
+        """
         return dependent_host[2][0][0].host_name
 
     def get_dependency_tuple_host_name(self, tuple):
-        '''
+        """
         Just get the host name part of a dependency tuple.
         A dependency tuples is : ( 'service', 'host_name, service_description' )
-        '''
+        """
         return tuple[1].split(',')[0]
 
     def get_dependency_tuple_service_description(self, tuple):
-        '''
+        """
         Just get the service description part of a dependency tuple.
         A dependency tuples is : ( 'service', 'host_name, service_description' )
-        '''
+        """
         return tuple[1].split(',')[1]
 
 
     def split_and_merge(self, list, split=True):
-        '''
+        """
         Split a list on comma separator and merge resulting lists
         into an uniq list then return it
-        '''
+        """
         res = []
         for elt in list:
             if split:
@@ -215,10 +215,10 @@ class ShinkenAdmin():
         return res
 
     def clean_empty_value(self, r):
-        '''
+        """
         Empty value comes from unused config pack and then service dep
         is created but without nothing...
-        '''
+        """
         r_cleaned = []
         for elt in r:
             if elt != []:
