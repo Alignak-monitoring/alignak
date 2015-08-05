@@ -158,7 +158,7 @@ class Timeperiod(Item):
 
     def __init__(self, params={}):
         self._id = Timeperiod._id
-        Timeperiod._id = Timeperiod._id + 1
+        Timeperiod._id += 1
         self.unresolved = []
         self.dateranges = []
         self.exclude = ''
