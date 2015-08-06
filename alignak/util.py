@@ -317,7 +317,7 @@ def get_start_of_day(year, month_id, day):
     :param day: date day
     :type day: int
     :return: timestamp
-    :rtype: int
+    :rtype: float
 
     TODO: Missing timezone
     """

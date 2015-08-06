@@ -72,21 +72,11 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
     :return: day number in the month
     :rtype: int
 
-    >>> find_day_by_weekday_offset(2010, "july", "tuesday", -1)
+    >>> find_day_by_weekday_offset(2010, 7, 1, -1)
     27
     """
-    # get the id of the weekday (1 for Tuesday)
-    weekday_id = Daterange.get_weekday_id(weekday)
-    if weekday_id is None:
-        return None
-
-    # same for month
-    month_id = Daterange.get_month_id(month)
-    if month_id is None:
-        return None
-
     # thanks calendar :)
-    cal = calendar.monthcalendar(year, month_id)
+    cal = calendar.monthcalendar(year, month)
 
     # If we ask for a -1 day, just reverse cal
     if offset < 0:
@@ -98,10 +88,10 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
     try:
         for i in xrange(0, offset + 1):
             # in cal 0 mean "there are no day here :)"
-            if cal[i][weekday_id] != 0:
+            if cal[i][weekday] != 0:
                 nb_found += 1
             if nb_found == offset:
-                return cal[i][weekday_id]
+                return cal[i][weekday]
         return None
     except Exception:
         return None
@@ -119,14 +109,10 @@ def find_day_by_offset(year, month, offset):
     :return: day number in the month
     :rtype: int
 
-    >>> find_day_by_offset(2015, "july", -1)
+    >>> find_day_by_offset(2015, 7, -1)
     31
-
     """
-    month_id = Daterange.get_month_id(month)
-    if month_id is None:
-        return None
-    (tmp, days_in_month) = calendar.monthrange(year, month_id)
+    (_, days_in_month) = calendar.monthrange(year, month)
     if offset >= 0:
         return min(offset, days_in_month)
     else:
@@ -604,15 +590,15 @@ class Daterange(AbstractDaterange):
         :param smday: start day (number)
         :type smday: int
         :param swday: start day (week day id)
-        :type smday: int
+        :type swday: int
         :param swday_offset: offset in the month (1 is first, -1 last)
         :type swday_offset: int
         :param eyear: end year
-        :type eyear:
+        :type eyear: int
         :param emon: end month
-        :type emon:
+        :type emon: int
         :param emday: end day
-        :type emday:
+        :type emday: int
         :param ewday: end day (week day id)
         :type ewday: int
         :param ewday_offset: offset in the month (1 is first, -1 last)
@@ -625,14 +611,14 @@ class Daterange(AbstractDaterange):
         """
         super(Daterange, self).__init__()
         self.syear = int(syear)
-        self.smon = smon
+        self.smon = int(smon)
         self.smday = int(smday)
-        self.swday = swday
+        self.swday = int(swday)
         self.swday_offset = int(swday_offset)
         self.eyear = int(eyear)
-        self.emon = emon
+        self.emon = int(emon)
         self.emday = int(emday)
-        self.ewday = ewday
+        self.ewday = int(ewday)
         self.ewday_offset = int(ewday_offset)
         self.skip_interval = int(skip_interval)
         self.other = other
@@ -664,6 +650,15 @@ class StandardDaterange(AbstractDaterange):
 
     """
     def __init__(self, day, other):
+        """
+        Init of StandardDaterange
+
+        :param day: one of Daterange.weekdays
+        :type day: str
+        :param other:
+        :type other: str
+        :return: None
+        """
         self.other = other
         self.timeranges = []
 
@@ -717,11 +712,11 @@ class MonthWeekDayDaterange(Daterange):
         :rtype: bool
         """
         b = True
-        b &= self.swday in Daterange.weekdays
+        b &= self.swday in xrange(7)
         if not b:
             logger.error("Error: %s is not a valid day", self.swday)
 
-        b &= self.ewday in Daterange.weekdays
+        b &= self.ewday in xrange(7)
         if not b:
             logger.error("Error: %s is not a valid day", self.ewday)
 
@@ -731,44 +726,42 @@ class MonthWeekDayDaterange(Daterange):
         """Specific function to get start time and end time for MonthWeekDayDaterange
 
         :param ref: time in seconds
-        :type ref: int
+        :type ref: int | None
         :return: tuple with start and end time
-        :rtype: tutle
+        :rtype: tuple
         """
         now = time.localtime(ref)
 
         if self.syear == 0:
             self.syear = now.tm_year
-        month_id = Daterange.get_month_id(self.smon)
         day_start = find_day_by_weekday_offset(self.syear, self.smon, self.swday, self.swday_offset)
-        start_time = get_start_of_day(self.syear, month_id, day_start)
+        start_time = get_start_of_day(self.syear, self.smon, day_start)
 
         if self.eyear == 0:
             self.eyear = now.tm_year
-        month_end_id = Daterange.get_month_id(self.emon)
         day_end = find_day_by_weekday_offset(self.eyear, self.emon, self.ewday, self.ewday_offset)
-        end_time = get_end_of_day(self.eyear, month_end_id, day_end)
+        end_time = get_end_of_day(self.eyear, self.emon, day_end)
 
         now_epoch = time.mktime(now)
         if start_time > end_time:  # the period is between years
             if now_epoch > end_time:  # check for next year
                 day_end = find_day_by_weekday_offset(self.eyear + 1,
                                                      self.emon, self.ewday, self.ewday_offset)
-                end_time = get_end_of_day(self.eyear + 1, month_end_id, day_end)
+                end_time = get_end_of_day(self.eyear + 1, self.emon, day_end)
             else:
                 # it s just that the start was the last year
                 day_start = find_day_by_weekday_offset(self.syear - 1,
                                                        self.smon, self.swday, self.swday_offset)
-                start_time = get_start_of_day(self.syear - 1, month_id, day_start)
+                start_time = get_start_of_day(self.syear - 1, self.smon, day_start)
         else:
             if now_epoch > end_time:
                 # just have to check for next year if necessary
                 day_start = find_day_by_weekday_offset(self.syear + 1,
                                                        self.smon, self.swday, self.swday_offset)
-                start_time = get_start_of_day(self.syear + 1, month_id, day_start)
+                start_time = get_start_of_day(self.syear + 1, self.smon, day_start)
                 day_end = find_day_by_weekday_offset(self.eyear + 1,
                                                      self.emon, self.ewday, self.ewday_offset)
-                end_time = get_end_of_day(self.eyear + 1, month_end_id, day_end)
+                end_time = get_end_of_day(self.eyear + 1, self.emon, day_end)
 
         return (start_time, end_time)
 
@@ -788,33 +781,31 @@ class MonthDateDaterange(Daterange):
         now = time.localtime(ref)
         if self.syear == 0:
             self.syear = now.tm_year
-        month_start_id = Daterange.get_month_id(self.smon)
         day_start = find_day_by_offset(self.syear, self.smon, self.smday)
-        start_time = get_start_of_day(self.syear, month_start_id, day_start)
+        start_time = get_start_of_day(self.syear, self.smon, day_start)
 
         if self.eyear == 0:
             self.eyear = now.tm_year
-        month_end_id = Daterange.get_month_id(self.emon)
         day_end = find_day_by_offset(self.eyear, self.emon, self.emday)
-        end_time = get_end_of_day(self.eyear, month_end_id, day_end)
+        end_time = get_end_of_day(self.eyear, self.emon, day_end)
 
         now_epoch = time.mktime(now)
         if start_time > end_time:  # the period is between years
             if now_epoch > end_time:
                 # check for next year
                 day_end = find_day_by_offset(self.eyear + 1, self.emon, self.emday)
-                end_time = get_end_of_day(self.eyear + 1, month_end_id, day_end)
+                end_time = get_end_of_day(self.eyear + 1, self.emon, day_end)
             else:
                 # it s just that start was the last year
                 day_start = find_day_by_offset(self.syear - 1, self.smon, self.emday)
-                start_time = get_start_of_day(self.syear - 1, month_start_id, day_start)
+                start_time = get_start_of_day(self.syear - 1, self.smon, day_start)
         else:
             if now_epoch > end_time:
                 # just have to check for next year if necessary
                 day_start = find_day_by_offset(self.syear + 1, self.smon, self.emday)
-                start_time = get_start_of_day(self.syear + 1, month_start_id, day_start)
+                start_time = get_start_of_day(self.syear + 1, self.smon, day_start)
                 day_end = find_day_by_offset(self.eyear + 1, self.emon, self.emday)
-                end_time = get_end_of_day(self.eyear + 1, month_end_id, day_end)
+                end_time = get_end_of_day(self.eyear + 1, self.emon, day_end)
 
         return (start_time, end_time)
 
@@ -837,17 +828,16 @@ class WeekDayDaterange(Daterange):
         if self.syear == 0:
             self.syear = now.tm_year
         month_start_id = now.tm_mon
-        month_start = Daterange.get_month_by_id(month_start_id)
         day_start = find_day_by_weekday_offset(self.syear,
-                                               month_start, self.swday, self.swday_offset)
+                                               month_start_id, self.swday, self.swday_offset)
         start_time = get_start_of_day(self.syear, month_start_id, day_start)
 
         # Same for end year
         if self.eyear == 0:
             self.eyear = now.tm_year
         month_end_id = now.tm_mon
-        month_end = Daterange.get_month_by_id(month_end_id)
-        day_end = find_day_by_weekday_offset(self.eyear, month_end, self.ewday, self.ewday_offset)
+        day_end = find_day_by_weekday_offset(self.eyear, month_end_id, self.ewday,
+                                             self.ewday_offset)
         end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         # Maybe end_time is before start. So look for the
@@ -857,9 +847,8 @@ class WeekDayDaterange(Daterange):
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
-            month_end = Daterange.get_month_by_id(month_end_id)
             day_end = find_day_by_weekday_offset(self.eyear,
-                                                 month_end, self.ewday, self.ewday_offset)
+                                                 month_end_id, self.ewday, self.ewday_offset)
             end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         now_epoch = time.mktime(now)
@@ -874,14 +863,12 @@ class WeekDayDaterange(Daterange):
                 month_start_id = 1
                 self.syear += 1
             # First start
-            month_start = Daterange.get_month_by_id(month_start_id)
             day_start = find_day_by_weekday_offset(self.syear,
-                                                   month_start, self.swday, self.swday_offset)
+                                                   month_start_id, self.swday, self.swday_offset)
             start_time = get_start_of_day(self.syear, month_start_id, day_start)
             # Then end
-            month_end = Daterange.get_month_by_id(month_end_id)
             day_end = find_day_by_weekday_offset(self.eyear,
-                                                 month_end, self.ewday, self.ewday_offset)
+                                                 month_end_id, self.ewday, self.ewday_offset)
             end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         return (start_time, end_time)
@@ -903,15 +890,13 @@ class MonthDayDaterange(Daterange):
         if self.syear == 0:
             self.syear = now.tm_year
         month_start_id = now.tm_mon
-        month_start = Daterange.get_month_by_id(month_start_id)
-        day_start = find_day_by_offset(self.syear, month_start, self.smday)
+        day_start = find_day_by_offset(self.syear, month_start_id, self.smday)
         start_time = get_start_of_day(self.syear, month_start_id, day_start)
 
         if self.eyear == 0:
             self.eyear = now.tm_year
         month_end_id = now.tm_mon
-        month_end = Daterange.get_month_by_id(month_end_id)
-        day_end = find_day_by_offset(self.eyear, month_end, self.emday)
+        day_end = find_day_by_offset(self.eyear, month_end_id, self.emday)
         end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         now_epoch = time.mktime(now)
@@ -921,7 +906,7 @@ class MonthDayDaterange(Daterange):
             if month_end_id > 12:
                 month_end_id = 1
                 self.eyear += 1
-            day_end = find_day_by_offset(self.eyear, month_end, self.emday)
+            day_end = find_day_by_offset(self.eyear, month_end_id, self.emday)
             end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         if end_time < now_epoch:
@@ -935,13 +920,11 @@ class MonthDayDaterange(Daterange):
                 self.syear += 1
 
             # For the start
-            month_start = Daterange.get_month_by_id(month_start_id)
-            day_start = find_day_by_offset(self.syear, month_start, self.smday)
+            day_start = find_day_by_offset(self.syear, month_start_id, self.smday)
             start_time = get_start_of_day(self.syear, month_start_id, day_start)
 
             # For the end
-            month_end = Daterange.get_month_by_id(month_end_id)
-            day_end = find_day_by_offset(self.eyear, month_end, self.emday)
+            day_end = find_day_by_offset(self.eyear, month_end_id, self.emday)
             end_time = get_end_of_day(self.eyear, month_end_id, day_end)
 
         return (start_time, end_time)
