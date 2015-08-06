@@ -152,9 +152,9 @@ class Receiver(Satellite):
 
         # Now create the external commander. It's just here to dispatch
         # the commands to schedulers
-        e = ExternalCommandManager(None, 'receiver')
-        e.load_receiver(self)
-        self.external_command = e
+        ecm = ExternalCommandManager(None, 'receiver')
+        ecm.load_receiver(self)
+        self.external_command = ecm
 
     def add(self, elt):
         """Add an object to the receiver one
@@ -184,8 +184,8 @@ class Receiver(Satellite):
         :type hnames: list
         :return: None
         """
-        for h in hnames:
-            self.host_assoc[h] = sched_id
+        for h_name in hnames:
+            self.host_assoc[h_name] = sched_id
 
     def get_sched_from_hname(self, hname):
         """Get scheduler linked to the given host_name
@@ -195,9 +195,9 @@ class Receiver(Satellite):
         :return: scheduler with id corresponding to the mapping table
         :rtype: dict
         """
-        i = self.host_assoc.get(hname, None)
-        e = self.schedulers.get(i, None)
-        return e
+        item = self.host_assoc.get(hname, None)
+        sched = self.schedulers.get(item, None)
+        return sched
 
     def manage_brok(self, b):
         """Send brok to modules. Modules have to implement their own manage_brok function.
@@ -230,9 +230,9 @@ class Receiver(Satellite):
         """
 
         act = active_children()
-        for a in act:
-            a.terminate()
-            a.join(1)
+        for child in act:
+            child.terminate()
+            child.join(1)
         super(Receiver, self).do_stop()
 
     def setup_new_conf(self):
@@ -292,16 +292,16 @@ class Receiver(Satellite):
                 external_commands = self.schedulers[sched_id]['external_commands']
                 con = self.schedulers[sched_id]['con']
 
-            s = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = s
+            sched = conf['schedulers'][sched_id]
+            self.schedulers[sched_id] = sched
 
-            if s['name'] in g_conf['satellitemap']:
-                s.update(g_conf['satellitemap'][s['name']])
+            if sched['name'] in g_conf['satellitemap']:
+                sched.update(g_conf['satellitemap'][sched['name']])
 
             proto = 'http'
-            if s['use_ssl']:
+            if sched['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, s['address'], s['port'])
+            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
 
             self.schedulers[sched_id]['uri'] = uri
             if already_got:
@@ -315,9 +315,9 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['external_commands'] = []
                 self.schedulers[sched_id]['con'] = None
             self.schedulers[sched_id]['running_id'] = 0
-            self.schedulers[sched_id]['active'] = s['active']
-            self.schedulers[sched_id]['timeout'] = s['timeout']
-            self.schedulers[sched_id]['data_timeout'] = s['data_timeout']
+            self.schedulers[sched_id]['active'] = sched['active']
+            self.schedulers[sched_id]['timeout'] = sched['timeout']
+            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
             # Do not connect if we are a passive satellite
             if self.direct_routing and not already_got:
