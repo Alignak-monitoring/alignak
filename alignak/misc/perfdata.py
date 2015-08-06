@@ -88,16 +88,16 @@ class Metric:
             self.warning = self.critical = self.min = self.max = None
         s = s.strip()
         # print "Analysis string", s
-        r = metric_pattern.match(s)
-        if r:
+        matches = metric_pattern.match(s)
+        if matches:
             # Get the name but remove all ' in it
-            self.name = r.group(1).replace("'", "")
-            self.value = guess_int_or_float(r.group(2))
-            self.uom = r.group(3)
-            self.warning = guess_int_or_float(r.group(4))
-            self.critical = guess_int_or_float(r.group(5))
-            self.min = guess_int_or_float(r.group(6))
-            self.max = guess_int_or_float(r.group(7))
+            self.name = matches.group(1).replace("'", "")
+            self.value = guess_int_or_float(matches.group(2))
+            self.uom = matches.group(3)
+            self.warning = guess_int_or_float(matches.group(4))
+            self.critical = guess_int_or_float(matches.group(5))
+            self.min = guess_int_or_float(matches.group(6))
+            self.max = guess_int_or_float(matches.group(7))
             # print 'Name', self.name
             # print "Value", self.value
             # print "Res", r
@@ -107,12 +107,12 @@ class Metric:
                 self.max = 100
 
     def __str__(self):
-        s = "%s=%s%s" % (self.name, self.value, self.uom)
+        string = "%s=%s%s" % (self.name, self.value, self.uom)
         if self.warning:
-            s += ";%s" % (self.warning)
+            string += ";%s" % (self.warning)
         if self.critical:
-            s += ";%s" % (self.critical)
-        return s
+            string += ";%s" % (self.critical)
+        return string
 
 
 class PerfDatas:
@@ -124,10 +124,10 @@ class PerfDatas:
         elts = perfdata_split_pattern.findall(s)
         elts = [e for e in elts if e != '']
         self.metrics = {}
-        for e in elts:
-            m = Metric(e)
-            if m.name is not None:
-                self.metrics[m.name] = m
+        for elem in elts:
+            metric = Metric(elem)
+            if metric.name is not None:
+                self.metrics[metric.name] = metric
 
     def __iter__(self):
         return self.metrics.itervalues()
