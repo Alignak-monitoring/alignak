@@ -149,9 +149,9 @@ class Hostgroup(Itemgroup):
 
         hg_mbrs = self.get_hostgroup_members()
         for hg_mbr in hg_mbrs:
-            hg = hostgroups.find_by_name(hg_mbr.strip())
-            if hg is not None:
-                value = hg.get_hosts_by_explosion(hostgroups)
+            hostgroup = hostgroups.find_by_name(hg_mbr.strip())
+            if hostgroup is not None:
+                value = hostgroup.get_hosts_by_explosion(hostgroups)
                 if value is not None:
                     self.add_string_member(value)
 
@@ -175,10 +175,10 @@ class Hostgroups(Itemgroups):
         :return: list of hosts with this name
         :rtype: list
         """
-        hg = self.find_by_name(hgname)
-        if hg is None:
+        hostgroup = self.find_by_name(hgname)
+        if hostgroup is None:
             return []
-        return hg.get_hosts()
+        return hostgroup.get_hosts()
 
     def linkify(self, hosts=None, realms=None):
         """
@@ -202,8 +202,8 @@ class Hostgroups(Itemgroups):
         :type hosts: object
         :return: None
         """
-        for hg in self:
-            mbrs = hg.get_hosts()
+        for hostgroup in self:
+            mbrs = hostgroup.get_hosts()
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
@@ -213,23 +213,23 @@ class Hostgroups(Itemgroups):
                 elif mbr == '*':
                     new_mbrs.extend(hosts)
                 else:
-                    h = hosts.find_by_name(mbr)
-                    if h is not None:
-                        new_mbrs.append(h)
+                    host = hosts.find_by_name(mbr)
+                    if host is not None:
+                        new_mbrs.append(host)
                     else:
-                        hg.add_string_unknown_member(mbr)
+                        hostgroup.add_string_unknown_member(mbr)
 
             # Make members uniq
             new_mbrs = list(set(new_mbrs))
 
             # We find the id, we replace the names
-            hg.replace_members(new_mbrs)
+            hostgroup.replace_members(new_mbrs)
 
             # Now register us in our members
-            for h in hg.members:
-                h.hostgroups.append(hg)
+            for host in hostgroup.members:
+                host.hostgroups.append(hostgroup)
                 # and be sure we are uniq in it
-                h.hostgroups = list(set(h.hostgroups))
+                host.hostgroups = list(set(host.hostgroups))
 
     def linkify_hg_by_realms(self, realms):
         """
@@ -244,35 +244,38 @@ class Hostgroups(Itemgroups):
         """
         # Now we explode the realm value if we've got one
         # The group realm must not override a host one (warning?)
-        for hg in self:
-            if not hasattr(hg, 'realm'):
+        for hostgroup in self:
+            if not hasattr(hostgroup, 'realm'):
                 continue
 
             # Maybe the value is void?
-            if not hg.realm.strip():
+            if not hostgroup.realm.strip():
                 continue
 
-            r = realms.find_by_name(hg.realm.strip())
-            if r is not None:
-                hg.realm = r
-                logger.debug("[hostgroups] %s is in %s realm", hg.get_name(), r.get_name())
+            realm = realms.find_by_name(hostgroup.realm.strip())
+            if realm is not None:
+                hostgroup.realm = realm
+                logger.debug("[hostgroups] %s is in %s realm",
+                             hostgroup.get_name(), realm.get_name())
             else:
-                err = "the hostgroup %s got an unknown realm '%s'" % (hg.get_name(), hg.realm)
-                hg.configuration_errors.append(err)
-                hg.realm = None
+                err = "the hostgroup %s got an unknown realm '%s'" % \
+                      (hostgroup.get_name(), hostgroup.realm)
+                hostgroup.configuration_errors.append(err)
+                hostgroup.realm = None
                 continue
 
-            for h in hg:
-                if h is None:
+            for host in hostgroup:
+                if host is None:
                     continue
-                if h.realm is None or h.got_default_realm:  # default value not hasattr(h, 'realm'):
+                if host.realm is None or host.got_default_realm:  # default not hasattr(h, 'realm'):
                     logger.debug("[hostgroups] apply a realm %s to host %s from a hostgroup "
-                                 "rule (%s)", hg.realm.get_name(), h.get_name(), hg.get_name())
-                    h.realm = hg.realm
+                                 "rule (%s)", hostgroup.realm.get_name(),
+                                 host.get_name(), hostgroup.get_name())
+                    host.realm = hostgroup.realm
                 else:
-                    if h.realm != hg.realm:
+                    if host.realm != hostgroup.realm:
                         logger.warning("[hostgroups] host %s it not in the same realm than it's "
-                                       "hostgroup %s", h.get_name(), hg.get_name())
+                                       "hostgroup %s", host.get_name(), hostgroup.get_name())
 
     def add_member(self, hname, hgname):
         """
@@ -285,13 +288,13 @@ class Hostgroups(Itemgroups):
         :type hgname: str
         :return: None
         """
-        hg = self.find_by_name(hgname)
+        hostgroup = self.find_by_name(hgname)
         # if the id do not exist, create the hg
-        if hg is None:
-            hg = Hostgroup({'hostgroup_name': hgname, 'alias': hgname, 'members': hname})
-            self.add(hg)
+        if hostgroup is None:
+            hostgroup = Hostgroup({'hostgroup_name': hgname, 'alias': hgname, 'members': hname})
+            self.add(hostgroup)
         else:
-            hg.add_string_member(hname)
+            hostgroup.add_string_member(hname)
 
     def explode(self):
         """
@@ -303,13 +306,13 @@ class Hostgroups(Itemgroups):
         # so we tag it
         for tmp_hg in self.items.values():
             tmp_hg.already_explode = False
-        for hg in self.items.values():
-            if hg.has('hostgroup_members') and not hg.already_explode:
+        for hostgroup in self.items.values():
+            if hostgroup.has('hostgroup_members') and not hostgroup.already_explode:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_hg in self.items.values():
                     tmp_hg.rec_tag = False
-                hg.get_hosts_by_explosion(self)
+                hostgroup.get_hosts_by_explosion(self)
 
         # We clean the tags
         for tmp_hg in self.items.values():
