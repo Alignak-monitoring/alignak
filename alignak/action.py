@@ -91,9 +91,9 @@ def no_block_read(output):
     :return: data read from fd
     :rtype: str
     """
-    fd = output.fileno()
-    fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+    o_fd = output.fileno()
+    o_fl = fcntl.fcntl(o_fd, fcntl.F_GETFL)
+    fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
     try:
         return output.read()
     except Exception:
@@ -140,8 +140,8 @@ class __Action(object):
         # changes the real environment (it is still a os._Environment
         # instance).
         local_env = os.environ.copy()
-        for p in self.env:
-            local_env[p] = self.env[p].encode('utf8')
+        for local_var in self.env:
+            local_env[local_var] = self.env[local_var].encode('utf8')
         return local_env
 
     def execute(self):
@@ -316,8 +316,8 @@ class __Action(object):
         :return: True if one shell character is found, False otherwise
         :rtype: bool
         """
-        for c in self.command:
-            if c in shellchars:
+        for command in self.command:
+            if command in shellchars:
                 return True
         return False
 
@@ -403,9 +403,9 @@ if os.name != 'nt':
             # tree instead of just the first one
             os.killpg(self.process.pid, signal.SIGKILL)
             # Try to force close the descriptors, because python seems to have problems with them
-            for fd in [self.process.stdout, self.process.stderr]:
+            for file_d in [self.process.stdout, self.process.stderr]:
                 try:
-                    fd.close()
+                    file_d.close()
                 except Exception:
                     pass
 
