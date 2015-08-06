@@ -214,11 +214,11 @@ class Broker(BaseSatellite):
         :rtype: object
         """
         s_type = {'scheduler': self.schedulers,
-             'arbiter': self.arbiters,
-             'poller': self.pollers,
-             'reactionner': self.reactionners,
-             'receiver': self.receivers
-             }
+                  'arbiter': self.arbiters,
+                  'poller': self.pollers,
+                  'reactionner': self.reactionners,
+                  'receiver': self.receivers
+                  }
         if d_type in s_type:
             return s_type[d_type]
         return None
