@@ -85,29 +85,29 @@ def safe_print(*args):
     :type args:
     :return: None
     """
-    l = []
-    for e in args:
+    lst = []
+    for arg in args:
         # If we got an str, go in unicode, and if we cannot print
         # utf8, go in ascii mode
-        if isinstance(e, str):
+        if isinstance(arg, str):
             if safe_stdout:
-                s = unicode(e, 'utf8', errors='ignore')
+                string = unicode(arg, 'utf8', errors='ignore')
             else:
-                s = e.decode('ascii', 'replace').encode('ascii', 'replace').\
+                string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
                     decode('ascii', 'replace')
-            l.append(s)
+            lst.append(string)
         # Same for unicode, but skip the unicode pass
-        elif isinstance(e, unicode):
+        elif isinstance(arg, unicode):
             if safe_stdout:
-                s = e
+                string = arg
             else:
-                s = e.encode('ascii', 'replace')
-            l.append(s)
+                string = arg.encode('ascii', 'replace')
+            lst.append(string)
         # Other types can be directly convert in unicode
         else:
-            l.append(unicode(e))
+            lst.append(unicode(arg))
     # Ok, now print it :)
-    print u' '.join(l)
+    print u' '.join(lst)
 
 
 def split_semicolon(line, maxsplit=None):
@@ -190,42 +190,42 @@ def jsonify_r(obj):
     for prop in properties:
         if not hasattr(obj, prop):
             continue
-        v = getattr(obj, prop)
+        val = getattr(obj, prop)
         # Maybe the property is not jsonable
         try:
-            if isinstance(v, set):
-                v = list(v)
-            if isinstance(v, list):
-                v = sorted(v)
-            json.dumps(v)
-            res[prop] = v
+            if isinstance(val, set):
+                val = list(val)
+            if isinstance(val, list):
+                val = sorted(val)
+            json.dumps(val)
+            res[prop] = val
         except Exception, exp:
-            if isinstance(v, list):
+            if isinstance(val, list):
                 lst = []
-                for _t in v:
-                    t = getattr(_t.__class__, 'my_type', '')
-                    if t == 'CommandCall':
+                for subval in val:
+                    o_type = getattr(subval.__class__, 'my_type', '')
+                    if o_type == 'CommandCall':
                         try:
-                            lst.append(_t.call)
+                            lst.append(subval.call)
                         except Exception:
                             pass
                         continue
-                    if t and hasattr(_t, t + '_name'):
-                        lst.append(getattr(_t, t + '_name'))
+                    if o_type and hasattr(subval, o_type + '_name'):
+                        lst.append(getattr(subval, o_type + '_name'))
                     else:
                         pass
                         # print "CANNOT MANAGE OBJECT", _t, type(_t), t
                 res[prop] = lst
             else:
-                t = getattr(v.__class__, 'my_type', '')
-                if t == 'CommandCall':
+                o_type = getattr(val.__class__, 'my_type', '')
+                if o_type == 'CommandCall':
                     try:
-                        res[prop] = v.call
+                        res[prop] = val.call
                     except Exception:
                         pass
                     continue
-                if t and hasattr(v, t + '_name'):
-                    res[prop] = getattr(v, t + '_name')
+                if o_type and hasattr(val, o_type + '_name'):
+                    res[prop] = getattr(val, o_type + '_name')
                 # else:
                 #    print "CANNOT MANAGE OBJECT", v, type(v), t
     return res
@@ -301,10 +301,7 @@ def get_sec_from_morning(t):
     TODO: Missing timezone
     """
     t_lt = time.localtime(t)
-    h = t_lt.tm_hour
-    m = t_lt.tm_min
-    s = t_lt.tm_sec
-    return h * 3600 + m * 60 + s
+    return t_lt.tm_hour * 3600 + t_lt.tm_min * 60 + t_lt.tm_sec
 
 
 def get_start_of_day(year, month_id, day):
@@ -346,11 +343,10 @@ def format_t_into_dhms_format(t):
     '0d 1h 0m 0s'
 
     """
-    s = t
-    m, s = divmod(s, 60)
-    h, m = divmod(m, 60)
-    d, h = divmod(h, 24)
-    return '%sd %sh %sm %ss' % (d, h, m, s)
+    mins, t = divmod(t, 60)
+    hour, mins = divmod(mins, 60)
+    day, hour = divmod(hour, 24)
+    return '%sd %sh %sm %ss' % (day, hour, mins, t)
 
 
 # ################################ Pythonization ###########################
@@ -446,8 +442,8 @@ def list_split(val, split_on_coma=True):
     if not split_on_coma:
         return val
     new_val = []
-    for x in val:
-        new_val.extend(x.split(','))
+    for subval in val:
+        new_val.extend(subval.split(','))
     return new_val
 
 
@@ -468,13 +464,13 @@ def to_best_int_float(val):
     >>> to_best_int_float("20")
     20
     """
-    i = int(float(val))
-    f = float(val)
+    integer = int(float(val))
+    flt = float(val)
     # If the f is a .0 value,
     # best match is int
-    if i == f:
-        return i
-    return f
+    if integer == flt:
+        return integer
+    return flt
 
 
 # bool('0') = true, so...
@@ -600,11 +596,11 @@ def to_hostnames_list(ref, tab):
     :return: host_name list
     :rtype: list
     """
-    r = []
-    for h in tab:
-        if hasattr(h, 'host_name'):
-            r.append(h.host_name)
-    return r
+    res = []
+    for host in tab:
+        if hasattr(host, 'host_name'):
+            res.append(host.host_name)
+    return res
 
 
 def to_svc_hst_distinct_lists(ref, tab):
@@ -620,16 +616,16 @@ def to_svc_hst_distinct_lists(ref, tab):
     :return: dict with hosts and services names
     :rtype: dict
     """
-    r = {'hosts': [], 'services': []}
-    for e in tab:
-        cls = e.__class__
+    res = {'hosts': [], 'services': []}
+    for elem in tab:
+        cls = elem.__class__
         if cls.my_type == 'service':
-            name = e.get_dbg_name()
-            r['services'].append(name)
+            name = elem.get_dbg_name()
+            res['services'].append(name)
         else:
-            name = e.get_dbg_name()
-            r['hosts'].append(name)
-    return r
+            name = elem.get_dbg_name()
+            res['hosts'].append(name)
+    return res
 
 
 def expand_with_macros(ref, value):
@@ -818,20 +814,20 @@ def nighty_five_percent(t):
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    t2 = copy.copy(t)
-    t2.sort()
+    t02 = copy.copy(t)
+    t02.sort()
 
-    l = len(t)
+    length = len(t)
 
     # If void tab, wtf??
-    if l == 0:
+    if length == 0:
         return (None, None, None)
 
-    t_reduce = t2
+    t_reduce = t02
     # only take a part if we got more
     # than 100 elements, or it's a non sense
-    if l > 100:
-        offset = int(l * 0.05)
+    if length > 100:
+        offset = int(length * 0.05)
         t_reduce = t_reduce[offset:-offset]
 
     reduce_len = len(t_reduce)
@@ -871,11 +867,11 @@ def expand_xy_pattern(pattern):
     :type pattern: str
     :return: Nome
     """
-    ns = NodeSet(str(pattern))
-    if len(ns) > 1:
-        for elem in ns:
-            for a in expand_xy_pattern(elem):
-                yield a
+    nodeset = NodeSet(str(pattern))
+    if len(nodeset) > 1:
+        for elem in nodeset:
+            for expand in expand_xy_pattern(elem):
+                yield expand
     else:
         yield pattern
 
@@ -898,18 +894,18 @@ def got_generation_rule_pattern_change(xy_couples):
     xy_cpl = xy_couples
     if xy_couples == []:
         return []
-    (x, y) = xy_cpl[0]
-    for i in xrange(x, y + 1):
-        n = got_generation_rule_pattern_change(xy_cpl[1:])
-        if n != []:
-            for e in n:
-                res.append([i, '[%d-%d]' % (x, y), e])
+    (x00, y00) = xy_cpl[0]
+    for i in xrange(x00, y00 + 1):
+        rules = got_generation_rule_pattern_change(xy_cpl[1:])
+        if rules != []:
+            for elem in rules:
+                res.append([i, '[%d-%d]' % (x00, y00), elem])
         else:
-            res.append([i, '[%d-%d]' % (x, y), []])
+            res.append([i, '[%d-%d]' % (x00, y00), []])
     return res
 
 
-def apply_change_recursive_pattern_change(s, rule):
+def apply_change_recursive_pattern_change(string, rule):
     """Apply a recursive pattern change
     generate by the got_generation_rule_pattern_change function.
 
@@ -930,13 +926,13 @@ def apply_change_recursive_pattern_change(s, rule):
     """
     # print "Try to change %s" % s, 'with', rule
     # new_s = s
-    (i, m, t) = rule
+    (new_val, match, lst) = rule
     # print "replace %s by %s" % (r'%s' % m, str(i)), 'in', s
-    s = s.replace(r'%s' % m, str(i))
+    string = string.replace(r'%s' % match, str(new_val))
     # print "And got", s
-    if t == []:
-        return s
-    return apply_change_recursive_pattern_change(s, t)
+    if lst == []:
+        return string
+    return apply_change_recursive_pattern_change(string, lst)
 
 GET_KEY_VALUE_SEQUENCE_ERROR_NOERROR = 0
 GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX = 1
@@ -982,7 +978,7 @@ def get_key_value_sequence(entry, default_value=None):
 
     if all_keyval_pattern.match(conf_entry):
         for mat in re.finditer(keyval_pattern, conf_entry):
-            r = {'KEY': mat.group('key')}
+            r_dict = {'KEY': mat.group('key')}
             # The key is in mat.group('key')
             # If there are also value(s)...
             if mat.group('values'):
@@ -990,27 +986,27 @@ def get_key_value_sequence(entry, default_value=None):
                     # If there are multiple values, loop over them
                     valnum = 1
                     for val in re.finditer(value_pattern, mat.group('values')):
-                        r['VALUE' + str(valnum)] = val.group('val')
+                        r_dict['VALUE' + str(valnum)] = val.group('val')
                         valnum += 1
                 else:
                     # Value syntax error
                     return (None, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX)
             else:
-                r['VALUE1'] = None
-            array1.append(r)
+                r_dict['VALUE1'] = None
+            array1.append(r_dict)
     else:
         # Something is wrong with the values. (Maybe unbalanced '$(')
         # TODO: count opening and closing brackets in the pattern
         return (None, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX)
 
     # now fill the empty values with the default value
-    for r in array1:
-        if r['VALUE1'] is None:
+    for r_dict in array1:
+        if r_dict['VALUE1'] is None:
             if default_value is None:
                 return (None, GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT)
             else:
-                r['VALUE1'] = default_value
-        r['VALUE'] = r['VALUE1']
+                r_dict['VALUE1'] = default_value
+        r_dict['VALUE'] = r_dict['VALUE1']
 
     # Now create new one but for [X-Y] matchs
     #  array1 holds the original entries. Some of the keys may contain wildcards
@@ -1020,21 +1016,21 @@ def get_key_value_sequence(entry, default_value=None):
         # The pattern that will say if we have a [X-Y] key.
         pat = re.compile(r'\[(\d*)-(\d*)\]')
 
-    for r in array1:
+    for r_dict in array1:
 
-        key = r['KEY']
-        orig_key = r['KEY']
+        key = r_dict['KEY']
+        orig_key = r_dict['KEY']
 
         # We have no choice, we cannot use NodeSet, so we use the
         # simple regexp
         if NodeSet is None:
-            m = pat.search(key)
-            got_xy = (m is not None)
+            matches = pat.search(key)
+            got_xy = (matches is not None)
         else:  # Try to look with a nodeset check directly
             try:
-                ns = NodeSet(str(key))
+                nodeset = NodeSet(str(key))
                 # If we have more than 1 element, we have a xy thing
-                got_xy = (len(ns) != 1)
+                got_xy = (len(nodeset) != 1)
             except NodeSetParseRangeError:
                 return (None, GET_KEY_VALUE_SEQUENCE_ERROR_NODE)
 
@@ -1049,14 +1045,14 @@ def get_key_value_sequence(entry, default_value=None):
                 still_loop = True
                 xy_couples = []  # will get all X-Y couples
                 while still_loop:
-                    m = pat.search(key)
-                    if m is not None:  # we've find one X-Y
-                        (x, y) = m.groups()
-                        (x, y) = (int(x), int(y))
-                        xy_couples.append((x, y))
+                    matches = pat.search(key)
+                    if matches is not None:  # we've find one X-Y
+                        (x00, y00) = matches.groups()
+                        (x00, y00) = (int(x00), int(y00))
+                        xy_couples.append((x00, y00))
                         # We must search if we've gotother X-Y, so
                         # we delete this one, and loop
-                        key = key.replace('[%d-%d]' % (x, y), 'Z' * 10)
+                        key = key.replace('[%d-%d]' % (x00, y00), 'Z' * 10)
                     else:  # no more X-Y in it
                         still_loop = False
 
@@ -1069,8 +1065,8 @@ def get_key_value_sequence(entry, default_value=None):
                 for rule in rules:
                     res = apply_change_recursive_pattern_change(orig_key, rule)
                     new_r = {}
-                    for key in r:
-                        new_r[key] = r[key]
+                    for key in r_dict:
+                        new_r[key] = r_dict[key]
                     new_r['KEY'] = res
                     array2.append(new_r)
 
@@ -1087,13 +1083,13 @@ def get_key_value_sequence(entry, default_value=None):
                 for new_key in new_keys:
                     # res = apply_change_recursive_pattern_change(orig_key, rule)
                     new_r = {}
-                    for key in r:
-                        new_r[key] = r[key]
+                    for key in r_dict:
+                        new_r[key] = r_dict[key]
                     new_r['KEY'] = new_key
                     array2.append(new_r)
         else:
             # There were no wildcards
-            array2.append(r)
+            array2.append(r_dict)
     # t1 = time.time()
     # print "***********Diff", t1 -t0
 
@@ -1118,15 +1114,15 @@ def expect_file_dirs(root, path):
     # so we are doing a mkdir -p .....
     # TODO: and windows????
     tmp_dir = root
-    for d in dirs:
-        _d = os.path.join(tmp_dir, d)
-        logger.info('Verify the existence of file %s', _d)
-        if not os.path.exists(_d):
+    for directory in dirs:
+        path = os.path.join(tmp_dir, directory)
+        logger.info('Verify the existence of file %s', path)
+        if not os.path.exists(path):
             try:
-                os.mkdir(_d)
+                os.mkdir(path)
             except Exception:
                 return False
-        tmp_dir = _d
+        tmp_dir = path
     return True
 
 
@@ -1445,7 +1441,7 @@ def is_complex_expr(expr):
     :return: True if '(', ')', '&', '|', '!' or '*' are in expr
     :rtype: bool
     """
-    for m in '()&|!*':
-        if m in expr:
+    for char in '()&|!*':
+        if char in expr:
             return True
     return False
