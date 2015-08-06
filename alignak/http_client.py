@@ -177,8 +177,8 @@ class HTTPClient(object):
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
-        for (k, v) in args.iteritems():
-            args[k] = zlib.compress(cPickle.dumps(v), 2)
+        for (key, value) in args.iteritems():
+            args[key] = zlib.compress(cPickle.dumps(value), 2)
         try:
             rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl)
             if rsp.status_code != 200:
