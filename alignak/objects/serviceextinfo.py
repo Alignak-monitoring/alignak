@@ -183,16 +183,17 @@ class ServicesExtInfo(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for ei in self:
-            if hasattr(ei, 'register') and not getattr(ei, 'register'):
+        for extinfo in self:
+            if hasattr(extinfo, 'register') and not getattr(extinfo, 'register'):
                 # We don't have to merge template
                 continue
-            hosts_names = ei.get_name().split(",")
+            hosts_names = extinfo.get_name().split(",")
             for host_name in hosts_names:
-                s = services.find_srv_by_name_and_hostname(host_name, ei.service_description)
-                if s is not None:
+                serv = services.find_srv_by_name_and_hostname(host_name,
+                                                              extinfo.service_description)
+                if serv is not None:
                     # FUUUUUUUUUUsion
-                    self.merge_extinfo(s, ei)
+                    self.merge_extinfo(serv, extinfo)
 
     def merge_extinfo(self, service, extinfo):
         """Merge extended host information into a service
@@ -205,6 +206,6 @@ class ServicesExtInfo(Items):
         """
         properties = ['notes', 'notes_url', 'icon_image', 'icon_image_alt']
         # service properties have precedence over serviceextinfo properties
-        for p in properties:
-            if getattr(service, p) == '' and getattr(extinfo, p) != '':
-                setattr(service, p, getattr(extinfo, p))
+        for prop in properties:
+            if getattr(service, prop) == '' and getattr(extinfo, prop) != '':
+                setattr(service, prop, getattr(extinfo, prop))
