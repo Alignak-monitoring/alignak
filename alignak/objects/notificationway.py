@@ -149,25 +149,25 @@ class NotificationWay(Item):
         if business_impact < self.min_business_impact:
             return False
 
-        b = self.service_notification_period.is_time_valid(t)
+        valid = self.service_notification_period.is_time_valid(t)
         if 'n' in self.service_notification_options:
             return False
         t = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
              'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's'}
         if n_type == 'PROBLEM':
             if state in t:
-                return b and t[state] in self.service_notification_options
+                return valid and t[state] in self.service_notification_options
         elif n_type == 'RECOVERY':
             if n_type in t:
-                return b and t[n_type] in self.service_notification_options
+                return valid and t[n_type] in self.service_notification_options
         elif n_type == 'ACKNOWLEDGEMENT':
-            return b
+            return valid
         elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            return b and 'f' in self.service_notification_options
+            return valid and 'f' in self.service_notification_options
         elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             # No notification when a downtime was cancelled. Is that true??
             # According to the documentation we need to look at _host_ options
-            return b and 's' in self.host_notification_options
+            return valid and 's' in self.host_notification_options
 
         return False
 
@@ -208,23 +208,23 @@ class NotificationWay(Item):
         if cmd and cmd not in self.host_notification_commands:
             return False
 
-        b = self.host_notification_period.is_time_valid(t)
+        valid = self.host_notification_period.is_time_valid(t)
         if 'n' in self.host_notification_options:
             return False
         t = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
              'FLAPPING': 'f', 'DOWNTIME': 's'}
         if n_type == 'PROBLEM':
             if state in t:
-                return b and t[state] in self.host_notification_options
+                return valid and t[state] in self.host_notification_options
         elif n_type == 'RECOVERY':
             if n_type in t:
-                return b and t[n_type] in self.host_notification_options
+                return valid and t[n_type] in self.host_notification_options
         elif n_type == 'ACKNOWLEDGEMENT':
-            return b
+            return valid
         elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            return b and 'f' in self.host_notification_options
+            return valid and 'f' in self.host_notification_options
         elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
-            return b and 's' in self.host_notification_options
+            return valid and 's' in self.host_notification_options
 
         return False
 
@@ -359,5 +359,5 @@ class NotificationWays(Items):
             name = NotificationWay._id
         params['notificationway_name'] = name
         # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
-        nw = NotificationWay(params)
-        self.add_item(nw)
+        notificationway = NotificationWay(params)
+        self.add_item(notificationway)
