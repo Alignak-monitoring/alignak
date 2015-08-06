@@ -266,12 +266,12 @@ class IStats(Interface):
             res[sched_id] = lst
             for mod in app.q_by_mod:
                 # In workers we've got actions send to queue - queue size
-                for (i, q) in app.q_by_mod[mod].items():
+                for (q_id, queue) in app.q_by_mod[mod].items():
                     lst.append({
                         'scheduler_name': sched['name'],
                         'module': mod,
-                        'queue_number': i,
-                        'queue_size': q.qsize(),
+                        'queue_number': q_id,
+                        'queue_size': queue.qsize(),
                         'return_queue_len': app.get_returns_queue_len()})
         return res
 
@@ -324,10 +324,10 @@ class BaseSatellite(Daemon):
         :return: a dict of scheduler id as key and push_flavor as values
         :rtype: dict
         """
-        r = {}
-        for (k, v) in self.schedulers.iteritems():
-            r[k] = v['push_flavor']
-        return r
+        res = {}
+        for (key, val) in self.schedulers.iteritems():
+            res[key] = val['push_flavor']
+        return res
 
     def get_external_commands(self):
         """Get the external commands
@@ -386,10 +386,10 @@ class Satellite(BaseSatellite):
         :return: scheduler connection object or None
         :rtype: alignak.http_client.HTTPClient
         """
-        _t = time.time()
-        r = self.do_pynag_con_init(_id)
-        statsmgr.incr('con-init.scheduler', time.time() - _t)
-        return r
+        _t0 = time.time()
+        res = self.do_pynag_con_init(_id)
+        statsmgr.incr('con-init.scheduler', time.time() - _t0)
+        return res
 
     def do_pynag_con_init(self, s_id):
         """Initialize a connection with scheduler having '_id'
@@ -495,9 +495,9 @@ class Satellite(BaseSatellite):
         :return: None
         TODO: Use a decorator for stat
         """
-        _t = time.time()
+        _t0 = time.time()
         self.do_manage_returns()
-        statsmgr.incr('core.manage-returns', time.time() - _t)
+        statsmgr.incr('core.manage-returns', time.time() - _t0)
 
     def do_manage_returns(self):
         """Manage the checks and then
@@ -589,9 +589,9 @@ class Satellite(BaseSatellite):
         # create the input queue of this worker
         try:
             if is_android:
-                q = Queue()
+                queue = Queue()
             else:
-                q = self.manager.Queue()
+                queue = self.manager.Queue()
         # If we got no /dev/shm on linux-based system, we can got problem here.
         # Must raise with a good message
         except OSError, exp:
@@ -621,19 +621,19 @@ class Satellite(BaseSatellite):
                 return
         # We want to give to the Worker the name of the daemon (poller or reactionner)
         cls_name = self.__class__.__name__.lower()
-        w = Worker(1, q, self.returns_queue, self.processes_by_worker,
-                   mortal=mortal, max_plugins_output_length=self.max_plugins_output_length,
-                   target=target, loaded_into=cls_name, http_daemon=self.http_daemon)
-        w.module_name = module_name
+        worker = Worker(1, queue, self.returns_queue, self.processes_by_worker,
+                        mortal=mortal, max_plugins_output_length=self.max_plugins_output_length,
+                        target=target, loaded_into=cls_name, http_daemon=self.http_daemon)
+        worker.module_name = module_name
         # save this worker
-        self.workers[w._id] = w
+        self.workers[worker._id] = worker
 
         # And save the Queue of this worker, with key = worker id
-        self.q_by_mod[module_name][w._id] = q
-        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, w._id)
+        self.q_by_mod[module_name][worker._id] = queue
+        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, worker._id)
 
         # Ok, all is good. Start it!
-        w.start()
+        worker.start()
 
     def do_stop(self):
         """Stop all workers modules and sockets
@@ -641,10 +641,10 @@ class Satellite(BaseSatellite):
         :return: None
         """
         logger.info("[%s] Stopping all workers", self.name)
-        for w in self.workers.values():
+        for worker in self.workers.values():
             try:
-                w.terminate()
-                w.join(timeout=1)
+                worker.terminate()
+                worker.join(timeout=1)
             # A already dead worker or in a worker
             except (AttributeError, AssertionError):
                 pass
@@ -698,32 +698,32 @@ class Satellite(BaseSatellite):
             active_children()
 
         w_to_del = []
-        for w in self.workers.values():
+        for worker in self.workers.values():
             # If a worker goes down and we did not ask him, it's not
             # good: we can think that we have a worker and it's not True
             # So we del it
-            if not w.is_alive():
-                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, w._id)
+            if not worker.is_alive():
+                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, worker._id)
                 # Terminate immediately
-                w.terminate()
-                w.join(timeout=1)
-                w_to_del.append(w._id)
+                worker.terminate()
+                worker.join(timeout=1)
+                w_to_del.append(worker._id)
 
         # OK, now really del workers from queues
         # And requeue the actions it was managed
         for w_id in w_to_del:
-            w = self.workers[w_id]
+            worker = self.workers[w_id]
 
             # Del the queue of the module queue
-            del self.q_by_mod[w.module_name][w._id]
+            del self.q_by_mod[worker.module_name][worker._id]
 
             for sched_id in self.schedulers:
                 sched = self.schedulers[sched_id]
-                for a in sched['actions'].values():
-                    if a.status == 'queue' and a.worker_id == w_id:
+                for act in sched['actions'].values():
+                    if act.status == 'queue' and act.worker_id == w_id:
                         # Got a check that will NEVER return if we do not
                         # restart it
-                        self.assign_to_a_queue(a)
+                        self.assign_to_a_queue(act)
 
             # So now we can really forgot it
             del self.workers[w_id]
@@ -777,10 +777,10 @@ class Satellite(BaseSatellite):
         # if not get a round robin index to get a queue based
         # on the action id
         rr_idx = a._id % len(queues)
-        (i, q) = queues[rr_idx]
+        (index, queue) = queues[rr_idx]
 
         # return the id of the worker (i), and its queue
-        return (i, q)
+        return (index, queue)
 
     def add_actions(self, lst, sched_id):
         """Add a list of actions to the satellite queues
@@ -791,14 +791,14 @@ class Satellite(BaseSatellite):
         :type sched_id: int
         :return: None
         """
-        for a in lst:
+        for act in lst:
             # First we look if we do not already have it, if so
             # do nothing, we are already working!
-            if a._id in self.schedulers[sched_id]['actions']:
+            if act._id in self.schedulers[sched_id]['actions']:
                 continue
-            a.sched_id = sched_id
-            a.status = 'queue'
-            self.assign_to_a_queue(a)
+            act.sched_id = sched_id
+            act.status = 'queue'
+            self.assign_to_a_queue(act)
 
     def assign_to_a_queue(self, a):
         """Take an action and put it to a queue
@@ -808,11 +808,11 @@ class Satellite(BaseSatellite):
         :return: None
         """
         msg = Message(_id=0, _type='Do', data=a)
-        (i, q) = self._got_queue_from_action(a)
+        (index, queue) = self._got_queue_from_action(a)
         # Tag the action as "in the worker i"
-        a.worker_id = i
-        if q is not None:
-            q.put(msg)
+        a.worker_id = index
+        if queue is not None:
+            queue.put(msg)
 
     def get_new_actions(self):
         """ Wrapper function for do_get_new_actions
@@ -821,9 +821,9 @@ class Satellite(BaseSatellite):
         :return: None
         TODO: Use a decorator
         """
-        _t = time.time()
+        _t0 = time.time()
         self.do_get_new_actions()
-        statsmgr.incr('core.get-new-actions', time.time() - _t)
+        statsmgr.incr('core.get-new-actions', time.time() - _t0)
 
     def do_get_new_actions(self):
         """Get new actions from schedulers
@@ -972,12 +972,12 @@ class Satellite(BaseSatellite):
             sched = self.schedulers[sched_id]
             for mod in self.q_by_mod:
                 # In workers we've got actions send to queue - queue size
-                for (i, q) in self.q_by_mod[mod].items():
+                for (index, queue) in self.q_by_mod[mod].items():
                     logger.debug("[%d][%s][%s] Stats: Workers:%d (Queued:%d TotalReturnWait:%d)",
                                  sched_id, sched['name'], mod,
-                                 i, q.qsize(), self.get_returns_queue_len())
+                                 index, queue.qsize(), self.get_returns_queue_len())
                     # also update the stats module
-                    statsmgr.incr('core.worker-%s.queue-size' % mod, q.qsize())
+                    statsmgr.incr('core.worker-%s.queue-size' % mod, queue.qsize())
 
         # Before return or get new actions, see how we manage
         # old ones: are they still in queue (s)? If True, we
@@ -985,8 +985,8 @@ class Satellite(BaseSatellite):
         wait_ratio = self.wait_ratio.get_load()
         total_q = 0
         for mod in self.q_by_mod:
-            for q in self.q_by_mod[mod].values():
-                total_q += q.qsize()
+            for queue in self.q_by_mod[mod].values():
+                total_q += queue.qsize()
         if total_q != 0 and wait_ratio < 2 * self.polling_interval:
             logger.debug("I decide to up wait ratio")
             self.wait_ratio.update_load(wait_ratio * 2)
@@ -1131,15 +1131,15 @@ class Satellite(BaseSatellite):
                 wait_homerun = self.schedulers[sched_id]['wait_homerun']
                 actions = self.schedulers[sched_id]['actions']
 
-            s = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = s
+            sched = conf['schedulers'][sched_id]
+            self.schedulers[sched_id] = sched
 
-            if s['name'] in g_conf['satellitemap']:
-                s.update(g_conf['satellitemap'][s['name']])
+            if sched['name'] in g_conf['satellitemap']:
+                sched.update(g_conf['satellitemap'][sched['name']])
             proto = 'http'
-            if s['use_ssl']:
+            if sched['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, s['address'], s['port'])
+            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
 
             self.schedulers[sched_id]['uri'] = uri
             if already_got:
@@ -1149,9 +1149,9 @@ class Satellite(BaseSatellite):
                 self.schedulers[sched_id]['wait_homerun'] = {}
                 self.schedulers[sched_id]['actions'] = {}
             self.schedulers[sched_id]['running_id'] = 0
-            self.schedulers[sched_id]['active'] = s['active']
-            self.schedulers[sched_id]['timeout'] = s['timeout']
-            self.schedulers[sched_id]['data_timeout'] = s['data_timeout']
+            self.schedulers[sched_id]['active'] = sched['active']
+            self.schedulers[sched_id]['timeout'] = sched['timeout']
+            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
             # Do not connect if we are a passive satellite
             if not self.passive and not already_got:
