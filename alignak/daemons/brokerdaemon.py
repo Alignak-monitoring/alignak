@@ -213,14 +213,14 @@ class Broker(BaseSatellite):
         :return: return the object linked
         :rtype: object
         """
-        t = {'scheduler': self.schedulers,
+        s_type = {'scheduler': self.schedulers,
              'arbiter': self.arbiters,
              'poller': self.pollers,
              'reactionner': self.reactionners,
              'receiver': self.receivers
              }
-        if d_type in t:
-            return t[d_type]
+        if d_type in s_type:
+            return s_type[d_type]
         return None
 
     def is_connection_try_too_close(self, elt):
@@ -248,10 +248,10 @@ class Broker(BaseSatellite):
         :return: do_pynag_con_init return always True, so we return always True
         :rtype: bool
         """
-        _t = time.time()
-        r = self.do_pynag_con_init(_id, i_type)
-        statsmgr.incr('con-init.%s' % i_type, time.time() - _t)
-        return r
+        _t0 = time.time()
+        res = self.do_pynag_con_init(_id, i_type)
+        statsmgr.incr('con-init.%s' % i_type, time.time() - _t0)
+        return res
 
     def do_pynag_con_init(self, s_id, i_type='scheduler'):
         """Initialize or re-initialize connection with scheduler or arbiter if type == arbiter
@@ -408,22 +408,20 @@ class Broker(BaseSatellite):
             try:
                 con = links[sched_id]['con']
                 if con is not None:  # None = not initialized
-                    t0 = time.time()
+                    t00 = time.time()
                     # Before ask a call that can be long, do a simple ping to be sure it is alive
                     con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
-                        _t = base64.b64decode(tmp_broks)
-                        _t = zlib.decompress(_t)
-                        tmp_broks = cPickle.loads(_t)
+                        tmp_broks = cPickle.loads(zlib.decompress(base64.b64decode(tmp_broks)))
                     except (TypeError, zlib.error, cPickle.PickleError), exp:
                         logger.error('Cannot load broks data from %s : %s',
                                      links[sched_id]['name'], exp)
                         links[sched_id]['con'] = None
                         continue
-                    logger.debug("%s Broks get in %s", len(tmp_broks), time.time() - t0)
-                    for b in tmp_broks.values():
-                        b.instance_id = links[sched_id]['instance_id']
+                    logger.debug("%s Broks get in %s", len(tmp_broks), time.time() - t00)
+                    for brok in tmp_broks.values():
+                        brok.instance_id = links[sched_id]['instance_id']
                     # Ok, we can add theses broks to our queues
                     self.add_broks_to_queue(tmp_broks.values())
 
@@ -444,8 +442,8 @@ class Broker(BaseSatellite):
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
-            except Exception, x:
-                logger.error(str(x))
+            except Exception, err:
+                logger.error(str(err))
                 logger.error(traceback.format_exc())
                 sys.exit(1)
 
@@ -472,9 +470,9 @@ class Broker(BaseSatellite):
         :return: None
         """
         act = active_children()
-        for a in act:
-            a.terminate()
-            a.join(1)
+        for child in act:
+            child.terminate()
+            child.join(1)
         super(Broker, self).do_stop()
 
     def setup_new_conf(self):
@@ -531,26 +529,26 @@ class Broker(BaseSatellite):
             else:
                 broks = {}
                 running_id = 0
-            s = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = s
+            sched = conf['schedulers'][sched_id]
+            self.schedulers[sched_id] = sched
 
             # replacing scheduler address and port by those defined in satellitemap
-            if s['name'] in g_conf['satellitemap']:
-                s = dict(s)  # make a copy
-                s.update(g_conf['satellitemap'][s['name']])
+            if sched['name'] in g_conf['satellitemap']:
+                sched = dict(sched)  # make a copy
+                sched.update(g_conf['satellitemap'][sched['name']])
             proto = 'http'
-            if s['use_ssl']:
+            if sched['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, s['address'], s['port'])
+            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
             self.schedulers[sched_id]['uri'] = uri
 
             self.schedulers[sched_id]['broks'] = broks
-            self.schedulers[sched_id]['instance_id'] = s['instance_id']
+            self.schedulers[sched_id]['instance_id'] = sched['instance_id']
             self.schedulers[sched_id]['running_id'] = running_id
-            self.schedulers[sched_id]['active'] = s['active']
+            self.schedulers[sched_id]['active'] = sched['active']
             self.schedulers[sched_id]['last_connection'] = 0
-            self.schedulers[sched_id]['timeout'] = s['timeout']
-            self.schedulers[sched_id]['data_timeout'] = s['data_timeout']
+            self.schedulers[sched_id]['timeout'] = sched['timeout']
+            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
         logger.info("We have our schedulers: %s ", self.schedulers)
 
@@ -562,18 +560,18 @@ class Broker(BaseSatellite):
                 broks = self.arbiters[arb_id]['broks']
             else:
                 broks = {}
-            a = conf['arbiters'][arb_id]
-            self.arbiters[arb_id] = a
+            arb = conf['arbiters'][arb_id]
+            self.arbiters[arb_id] = arb
 
             # replacing arbiter address and port by those defined in satellitemap
-            if a['name'] in g_conf['satellitemap']:
-                a = dict(a)  # make a copy
-                a.update(g_conf['satellitemap'][a['name']])
+            if arb['name'] in g_conf['satellitemap']:
+                arb = dict(arb)  # make a copy
+                arb.update(g_conf['satellitemap'][arb['name']])
 
             proto = 'http'
-            if a['use_ssl']:
+            if arb['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, a['address'], a['port'])
+            uri = '%s://%s:%s/' % (proto, arb['address'], arb['port'])
             self.arbiters[arb_id]['uri'] = uri
 
             self.arbiters[arb_id]['broks'] = broks
@@ -595,19 +593,19 @@ class Broker(BaseSatellite):
             else:
                 broks = {}
                 running_id = 0
-            p = conf['pollers'][pol_id]
-            self.pollers[pol_id] = p
+            poll = conf['pollers'][pol_id]
+            self.pollers[pol_id] = poll
 
             # replacing poller address and port by those defined in satellitemap
-            if p['name'] in g_conf['satellitemap']:
-                p = dict(p)  # make a copy
-                p.update(g_conf['satellitemap'][p['name']])
+            if poll['name'] in g_conf['satellitemap']:
+                poll = dict(poll)  # make a copy
+                poll.update(g_conf['satellitemap'][poll['name']])
 
             proto = 'http'
-            if p['use_ssl']:
+            if poll['use_ssl']:
                 proto = 'https'
 
-            uri = '%s://%s:%s/' % (proto, p['address'], p['port'])
+            uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
             self.pollers[pol_id]['uri'] = uri
 
             self.pollers[pol_id]['broks'] = broks
@@ -631,18 +629,18 @@ class Broker(BaseSatellite):
                 broks = {}
                 running_id = 0
 
-            r = conf['reactionners'][rea_id]
-            self.reactionners[rea_id] = r
+            reac = conf['reactionners'][rea_id]
+            self.reactionners[rea_id] = reac
 
             # replacing reactionner address and port by those defined in satellitemap
-            if r['name'] in g_conf['satellitemap']:
-                r = dict(r)  # make a copy
-                r.update(g_conf['satellitemap'][r['name']])
+            if reac['name'] in g_conf['satellitemap']:
+                reac = dict(reac)  # make a copy
+                reac.update(g_conf['satellitemap'][reac['name']])
 
             proto = 'http'
-            if r['use_ssl']:
+            if reac['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, r['address'], r['port'])
+            uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
             self.reactionners[rea_id]['uri'] = uri
 
             self.reactionners[rea_id]['broks'] = broks
@@ -666,18 +664,18 @@ class Broker(BaseSatellite):
                 broks = {}
                 running_id = 0
 
-            r = conf['receivers'][rec_id]
-            self.receivers[rec_id] = r
+            rec = conf['receivers'][rec_id]
+            self.receivers[rec_id] = rec
 
             # replacing reactionner address and port by those defined in satellitemap
-            if r['name'] in g_conf['satellitemap']:
-                r = dict(r)  # make a copy
-                r.update(g_conf['satellitemap'][r['name']])
+            if rec['name'] in g_conf['satellitemap']:
+                rec = dict(rec)  # make a copy
+                rec.update(g_conf['satellitemap'][rec['name']])
 
             proto = 'http'
-            if r['use_ssl']:
+            if rec['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, r['address'], r['port'])
+            uri = '%s://%s:%s/' % (proto, rec['address'], rec['port'])
             self.receivers[rec_id]['uri'] = uri
 
             self.receivers[rec_id]['broks'] = broks
@@ -800,10 +798,10 @@ class Broker(BaseSatellite):
         # Main job, go get broks in our distants daemons
         types = ['scheduler', 'poller', 'reactionner', 'receiver']
         for _type in types:
-            _t = time.time()
+            _t0 = time.time()
             # And from schedulers
             self.get_new_broks(i_type=_type)
-            statsmgr.incr('get-new-broks.%s' % _type, time.time() - _t)
+            statsmgr.incr('get-new-broks.%s' % _type, time.time() - _t0)
 
         # Sort the brok list by id
         self.broks.sort(sort_by_ids)
@@ -811,10 +809,10 @@ class Broker(BaseSatellite):
         # and for external queues
         # REF: doc/broker-modules.png (3)
         # We put to external queues broks that was not already send
-        t0 = time.time()
+        t00 = time.time()
         # We are sending broks as a big list, more efficient than one by one
         ext_modules = self.modules_manager.get_external_instances()
-        to_send = [b for b in self.broks if getattr(b, 'need_send_to_ext', True)]
+        to_send = [brok for brok in self.broks if getattr(brok, 'need_send_to_ext', True)]
 
         # Send our pack to all external modules to_q queue so they can get the wole packet
         # beware, the sub-process/queue can be die/close, so we put to restart the whole module
@@ -833,10 +831,10 @@ class Broker(BaseSatellite):
                 self.modules_manager.set_to_restart(mod)
 
         # No more need to send them
-        for b in to_send:
-            b.need_send_to_ext = False
-        statsmgr.incr('core.put-to-external-queue', time.time() - t0)
-        logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t0)
+        for brok in to_send:
+            brok.need_send_to_ext = False
+        statsmgr.incr('core.put-to-external-queue', time.time() - t00)
+        logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t00)
 
         # We must had new broks at the end of the list, so we reverse the list
         self.broks.reverse()
@@ -849,14 +847,14 @@ class Broker(BaseSatellite):
             if now - start > 1:
                 break
 
-            b = self.broks.pop()
+            brok = self.broks.pop()
             # Ok, we can get the brok, and doing something with it
             # REF: doc/broker-modules.png (4-5)
             # We un serialize the brok before consume it
-            b.prepare()
-            _t = time.time()
-            self.manage_brok(b)
-            statsmgr.incr('core.manage-brok', time.time() - _t)
+            brok.prepare()
+            _t0 = time.time()
+            self.manage_brok(brok)
+            statsmgr.incr('core.manage-brok', time.time() - _t0)
 
             nb_broks = len(self.broks)
 
