@@ -108,8 +108,8 @@ class Trigger(Item):
         self = ctx
 
         # Ok we can declare for this trigger call our functions
-        for (n, f) in trigger_functions.iteritems():
-            locals()[n] = f
+        for (name, fun) in trigger_functions.iteritems():
+            locals()[name] = fun
 
         code = myself.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
         try:
@@ -149,13 +149,13 @@ class Triggers(Items):
         for root, dirs, files in os.walk(path):
             for t_file in files:
                 if re.search(r"\.trig$", t_file):
-                    p = os.path.join(root, t_file)
+                    path = os.path.join(root, t_file)
                     try:
-                        fd = open(p, 'rU')
-                        buf = fd.read()
-                        fd.close()
+                        file_d = open(path, 'rU')
+                        buf = file_d.read()
+                        file_d.close()
                     except IOError, exp:
-                        logger.error("Cannot open trigger file '%s' for reading: %s", p, exp)
+                        logger.error("Cannot open trigger file '%s' for reading: %s", path, exp)
                         # ok, skip this one
                         continue
                     self.create_trigger(buf, t_file[:-5])
@@ -171,11 +171,11 @@ class Triggers(Items):
         :rtype: alignak.objects.trigger.Trigger
         """
         # Ok, go compile the code
-        t = Trigger({'trigger_name': name, 'code_src': src})
-        t.compile()
+        trigger = Trigger({'trigger_name': name, 'code_src': src})
+        trigger.compile()
         # Ok, add it
-        self[t._id] = t
-        return t
+        self[trigger._id] = trigger
+        return trigger
 
     def compile(self):
         """Loop on triggers and call Trigger.compile()
