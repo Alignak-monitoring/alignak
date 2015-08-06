@@ -142,9 +142,9 @@ class Contactgroup(Itemgroup):
 
         cg_mbrs = self.get_contactgroup_members()
         for cg_mbr in cg_mbrs:
-            cg = contactgroups.find_by_name(cg_mbr.strip())
-            if cg is not None:
-                value = cg.get_contacts_by_explosion(contactgroups)
+            contactgroup = contactgroups.find_by_name(cg_mbr.strip())
+            if contactgroup is not None:
+                value = contactgroup.get_contacts_by_explosion(contactgroups)
                 if value is not None:
                     self.add_string_member(value)
         if self.has('members'):
@@ -170,10 +170,10 @@ class Contactgroups(Itemgroups):
         :return: list of contacts with this name
         :rtype: list[alignak.objects.contact.Contact]
         """
-        cg = self.find_by_name(cgname)
-        if cg is None:
+        contactgroup = self.find_by_name(cgname)
+        if contactgroup is None:
             return []
-        return cg.get_contacts()
+        return contactgroup.get_contacts()
 
     def add_contactgroup(self, cg):
         """Wrapper for add_item method
@@ -203,8 +203,8 @@ class Contactgroups(Itemgroups):
         :type contacts: alignak.objects.contact.Contacts
         :return: None
         """
-        for cg in self:
-            mbrs = cg.get_contacts()
+        for contactgroup in self:
+            mbrs = contactgroup.get_contacts()
 
             # The new member list, in id
             new_mbrs = []
@@ -212,18 +212,18 @@ class Contactgroups(Itemgroups):
                 mbr = mbr.strip()  # protect with strip at the begining so don't care about spaces
                 if mbr == '':  # void entry, skip this
                     continue
-                m = contacts.find_by_name(mbr)
+                member = contacts.find_by_name(mbr)
                 # Maybe the contact is missing, if so, must be put in unknown_members
-                if m is not None:
-                    new_mbrs.append(m)
+                if member is not None:
+                    new_mbrs.append(member)
                 else:
-                    cg.add_string_unknown_member(mbr)
+                    contactgroup.add_string_unknown_member(mbr)
 
             # Make members uniq
             new_mbrs = list(set(new_mbrs))
 
             # We find the id, we replace the names
-            cg.replace_members(new_mbrs)
+            contactgroup.replace_members(new_mbrs)
 
     def add_member(self, cname, cgname):
         """Add a contact string to a contact member
@@ -235,13 +235,14 @@ class Contactgroups(Itemgroups):
         :type cgname: strr
         :return: None
         """
-        cg = self.find_by_name(cgname)
+        contactgroup = self.find_by_name(cgname)
         # if the id do not exist, create the cg
-        if cg is None:
-            cg = Contactgroup({'contactgroup_name': cgname, 'alias': cgname, 'members': cname})
-            self.add_contactgroup(cg)
+        if contactgroup is None:
+            contactgroup = Contactgroup({'contactgroup_name': cgname,
+                                         'alias': cgname, 'members': cname})
+            self.add_contactgroup(contactgroup)
         else:
-            cg.add_string_member(cname)
+            contactgroup.add_string_member(cname)
 
     def explode(self):
         """
@@ -254,13 +255,13 @@ class Contactgroups(Itemgroups):
         for tmp_cg in self.items.values():
             tmp_cg.already_explode = False
 
-        for cg in self.items.values():
-            if cg.has('contactgroup_members') and not cg.already_explode:
+        for contactgroup in self.items.values():
+            if contactgroup.has('contactgroup_members') and not contactgroup.already_explode:
                 # get_contacts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_cg in self.items.values():
                     tmp_cg.rec_tag = False
-                cg.get_contacts_by_explosion(self)
+                contactgroup.get_contacts_by_explosion(self)
 
         # We clean the tags
         for tmp_cg in self.items.values():
