@@ -164,13 +164,13 @@ class BaseModule(object):
         :type manager: None | object
         :return: None
         """
-        for q in (self.to_q, self.from_q):
-            if q is None:
+        for queue in (self.to_q, self.from_q):
+            if queue is None:
                 continue
             # If we got no manager, we direct call the clean
             if not manager:
-                q.close()
-                q.join_thread()
+                queue.close()
+                queue.join_thread()
             # else:
             #    q._callmethod('close')
             #    q._callmethod('join_thread')
@@ -184,9 +184,9 @@ class BaseModule(object):
         """
         try:
             self._main()
-        except Exception as e:
+        except Exception as exp:
             logger.error('[%s] %s', self.name, traceback.format_exc())
-            raise e
+            raise exp
 
     def start(self, http_daemon=None):
         """Actually restart the process if the module is external
@@ -203,7 +203,7 @@ class BaseModule(object):
             return
         self.stop_process()
         logger.info("Starting external process for instance %s", self.name)
-        p = Process(target=self.start_module, args=())
+        proc = Process(target=self.start_module, args=())
 
         # Under windows we should not call start() on an object that got
         # its process as object, so we remove it and we set it in a earlier
@@ -213,11 +213,11 @@ class BaseModule(object):
         except KeyError:
             pass
 
-        p.start()
+        proc.start()
         # We save the process data AFTER the fork()
-        self.process = p
-        self.properties['process'] = p  # TODO: temporary
-        logger.info("%s is now started ; pid=%d", self.name, p.pid)
+        self.process = proc
+        self.properties['process'] = proc  # TODO: temporary
+        logger.info("%s is now started ; pid=%d", self.name, proc.pid)
 
     def __kill(self):
         """Sometime terminate() is not enough, we must "help"
