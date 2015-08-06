@@ -132,10 +132,10 @@ class Timerange(object):
         :rtype: object
         """
         pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
-        m = re.match(pattern, entry)
-        self.is_valid = m is not None
+        matches = re.match(pattern, entry)
+        self.is_valid = matches is not None
         if self.is_valid:
-            self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in m.groups()]
+            self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
 
     def __str__(self):
         return str(self.__dict__)
@@ -197,8 +197,8 @@ class AbstractDaterange(object):
         :return: True if timerange are correct, False otherwise
         :rtype: bool
         """
-        for tr in self.timeranges:
-            if not tr.is_correct():
+        for timerange in self.timeranges:
+            if not timerange.is_correct():
                 return False
         return True
 
@@ -279,9 +279,9 @@ class AbstractDaterange(object):
         # print "****Look for time valid for", time.asctime(time.localtime(t))
         if self.is_time_day_valid(t):
             # print "is time day valid"
-            for tr in self.timeranges:
+            for timerange in self.timeranges:
                 # print tr, "is valid?", tr.is_time_valid(t)
-                if tr.is_time_valid(t):
+                if timerange.is_time_valid(t):
                     # print "return True"
                     return True
         return False
@@ -293,8 +293,8 @@ class AbstractDaterange(object):
         :rtype: int
         """
         mins = []
-        for tr in self.timeranges:
-            mins.append(tr.get_sec_from_morning())
+        for timerange in self.timeranges:
+            mins.append(timerange.get_sec_from_morning())
         return min(mins)
 
     def get_min_sec_out_from_morning(self):
@@ -304,8 +304,8 @@ class AbstractDaterange(object):
         :rtype: int
         """
         mins = []
-        for tr in self.timeranges:
-            mins.append(tr.get_first_sec_out_from_morning())
+        for timerange in self.timeranges:
+            mins.append(timerange.get_first_sec_out_from_morning())
         return min(mins)
 
     def get_min_from_t(self, t):
@@ -361,8 +361,8 @@ class AbstractDaterange(object):
         # print "Look for get_next_future_timerange_valid for t", t, time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(t)
         starts = []
-        for tr in self.timeranges:
-            tr_start = tr.hstart * 3600 + tr.mstart * 60
+        for timerange in self.timeranges:
+            tr_start = timerange.hstart * 3600 + timerange.mstart * 60
             if tr_start >= sec_from_morning:
                 starts.append(tr_start)
         if starts != []:
@@ -384,11 +384,11 @@ class AbstractDaterange(object):
         sec_from_morning = get_sec_from_morning(t)
         # print 'sec from morning', sec_from_morning
         ends = []
-        for tr in self.timeranges:
-            tr_start = tr.hstart * 3600 + tr.mstart * 60
+        for timerange in self.timeranges:
+            tr_start = timerange.hstart * 3600 + timerange.mstart * 60
             if tr_start >= sec_from_morning:
                 ends.append(tr_start)
-            tr_end = tr.hend * 3600 + tr.mend * 60
+            tr_end = timerange.hend * 3600 + timerange.mend * 60
             if tr_end >= sec_from_morning:
                 ends.append(tr_end)
         # print "Ends:", ends
@@ -672,12 +672,12 @@ class StandardDaterange(AbstractDaterange):
         :return: True if weekdays are valid, False otherwise
         :rtype: bool
         """
-        b = self.day in Daterange.weekdays
-        if not b:
+        valid = self.day in Daterange.weekdays
+        if not valid:
             logger.error("Error: %s is not a valid day", self.day)
         # Check also if Daterange is correct.
-        b &= super(StandardDaterange, self).is_correct()
-        return b
+        valid &= super(StandardDaterange, self).is_correct()
+        return valid
 
     def get_start_and_end_time(self, ref=None):
         """Specific function to get start time and end time for StandardDaterange
@@ -711,16 +711,16 @@ class MonthWeekDayDaterange(Daterange):
         :return: True if weekdays are valid, False otherwise
         :rtype: bool
         """
-        b = True
-        b &= self.swday in xrange(7)
-        if not b:
+        valid = True
+        valid &= self.swday in xrange(7)
+        if not valid:
             logger.error("Error: %s is not a valid day", self.swday)
 
-        b &= self.ewday in xrange(7)
-        if not b:
+        valid &= self.ewday in xrange(7)
+        if not valid:
             logger.error("Error: %s is not a valid day", self.ewday)
 
-        return b
+        return valid
 
     def get_start_and_end_time(self, ref=None):
         """Specific function to get start time and end time for MonthWeekDayDaterange
