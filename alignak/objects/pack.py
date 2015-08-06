@@ -111,13 +111,13 @@ class Packs(Items):
         for root, dirs, files in os.walk(path):
             for p_file in files:
                 if re.search(r"\.pack$", p_file):
-                    p = os.path.join(root, p_file)
+                    path = os.path.join(root, p_file)
                     try:
-                        fd = open(p, 'rU')
-                        buf = fd.read()
-                        fd.close()
+                        file_d = open(path, 'rU')
+                        buf = file_d.read()
+                        file_d.close()
                     except IOError, exp:
-                        logger.error("Cannot open pack file '%s' for reading: %s", p, exp)
+                        logger.error("Cannot open pack file '%s' for reading: %s", path, exp)
                         # ok, skip this one
                         continue
                     self.create_pack(buf, p_file[:-5])
@@ -137,22 +137,22 @@ class Packs(Items):
             return
         # Ok, go compile the code
         try:
-            d = json.loads(buf)
-            if 'name' not in d:
+            json_dump = json.loads(buf)
+            if 'name' not in json_dump:
                 logger.error("[Pack] no name in the pack '%s'", name)
                 return
-            p = Pack({})
-            p.pack_name = d['name']
-            p.description = d.get('description', '')
-            p.macros = d.get('macros', {})
-            p.templates = d.get('templates', [p.pack_name])
-            p.path = d.get('path', 'various/')
-            p.doc_link = d.get('doc_link', '')
-            p.services = d.get('services', {})
-            p.commands = d.get('commands', [])
-            if not p.path.endswith('/'):
-                p.path += '/'
+            pack = Pack({})
+            pack.pack_name = json_dump['name']
+            pack.description = json_dump.get('description', '')
+            pack.macros = json_dump.get('macros', {})
+            pack.templates = json_dump.get('templates', [pack.pack_name])
+            pack.path = json_dump.get('path', 'various/')
+            pack.doc_link = json_dump.get('doc_link', '')
+            pack.services = json_dump.get('services', {})
+            pack.commands = json_dump.get('commands', [])
+            if not pack.path.endswith('/'):
+                pack.path += '/'
             # Ok, add it
-            self[p._id] = p
+            self[pack._id] = pack
         except ValueError, exp:
             logger.error("[Pack] error in loading pack file '%s': '%s'", name, exp)
