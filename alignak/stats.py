@@ -178,14 +178,14 @@ class Stats(object):
         :type v: int
         :return: None
         """
-        _min, _max, nb, _sum = self.stats.get(k, (None, None, 0, 0))
-        nb += 1
+        _min, _max, number, _sum = self.stats.get(k, (None, None, 0, 0))
+        number += 1
         _sum += v
         if _min is None or v < _min:
             _min = v
         if _max is None or v > _max:
             _max = v
-        self.stats[k] = (_min, _max, nb, _sum)
+        self.stats[k] = (_min, _max, number, _sum)
 
         # Manage local statd part
         if self.statsd_sock and self.name:
@@ -205,17 +205,17 @@ class Stats(object):
         :return: cyphered data
         :rtype: str
         """
-        m = hashlib.md5()
-        m.update(self.secret)
-        key = m.hexdigest()
+        md_hash = hashlib.md5()
+        md_hash.update(self.secret)
+        key = md_hash.hexdigest()
 
-        m = hashlib.md5()
-        m.update(self.secret + key)
-        iv = m.hexdigest()
+        md_hash = hashlib.md5()
+        md_hash.update(self.secret + key)
+        ivs = md_hash.hexdigest()
 
         data = pad(data)
 
-        aes = AES.new(key, AES.MODE_CBC, iv[:16])
+        aes = AES.new(key, AES.MODE_CBC, ivs[:16])
 
         encrypted = aes.encrypt(data)
         return base64.urlsafe_b64encode(encrypted)
@@ -229,7 +229,7 @@ class Stats(object):
             from Crypto.Cipher import AES
         except ImportError:
             logger.error('Cannot find python lib crypto: stats export is not available')
-            AES = None
+            AES = None  # pylint: disable=C0103
 
         while True:
             now = int(time.time())
@@ -237,7 +237,7 @@ class Stats(object):
             self.stats = {}
 
             if len(stats) != 0:
-                s = ', '.join(['%s:%s' % (k, v) for (k, v) in stats.iteritems()])
+                string = ', '.join(['%s:%s' % (key, v) for (key, v) in stats.iteritems()])
             # If we are not in an initializer daemon we skip, we cannot have a real name, it sucks
             # to find the data after this
             if not self.name or not self.api_key or not self.secret:
@@ -245,19 +245,19 @@ class Stats(object):
                 continue
 
             metrics = []
-            for (k, e) in stats.iteritems():
-                nk = '%s.%s.%s' % (self.type, self.name, k)
-                _min, _max, nb, _sum = e
-                _avg = float(_sum) / nb
+            for (key, elem) in stats.iteritems():
+                namekey = '%s.%s.%s' % (self.type, self.name, key)
+                _min, _max, number, _sum = elem
+                _avg = float(_sum) / number
                 # nb can't be 0 here and _min_max can't be None too
-                s = '%s.avg %f %d' % (nk, _avg, now)
-                metrics.append(s)
-                s = '%s.min %f %d' % (nk, _min, now)
-                metrics.append(s)
-                s = '%s.max %f %d' % (nk, _max, now)
-                metrics.append(s)
-                s = '%s.count %f %d' % (nk, nb, now)
-                metrics.append(s)
+                string = '%s.avg %f %d' % (namekey, _avg, now)
+                metrics.append(string)
+                string = '%s.min %f %d' % (namekey, _min, now)
+                metrics.append(string)
+                string = '%s.max %f %d' % (namekey, _max, now)
+                metrics.append(string)
+                string = '%s.count %f %d' % (namekey, number, now)
+                metrics.append(string)
 
             # logger.debug('REAPER metrics to send %s (%d)' % (metrics, len(str(metrics))) )
             # get the inner data for the daemon
@@ -273,7 +273,7 @@ class Stats(object):
                 # assume a %16 length messagexs
                 encrypted_text = self._encrypt(j)
                 try:
-                    r = self.con.put('/api/v1/put/?api_key=%s' % (self.api_key), encrypted_text)
+                    self.con.put('/api/v1/put/?api_key=%s' % (self.api_key), encrypted_text)
                 except HTTPException, exp:
                     logger.error('Stats REAPER cannot put to the metric server %s', exp)
             time.sleep(60)
