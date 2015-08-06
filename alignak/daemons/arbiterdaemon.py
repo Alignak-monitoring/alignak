@@ -152,14 +152,14 @@ class IForArbiter(Interface):
         :rtype: dict
         """
         res = {}
-        for t in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
-                  'broker']:
-            if daemon_type and daemon_type != t:
+        for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
+                       'broker']:
+            if daemon_type and daemon_type != s_type:
                 continue
             satellite_list = []
-            res[t] = satellite_list
-            daemon_name_attr = t + "_name"
-            daemons = self.app.get_daemons(t)
+            res[s_type] = satellite_list
+            daemon_name_attr = s_type + "_name"
+            daemons = self.app.get_daemons(s_type)
             for dae in daemons:
                 if hasattr(dae, daemon_name_attr):
                     satellite_list.append(getattr(dae, daemon_name_attr))
@@ -191,29 +191,29 @@ class IForArbiter(Interface):
         :rtype: dict
         """
         res = {}
-        for t in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
-                  'broker']:
+        for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
+                       'broker']:
             lst = []
-            res[t] = lst
-            for d in getattr(self.app.conf, t + 's'):
-                cls = d.__class__
-                e = {}
-                ds = [cls.properties, cls.running_properties]
+            res[s_type] = lst
+            for daemon in getattr(self.app.conf, s_type + 's'):
+                cls = daemon.__class__
+                env = {}
+                all_props = [cls.properties, cls.running_properties]
 
-                for _d in ds:
-                    for prop in _d:
-                        if hasattr(d, prop):
-                            v = getattr(d, prop)
+                for props in all_props:
+                    for prop in props:
+                        if hasattr(daemon, prop):
+                            val = getattr(daemon, prop)
                             if prop == "realm":
-                                if hasattr(v, "realm_name"):
-                                    e[prop] = v.realm_name
+                                if hasattr(val, "realm_name"):
+                                    env[prop] = val.realm_name
                             # give a try to a json able object
                             try:
-                                json.dumps(v)
-                                e[prop] = v
+                                json.dumps(val)
+                                env[prop] = val
                             except Exception, exp:
                                 logger.debug('%s', exp)
-                lst.append(e)
+                lst.append(env)
         return res
 
     def get_objects_properties(self, table):
@@ -232,8 +232,8 @@ class IForArbiter(Interface):
             return []
         res = []
         for obj in objs:
-            l = jsonify_r(obj)
-            res.append(l)
+            j_obj = jsonify_r(obj)
+            res.append(j_obj)
         return res
 
 
@@ -324,10 +324,10 @@ class Arbiter(Daemon):
                 self.conf.pollers, self.conf.reactionners,
                 self.conf.receivers]
         for tab in tabs:
-            for s in tab:
-                new_broks = s.get_all_broks()
-                for b in new_broks:
-                    self.add(b)
+            for sat in tab:
+                new_broks = sat.get_all_broks()
+                for brok in new_broks:
+                    self.add(brok)
 
     def get_initial_broks_from_satellitelinks(self):
         """Get initial broks from my internal satellitelinks (satellite status)
@@ -338,9 +338,9 @@ class Arbiter(Daemon):
                 self.conf.pollers, self.conf.reactionners,
                 self.conf.receivers]
         for tab in tabs:
-            for s in tab:
-                b = s.get_initial_status_brok()
-                self.add(b)
+            for sat in tab:
+                brok = sat.get_initial_status_brok()
+                self.add(brok)
 
     def load_external_command(self, e):
         """Set external_command attribute to the external command manager
@@ -607,9 +607,9 @@ class Arbiter(Daemon):
         for inst in self.modules_manager.instances:
             # TODO : clean
             if hasattr(inst, 'get_objects'):
-                _t = time.time()
+                _t0 = time.time()
                 try:
-                    r = inst.get_objects()
+                    objs = inst.get_objects()
                 except Exception, exp:
                     logger.error("Instance %s raised an exception %s. Log and continue to run",
                                  inst.get_name(), str(exp))
@@ -618,23 +618,23 @@ class Arbiter(Daemon):
                     logger.error("Back trace of this remove: %s", output.getvalue())
                     output.close()
                     continue
-                statsmgr.incr('hook.get-objects', time.time() - _t)
+                statsmgr.incr('hook.get-objects', time.time() - _t0)
                 types_creations = self.conf.types_creations
-                for k in types_creations:
-                    (cls, clss, prop, dummy) = types_creations[k]
-                    if prop in r:
-                        for x in r[prop]:
+                for type_c in types_creations:
+                    (cls, clss, prop, dummy) = types_creations[type_c]
+                    if prop in objs:
+                        for obj in objs[prop]:
                             # test if raw_objects[k] are already set - if not, add empty array
-                            if k not in raw_objects:
-                                raw_objects[k] = []
+                            if type_c not in raw_objects:
+                                raw_objects[type_c] = []
                             # put the imported_from property if the module is not already setting
                             # it so we know where does this object came from
-                            if 'imported_from' not in x:
-                                x['imported_from'] = 'module:%s' % inst.get_name()
+                            if 'imported_from' not in obj:
+                                obj['imported_from'] = 'module:%s' % inst.get_name()
                             # now append the object
-                            raw_objects[k].append(x)
+                            raw_objects[type_c].append(obj)
                         logger.debug("Added %i objects to %s from module %s",
-                                     len(r[prop]), k, inst.get_name())
+                                     len(objs[prop]), type_c, inst.get_name())
 
     def launch_analyse(self):
         """Print the number of objects we have for each type.
@@ -646,21 +646,21 @@ class Arbiter(Daemon):
         types = ['hosts', 'services', 'contacts', 'timeperiods', 'commands', 'arbiters',
                  'schedulers', 'pollers', 'reactionners', 'brokers', 'receivers', 'modules',
                  'realms']
-        for t in types:
-            lst = getattr(self.conf, t)
-            nb = len(lst)
-            stats['nb_' + t] = nb
-            logger.info("Got %s for %s", nb, t)
+        for o_type in types:
+            lst = getattr(self.conf, o_type)
+            number = len(lst)
+            stats['nb_' + o_type] = number
+            logger.info("Got %s for %s", number, o_type)
 
         max_srv_by_host = max(len(h.services) for h in self.conf.hosts)
         logger.info("Max srv by host %s", max_srv_by_host)
         stats['max_srv_by_host'] = max_srv_by_host
 
-        f = open(self.analyse, 'w')
-        s = json.dumps(stats)
-        logger.info("Saving stats data to a file %s", s)
-        f.write(s)
-        f.close()
+        file_d = open(self.analyse, 'w')
+        state = json.dumps(stats)
+        logger.info("Saving stats data to a file %s", state)
+        file_d.write(state)
+        file_d.close()
 
     def go_migrate(self):
         """Migrate configuration
@@ -688,21 +688,21 @@ class Arbiter(Daemon):
             sys.exit(2)
         print "Configuration migrating in progress..."
         mod = self.modules_manager.instances[0]
-        f = getattr(mod, 'import_objects', None)
-        if not f or not callable(f):
+        fun = getattr(mod, 'import_objects', None)
+        if not fun or not callable(fun):
             print "Import module is missing the import_objects function. Bailing out"
             sys.exit(2)
 
         objs = {}
         types = ['hosts', 'services', 'commands', 'timeperiods', 'contacts']
-        for t in types:
-            print "New type", t
-            objs[t] = []
-            for i in getattr(self.conf, t):
-                d = i.get_raw_import_values()
-                if d:
-                    objs[t].append(d)
-            f(objs)
+        for o_type in types:
+            print "New type", o_type
+            objs[o_type] = []
+            for items in getattr(self.conf, o_type):
+                dct = items.get_raw_import_values()
+                if dct:
+                    objs[o_type].append(dct)
+            fun(objs)
         # Ok we can exit now
         sys.exit(0)
 
@@ -862,8 +862,8 @@ class Arbiter(Daemon):
 
         :return: None
         """
-        for tp in self.conf.timeperiods:
-            tp.check_and_log_activation_change()
+        for timeperiod in self.conf.timeperiods:
+            timeperiod.check_and_log_activation_change()
 
     def run(self):
         """Run Arbiter daemon ::
@@ -897,9 +897,9 @@ class Arbiter(Daemon):
 
         # Now create the external commander. It's just here to dispatch
         # the commands to schedulers
-        e = ExternalCommandManager(self.conf, 'dispatcher')
-        e.load_arbiter(self)
-        self.external_command = e
+        ecm = ExternalCommandManager(self.conf, 'dispatcher')
+        ecm.load_arbiter(self)
+        self.external_command = ecm
 
         logger.debug("Run baby, run...")
         timeout = 1.0
@@ -941,22 +941,22 @@ class Arbiter(Daemon):
             self.check_and_log_tp_activation_change()
 
             # Now the dispatcher job
-            _t = time.time()
+            _t0 = time.time()
             self.dispatcher.check_alive()
-            statsmgr.incr('core.check-alive', time.time() - _t)
+            statsmgr.incr('core.check-alive', time.time() - _t0)
 
-            _t = time.time()
+            _t0 = time.time()
             self.dispatcher.check_dispatch()
-            statsmgr.incr('core.check-dispatch', time.time() - _t)
+            statsmgr.incr('core.check-dispatch', time.time() - _t0)
 
             # REF: doc/alignak-conf-dispatching.png (3)
-            _t = time.time()
+            _t0 = time.time()
             self.dispatcher.dispatch()
-            statsmgr.incr('core.dispatch', time.time() - _t)
+            statsmgr.incr('core.dispatch', time.time() - _t0)
 
-            _t = time.time()
+            _t0 = time.time()
             self.dispatcher.check_bad_dispatch()
-            statsmgr.incr('core.check-bad-dispatch', time.time() - _t)
+            statsmgr.incr('core.check-bad-dispatch', time.time() - _t0)
 
             # Now get things from our module instances
             self.get_objects_from_from_queues()
@@ -975,9 +975,9 @@ class Arbiter(Daemon):
                 logger.debug("Nb Broks send: %d", self.nb_broks_send)
             self.nb_broks_send = 0
 
-            _t = time.time()
+            _t0 = time.time()
             self.push_external_commands_to_schedulers()
-            statsmgr.incr('core.push-external-commands', time.time() - _t)
+            statsmgr.incr('core.push-external-commands', time.time() - _t0)
 
             # It's sent, do not keep them
             # TODO: check if really sent. Queue by scheduler?
@@ -1005,11 +1005,11 @@ class Arbiter(Daemon):
         :return: broks and external commands in a dict
         :rtype: dict
         """
-        r = {
+        res = {
             'broks': self.broks,
             'external_commands': self.external_commands
         }
-        return r
+        return res
 
     def restore_retention_data(self, data):
         """Restore data from retention (broks, and external commands)
