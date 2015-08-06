@@ -187,8 +187,8 @@ class Downtime:
             self.ref.create_notifications('DOWNTIMESTART')
         self.ref.scheduled_downtime_depth += 1
         self.ref.in_scheduled_downtime = True
-        for dt in self.activate_me:
-            res.extend(dt.enter())
+        for downtime in self.activate_me:
+            res.extend(downtime.enter())
         return res
 
     def exit(self):
@@ -239,8 +239,8 @@ class Downtime:
         # Nagios does not notify on canceled downtimes
         # res.extend(self.ref.create_notifications('DOWNTIMECANCELLED'))
         # Also cancel other downtimes triggered by me
-        for dt in self.activate_me:
-            res.extend(dt.cancel())
+        for downtime in self.activate_me:
+            res.extend(downtime.cancel())
         return res
 
     def add_automatic_comment(self):
@@ -272,10 +272,10 @@ class Downtime:
             comment_type = 1
         else:
             comment_type = 2
-        c = Comment(self.ref, False, "(Nagios Process)", text, comment_type, 2, 0, False, 0)
-        self.comment_id = c._id
-        self.extra_comment = c
-        self.ref.add_comment(c)
+        comm = Comment(self.ref, False, "(Nagios Process)", text, comment_type, 2, 0, False, 0)
+        self.comment_id = comm._id
+        self.extra_comment = comm
+        self.ref.add_comment(comm)
 
     def del_automatic_comment(self):
         """Remove automatic comment on ref previously created
@@ -316,8 +316,8 @@ class Downtime:
         data = {'_id': self._id}
 
         self.fill_data_brok_from(data, 'full_status')
-        b = Brok('downtime_raise', data)
-        return b
+        brok = Brok('downtime_raise', data)
+        return brok
 
     def __getstate__(self):
         """Call by pickle for dataify the comment
