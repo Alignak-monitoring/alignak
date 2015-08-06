@@ -178,5 +178,5 @@ class CheckModulations(Items):
             name = CheckModulation._id
         params['checkmodulation_name'] = name
         # print "Asking a new inner checkmodulation from name %s with params %s" % (name, params)
-        cw = CheckModulation(params)
-        self.add_item(cw)
+        checkmodulation = CheckModulation(params)
+        self.add_item(checkmodulation)
