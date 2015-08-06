@@ -267,8 +267,8 @@ class Notification(Action):
         data = {'_id': self._id}
 
         self.fill_data_brok_from(data, 'full_status')
-        b = Brok('notification_raise', data)
-        return b
+        brok = Brok('notification_raise', data)
+        return brok
 
     def __getstate__(self):
         """Call by pickle for dataify the comment
