@@ -170,9 +170,9 @@ class Itemgroup(Item):
         res = True
 
         if self.unknown_members:
-            for m in self.unknown_members:
+            for member in self.unknown_members:
                 logger.error("[itemgroup::%s] as %s, got unknown member %s",
-                             self.get_name(), self.__class__.my_type, m)
+                             self.get_name(), self.__class__.my_type, member)
             res = False
 
         if self.configuration_errors != []:
@@ -214,8 +214,8 @@ class Itemgroup(Item):
         for i in self.members:
             # it look like lisp! ((( ..))), sorry....
             data['members'].append((i._id, i.get_name()))
-        b = Brok('initial_' + cls.my_type + '_status', data)
-        return b
+        brok = Brok('initial_' + cls.my_type + '_status', data)
+        return brok
 
 
 class Itemgroups(Items):
@@ -253,7 +253,7 @@ class Itemgroups(Items):
         :return: list of members
         :rtype: list
         """
-        g = self.find_by_name(gname)
-        if g is None:
+        group = self.find_by_name(gname)
+        if group is None:
             return []
-        return getattr(g, 'members', [])
+        return getattr(group, 'members', [])
