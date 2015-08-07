@@ -143,44 +143,44 @@ class Hostdependencies(Items):
         # because we are adding services, we can't just loop in it
         hostdeps = self.items.keys()
         for h_id in hostdeps:
-            hd = self.items[h_id]
+            hostdep = self.items[h_id]
             # We explode first the dependent (son) part
             dephnames = []
-            if hasattr(hd, 'dependent_hostgroup_name'):
-                dephg_names = [n.strip() for n in hd.dependent_hostgroup_name.split(',')]
+            if hasattr(hostdep, 'dependent_hostgroup_name'):
+                dephg_names = [n.strip() for n in hostdep.dependent_hostgroup_name.split(',')]
                 for dephg_name in dephg_names:
                     dephg = hostgroups.find_by_name(dephg_name)
                     if dephg is None:
                         err = "ERROR: the hostdependency got " \
                               "an unknown dependent_hostgroup_name '%s'" % dephg_name
-                        hd.configuration_errors.append(err)
+                        hostdep.configuration_errors.append(err)
                         continue
                     dephnames.extend([m.strip() for m in dephg.members])
 
-            if hasattr(hd, 'dependent_host_name'):
-                dephnames.extend([n.strip() for n in hd.dependent_host_name.split(',')])
+            if hasattr(hostdep, 'dependent_host_name'):
+                dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
 
             # Ok, and now the father part :)
             hnames = []
-            if hasattr(hd, 'hostgroup_name'):
-                hg_names = [n.strip() for n in hd.hostgroup_name.split(',')]
+            if hasattr(hostdep, 'hostgroup_name'):
+                hg_names = [n.strip() for n in hostdep.hostgroup_name.split(',')]
                 for hg_name in hg_names:
-                    hg = hostgroups.find_by_name(hg_name)
-                    if hg is None:
+                    hostgroup = hostgroups.find_by_name(hg_name)
+                    if hostgroup is None:
                         err = "ERROR: the hostdependency got" \
                               " an unknown hostgroup_name '%s'" % hg_name
-                        hd.configuration_errors.append(err)
+                        hostdep.configuration_errors.append(err)
                         continue
-                    hnames.extend([m.strip() for m in hg.members])
+                    hnames.extend([m.strip() for m in hostgroup.members])
 
-            if hasattr(hd, 'host_name'):
-                hnames.extend([n.strip() for n in hd.host_name.split(',')])
+            if hasattr(hostdep, 'host_name'):
+                hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
 
             # Loop over all sons and fathers to get S*F host deps
             for dephname in dephnames:
                 dephname = dephname.strip()
                 for hname in hnames:
-                    new_hd = hd.copy()
+                    new_hd = hostdep.copy()
                     new_hd.dependent_host_name = dephname
                     new_hd.host_name = hname
                     self.add_item(new_hd)
@@ -212,24 +212,24 @@ class Hostdependencies(Items):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        for hd in self:
+        for hostdep in self:
             try:
-                h_name = hd.host_name
-                dh_name = hd.dependent_host_name
-                h = hosts.find_by_name(h_name)
-                if h is None:
+                h_name = hostdep.host_name
+                dh_name = hostdep.dependent_host_name
+                host = hosts.find_by_name(h_name)
+                if host is None:
                     err = "Error: the host dependency got a bad host_name definition '%s'" % h_name
-                    hd.configuration_errors.append(err)
-                dh = hosts.find_by_name(dh_name)
-                if dh is None:
+                    hostdep.configuration_errors.append(err)
+                dephost = hosts.find_by_name(dh_name)
+                if dephost is None:
                     err = "Error: the host dependency got " \
                           "a bad dependent_host_name definition '%s'" % dh_name
-                    hd.configuration_errors.append(err)
-                hd.host_name = h
-                hd.dependent_host_name = dh
+                    hostdep.configuration_errors.append(err)
+                hostdep.host_name = host
+                hostdep.dependent_host_name = dephost
             except AttributeError, exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
-                hd.configuration_errors.append(err)
+                hostdep.configuration_errors.append(err)
 
     def linkify_hd_by_tp(self, timeperiods):
         """Replace dependency_period by a real object in host dependency
@@ -238,11 +238,11 @@ class Hostdependencies(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        for hd in self:
+        for hostdep in self:
             try:
-                tp_name = hd.dependency_period
-                tp = timeperiods.find_by_name(tp_name)
-                hd.dependency_period = tp
+                tp_name = hostdep.dependency_period
+                timeperiod = timeperiods.find_by_name(tp_name)
+                hostdep.dependency_period = timeperiod
             except AttributeError, exp:
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
@@ -251,19 +251,21 @@ class Hostdependencies(Items):
 
         :return: None
         """
-        for hd in self:
+        for hostdep in self:
             # if the host dep conf is bad, pass this one
-            if getattr(hd, 'host_name', None) is None or\
-                    getattr(hd, 'dependent_host_name', None) is None:
+            if getattr(hostdep, 'host_name', None) is None or\
+                    getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
             # Ok, link!
-            depdt_hname = hd.dependent_host_name
-            dp = getattr(hd, 'dependency_period', None)
+            depdt_hname = hostdep.dependent_host_name
+            dep_period = getattr(hostdep, 'dependency_period', None)
             depdt_hname.add_host_act_dependency(
-                hd.host_name, hd.notification_failure_criteria, dp, hd.inherits_parent
+                hostdep.host_name, hostdep.notification_failure_criteria,
+                dep_period, hostdep.inherits_parent
             )
             depdt_hname.add_host_chk_dependency(
-                hd.host_name, hd.execution_failure_criteria, dp, hd.inherits_parent
+                hostdep.host_name, hostdep.execution_failure_criteria,
+                dep_period, hostdep.inherits_parent
             )
 
     def is_correct(self):
@@ -275,5 +277,5 @@ class Hostdependencies(Items):
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
         """
-        r = super(Hostdependencies, self).is_correct()
-        return r and self.no_loop_in_parents("host_name", "dependent_host_name")
+        valid = super(Hostdependencies, self).is_correct()
+        return valid and self.no_loop_in_parents("host_name", "dependent_host_name")
