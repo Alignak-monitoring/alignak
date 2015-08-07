@@ -105,13 +105,13 @@ class Serviceescalations(Items):
         :return: None
         """
         # Now we explode all escalations (host_name, service_description) to escalations
-        for es in self:
-            properties = es.__class__.properties
+        for svescal in self:
+            properties = svescal.__class__.properties
 
-            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%d' % es._id}
+            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%d' % svescal._id}
             for prop in properties:
-                if hasattr(es, prop):
-                    creation_dict[prop] = getattr(es, prop)
+                if hasattr(svescal, prop):
+                    creation_dict[prop] = getattr(svescal, prop)
             # print "Creation an escalation with:", creation_dict
-            s = Escalation(creation_dict)
-            escalations.add_escalation(s)
+            escalation = Escalation(creation_dict)
+            escalations.add_escalation(escalation)
