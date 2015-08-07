@@ -387,15 +387,16 @@ class DictProp(Property):
             :return: key, value
             :rtype: tuple
             """
-            m = re.match(r"^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
-            if m is None:
+            matches = re.match(r"^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
+            if matches is None:
                 raise ValueError
 
             return (
-                m.group(1),
+                matches.group(1),
                 # >2.4 only. we keep it for later. m.group(2) if self.elts_prop is None
                 # else self.elts_prop.pythonize(m.group(2))
-                (self.elts_prop.pythonize(m.group(2)), m.group(2))[self.elts_prop is None]
+                (self.elts_prop.pythonize(matches.group(2)),
+                 matches.group(2))[self.elts_prop is None]
             )
 
         if val is None:
@@ -424,13 +425,13 @@ class AddrProp(Property):
         :rtype: dict
         """
         val = unique_value(val)
-        m = re.match(r"^([^:]*)(?::(\d+))?$", val)
-        if m is None:
+        matches = re.match(r"^([^:]*)(?::(\d+))?$", val)
+        if matches is None:
             raise ValueError
 
-        addr = {'address': m.group(1)}
-        if m.group(2) is not None:
-            addr['port'] = int(m.group(2))
+        addr = {'address': matches.group(1)}
+        if matches.group(2) is not None:
+            addr['port'] = int(matches.group(2))
 
         return addr
 
