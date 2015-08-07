@@ -133,8 +133,8 @@ class ArbiterLink(SatelliteLink):
         if self.con is None:
             self.create_connection()
         try:
-            r = self.con.get_satellite_list(daemon_type)
-            return r
+            satlist = self.con.get_satellite_list(daemon_type)
+            return satlist
         except HTTPExceptions, exp:
             self.con = None
             return []
@@ -153,8 +153,8 @@ class ArbiterLink(SatelliteLink):
         if self.con is None:
             self.create_connection()
         try:
-            r = self.con.get_satellite_status(daemon_type, name)
-            return r
+            satlist = self.con.get_satellite_status(daemon_type, name)
+            return satlist
         except HTTPExceptions, exp:
             self.con = None
             return {}
@@ -169,8 +169,8 @@ class ArbiterLink(SatelliteLink):
         if self.con is None:
             self.create_connection()
         try:
-            r = self.con.get('get_all_states')
-            return r
+            res = self.con.get('get_all_states')
+            return res
         except HTTPExceptions, exp:
             self.con = None
             return None
@@ -190,8 +190,8 @@ class ArbiterLink(SatelliteLink):
             self.create_connection()
         try:
             print properties
-            r = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
-            return r
+            res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
+            return res
         except HTTPExceptions, exp:
             self.con = None
             return None
