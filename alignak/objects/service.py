@@ -77,8 +77,9 @@ from alignak.objects.schedulingitem import SchedulingItem
 
 from alignak.autoslots import AutoSlots
 from alignak.util import strip_and_uniq, format_t_into_dhms_format, to_svc_hst_distinct_lists, \
-    get_key_value_sequence, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX, GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT, \
-    GET_KEY_VALUE_SEQUENCE_ERROR_NODE, to_list_string_of_names, to_list_of_names, to_name_if_possible, \
+    get_key_value_sequence, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX,\
+    GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT, GET_KEY_VALUE_SEQUENCE_ERROR_NODE,\
+    to_list_string_of_names, to_list_of_names, to_name_if_possible, \
     is_complex_expr
 from alignak.property import BoolProp, IntegerProp, FloatProp,\
     CharProp, StringProp, ListProp, DictProp
@@ -782,10 +783,10 @@ class Service(SchedulingItem):
         if not hasattr(self, 'check_period'):
             self.check_period = None
         if hasattr(self, 'service_description'):
-            for c in cls.illegal_object_name_chars:
-                if c in self.service_description:
+            for char in cls.illegal_object_name_chars:
+                if char in self.service_description:
                     logger.error("%s: My service_description got the "
-                                 "character %s that is not allowed.", self.get_name(), c)
+                                 "character %s that is not allowed.", self.get_name(), char)
                     state = False
         return state
 
@@ -942,8 +943,8 @@ class Service(SchedulingItem):
                             setattr(new_s, prop, getattr(new_s, prop).replace('$' + key + '$',
                                                                               key_value[key]))
                     if hasattr(self, 'service_dependencies'):
-                        for i, sd in enumerate(new_s.service_dependencies):
-                            new_s.service_dependencies[i] = sd.replace(
+                        for i, servicedep in enumerate(new_s.service_dependencies):
+                            new_s.service_dependencies[i] = servicedep.replace(
                                 '$' + key + '$', key_value[key]
                             )
                 # And then add in our list this new service
@@ -952,7 +953,8 @@ class Service(SchedulingItem):
             # If error, we should link the error to the host, because self is
             # a template, and so won't be checked not print!
             if errcode == GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX:
-                err = "The custom property '%s' of the host '%s' is not a valid entry %s for a service generator" % \
+                err = "The custom property '%s' of the host '%s'" \
+                      "is not a valid entry %s for a service generator" % \
                       (self.duplicate_foreach.strip(), host.get_name(), entry)
                 logger.warning(err)
                 host.configuration_errors.append(err)
@@ -1391,9 +1393,9 @@ class Service(SchedulingItem):
         :rtype: str
         TODO: Move to util or SchedulingItem class
         """
-        m, s = divmod(self.duration_sec, 60)
-        h, m = divmod(m, 60)
-        return "%02dh %02dm %02ds" % (h, m, s)
+        mins, secs = divmod(self.duration_sec, 60)
+        hours, mins = divmod(mins, 60)
+        return "%02dh %02dm %02ds" % (hours, mins, secs)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement
@@ -1549,13 +1551,13 @@ class Service(SchedulingItem):
         if not cls.obsess_over or not self.obsess_over_service:
             return
 
-        m = MacroResolver()
+        macroresolver = MacroResolver()
         data = self.get_data_for_event_handler()
-        cmd = m.resolve_command(cls.ocsp_command, data)
-        e = EventHandler(cmd, timeout=cls.ocsp_timeout)
+        cmd = macroresolver.resolve_command(cls.ocsp_command, data)
+        event_h = EventHandler(cmd, timeout=cls.ocsp_timeout)
 
         # ok we can put it in our temp action queue
-        self.actions.append(e)
+        self.actions.append(event_h)
 
     def get_short_status(self):
         """Get the short status of this host
@@ -1778,10 +1780,10 @@ class Services(Items):
         :rtype: list[alignak.objects.service.Service]
         """
         if hasattr(self, 'hosts'):
-            h = self.hosts.find_by_name(host_name)
-            if h is None:
+            host = self.hosts.find_by_name(host_name)
+            if host is None:
                 return None
-            return h.get_services()
+            return host.get_services()
         return None
 
     def find_srv_by_name_and_hostname(self, host_name, sdescr):
@@ -1889,7 +1891,8 @@ class Services(Items):
                 excludes = ['host_name', 'service_description', 'use',
                             'servicegroups', 'trigger', 'trigger_name']
                 if prop in excludes:
-                    err = "Error: trying to override '%s', a forbidden property for service '%s'" % \
+                    err = "Error: trying to override '%s', " \
+                          "a forbidden property for service '%s'" % \
                           (prop, sdescr)
                     host.configuration_errors.append(err)
                     continue
@@ -1913,24 +1916,24 @@ class Services(Items):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        for s in self:
+        for serv in self:
             # If we do not have a host_name, we set it as
             # a template element to delete. (like Nagios)
-            if not hasattr(s, 'host_name'):
-                s.host = None
+            if not hasattr(serv, 'host_name'):
+                serv.host = None
                 continue
             try:
-                hst_name = s.host_name
+                hst_name = serv.host_name
                 # The new member list, in id
                 hst = hosts.find_by_name(hst_name)
-                s.host = hst
+                serv.host = hst
                 # Let the host know we are his service
-                if s.host is not None:
-                    hst.add_service_link(s)
+                if serv.host is not None:
+                    hst.add_service_link(serv)
                 else:  # Ok, the host do not exists!
                     err = "Warning: the service '%s' got an invalid host_name '%s'" % \
                           (self.get_name(), hst_name)
-                    s.configuration_warnings.append(err)
+                    serv.configuration_warnings.append(err)
                     continue
             except AttributeError, exp:
                 pass  # Will be catch at the is_correct moment
@@ -1942,19 +1945,19 @@ class Services(Items):
         :type servicegroups: alignak.objects.servicegroup.Servicegroups
         :return: None
         """
-        for s in self:
+        for serv in self:
             new_servicegroups = []
-            if hasattr(s, 'servicegroups') and s.servicegroups != '':
-                for sg_name in s.servicegroups:
+            if hasattr(serv, 'servicegroups') and serv.servicegroups != '':
+                for sg_name in serv.servicegroups:
                     sg_name = sg_name.strip()
-                    sg = servicegroups.find_by_name(sg_name)
-                    if sg is not None:
-                        new_servicegroups.append(sg)
+                    servicegroup = servicegroups.find_by_name(sg_name)
+                    if servicegroup is not None:
+                        new_servicegroups.append(servicegroup)
                     else:
                         err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
-                              (sg_name, s.get_dbg_name())
-                        s.configuration_errors.append(err)
-            s.servicegroups = new_servicegroups
+                              (sg_name, serv.get_dbg_name())
+                        serv.configuration_errors.append(err)
+            serv.servicegroups = new_servicegroups
 
     def delete_services_by_id(self, ids):
         """Delete a list of services
@@ -1979,19 +1982,19 @@ class Services(Items):
                      'notification_period', 'resultmodulations', 'business_impact_modulations',
                      'escalations', 'poller_tag', 'reactionner_tag', 'check_period',
                      'business_impact', 'maintenance_period'):
-            for s in self:
-                if not hasattr(s, prop) and hasattr(s, 'host_name'):
-                    h = hosts.find_by_name(s.host_name)
-                    if h is not None and hasattr(h, prop):
-                        setattr(s, prop, getattr(h, prop))
+            for serv in self:
+                if not hasattr(serv, prop) and hasattr(serv, 'host_name'):
+                    host = hosts.find_by_name(serv.host_name)
+                    if host is not None and hasattr(host, prop):
+                        setattr(serv, prop, getattr(host, prop))
 
     def apply_dependencies(self):
         """Wrapper to loop over services and call Service.fill_daddy_dependency()
 
         :return: None
         """
-        for s in self:
-            s.fill_daddy_dependency()
+        for service in self:
+            service.fill_daddy_dependency()
 
     def clean(self):
         """Remove services without host object linked to
@@ -1999,9 +2002,9 @@ class Services(Items):
         :return: None
         """
         to_del = []
-        for s in self:
-            if not s.host:
-                to_del.append(s._id)
+        for serv in self:
+            if not serv.host:
+                to_del.append(serv._id)
         for sid in to_del:
             del self.items[sid]
 
@@ -2042,13 +2045,13 @@ class Services(Items):
 
         # Now we duplicate the service for all host_names
         for hname in duplicate_for_hosts:
-            h = hosts.find_by_name(hname)
-            if h is None:
+            host = hosts.find_by_name(hname)
+            if host is None:
                 err = 'Error: The hostname %s is unknown for the ' \
                       'service %s!' % (hname, s.get_name())
                 s.configuration_errors.append(err)
                 continue
-            if h.is_excluded_for(s):
+            if host.is_excluded_for(s):
                 continue
             new_s = s.copy()
             new_s.host_name = hname
@@ -2066,8 +2069,8 @@ class Services(Items):
         :return: The new service created.
         :rtype: alignak.objects.service.Service
         """
-        h = hosts.find_by_name(host_name.strip())
-        if h.is_excluded_for(service):
+        host = hosts.find_by_name(host_name.strip())
+        if host.is_excluded_for(service):
             return
         # Creates concrete instance
         new_s = service.copy()
@@ -2118,17 +2121,17 @@ class Services(Items):
 
         # the generator case, we must create several new services
         # we must find our host, and get all key:value we need
-        h = hosts.find_by_name(hname.strip())
+        host = hosts.find_by_name(hname.strip())
 
-        if h is None:
+        if host is None:
             err = 'Error: The hostname %s is unknown for the ' \
                   'service %s!' % (hname, s.get_name())
             s.configuration_errors.append(err)
             return
 
         # Duplicate services
-        for new_s in s.duplicate(h):
-            if h.is_excluded_for(new_s):
+        for new_s in s.duplicate(host):
+            if host.is_excluded_for(new_s):
                 continue
             # Adds concrete instance
             self.add_item(new_s)
@@ -2153,8 +2156,8 @@ class Services(Items):
                     sgs = s.servicegroups
                 else:
                     sgs = s.servicegroups.split(',')
-                for sg in sgs:
-                    servicegroups.add_member([shname, sname], sg.strip())
+                for servicegroup in sgs:
+                    servicegroups.add_member([shname, sname], servicegroup.strip())
 
     def register_service_dependencies(self, s, servicedependencies):
         """
@@ -2214,41 +2217,41 @@ class Services(Items):
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
         for s_id in self.items.keys():
-            s = self.items[s_id]
+            serv = self.items[s_id]
             # items::explode_host_groups_into_hosts
             # take all hosts from our hostgroup_name into our host_name property
-            self.explode_host_groups_into_hosts(s, hosts, hostgroups)
+            self.explode_host_groups_into_hosts(serv, hosts, hostgroups)
 
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
-            self.explode_contact_groups_into_contacts(s, contactgroups)
+            self.explode_contact_groups_into_contacts(serv, contactgroups)
 
-            hnames = getattr(s, "host_name", '')
+            hnames = getattr(serv, "host_name", '')
             hnames = list(set([n.strip() for n in hnames.split(',') if n.strip()]))
             # hnames = strip_and_uniq(hnames)
             # We will duplicate if we have multiple host_name
             # or if we are a template (so a clean service)
             if len(hnames) == 1:
-                self.index_item(s)
+                self.index_item(serv)
             else:
                 if len(hnames) >= 2:
-                    self.explode_services_from_hosts(hosts, s, hnames)
+                    self.explode_services_from_hosts(hosts, serv, hnames)
                 # Delete expanded source service
-                if not s.configuration_errors:
-                    self.remove_item(s)
+                if not serv.configuration_errors:
+                    self.remove_item(serv)
 
         for s_id in self.templates.keys():
-            t = self.templates[s_id]
-            self.explode_contact_groups_into_contacts(t, contactgroups)
-            self.explode_services_from_templates(hosts, t)
+            template = self.templates[s_id]
+            self.explode_contact_groups_into_contacts(template, contactgroups)
+            self.explode_services_from_templates(hosts, template)
 
         # Explode services that have a duplicate_foreach clause
-        duplicates = [s._id for s in self if getattr(s, 'duplicate_foreach', '')]
+        duplicates = [serv._id for serv in self if getattr(serv, 'duplicate_foreach', '')]
         for s_id in duplicates:
-            s = self.items[s_id]
-            self.explode_services_duplicates(hosts, s)
-            if not s.configuration_errors:
-                self.remove_item(s)
+            serv = self.items[s_id]
+            self.explode_services_duplicates(hosts, serv)
+            if not serv.configuration_errors:
+                self.remove_item(serv)
 
         to_remove = []
         for service in self:
@@ -2260,9 +2263,9 @@ class Services(Items):
 
         # Servicegroups property need to be fullfill for got the informations
         # And then just register to this service_group
-        for s in self:
-            self.register_service_into_servicegroups(s, servicegroups)
-            self.register_service_dependencies(s, servicedependencies)
+        for serv in self:
+            self.register_service_into_servicegroups(serv, servicegroups)
+            self.register_service_dependencies(serv, servicedependencies)
 
     def create_business_rules(self, hosts, services):
         """
@@ -2276,8 +2279,8 @@ class Services(Items):
         :return: None
         TODO: Move this function into SchedulingItems class
         """
-        for s in self:
-            s.create_business_rules(hosts, services)
+        for serv in self:
+            serv.create_business_rules(hosts, services)
 
     def create_business_rules_dependencies(self):
         """Loop on services and call Service.create_business_rules_dependencies()
@@ -2285,5 +2288,5 @@ class Services(Items):
         :return: None
         TODO: Move this function into SchedulingItems class
         """
-        for s in self:
-            s.create_business_rules_dependencies()
+        for serv in self:
+            serv.create_business_rules_dependencies()
