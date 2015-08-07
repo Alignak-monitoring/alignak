@@ -146,9 +146,9 @@ class Servicegroup(Itemgroup):
 
         sg_mbrs = self.get_servicegroup_members()
         for sg_mbr in sg_mbrs:
-            sg = servicegroups.find_by_name(sg_mbr.strip())
-            if sg is not None:
-                value = sg.get_services_by_explosion(servicegroups)
+            servicegroup = servicegroups.find_by_name(sg_mbr.strip())
+            if servicegroup is not None:
+                value = servicegroup.get_services_by_explosion(servicegroups)
                 if value is not None:
                     self.add_string_member(value)
 
@@ -190,14 +190,14 @@ class Servicegroups(Itemgroups):
         :type services: object
         :return: None
         """
-        for sg in self:
-            mbrs = sg.get_services()
+        for servicegroup in self:
+            mbrs = servicegroup.get_services()
             # The new member list, in id
             new_mbrs = []
             seek = 0
             host_name = ''
             if len(mbrs) == 1 and mbrs[0] != '':
-                sg.add_string_unknown_member('%s' % mbrs[0])
+                servicegroup.add_string_unknown_member('%s' % mbrs[0])
 
             for mbr in mbrs:
                 if seek % 2 == 0:
@@ -210,11 +210,12 @@ class Servicegroups(Itemgroups):
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
-                            sg.add_string_unknown_member('%s,%s' % (host_name, service_desc))
+                            servicegroup.add_string_unknown_member('%s,%s' %
+                                                                   (host_name, service_desc))
                         elif host:
                             self.configuration_warnings.append(
                                 'servicegroup %r : %s is excluded from the services of the host %s'
-                                % (sg, service_desc, host_name)
+                                % (servicegroup, service_desc, host_name)
                             )
                 seek += 1
 
@@ -222,11 +223,11 @@ class Servicegroups(Itemgroups):
             new_mbrs = list(set(new_mbrs))
 
             # We find the id, we replace the names
-            sg.replace_members(new_mbrs)
-            for s in sg.members:
-                s.servicegroups.append(sg)
+            servicegroup.replace_members(new_mbrs)
+            for serv in servicegroup.members:
+                serv.servicegroups.append(servicegroup)
                 # and make this uniq
-                s.servicegroups = list(set(s.servicegroups))
+                serv.servicegroups = list(set(serv.servicegroups))
 
     def add_member(self, cname, sgname):
         """
@@ -238,13 +239,13 @@ class Servicegroups(Itemgroups):
         :type sgname: str
         :return: None
         """
-        sg = self.find_by_name(sgname)
+        svcgp = self.find_by_name(sgname)
         # if the id do not exist, create the cg
-        if sg is None:
-            sg = Servicegroup({'servicegroup_name': sgname, 'alias': sgname, 'members': cname})
-            self.add(sg)
+        if svcgp is None:
+            svcgp = Servicegroup({'servicegroup_name': sgname, 'alias': sgname, 'members': cname})
+            self.add(svcgp)
         else:
-            sg.add_string_member(cname)
+            svcgp.add_string_member(cname)
 
     def explode(self):
         """
@@ -254,21 +255,21 @@ class Servicegroups(Itemgroups):
         """
         # We do not want a same hg to be explode again and again
         # so we tag it
-        for sg in self:
-            sg.already_explode = False
+        for servicegroup in self:
+            servicegroup.already_explode = False
 
-        for sg in self:
-            if sg.has('servicegroup_members') and not sg.already_explode:
+        for servicegroup in self:
+            if servicegroup.has('servicegroup_members') and not servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for sg2 in self:
                     sg2.rec_tag = False
-                sg.get_services_by_explosion(self)
+                servicegroup.get_services_by_explosion(self)
 
         # We clean the tags
-        for sg in self:
+        for servicegroup in self:
             try:
-                del sg.rec_tag
+                del servicegroup.rec_tag
             except AttributeError:
                 pass
-            del sg.already_explode
+            del servicegroup.already_explode
