@@ -115,9 +115,9 @@ class Modules(Items):
 
         :return: None
         """
-        for s in self:
+        for module in self:
             new_modules = []
-            mods = strip_and_uniq(s.modules)
+            mods = strip_and_uniq(module.modules)
             for plug_name in mods:
                 plug_name = plug_name.strip()
 
@@ -130,10 +130,10 @@ class Modules(Items):
                 if plug is not None:
                     new_modules.append(plug)
                 else:
-                    err = "[module] unknown %s module from %s" % (plug_name, s.get_name())
+                    err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
                     logger.error(err)
-                    s.configuration_errors.append(err)
-            s.modules = new_modules
+                    module.configuration_errors.append(err)
+            module.modules = new_modules
 
     def explode(self):
         """
