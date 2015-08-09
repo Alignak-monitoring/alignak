@@ -238,7 +238,7 @@ class Timeperiod(Item):
         :return: time is valid or not
         :rtype: bool
         """
-        if self.has('exclude'):
+        if hasattr(self, 'exclude'):
             for daterange in self.exclude:
                 if daterange.is_time_valid(t):
                     return False
@@ -898,7 +898,7 @@ class Timeperiod(Item):
         :return: None
         """
         new_exclude = []
-        if self.has('exclude') and self.exclude != []:
+        if hasattr(self, 'exclude') and self.exclude != []:
             logger.debug("[timeentry::%s] have excluded %s", self.get_name(), self.exclude)
             excluded_tps = self.exclude
             # print "I will exclude from:", excluded_tps
