@@ -59,6 +59,7 @@ import time
 import traceback
 import re
 from multiprocessing import Queue, Process
+import warnings
 
 import alignak.http_daemon
 from alignak.log import logger
@@ -274,6 +275,11 @@ class BaseModule(object):
         :return: True if has a property, otherwise False
         :rtype: bool
         """
+        warnings.warn(
+            "{s.__class__.__name__} is deprecated, please use "
+            "`hasattr(your_object, attr)` instead. This has() method will "
+            "be removed in a later version.".format(s=self),
+            DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
     def want_brok(self, b):
