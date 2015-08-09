@@ -241,7 +241,8 @@ class Host(SchedulingItem):
         'service_includes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
         'labels':
-            StringProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], merging='join',
+                     split_on_coma=True),
 
         # BUSINESS CORRELATOR PART
         # Business rules output format template
