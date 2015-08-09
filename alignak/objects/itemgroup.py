@@ -55,6 +55,7 @@
 """
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
+import warnings
 
 from alignak.objects.item import Item, Items
 
@@ -191,6 +192,11 @@ class Itemgroup(Item):
         :return: True if self has this attribute, otherwise False
         :rtype: bool
         """
+        warnings.warn(
+            "{s.__class__.__name__} is deprecated, please use "
+            "`hasattr(your_object, attr)` instead. This has() method will "
+            "be removed in a later version.".format(s=self),
+            DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
     def get_initial_status_brok(self):
