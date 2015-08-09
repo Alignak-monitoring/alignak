@@ -122,6 +122,7 @@ action or not if we are in right period
 
 import time
 import re
+import warnings
 
 from alignak.objects.item import Item, Items
 
@@ -555,6 +556,11 @@ class Timeperiod(Item):
         :return: true if self has this attribute
         :rtype: bool
         """
+        warnings.warn(
+            "{s.__class__.__name__} is deprecated, please use "
+            "`hasattr(your_object, attr)` instead. This has() method will "
+            "be removed in a later version.".format(s=self),
+            DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
     def is_correct(self):
