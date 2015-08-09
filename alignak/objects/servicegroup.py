@@ -259,7 +259,8 @@ class Servicegroups(Itemgroups):
             servicegroup.already_explode = False
 
         for servicegroup in self:
-            if servicegroup.has('servicegroup_members') and not servicegroup.already_explode:
+            if hasattr(servicegroup, 'servicegroup_members') and not \
+                    servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for sg2 in self:

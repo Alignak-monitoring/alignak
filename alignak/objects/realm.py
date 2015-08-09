@@ -539,7 +539,7 @@ class Realms(Itemgroups):
         for tmp_p in self.items.values():
             tmp_p.already_explode = False
         for realm in self:
-            if realm.has('realm_members') and not realm.already_explode:
+            if hasattr(realm, 'realm_members') and not realm.already_explode:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_p in self:

@@ -256,7 +256,8 @@ class Contactgroups(Itemgroups):
             tmp_cg.already_explode = False
 
         for contactgroup in self.items.values():
-            if contactgroup.has('contactgroup_members') and not contactgroup.already_explode:
+            if hasattr(contactgroup, 'contactgroup_members') and not \
+                    contactgroup.already_explode:
                 # get_contacts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_cg in self.items.values():
