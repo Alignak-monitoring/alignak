@@ -767,10 +767,10 @@ class Host(SchedulingItem):
             self.check_period = None
 
         if hasattr(self, 'host_name'):
-            for c in cls.illegal_object_name_chars:
-                if c in self.host_name:
+            for char in cls.illegal_object_name_chars:
+                if char in self.host_name:
                     logger.error("%s: My host_name got the character %s that is not allowed.",
-                                 self.get_name(), c)
+                                 self.get_name(), char)
                     state = False
 
         return state
@@ -783,9 +783,9 @@ class Host(SchedulingItem):
         :return: service with service.service_description == service_description
         :rtype: alignak.objects.service.Services | None
         """
-        for s in self.services:
-            if getattr(s, 'service_description', '__UNNAMED_SERVICE__') == service_description:
-                return s
+        for serv in self.services:
+            if getattr(serv, 'service_description', '__UNNAMED_SERVICE__') == service_description:
+                return serv
         return None
 
     def get_services(self):
@@ -822,10 +822,10 @@ class Host(SchedulingItem):
         TODO: Clean this. It returns the last hostgroup encountered
         """
         groupname = ''
-        for hg in self.hostgroups:
+        for hostgroup in self.hostgroups:
             # naglog_result('info', 'get_groupname : %s %s %s' % (hg._id, hg.alias, hg.get_name()))
             # groupname = "%s [%s]" % (hg.alias, hg.get_name())
-            groupname = "%s" % (hg.alias)
+            groupname = "%s" % (hostgroup.alias)
         return groupname
 
     def get_groupnames(self):
@@ -835,12 +835,12 @@ class Host(SchedulingItem):
         :rtype: str
         """
         groupnames = ''
-        for hg in self.hostgroups:
+        for hostgroup in self.hostgroups:
             # naglog_result('info', 'get_groupnames : %s' % (hg.get_name()))
             if groupnames == '':
-                groupnames = hg.get_name()
+                groupnames = hostgroup.get_name()
             else:
-                groupnames = "%s, %s" % (groupnames, hg.get_name())
+                groupnames = "%s, %s" % (groupnames, hostgroup.get_name())
         return groupnames
 
     def get_dbg_name(self):
@@ -891,8 +891,8 @@ class Host(SchedulingItem):
         :return: True if other in act_depend_of list, otherwise False
         :rtype: bool
         """
-        for (h, status, _, timeperiod, inherits_parent) in self.act_depend_of:
-            if h == other:
+        for (host, status, _, timeperiod, inherits_parent) in self.act_depend_of:
+            if host == other:
                 return True
         return False
 
@@ -908,19 +908,19 @@ class Host(SchedulingItem):
         """
         to_del = []
         # First we remove in my list
-        for (h, status, n_type, timeperiod, inherits_parent) in self.act_depend_of:
-            if h == other:
-                to_del.append((h, status, n_type, timeperiod, inherits_parent))
-        for t in to_del:
-            self.act_depend_of.remove(t)
+        for (host, status, n_type, timeperiod, inherits_parent) in self.act_depend_of:
+            if host == other:
+                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+        for tup in to_del:
+            self.act_depend_of.remove(tup)
 
         # And now in the father part
         to_del = []
-        for (h, status, n_type, timeperiod, inherits_parent) in other.act_depend_of_me:
-            if h == self:
-                to_del.append((h, status, n_type, timeperiod, inherits_parent))
-        for t in to_del:
-            other.act_depend_of_me.remove(t)
+        for (host, status, n_type, timeperiod, inherits_parent) in other.act_depend_of_me:
+            if host == self:
+                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+        for tup in to_del:
+            other.act_depend_of_me.remove(tup)
 
         # Remove in child/parents deps too
         # Me in father list
@@ -1484,9 +1484,9 @@ class Host(SchedulingItem):
         :return: Formatted duration
         :rtype: str
         """
-        m, s = divmod(self.duration_sec, 60)
-        h, m = divmod(m, 60)
-        return "%02dh %02dm %02ds" % (h, m, s)
+        mins, secs = divmod(self.duration_sec, 60)
+        hours, mins = divmod(mins, 60)
+        return "%02dh %02dm %02ds" % (hours, mins, secs)
 
     def notification_is_blocked_by_item(self, n_type, t_wished=None):
         """Check if a notification is blocked by the host.
@@ -1603,13 +1603,13 @@ class Host(SchedulingItem):
         cls = self.__class__
         if not cls.obsess_over or not self.obsess_over_host:
             return
-        m = MacroResolver()
+        macroresolver = MacroResolver()
         data = self.get_data_for_event_handler()
-        cmd = m.resolve_command(cls.ochp_command, data)
-        e = EventHandler(cmd, timeout=cls.ochp_timeout)
+        cmd = macroresolver.resolve_command(cls.ochp_command, data)
+        e_handler = EventHandler(cmd, timeout=cls.ochp_timeout)
 
         # ok we can put it in our temp action queue
-        self.actions.append(e)
+        self.actions.append(e_handler)
 
     def get_total_services(self):
         """Get the number of services for this host
@@ -1777,29 +1777,29 @@ class Hosts(Items):
 
         :return: None
         """
-        for h in self:
-            h.fill_predictive_missing_parameters()
+        for host in self:
+            host.fill_predictive_missing_parameters()
 
     def linkify_h_by_h(self):
         """Link hosts with their parents
 
         :return: None
         """
-        for h in self:
-            parents = h.parents
+        for host in self:
+            parents = host.parents
             # The new member list
             new_parents = []
             for parent in parents:
                 parent = parent.strip()
-                p = self.find_by_name(parent)
-                if p is not None:
-                    new_parents.append(p)
+                o_parent = self.find_by_name(parent)
+                if o_parent is not None:
+                    new_parents.append(o_parent)
                 else:
-                    err = "the parent '%s' on host '%s' is unknown!" % (parent, h.get_name())
+                    err = "the parent '%s' on host '%s' is unknown!" % (parent, host.get_name())
                     self.configuration_warnings.append(err)
             # print "Me,", h.host_name, "define my parents", new_parents
             # We find the id, we replace the names
-            h.parents = new_parents
+            host.parents = new_parents
 
     def linkify_h_by_realms(self, realms):
         """Link hosts with realms
@@ -1809,23 +1809,23 @@ class Hosts(Items):
         :return: None
         """
         default_realm = None
-        for r in realms:
-            if getattr(r, 'default', False):
-                default_realm = r
+        for realm in realms:
+            if getattr(realm, 'default', False):
+                default_realm = realm
         # if default_realm is None:
         #    print "Error: there is no default realm defined!"
-        for h in self:
-            if h.realm is not None:
-                p = realms.find_by_name(h.realm.strip())
-                if p is None:
-                    err = "the host %s got an invalid realm (%s)!" % (h.get_name(), h.realm)
-                    h.configuration_errors.append(err)
-                h.realm = p
+        for host in self:
+            if host.realm is not None:
+                realm = realms.find_by_name(host.realm.strip())
+                if realm is None:
+                    err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
+                    host.configuration_errors.append(err)
+                host.realm = realm
             else:
                 # print("Notice: applying default realm %s to host %s"
                 #       % (default_realm.get_name(), h.get_name()))
-                h.realm = default_realm
-                h.got_default_realm = True
+                host.realm = default_realm
+                host.got_default_realm = True
 
     def linkify_h_by_hg(self, hostgroups):
         """Link hosts with hostgroups
@@ -1835,20 +1835,20 @@ class Hosts(Items):
         :return: None
         """
         # Register host in the hostgroups
-        for h in self:
+        for host in self:
             new_hostgroups = []
-            if hasattr(h, 'hostgroups') and h.hostgroups != []:
-                hgs = [n.strip() for n in h.hostgroups if n.strip()]
+            if hasattr(host, 'hostgroups') and host.hostgroups != []:
+                hgs = [n.strip() for n in host.hostgroups if n.strip()]
                 for hg_name in hgs:
                     # TODO: should an unknown hostgroup raise an error ?
-                    hg = hostgroups.find_by_name(hg_name)
-                    if hg is not None:
-                        new_hostgroups.append(hg)
+                    hostgroup = hostgroups.find_by_name(hg_name)
+                    if hostgroup is not None:
+                        new_hostgroups.append(hostgroup)
                     else:
                         err = ("the hostgroup '%s' of the host '%s' is "
-                               "unknown" % (hg_name, h.host_name))
-                        h.configuration_errors.append(err)
-            h.hostgroups = new_hostgroups
+                               "unknown" % (hg_name, host.host_name))
+                        host.configuration_errors.append(err)
+            host.hostgroups = new_hostgroups
 
     def explode(self, hostgroups, contactgroups, triggers):
         """Explode hosts, hostrgroups and triggers::
@@ -1869,29 +1869,29 @@ class Hosts(Items):
         # items::explode_trigger_string_into_triggers
         self.explode_trigger_string_into_triggers(triggers)
 
-        for t in self.templates.itervalues():
+        for template in self.templates.itervalues():
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
-            self.explode_contact_groups_into_contacts(t, contactgroups)
+            self.explode_contact_groups_into_contacts(template, contactgroups)
 
         # Register host in the hostgroups
-        for h in self:
+        for host in self:
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
-            self.explode_contact_groups_into_contacts(h, contactgroups)
+            self.explode_contact_groups_into_contacts(host, contactgroups)
 
-            if hasattr(h, 'host_name') and hasattr(h, 'hostgroups'):
-                hname = h.host_name
-                for hg in h.hostgroups:
-                    hostgroups.add_member(hname, hg.strip())
+            if hasattr(host, 'host_name') and hasattr(host, 'hostgroups'):
+                hname = host.host_name
+                for hostgroup in host.hostgroups:
+                    hostgroups.add_member(hname, hostgroup.strip())
 
     def apply_dependencies(self):
         """Loop on hosts and call Host.fill_parents_dependency()
 
         :return: None
         """
-        for h in self:
-            h.fill_parents_dependency()
+        for host in self:
+            host.fill_parents_dependency()
 
     def find_hosts_that_use_template(self, tpl_name):
         """Find hosts that use the template defined in argument tpl_name
@@ -1913,13 +1913,13 @@ class Hosts(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for h in self:
-            h.create_business_rules(hosts, services)
+        for host in self:
+            host.create_business_rules(hosts, services)
 
     def create_business_rules_dependencies(self):
         """Loop on hosts and call Host.create_business_rules_dependencies()
 
         :return: None
         """
-        for h in self:
-            h.create_business_rules_dependencies()
+        for host in self:
+            host.create_business_rules_dependencies()

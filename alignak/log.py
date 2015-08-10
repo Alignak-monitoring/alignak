@@ -268,11 +268,11 @@ class Log(logging.Logger):
         :return: None
         """
         for (level, args, kwargs) in self.pre_log_buffer:
-            f = getattr(logging.Logger, level, None)
-            if f is None:
+            fun = getattr(logging.Logger, level, None)
+            if fun is None:
                 self.warning('Missing level for a log? %s', level)
                 continue
-            f(self, *args, **kwargs)
+            fun(self, *args, **kwargs)
 
     def debug(self, *args, **kwargs):
         self._stack('debug', args, kwargs)

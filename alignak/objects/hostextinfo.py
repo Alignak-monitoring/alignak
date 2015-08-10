@@ -190,12 +190,12 @@ class HostsExtInfo(Items):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        for ei in self:
-            host_name = ei.get_name()
-            h = hosts.find_by_name(host_name)
-            if h is not None:
+        for extinfo in self:
+            host_name = extinfo.get_name()
+            host = hosts.find_by_name(host_name)
+            if host is not None:
                 # FUUUUUUUUUUsion
-                self.merge_extinfo(h, ei)
+                self.merge_extinfo(host, extinfo)
 
     def merge_extinfo(self, host, extinfo):
         """Merge extended host information into a host
@@ -213,6 +213,6 @@ class HostsExtInfo(Items):
                       'vrml_image',
                       'statusmap_image']
         # host properties have precedence over hostextinfo properties
-        for p in properties:
-            if getattr(host, p) == '' and getattr(extinfo, p) != '':
-                setattr(host, p, getattr(extinfo, p))
+        for prop in properties:
+            if getattr(host, prop) == '' and getattr(extinfo, prop) != '':
+                setattr(host, prop, getattr(extinfo, prop))

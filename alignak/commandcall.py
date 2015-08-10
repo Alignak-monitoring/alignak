@@ -200,6 +200,6 @@ class CommandCall(DummyCommandCall):
         :return: None
         TODO: Clean this
         """
-        for d in state:
-            for k, v in d.items():
-                setattr(self, k, v)
+        for d_state in state:
+            for key, val in d_state.items():
+                setattr(self, key, val)

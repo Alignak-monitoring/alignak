@@ -144,26 +144,26 @@ class Regenerator(object):
         self.in_scheduler_mode = True
 
         # Go with the data creation/load
-        c = sched.conf
+        conf = sched.conf
         # Simulate a drop conf
-        b = sched.get_program_status_brok()
-        b.prepare()
-        self.manage_program_status_brok(b)
+        brok = sched.get_program_status_brok()
+        brok.prepare()
+        self.manage_program_status_brok(brok)
 
         # Now we will lie and directly map our objects :)
         print "Regenerator::load_from_scheduler"
-        self.hosts = c.hosts
-        self.services = c.services
-        self.notificationways = c.notificationways
-        self.contacts = c.contacts
-        self.hostgroups = c.hostgroups
-        self.servicegroups = c.servicegroups
-        self.contactgroups = c.contactgroups
-        self.timeperiods = c.timeperiods
-        self.commands = c.commands
+        self.hosts = conf.hosts
+        self.services = conf.services
+        self.notificationways = conf.notificationways
+        self.contacts = conf.contacts
+        self.hostgroups = conf.hostgroups
+        self.servicegroups = conf.servicegroups
+        self.contactgroups = conf.contactgroups
+        self.timeperiods = conf.timeperiods
+        self.commands = conf.commands
         # We also load the realm
-        for h in self.hosts:
-            self.realms.add(h.realm)
+        for host in self.hosts:
+            self.realms.add(host.realm)
             break
 
     def want_brok(self, brok):
@@ -251,165 +251,165 @@ class Regenerator(object):
             return
 
         # Link HOSTGROUPS with hosts
-        for hg in inp_hostgroups:
+        for hostgroup in inp_hostgroups:
             new_members = []
-            for (i, hname) in hg.members:
-                h = inp_hosts.find_by_name(hname)
-                if h:
-                    new_members.append(h)
-            hg.members = new_members
+            for (i, hname) in hostgroup.members:
+                host = inp_hosts.find_by_name(hname)
+                if host:
+                    new_members.append(host)
+            hostgroup.members = new_members
 
         # Merge HOSTGROUPS with real ones
         for inphg in inp_hostgroups:
             hgname = inphg.hostgroup_name
-            hg = self.hostgroups.find_by_name(hgname)
+            hostgroup = self.hostgroups.find_by_name(hgname)
             # If hte hostgroup already exist, just add the new
             # hosts into it
-            if hg:
-                hg.members.extend(inphg.members)
+            if hostgroup:
+                hostgroup.members.extend(inphg.members)
             else:  # else take the new one
                 self.hostgroups.add_item(inphg)
 
         # Now link HOSTS with hostgroups, and commands
-        for h in inp_hosts:
+        for host in inp_hosts:
             # print "Linking %s groups %s" % (h.get_name(), h.hostgroups)
             new_hostgroups = []
-            for hgname in h.hostgroups.split(','):
+            for hgname in host.hostgroups.split(','):
                 hgname = hgname.strip()
-                hg = self.hostgroups.find_by_name(hgname)
-                if hg:
-                    new_hostgroups.append(hg)
-            h.hostgroups = new_hostgroups
+                hostgroup = self.hostgroups.find_by_name(hgname)
+                if hostgroup:
+                    new_hostgroups.append(hostgroup)
+            host.hostgroups = new_hostgroups
 
             # Now link Command() objects
-            self.linkify_a_command(h, 'check_command')
-            self.linkify_a_command(h, 'event_handler')
+            self.linkify_a_command(host, 'check_command')
+            self.linkify_a_command(host, 'event_handler')
 
             # Now link timeperiods
-            self.linkify_a_timeperiod_by_name(h, 'notification_period')
-            self.linkify_a_timeperiod_by_name(h, 'check_period')
-            self.linkify_a_timeperiod_by_name(h, 'maintenance_period')
+            self.linkify_a_timeperiod_by_name(host, 'notification_period')
+            self.linkify_a_timeperiod_by_name(host, 'check_period')
+            self.linkify_a_timeperiod_by_name(host, 'maintenance_period')
 
             # And link contacts too
-            self.linkify_contacts(h, 'contacts')
+            self.linkify_contacts(host, 'contacts')
 
             # Linkify tags
-            for t in h.tags:
-                if t not in self.tags:
-                    self.tags[t] = 0
-                self.tags[t] += 1
+            for tag in host.tags:
+                if tag not in self.tags:
+                    self.tags[tag] = 0
+                self.tags[tag] += 1
 
             # We can really declare this host OK now
-            self.hosts.add_item(h)
+            self.hosts.add_item(host)
 
         # Link SERVICEGROUPS with services
-        for sg in inp_servicegroups:
+        for servicegroup in inp_servicegroups:
             new_members = []
-            for (i, sname) in sg.members:
+            for (i, sname) in servicegroup.members:
                 if i not in inp_services:
                     continue
-                s = inp_services[i]
-                new_members.append(s)
-            sg.members = new_members
+                serv = inp_services[i]
+                new_members.append(serv)
+            servicegroup.members = new_members
 
         # Merge SERVICEGROUPS with real ones
         for inpsg in inp_servicegroups:
             sgname = inpsg.servicegroup_name
-            sg = self.servicegroups.find_by_name(sgname)
+            servicegroup = self.servicegroups.find_by_name(sgname)
             # If the servicegroup already exist, just add the new
             # services into it
-            if sg:
-                sg.members.extend(inpsg.members)
+            if servicegroup:
+                servicegroup.members.extend(inpsg.members)
             else:  # else take the new one
                 self.servicegroups.add_item(inpsg)
 
         # Now link SERVICES with hosts, servicesgroups, and commands
-        for s in inp_services:
+        for serv in inp_services:
             new_servicegroups = []
-            for sgname in s.servicegroups.split(','):
+            for sgname in serv.servicegroups.split(','):
                 sgname = sgname.strip()
-                sg = self.servicegroups.find_by_name(sgname)
-                if sg:
-                    new_servicegroups.append(sg)
-            s.servicegroups = new_servicegroups
+                servicegroup = self.servicegroups.find_by_name(sgname)
+                if servicegroup:
+                    new_servicegroups.append(servicegroup)
+            serv.servicegroups = new_servicegroups
 
             # Now link with host
-            hname = s.host_name
-            s.host = self.hosts.find_by_name(hname)
-            if s.host:
-                s.host.services.append(s)
+            hname = serv.host_name
+            serv.host = self.hosts.find_by_name(hname)
+            if serv.host:
+                serv.host.services.append(serv)
 
             # Now link Command() objects
-            self.linkify_a_command(s, 'check_command')
-            self.linkify_a_command(s, 'event_handler')
+            self.linkify_a_command(serv, 'check_command')
+            self.linkify_a_command(serv, 'event_handler')
 
             # Now link timeperiods
-            self.linkify_a_timeperiod_by_name(s, 'notification_period')
-            self.linkify_a_timeperiod_by_name(s, 'check_period')
-            self.linkify_a_timeperiod_by_name(s, 'maintenance_period')
+            self.linkify_a_timeperiod_by_name(serv, 'notification_period')
+            self.linkify_a_timeperiod_by_name(serv, 'check_period')
+            self.linkify_a_timeperiod_by_name(serv, 'maintenance_period')
 
             # And link contacts too
-            self.linkify_contacts(s, 'contacts')
+            self.linkify_contacts(serv, 'contacts')
 
             # Linkify services tags
-            for t in s.tags:
-                if t not in self.services_tags:
-                    self.services_tags[t] = 0
-                self.services_tags[t] += 1
+            for tag in serv.tags:
+                if tag not in self.services_tags:
+                    self.services_tags[tag] = 0
+                self.services_tags[tag] += 1
 
             # We can really declare this host OK now
-            self.services.add_item(s, index=True)
+            self.services.add_item(serv, index=True)
 
         # Add realm of theses hosts. Only the first is useful
-        for h in inp_hosts:
-            self.realms.add(h.realm)
+        for host in inp_hosts:
+            self.realms.add(host.realm)
             break
 
         # Now we can link all impacts/source problem list
         # but only for the new ones here of course
-        for h in inp_hosts:
-            self.linkify_dict_srv_and_hosts(h, 'impacts')
-            self.linkify_dict_srv_and_hosts(h, 'source_problems')
-            self.linkify_host_and_hosts(h, 'parents')
-            self.linkify_host_and_hosts(h, 'childs')
-            self.linkify_dict_srv_and_hosts(h, 'parent_dependencies')
-            self.linkify_dict_srv_and_hosts(h, 'child_dependencies')
+        for host in inp_hosts:
+            self.linkify_dict_srv_and_hosts(host, 'impacts')
+            self.linkify_dict_srv_and_hosts(host, 'source_problems')
+            self.linkify_host_and_hosts(host, 'parents')
+            self.linkify_host_and_hosts(host, 'childs')
+            self.linkify_dict_srv_and_hosts(host, 'parent_dependencies')
+            self.linkify_dict_srv_and_hosts(host, 'child_dependencies')
 
         # Now services too
-        for s in inp_services:
-            self.linkify_dict_srv_and_hosts(s, 'impacts')
-            self.linkify_dict_srv_and_hosts(s, 'source_problems')
-            self.linkify_dict_srv_and_hosts(s, 'parent_dependencies')
-            self.linkify_dict_srv_and_hosts(s, 'child_dependencies')
+        for serv in inp_services:
+            self.linkify_dict_srv_and_hosts(serv, 'impacts')
+            self.linkify_dict_srv_and_hosts(serv, 'source_problems')
+            self.linkify_dict_srv_and_hosts(serv, 'parent_dependencies')
+            self.linkify_dict_srv_and_hosts(serv, 'child_dependencies')
 
         # Linking TIMEPERIOD exclude with real ones now
-        for tp in self.timeperiods:
+        for timeperiod in self.timeperiods:
             new_exclude = []
-            for ex in tp.exclude:
+            for ex in timeperiod.exclude:
                 exname = ex.timeperiod_name
-                t = self.timeperiods.find_by_name(exname)
-                if t:
-                    new_exclude.append(t)
-            tp.exclude = new_exclude
+                tag = self.timeperiods.find_by_name(exname)
+                if tag:
+                    new_exclude.append(tag)
+            timeperiod.exclude = new_exclude
 
         # Link CONTACTGROUPS with contacts
-        for cg in inp_contactgroups:
+        for contactgroup in inp_contactgroups:
             new_members = []
-            for (i, cname) in cg.members:
-                c = self.contacts.find_by_name(cname)
-                if c:
-                    new_members.append(c)
-            cg.members = new_members
+            for (i, cname) in contactgroup.members:
+                contact = self.contacts.find_by_name(cname)
+                if contact:
+                    new_members.append(contact)
+            contactgroup.members = new_members
 
         # Merge contactgroups with real ones
         for inpcg in inp_contactgroups:
             cgname = inpcg.contactgroup_name
-            cg = self.contactgroups.find_by_name(cgname)
+            contactgroup = self.contactgroups.find_by_name(cgname)
             # If the contactgroup already exist, just add the new
             # contacts into it
-            if cg:
-                cg.members.extend(inpcg.members)
-                cg.members = list(set(cg.members))
+            if contactgroup:
+                contactgroup.members.extend(inpcg.members)
+                contactgroup.members = list(set(contactgroup.members))
             else:  # else take the new one
                 self.contactgroups.add_item(inpcg)
 
@@ -432,14 +432,14 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        cc = getattr(o, prop, None)
+        commandcall = getattr(o, prop, None)
         # if the command call is void, bypass it
-        if not cc:
+        if not commandcall:
             setattr(o, prop, None)
             return
-        cmdname = cc.command
-        c = self.commands.find_by_name(cmdname)
-        cc.command = c
+        cmdname = commandcall.command
+        command = self.commands.find_by_name(cmdname)
+        commandcall.command = command
 
     def linkify_commands(self, o, prop):
         """
@@ -452,16 +452,16 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        v = getattr(o, prop, None)
-        if not v:
+        commandcalls = getattr(o, prop, None)
+        if not commandcalls:
             # If do not have a command list, put a void list instead
             setattr(o, prop, [])
             return
 
-        for cc in v:
-            cmdname = cc.command
-            c = self.commands.find_by_name(cmdname)
-            cc.command = c
+        for commandcall in commandcalls:
+            cmdname = commandcall.command
+            command = self.commands.find_by_name(cmdname)
+            commandcall.command = command
 
     def linkify_a_timeperiod(self, o, prop):
         """
@@ -474,13 +474,13 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        t = getattr(o, prop, None)
-        if not t:
+        raw_timeperiod = getattr(o, prop, None)
+        if not raw_timeperiod:
             setattr(o, prop, None)
             return
-        tpname = t.timeperiod_name
-        tp = self.timeperiods.find_by_name(tpname)
-        setattr(o, prop, tp)
+        tpname = raw_timeperiod.timeperiod_name
+        timeperiod = self.timeperiods.find_by_name(tpname)
+        setattr(o, prop, timeperiod)
 
     def linkify_a_timeperiod_by_name(self, o, prop):
         """
@@ -497,8 +497,8 @@ class Regenerator(object):
         if not tpname:
             setattr(o, prop, None)
             return
-        tp = self.timeperiods.find_by_name(tpname)
-        setattr(o, prop, tp)
+        timeperiod = self.timeperiods.find_by_name(tpname)
+        setattr(o, prop, timeperiod)
 
     def linkify_contacts(self, o, prop):
         """
@@ -510,16 +510,16 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        v = getattr(o, prop)
+        contacts = getattr(o, prop)
 
-        if not v:
+        if not contacts:
             return
 
         new_v = []
-        for cname in v:
-            c = self.contacts.find_by_name(cname)
-            if c:
-                new_v.append(c)
+        for cname in contacts:
+            contact = self.contacts.find_by_name(cname)
+            if contact:
+                new_v.append(contact)
         setattr(o, prop, new_v)
 
     def linkify_dict_srv_and_hosts(self, o, prop):
@@ -533,24 +533,24 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        v = getattr(o, prop)
+        problems = getattr(o, prop)
 
-        if not v:
+        if not problems:
             setattr(o, prop, [])
 
         new_v = []
         # print "Linkify Dict SRV/Host", v, o.get_name(), prop
-        for name in v['services']:
+        for name in problems['services']:
             elts = name.split('/')
             hname = elts[0]
             sdesc = elts[1]
-            s = self.services.find_srv_by_name_and_hostname(hname, sdesc)
-            if s:
-                new_v.append(s)
-        for hname in v['hosts']:
-            h = self.hosts.find_by_name(hname)
-            if h:
-                new_v.append(h)
+            serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
+            if serv:
+                new_v.append(serv)
+        for hname in problems['hosts']:
+            host = self.hosts.find_by_name(hname)
+            if host:
+                new_v.append(host)
         setattr(o, prop, new_v)
 
     def linkify_host_and_hosts(self, o, prop):
@@ -564,16 +564,16 @@ class Regenerator(object):
         :type prop: str
         :return: None
         """
-        v = getattr(o, prop)
+        hosts = getattr(o, prop)
 
-        if not v:
+        if not hosts:
             setattr(o, prop, [])
 
         new_v = []
-        for hname in v:
-            h = self.hosts.find_by_name(hname)
-            if h:
-                new_v.append(h)
+        for hname in hosts:
+            host = self.hosts.find_by_name(hname)
+            if host:
+                new_v.append(host)
         setattr(o, prop, new_v)
 
 ###############
@@ -606,8 +606,8 @@ class Regenerator(object):
         safe_print("Regenerator: Creating config:", c_id)
 
         # We get a real Conf object ,adn put our data
-        c = Config()
-        self.update_element(c, data)
+        conf = Config()
+        self.update_element(conf, data)
 
         # Clean all in_progress things.
         # And in progress one
@@ -618,7 +618,7 @@ class Regenerator(object):
         self.inp_contactgroups[c_id] = Contactgroups([])
 
         # And we save it
-        self.configs[c_id] = c
+        self.configs[c_id] = conf
 
         # Clean the old "hard" objects
 
@@ -629,24 +629,24 @@ class Regenerator(object):
 
         safe_print("Cleaning host:%d srv:%d" % (len(to_del_h), len(to_del_srv)))
         # Clean hosts from hosts and hostgroups
-        for h in to_del_h:
-            safe_print("Deleting", h.get_name())
-            del self.hosts[h._id]
+        for host in to_del_h:
+            safe_print("Deleting", host.get_name())
+            del self.hosts[host._id]
 
         # Now clean all hostgroups too
-        for hg in self.hostgroups:
-            safe_print("Cleaning hostgroup %s:%d" % (hg.get_name(), len(hg.members)))
+        for hostgroup in self.hostgroups:
+            safe_print("Cleaning hostgroup %s:%d" % (hostgroup.get_name(), len(hostgroup.members)))
             # Exclude from members the hosts with this inst_id
-            hg.members = [h for h in hg.members if h.instance_id != c_id]
-            safe_print("Len after", len(hg.members))
+            hostgroup.members = [host for host in hostgroup.members if host.instance_id != c_id]
+            safe_print("Len after", len(hostgroup.members))
 
-        for s in to_del_srv:
-            safe_print("Deleting", s.get_full_name())
-            del self.services[s._id]
+        for serv in to_del_srv:
+            safe_print("Deleting", serv.get_full_name())
+            del self.services[serv._id]
 
         # Now clean service groups
-        for sg in self.servicegroups:
-            sg.members = [s for s in sg.members if s.instance_id != c_id]
+        for servicegroup in self.servicegroups:
+            servicegroup.members = [s for s in servicegroup.members if s.instance_id != c_id]
 
     def manage_initial_host_status_brok(self, b):
         """
@@ -668,15 +668,15 @@ class Regenerator(object):
             return
         # safe_print("Creating a host: %s in instance %d" % (hname, inst_id))
 
-        h = Host({})
-        self.update_element(h, data)
+        host = Host({})
+        self.update_element(host, data)
 
         # We need to rebuild Downtime and Comment relationship
-        for dtc in h.downtimes + h.comments:
-            dtc.ref = h
+        for dtc in host.downtimes + host.comments:
+            dtc.ref = host
 
         # Ok, put in in the in progress hosts
-        inp_hosts[h._id] = h
+        inp_hosts[host._id] = host
 
     def manage_initial_hostgroup_status_brok(self, b):
         """
@@ -700,14 +700,14 @@ class Regenerator(object):
         safe_print("Creating a hostgroup: %s in instance %d" % (hgname, inst_id))
 
         # With void members
-        hg = Hostgroup([])
+        hostgroup = Hostgroup([])
 
         # populate data
-        self.update_element(hg, data)
+        self.update_element(hostgroup, data)
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_hostgroups[hg._id] = hg
+        inp_hostgroups[hostgroup._id] = hostgroup
 
     def manage_initial_service_status_brok(self, b):
         """
@@ -730,15 +730,15 @@ class Regenerator(object):
             return
         # safe_print("Creating a service: %s/%s in instance %d" % (hname, sdesc, inst_id))
 
-        s = Service({})
-        self.update_element(s, data)
+        serv = Service({})
+        self.update_element(serv, data)
 
         # We need to rebuild Downtime and Comment relationship
-        for dtc in s.downtimes + s.comments:
-            dtc.ref = s
+        for dtc in serv.downtimes + serv.comments:
+            dtc.ref = serv
 
         # Ok, put in in the in progress hosts
-        inp_services[s._id] = s
+        inp_services[serv._id] = serv
 
     def manage_initial_servicegroup_status_brok(self, b):
         """
@@ -762,14 +762,14 @@ class Regenerator(object):
         safe_print("Creating a servicegroup: %s in instance %d" % (sgname, inst_id))
 
         # With void members
-        sg = Servicegroup([])
+        servicegroup = Servicegroup([])
 
         # populate data
-        self.update_element(sg, data)
+        self.update_element(servicegroup, data)
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_servicegroups[sg._id] = sg
+        inp_servicegroups[servicegroup._id] = servicegroup
 
     def manage_initial_contact_status_brok(self, b):
         """
@@ -782,50 +782,50 @@ class Regenerator(object):
         data = b.data
         cname = data['contact_name']
         safe_print("Contact with data", data)
-        c = self.contacts.find_by_name(cname)
-        if c:
-            self.update_element(c, data)
+        contact = self.contacts.find_by_name(cname)
+        if contact:
+            self.update_element(contact, data)
         else:
             safe_print("Creating Contact:", cname)
-            c = Contact({})
-            self.update_element(c, data)
-            self.contacts.add_item(c)
+            contact = Contact({})
+            self.update_element(contact, data)
+            self.contacts.add_item(contact)
 
         # Delete some useless contact values
-        del c.host_notification_commands
-        del c.service_notification_commands
-        del c.host_notification_period
-        del c.service_notification_period
+        del contact.host_notification_commands
+        del contact.service_notification_commands
+        del contact.host_notification_period
+        del contact.service_notification_period
 
         # Now manage notification ways too
         # Same than for contacts. We create or
         # update
-        nws = c.notificationways
+        nws = contact.notificationways
         safe_print("Got notif ways", nws)
         new_notifways = []
         for cnw in nws:
             nwname = cnw.notificationway_name
-            nw = self.notificationways.find_by_name(nwname)
-            if not nw:
+            notifway = self.notificationways.find_by_name(nwname)
+            if not notifway:
                 safe_print("Creating notif way", nwname)
-                nw = NotificationWay([])
-                self.notificationways.add_item(nw)
+                notifway = NotificationWay([])
+                self.notificationways.add_item(notifway)
             # Now update it
             for prop in NotificationWay.properties:
                 if hasattr(cnw, prop):
-                    setattr(nw, prop, getattr(cnw, prop))
-            new_notifways.append(nw)
+                    setattr(notifway, prop, getattr(cnw, prop))
+            new_notifways.append(notifway)
 
             # Linking the notification way
             # With commands
-            self.linkify_commands(nw, 'host_notification_commands')
-            self.linkify_commands(nw, 'service_notification_commands')
+            self.linkify_commands(notifway, 'host_notification_commands')
+            self.linkify_commands(notifway, 'service_notification_commands')
 
             # Now link timeperiods
-            self.linkify_a_timeperiod(nw, 'host_notification_period')
-            self.linkify_a_timeperiod(nw, 'service_notification_period')
+            self.linkify_a_timeperiod(notifway, 'host_notification_period')
+            self.linkify_a_timeperiod(notifway, 'service_notification_period')
 
-        c.notificationways = new_notifways
+        contact.notificationways = new_notifways
 
     def manage_initial_contactgroup_status_brok(self, b):
         """
@@ -849,14 +849,14 @@ class Regenerator(object):
         safe_print("Creating an contactgroup: %s in instance %d" % (cgname, inst_id))
 
         # With void members
-        cg = Contactgroup([])
+        contactgroup = Contactgroup([])
 
         # populate data
-        self.update_element(cg, data)
+        self.update_element(contactgroup, data)
 
         # We will link contacts into contactgroups later
         # so now only save it
-        inp_contactgroups[cg._id] = cg
+        inp_contactgroups[contactgroup._id] = contactgroup
 
     def manage_initial_timeperiod_status_brok(self, b):
         """
@@ -870,15 +870,15 @@ class Regenerator(object):
         # print "Creating timeperiod", data
         tpname = data['timeperiod_name']
 
-        tp = self.timeperiods.find_by_name(tpname)
-        if tp:
+        timeperiod = self.timeperiods.find_by_name(tpname)
+        if timeperiod:
             # print "Already existing timeperiod", tpname
-            self.update_element(tp, data)
+            self.update_element(timeperiod, data)
         else:
             # print "Creating Timeperiod:", tpname
-            tp = Timeperiod({})
-            self.update_element(tp, data)
-            self.timeperiods.add_item(tp)
+            timeperiod = Timeperiod({})
+            self.update_element(timeperiod, data)
+            self.timeperiods.add_item(timeperiod)
 
     def manage_initial_command_status_brok(self, b):
         """
@@ -891,15 +891,15 @@ class Regenerator(object):
         data = b.data
         cname = data['command_name']
 
-        c = self.commands.find_by_name(cname)
-        if c:
+        command = self.commands.find_by_name(cname)
+        if command:
             # print "Already existing command", cname, "updating it"
-            self.update_element(c, data)
+            self.update_element(command, data)
         else:
             # print "Creating a new command", cname
-            c = Command({})
-            self.update_element(c, data)
-            self.commands.add_item(c)
+            command = Command({})
+            self.update_element(command, data)
+            self.commands.add_item(command)
 
     def manage_initial_scheduler_status_brok(self, b):
         """
@@ -1037,8 +1037,8 @@ class Regenerator(object):
             return
 
         # Ok, good conf, we can update it
-        c = self.configs[c_id]
-        self.update_element(c, data)
+        conf = self.configs[c_id]
+        self.update_element(conf, data)
 
     def manage_update_host_status_brok(self, b):
         """
@@ -1066,27 +1066,27 @@ class Regenerator(object):
             del data[prop]
 
         hname = data['host_name']
-        h = self.hosts.find_by_name(hname)
+        host = self.hosts.find_by_name(hname)
 
-        if h:
-            self.before_after_hook(b, h)
-            self.update_element(h, data)
+        if host:
+            self.before_after_hook(b, host)
+            self.update_element(host, data)
 
             # We can have some change in our impacts and source problems.
-            self.linkify_dict_srv_and_hosts(h, 'impacts')
-            self.linkify_dict_srv_and_hosts(h, 'source_problems')
+            self.linkify_dict_srv_and_hosts(host, 'impacts')
+            self.linkify_dict_srv_and_hosts(host, 'source_problems')
 
             # If the topology change, update it
             if toplogy_change:
-                print "Topology change for", h.get_name(), h.parent_dependencies
-                self.linkify_host_and_hosts(h, 'parents')
-                self.linkify_host_and_hosts(h, 'childs')
-                self.linkify_dict_srv_and_hosts(h, 'parent_dependencies')
-                self.linkify_dict_srv_and_hosts(h, 'child_dependencies')
+                print "Topology change for", host.get_name(), host.parent_dependencies
+                self.linkify_host_and_hosts(host, 'parents')
+                self.linkify_host_and_hosts(host, 'childs')
+                self.linkify_dict_srv_and_hosts(host, 'parent_dependencies')
+                self.linkify_dict_srv_and_hosts(host, 'child_dependencies')
 
             # Relink downtimes and comments
-            for dtc in h.downtimes + h.comments:
-                dtc.ref = h
+            for dtc in host.downtimes + host.comments:
+                dtc.ref = host
 
     def manage_update_service_status_brok(self, b):
         """
@@ -1115,23 +1115,23 @@ class Regenerator(object):
 
         hname = data['host_name']
         sdesc = data['service_description']
-        s = self.services.find_srv_by_name_and_hostname(hname, sdesc)
-        if s:
-            self.before_after_hook(b, s)
-            self.update_element(s, data)
+        serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
+        if serv:
+            self.before_after_hook(b, serv)
+            self.update_element(serv, data)
 
             # We can have some change in our impacts and source problems.
-            self.linkify_dict_srv_and_hosts(s, 'impacts')
-            self.linkify_dict_srv_and_hosts(s, 'source_problems')
+            self.linkify_dict_srv_and_hosts(serv, 'impacts')
+            self.linkify_dict_srv_and_hosts(serv, 'source_problems')
 
             # If the topology change, update it
             if toplogy_change:
-                self.linkify_dict_srv_and_hosts(s, 'parent_dependencies')
-                self.linkify_dict_srv_and_hosts(s, 'child_dependencies')
+                self.linkify_dict_srv_and_hosts(serv, 'parent_dependencies')
+                self.linkify_dict_srv_and_hosts(serv, 'child_dependencies')
 
             # Relink downtimes and comments with the service
-            for dtc in s.downtimes + s.comments:
-                dtc.ref = s
+            for dtc in serv.downtimes + serv.comments:
+                dtc.ref = serv
 
     def manage_update_broker_status_brok(self, b):
         """
@@ -1144,8 +1144,8 @@ class Regenerator(object):
         data = b.data
         broker_name = data['broker_name']
         try:
-            s = self.brokers[broker_name]
-            self.update_element(s, data)
+            broker = self.brokers[broker_name]
+            self.update_element(broker, data)
         except Exception:
             pass
 
@@ -1160,8 +1160,8 @@ class Regenerator(object):
         data = b.data
         receiver_name = data['receiver_name']
         try:
-            s = self.receivers[receiver_name]
-            self.update_element(s, data)
+            receiver = self.receivers[receiver_name]
+            self.update_element(receiver, data)
         except Exception:
             pass
 
@@ -1176,8 +1176,8 @@ class Regenerator(object):
         data = b.data
         reactionner_name = data['reactionner_name']
         try:
-            s = self.reactionners[reactionner_name]
-            self.update_element(s, data)
+            reactionner = self.reactionners[reactionner_name]
+            self.update_element(reactionner, data)
         except Exception:
             pass
 
@@ -1192,8 +1192,8 @@ class Regenerator(object):
         data = b.data
         poller_name = data['poller_name']
         try:
-            s = self.pollers[poller_name]
-            self.update_element(s, data)
+            poller = self.pollers[poller_name]
+            self.update_element(poller, data)
         except Exception:
             pass
 
@@ -1208,8 +1208,8 @@ class Regenerator(object):
         data = b.data
         scheduler_name = data['scheduler_name']
         try:
-            s = self.schedulers[scheduler_name]
-            self.update_element(s, data)
+            scheduler = self.schedulers[scheduler_name]
+            self.update_element(scheduler, data)
             # print "S:", s
         except Exception:
             pass
@@ -1229,10 +1229,10 @@ class Regenerator(object):
         data = b.data
         hname = data['host_name']
 
-        h = self.hosts.find_by_name(hname)
-        if h:
-            self.before_after_hook(b, h)
-            self.update_element(h, data)
+        host = self.hosts.find_by_name(hname)
+        if host:
+            self.before_after_hook(b, host)
+            self.update_element(host, data)
 
     def manage_host_next_schedule_brok(self, b):
         """
@@ -1253,10 +1253,10 @@ class Regenerator(object):
         data = b.data
         hname = data['host_name']
         sdesc = data['service_description']
-        s = self.services.find_srv_by_name_and_hostname(hname, sdesc)
-        if s:
-            self.before_after_hook(b, s)
-            self.update_element(s, data)
+        serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
+        if serv:
+            self.before_after_hook(b, serv)
+            self.update_element(serv, data)
 
     def manage_service_next_schedule_brok(self, b):
         """

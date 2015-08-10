@@ -275,9 +275,9 @@ class ModulesManager(object):
                 inst.create_queues(self.manager)
 
             inst.init()
-        except Exception, e:
+        except Exception, err:
             logger.error("The instance %s raised an exception %s, I remove it!",
-                         inst.get_name(), str(e))
+                         inst.get_name(), str(err))
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("Back trace of this remove: %s", output.getvalue())

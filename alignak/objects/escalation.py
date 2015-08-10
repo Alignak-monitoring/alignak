@@ -303,25 +303,25 @@ class Escalations(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for es in self:
+        for escal in self:
             # If no host, no hope of having a service
-            if not (hasattr(es, 'host_name') and hasattr(es, 'service_description')):
+            if not (hasattr(escal, 'host_name') and hasattr(escal, 'service_description')):
                 continue
-            es_hname, sdesc = es.host_name, es.service_description
+            es_hname, sdesc = escal.host_name, escal.service_description
             if '' in (es_hname.strip(), sdesc.strip()):
                 continue
             for hname in strip_and_uniq(es_hname.split(',')):
                 if sdesc.strip() == '*':
                     slist = services.find_srvs_by_hostname(hname)
                     if slist is not None:
-                        for s in slist:
-                            s.escalations.append(es)
+                        for serv in slist:
+                            serv.escalations.append(escal)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
-                        s = services.find_srv_by_name_and_hostname(hname, sname)
-                        if s is not None:
+                        serv = services.find_srv_by_name_and_hostname(hname, sname)
+                        if serv is not None:
                             # print "Linking service", s.get_name(), 'with me', es.get_name()
-                            s.escalations.append(es)
+                            serv.escalations.append(escal)
                             # print "Now service", s.get_name(), 'have', s.escalations
 
     def linkify_es_by_h(self, hosts):
@@ -331,18 +331,18 @@ class Escalations(Items):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        for es in self:
+        for escal in self:
             # If no host, no hope of having a service
-            if (not hasattr(es, 'host_name') or es.host_name.strip() == ''
-                    or (hasattr(es, 'service_description')
-                        and es.service_description.strip() != '')):
+            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == ''
+                    or (hasattr(escal, 'service_description')
+                        and escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
-            for hname in strip_and_uniq(es.host_name.split(',')):
-                h = hosts.find_by_name(hname)
-                if h is not None:
+            for hname in strip_and_uniq(escal.host_name.split(',')):
+                host = hosts.find_by_name(hname)
+                if host is not None:
                     # print "Linking host", h.get_name(), 'with me', es.get_name()
-                    h.escalations.append(es)
+                    host.escalations.append(escal)
                     # print "Now host", h.get_name(), 'have', h.escalations
 
     def explode(self, hosts, hostgroups, contactgroups):

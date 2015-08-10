@@ -257,10 +257,10 @@ class Worker:
         for chk in self.checks:
             if chk.status == 'queue':
                 self._idletime = 0
-                r = chk.execute()
+                res = chk.execute()
                 # Maybe we got a true big problem in the
                 # action launching
-                if r == 'toomanyopenfiles':
+                if res == 'toomanyopenfiles':
                     # We should die as soon as we return all checks
                     logger.error("[%d] I am dying Too many open files %s ... ", self._id, chk)
                     self.i_am_dying = True

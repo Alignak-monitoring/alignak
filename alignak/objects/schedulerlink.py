@@ -128,12 +128,12 @@ class SchedulerLink(SatelliteLink):
         :return: dictionary of properties
         :rtype: dict
         """
-        r = {}
+        res = {}
         properties = self.__class__.properties
         for prop, entry in properties.items():
             if entry.override:
-                r[prop] = getattr(self, prop)
-        return r
+                res[prop] = getattr(self, prop)
+        return res
 
 
 class SchedulerLinks(SatelliteLinks):

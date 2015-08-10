@@ -102,8 +102,8 @@ class ComplexExpressionNode(object):
 
         # The operand will change the positiv loop only
         i = 0
-        for n in positiv_nodes:
-            node_members = n.resolve_elements()
+        for node in positiv_nodes:
+            node_members = node.resolve_elements()
             if self.operand == '|':
                 # print "OR rule", node_members
                 res = res.union(node_members)
@@ -117,8 +117,8 @@ class ComplexExpressionNode(object):
             i += 1
 
         # And we finally remove all NOT elements from the result
-        for n in not_nodes:
-            node_members = n.resolve_elements()
+        for node in not_nodes:
+            node_members = node.resolve_elements()
             res = res.difference(node_members)
         return res
 
@@ -137,9 +137,9 @@ class ComplexExpressionNode(object):
         if not self.sons:
             valid = False
         else:
-            for s in self.sons:
-                if isinstance(s, DependencyNode) and not s.is_valid():
-                    self.configuration_errors.extend(s.configuration_errors)
+            for son in self.sons:
+                if isinstance(son, DependencyNode) and not son.is_valid():
+                    self.configuration_errors.extend(son.configuration_errors)
                     valid = False
         return valid
 
@@ -167,8 +167,8 @@ class ComplexExpressionFactory(object):
 
         # Look if it's a complex pattern (with rule) or
         # if it's a leaf ofit, like a host/service
-        for m in '()+&|,':
-            if m in pattern:
+        for char in '()+&|,':
+            if char in pattern:
                 complex_node = True
 
         node = ComplexExpressionNode()
@@ -196,13 +196,13 @@ class ComplexExpressionFactory(object):
         in_par = False
         tmp = ''
         stacked_par = 0
-        for c in pattern:
+        for char in pattern:
             # print "MATCHING", c
-            if c == ',' or c == '|':
+            if char == ',' or char == '|':
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     # print ", in a par, just staking it"
-                    tmp += c
+                    tmp += char
                 else:
                     # Oh we got a real cut in an expression, if so, cut it
                     # print "REAL , for cutting"
@@ -210,15 +210,15 @@ class ComplexExpressionFactory(object):
                     node.operand = '|'
                     if tmp != '':
                         # print "Will analyse the current str", tmp
-                        o = self.eval_cor_pattern(tmp)
-                        node.sons.append(o)
+                        son = self.eval_cor_pattern(tmp)
+                        node.sons.append(son)
                     tmp = ''
 
-            elif c == '&' or c == '+':
+            elif char == '&' or char == '+':
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     # print " & in a par, just staking it"
-                    tmp += c
+                    tmp += char
                 else:
                     # Oh we got a real cut in an expression, if so, cut it
                     # print "REAL & for cutting"
@@ -226,11 +226,11 @@ class ComplexExpressionFactory(object):
                     node.operand = '&'
                     if tmp != '':
                         # print "Will analyse the current str", tmp
-                        o = self.eval_cor_pattern(tmp)
-                        node.sons.append(o)
+                        son = self.eval_cor_pattern(tmp)
+                        node.sons.append(son)
                     tmp = ''
 
-            elif c == '(':
+            elif char == '(':
                 stacked_par += 1
                 # print "INCREASING STACK TO", stacked_par
 
@@ -246,12 +246,12 @@ class ComplexExpressionFactory(object):
                 # If we are already in a par, add this (
                 # but not if it's the first one so
                 if stacked_par > 1:
-                    tmp += c
+                    tmp += char
                     # o = self.eval_cor_pattern(tmp)
                     # print "1( I've %s got new sons" % pattern , o
                     # node.sons.append(o)
 
-            elif c == ')':
+            elif char == ')':
                 # print "Need closeing a sub expression?", tmp
                 stacked_par -= 1
 
@@ -263,26 +263,26 @@ class ComplexExpressionFactory(object):
                 if stacked_par == 0:
                     # print "THIS is closing a sub compress expression", tmp
                     tmp = tmp.strip()
-                    o = self.eval_cor_pattern(tmp)
-                    node.sons.append(o)
+                    son = self.eval_cor_pattern(tmp)
+                    node.sons.append(son)
                     in_par = False
                     # OK now clean the tmp so we start clean
                     tmp = ''
                     continue
 
                 # ok here we are still in a huge par, we just close one sub one
-                tmp += c
+                tmp += char
             # Maybe it's a classic character, if so, continue
             else:
-                tmp += c
+                tmp += char
 
         # Be sure to manage the trainling part when the line is done
         tmp = tmp.strip()
         if tmp != '':
             # print "Managing trainling part", tmp
-            o = self.eval_cor_pattern(tmp)
+            son = self.eval_cor_pattern(tmp)
             # print "4end I've %s got new sons" % pattern , o
-            node.sons.append(o)
+            node.sons.append(son)
 
         # print "End, tmp", tmp
         # print "R %s:" % pattern, node
@@ -311,13 +311,13 @@ class ComplexExpressionFactory(object):
 
         if self.ctx == 'hostgroups':
             # Ok try to find this hostgroup
-            hg = self.grps.find_by_name(pattern)
+            hgr = self.grps.find_by_name(pattern)
             # Maybe it's an known one?
-            if not hg:
+            if not hgr:
                 error = "Error : cannot find the %s of the expression '%s'" % (self.ctx, pattern)
-                return hg, error
+                return hgr, error
             # Ok the group is found, get the elements!
-            elts = hg.get_hosts()
+            elts = hgr.get_hosts()
             elts = strip_and_uniq(elts)
 
             # Maybe the hostgroup memebrs is '*', if so expand with all hosts

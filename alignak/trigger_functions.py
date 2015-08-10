@@ -68,9 +68,9 @@ class declared(object):
     def __init__(self, f):
         self.f = f
         global functions
-        n = f.func_name
+        name = f.func_name
         # logger.debug("Initializing function %s %s" % (n, f))
-        trigger_functions[n] = f
+        trigger_functions[name] = f
 
     def __call__(self, *args):
         logger.debug("Calling %s with arguments %s", self.f.func_name, args)
@@ -188,21 +188,21 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
 
     now = time.time()
 
-    c = obj.launch_check(now, force=True)
-    if c is None:
+    chk = obj.launch_check(now, force=True)
+    if chk is None:
         logger.debug("[trigger] %s > none check launched", obj.get_full_name())
     else:
         logger.debug("[trigger] %s > I found the check I want to change",
                      obj.get_full_name())
         # Now we 'transform the check into a result'
         # So exit_status, output and status is eaten by the host
-        c.exit_status = return_code
-        c.get_outputs(output, obj.max_plugins_output_length)
-        c.status = 'waitconsume'
-        c.check_time = now
+        chk.exit_status = return_code
+        chk.get_outputs(output, obj.max_plugins_output_length)
+        chk.status = 'waitconsume'
+        chk.check_time = now
         # IMPORTANT: tag this check as from a trigger, so we will not
         # loop in an infinite way for triggers checks!
-        c.from_trigger = True
+        chk.from_trigger = True
         # Ok now this result will be read by scheduler the next loop
 
 
@@ -217,10 +217,10 @@ def perf(obj_ref, metric_name):
     :return: None
     """
     obj = get_object(obj_ref)
-    p = PerfDatas(obj.perf_data)
-    if metric_name in p:
+    perfdata = PerfDatas(obj.perf_data)
+    if metric_name in perfdata:
         logger.debug("[trigger] I found the perfdata")
-        return p[metric_name].value
+        return perfdata[metric_name].value
     logger.debug("[trigger] I am in perf command")
     return None
 
@@ -263,11 +263,11 @@ def perfs(objs_ref, metric_name):
     :rtype: list
     """
     objs = get_objects(objs_ref)
-    r = []
-    for o in objs:
-        v = perf(o, metric_name)
-        r.append(v)
-    return r
+    res = []
+    for obj in objs:
+        val = perf(obj, metric_name)
+        res.append(val)
+    return res
 
 
 @declared
@@ -280,9 +280,9 @@ def allperfs(obj_ref):
     :rtype: dict
     """
     obj = get_object(obj_ref)
-    p = PerfDatas(obj.perf_data)
+    perfdata = PerfDatas(obj.perf_data)
     logger.debug("[trigger] I get all perfdatas")
-    return dict([(metric.name, p[metric.name]) for metric in p])
+    return dict([(metric.name, perfdata[metric.name]) for metric in perfdata])
 
 
 @declared
@@ -342,33 +342,33 @@ def get_objects(ref):
 
     # Look for host, and if need, look for service
     if '*' not in hname:
-        h = objs['hosts'].find_by_name(hname)
-        if h:
-            hosts.append(h)
+        host = objs['hosts'].find_by_name(hname)
+        if host:
+            hosts.append(host)
     else:
         hname = hname.replace('*', '.*')
-        p = re.compile(hname)
-        for h in objs['hosts']:
-            logger.debug("[trigger] Compare %s with %s", hname, h.get_name())
-            if p.search(h.get_name()):
-                hosts.append(h)
+        regex = re.compile(hname)
+        for host in objs['hosts']:
+            logger.debug("[trigger] Compare %s with %s", hname, host.get_name())
+            if regex.search(host.get_name()):
+                hosts.append(host)
 
     # Maybe the user ask for justs hosts :)
     if not sdesc:
         return hosts
 
-    for h in hosts:
+    for host in hosts:
         if '*' not in sdesc:
-            s = h.find_service_by_name(sdesc)
-            if s:
-                services.append(s)
+            serv = host.find_service_by_name(sdesc)
+            if serv:
+                services.append(serv)
         else:
             sdesc = sdesc.replace('*', '.*')
-            p = re.compile(sdesc)
-            for s in h.services:
-                logger.debug("[trigger] Compare %s with %s", s.service_description, sdesc)
-                if p.search(s.service_description):
-                    services.append(s)
+            regex = re.compile(sdesc)
+            for serv in host.services:
+                logger.debug("[trigger] Compare %s with %s", serv.service_description, sdesc)
+                if regex.search(serv.service_description):
+                    services.append(serv)
 
     logger.debug("Found the following services: %s", services)
     return services

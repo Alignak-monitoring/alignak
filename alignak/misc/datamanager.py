@@ -200,7 +200,7 @@ class DataManager(object):
         :return: A sorted hostgroup list
         :rtype: list
         """
-        r = []
+        res = []
         selected = selected.strip()
 
         hg_names = [hg.get_name() for hg in self.rg.hostgroups
@@ -213,14 +213,14 @@ class DataManager(object):
         hgvoids = [self.rg.hostgroups.find_by_name(n) for n in hgvoid_names]
 
         if selected:
-            hg = self.rg.hostgroups.find_by_name(selected)
-            if hg:
-                r.append(hg)
+            hostgroup = self.rg.hostgroups.find_by_name(selected)
+            if hostgroup:
+                res.append(hostgroup)
 
-        r.extend(hgs)
-        r.extend(hgvoids)
+        res.extend(hgs)
+        res.extend(hgvoids)
 
-        return r
+        return res
 
     def get_hosts(self):
         """
@@ -292,8 +292,8 @@ class DataManager(object):
         :return: Timestamp representing start time
         :rtype: int | None
         """
-        for c in self.rg.configs.values():
-            return c.program_start
+        for conf in self.rg.configs.values():
+            return conf.program_start
         return None
 
     def get_realms(self):
@@ -326,12 +326,12 @@ class DataManager(object):
         :return: list of hosts tags
         :rtype: list
         """
-        r = []
+        res = []
         names = self.rg.tags.keys()
         names.sort()
-        for n in names:
-            r.append((n, self.rg.tags[n]))
-        return r
+        for name in names:
+            res.append((name, self.rg.tags[name]))
+        return res
 
     def get_hosts_tagged_with(self, tag):
         """
@@ -342,11 +342,11 @@ class DataManager(object):
         :return:  Hosts list with tag in host tags
         :rtype: alignak.objects.host.Host
         """
-        r = []
-        for h in self.get_hosts():
-            if tag in h.get_host_tags():
-                r.append(h)
-        return r
+        res = []
+        for host in self.get_hosts():
+            if tag in host.get_host_tags():
+                res.append(host)
+        return res
 
     def get_service_tags_sorted(self):
         """
@@ -355,12 +355,12 @@ class DataManager(object):
         :return: list of services tags
         :rtype: list
         """
-        r = []
+        res = []
         names = self.rg.services_tags.keys()
         names.sort()
-        for n in names:
-            r.append((n, self.rg.services_tags[n]))
-        return r
+        for name in names:
+            res.append((name, self.rg.services_tags[name]))
+        return res
 
     def get_important_impacts(self):
         """
@@ -373,14 +373,14 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        for s in self.rg.services:
-            if s.is_impact and s.state not in ['OK', 'PENDING']:
-                if s.business_impact > 2:
-                    res.append(s)
-        for h in self.rg.hosts:
-            if h.is_impact and h.state not in ['UP', 'PENDING']:
-                if h.business_impact > 2:
-                    res.append(h)
+        for serv in self.rg.services:
+            if serv.is_impact and serv.state not in ['OK', 'PENDING']:
+                if serv.business_impact > 2:
+                    res.append(serv)
+        for host in self.rg.hosts:
+            if host.is_impact and host.state not in ['UP', 'PENDING']:
+                if host.business_impact > 2:
+                    res.append(host)
         return res
 
     def get_all_problems(self, to_sort=True, get_acknowledged=False):
@@ -437,24 +437,24 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        for s in self.rg.services:
-            if s.is_impact and s.state not in ['OK', 'PENDING']:
+        for serv in self.rg.services:
+            if serv.is_impact and serv.state not in ['OK', 'PENDING']:
                 # If s is acked, pass
-                if s.problem_has_been_acknowledged:
+                if serv.problem_has_been_acknowledged:
                     continue
                 # We search for impacts that were NOT currently managed
-                if sum(1 for p in s.source_problems
+                if sum(1 for p in serv.source_problems
                        if not p.problem_has_been_acknowledged) > 0:
-                    res.append(s)
-        for h in self.rg.hosts:
-            if h.is_impact and h.state not in ['UP', 'PENDING']:
+                    res.append(serv)
+        for host in self.rg.hosts:
+            if host.is_impact and host.state not in ['UP', 'PENDING']:
                 # If h is acked, pass
-                if h.problem_has_been_acknowledged:
+                if host.problem_has_been_acknowledged:
                     continue
                 # We search for impacts that were NOT currently managed
-                if sum(1 for p in h.source_problems
+                if sum(1 for p in host.source_problems
                        if not p.problem_has_been_acknowledged) > 0:
-                    res.append(h)
+                    res.append(host)
         return res
 
     def get_nb_problems(self):
@@ -679,7 +679,7 @@ class DataManager(object):
         """
         if obj.__class__.my_type != 'service':
             return []
-        r = [s for s in obj.host.services if s.state_id != 0 and s != obj]
-        return r
+        res = [s for s in obj.host.services if s.state_id != 0 and s != obj]
+        return res
 
 datamgr = DataManager()

@@ -68,26 +68,26 @@ def only_related_to(lst, user):
         return lst
 
     # Ok the user is a simple user, we should filter
-    r = set()
-    for i in lst:
+    res = set()
+    for item in lst:
         # Maybe the user is a direct contact
-        if user in i.contacts:
-            r.add(i)
+        if user in item.contacts:
+            res.add(item)
             continue
         # TODO: add a notified_contact pass
 
         # Maybe it's a contact of a linked elements (source problems or impacts)
         is_find = False
-        for s in i.source_problems:
-            if user in s.contacts:
-                r.add(i)
+        for serv in item.source_problems:
+            if user in serv.contacts:
+                res.add(item)
                 is_find = True
         # Ok skip this object now
         if is_find:
             continue
         # Now impacts related maybe?
-        for imp in i.impacts:
+        for imp in item.impacts:
             if user in imp.contacts:
-                r.add(i)
+                res.add(item)
 
-    return list(r)
+    return list(res)

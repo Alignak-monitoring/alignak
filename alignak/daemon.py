@@ -270,12 +270,12 @@ class Interface(object):
         :rtype: dict
         """
         res = {}
-        for (fname, f) in self.app.http_daemon.registered_fun.iteritems():
+        for (fname, fun) in self.app.http_daemon.registered_fun.iteritems():
             fclean = fname.replace('_', '-')
-            argspec = inspect.getargspec(f)
+            argspec = inspect.getargspec(fun)
             args = [a for a in argspec.args if a != 'self']
             defaults = self.app.http_daemon.registered_fun_defaults.get(fname, {})
-            e = {}
+            env = {}
             # Get a string about the args and co
             _s_nondef_args = ', '.join([a for a in args if a not in defaults])
             _s_def_args = ', '.join(['%s=%s' % (k, v) for (k, v) in defaults.iteritems()])
@@ -284,14 +284,14 @@ class Interface(object):
                 _s_args += _s_nondef_args
             if _s_def_args:
                 _s_args += ', ' + _s_def_args
-            e['proto'] = '%s(%s)' % (fclean, _s_args)
-            e['need_lock'] = getattr(f, 'need_lock', True)
-            e['method'] = getattr(f, 'method', 'GET').upper()
-            e['encode'] = getattr(f, 'encode', 'json')
-            doc = getattr(f, '__doc__', '')
+            env['proto'] = '%s(%s)' % (fclean, _s_args)
+            env['need_lock'] = getattr(fun, 'need_lock', True)
+            env['method'] = getattr(fun, 'method', 'GET').upper()
+            env['encode'] = getattr(fun, 'encode', 'json')
+            doc = getattr(fun, '__doc__', '')
             if doc:
-                e['doc'] = doc
-            res[fclean] = e
+                env['doc'] = doc
+            res[fclean] = env
         return res
 
 
@@ -512,8 +512,8 @@ class Daemon(object):
         logger.info("I dump my memory, it can take a minute")
         try:
             from guppy import hpy
-            hp = hpy()
-            logger.info(hp.heap())
+            heap = hpy()
+            logger.info(heap.heap())
         except ImportError:
             logger.warning('I do not have the module guppy for memory dump, please install it')
 
@@ -550,8 +550,8 @@ class Daemon(object):
         self.workdir = os.path.abspath(self.workdir)
         try:
             os.chdir(self.workdir)
-        except Exception, e:
-            raise InvalidWorkDir(e)
+        except Exception, exp:
+            raise InvalidWorkDir(exp)
         self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
 
     def unlink(self):
@@ -562,8 +562,8 @@ class Daemon(object):
         logger.debug("Unlinking %s", self.pidfile)
         try:
             os.unlink(self.pidfile)
-        except Exception, e:
-            logger.error("Got an error unlinking our pidfile: %s", e)
+        except Exception, exp:
+            logger.error("Got an error unlinking our pidfile: %s", exp)
 
     def register_local_log(self):
         """Open local log file for logging purpose
@@ -604,14 +604,14 @@ class Daemon(object):
         """
         # if problem on opening or creating file it'll be raised to the caller:
         try:
-            p = os.path.abspath(self.pidfile)
-            self.debug_output.append("Opening pid file: %s" % p)
+            pid = os.path.abspath(self.pidfile)
+            self.debug_output.append("Opening pid file: %s" % pid)
             # Windows do not manage the rw+ mode,
             # so we must open in read mode first, then reopen it write mode...
-            if not write and os.path.exists(p):
-                self.fpid = open(p, 'r+')
+            if not write and os.path.exists(pid):
+                self.fpid = open(pid, 'r+')
             else:  # If it doesn't exist too, we create it as void
-                self.fpid = open(p, 'w+')
+                self.fpid = open(pid, 'w+')
         except Exception as err:
             raise InvalidPidFile(err)
 
@@ -695,11 +695,11 @@ class Daemon(object):
             maxfd = 1024
 
         # Iterate through and close all file descriptors.
-        for fd in range(0, maxfd):
-            if fd in skip_close_fds:
+        for file_d in range(0, maxfd):
+            if file_d in skip_close_fds:
                 continue
             try:
-                os.close(fd)
+                os.close(file_d)
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
 
@@ -730,8 +730,8 @@ class Daemon(object):
         # Now the fork/setsid/fork..
         try:
             pid = os.fork()
-        except OSError, e:
-            raise Exception("%s [%d]" % (e.strerror, e.errno))
+        except OSError, err:
+            raise Exception("%s [%d]" % (err.strerror, err.errno))
 
         if pid != 0:
             # In the father: we check if our child exit correctly
@@ -761,8 +761,8 @@ class Daemon(object):
         os.setsid()
         try:
             pid = os.fork()
-        except OSError as e:
-            raise Exception("%s [%d]" % (e.strerror, e.errno))
+        except OSError as err:
+            raise Exception("%s [%d]" % (err.strerror, err.errno))
         if pid != 0:
             # we are the last step and the real daemon is actually correctly created at least.
             # we have still the last responsibility to write the pid of the daemon itself.
@@ -775,8 +775,8 @@ class Daemon(object):
         self.debug_output.append("We are now fully daemonized :) pid=%d" % self.pid)
         # We can now output some previously silenced debug output
         logger.info("Printing stored debug messages prior to our daemonization")
-        for s in self.debug_output:
-            logger.info(s)
+        for stored in self.debug_output:
+            logger.info(stored)
         del self.debug_output
         self.set_proctitle()
 
@@ -909,8 +909,8 @@ class Daemon(object):
             return []
         try:
             ins, _, _ = select.select(socks, [], [], timeout)
-        except select.error, e:
-            errnum, _ = e
+        except select.error, err:
+            errnum, _ = err
             if errnum == errno.EINTR:
                 return []
             raise
@@ -1014,24 +1014,24 @@ class Daemon(object):
             logger.info('Trying to initialize additional groups for the daemon')
             try:
                 os.initgroups(self.user, gid)
-            except OSError, e:
+            except OSError, err:
                 logger.warning('Cannot call the additional groups setting with initgroups (%s)',
-                               e.strerror)
+                               err.strerror)
         elif hasattr(os, 'setgroups'):
             groups = [gid] + \
                      [group.gr_gid for group in get_all_groups() if self.user in group.gr_mem]
             try:
                 os.setgroups(groups)
-            except OSError, e:
+            except OSError, err:
                 logger.warning('Cannot call the additional groups setting with setgroups (%s)',
-                               e.strerror)
+                               err.strerror)
         try:
             # First group, then user :)
             os.setregid(gid, gid)
             os.setreuid(uid, uid)
-        except OSError, e:
+        except OSError, err:
             logger.error("cannot change user/group to %s/%s (%s [%d]). Exiting",
-                         self.user, self.group, e.strerror, e.errno)
+                         self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
 
     def parse_config_file(self):
@@ -1053,9 +1053,9 @@ class Daemon(object):
                     if key in properties:
                         value = properties[key].pythonize(value)
                     setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError, e:
-                e = str(e)
-                wrong_variable = e.split('\n')[3].split(':')[1].strip()
+            except ConfigParser.InterpolationMissingOptionError, err:
+                err = str(err)
+                wrong_variable = err.split('\n')[3].split(':')[1].strip()
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
                              wrong_variable, self.config_file)
                 sys.exit(2)
@@ -1273,18 +1273,18 @@ class Daemon(object):
         :type hook_name: str
         :return: None
         """
-        _t = time.time()
+        _t0 = time.time()
         for inst in self.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
             if hasattr(inst, full_hook_name):
-                f = getattr(inst, full_hook_name)
+                fun = getattr(inst, full_hook_name)
                 try:
-                    f(self)
+                    fun(self)
                 except Exception as exp:
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
                     self.modules_manager.set_to_restart(inst)
-        statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t)
+        statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
 
     def get_retention_data(self):
         """Basic function to get retention data,
@@ -1323,24 +1323,24 @@ class Daemon(object):
         :rtype: dict
 
         """
-        r = {'metrics': [], 'version': __version__, 'name': '', 'type': '', 'modules':
-             {'internal': {}, 'external': {}}}
-        modules = r['modules']
+        res = {'metrics': [], 'version': __version__, 'name': '', 'type': '', 'modules':
+               {'internal': {}, 'external': {}}}
+        modules = res['modules']
 
         # first get data for all internal modules
         for mod in self.modules_manager.get_internal_instances():
             mname = mod.get_name()
             state = {True: 'ok', False: 'stopped'}[(mod not in self.modules_manager.to_restart)]
-            e = {'name': mname, 'state': state}
-            modules['internal'][mname] = e
+            env = {'name': mname, 'state': state}
+            modules['internal'][mname] = env
         # Same but for external ones
         for mod in self.modules_manager.get_external_instances():
             mname = mod.get_name()
             state = {True: 'ok', False: 'stopped'}[(mod not in self.modules_manager.to_restart)]
-            e = {'name': mname, 'state': state}
-            modules['external'][mname] = e
+            env = {'name': mname, 'state': state}
+            modules['external'][mname] = env
 
-        return r
+        return res
 
     @staticmethod
     def print_unrecoverable(trace):
@@ -1366,12 +1366,12 @@ class Daemon(object):
         for queue in self.modules_manager.get_external_from_queues():
             while True:
                 try:
-                    o = queue.get(block=False)
+                    obj = queue.get(block=False)
                 except (Empty, IOError, EOFError) as err:
                     if not isinstance(err, Empty):
                         logger.error("An external module queue got a problem '%s'", str(exp))
                     break
                 else:
                     had_some_objects = True
-                    self.add(o)
+                    self.add(obj)
         return had_some_objects

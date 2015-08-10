@@ -183,9 +183,9 @@ class IBroks(Interface):
         if bname not in self.app.brokers:
             logger.info("A new broker just connected : %s", bname)
             self.app.brokers[bname] = {'broks': {}, 'has_full_broks': False}
-        e = self.app.brokers[bname]
-        if not e['has_full_broks']:
-            e['broks'].clear()
+        env = self.app.brokers[bname]
+        if not env['has_full_broks']:
+            env['broks'].clear()
             self.app.fill_initial_broks(bname, with_logs=True)
 
 
@@ -329,17 +329,17 @@ class Alignak(BaseSatellite):
             return
 
         # Then we compensate all host/services
-        for h in self.sched.hosts:
-            h.compensate_system_time_change(difference)
-        for s in self.sched.services:
-            s.compensate_system_time_change(difference)
+        for host in self.sched.hosts:
+            host.compensate_system_time_change(difference)
+        for serv in self.sched.services:
+            serv.compensate_system_time_change(difference)
 
         # Now all checks and actions
-        for c in self.sched.checks.values():
+        for chk in self.sched.checks.values():
             # Already launch checks should not be touch
-            if c.status == 'scheduled' and c.t_to_go is not None:
-                t_to_go = c.t_to_go
-                ref = c.ref
+            if chk.status == 'scheduled' and chk.t_to_go is not None:
+                t_to_go = chk.t_to_go
+                ref = chk.ref
                 new_t = max(0, t_to_go + difference)
                 if ref.check_period is not None:
                     # But it's no so simple, we must match the timeperiod
@@ -347,43 +347,43 @@ class Alignak(BaseSatellite):
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:
-                    c.state = 'waitconsume'
-                    c.exit_status = 2
-                    c.output = '(Error: there is no available check time after time change!)'
-                    c.check_time = time.time()
-                    c.execution_time = 0
+                    chk.state = 'waitconsume'
+                    chk.exit_status = 2
+                    chk.output = '(Error: there is no available check time after time change!)'
+                    chk.check_time = time.time()
+                    chk.execution_time = 0
                 else:
-                    c.t_to_go = new_t
+                    chk.t_to_go = new_t
                     ref.next_chk = new_t
 
         # Now all checks and actions
-        for c in self.sched.actions.values():
+        for act in self.sched.actions.values():
             # Already launch checks should not be touch
-            if c.status == 'scheduled':
-                t_to_go = c.t_to_go
+            if act.status == 'scheduled':
+                t_to_go = act.t_to_go
 
                 #  Event handler do not have ref
-                ref = getattr(c, 'ref', None)
+                ref = getattr(act, 'ref', None)
                 new_t = max(0, t_to_go + difference)
 
                 # Notification should be check with notification_period
-                if c.is_a == 'notification':
+                if act.is_a == 'notification':
                     if ref.notification_period:
                         # But it's no so simple, we must match the timeperiod
                         new_t = ref.notification_period.get_next_valid_time_from_t(new_t)
                     # And got a creation_time variable too
-                    c.creation_time += difference
+                    act.creation_time += difference
 
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:
-                    c.state = 'waitconsume'
-                    c.exit_status = 2
-                    c.output = '(Error: there is no available check time after time change!)'
-                    c.check_time = time.time()
-                    c.execution_time = 0
+                    act.state = 'waitconsume'
+                    act.exit_status = 2
+                    act.output = '(Error: there is no available check time after time change!)'
+                    act.check_time = time.time()
+                    act.execution_time = 0
                 else:
-                    c.t_to_go = new_t
+                    act.t_to_go = new_t
 
     def manage_signal(self, sig, frame):
         """Manage signals caught by the daemon
@@ -429,22 +429,22 @@ class Alignak(BaseSatellite):
 
         :return: None
         """
-        pk = self.new_conf
-        conf_raw = pk['conf']
-        override_conf = pk['override_conf']
-        modules = pk['modules']
-        satellites = pk['satellites']
-        instance_name = pk['instance_name']
-        push_flavor = pk['push_flavor']
-        skip_initial_broks = pk['skip_initial_broks']
-        accept_passive_unknown_check_results = pk['accept_passive_unknown_check_results']
-        api_key = pk['api_key']
-        secret = pk['secret']
-        http_proxy = pk['http_proxy']
-        statsd_host = pk['statsd_host']
-        statsd_port = pk['statsd_port']
-        statsd_prefix = pk['statsd_prefix']
-        statsd_enabled = pk['statsd_enabled']
+        new_c = self.new_conf
+        conf_raw = new_c['conf']
+        override_conf = new_c['override_conf']
+        modules = new_c['modules']
+        satellites = new_c['satellites']
+        instance_name = new_c['instance_name']
+        push_flavor = new_c['push_flavor']
+        skip_initial_broks = new_c['skip_initial_broks']
+        accept_passive_unknown_chk_res = new_c['accept_passive_unknown_check_results']
+        api_key = new_c['api_key']
+        secret = new_c['secret']
+        http_proxy = new_c['http_proxy']
+        statsd_host = new_c['statsd_host']
+        statsd_port = new_c['statsd_port']
+        statsd_prefix = new_c['statsd_prefix']
+        statsd_enabled = new_c['statsd_enabled']
 
         # horay, we got a name, we can set it in our stats objects
         statsmgr.register(self.sched, instance_name, 'scheduler',
@@ -452,9 +452,9 @@ class Alignak(BaseSatellite):
                           statsd_host=statsd_host, statsd_port=statsd_port,
                           statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
-        t0 = time.time()
+        t00 = time.time()
         conf = cPickle.loads(conf_raw)
-        logger.debug("Conf received at %d. Unserialized in %d secs", t0, time.time() - t0)
+        logger.debug("Conf received at %d. Unserialized in %d secs", t00, time.time() - t00)
         self.new_conf = None
 
         # Tag the conf with our data
@@ -462,7 +462,7 @@ class Alignak(BaseSatellite):
         self.conf.push_flavor = push_flavor
         self.conf.instance_name = instance_name
         self.conf.skip_initial_broks = skip_initial_broks
-        self.conf.accept_passive_unknown_check_results = accept_passive_unknown_check_results
+        self.conf.accept_passive_unknown_check_results = accept_passive_unknown_chk_res
 
         self.cur_conf = conf
         self.override_conf = override_conf
@@ -477,17 +477,17 @@ class Alignak(BaseSatellite):
         for pol_id in satellites['pollers']:
             # Must look if we already have it
             already_got = pol_id in self.pollers
-            p = satellites['pollers'][pol_id]
-            self.pollers[pol_id] = p
+            poll = satellites['pollers'][pol_id]
+            self.pollers[pol_id] = poll
 
-            if p['name'] in override_conf['satellitemap']:
-                p = dict(p)  # make a copy
-                p.update(override_conf['satellitemap'][p['name']])
+            if poll['name'] in override_conf['satellitemap']:
+                poll = dict(poll)  # make a copy
+                poll.update(override_conf['satellitemap'][poll['name']])
 
             proto = 'http'
-            if p['use_ssl']:
+            if poll['use_ssl']:
                 proto = 'https'
-            uri = '%s://%s:%s/' % (proto, p['address'], p['port'])
+            uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
             self.pollers[pol_id]['uri'] = uri
             self.pollers[pol_id]['last_connection'] = 0
 
@@ -503,7 +503,7 @@ class Alignak(BaseSatellite):
                 reac.update(override_conf['satellitemap'][reac['name']])
 
             proto = 'http'
-            if p['use_ssl']:
+            if poll['use_ssl']:
                 proto = 'https'
             uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
             self.reactionners[reac_id]['uri'] = uri
@@ -559,8 +559,8 @@ class Alignak(BaseSatellite):
         # print "DBG: got macros", self.sched.conf.macros
 
         # Creating the Macroresolver Class & unique instance
-        m = MacroResolver()
-        m.init(self.conf)
+        m_solver = MacroResolver()
+        m_solver.init(self.conf)
 
         # self.conf.dump()
         # self.conf.quick_debug()
@@ -568,14 +568,14 @@ class Alignak(BaseSatellite):
         # Now create the external commander
         # it's a applyer: it role is not to dispatch commands,
         # but to apply them
-        e = ExternalCommandManager(self.conf, 'applyer')
+        ecm = ExternalCommandManager(self.conf, 'applyer')
 
         # Scheduler need to know about external command to
         # activate it if necessary
-        self.sched.load_external_command(e)
+        self.sched.load_external_command(ecm)
 
         # External command need the sched because he can raise checks
-        e.load_scheduler(self.sched)
+        ecm.load_scheduler(self.sched)
 
         # We clear our schedulers managed (it's us :) )
         # and set ourself in it

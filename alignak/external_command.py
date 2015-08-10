@@ -525,7 +525,7 @@ class ExternalCommandManager:
         :rtype: list[alignak.external_command.ExternalCommand]
         """
         buf = os.read(self.fifo, 8096)
-        r = []
+        res = []
         fullbuf = len(buf) == 8096 and True or False
         # If the buffer ended with a fragment last time, prepend it here
         buf = self.cmd_fragments + buf
@@ -533,16 +533,16 @@ class ExternalCommandManager:
         self.cmd_fragments = ''
         if fullbuf and buf[-1] != '\n':
             # The buffer was full but ends with a command fragment
-            r.extend([ExternalCommand(s) for s in (buf.split('\n'))[:-1] if s])
+            res.extend([ExternalCommand(s) for s in (buf.split('\n'))[:-1] if s])
             self.cmd_fragments = (buf.split('\n'))[-1]
         elif buflen:
             # The buffer is either half-filled or full with a '\n' at the end.
-            r.extend([ExternalCommand(s) for s in buf.split('\n') if s])
+            res.extend([ExternalCommand(s) for s in buf.split('\n') if s])
         else:
             # The buffer is empty. We "reset" the fifo here. It will be
             # re-opened in the main loop.
             os.close(self.fifo)
-        return r
+        return res
 
     def resolve_command(self, excmd):
         """Parse command and dispatch it (to sched for example) if necessary
@@ -567,21 +567,21 @@ class ExternalCommandManager:
             # Fix #1263
             # logger.info('EXTERNAL COMMAND: ' + command.rstrip())
             naglog_result('info', 'EXTERNAL COMMAND: ' + command.rstrip())
-        r = self.get_command_and_args(command, excmd)
+        res = self.get_command_and_args(command, excmd)
 
         # If we are a receiver, bail out here
         if self.mode == 'receiver':
             return
 
-        if r is not None:
-            is_global = r['global']
+        if res is not None:
+            is_global = res['global']
             if not is_global:
-                c_name = r['c_name']
-                args = r['args']
+                c_name = res['c_name']
+                args = res['args']
                 logger.debug("Got commands %s %s", c_name, str(args))
                 getattr(self, c_name)(*args)
             else:
-                command = r['cmd']
+                command = res['cmd']
                 self.dispatch_global_command(command)
 
     def search_host_and_dispatch(self, host_name, command, extcmd):
@@ -625,8 +625,8 @@ class ExternalCommandManager:
         if not host_found:
             if getattr(self, 'receiver',
                        getattr(self, 'arbiter', None)).accept_passive_unknown_check_results:
-                b = self.get_unknown_check_result_brok(command)
-                getattr(self, 'receiver', getattr(self, 'arbiter', None)).add(b)
+                brok = self.get_unknown_check_result_brok(command)
+                getattr(self, 'receiver', getattr(self, 'arbiter', None)).add(brok)
             else:
                 logger.warning("Passive check result was received for host '%s', "
                                "but the host could not be found!", host_name)
@@ -667,9 +667,9 @@ class ExternalCommandManager:
             data['output'] = match.group(5)
             data['perf_data'] = match.group(6)
 
-        b = Brok('unknown_%s_check_result' % match.group(2).lower(), data)
+        brok = Brok('unknown_%s_check_result' % match.group(2).lower(), data)
 
-        return b
+        return brok
 
     def dispatch_global_command(self, command):
         """Send command to scheduler, it's a global one
@@ -707,15 +707,15 @@ class ExternalCommandManager:
         if len(elts2) != 2:
             logger.debug("Malformed command '%s'", command)
             return None
-        ts = elts2[0]
+        timestamp = elts2[0]
         # Now we will get the timestamps as [123456]
-        if not ts.startswith('[') or not ts.endswith(']'):
+        if not timestamp.startswith('[') or not timestamp.endswith(']'):
             logger.debug("Malformed command '%s'", command)
             return None
         # Ok we remove the [ ]
-        ts = ts[1:-1]
+        timestamp = timestamp[1:-1]
         try:  # is an int or not?
-            self.current_timestamp = to_int(ts)
+            self.current_timestamp = to_int(timestamp)
         except ValueError:
             logger.debug("Malformed command '%s'", command)
             return None
@@ -774,22 +774,22 @@ class ExternalCommandManager:
                         if self.mode == 'dispatcher' or self.mode == 'receiver':
                             self.search_host_and_dispatch(val, command, extcmd)
                             return None
-                        h = self.hosts.find_by_name(val)
-                        if h is not None:
-                            args.append(h)
+                        host = self.hosts.find_by_name(val)
+                        if host is not None:
+                            args.append(host)
                         elif self.conf.accept_passive_unknown_check_results:
-                            b = self.get_unknown_check_result_brok(command)
-                            self.sched.add_Brok(b)
+                            brok = self.get_unknown_check_result_brok(command)
+                            self.sched.add_Brok(brok)
 
                     elif type_searched == 'contact':
-                        c = self.contacts.find_by_name(val)
-                        if c is not None:
-                            args.append(c)
+                        contact = self.contacts.find_by_name(val)
+                        if contact is not None:
+                            args.append(contact)
 
                     elif type_searched == 'time_period':
-                        t = self.timeperiods.find_by_name(val)
-                        if t is not None:
-                            args.append(t)
+                        timeperiod = self.timeperiods.find_by_name(val)
+                        if timeperiod is not None:
+                            args.append(timeperiod)
 
                     elif type_searched == 'to_bool':
                         args.append(to_bool(val))
@@ -801,27 +801,27 @@ class ExternalCommandManager:
                         args.append(val)
 
                     elif type_searched == 'command':
-                        c = self.commands.find_by_name(val)
-                        if c is not None:
+                        command = self.commands.find_by_name(val)
+                        if command is not None:
                             # the find will be redone by
                             # the commandCall creation, but != None
                             # is useful so a bad command will be caught
                             args.append(val)
 
                     elif type_searched == 'host_group':
-                        hg = self.hostgroups.find_by_name(val)
-                        if hg is not None:
-                            args.append(hg)
+                        hostgroup = self.hostgroups.find_by_name(val)
+                        if hostgroup is not None:
+                            args.append(hostgroup)
 
                     elif type_searched == 'service_group':
-                        sg = self.servicegroups.find_by_name(val)
-                        if sg is not None:
-                            args.append(sg)
+                        servicegroup = self.servicegroups.find_by_name(val)
+                        if servicegroup is not None:
+                            args.append(servicegroup)
 
                     elif type_searched == 'contact_group':
-                        cg = self.contact_groups.find_by_name(val)
-                        if cg is not None:
-                            args.append(cg)
+                        contactgroup = self.contact_groups.find_by_name(val)
+                        if contactgroup is not None:
+                            args.append(contactgroup)
 
                     # special case: service are TWO args host;service, so one more loop
                     # to get the two parts
@@ -847,12 +847,12 @@ class ExternalCommandManager:
                         return None
 
                     # safe_print("Got service full", tmp_host, srv_name)
-                    s = self.services.find_srv_by_name_and_hostname(tmp_host, srv_name)
-                    if s is not None:
-                        args.append(s)
+                    serv = self.services.find_srv_by_name_and_hostname(tmp_host, srv_name)
+                    if serv is not None:
+                        args.append(serv)
                     elif self.conf.accept_passive_unknown_check_results:
-                        b = self.get_unknown_check_result_brok(command)
-                        self.sched.add_Brok(b)
+                        brok = self.get_unknown_check_result_brok(command)
+                        self.sched.add_Brok(brok)
                     else:
                         logger.warning(
                             "A command was received for service '%s' on host '%s', "
@@ -945,9 +945,9 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        c = Comment(service, persistent, author, comment, 2, 1, 1, False, 0)
-        service.add_comment(c)
-        self.sched.add(c)
+        comm = Comment(service, persistent, author, comment, 2, 1, 1, False, 0)
+        service.add_comment(comm)
+        self.sched.add(comm)
 
     def ADD_HOST_COMMENT(self, host, persistent, author, comment):
         """Add a host comment
@@ -965,9 +965,9 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        c = Comment(host, persistent, author, comment, 1, 1, 1, False, 0)
-        host.add_comment(c)
-        self.sched.add(c)
+        comm = Comment(host, persistent, author, comment, 1, 1, 1, False, 0)
+        host.add_comment(comm)
+        self.sched.add(comm)
 
     def ACKNOWLEDGE_SVC_PROBLEM(self, service, sticky, notify, persistent, author, comment):
         """Acknowledge a service problem
@@ -1480,8 +1480,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for c in host.comments:
-            self.DEL_HOST_COMMENT(c._id)
+        for comm in host.comments:
+            self.DEL_HOST_COMMENT(comm._id)
 
     def DEL_ALL_HOST_DOWNTIMES(self, host):
         """Delete all host downtimes
@@ -1493,8 +1493,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for dt in host.downtimes:
-            self.DEL_HOST_DOWNTIME(dt._id)
+        for downtime in host.downtimes:
+            self.DEL_HOST_DOWNTIME(downtime._id)
 
     def DEL_ALL_SVC_COMMENTS(self, service):
         """Delete all service comments
@@ -1506,8 +1506,8 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        for c in service.comments:
-            self.DEL_SVC_COMMENT(c._id)
+        for comm in service.comments:
+            self.DEL_SVC_COMMENT(comm._id)
 
     def DEL_ALL_SVC_DOWNTIMES(self, service):
         """Delete all service downtime
@@ -1519,8 +1519,8 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        for dt in service.downtimes:
-            self.DEL_SVC_DOWNTIME(dt._id)
+        for downtime in service.downtimes:
+            self.DEL_SVC_DOWNTIME(downtime._id)
 
     def DEL_CONTACT_DOWNTIME(self, downtime_id):
         """Delete a contact downtime
@@ -1891,8 +1891,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for s in host.services:
-            self.DISABLE_SVC_CHECK(s)
+        for serv in host.services:
+            self.DISABLE_SVC_CHECK(serv)
 
     def DISABLE_HOST_SVC_NOTIFICATIONS(self, host):
         """Disable services notifications for a host
@@ -1904,9 +1904,9 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for s in host.services:
-            self.DISABLE_SVC_NOTIFICATIONS(s)
-            self.sched.get_and_register_status_brok(s)
+        for serv in host.services:
+            self.DISABLE_SVC_NOTIFICATIONS(serv)
+            self.sched.get_and_register_status_brok(serv)
 
     def DISABLE_NOTIFICATIONS(self):
         """Disable notifications (globally)
@@ -2423,8 +2423,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for s in host.services:
-            self.ENABLE_SVC_CHECK(s)
+        for serv in host.services:
+            self.ENABLE_SVC_CHECK(serv)
 
     def ENABLE_HOST_SVC_NOTIFICATIONS(self, host):
         """Enable services notifications for a host
@@ -2436,9 +2436,9 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for s in host.services:
-            self.ENABLE_SVC_NOTIFICATIONS(s)
-            self.sched.get_and_register_status_brok(s)
+        for serv in host.services:
+            self.ENABLE_SVC_NOTIFICATIONS(serv)
+            self.sched.get_and_register_status_brok(serv)
 
     def ENABLE_NOTIFICATIONS(self):
         """Enable notifications (globally)
@@ -2694,20 +2694,20 @@ class ExternalCommandManager:
             if self.current_timestamp < host.last_chk:
                 return
 
-            c = host.launch_check(now, force=True)
+            chk = host.launch_check(now, force=True)
             # Should not be possible to not find the check, but if so, don't crash
-            if not c:
+            if not chk:
                 logger.error('%s > Passive host check failed. None check launched !?',
                              host.get_full_name())
                 return
             # Now we 'transform the check into a result'
             # So exit_status, output and status is eaten by the host
-            c.exit_status = status_code
-            c.get_outputs(plugin_output, host.max_plugins_output_length)
-            c.status = 'waitconsume'
-            c.check_time = self.current_timestamp  # we are using the external command timestamps
+            chk.exit_status = status_code
+            chk.get_outputs(plugin_output, host.max_plugins_output_length)
+            chk.status = 'waitconsume'
+            chk.check_time = self.current_timestamp  # we are using the external command timestamps
             # Set the corresponding host's check_type to passive=1
-            c.set_type_passive()
+            chk.set_type_passive()
             self.sched.nb_check_received += 1
             # Ok now this result will be read by scheduler the next loop
 
@@ -2753,20 +2753,20 @@ class ExternalCommandManager:
             if self.current_timestamp < service.last_chk:
                 return
 
-            c = service.launch_check(now, force=True)
+            chk = service.launch_check(now, force=True)
             # Should not be possible to not find the check, but if so, don't crash
-            if not c:
+            if not chk:
                 logger.error('%s > Passive service check failed. None check launched !?',
                              service.get_full_name())
                 return
             # Now we 'transform the check into a result'
             # So exit_status, output and status is eaten by the service
-            c.exit_status = return_code
-            c.get_outputs(plugin_output, service.max_plugins_output_length)
-            c.status = 'waitconsume'
-            c.check_time = self.current_timestamp  # we are using the external command timestamps
+            chk.exit_status = return_code
+            chk.get_outputs(plugin_output, service.max_plugins_output_length)
+            chk.status = 'waitconsume'
+            chk.check_time = self.current_timestamp  # we are using the external command timestamps
             # Set the corresponding service's check_type to passive=1
-            c.set_type_passive()
+            chk.set_type_passive()
             self.sched.nb_check_received += 1
             # Ok now this result will be reap by scheduler the next loop
 
@@ -2835,18 +2835,19 @@ class ExternalCommandManager:
         logger.warning("RESTART command : %s", restart_cmd_line)
 
         # Ok get an event handler command that will run in 15min max
-        e = EventHandler(restart_cmd_line, timeout=900)
+        e_handler = EventHandler(restart_cmd_line, timeout=900)
         # Ok now run it
-        e.execute()
+        e_handler.execute()
         # And wait for the command to finish
-        while e.status not in ('done', 'timeout'):
-            e.check_finished(64000)
-        if e.status == 'timeout' or e.exit_status != 0:
+        while e_handler.status not in ('done', 'timeout'):
+            e_handler.check_finished(64000)
+        if e_handler.status == 'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot restart Alignak : the 'restart-alignak' command failed with"
-                         " the error code '%d' and the text '%s'.", e.exit_status, e.output)
+                         " the error code '%d' and the text '%s'.",
+                         e_handler.exit_status, e_handler.output)
             return
         # Ok here the command succeed, we can now wait our death
-        naglog_result('info', "%s" % (e.output))
+        naglog_result('info', "%s" % (e_handler.output))
 
     def RELOAD_CONFIG(self):
         """Reload Alignak configuration
@@ -2865,18 +2866,19 @@ class ExternalCommandManager:
         logger.warning("RELOAD command : %s", reload_cmd_line)
 
         # Ok get an event handler command that will run in 15min max
-        e = EventHandler(reload_cmd_line, timeout=900)
+        e_handler = EventHandler(reload_cmd_line, timeout=900)
         # Ok now run it
-        e.execute()
+        e_handler.execute()
         # And wait for the command to finish
-        while e.status not in ('done', 'timeout'):
-            e.check_finished(64000)
-        if e.status == 'timeout' or e.exit_status != 0:
+        while e_handler.status not in ('done', 'timeout'):
+            e_handler.check_finished(64000)
+        if e_handler.status == 'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot reload Alignak configuration: the 'reload-alignak' command failed"
-                         " with the error code '%d' and the text '%s'.", e.exit_status, e.output)
+                         " with the error code '%d' and the text '%s'.",
+                         e_handler.exit_status, e_handler.output)
             return
         # Ok here the command succeed, we can now wait our death
-        naglog_result('info', "%s" % (e.output))
+        naglog_result('info', "%s" % (e_handler.output))
 
     def SAVE_STATE_INFORMATION(self):
         """DOES NOTHING (What it is supposed to do?)
@@ -2930,9 +2932,9 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        dt = ContactDowntime(contact, start_time, end_time, author, comment)
-        contact.add_downtime(dt)
-        self.sched.add(dt)
+        cdt = ContactDowntime(contact, start_time, end_time, author, comment)
+        contact.add_downtime(cdt)
+        self.sched.add(cdt)
         self.sched.get_and_register_status_brok(contact)
 
     def SCHEDULE_FORCED_HOST_CHECK(self, host, check_time):
@@ -2962,9 +2964,9 @@ class ExternalCommandManager:
         :type check_time: int
         :return: None
         """
-        for s in host.services:
-            self.SCHEDULE_FORCED_SVC_CHECK(s, check_time)
-            self.sched.get_and_register_status_brok(s)
+        for serv in host.services:
+            self.SCHEDULE_FORCED_SVC_CHECK(serv, check_time)
+            self.sched.get_and_register_status_brok(serv)
 
     def SCHEDULE_FORCED_SVC_CHECK(self, service, check_time):
         """Schedule a forced check on a service
@@ -3038,8 +3040,8 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            for s in host.services:
-                self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
+            for serv in host.services:
+                self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
                                            trigger_id, duration, author, comment)
 
     def SCHEDULE_HOST_CHECK(self, host, check_time):
@@ -3083,12 +3085,13 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        dt = Downtime(host, start_time, end_time, fixed, trigger_id, duration, author, comment)
-        host.add_downtime(dt)
-        self.sched.add(dt)
+        downtime = Downtime(host, start_time, end_time, fixed, trigger_id, duration, author,
+                            comment)
+        host.add_downtime(downtime)
+        self.sched.add(downtime)
         self.sched.get_and_register_status_brok(host)
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
-            self.sched.downtimes[trigger_id].trigger_me(dt)
+            self.sched.downtimes[trigger_id].trigger_me(downtime)
 
     def SCHEDULE_HOST_SVC_CHECKS(self, host, check_time):
         """Schedule a check on all services of a host
@@ -3102,9 +3105,9 @@ class ExternalCommandManager:
         :type check_time:
         :return: None
         """
-        for s in host.services:
-            self.SCHEDULE_SVC_CHECK(s, check_time)
-            self.sched.get_and_register_status_brok(s)
+        for serv in host.services:
+            self.SCHEDULE_SVC_CHECK(serv, check_time)
+            self.sched.get_and_register_status_brok(serv)
 
     def SCHEDULE_HOST_SVC_DOWNTIME(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
@@ -3132,8 +3135,8 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        for s in host.services:
-            self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
+        for serv in host.services:
+            self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
     def SCHEDULE_SERVICEGROUP_HOST_DOWNTIME(self, servicegroup, start_time, end_time,
@@ -3162,8 +3165,8 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        for h in [s.host for s in servicegroup.get_services()]:
-            self.SCHEDULE_HOST_DOWNTIME(h, start_time, end_time, fixed,
+        for host in [s.host for s in servicegroup.get_services()]:
+            self.SCHEDULE_HOST_DOWNTIME(host, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment)
 
     def SCHEDULE_SERVICEGROUP_SVC_DOWNTIME(self, servicegroup, start_time, end_time,
@@ -3192,8 +3195,8 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        for s in servicegroup.get_services():
-            self.SCHEDULE_SVC_DOWNTIME(s, start_time, end_time, fixed,
+        for serv in servicegroup.get_services():
+            self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
     def SCHEDULE_SVC_CHECK(self, service, check_time):
@@ -3237,12 +3240,13 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        dt = Downtime(service, start_time, end_time, fixed, trigger_id, duration, author, comment)
-        service.add_downtime(dt)
-        self.sched.add(dt)
+        downtime = Downtime(service, start_time, end_time, fixed, trigger_id, duration, author,
+                            comment)
+        service.add_downtime(downtime)
+        self.sched.add(downtime)
         self.sched.get_and_register_status_brok(service)
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
-            self.sched.downtimes[trigger_id].trigger_me(dt)
+            self.sched.downtimes[trigger_id].trigger_me(downtime)
 
     def SEND_CUSTOM_HOST_NOTIFICATION(self, host, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
@@ -3638,28 +3642,28 @@ class ExternalCommandManager:
                      realm_name, poller_name, address, port)
 
         # First we look for the realm
-        r = self.conf.realms.find_by_name(realm_name)
-        if r is None:
+        realm = self.conf.realms.find_by_name(realm_name)
+        if realm is None:
             logger.debug("Sorry, the realm %s is unknown", realm_name)
             return
 
-        logger.debug("We found the realm: %s", str(r))
+        logger.debug("We found the realm: %s", str(realm))
         # TODO: backport this in the config class?
         # We create the PollerLink object
-        t = {'poller_name': poller_name, 'address': address, 'port': port}
-        p = PollerLink(t)
-        p.fill_default()
-        p.prepare_for_conf()
+        params = {'poller_name': poller_name, 'address': address, 'port': port}
+        poll = PollerLink(params)
+        poll.fill_default()
+        poll.prepare_for_conf()
         parameters = {'max_plugins_output_length': self.conf.max_plugins_output_length}
-        p.add_global_conf_parameters(parameters)
-        self.arbiter.conf.pollers[p._id] = p
-        self.arbiter.dispatcher.elements.append(p)
-        self.arbiter.dispatcher.satellites.append(p)
-        r.pollers.append(p)
-        r.count_pollers()
-        r.fill_potential_satellites_by_type('pollers')
+        poll.add_global_conf_parameters(parameters)
+        self.arbiter.conf.pollers[poll._id] = poll
+        self.arbiter.dispatcher.elements.append(poll)
+        self.arbiter.dispatcher.satellites.append(poll)
+        realm.pollers.append(poll)
+        realm.count_pollers()
+        realm.fill_potential_satellites_by_type('pollers')
         logger.debug("Poller %s added", poller_name)
-        logger.debug("Potential %s", str(r.get_potential_satellites_by_type('poller')))
+        logger.debug("Potential %s", str(realm.get_potential_satellites_by_type('poller')))
 
 
 if __name__ == '__main__':

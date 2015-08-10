@@ -200,8 +200,8 @@ class SatelliteLink(Item):
         # We came from dead to alive
         # so we must add a brok update
         if not was_alive:
-            b = self.get_update_status_brok()
-            self.broks.append(b)
+            brok = self.get_update_status_brok()
+            self.broks.append(brok)
 
     def set_dead(self):
         """Set the satellite into dead state:
@@ -221,8 +221,8 @@ class SatelliteLink(Item):
         # a brok to say it
         if was_alive:
             logger.warning("Setting the satellite %s to a dead state.", self.get_name())
-            b = self.get_update_status_brok()
-            self.broks.append(b)
+            brok = self.get_update_status_brok()
+            self.broks.append(brok)
 
     def add_failed_check_attempt(self, reason=''):
         """Go in reachable=False and add a failed attempt
@@ -264,8 +264,8 @@ class SatelliteLink(Item):
         self.update_managed_list()
 
         # Update the state of this element
-        b = self.get_update_status_brok()
-        self.broks.append(b)
+        brok = self.get_update_status_brok()
+        self.broks.append(brok)
 
     def known_conf_managed_push(self, cfg_id, push_flavor):
         """The elements just got a new conf_id, we put it in our list
@@ -297,10 +297,10 @@ class SatelliteLink(Item):
                 self.add_failed_check_attempt()
                 return
 
-            r = self.con.get('ping')
+            res = self.con.get('ping')
 
             # Should return us pong string
-            if r == 'pong':
+            if res == 'pong':
                 self.set_alive()
             else:
                 self.add_failed_check_attempt()
@@ -316,7 +316,7 @@ class SatelliteLink(Item):
         if self.con is None:
             self.create_connection()
         try:
-            r = self.con.get('wait_new_conf')
+            self.con.get('wait_new_conf')
             return True
         except HTTPExceptions, exp:
             self.con = None
@@ -340,13 +340,13 @@ class SatelliteLink(Item):
 
         try:
             if magic_hash is None:
-                r = self.con.get('have_conf')
+                res = self.con.get('have_conf')
             else:
-                r = self.con.get('have_conf', {'magic_hash': magic_hash})
-            print "have_conf RAW CALL", r, type(r)
-            if not isinstance(r, bool):
+                res = self.con.get('have_conf', {'magic_hash': magic_hash})
+            print "have_conf RAW CALL", res, type(res)
+            if not isinstance(res, bool):
                 return False
-            return r
+            return res
         except HTTPExceptions, exp:
             self.con = None
             return False
@@ -368,11 +368,11 @@ class SatelliteLink(Item):
             return False
 
         try:
-            r = self.con.get('got_conf')
+            res = self.con.get('got_conf')
             # Protect against bad return
-            if not isinstance(r, bool):
+            if not isinstance(res, bool):
                 return False
-            return r
+            return res
         except HTTPExceptions, exp:
             self.con = None
             return False
@@ -430,9 +430,9 @@ class SatelliteLink(Item):
 
             # Ok protect against json that is chaning keys as string instead of int
             tab_cleaned = {}
-            for (k, v) in tab.iteritems():
+            for (key, val) in tab.iteritems():
                 try:
-                    tab_cleaned[int(k)] = v
+                    tab_cleaned[int(key)] = val
                 except ValueError:
                     print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
                           self.get_name(), tab
@@ -655,19 +655,19 @@ class SatelliteLinks(Items):
         :type realms: list
         :return: None
         """
-        for s in self:
-            p_name = s.realm.strip()
+        for satlink in self:
+            r_name = satlink.realm.strip()
             # If no realm name, take the default one
-            if p_name == '':
-                p = realms.get_default()
-                s.realm = p
+            if r_name == '':
+                realm = realms.get_default()
+                satlink.realm = realm
             else:  # find the realm one
-                p = realms.find_by_name(p_name)
-                s.realm = p
+                realm = realms.find_by_name(r_name)
+                satlink.realm = realm
             # Check if what we get is OK or not
-            if p is not None:
-                s.register_to_my_realm()
+            if realm is not None:
+                satlink.register_to_my_realm()
             else:
                 err = "The %s %s got a unknown realm '%s'" % \
-                      (s.__class__.my_type, s.get_name(), p_name)
-                s.configuration_errors.append(err)
+                      (satlink.__class__.my_type, satlink.get_name(), r_name)
+                satlink.configuration_errors.append(err)

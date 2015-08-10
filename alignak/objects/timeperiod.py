@@ -218,17 +218,17 @@ class Timeperiod(Item):
         :rtype: dict
         """
         properties = ['timeperiod_name', 'alias', 'use', 'register']
-        r = {}
+        res = {}
         for prop in properties:
             if hasattr(self, prop):
-                v = getattr(self, prop)
-                print prop, ":", v
-                r[prop] = v
+                val = getattr(self, prop)
+                print prop, ":", val
+                res[prop] = val
         # Now the unresolved one. The only way to get ride of same key things is to put
         # directly the full value as the key
         for other in self.unresolved:
-            r[other] = ''
-        return r
+            res[other] = ''
+        return res
 
     def is_time_valid(self, t):
         """
@@ -238,11 +238,11 @@ class Timeperiod(Item):
         :rtype: bool
         """
         if self.has('exclude'):
-            for dr in self.exclude:
-                if dr.is_time_valid(t):
+            for daterange in self.exclude:
+                if daterange.is_time_valid(t):
                     return False
-        for dr in self.dateranges:
-            if dr.is_time_valid(t):
+        for daterange in self.dateranges:
+            if daterange.is_time_valid(t):
                 return True
         return False
 
@@ -258,8 +258,8 @@ class Timeperiod(Item):
         TODO: not used, so delete it
         """
         mins_incl = []
-        for dr in self.dateranges:
-            mins_incl.append(dr.get_min_from_t(t))
+        for daterange in self.dateranges:
+            mins_incl.append(daterange.get_min_from_t(t))
         return min(mins_incl)
 
     # will give the first time > t which is not valid
@@ -343,19 +343,19 @@ class Timeperiod(Item):
         """
         now = int(time.time())
         t_to_del = []
-        for t in self.cache:
-            if t < now:
-                t_to_del.append(t)
-        for t in t_to_del:
-            del self.cache[t]
+        for timestamp in self.cache:
+            if timestamp < now:
+                t_to_del.append(timestamp)
+        for timestamp in t_to_del:
+            del self.cache[timestamp]
 
         # same for the invalid cache
         t_to_del = []
-        for t in self.invalid_cache:
-            if t < now:
-                t_to_del.append(t)
-        for t in t_to_del:
-            del self.invalid_cache[t]
+        for timestamp in self.invalid_cache:
+            if timestamp < now:
+                t_to_del.append(timestamp)
+        for timestamp in t_to_del:
+            del self.invalid_cache[timestamp]
 
     def get_next_valid_time_from_t(self, t):
         """
@@ -386,29 +386,29 @@ class Timeperiod(Item):
             dr_mins = []
             s_dr_mins = []
 
-            for dr in self.dateranges:
-                dr_mins.append(dr.get_next_valid_time_from_t(t))
+            for datarange in self.dateranges:
+                dr_mins.append(datarange.get_next_valid_time_from_t(t))
 
             s_dr_mins = sorted([d for d in dr_mins if d is not None])
 
-            for t1 in s_dr_mins:
+            for t01 in s_dr_mins:
                 if not self.exclude and still_loop is True:
                     # No Exclude so we are good
-                    local_min = t1
+                    local_min = t01
                     still_loop = False
                 else:
-                    for tp in self.exclude:
-                        if not tp.is_time_valid(t1) and still_loop is True:
+                    for timeperiod in self.exclude:
+                        if not timeperiod.is_time_valid(t01) and still_loop is True:
                             # OK we found a date that is not valid in any exclude timeperiod
-                            local_min = t1
+                            local_min = t01
                             still_loop = False
 
             if local_min is None:
                 # print "Looking for next valid date"
                 exc_mins = []
                 if s_dr_mins != []:
-                    for tp in self.exclude:
-                        exc_mins.append(tp.get_next_invalid_time_from_t(s_dr_mins[0]))
+                    for timeperiod in self.exclude:
+                        exc_mins.append(timeperiod.get_next_invalid_time_from_t(s_dr_mins[0]))
 
                 s_exc_mins = sorted([d for d in exc_mins if d is not None])
 
@@ -463,19 +463,19 @@ class Timeperiod(Item):
             # But maybe we can find a better solution with next invalid of standard dateranges
             # print self.get_name(),
             # "After valid of exclude, local_min =", time.asctime(time.localtime(local_min))
-            for dr in self.dateranges:
+            for daterange in self.dateranges:
                 # print self.get_name(),
                 # "Search a next invalid from DR", time.asctime(time.localtime(local_min))
                 # print dr.__dict__
-                m = dr.get_next_invalid_time_from_t(local_min)
+                next_t = daterange.get_next_invalid_time_from_t(local_min)
 
                 # print self.get_name(), "Dr", dr.__dict__,
                 # "give me next invalid", time.asctime(time.localtime(m))
-                if m is not None:
+                if next_t is not None:
                     # But maybe it's invalid for this dr, but valid for other ones.
                     # if not self.is_time_valid(m):
                     #     print "Final: Got a next invalid at", time.asctime(time.localtime(m))
-                    dr_mins.append(m)
+                    dr_mins.append(next_t)
                     # if not self.is_time_valid(m):
                     #    val_inval.append(m)
                     # else:
@@ -523,14 +523,14 @@ class Timeperiod(Item):
             # if we've got a real value, we check it with the exclude
             if local_min is not None:
                 # Now check if local_min is not valid
-                for tp in self.exclude:
+                for timeperiod in self.exclude:
                     # print self.get_name(),
                     # "we check for invalid",
                     # time.asctime(time.localtime(local_min)), 'with tp', tp.name
-                    if tp.is_time_valid(local_min):
+                    if timeperiod.is_time_valid(local_min):
                         still_loop = True
                         # local_min + 60
-                        local_min = tp.get_next_invalid_time_from_t(local_min + 60)
+                        local_min = timeperiod.get_next_invalid_time_from_t(local_min + 60)
                         # No loop more than one year
                         if local_min > original_t + 60 * 24 * 366 + 1:
                             still_loop = False
@@ -564,17 +564,17 @@ class Timeperiod(Item):
         :return: false if at least one datarange is invalid
         :rtype: bool
         """
-        b = True
-        for dr in self.dateranges:
-            d = dr.is_correct()
-            if not d:
+        valid = True
+        for daterange in self.dateranges:
+            good = daterange.is_correct()
+            if not good:
                 logger.error("[timeperiod::%s] invalid daterange ", self.get_name())
-            b &= d
+            valid &= good
 
         # Warn about non correct entries
-        for e in self.invalid_entries:
-            logger.warning("[timeperiod::%s] invalid entry '%s'", self.get_name(), e)
-        return b
+        for entry in self.invalid_entries:
+            logger.warning("[timeperiod::%s] invalid entry '%s'", self.get_name(), entry)
+        return valid
 
     def __str__(self):
         """
@@ -583,19 +583,19 @@ class Timeperiod(Item):
         :return: this object in readable format
         :rtype: str
         """
-        s = ''
-        s += str(self.__dict__) + '\n'
+        string = ''
+        string += str(self.__dict__) + '\n'
         for elt in self.dateranges:
-            s += str(elt)
+            string += str(elt)
             (start, end) = elt.get_start_and_end_time()
             start = time.asctime(time.localtime(start))
             end = time.asctime(time.localtime(end))
-            s += "\nStart and end:" + str((start, end))
-        s += '\nExclude'
+            string += "\nStart and end:" + str((start, end))
+        string += '\nExclude'
         for elt in self.exclude:
-            s += str(elt)
+            string += str(elt)
 
-        return s
+        return string
 
     def resolve_daterange(self, dateranges, entry):
         """
@@ -678,10 +678,10 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 6"
-            (t0, smday, t1, emday, skip_interval, other) = res.groups()
-            if t0 in Daterange.weekdays and t1 in Daterange.weekdays:
-                swday = Daterange.get_weekday_id(t0)
-                ewday = Daterange.get_weekday_id(t1)
+            (t00, smday, t01, emday, skip_interval, other) = res.groups()
+            if t00 in Daterange.weekdays and t01 in Daterange.weekdays:
+                swday = Daterange.get_weekday_id(t00)
+                ewday = Daterange.get_weekday_id(t01)
                 swday_offset = smday
                 ewday_offset = emday
                 dateranges.append(
@@ -689,15 +689,15 @@ class Timeperiod(Item):
                                      0, 0, 0, ewday, ewday_offset, skip_interval, other)
                 )
                 return
-            elif t0 in Daterange.months and t1 in Daterange.months:
-                smon = Daterange.get_month_id(t0)
-                emon = Daterange.get_month_id(t1)
+            elif t00 in Daterange.months and t01 in Daterange.months:
+                smon = Daterange.get_month_id(t00)
+                emon = Daterange.get_month_id(t01)
                 dateranges.append(
                     MonthDateDaterange(0, smon, smday, 0, 0, 0,
                                        emon, emday, 0, 0, skip_interval, other)
                 )
                 return
-            elif t0 == 'day' and t1 == 'day':
+            elif t00 == 'day' and t01 == 'day':
                 dateranges.append(
                     MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
                                       emday, 0, 0, skip_interval, other)
@@ -707,9 +707,9 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 7"
-            (t0, smday, emday, skip_interval, other) = res.groups()
-            if t0 in Daterange.weekdays:
-                swday = Daterange.get_weekday_id(t0)
+            (t00, smday, emday, skip_interval, other) = res.groups()
+            if t00 in Daterange.weekdays:
+                swday = Daterange.get_weekday_id(t00)
                 swday_offset = smday
                 ewday = swday
                 ewday_offset = emday
@@ -718,15 +718,15 @@ class Timeperiod(Item):
                                      0, 0, 0, ewday, ewday_offset, skip_interval, other)
                 )
                 return
-            elif t0 in Daterange.months:
-                smon = Daterange.get_month_id(t0)
+            elif t00 in Daterange.months:
+                smon = Daterange.get_month_id(t00)
                 emon = smon
                 dateranges.append(
                     MonthDateDaterange(0, smon, smday, 0, 0, 0, emon,
                                        emday, 0, 0, skip_interval, other)
                 )
                 return
-            elif t0 == 'day':
+            elif t00 == 'day':
                 dateranges.append(
                     MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
                                       emday, 0, 0, skip_interval, other)
@@ -752,9 +752,9 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 9"
-            (t0, smday, emday, other) = res.groups()
-            if t0 in Daterange.weekdays:
-                swday = Daterange.get_weekday_id(t0)
+            (t00, smday, emday, other) = res.groups()
+            if t00 in Daterange.weekdays:
+                swday = Daterange.get_weekday_id(t00)
                 swday_offset = smday
                 ewday = swday
                 ewday_offset = emday
@@ -764,15 +764,15 @@ class Timeperiod(Item):
                         ewday, ewday_offset, 0, other)
                 )
                 return
-            elif t0 in Daterange.months:
-                smon = Daterange.get_month_id(t0)
+            elif t00 in Daterange.months:
+                smon = Daterange.get_month_id(t00)
                 emon = smon
                 dateranges.append(
                     MonthDateDaterange(0, smon, smday, 0, 0, 0,
                                        emon, emday, 0, 0, 0, other)
                 )
                 return
-            elif t0 == 'day':
+            elif t00 == 'day':
                 dateranges.append(
                     MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
                                       emday, 0, 0, 0, other)
@@ -782,10 +782,10 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 10"
-            (t0, smday, t1, emday, other) = res.groups()
-            if t0 in Daterange.weekdays and t1 in Daterange.weekdays:
-                swday = Daterange.get_weekday_id(t0)
-                ewday = Daterange.get_weekday_id(t1)
+            (t00, smday, t01, emday, other) = res.groups()
+            if t00 in Daterange.weekdays and t01 in Daterange.weekdays:
+                swday = Daterange.get_weekday_id(t00)
+                ewday = Daterange.get_weekday_id(t01)
                 swday_offset = smday
                 ewday_offset = emday
                 dateranges.append(
@@ -793,15 +793,15 @@ class Timeperiod(Item):
                                      0, 0, ewday, ewday_offset, 0, other)
                 )
                 return
-            elif t0 in Daterange.months and t1 in Daterange.months:
-                smon = Daterange.get_month_id(t0)
-                emon = Daterange.get_month_id(t1)
+            elif t00 in Daterange.months and t01 in Daterange.months:
+                smon = Daterange.get_month_id(t00)
+                emon = Daterange.get_month_id(t01)
                 dateranges.append(
                     MonthDateDaterange(0, smon, smday, 0, 0,
                                        0, emon, emday, 0, 0, 0, other)
                 )
                 return
-            elif t0 == 'day' and t1 == 'day':
+            elif t00 == 'day' and t01 == 'day':
                 dateranges.append(
                     MonthDayDaterange(0, 0, smday, 0, 0, 0,
                                       0, emday, 0, 0, 0, other)
@@ -811,23 +811,23 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*) ([\d-]+) ([a-z]*)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 11"
-            (t0, t2, t1, other) = res.groups()
-            if t0 in Daterange.weekdays and t1 in Daterange.months:
-                swday = Daterange.get_weekday_id(t0)
-                smon = Daterange.get_month_id(t1)
+            (t00, t02, t01, other) = res.groups()
+            if t00 in Daterange.weekdays and t01 in Daterange.months:
+                swday = Daterange.get_weekday_id(t00)
+                smon = Daterange.get_month_id(t01)
                 emon = smon
                 ewday = swday
-                ewday_offset = t2
+                ewday_offset = t02
                 dateranges.append(
-                    MonthWeekDayDaterange(0, smon, 0, swday, t2, 0, emon,
+                    MonthWeekDayDaterange(0, smon, 0, swday, t02, 0, emon,
                                           0, ewday, ewday_offset, 0, other)
                 )
                 return
-            if not t1:
+            if not t01:
                 # print "Good catch 12"
-                if t0 in Daterange.weekdays:
-                    swday = Daterange.get_weekday_id(t0)
-                    swday_offset = t2
+                if t00 in Daterange.weekdays:
+                    swday = Daterange.get_weekday_id(t00)
+                    swday_offset = t02
                     ewday = swday
                     ewday_offset = swday_offset
                     dateranges.append(
@@ -835,19 +835,19 @@ class Timeperiod(Item):
                                          0, 0, ewday, ewday_offset, 0, other)
                     )
                     return
-                if t0 in Daterange.months:
-                    smon = Daterange.get_month_id(t0)
+                if t00 in Daterange.months:
+                    smon = Daterange.get_month_id(t00)
                     emon = smon
-                    emday = t2
+                    emday = t02
                     dateranges.append(
                         MonthDateDaterange(
-                            0, smon, t2, 0, 0, 0, emon, emday, 0, 0, 0, other)
+                            0, smon, t02, 0, 0, 0, emon, emday, 0, 0, 0, other)
                     )
                     return
-                if t0 == 'day':
-                    emday = t2
+                if t00 == 'day':
+                    emday = t02
                     dateranges.append(
-                        MonthDayDaterange(0, 0, t2, 0, 0, 0,
+                        MonthDayDaterange(0, 0, t02, 0, 0, 0,
                                           0, emday, 0, 0, 0, other)
                     )
                     return
@@ -855,9 +855,9 @@ class Timeperiod(Item):
         res = re.search(r'([a-z]*)[\s\t]+([0-9:, -]+)', entry)
         if res is not None:
             # print "Good catch 13"
-            (t0, other) = res.groups()
-            if t0 in Daterange.weekdays:
-                day = t0
+            (t00, other) = res.groups()
+            if t00 in Daterange.weekdays:
+                day = t00
                 dateranges.append(StandardDaterange(day, other))
                 return
         logger.info("[timeentry::%s] no match for %s", self.get_name(), entry)
@@ -898,9 +898,9 @@ class Timeperiod(Item):
             excluded_tps = self.exclude
             # print "I will exclude from:", excluded_tps
             for tp_name in excluded_tps:
-                tp = timeperiods.find_by_name(tp_name.strip())
-                if tp is not None:
-                    new_exclude.append(tp)
+                timepriod = timeperiods.find_by_name(tp_name.strip())
+                if timepriod is not None:
+                    new_exclude.append(timepriod)
                 else:
                     logger.error("[timeentry::%s] unknown %s timeperiod", self.get_name(), tp_name)
         self.exclude = new_exclude
@@ -916,8 +916,8 @@ class Timeperiod(Item):
             logger.error("[timeentry::%s] is in a loop in exclude parameter", self.get_name())
             return False
         self.rec_tag = True
-        for tp in self.exclude:
-            tp.check_exclude_rec()
+        for timeperiod in self.exclude:
+            timeperiod.check_exclude_rec()
         return True
 
     def fill_data_brok_from(self, data, brok_type):
@@ -959,8 +959,8 @@ class Timeperiods(Items):
         :return: None
         """
         for t_id in self.items:
-            tp = self.items[t_id]
-            tp.explode(self)
+            timeperiod = self.items[t_id]
+            timeperiod.explode(self)
 
     def linkify(self):
         """
@@ -969,8 +969,8 @@ class Timeperiods(Items):
         :return: None
         """
         for t_id in self.items:
-            tp = self.items[t_id]
-            tp.linkify(self)
+            timeperiod = self.items[t_id]
+            timeperiod.linkify(self)
 
     def apply_inheritance(self):
         """
@@ -984,8 +984,8 @@ class Timeperiods(Items):
 
         # And now apply inheritance for unresolved properties
         # like the dateranges in fact
-        for tp in self:
-            tp.get_unresolved_properties_by_inheritance(self.items)
+        for timeperiod in self:
+            timeperiod.get_unresolved_properties_by_inheritance(self.items)
 
     def is_correct(self):
         """
@@ -994,23 +994,23 @@ class Timeperiods(Items):
         :return: True if is correct, otherwise False
         :rtype: bool
         """
-        r = True
+        valid = True
         # We do not want a same hg to be explode again and again
         # so we tag it
-        for tp in self.items.values():
-            tp.rec_tag = False
+        for timeperiod in self.items.values():
+            timeperiod.rec_tag = False
 
-        for tp in self.items.values():
+        for timeperiod in self.items.values():
             for tmp_tp in self.items.values():
                 tmp_tp.rec_tag = False
-            r &= tp.check_exclude_rec()
+            valid &= timeperiod.check_exclude_rec()
 
         # We clean the tags
-        for tp in self.items.values():
-            del tp.rec_tag
+        for timeperiod in self.items.values():
+            del timeperiod.rec_tag
 
         # And check all timeperiods for correct (sunday is false)
-        for tp in self:
-            r &= tp.is_correct()
+        for timeperiod in self:
+            valid &= timeperiod.is_correct()
 
-        return r
+        return valid

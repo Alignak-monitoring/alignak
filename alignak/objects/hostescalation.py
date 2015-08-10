@@ -105,15 +105,15 @@ class Hostescalations(Items):
         :return: None
         """
         # Now we explode all escalations (host_name, service_description) to escalations
-        for es in self:
-            properties = es.__class__.properties
-            name = getattr(es, 'host_name', getattr(es, 'hostgroup_name', ''))
-            creation_dict = {'escalation_name': 'Generated-Hostescalation-%d-%s' % (es._id, name)}
+        for esca in self:
+            properties = esca.__class__.properties
+            name = getattr(esca, 'host_name', getattr(esca, 'hostgroup_name', ''))
+            creation_dict = {'escalation_name': 'Generated-Hostescalation-%d-%s' % (esca._id, name)}
             for prop in properties:
-                if hasattr(es, prop):
-                    creation_dict[prop] = getattr(es, prop)
-            s = Escalation(creation_dict)
-            escalations.add_escalation(s)
+                if hasattr(esca, prop):
+                    creation_dict[prop] = getattr(esca, prop)
+            escalation = Escalation(creation_dict)
+            escalations.add_escalation(escalation)
 
         # print "All escalations"
         # for es in escalations:

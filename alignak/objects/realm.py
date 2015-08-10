@@ -168,9 +168,9 @@ class Realm(Itemgroup):
 
         p_mbrs = self.get_realm_members()
         for p_mbr in p_mbrs:
-            p = realms.find_by_name(p_mbr.strip())
-            if p is not None:
-                value = p.get_realms_by_explosion(realms)
+            realm = realms.find_by_name(p_mbr.strip())
+            if realm is not None:
+                value = realm.get_realms_by_explosion(realms)
                 if len(value) > 0:
                     self.add_string_member(value)
 
@@ -188,12 +188,12 @@ class Realm(Itemgroup):
         :rtype: list
         TODO: Make this generic
         """
-        r = copy.copy(getattr(self, sat_type))
-        for p in self.realm_members:
-            tmps = p.get_all_subs_satellites_by_type(sat_type)
-            for s in tmps:
-                r.append(s)
-        return r
+        res = copy.copy(getattr(self, sat_type))
+        for member in self.realm_members:
+            tmps = member.get_all_subs_satellites_by_type(sat_type)
+            for mem in tmps:
+                res.append(mem)
+        return res
 
     def count_reactionners(self):
         """ Set the number of reactionners in this realm.
@@ -359,7 +359,8 @@ class Realm(Itemgroup):
         self.count_receivers()
         self.fill_potential_satellites_by_type('receivers')
 
-        s = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d) (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
+        line = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d)" \
+               " (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
             (self.get_name(),
              len(self.schedulers),
              self.nb_pollers, len(self.potential_pollers),
@@ -367,7 +368,7 @@ class Realm(Itemgroup):
              self.nb_brokers, len(self.potential_brokers),
              self.nb_receivers, len(self.potential_receivers)
              )
-        logger.info(s)
+        logger.info(line)
 
     def fill_broker_with_poller_reactionner_links(self, broker):
         """Fill brokerlink object with satellite data
@@ -385,34 +386,34 @@ class Realm(Itemgroup):
         broker.cfg['receivers'] = {}
 
         # First our own level
-        for p in self.pollers:
-            cfg = p.give_satellite_cfg()
-            broker.cfg['pollers'][p._id] = cfg
+        for poller in self.pollers:
+            cfg = poller.give_satellite_cfg()
+            broker.cfg['pollers'][poller._id] = cfg
 
-        for r in self.reactionners:
-            cfg = r.give_satellite_cfg()
-            broker.cfg['reactionners'][r._id] = cfg
+        for reactionner in self.reactionners:
+            cfg = reactionner.give_satellite_cfg()
+            broker.cfg['reactionners'][reactionner._id] = cfg
 
-        for b in self.receivers:
-            cfg = b.give_satellite_cfg()
-            broker.cfg['receivers'][b._id] = cfg
+        for receiver in self.receivers:
+            cfg = receiver.give_satellite_cfg()
+            broker.cfg['receivers'][receiver._id] = cfg
 
         # Then sub if we must to it
         if broker.manage_sub_realms:
             # Now pollers
-            for p in self.get_all_subs_satellites_by_type('pollers'):
-                cfg = p.give_satellite_cfg()
-                broker.cfg['pollers'][p._id] = cfg
+            for poller in self.get_all_subs_satellites_by_type('pollers'):
+                cfg = poller.give_satellite_cfg()
+                broker.cfg['pollers'][poller._id] = cfg
 
             # Now reactionners
-            for r in self.get_all_subs_satellites_by_type('reactionners'):
-                cfg = r.give_satellite_cfg()
-                broker.cfg['reactionners'][r._id] = cfg
+            for reactionner in self.get_all_subs_satellites_by_type('reactionners'):
+                cfg = reactionner.give_satellite_cfg()
+                broker.cfg['reactionners'][reactionner._id] = cfg
 
             # Now receivers
-            for r in self.get_all_subs_satellites_by_type('receivers'):
-                cfg = r.give_satellite_cfg()
-                broker.cfg['receivers'][r._id] = cfg
+            for receiver in self.get_all_subs_satellites_by_type('receivers'):
+                cfg = receiver.give_satellite_cfg()
+                broker.cfg['receivers'][receiver._id] = cfg
 
     def get_satellites_links_for_scheduler(self):
         """Get a configuration dict with pollers and reactionners data
@@ -428,13 +429,13 @@ class Realm(Itemgroup):
         }
 
         # First our own level
-        for p in self.pollers:
-            c = p.give_satellite_cfg()
-            cfg['pollers'][p._id] = c
+        for poller in self.pollers:
+            config = poller.give_satellite_cfg()
+            cfg['pollers'][poller._id] = config
 
-        for r in self.reactionners:
-            c = r.give_satellite_cfg()
-            cfg['reactionners'][r._id] = c
+        for reactionner in self.reactionners:
+            config = reactionner.give_satellite_cfg()
+            cfg['reactionners'][reactionner._id] = config
 
         # print "***** Preparing a satellites conf for a scheduler", cfg
         return cfg
@@ -478,14 +479,14 @@ class Realms(Itemgroups):
         self.linkify_p_by_p()
 
         # prepare list of satellites and confs
-        for p in self:
-            p.pollers = []
-            p.schedulers = []
-            p.reactionners = []
-            p.brokers = []
-            p.receivers = []
-            p.packs = []
-            p.confs = {}
+        for realm in self:
+            realm.pollers = []
+            realm.schedulers = []
+            realm.reactionners = []
+            realm.brokers = []
+            realm.receivers = []
+            realm.packs = []
+            realm.confs = {}
 
     def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
@@ -493,8 +494,8 @@ class Realms(Itemgroups):
 
         :return: None
         """
-        for p in self.items.values():
-            mbrs = p.get_realm_members()
+        for realm in self.items.values():
+            mbrs = realm.get_realm_members()
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
@@ -502,17 +503,17 @@ class Realms(Itemgroups):
                 if new_mbr is not None:
                     new_mbrs.append(new_mbr)
                 else:
-                    p.add_string_unknown_member(mbr)
+                    realm.add_string_unknown_member(mbr)
             # We find the id, we replace the names
-            p.realm_members = new_mbrs
+            realm.realm_members = new_mbrs
 
         # Now put higher realm in sub realms
         # So after they can
-        for p in self.items.values():
-            p.higher_realms = []
+        for realm in self.items.values():
+            realm.higher_realms = []
 
-        for p in self.items.values():
-            self.recur_higer_realms(p, p.realm_members)
+        for realm in self.items.values():
+            self.recur_higer_realms(realm, realm.realm_members)
 
     def recur_higer_realms(self, r, sons):
         """Add sub-realms (parent / son)
@@ -537,13 +538,13 @@ class Realms(Itemgroups):
         # so we tag it
         for tmp_p in self.items.values():
             tmp_p.already_explode = False
-        for p in self:
-            if p.has('realm_members') and not p.already_explode:
+        for realm in self:
+            if realm.has('realm_members') and not realm.already_explode:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_p in self:
                     tmp_p.rec_tag = False
-                p.get_realms_by_explosion(self)
+                realm.get_realms_by_explosion(self)
 
         # We clean the tags
         for tmp_p in self.items.values():
@@ -557,9 +558,9 @@ class Realms(Itemgroups):
         :return: Default realm of Alignak configuration
         :rtype: alignak.objects.realm.Realm | None
         """
-        for r in self:
-            if getattr(r, 'default', False):
-                return r
+        for realm in self:
+            if getattr(realm, 'default', False):
+                return realm
         return None
 
     def prepare_for_satellites_conf(self):
@@ -567,5 +568,5 @@ class Realms(Itemgroups):
 
         :return: None
         """
-        for r in self:
-            r.prepare_for_satellites_conf()
+        for realm in self:
+            realm.prepare_for_satellites_conf()

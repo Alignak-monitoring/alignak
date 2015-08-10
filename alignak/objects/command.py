@@ -192,9 +192,9 @@ class Command(Item):
         :type state: dict
         :return: None
         """
-        for d in state:
-            for k, v in d.items():
-                setattr(self, k, v)
+        for state_d in state:
+            for key, val in state_d.items():
+                setattr(self, key, val)
 
 
 class Commands(Items):

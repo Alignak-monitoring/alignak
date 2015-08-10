@@ -154,8 +154,8 @@ class MacroResolver(Borg):
         # if s in self.cache:
         #    return self.cache[s]
 
-        p = re.compile(r'(\$)')
-        elts = p.split(s)
+        regex = re.compile(r'(\$)')
+        elts = regex.split(s)
         macros = {}
         in_macro = False
         for elt in elts:
@@ -204,8 +204,8 @@ class MacroResolver(Borg):
         :return: string cleaned
         :rtype: str
         """
-        for c in self.illegal_macro_output_chars:
-            s = s.replace(c, '')
+        for char in self.illegal_macro_output_chars:
+            s = s.replace(char, '')
         return s
 
     def get_env_macros(self, data):
@@ -222,21 +222,21 @@ class MacroResolver(Borg):
         """
         env = {}
 
-        for o in data:
-            cls = o.__class__
+        for obj in data:
+            cls = obj.__class__
             macros = cls.macros
             for macro in macros:
                 if macro.startswith("USER"):
                     break
 
                 prop = macros[macro]
-                value = self._get_value_from_element(o, prop)
+                value = self._get_value_from_element(obj, prop)
                 env['NAGIOS_%s' % macro] = value
-            if hasattr(o, 'customs'):
+            if hasattr(obj, 'customs'):
                 # make NAGIOS__HOSTMACADDR from _MACADDR
-                for cmacro in o.customs:
-                    new_env_name = 'NAGIOS__' + o.__class__.__name__.upper() + cmacro[1:].upper()
-                    env[new_env_name] = o.customs[cmacro]
+                for cmacro in obj.customs:
+                    new_env_name = 'NAGIOS__' + obj.__class__.__name__.upper() + cmacro[1:].upper()
+                    env[new_env_name] = obj.customs[cmacro]
 
         return env
 
@@ -309,11 +309,11 @@ class MacroResolver(Borg):
                             # the last to set, will be the firt to have. (yes, don't want to play
                             # with break and such things sorry...)
                             mms = getattr(elt, 'macromodulations', [])
-                            for mm in mms[::-1]:
+                            for macromod in mms[::-1]:
                                 # Look if the modulation got the value,
                                 # but also if it's currently active
-                                if '_' + macro_name in mm.customs and mm.is_active():
-                                    macros[macro]['val'] = mm.customs['_' + macro_name]
+                                if '_' + macro_name in macromod.customs and macromod.is_active():
+                                    macros[macro]['val'] = macromod.customs['_' + macro_name]
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
 
@@ -408,9 +408,9 @@ class MacroResolver(Borg):
         """
         # first, get the number of args
         _id = None
-        r = re.search(r'ARG(?P<id>\d+)', macro)
-        if r is not None:
-            _id = int(r.group('id')) - 1
+        matches = re.search(r'ARG(?P<id>\d+)', macro)
+        if matches is not None:
+            _id = int(matches.group('id')) - 1
             try:
                 return args[_id]
             except IndexError:
@@ -443,11 +443,11 @@ class MacroResolver(Borg):
                     if elt is not None and elt.__class__ == self.host_class:
                         host_name = elt.host_name
             # Ok now we get service
-            s = self.services.find_srv_by_name_and_hostname(host_name, service_description)
-            if s is not None:
-                cls = s.__class__
+            serv = self.services.find_srv_by_name_and_hostname(host_name, service_description)
+            if serv is not None:
+                cls = serv.__class__
                 prop = cls.macros[macro_name]
-                val = self._get_value_from_element(s, prop)
+                val = self._get_value_from_element(serv, prop)
                 # print "Got val:", val
                 return val
         # Ok, service was easy, now hard part

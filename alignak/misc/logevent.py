@@ -142,8 +142,8 @@ class LogEvent:
 
             if properties_match:
                 # Populate self.data with the event's properties
-                for i, p in enumerate(event_type['properties']):
-                    self.data[p] = properties_match.group(i + 1)
+                for i, prop in enumerate(event_type['properties']):
+                    self.data[prop] = properties_match.group(i + 1)
 
                 # Convert the time to int
                 self.data['time'] = int(self.data['time'])

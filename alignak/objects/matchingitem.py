@@ -74,32 +74,32 @@ class MatchingItem(Item):
         :rtype: bool
         """
         if look_in == 'matches':
-            d = self.matches
+            look_d = self.matches
         else:
-            d = self.not_matches
+            look_d = self.not_matches
         # If we do not even have the key, we bailout
-        if not key.strip() in d:
+        if not key.strip() in look_d:
             return False
 
         # Get my matching pattern
-        m = d[key]
-        if ',' in m:
-            matchings = [mt.strip() for mt in m.split(',')]
+        match = look_d[key]
+        if ',' in match:
+            matchings = [mt.strip() for mt in match.split(',')]
         else:
-            matchings = [m]
+            matchings = [match]
 
         # Split the value by , too
         values = value.split(',')
-        for m in matchings:
-            for v in values:
-                print "Try to match", m, v
+        for match in matchings:
+            for val in values:
+                print "Try to match", match, val
                 # Maybe m is a list, if so should check one values
-                if isinstance(m, list):
-                    for _m in m:
-                        if re.search(_m, v):
+                if isinstance(match, list):
+                    for submatch in match:
+                        if re.search(submatch, val):
                             return True
                 else:
-                    if re.search(m, v):
+                    if re.search(match, val):
                         return True
         return False
 
@@ -118,13 +118,13 @@ class MatchingItem(Item):
 
         # First we look if it's possible to match
         # we must match All self.matches things
-        for m in self.matches:
+        for match in self.matches:
             # print "Compare to", m
             match_one = False
-            for (k, v) in datas.iteritems():
+            for (key, val) in datas.iteritems():
                 # We found at least one of our match key
-                if m == k:
-                    if self.is_matching(k, v):
+                if match == key:
+                    if self.is_matching(key, val):
                         # print "Got matching with", m, k, v
                         match_one = True
                         continue
@@ -136,15 +136,15 @@ class MatchingItem(Item):
 
         # And now look if ANY of not_matches is reach. If so
         # it's False
-        for m in self.not_matches:
+        for match in self.not_matches:
             # print "Compare to NOT", m
             match_one = False
-            for (k, v) in datas.iteritems():
+            for (key, val) in datas.iteritems():
                 # print "K,V", k,v
                 # We found at least one of our match key
-                if m == k:
+                if match == key:
                     # print "Go loop"
-                    if self.is_matching(k, v, look_in='not_matches'):
+                    if self.is_matching(key, val, look_in='not_matches'):
                         # print "Got matching with", m, k, v
                         match_one = True
                         continue

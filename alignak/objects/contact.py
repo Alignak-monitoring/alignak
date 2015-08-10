@@ -172,14 +172,14 @@ class Contact(Item):
             return False
 
         # If we are in downtime, we do nto want notification
-        for dt in self.downtimes:
-            if dt.is_in_effect:
+        for downtime in self.downtimes:
+            if downtime.is_in_effect:
                 return False
 
         # Now the rest is for sub notificationways. If one is OK, we are ok
         # We will filter in another phase
-        for nw in self.notificationways:
-            nw_b = nw.want_service_notification(t, state, n_type, business_impact, cmd)
+        for notifway in self.notificationways:
+            nw_b = notifway.want_service_notification(t, state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
@@ -206,14 +206,14 @@ class Contact(Item):
             return False
 
         # If we are in downtime, we do nto want notification
-        for dt in self.downtimes:
-            if dt.is_in_effect:
+        for downtime in self.downtimes:
+            if downtime.is_in_effect:
                 return False
 
         # Now it's all for sub notificationways. If one is OK, we are OK
         # We will filter in another phase
-        for nw in self.notificationways:
-            nw_b = nw.want_host_notification(t, state, n_type, business_impact, cmd)
+        for notifway in self.notificationways:
+            nw_b = notifway.want_host_notification(t, state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
@@ -228,12 +228,12 @@ class Contact(Item):
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
-        r = []
+        res = []
         # service_notification_commands for service
         notif_commands_prop = n_type + '_notification_commands'
-        for nw in self.notificationways:
-            r.extend(getattr(nw, notif_commands_prop))
-        return r
+        for notifway in self.notificationways:
+            res.extend(getattr(notifway, notif_commands_prop))
+        return res
 
     def is_correct(self):
         """Check if this host configuration is correct ::
@@ -257,16 +257,16 @@ class Contact(Item):
         # There is a case where there is no nw: when there is not special_prop defined
         # at all!!
         if self.notificationways == []:
-            for p in _special_properties:
-                if not hasattr(self, p):
-                    logger.error("[contact::%s] %s property is missing", self.get_name(), p)
+            for prop in _special_properties:
+                if not hasattr(self, prop):
+                    logger.error("[contact::%s] %s property is missing", self.get_name(), prop)
                     state = False
 
         if hasattr(self, 'contact_name'):
-            for c in cls.illegal_object_name_chars:
-                if c in self.contact_name:
+            for char in cls.illegal_object_name_chars:
+                if char in self.contact_name:
                     logger.error("[contact::%s] %s character not allowed in contact_name",
-                                 self.get_name(), c)
+                                 self.get_name(), char)
                     state = False
         else:
             if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
@@ -352,9 +352,9 @@ class Contacts(Items):
                 continue
             new_notificationways = []
             for nw_name in strip_and_uniq(i.notificationways):
-                nw = notificationways.find_by_name(nw_name)
-                if nw is not None:
-                    new_notificationways.append(nw)
+                notifway = notificationways.find_by_name(nw_name)
+                if notifway is not None:
+                    new_notificationways.append(notifway)
                 else:
                     err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
                           (i.__class__.my_type, i.get_name(), nw_name)
@@ -381,32 +381,32 @@ class Contacts(Items):
             self.apply_partial_inheritance(prop)
 
         # Register ourself into the contactsgroups we are in
-        for c in self:
-            if not (hasattr(c, 'contact_name') and hasattr(c, 'contactgroups')):
+        for contact in self:
+            if not (hasattr(contact, 'contact_name') and hasattr(contact, 'contactgroups')):
                 continue
-            for cg in c.contactgroups:
-                contactgroups.add_member(c.contact_name, cg.strip())
+            for contactgroup in contact.contactgroups:
+                contactgroups.add_member(contact.contact_name, contactgroup.strip())
 
         # Now create a notification way with the simple parameter of the
         # contacts
-        for c in self:
+        for contact in self:
             need_notificationway = False
             params = {}
-            for p in _simple_way_parameters:
-                if hasattr(c, p):
+            for param in _simple_way_parameters:
+                if hasattr(contact, param):
                     need_notificationway = True
-                    params[p] = getattr(c, p)
+                    params[param] = getattr(contact, param)
                 else:  # put a default text value
                     # Remove the value and put a default value
-                    setattr(c, p, c.properties[p].default)
+                    setattr(contact, param, contact.properties[param].default)
 
             if need_notificationway:
                 # print "Create notif way with", params
-                cname = getattr(c, 'contact_name', getattr(c, 'alias', ''))
+                cname = getattr(contact, 'contact_name', getattr(contact, 'alias', ''))
                 nw_name = cname + '_inner_notificationway'
                 notificationways.new_inner_member(nw_name, params)
 
-                if not hasattr(c, 'notificationways'):
-                    c.notificationways = [nw_name]
+                if not hasattr(contact, 'notificationways'):
+                    contact.notificationways = [nw_name]
                 else:
-                    c.notificationways.append(nw_name)
+                    contact.notificationways.append(nw_name)

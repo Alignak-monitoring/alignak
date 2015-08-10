@@ -131,14 +131,14 @@ class Item(object):
                 elif hasattr(self, 'old_properties') and key in self.old_properties:
                     val = self.properties[self.old_properties[key]].pythonize(params[key])
                 elif key.startswith('_'):  # custom macro, not need to detect something here
-                    _t = params[key]
+                    macro = params[key]
                     # If it's a string, directly use this
-                    if isinstance(_t, basestring):
-                        val = _t
+                    if isinstance(macro, basestring):
+                        val = macro
                     # aa list for a custom macro is not managed (conceptually invalid)
                     # so take the first defined
-                    elif isinstance(_t, list) and len(_t) > 0:
-                        val = _t[0]
+                    elif isinstance(macro, list) and len(macro) > 0:
+                        val = macro[0]
                     # not a list of void? just put void string so
                     else:
                         val = ''
@@ -557,7 +557,7 @@ class Item(object):
         :return: dictionary of properties => values
         :rtype: dict
         """
-        r = {}
+        res = {}
         properties = self.__class__.properties.keys()
         # Register is not by default in the properties
         if 'register' not in properties:
@@ -565,10 +565,10 @@ class Item(object):
 
         for prop in properties:
             if hasattr(self, prop):
-                v = getattr(self, prop)
+                val = getattr(self, prop)
                 # print prop, ":", v
-                r[prop] = v
-        return r
+                res[prop] = val
+        return res
 
     def add_downtime(self, downtime):
         """
@@ -589,10 +589,10 @@ class Item(object):
         :return: None
         """
         d_to_del = None
-        for dt in self.downtimes:
-            if dt._id == downtime_id:
-                d_to_del = dt
-                dt.can_be_deleted = True
+        for downtime in self.downtimes:
+            if downtime._id == downtime_id:
+                d_to_del = downtime
+                downtime.can_be_deleted = True
         if d_to_del is not None:
             self.downtimes.remove(d_to_del)
 
@@ -615,10 +615,10 @@ class Item(object):
         :return: None
         """
         c_to_del = None
-        for c in self.comments:
-            if c._id == comment_id:
-                c_to_del = c
-                c.can_be_deleted = True
+        for comm in self.comments:
+            if comm._id == comment_id:
+                c_to_del = comm
+                comm.can_be_deleted = True
         if c_to_del is not None:
             self.comments.remove(c_to_del)
 
@@ -648,15 +648,15 @@ class Item(object):
                 sticky = True
             else:
                 sticky = False
-            a = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
-            self.acknowledgement = a
+            ack = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
+            self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
             else:
                 comment_type = 2
-            c = Comment(self, persistent, author, comment,
-                        comment_type, 4, 0, False, 0)
-            self.add_comment(c)
+            comm = Comment(self, persistent, author, comment,
+                           comment_type, 4, 0, False, 0)
+            self.add_comment(comm)
             self.broks.append(self.get_update_status_brok())
 
     def check_for_expire_acknowledge(self):
@@ -686,9 +686,9 @@ class Item(object):
             self.acknowledgement = None
             # del self.acknowledgement
             # find comments of non-persistent ack-comments and delete them too
-            for c in self.comments:
-                if c.entry_type == 4 and not c.persistent:
-                    self.del_comment(c._id)
+            for comm in self.comments:
+                if comm.entry_type == 4 and not comm.persistent:
+                    self.del_comment(comm._id)
             self.broks.append(self.get_update_status_brok())
 
     def unacknowledge_problem_if_not_sticky(self):
@@ -713,18 +713,18 @@ class Item(object):
         for prop, entry in cls.properties.items():
             # Is this property need preparation for sending?
             if entry.conf_send_preparation is not None:
-                f = entry.conf_send_preparation
-                if f is not None:
-                    val = f(getattr(self, prop))
+                fun = entry.conf_send_preparation
+                if fun is not None:
+                    val = fun(getattr(self, prop))
                     setattr(self, prop, val)
 
         if hasattr(cls, 'running_properties'):
             for prop, entry in cls.running_properties.items():
                 # Is this property need preparation for sending?
                 if entry.conf_send_preparation is not None:
-                    f = entry.conf_send_preparation
-                    if f is not None:
-                        val = f(getattr(self, prop))
+                    fun = entry.conf_send_preparation
+                    if fun is not None:
+                        val = fun(getattr(self, prop))
                         setattr(self, prop, val)
 
     def get_property_value_for_brok(self, prop, tab):
@@ -853,14 +853,14 @@ class Item(object):
             command = getattr(self, prop).strip()
             if command != '':
                 if hasattr(self, 'poller_tag'):
-                    cmdCall = CommandCall(commands, command,
+                    cmdcall = CommandCall(commands, command,
                                           poller_tag=self.poller_tag)
                 elif hasattr(self, 'reactionner_tag'):
-                    cmdCall = CommandCall(commands, command,
+                    cmdcall = CommandCall(commands, command,
                                           reactionner_tag=self.reactionner_tag)
                 else:
-                    cmdCall = CommandCall(commands, command)
-                setattr(self, prop, cmdCall)
+                    cmdcall = CommandCall(commands, command)
+                setattr(self, prop, cmdcall)
             else:
                 setattr(self, prop, None)
 
@@ -876,12 +876,13 @@ class Item(object):
         if src:
             # Change on the fly the characters
             src = src.replace(r'\n', '\n').replace(r'\t', '\t')
-            t = triggers.create_trigger(src,
-                                        'inner-trigger-' + self.__class__.my_type + str(self._id))
-            if t:
+            triger = triggers.create_trigger(
+                src,
+                'inner-trigger-' + self.__class__.my_type + str(self._id))
+            if triger:
                 # Maybe the trigger factory give me a already existing trigger,
                 # so my name can be dropped
-                self.triggers.append(t.get_name())
+                self.triggers.append(triger.get_name())
 
     def linkify_with_triggers(self, triggers):
         """
@@ -898,10 +899,10 @@ class Item(object):
         for tname in self.triggers:
             if tname == '':
                 continue
-            t = triggers.find_by_name(tname)
-            if t:
-                setattr(t, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
-                new_triggers.append(t)
+            trigger = triggers.find_by_name(tname)
+            if trigger:
+                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
+                new_triggers.append(trigger)
             else:
                 self.configuration_errors.append('the %s %s does have a unknown trigger_name '
                                                  '"%s"' % (self.__class__.my_type,
@@ -1221,8 +1222,8 @@ class Items(object):
         items = []
         for i in self:
             failed = False
-            for f in filters:
-                if not f(i):
+            for filt in filters:
+                if not filt(i):
                     failed = True
                     break
             if failed is False:
@@ -1279,9 +1280,9 @@ class Items(object):
         """
         all_tags = item.get_templates()
 
-        for t in item.templates:
-            all_tags.append(t.name)
-            all_tags.extend(self.get_all_tags(t))
+        for template in item.templates:
+            all_tags.append(template.name)
+            all_tags.extend(self.get_all_tags(template))
         return list(set(all_tags))
 
     def linkify_item_templates(self, item):
@@ -1296,8 +1297,8 @@ class Items(object):
         tpl_names = item.get_templates()
 
         for name in tpl_names:
-            t = self.find_tpl_by_name(name)
-            if t is None:
+            template = self.find_tpl_by_name(name)
+            if template is None:
                 # TODO: Check if this should not be better to report as an error ?
                 self.configuration_warnings.append("%s %r use/inherit from an unknown template "
                                                    "(%r) ! Imported from: "
@@ -1306,14 +1307,14 @@ class Items(object):
                                                            name,
                                                            item.imported_from))
             else:
-                if t is item:
+                if template is item:
                     self.configuration_errors.append(
                         '%s %r use/inherits from itself ! Imported from: '
                         '%s' % (type(item).__name__,
                                 item._get_name(),
                                 item.imported_from))
                 else:
-                    tpls.append(t)
+                    tpls.append(template)
         item.templates = tpls
 
     def linkify_templates(self):
@@ -1337,7 +1338,7 @@ class Items(object):
         :rtype: bool
         """
         # we are ok at the beginning. Hope we still ok at the end...
-        r = True
+        valid = True
         # Some class do not have twins, because they do not have names
         # like servicedependencies
         twins = getattr(self, 'twins', None)
@@ -1357,7 +1358,7 @@ class Items(object):
 
         for err in self.configuration_errors:
             logger.error("[items] %s", err)
-            r = False
+            valid = False
 
         # Then look for individual ok
         for i in self:
@@ -1370,11 +1371,11 @@ class Items(object):
 
             # Now other checks
             if not i.is_correct():
-                n = getattr(i, 'imported_from', "unknown source")
-                logger.error("[items] In %s is incorrect ; from %s", i.get_name(), n)
-                r = False
+                source = getattr(i, 'imported_from', "unknown source")
+                logger.error("[items] In %s is incorrect ; from %s", i.get_name(), source)
+                valid = False
 
-        return r
+        return valid
 
     def remove_templates(self):
         """
@@ -1456,9 +1457,9 @@ class Items(object):
                 new_contacts = []
                 for c_name in contacts_tab:
                     if c_name != '':
-                        c = contacts.find_by_name(c_name)
-                        if c is not None:
-                            new_contacts.append(c)
+                        contact = contacts.find_by_name(c_name)
+                        if contact is not None:
+                            new_contacts.append(contact)
                         # Else: Add in the errors tab.
                         # will be raised at is_correct
                         else:
@@ -1481,9 +1482,9 @@ class Items(object):
                 escalations_tab = strip_and_uniq(i.escalations)
                 new_escalations = []
                 for es_name in [e for e in escalations_tab if e != '']:
-                    es = escalations.find_by_name(es_name)
-                    if es is not None:
-                        new_escalations.append(es)
+                    escal = escalations.find_by_name(es_name)
+                    if escal is not None:
+                        new_escalations.append(escal)
                     else:  # Escalation not find, not good!
                         err = "the escalation '%s' defined for '%s' is unknown" % (es_name,
                                                                                    i.get_name())
@@ -1503,9 +1504,9 @@ class Items(object):
                 resultmodulations_tab = strip_and_uniq(i.resultmodulations)
                 new_resultmodulations = []
                 for rm_name in resultmodulations_tab:
-                    rm = resultmodulations.find_by_name(rm_name)
-                    if rm is not None:
-                        new_resultmodulations.append(rm)
+                    resultmod = resultmodulations.find_by_name(rm_name)
+                    if resultmod is not None:
+                        new_resultmodulations.append(resultmod)
                     else:
                         err = ("the result modulation '%s' defined on the %s "
                                "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
@@ -1526,9 +1527,9 @@ class Items(object):
                 business_impact_modulations_tab = strip_and_uniq(i.business_impact_modulations)
                 new_business_impact_modulations = []
                 for rm_name in business_impact_modulations_tab:
-                    rm = business_impact_modulations.find_by_name(rm_name)
-                    if rm is not None:
-                        new_business_impact_modulations.append(rm)
+                    resultmod = business_impact_modulations.find_by_name(rm_name)
+                    if resultmod is not None:
+                        new_business_impact_modulations.append(resultmod)
                     else:
                         err = ("the business impact modulation '%s' defined on the %s "
                                "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
@@ -1554,8 +1555,8 @@ class Items(object):
                 cgnames = item.contact_groups.split(',')
             cgnames = strip_and_uniq(cgnames)
             for cgname in cgnames:
-                cg = contactgroups.find_by_name(cgname)
-                if cg is None:
+                contactgroup = contactgroups.find_by_name(cgname)
+                if contactgroup is None:
                     err = "The contact group '%s' defined on the %s '%s' do " \
                           "not exist" % (cgname, item.__class__.my_type,
                                          item.get_name())
@@ -1588,15 +1589,15 @@ class Items(object):
                     continue
 
                 # Ok, get a real name, search for it
-                tp = timeperiods.find_by_name(tpname)
+                timeperiod = timeperiods.find_by_name(tpname)
                 # If not found, it's an error
-                if tp is None:
+                if timeperiod is None:
                     err = ("The %s of the %s '%s' named "
                            "'%s' is unknown!" % (prop, i.__class__.my_type, i.get_name(), tpname))
                     i.configuration_errors.append(err)
                     continue
                 # Got a real one, just set it :)
-                setattr(i, prop, tp)
+                setattr(i, prop, timeperiod)
 
     def create_commandcall(self, prop, commands, command):
         """
@@ -1636,10 +1637,10 @@ class Items(object):
             if hasattr(i, prop):
                 command = getattr(i, prop).strip()
                 if command != '':
-                    cmdCall = self.create_commandcall(i, commands, command)
+                    cmdcall = self.create_commandcall(i, commands, command)
 
                     # TODO: catch None?
-                    setattr(i, prop, cmdCall)
+                    setattr(i, prop, cmdcall)
                 else:
                     setattr(i, prop, None)
 
@@ -1659,9 +1660,9 @@ class Items(object):
                 com_list = []
                 for com in coms:
                     if com != '':
-                        cmdCall = self.create_commandcall(i, commands, com)
+                        cmdcall = self.create_commandcall(i, commands, com)
                         # TODO: catch None?
-                        com_list.append(cmdCall)
+                        com_list.append(cmdcall)
                     else:  # TODO: catch?
                         pass
                 setattr(i, prop, com_list)
@@ -1690,9 +1691,9 @@ class Items(object):
                 continue
             new_checkmodulations = []
             for cw_name in i.checkmodulations:
-                cw = checkmodulations.find_by_name(cw_name)
-                if cw is not None:
-                    new_checkmodulations.append(cw)
+                chkmod = checkmodulations.find_by_name(cw_name)
+                if chkmod is not None:
+                    new_checkmodulations.append(chkmod)
                 else:
                     err = ("The checkmodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
@@ -1713,9 +1714,9 @@ class Items(object):
                 continue
             new_macromodulations = []
             for cw_name in i.macromodulations:
-                cw = macromodulations.find_by_name(cw_name)
-                if cw is not None:
-                    new_macromodulations.append(cw)
+                macromod = macromodulations.find_by_name(cw_name)
+                if macromod is not None:
+                    new_macromodulations.append(macromod)
                 else:
                     err = ("The macromodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
@@ -1731,9 +1732,9 @@ class Items(object):
         :type modules: object
         :return: None
         """
-        for s in self:
+        for item in self:
             new_modules = []
-            for plug_name in s.modules:
+            for plug_name in item.modules:
                 plug_name = plug_name.strip()
                 # don't tread void names
                 if plug_name == '':
@@ -1743,9 +1744,9 @@ class Items(object):
                 if plug is not None:
                     new_modules.append(plug)
                 else:
-                    err = "Error: the module %s is unknown for %s" % (plug_name, s.get_name())
-                    s.configuration_errors.append(err)
-            s.modules = new_modules
+                    err = "Error: the module %s is unknown for %s" % (plug_name, item.get_name())
+                    item.configuration_errors.append(err)
+            item.modules = new_modules
 
     def evaluate_hostgroup_expression(self, expr, hosts, hostgroups, look_in='hostgroups'):
         """
@@ -1767,10 +1768,10 @@ class Items(object):
             expr = '|'.join(expr)
         # print "\n"*10, "looking for expression", expr
         if look_in == 'hostgroups':
-            f = ComplexExpressionFactory(look_in, hostgroups, hosts)
+            node = ComplexExpressionFactory(look_in, hostgroups, hosts)
         else:  # templates
-            f = ComplexExpressionFactory(look_in, hosts, hosts)
-        expr_tree = f.eval_cor_pattern(expr)
+            node = ComplexExpressionFactory(look_in, hosts, hosts)
+        expr_tree = node.eval_cor_pattern(expr)
 
         # print "RES of ComplexExpressionFactory"
         # print expr_tree
@@ -1799,10 +1800,10 @@ class Items(object):
         host_names = []
 
         for name in hgname:
-            hg = hostgroups.find_by_name(name)
-            if hg is None:
+            hostgroup = hostgroups.find_by_name(name)
+            if hostgroup is None:
                 raise ValueError("the hostgroup '%s' is unknown" % hgname)
-            mbrs = [h.strip() for h in hg.get_hosts() if h.strip()]
+            mbrs = [h.strip() for h in hostgroup.get_hosts() if h.strip()]
             host_names.extend(mbrs)
         return host_names
 
@@ -1831,29 +1832,29 @@ class Items(object):
             try:
                 hnames_list.extend(
                     self.get_hosts_from_hostgroups(hgnames, hostgroups))
-            except ValueError, e:
-                item.configuration_errors.append(str(e))
+            except ValueError, err:
+                item.configuration_errors.append(str(err))
 
         # Expands host names
         hname = getattr(item, "host_name", '')
         hnames_list.extend([n.strip() for n in hname.split(',') if n.strip()])
         hnames = set()
 
-        for h in hnames_list:
+        for host in hnames_list:
             # If the host start with a !, it's to be removed from
             # the hostgroup get list
-            if h.startswith('!'):
-                hst_to_remove = h[1:].strip()
+            if host.startswith('!'):
+                hst_to_remove = host[1:].strip()
                 try:
                     hnames.remove(hst_to_remove)
                 except KeyError:
                     pass
-            elif h == '*':
-                hnames.update([h.host_name for h in hosts.items.itervalues()
-                              if getattr(h, 'host_name', '')])
+            elif host == '*':
+                hnames.update([host.host_name for host in hosts.items.itervalues()
+                              if getattr(host, 'host_name', '')])
             # Else it's a host to add, but maybe it's ALL
             else:
-                hnames.add(h)
+                hnames.add(host)
 
         item.host_name = ','.join(hnames)
 
@@ -1887,7 +1888,7 @@ class Items(object):
         :rtype: bool
         """
         # Ok, we say "from now, no loop :) "
-        r = True
+        no_loop = True
 
         # Create parent graph
         parents = Graph()
@@ -1936,6 +1937,6 @@ class Items(object):
             logger.error("The %s object '%s'  is part of a circular parent/child chain!",
                          item.my_type,
                          item.get_name())
-            r = False
+            no_loop = False
 
-        return r
+        return no_loop
