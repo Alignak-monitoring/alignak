@@ -3664,19 +3664,3 @@ class ExternalCommandManager:
         realm.fill_potential_satellites_by_type('pollers')
         logger.debug("Poller %s added", poller_name)
         logger.debug("Potential %s", str(realm.get_potential_satellites_by_type('poller')))
-
-
-if __name__ == '__main__':
-
-    FIFO_PATH = '/tmp/my_fifo'
-
-    if os.path.exists(FIFO_PATH):
-        os.unlink(FIFO_PATH)
-
-    if not os.path.exists(FIFO_PATH):
-        os.umask(0)
-        os.mkfifo(FIFO_PATH, 0660)
-        my_fifo = open(FIFO_PATH, 'w+')
-        logger.debug("my_fifo: %s", my_fifo)
-
-    logger.debug(open(FIFO_PATH, 'r').readline())
