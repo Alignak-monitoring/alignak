@@ -122,7 +122,7 @@ class TestDataranges(AlignakTest):
         now = time.localtime()
         start = time.mktime((today.year, today.month, mondays[1], 0, 0, 0, 0, 0, now.tm_isdst))
         end = time.mktime((today.year, today.month, tuesdays[2], 23, 59, 59, 0, 0, now.tm_isdst))
-        if time.mktime(now) > start:
+        if end < time.mktime(now):
             nyear = today.year
             nmonth = today.month
             if nmonth + 1 == 13:
