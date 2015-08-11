@@ -1707,6 +1707,7 @@ class Config(Item):
         :return: None
         """
         self.hosts.fill_predictive_missing_parameters()
+        self.services.fill_predictive_missing_parameters()
 
     def fill_default_realm(self):
         """Check if a realm is defined, if not

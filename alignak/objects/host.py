@@ -131,7 +131,7 @@ class Host(SchedulingItem):
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
         'initial_state':
-            CharProp(default='u', fill_brok=['full_status']),
+            CharProp(default='o', fill_brok=['full_status']),
         'max_check_attempts':
             IntegerProp(default=1, fill_brok=['full_status']),
         'check_interval':
@@ -317,7 +317,7 @@ class Host(SchedulingItem):
         'attempt':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'state':
-            StringProp(default='PENDING', fill_brok=['full_status', 'check_result'],
+            StringProp(default='UP', fill_brok=['full_status', 'check_result'],
                        retention=True),
         'state_id':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
@@ -686,6 +686,7 @@ class Host(SchedulingItem):
 
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
+        and define state with initial_state
 
         :return: None
         """
@@ -693,6 +694,10 @@ class Host(SchedulingItem):
             self.address = self.host_name
         if hasattr(self, 'host_name') and not hasattr(self, 'alias'):
             self.alias = self.host_name
+        if self.initial_state == 'd':
+            self.state = 'DOWN'
+        elif self.initial_state == 'u':
+            self.state = 'UNREACHABLE'
 
     def is_correct(self):
         """Check if this host configuration is correct ::

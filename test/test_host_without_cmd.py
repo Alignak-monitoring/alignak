@@ -54,7 +54,7 @@ class TestConfig(AlignakTest):
     def setUp(self):
         self.setup_with_file('etc/alignak_host_without_cmd.cfg')
 
-    def test_host_is_pending(self):
+    def test_host_is_down(self):
         self.print_header()
         # first of all, a host without check_command must be valid
         self.assertTrue(self.conf.conf_is_correct)
@@ -75,9 +75,10 @@ class TestConfig(AlignakTest):
         # this time we need the dependency from service to host
         #svc.act_depend_of = [] # no hostchecks on critical checkresults
 
-        # initially the host is pending
-        self.assertEqual('PENDING', host.state)
-        self.assertEqual('PENDING', svc.state)
+        # initially the host is OK, we put it DOWN
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        self.assertEqual('DOWN', host.state)
+        self.assertEqual('OK', svc.state)
         # now force a dependency check of the host
         self.scheduler_loop(2, [[svc, 2, 'BAD | value1=0 value2=0']])
         self.show_actions()
@@ -85,7 +86,6 @@ class TestConfig(AlignakTest):
         self.assertEqual('UP', host.state)
         self.assertEqual('HARD', host.state_type)
         self.assertEqual('Host assumed to be UP', host.output)
-
 
 
 if __name__ == '__main__':
