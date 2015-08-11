@@ -80,9 +80,9 @@ from Queue import Empty
 import imp
 try:
     imp.find_module('android')
-    is_android = True
+    IS_ANDROID = True
 except ImportError:
-    is_android = False
+    IS_ANDROID = False
     from multiprocessing.managers import SyncManager
 
 
@@ -296,7 +296,7 @@ class Interface(object):
 
 
 # If we are under android, we can't give parameters
-if is_android:
+if IS_ANDROID:
     DEFAULT_WORK_DIR = '/sdcard/sl4a/scripts/'
     DEFAULT_LIB_DIR = DEFAULT_WORK_DIR
 else:
@@ -780,7 +780,7 @@ class Daemon(object):
         del self.debug_output
         self.set_proctitle()
 
-    if is_android:
+    if IS_ANDROID:
         def _create_manager(self):
             """Fake _create_manager for android
 
@@ -984,7 +984,7 @@ class Daemon(object):
         if insane is None:
             insane = not self.idontcareaboutsecurity
 
-        if is_android:
+        if IS_ANDROID:
             logger.warning("You can't change user on this system")
             return
 
