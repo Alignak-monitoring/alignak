@@ -63,12 +63,12 @@ import optparse
 import imp
 try:
     imp.find_module('android')
-    is_android = True
+    IS_ANDROID = True
 except ImportError:
-    is_android = False
+    IS_ANDROID = False
 
 
-if is_android is not None:
+if IS_ANDROID is not None:
     # Add our main script dir
     if os.path.exists('/sdcard/sl4a/scripts/'):
         sys.path.append('/sdcard/sl4a/scripts/')
