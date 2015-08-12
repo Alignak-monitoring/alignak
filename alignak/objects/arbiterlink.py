@@ -51,7 +51,7 @@ import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
-from alignak.http_client import HTTPExceptions
+from alignak.http_client import HTTPEXCEPTIONS
 from alignak.log import logger
 
 
@@ -117,7 +117,7 @@ class ArbiterLink(SatelliteLink):
         try:
             self.con.get('do_not_run')
             return True
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -135,7 +135,7 @@ class ArbiterLink(SatelliteLink):
         try:
             satlist = self.con.get_satellite_list(daemon_type)
             return satlist
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return []
 
@@ -155,7 +155,7 @@ class ArbiterLink(SatelliteLink):
         try:
             satlist = self.con.get_satellite_status(daemon_type, name)
             return satlist
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return {}
 
@@ -171,7 +171,7 @@ class ArbiterLink(SatelliteLink):
         try:
             res = self.con.get('get_all_states')
             return res
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return None
 
@@ -192,7 +192,7 @@ class ArbiterLink(SatelliteLink):
             print properties
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
             return res
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return None
 

@@ -53,7 +53,7 @@ from alignak.util import get_obj_name_two_args_and_void
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
 from alignak.log import logger
-from alignak.http_client import HTTPClient, HTTPExceptions
+from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
 
 
 class SatelliteLink(Item):
@@ -171,7 +171,7 @@ class SatelliteLink(Item):
             self.con.post('put_conf', {'conf': conf}, wait='long')
             print "PUT CONF SUCESS", self.get_name()
             return True
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
             return False
@@ -304,7 +304,7 @@ class SatelliteLink(Item):
                 self.set_alive()
             else:
                 self.add_failed_check_attempt()
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.add_failed_check_attempt(reason=str(exp))
 
     def wait_new_conf(self):
@@ -318,7 +318,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('wait_new_conf')
             return True
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -347,7 +347,7 @@ class SatelliteLink(Item):
             if not isinstance(res, bool):
                 return False
             return res
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -373,7 +373,7 @@ class SatelliteLink(Item):
             if not isinstance(res, bool):
                 return False
             return res
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -397,7 +397,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('remove_from_conf', {'sched_id': sched_id})
             return True
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -438,7 +438,7 @@ class SatelliteLink(Item):
                           self.get_name(), tab
             # We can update our list now
             self.managed_confs = tab_cleaned
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             print "EXCEPTION INwhat_i_managed", str(exp)
             # A timeout is not a crime, put this case aside
             # TODO : fix the timeout part?
@@ -486,7 +486,7 @@ class SatelliteLink(Item):
             self.con.get('ping')
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return False
 
@@ -515,7 +515,7 @@ class SatelliteLink(Item):
                 self.con = None
                 return []
             return tab
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             return []
         except AttributeError:

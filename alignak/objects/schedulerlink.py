@@ -48,7 +48,7 @@ This module provide SchedulerLink and SchedulerLinks classes used to manage sche
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.log import logger
-from alignak.http_client import HTTPExceptions
+from alignak.http_client import HTTPEXCEPTIONS
 
 
 class SchedulerLink(SatelliteLink):
@@ -94,7 +94,7 @@ class SchedulerLink(SatelliteLink):
         logger.debug("[SchedulerLink] Sending %d commands", len(commands))
         try:
             self.con.post('run_external_commands', {'cmds': commands})
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.con = None
             logger.debug(exp)
             return False

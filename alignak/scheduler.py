@@ -89,7 +89,7 @@ from alignak.acknowledge import Acknowledge
 from alignak.log import logger
 from alignak.util import nighty_five_percent
 from alignak.load import Load
-from alignak.http_client import HTTPClient, HTTPExceptions
+from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 
@@ -988,7 +988,7 @@ class Scheduler(object):
         try:
             links[s_id]['con'] = HTTPClient(uri=uri, strong_ssl=links[s_id]['hard_ssl_name_check'])
             con = links[s_id]['con']
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             logger.warning("Connection problem to the %s %s: %s",
                            s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
@@ -997,7 +997,7 @@ class Scheduler(object):
         try:
             # initial ping must be quick
             con.get('ping')
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             logger.warning("Connection problem to the %s %s: %s",
                            s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
@@ -1030,7 +1030,7 @@ class Scheduler(object):
                     logger.debug("Sending %s actions", len(lst))
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
-                except HTTPExceptions, exp:
+                except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
                     poll['con'] = None
@@ -1061,7 +1061,7 @@ class Scheduler(object):
                     logger.debug("Sending %d actions", len(lst))
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
-                except HTTPExceptions, exp:
+                except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
                     poll['con'] = None
@@ -1112,7 +1112,7 @@ class Scheduler(object):
                         result.set_type_passive()
                     with self.waiting_results_lock:
                         self.waiting_results.extend(results)
-                except HTTPExceptions, exp:
+                except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
                     poll['con'] = None
@@ -1144,7 +1144,7 @@ class Scheduler(object):
                         result.set_type_passive()
                     with self.waiting_results_lock:
                         self.waiting_results.extend(results)
-                except HTTPExceptions, exp:
+                except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
                     poll['con'] = None

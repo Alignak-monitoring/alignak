@@ -75,7 +75,7 @@ from alignak.util import sort_by_ids
 from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
-from alignak.http_client import HTTPClient, HTTPExceptions
+from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
 from alignak.daemon import Interface
 
 
@@ -297,7 +297,7 @@ class Broker(BaseSatellite):
             con = links[s_id]['con'] = HTTPClient(uri=uri,
                                                   strong_ssl=links[s_id]['hard_ssl_name_check'],
                                                   timeout=timeout, data_timeout=data_timeout)
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
             logger.info("Connection problem to the %s %s: %s",
@@ -326,7 +326,7 @@ class Broker(BaseSatellite):
                     con.get('fill_initial_broks', {'bname': self.name}, wait='long')
             # Ok all is done, we can save this new running s_id
             links[s_id]['running_id'] = new_run_id
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             logger.info("Connection problem to the %s %s: %s",
                         i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
@@ -431,7 +431,7 @@ class Broker(BaseSatellite):
             except KeyError, exp:
                 logger.debug("Key error for get_broks : %s", str(exp))
                 self.pynag_con_init(sched_id, i_type=i_type)
-            except HTTPExceptions, exp:
+            except HTTPEXCEPTIONS, exp:
                 logger.warning("Connection problem to the %s %s: %s",
                                i_type, links[sched_id]['name'], str(exp))
                 links[sched_id]['con'] = None
