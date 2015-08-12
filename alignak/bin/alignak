@@ -77,13 +77,13 @@ except ImportError:
                                                    "..")]))
     from alignak.bin import VERSION
 
-from alignak.log import logger, cprint, nagFormatter
+from alignak.log import logger, cprint, NAG_FORMATTER
 """TODO: cprint can't be load from alignak.log"""
 from alignak.objects.config import Config
 
 
 logger.setLevel('WARNING')
-logger.handlers[0].setFormatter(nagFormatter)
+logger.handlers[0].setFormatter(NAG_FORMATTER)
 
 
 # Handle some signals
