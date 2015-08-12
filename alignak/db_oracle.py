@@ -61,14 +61,6 @@ from cx_Oracle import OperationalError as OperationalError_exp
 from alignak.db import DB
 from alignak.log import logger
 
-connect_function = None
-IntegrityError_exp = None
-ProgrammingError_exp = None
-DatabaseError_exp = None
-InternalError_exp = None
-DataError_exp = None
-OperationalError_exp = None
-
 
 class DBOracle(DB):
     """Manage connection and query execution against Oracle databases."""
