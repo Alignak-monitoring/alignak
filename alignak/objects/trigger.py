@@ -193,6 +193,5 @@ class Triggers(Items):
         :return: None
         TODO: global statement may not be useful
         """
-        global objs
         objs['hosts'] = conf.hosts
         objs['services'] = conf.services
