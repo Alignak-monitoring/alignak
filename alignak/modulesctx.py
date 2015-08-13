@@ -102,4 +102,5 @@ class ModulesContext(object):
         # otherwise simply try new and old style:
         return ModulesManager.try_load(mod_name, mod_dir)
 
+# pylint: disable=C0103
 modulesctx = ModulesContext()
