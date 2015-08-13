@@ -278,5 +278,5 @@ class Stats(object):
                     logger.error('Stats REAPER cannot put to the metric server %s', exp)
             time.sleep(60)
 
-
+# pylint: disable=C0103
 statsmgr = Stats()
