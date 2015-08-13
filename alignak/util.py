@@ -69,11 +69,10 @@ from alignak.macroresolver import MacroResolver
 from alignak.log import logger
 
 try:
-    stdout_encoding = sys.stdout.encoding
-    safe_stdout = (stdout_encoding == 'UTF-8')
+    SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
 except Exception, exp:
     logger.error('Encoding detection error= %s', exp)
-    safe_stdout = False
+    SAFE_STDOUT = False
 
 
 # ########## Strings #############
@@ -90,7 +89,7 @@ def safe_print(*args):
         # If we got an str, go in unicode, and if we cannot print
         # utf8, go in ascii mode
         if isinstance(arg, str):
-            if safe_stdout:
+            if SAFE_STDOUT:
                 string = unicode(arg, 'utf8', errors='ignore')
             else:
                 string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
@@ -98,7 +97,7 @@ def safe_print(*args):
             lst.append(string)
         # Same for unicode, but skip the unicode pass
         elif isinstance(arg, unicode):
-            if safe_stdout:
+            if SAFE_STDOUT:
                 string = arg
             else:
                 string = arg.encode('ascii', 'replace')
