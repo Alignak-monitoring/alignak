@@ -31,7 +31,7 @@ import sys # not here used but "sub-"imported by livestatus test.. (to be correc
 from alignak.modulesctx import modulesctx
 from alignak.objects.module import Module
 from alignak.modulesmanager import ModulesManager
-from alignak.misc.datamanager import datamgr
+from alignak.misc.datamanager import DATA_MGR
 from alignak.log import logger
 
 #
@@ -129,8 +129,8 @@ class AlignakModulesTest(AlignakTest):
             print "errors during load", s
         del self.livestatus_broker.debug_output
         self.livestatus_broker.rg = LiveStatusRegenerator()
-        self.livestatus_broker.datamgr = datamgr
-        datamgr.load(self.livestatus_broker.rg)
+        self.livestatus_broker.datamgr = DATA_MGR
+        DATA_MGR.load(self.livestatus_broker.rg)
         self.livestatus_broker.query_cache = LiveStatusQueryCache()
         if not needcache:
             self.livestatus_broker.query_cache.disable()
