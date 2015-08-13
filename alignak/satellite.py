@@ -69,12 +69,12 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
 import imp
 try:
     imp.find_module('android')
-    is_android = True
+    IS_ANDROID = True
 except ImportError:
-    is_android = False
+    IS_ANDROID = False
 
 
-if not is_android:
+if not IS_ANDROID:
     from multiprocessing import Queue, active_children, cpu_count
 else:
     from Queue import Queue
@@ -588,7 +588,7 @@ class Satellite(BaseSatellite):
         """
         # create the input queue of this worker
         try:
-            if is_android:
+            if IS_ANDROID:
                 queue = Queue()
             else:
                 queue = self.manager.Queue()
@@ -693,7 +693,7 @@ class Satellite(BaseSatellite):
         :return: None
         """
         # In android, we are using threads, so there is not active_children call
-        if not is_android:
+        if not IS_ANDROID:
             # Active children make a join with everyone, useful :)
             active_children()
 
@@ -1054,7 +1054,7 @@ class Satellite(BaseSatellite):
         # so use standard Queue threads things
         # but in multiprocess, we are also using a Queue(). It's just
         # not the same
-        if is_android:
+        if IS_ANDROID:
             self.returns_queue = Queue()
         else:
             self.returns_queue = self.manager.Queue()
@@ -1161,14 +1161,14 @@ class Satellite(BaseSatellite):
         # Now the limit part, 0 mean: number of cpu of this machine :)
         # if not available, use 4 (modern hardware)
         self.max_workers = g_conf['max_workers']
-        if self.max_workers == 0 and not is_android:
+        if self.max_workers == 0 and not IS_ANDROID:
             try:
                 self.max_workers = cpu_count()
             except NotImplementedError:
                 self.max_workers = 4
         logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
         self.min_workers = g_conf['min_workers']
-        if self.min_workers == 0 and not is_android:
+        if self.min_workers == 0 and not IS_ANDROID:
             try:
                 self.min_workers = cpu_count()
             except NotImplementedError:
