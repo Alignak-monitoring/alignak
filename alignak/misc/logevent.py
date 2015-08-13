@@ -49,11 +49,11 @@ The supported event are listed in the event_type variable
 
 import re
 
-event_type_pattern = \
+EVENT_TYPE_PATTERN = \
     re.compile(
         r'^\[[0-9]{10}] (?:HOST|SERVICE) (ALERT|NOTIFICATION|FLAPPING|DOWNTIME)(?: ALERT)?:.*'
     )
-event_types = {
+EVENT_TYPES = {
     'NOTIFICATION': {
         # ex: "[1402515279] SERVICE NOTIFICATION:
         # admin;localhost;check-ssh;CRITICAL;notify-service-by-email;Connection refused"
@@ -133,11 +133,11 @@ class LogEvent:
         self.data = {}
 
         # Find the type of event
-        event_type_match = event_type_pattern.match(log)
+        event_type_match = EVENT_TYPE_PATTERN.match(log)
 
         if event_type_match:
             # parse it with it's pattern
-            event_type = event_types[event_type_match.group(1)]
+            event_type = EVENT_TYPES[event_type_match.group(1)]
             properties_match = re.match(event_type['pattern'], log)
 
             if properties_match:
