@@ -55,11 +55,11 @@ from Queue import Empty
 import imp
 try:
     imp.find_module('android')
-    is_android = True
+    IS_ANDROID = True
 except ImportError:
-    is_android = False
+    IS_ANDROID = False
 
-if not is_android:
+if not IS_ANDROID:
     from multiprocessing import Process, Queue
 else:
     from Queue import Queue
@@ -144,7 +144,7 @@ class Worker:
         :return: None
         """
         # We can just terminate process, not threads
-        if not is_android:
+        if not IS_ANDROID:
             self._process.terminate()
         # Is we are with a Manager() way
         # there should be not such functions
@@ -361,7 +361,7 @@ class Worker:
         """
         # restore default signal handler for the workers:
         # but on android, we are a thread, so don't do it
-        if not is_android:
+        if not IS_ANDROID:
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         self.set_proctitle()
