@@ -67,7 +67,6 @@ class declared(object):
     """
     def __init__(self, f):
         self.f = f
-        global functions
         name = f.func_name
         # logger.debug("Initializing function %s %s" % (n, f))
         TRIGGER_FUNCTIONS[name] = f
