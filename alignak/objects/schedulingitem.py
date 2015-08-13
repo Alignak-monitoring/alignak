@@ -76,9 +76,6 @@ from alignak.eventhandler import EventHandler
 from alignak.dependencynode import DependencyNodeFactory
 from alignak.log import logger
 
-# on system time change just reevaluate the following attributes:
-on_time_change_update = ('last_notification', 'last_state_change', 'last_hard_state_change')
-
 
 class SchedulingItem(Item):
     """SchedulingItem class provide method for Scheduler to handle Service or Host objects
@@ -712,7 +709,7 @@ class SchedulingItem(Item):
         :return: None
         """
         # We only need to change some value
-        for prop in on_time_change_update:
+        for prop in ('last_notification', 'last_state_change', 'last_hard_state_change'):
             val = getattr(self, prop)  # current value
             # Do not go below 1970 :)
             val = max(0, val + difference)  # diff may be negative
