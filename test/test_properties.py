@@ -50,7 +50,7 @@ Test alignak.property
 
 
 import alignak
-from alignak.property import none_object
+from alignak.property import NONE_OBJECT
 
 from alignak_test import AlignakTest, unittest
 
@@ -64,7 +64,7 @@ class PropertyTests:
 
     def test_no_default_value(self):
         p = self.prop_class()
-        self.assertIs(p.default, none_object)
+        self.assertIs(p.default, NONE_OBJECT)
         self.assertFalse(p.has_default)
         self.assertTrue(p.required)
 
