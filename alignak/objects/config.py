@@ -387,7 +387,7 @@ class Config(Item):
 
         'use_large_installation_tweaks':
             UnusedProp(text='this option is deprecated because in alignak it is just an alias '
-                            'for enable_environment_macros=0'),
+                            'for enable_environment_macros=False'),
 
         'free_child_process_memory':
             UnusedProp(text='this option is automatic in Python processes'),
