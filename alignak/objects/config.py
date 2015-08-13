@@ -122,10 +122,10 @@ from alignak.daemon import get_cur_user, get_cur_group
 from alignak.util import jsonify_r
 
 
-no_longer_used_txt = ('This parameter is not longer take from the main file, but must be defined '
-                      'in the status_dat broker module instead. But Alignak will create you one '
-                      'if there are no present and use this parameter in it, so no worry.')
-not_interresting_txt = 'We do not think such an option is interesting to manage.'
+NO_LONGER_USED = ('This parameter is not longer take from the main file, but must be defined '
+                  'in the status_dat broker module instead. But Alignak will create you one '
+                  'if there are no present and use this parameter in it, so no worry.')
+NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
 
 
 class Config(Item):
@@ -175,10 +175,10 @@ class Config(Item):
             StringProp(default='/var/log/alignak/arbiterd.log'),
 
         'log_file':
-            UnusedProp(text=no_longer_used_txt),
+            UnusedProp(text=NO_LONGER_USED),
 
         'object_cache_file':
-            UnusedProp(text=no_longer_used_txt),
+            UnusedProp(text=NO_LONGER_USED),
 
         'precached_object_file':
             UnusedProp(text='Alignak does not use precached_object_files. Skipping.'),
@@ -190,10 +190,10 @@ class Config(Item):
             UnusedProp(text='Temporary files are not used in the alignak architecture. Skipping'),
 
         'status_file':
-            UnusedProp(text=no_longer_used_txt),
+            UnusedProp(text=NO_LONGER_USED),
 
         'status_update_interval':
-            UnusedProp(text=no_longer_used_txt),
+            UnusedProp(text=NO_LONGER_USED),
 
         'alignak_user':
             StringProp(default=get_cur_user()),
@@ -259,28 +259,28 @@ class Config(Item):
             IntegerProp(default=60),
 
         'use_retained_program_state':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'use_retained_scheduling_info':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_host_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_service_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_process_host_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_process_service_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_contact_host_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'retained_contact_service_attribute_mask':
-            UnusedProp(text=not_interresting_txt),
+            UnusedProp(text=NOT_INTERESTING),
 
         'use_syslog':
             BoolProp(default=False),
