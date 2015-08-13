@@ -31,5 +31,6 @@ from alignak.objects.satellitelink import (
     SatelliteLinks,
 )
 
+# pylint: disable=C0103
 SatelliteLink = make_deprecated(SatelliteLink)
 SatelliteLinks = make_deprecated(SatelliteLinks)
