@@ -62,18 +62,17 @@ OBJS = {'hosts': [], 'services': []}
 TRIGGER_FUNCTIONS = {}
 
 
-class declared(object):
-    """ Decorator to add function in trigger environnement
-    """
-    def __init__(self, f):
-        self.f = f
-        name = f.func_name
-        # logger.debug("Initializing function %s %s" % (n, f))
-        TRIGGER_FUNCTIONS[name] = f
+def declared(function):
+    """ Decorator to add function in trigger environment
 
-    def __call__(self, *args):
-        logger.debug("Calling %s with arguments %s", self.f.func_name, args)
-        return self.f(*args)
+    :param function: function to add to trigger environment
+    :type function: types.FunctionType
+    :return : the function itself only update TRIGGER_FUNCTIONS variable
+    """
+    name = function.func_name
+    TRIGGER_FUNCTIONS[name] = function
+    logger.debug("Added %s to trigger functions list ", name)
+    return function
 
 
 @declared
@@ -165,7 +164,7 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
     :param perfdata:
     :type perfdata: None | str
     :param return_code:
-    :type return_code: None | str
+    :type return_code: None | int
     :return: None
     """
     obj = get_object(obj_ref)
@@ -254,8 +253,8 @@ def perfs(objs_ref, metric_name):
     """ TODO: check this description
         Get perfdatas from multiple services/hosts
 
-    :param obj_ref:
-    :type obj_ref: object
+    :param objs_ref:
+    :type objs_ref: object
     :param metric_name:
     :type metric_name: str
     :return: list of metrics
