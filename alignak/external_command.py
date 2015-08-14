@@ -92,357 +92,357 @@ class ExternalCommandManager:
     """
 
     commands = {
-        'CHANGE_CONTACT_MODSATTR':
+        'change_contact_modsattr':
             {'global': True, 'args': ['contact', None]},
-        'CHANGE_CONTACT_MODHATTR':
+        'change_contact_modhattr':
             {'global': True, 'args': ['contact', None]},
-        'CHANGE_CONTACT_MODATTR':
+        'change_contact_modattr':
             {'global': True, 'args': ['contact', None]},
-        'CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD':
+        'change_contact_host_notification_timeperiod':
             {'global': True, 'args': ['contact', 'time_period']},
-        'ADD_SVC_COMMENT':
+        'add_svc_comment':
             {'global': False, 'args': ['service', 'to_bool', 'author', None]},
-        'ADD_HOST_COMMENT':
+        'add_host_comment':
             {'global': False, 'args': ['host', 'to_bool', 'author', None]},
-        'ACKNOWLEDGE_SVC_PROBLEM':
+        'acknowledge_svc_problem':
             {'global': False, 'args': ['service', 'to_int', 'to_bool', 'to_bool', 'author', None]},
-        'ACKNOWLEDGE_HOST_PROBLEM':
+        'acknowledge_host_problem':
             {'global': False, 'args': ['host', 'to_int', 'to_bool', 'to_bool', 'author', None]},
-        'ACKNOWLEDGE_SVC_PROBLEM_EXPIRE':
+        'acknowledge_svc_problem_expire':
             {'global': False, 'args': ['service', 'to_int', 'to_bool',
                                        'to_bool', 'to_int', 'author', None]},
-        'ACKNOWLEDGE_HOST_PROBLEM_EXPIRE':
+        'acknowledge_host_problem_expire':
             {'global': False,
              'args': ['host', 'to_int', 'to_bool', 'to_bool', 'to_int', 'author', None]},
-        'CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD':
+        'change_contact_svc_notification_timeperiod':
             {'global': True, 'args': ['contact', 'time_period']},
-        'CHANGE_CUSTOM_CONTACT_VAR':
+        'change_custom_contact_var':
             {'global': True, 'args': ['contact', None, None]},
-        'CHANGE_CUSTOM_HOST_VAR':
+        'change_custom_host_var':
             {'global': False, 'args': ['host', None, None]},
-        'CHANGE_CUSTOM_SVC_VAR':
+        'change_custom_svc_var':
             {'global': False, 'args': ['service', None, None]},
-        'CHANGE_GLOBAL_HOST_EVENT_HANDLER':
+        'change_global_host_event_handler':
             {'global': True, 'args': ['command']},
-        'CHANGE_GLOBAL_SVC_EVENT_HANDLER':
+        'change_global_svc_event_handler':
             {'global': True, 'args': ['command']},
-        'CHANGE_HOST_CHECK_COMMAND':
+        'change_host_check_command':
             {'global': False, 'args': ['host', 'command']},
-        'CHANGE_HOST_CHECK_TIMEPERIOD':
+        'change_host_check_timeperiod':
             {'global': False, 'args': ['host', 'time_period']},
-        'CHANGE_HOST_EVENT_HANDLER':
+        'change_host_event_handler':
             {'global': False, 'args': ['host', 'command']},
-        'CHANGE_HOST_MODATTR':
+        'change_host_modattr':
             {'global': False, 'args': ['host', 'to_int']},
-        'CHANGE_MAX_HOST_CHECK_ATTEMPTS':
+        'change_max_host_check_attempts':
             {'global': False, 'args': ['host', 'to_int']},
-        'CHANGE_MAX_SVC_CHECK_ATTEMPTS':
+        'change_max_svc_check_attempts':
             {'global': False, 'args': ['service', 'to_int']},
-        'CHANGE_NORMAL_HOST_CHECK_INTERVAL':
+        'change_normal_host_check_interval':
             {'global': False, 'args': ['host', 'to_int']},
-        'CHANGE_NORMAL_SVC_CHECK_INTERVAL':
+        'change_normal_svc_check_interval':
             {'global': False, 'args': ['service', 'to_int']},
-        'CHANGE_RETRY_HOST_CHECK_INTERVAL':
+        'change_retry_host_check_interval':
             {'global': False, 'args': ['host', 'to_int']},
-        'CHANGE_RETRY_SVC_CHECK_INTERVAL':
+        'change_retry_svc_check_interval':
             {'global': False, 'args': ['service', 'to_int']},
-        'CHANGE_SVC_CHECK_COMMAND':
+        'change_svc_check_command':
             {'global': False, 'args': ['service', 'command']},
-        'CHANGE_SVC_CHECK_TIMEPERIOD':
+        'change_svc_check_timeperiod':
             {'global': False, 'args': ['service', 'time_period']},
-        'CHANGE_SVC_EVENT_HANDLER':
+        'change_svc_event_handler':
             {'global': False, 'args': ['service', 'command']},
-        'CHANGE_SVC_MODATTR':
+        'change_svc_modattr':
             {'global': False, 'args': ['service', 'to_int']},
-        'CHANGE_SVC_NOTIFICATION_TIMEPERIOD':
+        'change_svc_notification_timeperiod':
             {'global': False, 'args': ['service', 'time_period']},
-        'DELAY_HOST_NOTIFICATION':
+        'delay_host_notification':
             {'global': False, 'args': ['host', 'to_int']},
-        'DELAY_SVC_NOTIFICATION':
+        'delay_svc_notification':
             {'global': False, 'args': ['service', 'to_int']},
-        'DEL_ALL_HOST_COMMENTS':
+        'del_all_host_comments':
             {'global': False, 'args': ['host']},
-        'DEL_ALL_HOST_DOWNTIMES':
+        'del_all_host_downtimes':
             {'global': False, 'args': ['host']},
-        'DEL_ALL_SVC_COMMENTS':
+        'del_all_svc_comments':
             {'global': False, 'args': ['service']},
-        'DEL_ALL_SVC_DOWNTIMES':
+        'del_all_svc_downtimes':
             {'global': False, 'args': ['service']},
-        'DEL_CONTACT_DOWNTIME':
+        'del_contact_downtime':
             {'global': True, 'args': ['to_int']},
-        'DEL_HOST_COMMENT':
+        'del_host_comment':
             {'global': True, 'args': ['to_int']},
-        'DEL_HOST_DOWNTIME':
+        'del_host_downtime':
             {'global': True, 'args': ['to_int']},
-        'DEL_SVC_COMMENT':
+        'del_svc_comment':
             {'global': True, 'args': ['to_int']},
-        'DEL_SVC_DOWNTIME':
+        'del_svc_downtime':
             {'global': True, 'args': ['to_int']},
-        'DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST':
+        'disable_all_notifications_beyond_host':
             {'global': False, 'args': ['host']},
-        'DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS':
+        'disable_contactgroup_host_notifications':
             {'global': True, 'args': ['contact_group']},
-        'DISABLE_CONTACTGROUP_SVC_NOTIFICATIONS':
+        'disable_contactgroup_svc_notifications':
             {'global': True, 'args': ['contact_group']},
-        'DISABLE_CONTACT_HOST_NOTIFICATIONS':
+        'disable_contact_host_notifications':
             {'global': True, 'args': ['contact']},
-        'DISABLE_CONTACT_SVC_NOTIFICATIONS':
+        'disable_contact_svc_notifications':
             {'global': True, 'args': ['contact']},
-        'DISABLE_EVENT_HANDLERS':
+        'disable_event_handlers':
             {'global': True, 'args': []},
-        'DISABLE_FAILURE_PREDICTION':
+        'disable_failure_prediction':
             {'global': True, 'args': []},
-        'DISABLE_FLAP_DETECTION':
+        'disable_flap_detection':
             {'global': True, 'args': []},
-        'DISABLE_HOSTGROUP_HOST_CHECKS':
+        'disable_hostgroup_host_checks':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOSTGROUP_HOST_NOTIFICATIONS':
+        'disable_hostgroup_host_notifications':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOSTGROUP_PASSIVE_HOST_CHECKS':
+        'disable_hostgroup_passive_host_checks':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOSTGROUP_PASSIVE_SVC_CHECKS':
+        'disable_hostgroup_passive_svc_checks':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOSTGROUP_SVC_CHECKS':
+        'disable_hostgroup_svc_checks':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOSTGROUP_SVC_NOTIFICATIONS':
+        'disable_hostgroup_svc_notifications':
             {'global': True, 'args': ['host_group']},
-        'DISABLE_HOST_AND_CHILD_NOTIFICATIONS':
+        'disable_host_and_child_notifications':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_CHECK':
+        'disable_host_check':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_EVENT_HANDLER':
+        'disable_host_event_handler':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_FLAP_DETECTION':
+        'disable_host_flap_detection':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_FRESHNESS_CHECKS':
+        'disable_host_freshness_checks':
             {'global': True, 'args': []},
-        'DISABLE_HOST_NOTIFICATIONS':
+        'disable_host_notifications':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_SVC_CHECKS':
+        'disable_host_svc_checks':
             {'global': False, 'args': ['host']},
-        'DISABLE_HOST_SVC_NOTIFICATIONS':
+        'disable_host_svc_notifications':
             {'global': False, 'args': ['host']},
-        'DISABLE_NOTIFICATIONS':
+        'disable_notifications':
             {'global': True, 'args': []},
-        'DISABLE_PASSIVE_HOST_CHECKS':
+        'disable_passive_host_checks':
             {'global': False, 'args': ['host']},
-        'DISABLE_PASSIVE_SVC_CHECKS':
+        'disable_passive_svc_checks':
             {'global': False, 'args': ['service']},
-        'DISABLE_PERFORMANCE_DATA':
+        'disable_performance_data':
             {'global': True, 'args': []},
-        'DISABLE_SERVICEGROUP_HOST_CHECKS':
+        'disable_servicegroup_host_checks':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICEGROUP_HOST_NOTIFICATIONS':
+        'disable_servicegroup_host_notifications':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS':
+        'disable_servicegroup_passive_host_checks':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS':
+        'disable_servicegroup_passive_svc_checks':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICEGROUP_SVC_CHECKS':
+        'disable_servicegroup_svc_checks':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICEGROUP_SVC_NOTIFICATIONS':
+        'disable_servicegroup_svc_notifications':
             {'global': True, 'args': ['service_group']},
-        'DISABLE_SERVICE_FLAP_DETECTION':
+        'disable_service_flap_detection':
             {'global': False, 'args': ['service']},
-        'DISABLE_SERVICE_FRESHNESS_CHECKS':
+        'disable_service_freshness_checks':
             {'global': True, 'args': []},
-        'DISABLE_SVC_CHECK':
+        'disable_svc_check':
             {'global': False, 'args': ['service']},
-        'DISABLE_SVC_EVENT_HANDLER':
+        'disable_svc_event_handler':
             {'global': False, 'args': ['service']},
-        'DISABLE_SVC_FLAP_DETECTION':
+        'disable_svc_flap_detection':
             {'global': False, 'args': ['service']},
-        'DISABLE_SVC_NOTIFICATIONS':
+        'disable_svc_notifications':
             {'global': False, 'args': ['service']},
-        'ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST':
+        'enable_all_notifications_beyond_host':
             {'global': False, 'args': ['host']},
-        'ENABLE_CONTACTGROUP_HOST_NOTIFICATIONS':
+        'enable_contactgroup_host_notifications':
             {'global': True, 'args': ['contact_group']},
-        'ENABLE_CONTACTGROUP_SVC_NOTIFICATIONS':
+        'enable_contactgroup_svc_notifications':
             {'global': True, 'args': ['contact_group']},
-        'ENABLE_CONTACT_HOST_NOTIFICATIONS':
+        'enable_contact_host_notifications':
             {'global': True, 'args': ['contact']},
-        'ENABLE_CONTACT_SVC_NOTIFICATIONS':
+        'enable_contact_svc_notifications':
             {'global': True, 'args': ['contact']},
-        'ENABLE_EVENT_HANDLERS':
+        'enable_event_handlers':
             {'global': True, 'args': []},
-        'ENABLE_FAILURE_PREDICTION':
+        'enable_failure_prediction':
             {'global': True, 'args': []},
-        'ENABLE_FLAP_DETECTION':
+        'enable_flap_detection':
             {'global': True, 'args': []},
-        'ENABLE_HOSTGROUP_HOST_CHECKS':
+        'enable_hostgroup_host_checks':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOSTGROUP_HOST_NOTIFICATIONS':
+        'enable_hostgroup_host_notifications':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOSTGROUP_PASSIVE_HOST_CHECKS':
+        'enable_hostgroup_passive_host_checks':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOSTGROUP_PASSIVE_SVC_CHECKS':
+        'enable_hostgroup_passive_svc_checks':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOSTGROUP_SVC_CHECKS':
+        'enable_hostgroup_svc_checks':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOSTGROUP_SVC_NOTIFICATIONS':
+        'enable_hostgroup_svc_notifications':
             {'global': True, 'args': ['host_group']},
-        'ENABLE_HOST_AND_CHILD_NOTIFICATIONS':
+        'enable_host_and_child_notifications':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_CHECK':
+        'enable_host_check':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_EVENT_HANDLER':
+        'enable_host_event_handler':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_FLAP_DETECTION':
+        'enable_host_flap_detection':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_FRESHNESS_CHECKS':
+        'enable_host_freshness_checks':
             {'global': True, 'args': []},
-        'ENABLE_HOST_NOTIFICATIONS':
+        'enable_host_notifications':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_SVC_CHECKS':
+        'enable_host_svc_checks':
             {'global': False, 'args': ['host']},
-        'ENABLE_HOST_SVC_NOTIFICATIONS':
+        'enable_host_svc_notifications':
             {'global': False, 'args': ['host']},
-        'ENABLE_NOTIFICATIONS':
+        'enable_notifications':
             {'global': True, 'args': []},
-        'ENABLE_PASSIVE_HOST_CHECKS':
+        'enable_passive_host_checks':
             {'global': False, 'args': ['host']},
-        'ENABLE_PASSIVE_SVC_CHECKS':
+        'enable_passive_svc_checks':
             {'global': False, 'args': ['service']},
-        'ENABLE_PERFORMANCE_DATA':
+        'enable_performance_data':
             {'global': True, 'args': []},
-        'ENABLE_SERVICEGROUP_HOST_CHECKS':
+        'enable_servicegroup_host_checks':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICEGROUP_HOST_NOTIFICATIONS':
+        'enable_servicegroup_host_notifications':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS':
+        'enable_servicegroup_passive_host_checks':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS':
+        'enable_servicegroup_passive_svc_checks':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICEGROUP_SVC_CHECKS':
+        'enable_servicegroup_svc_checks':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICEGROUP_SVC_NOTIFICATIONS':
+        'enable_servicegroup_svc_notifications':
             {'global': True, 'args': ['service_group']},
-        'ENABLE_SERVICE_FRESHNESS_CHECKS':
+        'enable_service_freshness_checks':
             {'global': True, 'args': []},
-        'ENABLE_SVC_CHECK':
+        'enable_svc_check':
             {'global': False, 'args': ['service']},
-        'ENABLE_SVC_EVENT_HANDLER':
+        'enable_svc_event_handler':
             {'global': False, 'args': ['service']},
-        'ENABLE_SVC_FLAP_DETECTION':
+        'enable_svc_flap_detection':
             {'global': False, 'args': ['service']},
-        'ENABLE_SVC_NOTIFICATIONS':
+        'enable_svc_notifications':
             {'global': False, 'args': ['service']},
-        'PROCESS_FILE':
+        'process_file':
             {'global': True, 'args': [None, 'to_bool']},
-        'PROCESS_HOST_CHECK_RESULT':
+        'process_host_check_result':
             {'global': False, 'args': ['host', 'to_int', None]},
-        'PROCESS_HOST_OUTPUT':
+        'process_host_output':
             {'global': False, 'args': ['host', None]},
-        'PROCESS_SERVICE_CHECK_RESULT':
+        'process_service_check_result':
             {'global': False, 'args': ['service', 'to_int', None]},
-        'PROCESS_SERVICE_OUTPUT':
+        'process_service_output':
             {'global': False, 'args': ['service', None]},
-        'READ_STATE_INFORMATION':
+        'read_state_information':
             {'global': True, 'args': []},
-        'REMOVE_HOST_ACKNOWLEDGEMENT':
+        'remove_host_acknowledgement':
             {'global': False, 'args': ['host']},
-        'REMOVE_SVC_ACKNOWLEDGEMENT':
+        'remove_svc_acknowledgement':
             {'global': False, 'args': ['service']},
-        'RESTART_PROGRAM':
+        'restart_program':
             {'global': True, 'internal': True, 'args': []},
-        'RELOAD_CONFIG':
+        'reload_config':
             {'global': True, 'internal': True, 'args': []},
-        'SAVE_STATE_INFORMATION':
+        'save_state_information':
             {'global': True, 'args': []},
-        'SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME':
+        'schedule_and_propagate_host_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
                                        'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME':
+        'schedule_and_propagate_triggered_host_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
                                        'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_CONTACT_DOWNTIME':
+        'schedule_contact_downtime':
             {'global': True, 'args': ['contact', 'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_FORCED_HOST_CHECK':
+        'schedule_forced_host_check':
             {'global': False, 'args': ['host', 'to_int']},
-        'SCHEDULE_FORCED_HOST_SVC_CHECKS':
+        'schedule_forced_host_svc_checks':
             {'global': False, 'args': ['host', 'to_int']},
-        'SCHEDULE_FORCED_SVC_CHECK':
+        'schedule_forced_svc_check':
             {'global': False, 'args': ['service', 'to_int']},
-        'SCHEDULE_HOSTGROUP_HOST_DOWNTIME':
+        'schedule_hostgroup_host_downtime':
             {'global': True, 'args': ['host_group', 'to_int', 'to_int',
                                       'to_bool', 'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_HOSTGROUP_SVC_DOWNTIME':
+        'schedule_hostgroup_svc_downtime':
             {'global': True, 'args': ['host_group', 'to_int', 'to_int', 'to_bool',
                                       'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_HOST_CHECK':
+        'schedule_host_check':
             {'global': False, 'args': ['host', 'to_int']},
-        'SCHEDULE_HOST_DOWNTIME':
+        'schedule_host_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
                                        'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_HOST_SVC_CHECKS':
+        'schedule_host_svc_checks':
             {'global': False, 'args': ['host', 'to_int']},
-        'SCHEDULE_HOST_SVC_DOWNTIME':
+        'schedule_host_svc_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
                                        'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_SERVICEGROUP_HOST_DOWNTIME':
+        'schedule_servicegroup_host_downtime':
             {'global': True, 'args': ['service_group', 'to_int', 'to_int', 'to_bool',
                                       'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_SERVICEGROUP_SVC_DOWNTIME':
+        'schedule_servicegroup_svc_downtime':
             {'global': True, 'args': ['service_group', 'to_int', 'to_int', 'to_bool',
                                       'to_int', 'to_int', 'author', None]},
-        'SCHEDULE_SVC_CHECK':
+        'schedule_svc_check':
             {'global': False, 'args': ['service', 'to_int']},
-        'SCHEDULE_SVC_DOWNTIME': {'global': False, 'args': ['service', 'to_int', 'to_int',
+        'schedule_svc_downtime': {'global': False, 'args': ['service', 'to_int', 'to_int',
                                                             'to_bool', 'to_int', 'to_int',
                                                             'author', None]},
-        'SEND_CUSTOM_HOST_NOTIFICATION':
+        'send_custom_host_notification':
             {'global': False, 'args': ['host', 'to_int', 'author', None]},
-        'SEND_CUSTOM_SVC_NOTIFICATION':
+        'send_custom_svc_notification':
             {'global': False, 'args': ['service', 'to_int', 'author', None]},
-        'SET_HOST_NOTIFICATION_NUMBER':
+        'set_host_notification_number':
             {'global': False, 'args': ['host', 'to_int']},
-        'SET_SVC_NOTIFICATION_NUMBER':
+        'set_svc_notification_number':
             {'global': False, 'args': ['service', 'to_int']},
-        'SHUTDOWN_PROGRAM':
+        'shutdown_program':
             {'global': True, 'args': []},
-        'START_ACCEPTING_PASSIVE_HOST_CHECKS':
+        'start_accepting_passive_host_checks':
             {'global': True, 'args': []},
-        'START_ACCEPTING_PASSIVE_SVC_CHECKS':
+        'start_accepting_passive_svc_checks':
             {'global': True, 'args': []},
-        'START_EXECUTING_HOST_CHECKS':
+        'start_executing_host_checks':
             {'global': True, 'args': []},
-        'START_EXECUTING_SVC_CHECKS':
+        'start_executing_svc_checks':
             {'global': True, 'args': []},
-        'START_OBSESSING_OVER_HOST':
+        'start_obsessing_over_host':
             {'global': False, 'args': ['host']},
-        'START_OBSESSING_OVER_HOST_CHECKS':
+        'start_obsessing_over_host_checks':
             {'global': True, 'args': []},
-        'START_OBSESSING_OVER_SVC':
+        'start_obsessing_over_svc':
             {'global': False, 'args': ['service']},
-        'START_OBSESSING_OVER_SVC_CHECKS':
+        'start_obsessing_over_svc_checks':
             {'global': True, 'args': []},
-        'STOP_ACCEPTING_PASSIVE_HOST_CHECKS':
+        'stop_accepting_passive_host_checks':
             {'global': True, 'args': []},
-        'STOP_ACCEPTING_PASSIVE_SVC_CHECKS':
+        'stop_accepting_passive_svc_checks':
             {'global': True, 'args': []},
-        'STOP_EXECUTING_HOST_CHECKS':
+        'stop_executing_host_checks':
             {'global': True, 'args': []},
-        'STOP_EXECUTING_SVC_CHECKS':
+        'stop_executing_svc_checks':
             {'global': True, 'args': []},
-        'STOP_OBSESSING_OVER_HOST':
+        'stop_obsessing_over_host':
             {'global': False, 'args': ['host']},
-        'STOP_OBSESSING_OVER_HOST_CHECKS':
+        'stop_obsessing_over_host_checks':
             {'global': True, 'args': []},
-        'STOP_OBSESSING_OVER_SVC':
+        'stop_obsessing_over_svc':
             {'global': False, 'args': ['service']},
-        'STOP_OBSESSING_OVER_SVC_CHECKS':
+        'stop_obsessing_over_svc_checks':
             {'global': True, 'args': []},
-        'LAUNCH_SVC_EVENT_HANDLER':
+        'launch_svc_event_handler':
             {'global': False, 'args': ['service']},
-        'LAUNCH_HOST_EVENT_HANDLER':
+        'launch_host_event_handler':
             {'global': False, 'args': ['host']},
         # Now internal calls
-        'ADD_SIMPLE_HOST_DEPENDENCY':
+        'add_simple_host_dependency':
             {'global': False, 'args': ['host', 'host']},
-        'DEL_HOST_DEPENDENCY':
+        'del_host_dependency':
             {'global': False, 'args': ['host', 'host']},
-        'ADD_SIMPLE_POLLER':
+        'add_simple_poller':
             {'global': True, 'internal': True, 'args': [None, None, None, None]},
     }
 
@@ -721,7 +721,7 @@ class ExternalCommandManager:
             return None
 
         # Now get the command
-        c_name = elts2[1]
+        c_name = elts2[1].lower()
 
         # safe_print("Get command name", c_name)
         if c_name not in ExternalCommandManager.commands:
@@ -871,7 +871,7 @@ class ExternalCommandManager:
             logger.debug("Sorry, the arguments are not corrects (%s)", str(args))
             return None
 
-    def CHANGE_CONTACT_MODSATTR(self, contact, value):
+    def change_contact_modsattr(self, contact, value):
         """Change contact modified service attribute value
         Format of the line that triggers function call::
 
@@ -885,7 +885,7 @@ class ExternalCommandManager:
         """
         contact.modified_service_attributes = long(value)
 
-    def CHANGE_CONTACT_MODHATTR(self, contact, value):
+    def change_contact_modhattr(self, contact, value):
         """Change contact modified host attribute value
         Format of the line that triggers function call::
 
@@ -899,7 +899,7 @@ class ExternalCommandManager:
         """
         contact.modified_host_attributes = long(value)
 
-    def CHANGE_CONTACT_MODATTR(self, contact, value):
+    def change_contact_modattr(self, contact, value):
         """Change contact modified attribute value
         Format of the line that triggers function call::
 
@@ -913,7 +913,7 @@ class ExternalCommandManager:
         """
         contact.modified_attributes = long(value)
 
-    def CHANGE_CONTACT_HOST_NOTIFICATION_TIMEPERIOD(self, contact, notification_timeperiod):
+    def change_contact_host_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact host notification timeperiod value
         Format of the line that triggers function call::
 
@@ -929,7 +929,7 @@ class ExternalCommandManager:
         contact.host_notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(contact)
 
-    def ADD_SVC_COMMENT(self, service, persistent, author, comment):
+    def add_svc_comment(self, service, persistent, author, comment):
         """Add a service comment
         Format of the line that triggers function call::
 
@@ -949,7 +949,7 @@ class ExternalCommandManager:
         service.add_comment(comm)
         self.sched.add(comm)
 
-    def ADD_HOST_COMMENT(self, host, persistent, author, comment):
+    def add_host_comment(self, host, persistent, author, comment):
         """Add a host comment
         Format of the line that triggers function call::
 
@@ -969,7 +969,7 @@ class ExternalCommandManager:
         host.add_comment(comm)
         self.sched.add(comm)
 
-    def ACKNOWLEDGE_SVC_PROBLEM(self, service, sticky, notify, persistent, author, comment):
+    def acknowledge_svc_problem(self, service, sticky, notify, persistent, author, comment):
         """Acknowledge a service problem
         Format of the line that triggers function call::
 
@@ -992,7 +992,7 @@ class ExternalCommandManager:
         """
         service.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    def ACKNOWLEDGE_HOST_PROBLEM(self, host, sticky, notify, persistent, author, comment):
+    def acknowledge_host_problem(self, host, sticky, notify, persistent, author, comment):
         """Acknowledge a host problem
         Format of the line that triggers function call::
 
@@ -1015,7 +1015,7 @@ class ExternalCommandManager:
         """
         host.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    def ACKNOWLEDGE_SVC_PROBLEM_EXPIRE(self, service, sticky, notify,
+    def acknowledge_svc_problem_expire(self, service, sticky, notify,
                                        persistent, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1041,7 +1041,7 @@ class ExternalCommandManager:
         """
         service.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
 
-    def ACKNOWLEDGE_HOST_PROBLEM_EXPIRE(self, host, sticky, notify,
+    def acknowledge_host_problem_expire(self, host, sticky, notify,
                                         persistent, end_time, author, comment):
         """Acknowledge a host problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1068,7 +1068,7 @@ class ExternalCommandManager:
         """
         host.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
 
-    def CHANGE_CONTACT_SVC_NOTIFICATION_TIMEPERIOD(self, contact, notification_timeperiod):
+    def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value
         Format of the line that triggers function call::
 
@@ -1085,7 +1085,7 @@ class ExternalCommandManager:
         contact.service_notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(contact)
 
-    def CHANGE_CUSTOM_CONTACT_VAR(self, contact, varname, varvalue):
+    def change_custom_contact_var(self, contact, varname, varvalue):
         """Change custom contact variable
         Format of the line that triggers function call::
 
@@ -1102,7 +1102,7 @@ class ExternalCommandManager:
         contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         contact.customs[varname.upper()] = varvalue
 
-    def CHANGE_CUSTOM_HOST_VAR(self, host, varname, varvalue):
+    def change_custom_host_var(self, host, varname, varvalue):
         """Change custom host variable
         Format of the line that triggers function call::
 
@@ -1119,7 +1119,7 @@ class ExternalCommandManager:
         host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         host.customs[varname.upper()] = varvalue
 
-    def CHANGE_CUSTOM_SVC_VAR(self, service, varname, varvalue):
+    def change_custom_svc_var(self, service, varname, varvalue):
         """Change custom service variable
         Format of the line that triggers function call::
 
@@ -1136,7 +1136,7 @@ class ExternalCommandManager:
         service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         service.customs[varname.upper()] = varvalue
 
-    def CHANGE_GLOBAL_HOST_EVENT_HANDLER(self, event_handler_command):
+    def change_global_host_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global host event handler)
         Format of the line that triggers function call::
 
@@ -1149,7 +1149,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def CHANGE_GLOBAL_SVC_EVENT_HANDLER(self, event_handler_command):
+    def change_global_svc_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global service event handler)
         Format of the line that triggers function call::
 
@@ -1162,7 +1162,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def CHANGE_HOST_CHECK_COMMAND(self, host, check_command):
+    def change_host_check_command(self, host, check_command):
         """Modify host check command
         Format of the line that triggers function call::
 
@@ -1178,7 +1178,7 @@ class ExternalCommandManager:
         host.check_command = CommandCall(self.commands, check_command, poller_tag=host.poller_tag)
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_HOST_CHECK_TIMEPERIOD(self, host, timeperiod):
+    def change_host_check_timeperiod(self, host, timeperiod):
         """Modify host check timeperiod
         Format of the line that triggers function call::
 
@@ -1194,7 +1194,7 @@ class ExternalCommandManager:
         host.check_period = timeperiod
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_HOST_EVENT_HANDLER(self, host, event_handler_command):
+    def change_host_event_handler(self, host, event_handler_command):
         """Modify host event handler
         Format of the line that triggers function call::
 
@@ -1210,7 +1210,7 @@ class ExternalCommandManager:
         host.event_handler = CommandCall(self.commands, event_handler_command)
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_HOST_MODATTR(self, host, value):
+    def change_host_modattr(self, host, value):
         """Change host modified attributes
         Format of the line that triggers function call::
 
@@ -1224,7 +1224,7 @@ class ExternalCommandManager:
         """
         host.modified_attributes = long(value)
 
-    def CHANGE_MAX_HOST_CHECK_ATTEMPTS(self, host, check_attempts):
+    def change_max_host_check_attempts(self, host, check_attempts):
         """Modify max host check attempt
         Format of the line that triggers function call::
 
@@ -1242,7 +1242,7 @@ class ExternalCommandManager:
             host.attempt = host.max_check_attempts
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_MAX_SVC_CHECK_ATTEMPTS(self, service, check_attempts):
+    def change_max_svc_check_attempts(self, service, check_attempts):
         """Modify max service check attempt
         Format of the line that triggers function call::
 
@@ -1260,7 +1260,7 @@ class ExternalCommandManager:
             service.attempt = service.max_check_attempts
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_NORMAL_HOST_CHECK_INTERVAL(self, host, check_interval):
+    def change_normal_host_check_interval(self, host, check_interval):
         """Modify host check interval
         Format of the line that triggers function call::
 
@@ -1281,7 +1281,7 @@ class ExternalCommandManager:
             host.schedule(force=False, force_time=int(time.time()))
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_NORMAL_SVC_CHECK_INTERVAL(self, service, check_interval):
+    def change_normal_svc_check_interval(self, service, check_interval):
         """Modify service check interval
         Format of the line that triggers function call::
 
@@ -1302,7 +1302,7 @@ class ExternalCommandManager:
             service.schedule(force=False, force_time=int(time.time()))
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_RETRY_HOST_CHECK_INTERVAL(self, host, check_interval):
+    def change_retry_host_check_interval(self, host, check_interval):
         """Modify host retry interval
         Format of the line that triggers function call::
 
@@ -1318,7 +1318,7 @@ class ExternalCommandManager:
         host.retry_interval = check_interval
         self.sched.get_and_register_status_brok(host)
 
-    def CHANGE_RETRY_SVC_CHECK_INTERVAL(self, service, check_interval):
+    def change_retry_svc_check_interval(self, service, check_interval):
         """Modify service retry interval
         Format of the line that triggers function call::
 
@@ -1334,7 +1334,7 @@ class ExternalCommandManager:
         service.retry_interval = check_interval
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_SVC_CHECK_COMMAND(self, service, check_command):
+    def change_svc_check_command(self, service, check_command):
         """Modify service check command
         Format of the line that triggers function call::
 
@@ -1351,7 +1351,7 @@ class ExternalCommandManager:
                                             poller_tag=service.poller_tag)
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_SVC_CHECK_TIMEPERIOD(self, service, check_timeperiod):
+    def change_svc_check_timeperiod(self, service, check_timeperiod):
         """Modify service check timeperiod
         Format of the line that triggers function call::
 
@@ -1367,7 +1367,7 @@ class ExternalCommandManager:
         service.check_period = check_timeperiod
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_SVC_EVENT_HANDLER(self, service, event_handler_command):
+    def change_svc_event_handler(self, service, event_handler_command):
         """Modify service event handler
         Format of the line that triggers function call::
 
@@ -1383,7 +1383,7 @@ class ExternalCommandManager:
         service.event_handler = CommandCall(self.commands, event_handler_command)
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_SVC_MODATTR(self, service, value):
+    def change_svc_modattr(self, service, value):
         """Change service modified attributes
         Format of the line that triggers function call::
 
@@ -1423,7 +1423,7 @@ class ExternalCommandManager:
         # And we need to push the information to the scheduler.
         self.sched.get_and_register_status_brok(service)
 
-    def CHANGE_SVC_NOTIFICATION_TIMEPERIOD(self, service, notification_timeperiod):
+    def change_svc_notification_timeperiod(self, service, notification_timeperiod):
         """Change service notification timeperiod
         Format of the line that triggers function call::
 
@@ -1440,7 +1440,7 @@ class ExternalCommandManager:
         service.notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(service)
 
-    def DELAY_HOST_NOTIFICATION(self, host, notification_time):
+    def delay_host_notification(self, host, notification_time):
         """Modify host first notification delay
         Format of the line that triggers function call::
 
@@ -1455,7 +1455,7 @@ class ExternalCommandManager:
         host.first_notification_delay = notification_time
         self.sched.get_and_register_status_brok(host)
 
-    def DELAY_SVC_NOTIFICATION(self, service, notification_time):
+    def delay_svc_notification(self, service, notification_time):
         """Modify service first notification delay
         Format of the line that triggers function call::
 
@@ -1470,7 +1470,7 @@ class ExternalCommandManager:
         service.first_notification_delay = notification_time
         self.sched.get_and_register_status_brok(service)
 
-    def DEL_ALL_HOST_COMMENTS(self, host):
+    def del_all_host_comments(self, host):
         """Delete all host comments
         Format of the line that triggers function call::
 
@@ -1481,9 +1481,9 @@ class ExternalCommandManager:
         :return: None
         """
         for comm in host.comments:
-            self.DEL_HOST_COMMENT(comm._id)
+            self.del_host_comment(comm._id)
 
-    def DEL_ALL_HOST_DOWNTIMES(self, host):
+    def del_all_host_downtimes(self, host):
         """Delete all host downtimes
         Format of the line that triggers function call::
 
@@ -1494,9 +1494,9 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in host.downtimes:
-            self.DEL_HOST_DOWNTIME(downtime._id)
+            self.del_host_downtime(downtime._id)
 
-    def DEL_ALL_SVC_COMMENTS(self, service):
+    def del_all_svc_comments(self, service):
         """Delete all service comments
         Format of the line that triggers function call::
 
@@ -1507,9 +1507,9 @@ class ExternalCommandManager:
         :return: None
         """
         for comm in service.comments:
-            self.DEL_SVC_COMMENT(comm._id)
+            self.del_svc_comment(comm._id)
 
-    def DEL_ALL_SVC_DOWNTIMES(self, service):
+    def del_all_svc_downtimes(self, service):
         """Delete all service downtime
         Format of the line that triggers function call::
 
@@ -1520,9 +1520,9 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in service.downtimes:
-            self.DEL_SVC_DOWNTIME(downtime._id)
+            self.del_svc_downtime(downtime._id)
 
-    def DEL_CONTACT_DOWNTIME(self, downtime_id):
+    def del_contact_downtime(self, downtime_id):
         """Delete a contact downtime
         Format of the line that triggers function call::
 
@@ -1535,7 +1535,7 @@ class ExternalCommandManager:
         if downtime_id in self.sched.contact_downtimes:
             self.sched.contact_downtimes[downtime_id].cancel()
 
-    def DEL_HOST_COMMENT(self, comment_id):
+    def del_host_comment(self, comment_id):
         """Delete a host comment
         Format of the line that triggers function call::
 
@@ -1548,7 +1548,7 @@ class ExternalCommandManager:
         if comment_id in self.sched.comments:
             self.sched.comments[comment_id].can_be_deleted = True
 
-    def DEL_HOST_DOWNTIME(self, downtime_id):
+    def del_host_downtime(self, downtime_id):
         """Delete a host downtime
         Format of the line that triggers function call::
 
@@ -1561,7 +1561,7 @@ class ExternalCommandManager:
         if downtime_id in self.sched.downtimes:
             self.sched.downtimes[downtime_id].cancel()
 
-    def DEL_SVC_COMMENT(self, comment_id):
+    def del_svc_comment(self, comment_id):
         """Delete a service comment
         Format of the line that triggers function call::
 
@@ -1574,7 +1574,7 @@ class ExternalCommandManager:
         if comment_id in self.sched.comments:
             self.sched.comments[comment_id].can_be_deleted = True
 
-    def DEL_SVC_DOWNTIME(self, downtime_id):
+    def del_svc_downtime(self, downtime_id):
         """Delete a service downtime
         Format of the line that triggers function call::
 
@@ -1587,7 +1587,7 @@ class ExternalCommandManager:
         if downtime_id in self.sched.downtimes:
             self.sched.downtimes[downtime_id].cancel()
 
-    def DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST(self, host):
+    def disable_all_notifications_beyond_host(self, host):
         """DOES NOTHING (should disable notification beyond a host)
         Format of the line that triggers function call::
 
@@ -1600,7 +1600,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS(self, contactgroup):
+    def disable_contactgroup_host_notifications(self, contactgroup):
         """Disable host notifications for a contactgroup
         Format of the line that triggers function call::
 
@@ -1611,9 +1611,9 @@ class ExternalCommandManager:
         :return: None
         """
         for contact in contactgroup:
-            self.DISABLE_CONTACT_HOST_NOTIFICATIONS(contact)
+            self.disable_contact_host_notifications(contact)
 
-    def DISABLE_CONTACTGROUP_SVC_NOTIFICATIONS(self, contactgroup):
+    def disable_contactgroup_svc_notifications(self, contactgroup):
         """Disable service notifications for a contactgroup
         Format of the line that triggers function call::
 
@@ -1624,9 +1624,9 @@ class ExternalCommandManager:
         :return: None
         """
         for contact in contactgroup:
-            self.DISABLE_CONTACT_SVC_NOTIFICATIONS(contact)
+            self.disable_contact_svc_notifications(contact)
 
-    def DISABLE_CONTACT_HOST_NOTIFICATIONS(self, contact):
+    def disable_contact_host_notifications(self, contact):
         """Disable host notifications for a contact
         Format of the line that triggers function call::
 
@@ -1641,7 +1641,7 @@ class ExternalCommandManager:
             contact.host_notifications_enabled = False
             self.sched.get_and_register_status_brok(contact)
 
-    def DISABLE_CONTACT_SVC_NOTIFICATIONS(self, contact):
+    def disable_contact_svc_notifications(self, contact):
         """Disable service notifications for a contact
         Format of the line that triggers function call::
 
@@ -1656,7 +1656,7 @@ class ExternalCommandManager:
             contact.service_notifications_enabled = False
             self.sched.get_and_register_status_brok(contact)
 
-    def DISABLE_EVENT_HANDLERS(self):
+    def disable_event_handlers(self):
         """Disable event handlers (globally)
         Format of the line that triggers function call::
 
@@ -1670,7 +1670,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_FAILURE_PREDICTION(self):
+    def disable_failure_prediction(self):
         """Disable failure prediction (globally)
         Format of the line that triggers function call::
 
@@ -1685,7 +1685,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_FLAP_DETECTION(self):
+    def disable_flap_detection(self):
         """Disable flap detection (globally)
         Format of the line that triggers function call::
 
@@ -1710,7 +1710,7 @@ class ExternalCommandManager:
                     host.flapping_changes = []
                     self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_HOSTGROUP_HOST_CHECKS(self, hostgroup):
+    def disable_hostgroup_host_checks(self, hostgroup):
         """Disable host checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -1721,9 +1721,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.DISABLE_HOST_CHECK(host)
+            self.disable_host_check(host)
 
-    def DISABLE_HOSTGROUP_HOST_NOTIFICATIONS(self, hostgroup):
+    def disable_hostgroup_host_notifications(self, hostgroup):
         """Disable host notifications for a hostgroup
         Format of the line that triggers function call::
 
@@ -1734,9 +1734,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.DISABLE_HOST_NOTIFICATIONS(host)
+            self.disable_host_notifications(host)
 
-    def DISABLE_HOSTGROUP_PASSIVE_HOST_CHECKS(self, hostgroup):
+    def disable_hostgroup_passive_host_checks(self, hostgroup):
         """Disable host passive checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -1747,9 +1747,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.DISABLE_PASSIVE_HOST_CHECKS(host)
+            self.disable_passive_host_checks(host)
 
-    def DISABLE_HOSTGROUP_PASSIVE_SVC_CHECKS(self, hostgroup):
+    def disable_hostgroup_passive_svc_checks(self, hostgroup):
         """Disable service passive checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -1761,9 +1761,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.DISABLE_PASSIVE_SVC_CHECKS(service)
+                self.disable_passive_svc_checks(service)
 
-    def DISABLE_HOSTGROUP_SVC_CHECKS(self, hostgroup):
+    def disable_hostgroup_svc_checks(self, hostgroup):
         """Disable service checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -1775,9 +1775,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.DISABLE_SVC_CHECK(service)
+                self.disable_svc_check(service)
 
-    def DISABLE_HOSTGROUP_SVC_NOTIFICATIONS(self, hostgroup):
+    def disable_hostgroup_svc_notifications(self, hostgroup):
         """Disable service notifications for a hostgroup
         Format of the line that triggers function call::
 
@@ -1789,9 +1789,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.DISABLE_SVC_NOTIFICATIONS(service)
+                self.disable_svc_notifications(service)
 
-    def DISABLE_HOST_AND_CHILD_NOTIFICATIONS(self, host):
+    def disable_host_and_child_notifications(self, host):
         """DOES NOTHING (Should disable host notifications and its child)
         Format of the line that triggers function call::
 
@@ -1803,7 +1803,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def DISABLE_HOST_CHECK(self, host):
+    def disable_host_check(self, host):
         """Disable checks for a host
         Format of the line that triggers function call::
 
@@ -1818,7 +1818,7 @@ class ExternalCommandManager:
             host.disable_active_checks()
             self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_HOST_EVENT_HANDLER(self, host):
+    def disable_host_event_handler(self, host):
         """Disable event handlers for a host
         Format of the line that triggers function call::
 
@@ -1833,7 +1833,7 @@ class ExternalCommandManager:
             host.event_handler_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_HOST_FLAP_DETECTION(self, host):
+    def disable_host_flap_detection(self, host):
         """Disable flap detection for a host
         Format of the line that triggers function call::
 
@@ -1852,7 +1852,7 @@ class ExternalCommandManager:
                 host.flapping_changes = []
             self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_HOST_FRESHNESS_CHECKS(self):
+    def disable_host_freshness_checks(self):
         """Disable freshness checks (globally)
         Format of the line that triggers function call::
 
@@ -1866,7 +1866,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_HOST_NOTIFICATIONS(self, host):
+    def disable_host_notifications(self, host):
         """Disable notifications for a host
         Format of the line that triggers function call::
 
@@ -1881,7 +1881,7 @@ class ExternalCommandManager:
             host.notifications_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_HOST_SVC_CHECKS(self, host):
+    def disable_host_svc_checks(self, host):
         """Disable service checks for a host
         Format of the line that triggers function call::
 
@@ -1892,9 +1892,9 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.DISABLE_SVC_CHECK(serv)
+            self.disable_svc_check(serv)
 
-    def DISABLE_HOST_SVC_NOTIFICATIONS(self, host):
+    def disable_host_svc_notifications(self, host):
         """Disable services notifications for a host
         Format of the line that triggers function call::
 
@@ -1905,10 +1905,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.DISABLE_SVC_NOTIFICATIONS(serv)
+            self.disable_svc_notifications(serv)
             self.sched.get_and_register_status_brok(serv)
 
-    def DISABLE_NOTIFICATIONS(self):
+    def disable_notifications(self):
         """Disable notifications (globally)
         Format of the line that triggers function call::
 
@@ -1922,7 +1922,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_PASSIVE_HOST_CHECKS(self, host):
+    def disable_passive_host_checks(self, host):
         """Disable passive checks for a host
         Format of the line that triggers function call::
 
@@ -1937,7 +1937,7 @@ class ExternalCommandManager:
             host.passive_checks_enabled = False
             self.sched.get_and_register_status_brok(host)
 
-    def DISABLE_PASSIVE_SVC_CHECKS(self, service):
+    def disable_passive_svc_checks(self, service):
         """Disable passive checks for a service
         Format of the line that triggers function call::
 
@@ -1952,7 +1952,7 @@ class ExternalCommandManager:
             service.passive_checks_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    def DISABLE_PERFORMANCE_DATA(self):
+    def disable_performance_data(self):
         """Disable performance data processing (globally)
         Format of the line that triggers function call::
 
@@ -1966,7 +1966,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_SERVICEGROUP_HOST_CHECKS(self, servicegroup):
+    def disable_servicegroup_host_checks(self, servicegroup):
         """Disable host checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -1977,9 +1977,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_HOST_CHECK(service.host)
+            self.disable_host_check(service.host)
 
-    def DISABLE_SERVICEGROUP_HOST_NOTIFICATIONS(self, servicegroup):
+    def disable_servicegroup_host_notifications(self, servicegroup):
         """Disable host notifications for a servicegroup
         Format of the line that triggers function call::
 
@@ -1990,9 +1990,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_HOST_NOTIFICATIONS(service.host)
+            self.disable_host_notifications(service.host)
 
-    def DISABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS(self, servicegroup):
+    def disable_servicegroup_passive_host_checks(self, servicegroup):
         """Disable passive host checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2003,9 +2003,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_PASSIVE_HOST_CHECKS(service.host)
+            self.disable_passive_host_checks(service.host)
 
-    def DISABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS(self, servicegroup):
+    def disable_servicegroup_passive_svc_checks(self, servicegroup):
         """Disable passive service checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2016,9 +2016,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_PASSIVE_SVC_CHECKS(service)
+            self.disable_passive_svc_checks(service)
 
-    def DISABLE_SERVICEGROUP_SVC_CHECKS(self, servicegroup):
+    def disable_servicegroup_svc_checks(self, servicegroup):
         """Disable service checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2029,9 +2029,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_SVC_CHECK(service)
+            self.disable_svc_check(service)
 
-    def DISABLE_SERVICEGROUP_SVC_NOTIFICATIONS(self, servicegroup):
+    def disable_servicegroup_svc_notifications(self, servicegroup):
         """Disable service notifications for a servicegroup
         Format of the line that triggers function call::
 
@@ -2042,9 +2042,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.DISABLE_SVC_NOTIFICATIONS(service)
+            self.disable_svc_notifications(service)
 
-    def DISABLE_SERVICE_FLAP_DETECTION(self, service):
+    def disable_service_flap_detection(self, service):
         """Disable flap detection for a service
         Format of the line that triggers function call::
 
@@ -2063,7 +2063,7 @@ class ExternalCommandManager:
                 service.flapping_changes = []
             self.sched.get_and_register_status_brok(service)
 
-    def DISABLE_SERVICE_FRESHNESS_CHECKS(self):
+    def disable_service_freshness_checks(self):
         """Disable service freshness checks (globally)
         Format of the line that triggers function call::
 
@@ -2077,7 +2077,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def DISABLE_SVC_CHECK(self, service):
+    def disable_svc_check(self, service):
         """Disable checks for a service
         Format of the line that triggers function call::
 
@@ -2092,7 +2092,7 @@ class ExternalCommandManager:
             service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.sched.get_and_register_status_brok(service)
 
-    def DISABLE_SVC_EVENT_HANDLER(self, service):
+    def disable_svc_event_handler(self, service):
         """Disable event handlers for a service
         Format of the line that triggers function call::
 
@@ -2107,7 +2107,7 @@ class ExternalCommandManager:
             service.event_handler_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    def DISABLE_SVC_FLAP_DETECTION(self, service):
+    def disable_svc_flap_detection(self, service):
         """Disable flap detection for a service
         Format of the line that triggers function call::
 
@@ -2117,9 +2117,9 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        self.DISABLE_SERVICE_FLAP_DETECTION(service)
+        self.disable_service_flap_detection(service)
 
-    def DISABLE_SVC_NOTIFICATIONS(self, service):
+    def disable_svc_notifications(self, service):
         """Disable notifications for a service
         Format of the line that triggers function call::
 
@@ -2134,7 +2134,7 @@ class ExternalCommandManager:
             service.notifications_enabled = False
             self.sched.get_and_register_status_brok(service)
 
-    def ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST(self, host):
+    def enable_all_notifications_beyond_host(self, host):
         """DOES NOTHING (should enable notification beyond a host)
         Format of the line that triggers function call::
 
@@ -2147,7 +2147,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def ENABLE_CONTACTGROUP_HOST_NOTIFICATIONS(self, contactgroup):
+    def enable_contactgroup_host_notifications(self, contactgroup):
         """Enable host notifications for a contactgroup
         Format of the line that triggers function call::
 
@@ -2158,9 +2158,9 @@ class ExternalCommandManager:
         :return: None
         """
         for contact in contactgroup:
-            self.ENABLE_CONTACT_HOST_NOTIFICATIONS(contact)
+            self.enable_contact_host_notifications(contact)
 
-    def ENABLE_CONTACTGROUP_SVC_NOTIFICATIONS(self, contactgroup):
+    def enable_contactgroup_svc_notifications(self, contactgroup):
         """Enable service notifications for a contactgroup
         Format of the line that triggers function call::
 
@@ -2171,9 +2171,9 @@ class ExternalCommandManager:
         :return: None
         """
         for contact in contactgroup:
-            self.ENABLE_CONTACT_SVC_NOTIFICATIONS(contact)
+            self.enable_contact_svc_notifications(contact)
 
-    def ENABLE_CONTACT_HOST_NOTIFICATIONS(self, contact):
+    def enable_contact_host_notifications(self, contact):
         """Enable host notifications for a contact
         Format of the line that triggers function call::
 
@@ -2188,7 +2188,7 @@ class ExternalCommandManager:
             contact.host_notifications_enabled = True
             self.sched.get_and_register_status_brok(contact)
 
-    def ENABLE_CONTACT_SVC_NOTIFICATIONS(self, contact):
+    def enable_contact_svc_notifications(self, contact):
         """Enable service notifications for a contact
         Format of the line that triggers function call::
 
@@ -2203,7 +2203,7 @@ class ExternalCommandManager:
             contact.service_notifications_enabled = True
             self.sched.get_and_register_status_brok(contact)
 
-    def ENABLE_EVENT_HANDLERS(self):
+    def enable_event_handlers(self):
         """Enable event handlers (globally)
         Format of the line that triggers function call::
 
@@ -2217,7 +2217,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_FAILURE_PREDICTION(self):
+    def enable_failure_prediction(self):
         """Enable failure prediction (globally)
         Format of the line that triggers function call::
 
@@ -2232,7 +2232,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_FLAP_DETECTION(self):
+    def enable_flap_detection(self):
         """Enable flap detection (globally)
         Format of the line that triggers function call::
 
@@ -2246,7 +2246,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_HOSTGROUP_HOST_CHECKS(self, hostgroup):
+    def enable_hostgroup_host_checks(self, hostgroup):
         """Enable host checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -2257,9 +2257,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.ENABLE_HOST_CHECK(host)
+            self.enable_host_check(host)
 
-    def ENABLE_HOSTGROUP_HOST_NOTIFICATIONS(self, hostgroup):
+    def enable_hostgroup_host_notifications(self, hostgroup):
         """Enable host notifications for a hostgroup
         Format of the line that triggers function call::
 
@@ -2270,9 +2270,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.ENABLE_HOST_NOTIFICATIONS(host)
+            self.enable_host_notifications(host)
 
-    def ENABLE_HOSTGROUP_PASSIVE_HOST_CHECKS(self, hostgroup):
+    def enable_hostgroup_passive_host_checks(self, hostgroup):
         """Enable host passive checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -2283,9 +2283,9 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.ENABLE_PASSIVE_HOST_CHECKS(host)
+            self.enable_passive_host_checks(host)
 
-    def ENABLE_HOSTGROUP_PASSIVE_SVC_CHECKS(self, hostgroup):
+    def enable_hostgroup_passive_svc_checks(self, hostgroup):
         """Enable service passive checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -2297,9 +2297,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.ENABLE_PASSIVE_SVC_CHECKS(service)
+                self.enable_passive_svc_checks(service)
 
-    def ENABLE_HOSTGROUP_SVC_CHECKS(self, hostgroup):
+    def enable_hostgroup_svc_checks(self, hostgroup):
         """Enable service checks for a hostgroup
         Format of the line that triggers function call::
 
@@ -2311,9 +2311,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.ENABLE_SVC_CHECK(service)
+                self.enable_svc_check(service)
 
-    def ENABLE_HOSTGROUP_SVC_NOTIFICATIONS(self, hostgroup):
+    def enable_hostgroup_svc_notifications(self, hostgroup):
         """Enable service notifications for a hostgroup
         Format of the line that triggers function call::
 
@@ -2325,9 +2325,9 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for service in host.services:
-                self.ENABLE_SVC_NOTIFICATIONS(service)
+                self.enable_svc_notifications(service)
 
-    def ENABLE_HOST_AND_CHILD_NOTIFICATIONS(self, host):
+    def enable_host_and_child_notifications(self, host):
         """DOES NOTHING (Should enable host notifications and its child)
         Format of the line that triggers function call::
 
@@ -2339,7 +2339,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def ENABLE_HOST_CHECK(self, host):
+    def enable_host_check(self, host):
         """Enable checks for a host
         Format of the line that triggers function call::
 
@@ -2354,7 +2354,7 @@ class ExternalCommandManager:
             host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.sched.get_and_register_status_brok(host)
 
-    def ENABLE_HOST_EVENT_HANDLER(self, host):
+    def enable_host_event_handler(self, host):
         """Enable event handlers for a host
         Format of the line that triggers function call::
 
@@ -2369,7 +2369,7 @@ class ExternalCommandManager:
             host.event_handler_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    def ENABLE_HOST_FLAP_DETECTION(self, host):
+    def enable_host_flap_detection(self, host):
         """Enable flap detection for a host
         Format of the line that triggers function call::
 
@@ -2384,7 +2384,7 @@ class ExternalCommandManager:
             host.flap_detection_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    def ENABLE_HOST_FRESHNESS_CHECKS(self):
+    def enable_host_freshness_checks(self):
         """Enable freshness checks (globally)
         Format of the line that triggers function call::
 
@@ -2398,7 +2398,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_HOST_NOTIFICATIONS(self, host):
+    def enable_host_notifications(self, host):
         """Enable notifications for a host
         Format of the line that triggers function call::
 
@@ -2413,7 +2413,7 @@ class ExternalCommandManager:
             host.notifications_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    def ENABLE_HOST_SVC_CHECKS(self, host):
+    def enable_host_svc_checks(self, host):
         """Enable service checks for a host
         Format of the line that triggers function call::
 
@@ -2424,9 +2424,9 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.ENABLE_SVC_CHECK(serv)
+            self.enable_svc_check(serv)
 
-    def ENABLE_HOST_SVC_NOTIFICATIONS(self, host):
+    def enable_host_svc_notifications(self, host):
         """Enable services notifications for a host
         Format of the line that triggers function call::
 
@@ -2437,10 +2437,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.ENABLE_SVC_NOTIFICATIONS(serv)
+            self.enable_svc_notifications(serv)
             self.sched.get_and_register_status_brok(serv)
 
-    def ENABLE_NOTIFICATIONS(self):
+    def enable_notifications(self):
         """Enable notifications (globally)
         Format of the line that triggers function call::
 
@@ -2454,7 +2454,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_PASSIVE_HOST_CHECKS(self, host):
+    def enable_passive_host_checks(self, host):
         """Enable passive checks for a host
         Format of the line that triggers function call::
 
@@ -2469,7 +2469,7 @@ class ExternalCommandManager:
             host.passive_checks_enabled = True
             self.sched.get_and_register_status_brok(host)
 
-    def ENABLE_PASSIVE_SVC_CHECKS(self, service):
+    def enable_passive_svc_checks(self, service):
         """Enable passive checks for a service
         Format of the line that triggers function call::
 
@@ -2484,7 +2484,7 @@ class ExternalCommandManager:
             service.passive_checks_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    def ENABLE_PERFORMANCE_DATA(self):
+    def enable_performance_data(self):
         """Enable performance data processing (globally)
         Format of the line that triggers function call::
 
@@ -2498,7 +2498,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_SERVICEGROUP_HOST_CHECKS(self, servicegroup):
+    def enable_servicegroup_host_checks(self, servicegroup):
         """Enable host checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2509,9 +2509,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_HOST_CHECK(service.host)
+            self.enable_host_check(service.host)
 
-    def ENABLE_SERVICEGROUP_HOST_NOTIFICATIONS(self, servicegroup):
+    def enable_servicegroup_host_notifications(self, servicegroup):
         """Enable host notifications for a servicegroup
         Format of the line that triggers function call::
 
@@ -2522,9 +2522,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_HOST_NOTIFICATIONS(service.host)
+            self.enable_host_notifications(service.host)
 
-    def ENABLE_SERVICEGROUP_PASSIVE_HOST_CHECKS(self, servicegroup):
+    def enable_servicegroup_passive_host_checks(self, servicegroup):
         """Enable passive host checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2535,9 +2535,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_PASSIVE_HOST_CHECKS(service.host)
+            self.enable_passive_host_checks(service.host)
 
-    def ENABLE_SERVICEGROUP_PASSIVE_SVC_CHECKS(self, servicegroup):
+    def enable_servicegroup_passive_svc_checks(self, servicegroup):
         """Enable passive service checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2548,9 +2548,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_PASSIVE_SVC_CHECKS(service)
+            self.enable_passive_svc_checks(service)
 
-    def ENABLE_SERVICEGROUP_SVC_CHECKS(self, servicegroup):
+    def enable_servicegroup_svc_checks(self, servicegroup):
         """Enable service checks for a servicegroup
         Format of the line that triggers function call::
 
@@ -2561,9 +2561,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_SVC_CHECK(service)
+            self.enable_svc_check(service)
 
-    def ENABLE_SERVICEGROUP_SVC_NOTIFICATIONS(self, servicegroup):
+    def enable_servicegroup_svc_notifications(self, servicegroup):
         """Enable service notifications for a servicegroup
         Format of the line that triggers function call::
 
@@ -2574,9 +2574,9 @@ class ExternalCommandManager:
         :return: None
         """
         for service in servicegroup:
-            self.ENABLE_SVC_NOTIFICATIONS(service)
+            self.enable_svc_notifications(service)
 
-    def ENABLE_SERVICE_FRESHNESS_CHECKS(self):
+    def enable_service_freshness_checks(self):
         """Enable service freshness checks (globally)
         Format of the line that triggers function call::
 
@@ -2590,7 +2590,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def ENABLE_SVC_CHECK(self, service):
+    def enable_svc_check(self, service):
         """Enable checks for a service
         Format of the line that triggers function call::
 
@@ -2605,7 +2605,7 @@ class ExternalCommandManager:
             service.active_checks_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    def ENABLE_SVC_EVENT_HANDLER(self, service):
+    def enable_svc_event_handler(self, service):
         """Enable event handlers for a service
         Format of the line that triggers function call::
 
@@ -2620,7 +2620,7 @@ class ExternalCommandManager:
             service.event_handler_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    def ENABLE_SVC_FLAP_DETECTION(self, service):
+    def enable_svc_flap_detection(self, service):
         """Enable flap detection for a service
         Format of the line that triggers function call::
 
@@ -2635,7 +2635,7 @@ class ExternalCommandManager:
             service.flap_detection_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    def ENABLE_SVC_NOTIFICATIONS(self, service):
+    def enable_svc_notifications(self, service):
         """Enable notifications for a service
         Format of the line that triggers function call::
 
@@ -2650,7 +2650,7 @@ class ExternalCommandManager:
             service.notifications_enabled = True
             self.sched.get_and_register_status_brok(service)
 
-    def PROCESS_FILE(self, file_name, delete):
+    def process_file(self, file_name, delete):
         """DOES NOTHING (should process a file)
         Format of the line that triggers function call::
 
@@ -2664,7 +2664,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def PROCESS_HOST_CHECK_RESULT(self, host, status_code, plugin_output):
+    def process_host_check_result(self, host, status_code, plugin_output):
         """Process host check result
         Format of the line that triggers function call::
 
@@ -2711,7 +2711,7 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             # Ok now this result will be read by scheduler the next loop
 
-    def PROCESS_HOST_OUTPUT(self, host, plugin_output):
+    def process_host_output(self, host, plugin_output):
         """Process host output
         Format of the line that triggers function call::
 
@@ -2723,9 +2723,9 @@ class ExternalCommandManager:
         :type plugin_output: str
         :return: None
         """
-        self.PROCESS_HOST_CHECK_RESULT(host, host.state_id, plugin_output)
+        self.process_host_check_result(host, host.state_id, plugin_output)
 
-    def PROCESS_SERVICE_CHECK_RESULT(self, service, return_code, plugin_output):
+    def process_service_check_result(self, service, return_code, plugin_output):
         """Process service check result
         Format of the line that triggers function call::
 
@@ -2770,7 +2770,7 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             # Ok now this result will be reap by scheduler the next loop
 
-    def PROCESS_SERVICE_OUTPUT(self, service, plugin_output):
+    def process_service_output(self, service, plugin_output):
         """Process service output
         Format of the line that triggers function call::
 
@@ -2782,9 +2782,9 @@ class ExternalCommandManager:
         :type plugin_output: str
         :return: None
         """
-        self.PROCESS_SERVICE_CHECK_RESULT(service, service.state_id, plugin_output)
+        self.process_service_check_result(service, service.state_id, plugin_output)
 
-    def READ_STATE_INFORMATION(self):
+    def read_state_information(self):
         """DOES NOTHING (What it is supposed to do?)
         Format of the line that triggers function call::
 
@@ -2794,7 +2794,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def REMOVE_HOST_ACKNOWLEDGEMENT(self, host):
+    def remove_host_acknowledgement(self, host):
         """Remove an acknowledgment on a host
         Format of the line that triggers function call::
 
@@ -2806,7 +2806,7 @@ class ExternalCommandManager:
         """
         host.unacknowledge_problem()
 
-    def REMOVE_SVC_ACKNOWLEDGEMENT(self, service):
+    def remove_svc_acknowledgement(self, service):
         """Remove an acknowledgment on a service
         Format of the line that triggers function call::
 
@@ -2818,7 +2818,7 @@ class ExternalCommandManager:
         """
         service.unacknowledge_problem()
 
-    def RESTART_PROGRAM(self):
+    def restart_program(self):
         """Restart Alignak
         Format of the line that triggers function call::
 
@@ -2849,7 +2849,7 @@ class ExternalCommandManager:
         # Ok here the command succeed, we can now wait our death
         naglog_result('info', "%s" % (e_handler.output))
 
-    def RELOAD_CONFIG(self):
+    def reload_config(self):
         """Reload Alignak configuration
         Format of the line that triggers function call::
 
@@ -2880,7 +2880,7 @@ class ExternalCommandManager:
         # Ok here the command succeed, we can now wait our death
         naglog_result('info', "%s" % (e_handler.output))
 
-    def SAVE_STATE_INFORMATION(self):
+    def save_state_information(self):
         """DOES NOTHING (What it is supposed to do?)
         Format of the line that triggers function call::
 
@@ -2890,7 +2890,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME(self, host, start_time, end_time,
+    def schedule_and_propagate_host_downtime(self, host, start_time, end_time,
                                              fixed, trigger_id, duration, author, comment):
         """DOES NOTHING (Should create host downtime and start it?)
         Format of the line that triggers function call::
@@ -2902,7 +2902,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME(self, host, start_time, end_time, fixed,
+    def schedule_and_propagate_triggered_host_downtime(self, host, start_time, end_time, fixed,
                                                        trigger_id, duration, author, comment):
         """DOES NOTHING (Should create triggered host downtime and start it?)
         Format of the line that triggers function call::
@@ -2914,7 +2914,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SCHEDULE_CONTACT_DOWNTIME(self, contact, start_time, end_time, author, comment):
+    def schedule_contact_downtime(self, contact, start_time, end_time, author, comment):
         """Schedule contact downtime
         Format of the line that triggers function call::
 
@@ -2937,7 +2937,7 @@ class ExternalCommandManager:
         self.sched.add(cdt)
         self.sched.get_and_register_status_brok(contact)
 
-    def SCHEDULE_FORCED_HOST_CHECK(self, host, check_time):
+    def schedule_forced_host_check(self, host, check_time):
         """Schedule a forced check on a host
         Format of the line that triggers function call::
 
@@ -2952,7 +2952,7 @@ class ExternalCommandManager:
         host.schedule(force=True, force_time=check_time)
         self.sched.get_and_register_status_brok(host)
 
-    def SCHEDULE_FORCED_HOST_SVC_CHECKS(self, host, check_time):
+    def schedule_forced_host_svc_checks(self, host, check_time):
         """Schedule a forced check on all services of a host
         Format of the line that triggers function call::
 
@@ -2965,10 +2965,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.SCHEDULE_FORCED_SVC_CHECK(serv, check_time)
+            self.schedule_forced_svc_check(serv, check_time)
             self.sched.get_and_register_status_brok(serv)
 
-    def SCHEDULE_FORCED_SVC_CHECK(self, service, check_time):
+    def schedule_forced_svc_check(self, service, check_time):
         """Schedule a forced check on a service
         Format of the line that triggers function call::
 
@@ -2983,7 +2983,7 @@ class ExternalCommandManager:
         service.schedule(force=True, force_time=check_time)
         self.sched.get_and_register_status_brok(service)
 
-    def SCHEDULE_HOSTGROUP_HOST_DOWNTIME(self, hostgroup, start_time, end_time, fixed,
+    def schedule_hostgroup_host_downtime(self, hostgroup, start_time, end_time, fixed,
                                          trigger_id, duration, author, comment):
         """Schedule a downtime for each host of a hostgroup
         Format of the line that triggers function call::
@@ -3010,10 +3010,10 @@ class ExternalCommandManager:
         :return: None
         """
         for host in hostgroup:
-            self.SCHEDULE_HOST_DOWNTIME(host, start_time, end_time, fixed,
+            self.schedule_host_downtime(host, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment)
 
-    def SCHEDULE_HOSTGROUP_SVC_DOWNTIME(self, hostgroup, start_time, end_time, fixed,
+    def schedule_hostgroup_svc_downtime(self, hostgroup, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment):
         """Schedule a downtime for each service of each host of a hostgroup
         Format of the line that triggers function call::
@@ -3041,10 +3041,10 @@ class ExternalCommandManager:
         """
         for host in hostgroup:
             for serv in host.services:
-                self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
+                self.schedule_svc_downtime(serv, start_time, end_time, fixed,
                                            trigger_id, duration, author, comment)
 
-    def SCHEDULE_HOST_CHECK(self, host, check_time):
+    def schedule_host_check(self, host, check_time):
         """Schedule a check on a host
         Format of the line that triggers function call::
 
@@ -3059,7 +3059,7 @@ class ExternalCommandManager:
         host.schedule(force=False, force_time=check_time)
         self.sched.get_and_register_status_brok(host)
 
-    def SCHEDULE_HOST_DOWNTIME(self, host, start_time, end_time, fixed,
+    def schedule_host_downtime(self, host, start_time, end_time, fixed,
                                trigger_id, duration, author, comment):
         """Schedule a host downtime
         Format of the line that triggers function call::
@@ -3093,7 +3093,7 @@ class ExternalCommandManager:
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(downtime)
 
-    def SCHEDULE_HOST_SVC_CHECKS(self, host, check_time):
+    def schedule_host_svc_checks(self, host, check_time):
         """Schedule a check on all services of a host
         Format of the line that triggers function call::
 
@@ -3106,10 +3106,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.SCHEDULE_SVC_CHECK(serv, check_time)
+            self.schedule_svc_check(serv, check_time)
             self.sched.get_and_register_status_brok(serv)
 
-    def SCHEDULE_HOST_SVC_DOWNTIME(self, host, start_time, end_time, fixed,
+    def schedule_host_svc_downtime(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
         """Schedule a service downtime for each service of a host
         Format of the line that triggers function call::
@@ -3136,10 +3136,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in host.services:
-            self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
+            self.schedule_svc_downtime(serv, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
-    def SCHEDULE_SERVICEGROUP_HOST_DOWNTIME(self, servicegroup, start_time, end_time,
+    def schedule_servicegroup_host_downtime(self, servicegroup, start_time, end_time,
                                             fixed, trigger_id, duration, author, comment):
         """Schedule a host downtime for each host of services in a servicegroup
         Format of the line that triggers function call::
@@ -3166,10 +3166,10 @@ class ExternalCommandManager:
         :return: None
         """
         for host in [s.host for s in servicegroup.get_services()]:
-            self.SCHEDULE_HOST_DOWNTIME(host, start_time, end_time, fixed,
+            self.schedule_host_downtime(host, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment)
 
-    def SCHEDULE_SERVICEGROUP_SVC_DOWNTIME(self, servicegroup, start_time, end_time,
+    def schedule_servicegroup_svc_downtime(self, servicegroup, start_time, end_time,
                                            fixed, trigger_id, duration, author, comment):
         """Schedule a service downtime for each service of a servicegroup
         Format of the line that triggers function call::
@@ -3196,10 +3196,10 @@ class ExternalCommandManager:
         :return: None
         """
         for serv in servicegroup.get_services():
-            self.SCHEDULE_SVC_DOWNTIME(serv, start_time, end_time, fixed,
+            self.schedule_svc_downtime(serv, start_time, end_time, fixed,
                                        trigger_id, duration, author, comment)
 
-    def SCHEDULE_SVC_CHECK(self, service, check_time):
+    def schedule_svc_check(self, service, check_time):
         """Schedule a check on a service
         Format of the line that triggers function call::
 
@@ -3214,7 +3214,7 @@ class ExternalCommandManager:
         service.schedule(force=False, force_time=check_time)
         self.sched.get_and_register_status_brok(service)
 
-    def SCHEDULE_SVC_DOWNTIME(self, service, start_time, end_time, fixed,
+    def schedule_svc_downtime(self, service, start_time, end_time, fixed,
                               trigger_id, duration, author, comment):
         """Schedule a service downtime
         Format of the line that triggers function call::
@@ -3248,7 +3248,7 @@ class ExternalCommandManager:
         if trigger_id != 0 and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(downtime)
 
-    def SEND_CUSTOM_HOST_NOTIFICATION(self, host, options, author, comment):
+    def send_custom_host_notification(self, host, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
         Format of the line that triggers function call::
 
@@ -3266,7 +3266,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SEND_CUSTOM_SVC_NOTIFICATION(self, service, options, author, comment):
+    def send_custom_svc_notification(self, service, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
         Format of the line that triggers function call::
 
@@ -3284,7 +3284,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SET_HOST_NOTIFICATION_NUMBER(self, host, notification_number):
+    def set_host_notification_number(self, host, notification_number):
         """DOES NOTHING (Should set host notification number)
         Format of the line that triggers function call::
 
@@ -3298,7 +3298,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SET_SVC_NOTIFICATION_NUMBER(self, service, notification_number):
+    def set_svc_notification_number(self, service, notification_number):
         """DOES NOTHING (Should set host notification number)
         Format of the line that triggers function call::
 
@@ -3312,7 +3312,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def SHUTDOWN_PROGRAM(self):
+    def shutdown_program(self):
         """DOES NOTHING (Should shutdown Alignak)
         Format of the line that triggers function call::
 
@@ -3322,7 +3322,7 @@ class ExternalCommandManager:
         """
         pass
 
-    def START_ACCEPTING_PASSIVE_HOST_CHECKS(self):
+    def start_accepting_passive_host_checks(self):
         """Enable passive host check submission (globally)
         Format of the line that triggers function call::
 
@@ -3336,7 +3336,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def START_ACCEPTING_PASSIVE_SVC_CHECKS(self):
+    def start_accepting_passive_svc_checks(self):
         """Enable passive service check submission (globally)
         Format of the line that triggers function call::
 
@@ -3350,7 +3350,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def START_EXECUTING_HOST_CHECKS(self):
+    def start_executing_host_checks(self):
         """Enable host check execution (globally)
         Format of the line that triggers function call::
 
@@ -3364,7 +3364,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def START_EXECUTING_SVC_CHECKS(self):
+    def start_executing_svc_checks(self):
         """Enable service check execution (globally)
         Format of the line that triggers function call::
 
@@ -3378,7 +3378,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def START_OBSESSING_OVER_HOST(self, host):
+    def start_obsessing_over_host(self, host):
         """Enable obsessing over host for a host
         Format of the line that triggers function call::
 
@@ -3393,7 +3393,7 @@ class ExternalCommandManager:
             host.obsess_over_host = True
             self.sched.get_and_register_status_brok(host)
 
-    def START_OBSESSING_OVER_HOST_CHECKS(self):
+    def start_obsessing_over_host_checks(self):
         """Enable obssessing over host check (globally)
         Format of the line that triggers function call::
 
@@ -3407,7 +3407,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def START_OBSESSING_OVER_SVC(self, service):
+    def start_obsessing_over_svc(self, service):
         """Enable obssessing over service for a service
         Format of the line that triggers function call::
 
@@ -3422,7 +3422,7 @@ class ExternalCommandManager:
             service.obsess_over_service = True
             self.sched.get_and_register_status_brok(service)
 
-    def START_OBSESSING_OVER_SVC_CHECKS(self):
+    def start_obsessing_over_svc_checks(self):
         """Enable obssessing over service check (globally)
         Format of the line that triggers function call::
 
@@ -3436,7 +3436,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_ACCEPTING_PASSIVE_HOST_CHECKS(self):
+    def stop_accepting_passive_host_checks(self):
         """Disable passive host check submission (globally)
         Format of the line that triggers function call::
 
@@ -3450,7 +3450,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_ACCEPTING_PASSIVE_SVC_CHECKS(self):
+    def stop_accepting_passive_svc_checks(self):
         """Disable passive service check submission (globally)
         Format of the line that triggers function call::
 
@@ -3464,7 +3464,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_EXECUTING_HOST_CHECKS(self):
+    def stop_executing_host_checks(self):
         """Disable host check execution (globally)
         Format of the line that triggers function call::
 
@@ -3478,7 +3478,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_EXECUTING_SVC_CHECKS(self):
+    def stop_executing_svc_checks(self):
         """Disable service check execution (globally)
         Format of the line that triggers function call::
 
@@ -3492,7 +3492,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_OBSESSING_OVER_HOST(self, host):
+    def stop_obsessing_over_host(self, host):
         """Disable obsessing over host for a host
         Format of the line that triggers function call::
 
@@ -3507,7 +3507,7 @@ class ExternalCommandManager:
             host.obsess_over_host = False
             self.sched.get_and_register_status_brok(host)
 
-    def STOP_OBSESSING_OVER_HOST_CHECKS(self):
+    def stop_obsessing_over_host_checks(self):
         """Disable obssessing over host check (globally)
         Format of the line that triggers function call::
 
@@ -3521,7 +3521,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def STOP_OBSESSING_OVER_SVC(self, service):
+    def stop_obsessing_over_svc(self, service):
         """Disable obssessing over service for a service
         Format of the line that triggers function call::
 
@@ -3536,7 +3536,7 @@ class ExternalCommandManager:
             service.obsess_over_service = False
             self.sched.get_and_register_status_brok(service)
 
-    def STOP_OBSESSING_OVER_SVC_CHECKS(self):
+    def stop_obsessing_over_svc_checks(self):
         """Disable obssessing over service check (globally)
         Format of the line that triggers function call::
 
@@ -3550,7 +3550,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def LAUNCH_SVC_EVENT_HANDLER(self, service):
+    def launch_svc_event_handler(self, service):
         """Launch event handler for a service
         Format of the line that triggers function call::
 
@@ -3562,7 +3562,7 @@ class ExternalCommandManager:
         """
         service.get_event_handlers(externalcmd=True)
 
-    def LAUNCH_HOST_EVENT_HANDLER(self, host):
+    def launch_host_event_handler(self, host):
         """Launch event handler for a service
         Format of the line that triggers function call::
 
@@ -3574,7 +3574,7 @@ class ExternalCommandManager:
         """
         host.get_event_handlers(externalcmd=True)
 
-    def ADD_SIMPLE_HOST_DEPENDENCY(self, son, father):
+    def add_simple_host_dependency(self, son, father):
         """Add a host dependency between son and father
         Format of the line that triggers function call::
 
@@ -3598,7 +3598,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
-    def DEL_HOST_DEPENDENCY(self, son, father):
+    def del_host_dependency(self, son, father):
         """Delete a host dependency between son and father
         Format of the line that triggers function call::
 
@@ -3622,7 +3622,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
-    def ADD_SIMPLE_POLLER(self, realm_name, poller_name, address, port):
+    def add_simple_poller(self, realm_name, poller_name, address, port):
         """Add a poller
         Format of the line that triggers function call::
 
