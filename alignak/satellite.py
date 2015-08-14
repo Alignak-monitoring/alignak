@@ -306,7 +306,7 @@ class BaseSatellite(Daemon):
         :return: None
         TODO: Clean this, handle return a tuple and it is not used
         """
-        self.handleRequests(timeout)
+        self.handle_requests(timeout)
 
     def do_stop(self):
         """Unregister http functions and call super(BaseSatellite, self).do_stop()

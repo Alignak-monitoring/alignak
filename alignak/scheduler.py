@@ -1983,7 +1983,7 @@ class Scheduler(object):
             # Ok, go to send our broks to our external modules
             # self.send_broks_to_modules()
 
-            elapsed, _, _ = self.sched_daemon.handleRequests(timeout)
+            elapsed, _, _ = self.sched_daemon.handle_requests(timeout)
             if elapsed:
                 timeout -= elapsed
                 if timeout > 0:
