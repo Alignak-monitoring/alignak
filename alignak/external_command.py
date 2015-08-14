@@ -779,7 +779,7 @@ class ExternalCommandManager:
                             args.append(host)
                         elif self.conf.accept_passive_unknown_check_results:
                             brok = self.get_unknown_check_result_brok(command)
-                            self.sched.add_Brok(brok)
+                            self.sched.add_brok(brok)
 
                     elif type_searched == 'contact':
                         contact = self.contacts.find_by_name(val)
@@ -852,7 +852,7 @@ class ExternalCommandManager:
                         args.append(serv)
                     elif self.conf.accept_passive_unknown_check_results:
                         brok = self.get_unknown_check_result_brok(command)
-                        self.sched.add_Brok(brok)
+                        self.sched.add_brok(brok)
                     else:
                         logger.warning(
                             "A command was received for service '%s' on host '%s', "

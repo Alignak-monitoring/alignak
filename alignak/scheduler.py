@@ -368,7 +368,7 @@ class Scheduler(object):
         ext_cmd = ExternalCommand(command)
         self.external_command.resolve_command(ext_cmd)
 
-    def add_Brok(self, brok, bname=None):
+    def add_brok(self, brok, bname=None):
         """Add a brok into brokers list
         It can be for a specific one, all brokers or none (startup)
 
@@ -396,7 +396,7 @@ class Scheduler(object):
                 # connection will get all
                 self.broks[brok._id] = brok
 
-    def add_Notification(self, notif):
+    def add_notification(self, notif):
         """Add a notification into actions list
 
         :param notif: notification to add
@@ -409,7 +409,7 @@ class Scheduler(object):
             brok = notif.get_initial_status_brok()
             self.add(brok)
 
-    def add_Check(self, c):
+    def add_check(self, c):
         """Add a check into checks list
 
         :param c: check to add
@@ -422,7 +422,7 @@ class Scheduler(object):
         brok = c.ref.get_next_schedule_brok()
         self.add(brok)
 
-    def add_EventHandler(self, action):
+    def add_eventhandler(self, action):
         """Add a event handler into actions list
 
         :param action: event handler to add
@@ -432,7 +432,7 @@ class Scheduler(object):
         # print "Add an event Handler", elt._id
         self.actions[action._id] = action
 
-    def add_Downtime(self, dt):
+    def add_downtime(self, dt):
         """Add a downtime into downtimes list
 
         :param dt: downtime to add
@@ -441,9 +441,9 @@ class Scheduler(object):
         """
         self.downtimes[dt._id] = dt
         if dt.extra_comment:
-            self.add_Comment(dt.extra_comment)
+            self.add_comment(dt.extra_comment)
 
-    def add_ContactDowntime(self, contact_dt):
+    def add_contactdowntime(self, contact_dt):
         """Add a contact downtime into contact_downtimes list
 
         :param contact_dt: contact downtime to add
@@ -452,7 +452,7 @@ class Scheduler(object):
         """
         self.contact_downtimes[contact_dt._id] = contact_dt
 
-    def add_Comment(self, comment):
+    def add_comment(self, comment):
         """Add a comment into comments list
 
         :param comment: comment to add
@@ -463,7 +463,7 @@ class Scheduler(object):
         brok = comment.ref.get_update_status_brok()
         self.add(brok)
 
-    def add_ExternalCommand(self, ext_cmd):
+    def add_externalcommand(self, ext_cmd):
         """Resolve external command
 
         :param ext_cmd: extermal command to run
@@ -496,14 +496,14 @@ class Scheduler(object):
             )
 
     __add_actions = {
-        Check:              add_Check,
-        Brok:               add_Brok,
-        Notification:       add_Notification,
-        EventHandler:       add_EventHandler,
-        Downtime:           add_Downtime,
-        ContactDowntime:    add_ContactDowntime,
-        Comment:            add_Comment,
-        ExternalCommand:    add_ExternalCommand,
+        Check:              add_check,
+        Brok:               add_brok,
+        Notification:       add_notification,
+        EventHandler:       add_eventhandler,
+        Downtime:           add_downtime,
+        ContactDowntime:    add_contactdowntime,
+        Comment:            add_comment,
+        ExternalCommand:    add_externalcommand,
     }
 
     def hook_point(self, hook_name):
@@ -1447,11 +1447,11 @@ class Scheduler(object):
         """
         # First a Brok for delete all from my instance_id
         brok = Brok('clean_all_my_instance_id', {'instance_id': self.instance_id})
-        self.add_Brok(brok, bname)
+        self.add_brok(brok, bname)
 
         # first the program status
         brok = self.get_program_status_brok()
-        self.add_Brok(brok, bname)
+        self.add_brok(brok, bname)
 
         #  We can't call initial_status from all this types
         #  The order is important, service need host...
@@ -1466,7 +1466,7 @@ class Scheduler(object):
             for tab in initial_status_types:
                 for item in tab:
                     brok = item.get_initial_status_brok()
-                    self.add_Brok(brok, bname)
+                    self.add_brok(brok, bname)
 
         # Only raises the all logs at the scheduler startup
         if with_logs:
@@ -1478,7 +1478,7 @@ class Scheduler(object):
 
         # Add a brok to say that we finished all initial_pass
         brok = Brok('initial_broks_done', {'instance_id': self.instance_id})
-        self.add_Brok(brok, bname)
+        self.add_brok(brok, bname)
 
         # We now have all full broks
         self.has_full_broks = True
