@@ -67,6 +67,7 @@ from alignak.misc.common import setproctitle
 
 # The `properties dict defines what the module can do and
 # if it's an external module or not.
+# pylint: disable=C0103
 properties = {
     # name of the module type ; to distinguish between them:
     'type': None,

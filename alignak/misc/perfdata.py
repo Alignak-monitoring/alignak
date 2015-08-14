@@ -54,10 +54,10 @@ This module provide classes to handle performance data from monitoring plugin ou
 import re
 from alignak.util import to_best_int_float
 
-perfdata_split_pattern = re.compile(r'([^=]+=\S+)')
+PERFDATA_SPLIT_PATTERN = re.compile(r'([^=]+=\S+)')
 # TODO: Improve this regex to not match strings like this:
 # 'metric=45+e-456.56unit;50;80;0;45+-e45e-'
-metric_pattern = \
+METRIC_PATTERN = \
     re.compile(
         r'^([^=]+)=([\d\.\-\+eE]+)([\w\/%]*)'
         r';?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE:~@]+)?;?([\d\.\-\+eE]+)?;?([\d\.\-\+eE]+)?;?\s*'
@@ -88,7 +88,7 @@ class Metric:
             self.warning = self.critical = self.min = self.max = None
         s = s.strip()
         # print "Analysis string", s
-        matches = metric_pattern.match(s)
+        matches = METRIC_PATTERN.match(s)
         if matches:
             # Get the name but remove all ' in it
             self.name = matches.group(1).replace("'", "")
@@ -121,7 +121,7 @@ class PerfDatas:
     """
     def __init__(self, s):
         s = s or ''
-        elts = perfdata_split_pattern.findall(s)
+        elts = PERFDATA_SPLIT_PATTERN.findall(s)
         elts = [e for e in elts if e != '']
         self.metrics = {}
         for elem in elts:

@@ -58,7 +58,7 @@ import traceback
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, StringProp
 from alignak.log import logger
-from alignak.trigger_functions import objs, trigger_functions, set_value
+from alignak.trigger_functions import OBJS, TRIGGER_FUNCTIONS, set_value
 
 
 class Trigger(Item):
@@ -108,7 +108,7 @@ class Trigger(Item):
         self = ctx
 
         # Ok we can declare for this trigger call our functions
-        for (name, fun) in trigger_functions.iteritems():
+        for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
             locals()[name] = fun
 
         code = myself.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
@@ -193,6 +193,5 @@ class Triggers(Items):
         :return: None
         TODO: global statement may not be useful
         """
-        global objs
-        objs['hosts'] = conf.hosts
-        objs['services'] = conf.services
+        OBJS['hosts'] = conf.hosts
+        OBJS['services'] = conf.services

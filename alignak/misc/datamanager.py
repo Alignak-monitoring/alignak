@@ -682,4 +682,4 @@ class DataManager(object):
         res = [s for s in obj.host.services if s.state_id != 0 and s != obj]
         return res
 
-datamgr = DataManager()
+DATA_MGR = DataManager()

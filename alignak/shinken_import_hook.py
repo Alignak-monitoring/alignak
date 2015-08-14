@@ -48,6 +48,6 @@ class Finder(object):
             sys.modules[name] = mod
         return mod
 
-
+# pylint: disable=C0103
 finder = Finder()
 sys.meta_path.append(finder)

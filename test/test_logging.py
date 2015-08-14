@@ -56,8 +56,8 @@ from tempfile import NamedTemporaryFile
 
 import logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, StreamHandler
-from alignak.log import logger as alignak_logger, naglog_result, Log, human_timestamp_log
-from alignak.log import defaultFormatter, BrokHandler, ColorStreamHandler
+from alignak.log import logger as alignak_logger, naglog_result, Log, HUMAN_TIMESTAMP_LOG
+from alignak.log import DEFAULT_FORMATTER, BrokHandler, ColorStreamHandler
 
 alignak_logger.set_log = True
 
@@ -117,15 +117,15 @@ class TestBasics(NoSetup, AlignakTest):
 
     def test_setting_and_unsetting_human_timestamp_format(self):
         # :hack: alignak.log.human_timestamp_log is a global variable
-        self.assertEqual(alignak.log.human_timestamp_log, False)
+        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
         logger.set_human_format(True)
-        self.assertEqual(alignak.log.human_timestamp_log, True)
+        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
         logger.set_human_format(False)
-        self.assertEqual(alignak.log.human_timestamp_log, False)
+        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
         logger.set_human_format(True)
-        self.assertEqual(alignak.log.human_timestamp_log, True)
+        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
         logger.set_human_format(False)
-        self.assertEqual(alignak.log.human_timestamp_log, False)
+        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
 
 
 class LogCollectMixin:
@@ -150,7 +150,7 @@ class LogCollectMixin:
         logger = Log(name=None, log_set=True)
 
         sh = StreamHandler(sys.stdout)
-        sh.setFormatter(defaultFormatter)
+        sh.setFormatter(DEFAULT_FORMATTER)
         logger.addHandler(sh)
         logger.load_obj(self._collector)
         logger.pre_log_buffer = [] # reset the pre_log for several tests
@@ -201,7 +201,7 @@ class TestDefaultLoggingMethods(NoSetup, AlignakTest, LogCollectMixin):
         sys.stdout = StringIO()
         self._collector = Collector()
         sh = StreamHandler(sys.stdout)
-        sh.setFormatter(defaultFormatter)
+        sh.setFormatter(DEFAULT_FORMATTER)
         alignak_logger.handlers = []
         alignak_logger.addHandler(sh)
         alignak_logger.load_obj(self._collector)
@@ -365,7 +365,7 @@ class TestWithLocalLogging(NoSetup, AlignakTest, LogCollectMixin):
         sys.stdout = StringIO()
         self._collector = Collector()
         sh = StreamHandler(sys.stdout)
-        sh.setFormatter(defaultFormatter)
+        sh.setFormatter(DEFAULT_FORMATTER)
         alignak_logger.handlers = []
         alignak_logger.addHandler(sh)
         alignak_logger.load_obj(self._collector)
@@ -449,10 +449,10 @@ class TestNamedCollector(NoSetup, AlignakTest, LogCollectMixin):
         self._stdout = sys.stdout
         sys.stdout = StringIO()
         logger = Log(name=None, log_set=True)
-        from alignak.log import defaultFormatter
+        from alignak.log import DEFAULT_FORMATTER
         from logging import StreamHandler
         sh = StreamHandler(sys.stdout)
-        sh.setFormatter(defaultFormatter)
+        sh.setFormatter(DEFAULT_FORMATTER)
         logger.addHandler(sh)
         logger.load_obj(self._collector, 'Tiroler Schinken')
         return logger

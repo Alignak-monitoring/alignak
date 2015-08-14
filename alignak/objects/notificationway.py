@@ -58,9 +58,6 @@ from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger
 
-_special_properties = ('service_notification_commands', 'host_notification_commands',
-                       'service_notification_period', 'host_notification_period')
-
 
 class NotificationWay(Item):
     """NotificationWay class is used to implement way of sending notifications (command, periods..)
@@ -103,6 +100,9 @@ class NotificationWay(Item):
     }
 
     macros = {}
+
+    special_properties = ('service_notification_commands', 'host_notification_commands',
+                          'service_notification_period', 'host_notification_period')
 
     def get_name(self):
         """Accessor to notificationway_name attribute
@@ -269,7 +269,7 @@ class NotificationWay(Item):
                 return True
 
         for prop, entry in cls.properties.items():
-            if prop not in _special_properties:
+            if prop not in self.special_properties:
                 if not hasattr(self, prop) and entry.required:
                     logger.warning("[notificationway::%s] %s property not set",
                                    self.get_name(), prop)

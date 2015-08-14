@@ -60,11 +60,6 @@ from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger
 
-_special_properties = ('contacts', 'contact_groups',
-                       'first_notification_time', 'last_notification_time')
-_special_properties_time_based = ('contacts', 'contact_groups',
-                                  'first_notification', 'last_notification')
-
 
 class Escalation(Item):
     """Escalation class is used to implement notification escalation
@@ -93,6 +88,11 @@ class Escalation(Item):
     running_properties.update({
         'time_based': BoolProp(default=False),
     })
+
+    special_properties = ('contacts', 'contact_groups',
+                          'first_notification_time', 'last_notification_time')
+    special_properties_time_based = ('contacts', 'contact_groups',
+                                     'first_notification', 'last_notification')
 
     def get_name(self):
         """Accessor to escalation_name attribute
@@ -217,9 +217,9 @@ class Escalation(Item):
         # If we got the _time parameters, we are time based. Unless, we are not :)
         if hasattr(self, 'first_notification_time') or hasattr(self, 'last_notification_time'):
             self.time_based = True
-            special_properties = _special_properties_time_based
+            special_properties = self.special_properties_time_based
         else:  # classic ones
-            special_properties = _special_properties
+            special_properties = self.special_properties
 
         for prop, entry in cls.properties.items():
             if prop not in special_properties:

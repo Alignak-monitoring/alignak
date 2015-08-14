@@ -74,7 +74,7 @@ __licence__ = "GNU Affero General Public License version 3 (AGPL v3)"
 FULL_STATUS = 'full_status'
 CHECK_RESULT = 'check_result'
 
-none_object = object()
+NONE_OBJECT = object()
 
 
 class Property(object):
@@ -85,7 +85,7 @@ class Property(object):
 
     """
 
-    def __init__(self, default=none_object, class_inherit=None,
+    def __init__(self, default=NONE_OBJECT, class_inherit=None,
                  unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, conf_send_preparation=None,
                  brok_transformation=None, retention=False,
@@ -137,7 +137,7 @@ class Property(object):
         """
 
         self.default = default
-        self.has_default = (default is not none_object)
+        self.has_default = (default is not NONE_OBJECT)
         self.required = not self.has_default
         self.class_inherit = class_inherit or []
         self.help = _help or ''
@@ -187,7 +187,7 @@ class UnusedProp(Property):
         :type text: None | str
         :return: None
         """
-        super(UnusedProp, self).__init__(default=none_object,
+        super(UnusedProp, self).__init__(default=NONE_OBJECT,
                                          class_inherit=[],
                                          managed=True)
 
@@ -196,10 +196,6 @@ class UnusedProp(Property):
                     "Alignak architecture.")
         self.text = text
         self.unused = True
-
-
-_boolean_states = {'1': True, 'yes': True, 'true': True, 'on': True,
-                   '0': False, 'no': False, 'false': False, 'off': False}
 
 
 class BoolProp(Property):
@@ -222,11 +218,14 @@ class BoolProp(Property):
 
         :rtype: bool
         """
+        __boolean_states__ = {'1': True, 'yes': True, 'true': True, 'on': True,
+                              '0': False, 'no': False, 'false': False, 'off': False}
+
         if isinstance(val, bool):
             return val
         val = unique_value(val).lower()
-        if val in _boolean_states.keys():
-            return _boolean_states[val]
+        if val in __boolean_states__.keys():
+            return __boolean_states__[val]
         else:
             raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
 

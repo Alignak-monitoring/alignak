@@ -69,12 +69,12 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
 import imp
 try:
     imp.find_module('android')
-    is_android = True
+    IS_ANDROID = True
 except ImportError:
-    is_android = False
+    IS_ANDROID = False
 
 
-if not is_android:
+if not IS_ANDROID:
     from multiprocessing import Queue, active_children, cpu_count
 else:
     from Queue import Queue
@@ -88,7 +88,7 @@ import zlib
 import base64
 import threading
 
-from alignak.http_client import HTTPClient, HTTPExceptions
+from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
 
 from alignak.message import Message
 from alignak.worker import Worker
@@ -419,7 +419,7 @@ class Satellite(BaseSatellite):
             sch_con = sched['con'] = HTTPClient(
                 uri=uri, strong_ssl=sched['hard_ssl_name_check'],
                 timeout=timeout, data_timeout=data_timeout)
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
                            self.name, sname, str(exp))
             sched['con'] = None
@@ -430,7 +430,7 @@ class Satellite(BaseSatellite):
         try:
             new_run_id = sch_con.get('get_running_id')
             new_run_id = float(new_run_id)
-        except (HTTPExceptions, cPickle.PicklingError, KeyError), exp:
+        except (HTTPEXCEPTIONS, cPickle.PicklingError, KeyError), exp:
             logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
                            self.name, sname, str(exp))
             sched['con'] = None
@@ -535,7 +535,7 @@ class Satellite(BaseSatellite):
                 if con:
                     con.post('put_results', {'results': results.values()})
                     send_ok = True
-            except HTTPExceptions as err:
+            except HTTPEXCEPTIONS as err:
                 logger.error('Could not send results to scheduler %s : %s',
                              sched['name'], err)
             except Exception as err:
@@ -588,7 +588,7 @@ class Satellite(BaseSatellite):
         """
         # create the input queue of this worker
         try:
-            if is_android:
+            if IS_ANDROID:
                 queue = Queue()
             else:
                 queue = self.manager.Queue()
@@ -693,7 +693,7 @@ class Satellite(BaseSatellite):
         :return: None
         """
         # In android, we are using threads, so there is not active_children call
-        if not is_android:
+        if not IS_ANDROID:
             # Active children make a join with everyone, useful :)
             active_children()
 
@@ -875,7 +875,7 @@ class Satellite(BaseSatellite):
                     self.pynag_con_init(sched_id)
             # Ok, con is unknown, so we create it
             # Or maybe is the connection lost, we recreate it
-            except (HTTPExceptions, KeyError), exp:
+            except (HTTPEXCEPTIONS, KeyError), exp:
                 logger.debug('get_new_actions exception:: %s,%s ', type(exp), str(exp))
                 self.pynag_con_init(sched_id)
             # scheduler must not be initialized
@@ -1054,7 +1054,7 @@ class Satellite(BaseSatellite):
         # so use standard Queue threads things
         # but in multiprocess, we are also using a Queue(). It's just
         # not the same
-        if is_android:
+        if IS_ANDROID:
             self.returns_queue = Queue()
         else:
             self.returns_queue = self.manager.Queue()
@@ -1161,14 +1161,14 @@ class Satellite(BaseSatellite):
         # Now the limit part, 0 mean: number of cpu of this machine :)
         # if not available, use 4 (modern hardware)
         self.max_workers = g_conf['max_workers']
-        if self.max_workers == 0 and not is_android:
+        if self.max_workers == 0 and not IS_ANDROID:
             try:
                 self.max_workers = cpu_count()
             except NotImplementedError:
                 self.max_workers = 4
         logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
         self.min_workers = g_conf['min_workers']
-        if self.min_workers == 0 and not is_android:
+        if self.min_workers == 0 and not IS_ANDROID:
             try:
                 self.min_workers = cpu_count()
             except NotImplementedError:

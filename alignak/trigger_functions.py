@@ -58,8 +58,8 @@ import re
 from alignak.misc.perfdata import PerfDatas
 from alignak.log import logger
 
-objs = {'hosts': [], 'services': []}
-trigger_functions = {}
+OBJS = {'hosts': [], 'services': []}
+TRIGGER_FUNCTIONS = {}
 
 
 class declared(object):
@@ -67,10 +67,9 @@ class declared(object):
     """
     def __init__(self, f):
         self.f = f
-        global functions
         name = f.func_name
         # logger.debug("Initializing function %s %s" % (n, f))
-        trigger_functions[name] = f
+        TRIGGER_FUNCTIONS[name] = f
 
     def __call__(self, *args):
         logger.debug("Calling %s with arguments %s", self.f.func_name, args)
@@ -301,10 +300,10 @@ def get_object(ref):
     # Ok it's a string
     name = ref
     if '/' not in name:
-        return objs['hosts'].find_by_name(name)
+        return OBJS['hosts'].find_by_name(name)
     else:
         elts = name.split('/', 1)
-        return objs['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
+        return OBJS['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
 
 
 @declared
@@ -342,13 +341,13 @@ def get_objects(ref):
 
     # Look for host, and if need, look for service
     if '*' not in hname:
-        host = objs['hosts'].find_by_name(hname)
+        host = OBJS['hosts'].find_by_name(hname)
         if host:
             hosts.append(host)
     else:
         hname = hname.replace('*', '.*')
         regex = re.compile(hname)
-        for host in objs['hosts']:
+        for host in OBJS['hosts']:
             logger.debug("[trigger] Compare %s with %s", hname, host.get_name())
             if regex.search(host.get_name()):
                 hosts.append(host)

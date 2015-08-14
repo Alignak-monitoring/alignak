@@ -46,7 +46,7 @@ Test default values for item types.
 """
 
 
-from alignak.property import UnusedProp, none_object
+from alignak.property import UnusedProp, NONE_OBJECT
 import alignak.daemon
 
 # TODO: clean import *

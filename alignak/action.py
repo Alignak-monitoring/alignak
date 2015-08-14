@@ -74,12 +74,12 @@ from alignak.log import logger
 
 __all__ = ('Action', )
 
-valid_exit_status = (0, 1, 2, 3)
+VALID_EXIT_STATUS = (0, 1, 2, 3)
 
-only_copy_prop = ('_id', 'status', 'command', 't_to_go', 'timeout',
+ONLY_COPY_PROP = ('_id', 'status', 'command', 't_to_go', 'timeout',
                   'env', 'module_type', 'execution_time', 'u_time', 's_time')
 
-shellchars = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
+SHELLCHARS = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
                    '|', '{', '}', ';', '<', '>', '?', '`')
 
 
@@ -275,7 +275,7 @@ class __Action(object):
             self.stdoutdata = self.stdoutdata + self.stderrdata
             self.exit_status = 3
 
-        if self.exit_status not in valid_exit_status:
+        if self.exit_status not in VALID_EXIT_STATUS:
             self.exit_status = 3
 
         if not self.stdoutdata.strip():
@@ -304,7 +304,7 @@ class __Action(object):
         :return: object with new properties added
         :rtype: object
         """
-        for prop in only_copy_prop:
+        for prop in ONLY_COPY_PROP:
             setattr(new_i, prop, getattr(self, prop))
         return new_i
 
@@ -317,7 +317,7 @@ class __Action(object):
         :rtype: bool
         """
         for command in self.command:
-            if command in shellchars:
+            if command in SHELLCHARS:
                 return True
         return False
 
@@ -413,7 +413,6 @@ if os.name != 'nt':
 else:
 
     import ctypes
-    TerminateProcess = ctypes.windll.kernel32.TerminateProcess
 
     class Action(__Action):
         """Action class for Windows systems
@@ -454,4 +453,4 @@ else:
             :return: None
             TODO: This look like python2.5 style. Maybe we change that.
             """
-            TerminateProcess(int(self.process._handle), -1)
+            ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1)

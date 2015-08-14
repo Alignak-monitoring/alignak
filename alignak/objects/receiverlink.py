@@ -48,7 +48,7 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.log import logger
-from alignak.http_client import HTTPExceptions
+from alignak.http_client import HTTPEXCEPTIONS
 
 
 class ReceiverLink(SatelliteLink):
@@ -99,7 +99,7 @@ class ReceiverLink(SatelliteLink):
             # r = self.con.push_host_names(sched_id, hnames)
             self.con.get('ping')
             self.con.post('push_host_names', {'sched_id': sched_id, 'hnames': hnames}, wait='long')
-        except HTTPExceptions, exp:
+        except HTTPEXCEPTIONS, exp:
             self.add_failed_check_attempt(reason=str(exp))
 
 

@@ -96,11 +96,11 @@ if os.name != 'nt':
     # sure to set it at a high value. The maximum recursion depth depends
     # on the Python version and the process limit "stack size".
     # The factors used were acquired by testing a broad range of installations
-    stacksize_soft, stacksize_hard = resource.getrlimit(3)
+    STACKSIZE_SOFT, _ = resource.getrlimit(3)
     if sys.version_info < (3,):
-        sys.setrecursionlimit(int(stacksize_soft * 1.9 + 3200))
+        sys.setrecursionlimit(int(STACKSIZE_SOFT * 1.9 + 3200))
     else:
-        sys.setrecursionlimit(int(stacksize_soft * 2.4 + 3200))
+        sys.setrecursionlimit(int(STACKSIZE_SOFT * 2.4 + 3200))
 
 
 from alignak.daemons.schedulerdaemon import Alignak

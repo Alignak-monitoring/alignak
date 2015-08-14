@@ -67,7 +67,7 @@ from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
 from alignak.external_command import ExternalCommand, ExternalCommandManager
-from alignak.http_client import HTTPExceptions
+from alignak.http_client import HTTPEXCEPTIONS
 from alignak.daemon import Interface
 from alignak.stats import statsmgr
 
@@ -380,7 +380,7 @@ class Receiver(Satellite):
                     con.post('run_external_commands', {'cmds': cmds})
                     sent = True
                 # Not connected or sched is gone
-                except (HTTPExceptions, KeyError), exp:
+                except (HTTPEXCEPTIONS, KeyError), exp:
                     logger.debug('manage_returns exception:: %s,%s ', type(exp), str(exp))
                     self.pynag_con_init(sched_id)
                     return

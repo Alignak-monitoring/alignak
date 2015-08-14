@@ -70,17 +70,17 @@ from alignak.brok import Brok
 
 # obj = None
 # name = None
-human_timestamp_log = False
+HUMAN_TIMESTAMP_LOG = False
 
-_brokhandler_ = None
+__brokhandler__ = None
 
 
-defaultFormatter = Formatter('[%(created)i] %(levelname)s: %(message)s')
-defaultFormatter_named = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
-humanFormatter = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
-humanFormatter_named = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                                 '%a %b %d %H:%M:%S %Y')
-nagFormatter = Formatter('[%(created)i] %(message)s')
+DEFAULT_FORMATTER = Formatter('[%(created)i] %(levelname)s: %(message)s')
+DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
+HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
+HUMAN_FORMATTER_NAMED = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                                  '%a %b %d %H:%M:%S %Y')
+NAG_FORMATTER = Formatter('[%(created)i] %(message)s')
 
 
 class BrokHandler(Handler):
@@ -163,18 +163,18 @@ class Log(logging.Logger):
         :type name_: str | None
         :return: None
         """
-        global _brokhandler_
-        _brokhandler_ = BrokHandler(obj)
+        global __brokhandler__
+        __brokhandler__ = BrokHandler(obj)
         if name_ is not None or self.name is not None:
             if name_ is not None:
                 self.name = name_
             # We need to se the name format to all other handlers
             for handler in self.handlers:
-                handler.setFormatter(defaultFormatter_named)
-            _brokhandler_.setFormatter(defaultFormatter_named)
+                handler.setFormatter(DEFAULT_FORMATTER_NAMED)
+            __brokhandler__.setFormatter(DEFAULT_FORMATTER_NAMED)
         else:
-            _brokhandler_.setFormatter(defaultFormatter)
-        self.addHandler(_brokhandler_)
+            __brokhandler__.setFormatter(DEFAULT_FORMATTER)
+        self.addHandler(__brokhandler__)
 
     def register_local_log(self, path, level=None, purge_buffer=True):
         """The alignak logging wrapper can write to a local file if needed
@@ -204,9 +204,9 @@ class Log(logging.Logger):
         if level is not None:
             handler.setLevel(level)
         if self.name is not None:
-            handler.setFormatter(defaultFormatter_named)
+            handler.setFormatter(DEFAULT_FORMATTER_NAMED)
         else:
-            handler.setFormatter(defaultFormatter)
+            handler.setFormatter(DEFAULT_FORMATTER)
         self.addHandler(handler)
 
         # Ok now unstack all previous logs
@@ -227,8 +227,8 @@ class Log(logging.Logger):
         :type on: bool
         :return: None
         """
-        global human_timestamp_log
-        human_timestamp_log = bool(on)
+        global HUMAN_TIMESTAMP_LOG
+        HUMAN_TIMESTAMP_LOG = bool(on)
 
         # Apply/Remove the human format to all handlers except the brok one.
         for handler in self.handlers:
@@ -236,10 +236,10 @@ class Log(logging.Logger):
                 continue
 
             if self.name is not None:
-                handler.setFormatter(human_timestamp_log and humanFormatter_named or
-                                     defaultFormatter_named)
+                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER_NAMED or
+                                     DEFAULT_FORMATTER_NAMED)
             else:
-                handler.setFormatter(human_timestamp_log and humanFormatter or defaultFormatter)
+                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER or DEFAULT_FORMATTER)
 
     def _stack(self, level, args, kwargs):
         """
@@ -294,14 +294,15 @@ class Log(logging.Logger):
 
 # --- create the main logger ---
 logging.setLoggerClass(Log)
+# pylint: disable=C0103
 logger = logging.getLogger('Alignak')
 if hasattr(sys.stdout, 'isatty'):
-    csh = ColorStreamHandler(sys.stdout)
+    CSH = ColorStreamHandler(sys.stdout)
     if logger.name is not None:
-        csh.setFormatter(defaultFormatter_named)
+        CSH.setFormatter(DEFAULT_FORMATTER_NAMED)
     else:
-        csh.setFormatter(defaultFormatter)
-    logger.addHandler(csh)
+        CSH.setFormatter(DEFAULT_FORMATTER)
+    logger.addHandler(CSH)
 
 
 def naglog_result(level, result, *args):
@@ -314,7 +315,7 @@ def naglog_result(level, result, *args):
     prev_formatters = []
     for handler in logger.handlers:
         prev_formatters.append(handler.formatter)
-        handler.setFormatter(nagFormatter)
+        handler.setFormatter(NAG_FORMATTER)
 
     log_fun = getattr(logger, level)
 

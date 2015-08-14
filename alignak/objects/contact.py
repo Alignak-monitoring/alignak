@@ -58,20 +58,6 @@ from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger, naglog_result
 
-_special_properties = (
-    'service_notification_commands', 'host_notification_commands',
-    'service_notification_period', 'host_notification_period',
-    'service_notification_options', 'host_notification_options',
-    'host_notification_commands', 'contact_name'
-)
-
-_simple_way_parameters = (
-    'service_notification_period', 'host_notification_period',
-    'service_notification_options', 'host_notification_options',
-    'service_notification_commands', 'host_notification_commands',
-    'min_business_impact'
-)
-
 
 class Contact(Item):
     """Host class implements monitoring concepts for contact.
@@ -140,6 +126,20 @@ class Contact(Item):
         'CONTACTGROUPNAME': 'get_groupname',
         'CONTACTGROUPNAMES': 'get_groupnames'
     }
+
+    special_properties = (
+        'service_notification_commands', 'host_notification_commands',
+        'service_notification_period', 'host_notification_period',
+        'service_notification_options', 'host_notification_options',
+        'host_notification_commands', 'contact_name'
+    )
+
+    simple_way_parameters = (
+        'service_notification_period', 'host_notification_period',
+        'service_notification_options', 'host_notification_options',
+        'service_notification_commands', 'host_notification_commands',
+        'min_business_impact'
+    )
 
     def get_name(self):
         """Get contact name
@@ -249,7 +249,7 @@ class Contact(Item):
 
         # All of the above are checks in the notificationways part
         for prop, entry in cls.properties.items():
-            if prop not in _special_properties:
+            if prop not in self.special_properties:
                 if not hasattr(self, prop) and entry.required:
                     logger.error("[contact::%s] %s property not set", self.get_name(), prop)
                     state = False  # Bad boy...
@@ -257,7 +257,7 @@ class Contact(Item):
         # There is a case where there is no nw: when there is not special_prop defined
         # at all!!
         if self.notificationways == []:
-            for prop in _special_properties:
+            for prop in self.special_properties:
                 if not hasattr(self, prop):
                     logger.error("[contact::%s] %s property is missing", self.get_name(), prop)
                     state = False
@@ -375,7 +375,7 @@ class Contacts(Items):
         self.apply_partial_inheritance('contactgroups')
         # _special properties maybe came from a template, so
         # import them before grok ourselves
-        for prop in _special_properties:
+        for prop in Contact.special_properties:
             if prop == 'contact_name':
                 continue
             self.apply_partial_inheritance(prop)
@@ -392,7 +392,7 @@ class Contacts(Items):
         for contact in self:
             need_notificationway = False
             params = {}
-            for param in _simple_way_parameters:
+            for param in Contact.simple_way_parameters:
                 if hasattr(contact, param):
                     need_notificationway = True
                     params[param] = getattr(contact, param)

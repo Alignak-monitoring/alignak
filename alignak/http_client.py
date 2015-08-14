@@ -64,7 +64,7 @@ class HTTPException(Exception):
     pass
 
 
-HTTPExceptions = (HTTPException,)
+HTTPEXCEPTIONS = (HTTPException,)
 
 
 class HTTPClient(object):
