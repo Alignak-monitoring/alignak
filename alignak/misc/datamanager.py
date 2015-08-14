@@ -682,4 +682,5 @@ class DataManager(object):
         res = [s for s in obj.host.services if s.state_id != 0 and s != obj]
         return res
 
-DATA_MGR = DataManager()
+# pylint: disable=C0103
+datamgr = DataManager()
