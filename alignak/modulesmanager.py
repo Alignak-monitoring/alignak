@@ -218,15 +218,23 @@ class ModulesManager(object):
         if self.modules_path not in sys.path:
             sys.path.append(self.modules_path)
 
-        modules_files = [fname
-                         for fname in listdir(self.modules_path)
-                         if isdir(join(self.modules_path, fname))]
+        alignak_modules_path = sys.modules['alignak'].__path__[0] + '/modules'
+        if alignak_modules_path not in sys.path:
+            sys.path.append(alignak_modules_path)
+
+        modules_paths = [alignak_modules_path, self.modules_path]
+
+        modules_files = []
+        for path in modules_paths:
+            for fname in listdir(path):
+                if isdir(join(path, fname)):
+                    modules_files.append({'path': path, 'name': fname})
 
         del self.imported_modules[:]
-        for mod_name in modules_files:
-            mod_file = abspath(join(self.modules_path, mod_name, 'module.py'))
+        for module in modules_files:
+            mod_file = abspath(join(module['path'], module['name'], 'module.py'))
             mod_dir = os.path.normpath(os.path.dirname(mod_file))
-            mod = self.try_load(mod_name, mod_dir)
+            mod = self.try_load(module['name'], mod_dir)
             if not mod:
                 continue
             try:
