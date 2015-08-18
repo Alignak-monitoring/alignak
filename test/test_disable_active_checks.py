@@ -80,7 +80,7 @@ class TestDisableActiveChecks(AlignakTest):
         last_output = host.output
 
         host.schedule()
-        self.sched.external_command.DISABLE_HOST_CHECK(host)
+        self.sched.external_command.disable_host_check(host)
 
         c = host.checks_in_progress.pop()
         print c.__dict__

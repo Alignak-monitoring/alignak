@@ -811,7 +811,7 @@ class Arbiter(Daemon):
         logger.info("I'll wait master for %d seconds", master_timeout)
 
         while not self.interrupted:
-            elapsed, _, tcdiff = self.handleRequests(timeout)
+            elapsed, _, tcdiff = self.handle_requests(timeout)
             # if there was a system Time Change (tcdiff) then we have to adapt last_master_speak:
             if self.new_conf:
                 self.setup_new_conf()
@@ -905,7 +905,7 @@ class Arbiter(Daemon):
         timeout = 1.0
 
         while self.must_run and not self.interrupted:
-            elapsed, ins, _ = self.handleRequests(timeout, suppl_socks)
+            elapsed, ins, _ = self.handle_requests(timeout, suppl_socks)
 
             # If FIFO, read external command
             if ins:

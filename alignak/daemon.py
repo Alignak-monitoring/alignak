@@ -1172,7 +1172,7 @@ class Daemon(object):
             # Hard mode exit from a thread
             os._exit(2)
 
-    def handleRequests(self, timeout, suppl_socks=None):
+    def handle_requests(self, timeout, suppl_socks=None):
         """ Wait up to timeout to handle the requests.
         If suppl_socks is given it also looks for activity on that list of fd.
 
@@ -1256,7 +1256,7 @@ class Daemon(object):
         cur_timeout = timeout
         # Arbiter do not already set our have_conf param
         while not self.new_conf and not self.interrupted:
-            elapsed, _, _ = self.handleRequests(cur_timeout)
+            elapsed, _, _ = self.handle_requests(cur_timeout)
             if elapsed:
                 cur_timeout -= elapsed
                 if cur_timeout > 0:
