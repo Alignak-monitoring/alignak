@@ -85,17 +85,17 @@ class TestEndParsingType(unittest.TestCase):
                                   (prop, obj, obj_expected_type, value.__class__, value))
 
     def map_type(self, obj):
-        # TODO: Replace all str with unicode when done in property.default attribute
+        # TODO: Replace all basestring with unicode when done in property.default attribute
         # TODO: Fix ToGuessProp as it may be a list.
 
         if isinstance(obj, ListProp):
             return list
 
         if isinstance(obj, StringProp):
-            return str
+            return basestring
 
         if isinstance(obj, UnusedProp):
-            return str
+            return basestring
 
         if isinstance(obj, BoolProp):
             return bool
@@ -107,16 +107,16 @@ class TestEndParsingType(unittest.TestCase):
             return float
 
         if isinstance(obj, CharProp):
-            return str
+            return basestring
 
         if isinstance(obj, DictProp):
             return dict
 
         if isinstance(obj, AddrProp):
-            return str
+            return basestring
 
         if isinstance(obj, ToGuessProp):
-            return str
+            return basestring
 
     def print_header(self):
         print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
