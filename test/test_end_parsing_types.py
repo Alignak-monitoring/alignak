@@ -170,12 +170,10 @@ class TestEndParsingType(unittest.TestCase):
         self.conf.create_business_rules_dependencies()
         self.conf.is_correct()
 
-        # Cannot do it for all obj for now. We have to ensure unicode everywhere fist
+        for obj in self.conf.arbiters:
+            for prop in obj.properties:
+                self.check_object_property(obj, prop)
 
-        for objs in [self.conf.arbiters]:
-            for obj in objs:
-                for prop in obj.properties:
-                    self.check_object_property(obj, prop)
 
         # Manual check of several attr for self.conf.contacts
         # because contacts contains unicode attr
