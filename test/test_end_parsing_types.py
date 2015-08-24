@@ -47,6 +47,7 @@
 import unittest2 as unittest
 
 import string
+from alignak.objects.item import Items
 
 from alignak_test import time_hacker
 from alignak.log import logger
@@ -130,6 +131,12 @@ class TestEndParsingType(unittest.TestCase):
         if isinstance(b, ExternalCommand):
             self.sched.run_external_command(b.cmd_line)
 
+    def check_objects_from(self, container):
+        self.assertIsInstance(container, Items)
+        for obj in container:
+            for prop in obj.properties:
+                self.check_object_property(obj, prop)
+
     def test_types(self):
         path = 'etc/alignak_1r_1h_1s.cfg'
         time_hacker.set_my_time()
@@ -170,21 +177,10 @@ class TestEndParsingType(unittest.TestCase):
         self.conf.create_business_rules_dependencies()
         self.conf.is_correct()
 
-        for obj in self.conf.arbiters:
-            for prop in obj.properties:
-                self.check_object_property(obj, prop)
+        ###############
 
-
-        # Manual check of several attr for self.conf.contacts
-        # because contacts contains unicode attr
-        for contact in self.conf.contacts:
-            for prop in ["notificationways", "host_notification_commands", "service_notification_commands"]:
-                self.check_object_property(contact, prop)
-
-        # Same here
-        for notifway in self.conf.notificationways:
-            for prop in ["host_notification_commands", "service_notification_commands"]:
-                self.check_object_property(notifway, prop)
+        for objects in (self.conf.arbiters, self.conf.contacts, self.conf.notificationways, self.conf.hosts):
+            self.check_objects_from(objects)
 
         print "== test Check() =="
         check = Check('OK', 'check_ping', 0, 10.0)
