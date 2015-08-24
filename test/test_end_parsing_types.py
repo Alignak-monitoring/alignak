@@ -64,6 +64,26 @@ from alignak.objects.timeperiod import Timeperiod
 
 class TestEndParsingType(unittest.TestCase):
 
+    def check_object_property(self, obj, prop):
+        if prop in (
+                'realm',  # Realm
+                'check_period',    # CheckPeriod
+                'check_command',  # CommandCall
+                'event_handler',  # CommandCall
+                'notification_period',  # Timeperiod
+                'service_notification_period',  # Timeperiod
+                'host_notification_period',  # Timeperiod
+        ):
+            # currently not supported / handled or badly parsed / decoded properties values..
+            # TODO: consider to also handles them properly ..
+            return
+        value = getattr(obj, prop, None)
+        if value is not None:
+            obj_expected_type = self.map_type(obj.properties[prop])
+            self.assertIsInstance(value, obj_expected_type,
+                                  "The %s attr/property of %s object isn't a %s: %s, value=%r" %
+                                  (prop, obj, obj_expected_type, value.__class__, value))
+
     def map_type(self, obj):
         # TODO: Replace all str with unicode when done in property.default attribute
         # TODO: Fix ToGuessProp as it may be a list.
@@ -154,42 +174,19 @@ class TestEndParsingType(unittest.TestCase):
 
         for objs in [self.conf.arbiters]:
             for obj in objs:
-                #print "=== obj : %s ===" % obj.__class__
                 for prop in obj.properties:
-                    if hasattr(obj, prop):
-                        value = getattr(obj, prop)
-                        # We should get ride of None, maybe use the "neutral" value for type
-                        if value is not None:
-                            #print("TESTING %s with value %s" % (prop, value))
-                            self.assertIsInstance(value, self.map_type(obj.properties[prop]))
-                        else:
-                            print("Skipping %s " % prop)
-                #print "==="
+                    self.check_object_property(obj, prop)
 
         # Manual check of several attr for self.conf.contacts
         # because contacts contains unicode attr
         for contact in self.conf.contacts:
             for prop in ["notificationways", "host_notification_commands", "service_notification_commands"]:
-                if hasattr(contact, prop):
-                    value = getattr(contact, prop)
-                    # We should get ride of None, maybe use the "neutral" value for type
-                    if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
-                        self.assertIsInstance(value, self.map_type(contact.properties[prop]))
-                    else:
-                        print("Skipping %s " % prop)
+                self.check_object_property(contact, prop)
 
         # Same here
         for notifway in self.conf.notificationways:
             for prop in ["host_notification_commands", "service_notification_commands"]:
-                if hasattr(notifway, prop):
-                    value = getattr(notifway, prop)
-                    # We should get ride of None, maybe use the "neutral" value for type
-                    if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
-                        self.assertIsInstance(value, self.map_type(notifway.properties[prop]))
-                    else:
-                        print("Skipping %s " % prop)
+                self.check_object_property(notifway, prop)
 
         print "== test Check() =="
         check = Check('OK', 'check_ping', 0, 10.0)
