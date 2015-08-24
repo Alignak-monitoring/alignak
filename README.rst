@@ -8,6 +8,9 @@ Welcome to the Alignak project.
   :target: https://travis-ci.org/Alignak-monitoring/alignak
 .. image:: https://coveralls.io/repos/Alignak-monitoring/alignak/badge.svg?branch=develop
   :target: https://coveralls.io/r/Alignak-monitoring/alignak
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+   :alt: Join the chat at https://gitter.im/Alignak-monitoring/alignak
+   :target: https://gitter.im/Alignak-monitoring/alignak?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
 
 Alignak is a modern - almost 100% Nagios compatible - monitoring framework,
@@ -224,10 +227,3 @@ Receiver::
 
   env/etc/init.d/alignak-receiver start
 
-
-
-
-
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-   :alt: Join the chat at https://gitter.im/Alignak-monitoring/alignak
-   :target: https://gitter.im/Alignak-monitoring/alignak?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
