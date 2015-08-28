@@ -802,7 +802,7 @@ class MonthDateDaterange(Daterange):
         else:
             if now_epoch > end_time:
                 # just have to check for next year if necessary
-                day_start = find_day_by_offset(self.syear + 1, self.smon, self.emday)
+                day_start = find_day_by_offset(self.syear + 1, self.smon, self.smday)
                 start_time = get_start_of_day(self.syear + 1, self.smon, day_start)
                 day_end = find_day_by_offset(self.eyear + 1, self.emon, self.emday)
                 end_time = get_end_of_day(self.eyear + 1, self.emon, day_end)
@@ -902,12 +902,12 @@ class MonthDayDaterange(Daterange):
         now_epoch = time.mktime(now)
 
         if start_time > end_time:
-            month_end_id += 1
-            if month_end_id > 12:
-                month_end_id = 1
-                self.eyear += 1
-            day_end = find_day_by_offset(self.eyear, month_end_id, self.emday)
-            end_time = get_end_of_day(self.eyear, month_end_id, day_end)
+            month_start_id -= 1
+            if month_start_id < 1:
+                month_start_id = 12
+                self.syear -= 1
+        day_start = find_day_by_offset(self.syear, month_start_id, self.smday)
+        start_time = get_start_of_day(self.syear, month_start_id, day_start)
 
         if end_time < now_epoch:
             month_end_id += 1

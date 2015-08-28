@@ -32,11 +32,12 @@ import alignak.util
 import time
 import datetime
 import calendar
+from freezegun import freeze_time
 
 
-@unittest.skipIf(True, """\
-Test fails with many dates, temporarily disabled until it's completely fixed
- """)
+#@unittest.skipIf(True, """\
+#Test fails with many dates, temporarily disabled until it's completely fixed
+# """)
 class TestDataranges(AlignakTest):
 
     def test_get_start_of_day(self):
@@ -63,101 +64,208 @@ class TestDataranges(AlignakTest):
         self.assertEqual(10, ret)
 
     def test_calendardaterange_start_end_time(self):
+        data = {
+            '2015-07-20 01:50:00': {
+                'start': 1437868800,
+                'end': 1471737599
+            },
+            '2015-07-26 01:50:00': {
+                'start': 1437868800,
+                'end': 1471737599
+            },
+            '2016-01-01 01:50:00': {
+                'start': 1437868800,
+                'end': 1471737599
+            },
+            '2016-08-21 01:50:00': {
+                'start': 1437868800,
+                'end': 1471737599
+            },
+        }
+
         caldate = CalendarDaterange(2015, 7, 26, 0, 0, 2016, 8, 20, 0, 0, 3, '')
-        now = time.localtime()
-        start = time.mktime((2015, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
-        end = time.mktime((2016, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
-        ret = caldate.get_start_and_end_time();
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_start_end_time(self):
-        # Time from next wednesday morning to next wednesday night
-        caldate = StandardDaterange('wednesday', '00:00-24:00')
-        ret = caldate.get_start_and_end_time();
-        today = datetime.date.today()
-        while today.weekday() != 2:
-            today += datetime.timedelta(1)
-        wed = today
-        now = time.localtime()
-        start = time.mktime((wed.year, wed.month, wed.day, 0, 0, 0, 0, 0, now.tm_isdst))
-        end = time.mktime((wed.year, wed.month, wed.day, 23, 59, 59, 0, 0, now.tm_isdst))
+        data = {}
+        for x in xrange(1, 3):
+            data['2015-07-%02d 01:50:00' % x] = {
+                'start': 1435881600,
+                'end': 1435967999
+            }
+        for x in xrange(4, 10):
+            data['2015-07-%02d 01:50:00' % x] = {
+                'start': 1436486400,
+                'end': 1436572799
+            }
+        for x in xrange(11, 17):
+            data['2015-07-%02d 01:50:00' % x] = {
+                'start': 1437091200,
+                'end': 1437177599
+            }
 
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        # Time from next wednesday morning to next wednesday night
+        caldate = StandardDaterange('friday', '00:00-24:00')
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_MonthWeekDayDaterange_start_end_time(self):
-        # 2nd tuesday of july - 3rd friday of august
+        data = {}
+        for x in xrange(1, 31):
+            data['2015-07-%02d 01:50:00' % x] = {
+                'start': 1436832000,
+                'end': 1440201599
+            }
+        for x in xrange(1, 21):
+            data['2015-08-%02d 01:50:00' % x] = {
+                'start': 1436832000,
+                'end': 1440201599
+            }
+
+        for x in xrange(22, 31):
+            data['2015-08-%02d 01:50:00' % x] = {
+                'start': 1468281600,
+                'end': 1471651199
+            }
+
         caldate = MonthWeekDayDaterange(2015, 7, 0, 1, 2,
                                         2015, 8, 0, 4, 3, 0, '')
-        ret = caldate.get_start_and_end_time();
-        now = time.localtime()
-        july = time.localtime(time.mktime((2015, 7, 1, 0, 0, 0, 0, 0, now.tm_isdst)))
-        month = calendar.monthcalendar(july.tm_year, july.tm_mon)
-        tuesdays = [week[1] for week in month if week[1]>0]
-        august = time.localtime(time.mktime((2015, 8, 1, 0, 0, 0, 0, 0, now.tm_isdst)))
-        month = calendar.monthcalendar(august.tm_year, august.tm_mon)
-        fridays = [week[4] for week in month if week[4]>0]
-        start = time.mktime((2015, 7, tuesdays[1], 0, 0, 0, 0, 0, now.tm_isdst))
-        end = time.mktime((2015, 8, fridays[2], 23, 59, 59, 0, 0, now.tm_isdst))
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdatedaterange_start_end_time(self):
+        data = {
+            '2015-07-20 01:50:00': {
+                'start': 1437868800,
+                'end': 1440115199
+            },
+            '2015-07-26 01:50:00': {
+                'start': 1437868800,
+                'end': 1440115199
+            },
+            '2015-08-28 01:50:00': {
+                'start': 1469491200,
+                'end': 1471737599
+            },
+            '2016-01-01 01:50:00': {
+                'start': 1469491200,
+                'end': 1471737599
+            },
+        }
         caldate = MonthDateDaterange(0, 7, 26, 0, 0,
                                      0, 8, 20, 0, 0, 0, '')
-        ret = caldate.get_start_and_end_time();
-        now = time.localtime()
-        start = time.mktime((now.tm_year, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
-        end = time.mktime((now.tm_year, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
+        data = {
+            '2015-07-07 01:50:00': {
+                'start': 1436745600,
+                'end': 1437523199
+            },
+            '2015-07-20 01:50:00': {
+                'start': 1436745600,
+                'end': 1437523199
+            },
+            '2015-07-24 01:50:00': {
+                'start': 1439164800,
+                'end': 1439942399
+            },
+            '2015-08-02 01:50:00': {
+                'start': 1439164800,
+                'end': 1439942399
+            },
+        }
         # second monday - third tuesday
         caldate = WeekDayDaterange(0, 0, 0, 0, 2,
                                    0, 0, 0, 1, 3, 0, '')
-        ret = caldate.get_start_and_end_time();
-        today = datetime.date.today()
-        month = calendar.monthcalendar(today.year, today.month)
-        mondays = [week[0] for week in month if week[0]>0]
-        tuesdays = [week[1] for week in month if week[1]>0]
-        now = time.localtime()
-        start = time.mktime((today.year, today.month, mondays[1], 0, 0, 0, 0, 0, now.tm_isdst))
-        end = time.mktime((today.year, today.month, tuesdays[2], 23, 59, 59, 0, 0, now.tm_isdst))
-        if end < time.mktime(now):
-            nyear = today.year
-            nmonth = today.month
-            if nmonth + 1 == 13:
-                nyear += 1
-                nmonth = 1
-            else:
-                nmonth += 1
-            month = calendar.monthcalendar(nyear, nmonth)
-            mondays = [week[0] for week in month if week[0]>0]
-            tuesdays = [week[1] for week in month if week[1]>0]
-            now = time.localtime()
-            start = time.mktime((nyear, nmonth, mondays[1], 0, 0, 0, 0, 0, now.tm_isdst))
-            end = time.mktime((nyear, nmonth, tuesdays[2], 23, 59, 59, 0, 0, now.tm_isdst))
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time(self):
+        data = {
+            '2015-07-07 01:50:00': {
+                'start': 1438387200,
+                'end': 1438819199
+            },
+            '2015-07-31 01:50:00': {
+                'start': 1438387200,
+                'end': 1438819199
+            },
+            '2015-08-05 01:50:00': {
+                'start': 1438387200,
+                'end': 1438819199
+            },
+            '2015-08-06 01:50:00': {
+                'start': 1441065600,
+                'end': 1441497599
+            },
+        }
+
+        # day -1 - 5 00:00-10:00
+        caldate = MonthDayDaterange(0, 0, 1, 0, 0,
+                                    0, 0, 5, 0, 0, 0, '')
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
+
+    def test_monthdaydaterange_start_end_time_negative(self):
+        data = {
+            '2015-07-07 01:50:00': {
+                'start': 1438300800,
+                'end': 1438819199
+            },
+            '2015-07-31 01:50:00': {
+                'start': 1438300800,
+                'end': 1438819199
+            },
+            '2015-08-01 01:50:00': {
+                'start': 1438300800,
+                'end': 1438819199
+            },
+            '2015-08-05 01:50:00': {
+                'start': 1438300800,
+                'end': 1438819199
+            },
+            '2015-08-06 01:50:00': {
+                'start': 1440979200,
+                'end': 1441497599
+            },
+        }
+
         # day -1 - 5 00:00-10:00
         caldate = MonthDayDaterange(0, 0, -1, 0, 0,
                                     0, 0, 5, 0, 0, 0, '')
-        ret = caldate.get_start_and_end_time();
-        now = time.localtime()
-        lastday = calendar.monthrange(now.tm_year, now.tm_mon)[-1]
-        start = time.mktime((now.tm_year, now.tm_mon, lastday, 0, 0, 0, 0, 0, now.tm_isdst))
-        nyear = now.tm_year
-        nmonth = now.tm_mon + 1
-        if nmonth == 13:
-            nyear += 1
-            nmonth = 1
-        end = time.mktime((nyear, nmonth, 5, 23, 59, 59, 0, 0, now.tm_isdst))
-        self.assertEqual(start, ret[0])
-        self.assertEqual(end, ret[1])
+        for date_now in data:
+            with freeze_time(date_now, tz_offset=0):
+                ret = caldate.get_start_and_end_time()
+                print "* %s" % date_now
+                self.assertEqual(data[date_now]['start'], ret[0])
+                self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_is_correct(self):
         # Time from next wednesday morning to next wednesday night
