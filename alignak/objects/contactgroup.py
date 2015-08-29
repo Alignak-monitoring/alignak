@@ -108,7 +108,12 @@ class Contactgroup(Itemgroup):
         :return: list of hosts
         :rtype: list
         """
-        if self.has('contactgroup_members'):
+        # TODO: imho a Contactgroup instance should always have defined
+        # its contactgroup_members attribute, even if it's empty / the empty list.
+        if hasattr(self, 'contactgroup_members'):
+            # more over: it should already be in the list form,
+            # not anymore in the "bare" string from as readed
+            # from configuration (files or db or whaterver)
             return [m.strip() for m in self.contactgroup_members.split(',')]
         else:
             return []
@@ -133,7 +138,7 @@ class Contactgroup(Itemgroup):
         if self.rec_tag:
             logger.error("[contactgroup::%s] got a loop in contactgroup definition",
                          self.get_name())
-            if self.has('members'):
+            if hasattr(self, 'members'):
                 return self.members
             else:
                 return ''
@@ -147,7 +152,7 @@ class Contactgroup(Itemgroup):
                 value = contactgroup.get_contacts_by_explosion(contactgroups)
                 if value is not None:
                     self.add_string_member(value)
-        if self.has('members'):
+        if hasattr(self, 'members'):
             return self.members
         else:
             return ''

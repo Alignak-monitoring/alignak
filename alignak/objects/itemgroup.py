@@ -96,7 +96,7 @@ class Itemgroup(Item):
         # Copy all properties
         for prop in cls.properties:
             if prop is not 'members':
-                if self.has(prop):
+                if hasattr(self, prop):
                     val = getattr(self, prop)
                     setattr(new_i, prop, val)
         # but no members
@@ -213,7 +213,7 @@ class Itemgroup(Item):
         # Now config properties
         for prop, entry in cls.properties.items():
             if entry.fill_brok != []:
-                if self.has(prop):
+                if hasattr(self, prop):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place
         data['members'] = []

@@ -118,7 +118,12 @@ class Hostgroup(Itemgroup):
         :return: list of hosts
         :rtype: list
         """
-        if self.has('hostgroup_members'):
+        # TODO: consistency : a Hostgroup instance should always
+        # have its hostgroup_members attribute defined, even if the empty list
+        if hasattr(self, 'hostgroup_members'):
+            # consistency: any Hostgroup instance's hostgroup_members attribute
+            # should already be decoded/parsed:
+            # this should already be in its list form.
             return [m.strip() for m in self.hostgroup_members.split(',')]
         else:
             return []
