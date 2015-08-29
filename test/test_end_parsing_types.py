@@ -55,6 +55,9 @@ from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
 from alignak.property import UnusedProp, StringProp, IntegerProp, \
     BoolProp, CharProp, DictProp, FloatProp, ListProp, AddrProp, ToGuessProp
+from alignak.check import Check
+from alignak.notification import Notification
+from alignak.eventhandler import EventHandler
 
 
 class TestEndParsingType(unittest.TestCase):
@@ -185,6 +188,46 @@ class TestEndParsingType(unittest.TestCase):
                         self.assertIsInstance(value, self.map_type(notifway.properties[prop]))
                     else:
                         print("Skipping %s " % prop)
+
+        print "== test Check() =="
+        check = Check('OK', 'check_ping', 0, 10.0)
+        for prop in check.properties:
+            if hasattr(check, prop):
+                value = getattr(check, prop)
+                # We should get ride of None, maybe use the "neutral" value for type
+                if prop not in ['ref']: # TODO : clean this
+                    if value is not None:
+                        print("TESTING %s with value %s" % (prop, value))
+                        self.assertIsInstance(value, self.map_type(check.properties[prop]))
+                    else:
+                        print("Skipping %s " % prop)
+
+        print "== test Notification() =="
+        notification = Notification()
+        for prop in notification.properties:
+            if hasattr(notification, prop):
+                value = getattr(notification, prop)
+                # We should get ride of None, maybe use the "neutral" value for type
+                if prop not in ['already_start_escalations']: # TODO : clean this
+                    if value is not None:
+                        print("TESTING %s with value %s" % (prop, value))
+                        self.assertIsInstance(value, self.map_type(notification.properties[prop]))
+                    else:
+                        print("Skipping %s " % prop)
+
+        print "== test EventHandler() =="
+        eventhandler = EventHandler('')
+        for prop in eventhandler.properties:
+            if hasattr(eventhandler, prop):
+                value = getattr(eventhandler, prop)
+                # We should get ride of None, maybe use the "neutral" value for type
+                if prop not in ['jjjj']: # TODO : clean this
+                    if value is not None:
+                        print("TESTING %s with value %s" % (prop, value))
+                        self.assertIsInstance(value, self.map_type(eventhandler.properties[prop]))
+                    else:
+                        print("Skipping %s " % prop)
+
 
 if __name__ == '__main__':
     unittest.main()

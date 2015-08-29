@@ -99,7 +99,7 @@ class Command(Item):
         if not hasattr(self, 'poller_tag'):
             self.poller_tag = 'None'
         if not hasattr(self, 'enable_environment_macros'):
-            self.enable_environment_macros = 0
+            self.enable_environment_macros = False
         if not hasattr(self, 'reactionner_tag'):
             self.reactionner_tag = 'None'
         if not hasattr(self, 'module_type'):

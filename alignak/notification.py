@@ -72,46 +72,35 @@ class Notification(Action):
 
     my_type = 'notification'
 
-    properties = {
+    properties = Action.properties.copy()
+    properties.update({
         'is_a':                StringProp(default='notification'),
-        'type':                StringProp(default=''),
         'notification_type':   IntegerProp(default=0, fill_brok=['full_status']),
-        'start_time':          StringProp(default=0, fill_brok=['full_status']),
-        'end_time':            StringProp(default=0, fill_brok=['full_status']),
+        'start_time':          IntegerProp(default=0, fill_brok=['full_status']),
+        'end_time':            IntegerProp(default=0, fill_brok=['full_status']),
         'contact_name':        StringProp(default='', fill_brok=['full_status']),
         'host_name':           StringProp(default='', fill_brok=['full_status']),
         'service_description': StringProp(default='', fill_brok=['full_status']),
-        'reason_type':         StringProp(default=0, fill_brok=['full_status']),
-        'state':               StringProp(default=0, fill_brok=['full_status']),
+        'reason_type':         IntegerProp(default=0, fill_brok=['full_status']),
+        'state':               IntegerProp(default=0, fill_brok=['full_status']),
         'output':              StringProp(default='', fill_brok=['full_status']),
         'ack_author':          StringProp(default='', fill_brok=['full_status']),
         'ack_data':            StringProp(default='', fill_brok=['full_status']),
         'escalated':           BoolProp(default=False, fill_brok=['full_status']),
-        'contacts_notified':   StringProp(default=0, fill_brok=['full_status']),
-        'env':                 StringProp(default={}),
-        'exit_status':         IntegerProp(default=3),
+        'contacts_notified':   IntegerProp(default=0, fill_brok=['full_status']),
         'command_call':        StringProp(default=None),
-        'execution_time':      FloatProp(default=0),
-        'u_time':              FloatProp(default=0.0),
-        's_time':              FloatProp(default=0.0),
         'contact':             StringProp(default=None),
-        '_in_timeout':         BoolProp(default=False),
         'notif_nb':            IntegerProp(default=0),
         'status':              StringProp(default='scheduled'),
-        't_to_go':             IntegerProp(default=0),
         'command':             StringProp(default=''),
         'sched_id':            IntegerProp(default=0),
         'timeout':             IntegerProp(default=10),
-        'check_time':          IntegerProp(default=0),
         'module_type':         StringProp(default='fork', fill_brok=['full_status']),
-        'worker':              StringProp(default='none'),
-        'reactionner_tag':     StringProp(default='None'),
-        'creation_time':       IntegerProp(default=0),
+        'creation_time':       FloatProp(default=0),
         'enable_environment_macros': BoolProp(default=False),
         # Keep a list of currently active escalations
         'already_start_escalations':  StringProp(default=set()),
-
-    }
+    })
 
     macros = {
         'NOTIFICATIONTYPE':         'type',
@@ -128,13 +117,13 @@ class Notification(Action):
     }
 
     def __init__(self, _type='PROBLEM', status='scheduled', command='UNSET',
-                 command_call=None, ref=None, contact=None, t_to_go=0,
+                 command_call=None, ref=None, contact=None, t_to_go=0.0,
                  contact_name='', host_name='', service_description='',
                  reason_type=1, state=0, ack_author='', ack_data='',
                  escalated=False, contacts_notified=0,
                  start_time=0, end_time=0, notification_type=0, _id=None,
                  notif_nb=1, timeout=10, env={}, module_type='fork',
-                 reactionner_tag='None', enable_environment_macros=0):
+                 reactionner_tag='None', enable_environment_macros=False):
 
         self.is_a = 'notification'
         self.type = _type
@@ -148,9 +137,9 @@ class Notification(Action):
         self.command = command
         self.command_call = command_call
         self.output = None
-        self.execution_time = 0
-        self.u_time = 0  # user executon time
-        self.s_time = 0  # system execution time
+        self.execution_time = 0.0
+        self.u_time = 0.0  # user executon time
+        self.s_time = 0.0  # system execution time
 
         self.ref = ref
 
@@ -314,5 +303,5 @@ class Notification(Action):
             self.execution_time = 0
         # s_time and u_time are added between 1.2 and 1.4
         if not hasattr(self, 'u_time'):
-            self.u_time = 0
-            self.s_time = 0
+            self.u_time = 0.0
+            self.s_time = 0.0

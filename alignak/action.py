@@ -71,6 +71,8 @@ except ImportError:
     fcntl = None
 
 from alignak.log import logger
+from alignak.property import BoolProp, IntegerProp, FloatProp
+from alignak.property import StringProp, DictProp
 
 __all__ = ('Action', )
 
@@ -100,12 +102,30 @@ def no_block_read(output):
         return ''
 
 
-class __Action(object):
+class ActionBase(object):
     """
     This abstract class is used just for having a common id for both
     actions and checks.
     """
     _id = 0
+
+    properties = {
+        'is_a':             StringProp(default=''),
+        'type':             StringProp(default=''),
+        '_in_timeout':      BoolProp(default=False),
+        'status':           StringProp(default=''),
+        'exit_status':      IntegerProp(default=3),
+        'output':           StringProp(default=''),
+        't_to_go':          FloatProp(default=0),
+        'check_time':       IntegerProp(default=0),
+        'execution_time':   FloatProp(default=0.0),
+        'u_time':           FloatProp(default=0.0),
+        's_time':           FloatProp(default=0.0),
+        'reactionner_tag':  StringProp(default='None'),
+        'env':              DictProp(default={}),
+        'module_type':      StringProp(default='fork'),
+        'worker':           StringProp(default='none')
+    }
 
     @staticmethod
     def assume_at_least_id(_id):
@@ -329,10 +349,12 @@ class __Action(object):
 
 if os.name != 'nt':
 
-    class Action(__Action):
+    class Action(ActionBase):
         """Action class for *NIX systems
 
         """
+
+        properties = ActionBase.properties.copy()
 
         def execute__(self, force_shell=sys.version_info < (2, 7)):
             """Execute action in a subprocess
@@ -414,10 +436,12 @@ else:
 
     import ctypes
 
-    class Action(__Action):
+    class Action(ActionBase):
         """Action class for Windows systems
 
         """
+
+        properties = ActionBase.properties.copy()
 
         def execute__(self):
             """Execute action in a subprocess

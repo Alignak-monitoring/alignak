@@ -52,7 +52,7 @@
 
 """
 from alignak.action import Action
-from alignak.property import BoolProp, IntegerProp, FloatProp
+from alignak.property import BoolProp, IntegerProp, ListProp
 from alignak.property import StringProp
 
 
@@ -70,33 +70,20 @@ class Check(Action):
 
     my_type = 'check'
 
-    properties = {
+    properties = Action.properties.copy()
+    properties.update({
         'is_a':             StringProp(default='check'),
-        'type':             StringProp(default=''),
-        '_in_timeout':      BoolProp(default=False),
-        'status':           StringProp(default=''),
-        'exit_status':      IntegerProp(default=3),
         'state':            IntegerProp(default=0),
-        'output':           StringProp(default=''),
         'long_output':      StringProp(default=''),
         'ref':              IntegerProp(default=-1),
-        't_to_go':          IntegerProp(default=0),
-        'depend_on':        StringProp(default=[]),
-        'dep_check':        StringProp(default=[]),
-        'check_time':       IntegerProp(default=0),
-        'execution_time':   FloatProp(default=0.0),
-        'u_time':           FloatProp(default=0.0),
-        's_time':           FloatProp(default=0.0),
+        'depend_on':        ListProp(default=[]),
+        'dep_check':        ListProp(default=[]),
         'perf_data':        StringProp(default=''),
         'check_type':       IntegerProp(default=0),
         'poller_tag':       StringProp(default='None'),
-        'reactionner_tag':   StringProp(default='None'),
-        'env':              StringProp(default={}),
         'internal':         BoolProp(default=False),
-        'module_type':      StringProp(default='fork'),
-        'worker':           StringProp(default='none'),
         'from_trigger':     BoolProp(default=False),
-    }
+    })
 
     def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
                  timeout=10, poller_tag='None', reactionner_tag='None',
@@ -123,9 +110,9 @@ class Check(Action):
         else:
             self.depend_on_me = [dep_check]
         self.check_time = 0
-        self.execution_time = 0
-        self.u_time = 0  # user executon time
-        self.s_time = 0  # system execution time
+        self.execution_time = 0.0
+        self.u_time = 0.0  # user executon time
+        self.s_time = 0.0  # system execution time
         self.perf_data = ''
         self.check_type = 0  # which kind of check result? 0=active 1=passive
         self.poller_tag = poller_tag

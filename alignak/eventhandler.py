@@ -52,7 +52,7 @@
 import time
 
 from alignak.action import Action
-from alignak.property import IntegerProp, StringProp, FloatProp, BoolProp
+from alignak.property import IntegerProp, StringProp, BoolProp
 from alignak.autoslots import AutoSlots
 
 
@@ -67,29 +67,16 @@ class EventHandler(Action):
 
     my_type = 'eventhandler'
 
-    properties = {
+    properties = Action.properties.copy()
+    properties.update({
         'is_a':           StringProp(default='eventhandler'),
-        'type':           StringProp(default=''),
-        '_in_timeout':    StringProp(default=False),
-        'status':         StringProp(default=''),
-        'exit_status':    StringProp(default=3),
-        'output':         StringProp(default=''),
         'long_output':    StringProp(default=''),
-        't_to_go':        StringProp(default=0),
-        'execution_time': FloatProp(default=0),
-        'u_time':         FloatProp(default=0.0),
-        's_time':         FloatProp(default=0.0),
-        'env':            StringProp(default={}),
         'perf_data':      StringProp(default=''),
         'sched_id':       IntegerProp(default=0),
         'timeout':        IntegerProp(default=10),
-        'check_time':     IntegerProp(default=0),
         'command':        StringProp(default=''),
-        'module_type':    StringProp(default='fork'),
-        'worker':         StringProp(default='none'),
-        'reactionner_tag':     StringProp(default='None'),
         'is_snapshot':    BoolProp(default=False),
-    }
+    })
 
     # _id = 0  #Is common to Actions
     def __init__(self, command, _id=None, ref=None, timeout=10, env={},
@@ -109,9 +96,9 @@ class EventHandler(Action):
         self.long_output = ''
         self.t_to_go = time.time()
         self.check_time = 0
-        self.execution_time = 0
-        self.u_time = 0
-        self.s_time = 0
+        self.execution_time = 0.0
+        self.u_time = 0.0
+        self.s_time = 0.0
         self.perf_data = ''
         self.env = {}
         self.module_type = module_type
