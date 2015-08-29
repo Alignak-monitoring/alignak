@@ -871,7 +871,7 @@ class Timeperiod(Item):
         """
         pass
 
-    def explode(self, timeperiods):
+    def explode(self):
         """
         Try to resolv all unresolved elements
 
@@ -880,7 +880,6 @@ class Timeperiod(Item):
         :return: None
         """
         for entry in self.unresolved:
-            # print "Revolving entry", entry
             self.resolve_daterange(self.dateranges, entry)
         self.unresolved = []
 
@@ -960,7 +959,7 @@ class Timeperiods(Items):
         """
         for t_id in self.items:
             timeperiod = self.items[t_id]
-            timeperiod.explode(self)
+            timeperiod.explode()
 
     def linkify(self):
         """
