@@ -313,7 +313,7 @@ class Service(SchedulingItem):
         'attempt':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'state':
-            StringProp(default='PENDING',
+            StringProp(default='OK',
                        fill_brok=['full_status', 'check_result'], retention=True),
         'state_id':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
@@ -584,6 +584,18 @@ class Service(SchedulingItem):
 #                         __/ |
 #                        |___/
 ######
+
+    def fill_predictive_missing_parameters(self):
+        """define state with initial_state
+
+        :return: None
+        """
+        if self.initial_state == 'w':
+            self.state = 'WARNING'
+        elif self.initial_state == 'u':
+            self.state = 'UNKNOWN'
+        elif self.initial_state == 'c':
+            self.state = 'CRITICAL'
 
     def __repr__(self):
         return '<Service host_name=%r desc=%r name=%r use=%r />' % (
@@ -2290,3 +2302,11 @@ class Services(Items):
         """
         for serv in self:
             serv.create_business_rules_dependencies()
+
+    def fill_predictive_missing_parameters(self):
+        """Loop on services and call Service.fill_predictive_missing_parameters()
+
+        :return: None
+        """
+        for service in self:
+            service.fill_predictive_missing_parameters()
