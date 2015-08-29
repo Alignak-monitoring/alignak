@@ -48,7 +48,7 @@ Test alignak.logging
 import sys
 import os
 import time
-import cPickle
+import ujson
 from cStringIO import StringIO
 
 from tempfile import NamedTemporaryFile
@@ -139,7 +139,7 @@ class LogCollectMixin:
         for obj in collector.list:
             self.assertIsInstance(obj, Brok)
             self.assertEqual(obj.type, 'log')
-            data = cPickle.loads(obj.data)
+            data = ujson.loads(obj.data)
             self.assertEqual(data.keys(), ['log'])
             yield data['log']
 
