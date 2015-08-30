@@ -161,7 +161,7 @@ class Timeperiod(Item):
         Timeperiod._id += 1
         self.unresolved = []
         self.dateranges = []
-        self.exclude = ''
+        self.exclude = []
 
         self.invalid_entries = []
         self.cache = {}  # For tunning purpose only

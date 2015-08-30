@@ -94,7 +94,7 @@ class Command(Item):
         super(Command, self).__init__(params)
 
         if not hasattr(self, 'timeout'):
-            self.timeout = '-1'
+            self.timeout = -1
 
         if not hasattr(self, 'poller_tag'):
             self.poller_tag = 'None'
