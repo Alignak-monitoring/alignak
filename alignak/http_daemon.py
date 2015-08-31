@@ -217,6 +217,7 @@ class WSGIREFBackend(object):
             #       fd_sets = select.select([self], [], [], timeout)
             # with timeout == None ..
             self.srv.timeout = 10
+            self.threads = []
         except socket.error, exp:
             msg = "Error: Sorry, the port %d is not free: %s" % (port, str(exp))
             raise PortNotFree(msg)
@@ -243,6 +244,10 @@ class WSGIREFBackend(object):
     # We are asking us to stop, so we close our sockets
     def stop(self):
         self.stop_requested = True
+        for t in self.threads:
+            while t.is_alive():
+                t.join(5)
+
         for s in self.get_sockets():
             try:
                 s.close()
@@ -255,18 +260,17 @@ class WSGIREFBackend(object):
         # Ok create the thread
         nb_threads = self.daemon_thread_pool_size
         # Keep a list of our running threads
-        threads = []
         logger.info('Using a %d http pool size', nb_threads)
         while not self.stop_requested:
             # We must not run too much threads, so we will loop until
             # we got at least one free slot available
             free_slots = 0
             while free_slots <= 0 and not self.stop_requested:
-                to_del = [t for t in threads if not t.is_alive()]
+                to_del = [t for t in self.threads if not t.is_alive()]
                 for t in to_del:
-                    t.join()
-                    threads.remove(t)
-                free_slots = nb_threads - len(threads)
+                    t.join(5)
+                    self.threads.remove(t)
+                free_slots = nb_threads - len(self.threads)
                 if free_slots <= 0:
                     time.sleep(0.01)
 
@@ -284,10 +288,10 @@ class WSGIREFBackend(object):
                     # We don't want to hang the master thread just because this one is still alive
                     t.daemon = True
                     t.start()
-                    threads.append(t)
+                    self.threads.append(t)
 
-        for t in threads:
-            t.join()
+        for t in self.threads:
+            t.join(5)
 
     def handle_one_request_thread(self, sock):
         self.srv.handle_request()
