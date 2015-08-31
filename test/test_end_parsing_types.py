@@ -58,6 +58,8 @@ from alignak.property import UnusedProp, StringProp, IntegerProp, \
 from alignak.check import Check
 from alignak.notification import Notification
 from alignak.eventhandler import EventHandler
+from alignak.objects.command import Command
+from alignak.objects.timeperiod import Timeperiod
 
 
 class TestEndParsingType(unittest.TestCase):
@@ -227,6 +229,31 @@ class TestEndParsingType(unittest.TestCase):
                         self.assertIsInstance(value, self.map_type(eventhandler.properties[prop]))
                     else:
                         print("Skipping %s " % prop)
+
+        print "== test Timeperiod() =="
+        timeperiod = Timeperiod()
+        for prop in timeperiod.properties:
+            if hasattr(timeperiod, prop):
+                value = getattr(timeperiod, prop)
+                # We should get ride of None, maybe use the "neutral" value for type
+                if value is not None:
+                    print("TESTING %s with value %s" % (prop, value))
+                    self.assertIsInstance(value, self.map_type(timeperiod.properties[prop]))
+                else:
+                    print("Skipping %s " % prop)
+
+        print "== test Command() =="
+        command = Command({})
+        for prop in command.properties:
+            if hasattr(command, prop):
+                value = getattr(command, prop)
+                # We should get ride of None, maybe use the "neutral" value for type
+                if value is not None:
+                    print("TESTING %s with value %s" % (prop, value))
+                    self.assertIsInstance(value, self.map_type(command.properties[prop]))
+                else:
+                    print("Skipping %s " % prop)
+
 
 
 if __name__ == '__main__':
