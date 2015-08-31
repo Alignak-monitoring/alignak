@@ -112,7 +112,8 @@ class Servicegroup(Itemgroup):
         :return: list of services (members)
         :rtype: list | str
         """
-        if self.has('servicegroup_members'):
+        # TODO: a Servicegroup instance should always have its servicegroup_members defined.
+        if hasattr(self, 'servicegroup_members'):
             return [m.strip() for m in self.servicegroup_members.split(',')]
         else:
             return []
@@ -137,7 +138,7 @@ class Servicegroup(Itemgroup):
         if self.rec_tag:
             logger.error("[servicegroup::%s] got a loop in servicegroup definition",
                          self.get_name())
-            if self.has('members'):
+            if hasattr(self, 'members'):
                 return self.members
             else:
                 return ''
@@ -152,7 +153,7 @@ class Servicegroup(Itemgroup):
                 if value is not None:
                     self.add_string_member(value)
 
-        if self.has('members'):
+        if hasattr(self, 'members'):
             return self.members
         else:
             return ''
@@ -259,7 +260,8 @@ class Servicegroups(Itemgroups):
             servicegroup.already_explode = False
 
         for servicegroup in self:
-            if servicegroup.has('servicegroup_members') and not servicegroup.already_explode:
+            if hasattr(servicegroup, 'servicegroup_members') and not \
+                    servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for sg2 in self:

@@ -55,6 +55,7 @@
 """
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
+import warnings
 
 from alignak.objects.item import Item, Items
 
@@ -95,7 +96,7 @@ class Itemgroup(Item):
         # Copy all properties
         for prop in cls.properties:
             if prop is not 'members':
-                if self.has(prop):
+                if hasattr(self, prop):
                     val = getattr(self, prop)
                     setattr(new_i, prop, val)
         # but no members
@@ -191,6 +192,11 @@ class Itemgroup(Item):
         :return: True if self has this attribute, otherwise False
         :rtype: bool
         """
+        warnings.warn(
+            "{s.__class__.__name__} is deprecated, please use "
+            "`hasattr(your_object, attr)` instead. This has() method will "
+            "be removed in a later version.".format(s=self),
+            DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
     def get_initial_status_brok(self):
@@ -207,7 +213,7 @@ class Itemgroup(Item):
         # Now config properties
         for prop, entry in cls.properties.items():
             if entry.fill_brok != []:
-                if self.has(prop):
+                if hasattr(self, prop):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place
         data['members'] = []

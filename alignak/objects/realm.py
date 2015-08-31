@@ -133,7 +133,10 @@ class Realm(Itemgroup):
         :return: list of realm (members)
         :rtype: list
         """
-        if self.has('realm_members'):
+        # TODO: consistency: a Realm instance should always have its real_members defined,
+        if hasattr(self, 'realm_members'):
+            # more over it should already be decoded/parsed to its final type:
+            # a list of strings (being the names of the members)
             return [r.strip() for r in self.realm_members]
         else:
             return []
@@ -158,7 +161,7 @@ class Realm(Itemgroup):
         if self.rec_tag:
             err = "Error: we've got a loop in realm definition %s" % self.get_name()
             self.configuration_errors.append(err)
-            if self.has('members'):
+            if hasattr(self, 'members'):
                 return self.members
             else:
                 return []
@@ -174,7 +177,7 @@ class Realm(Itemgroup):
                 if len(value) > 0:
                     self.add_string_member(value)
 
-        if self.has('members'):
+        if hasattr(self, 'members'):
             return self.members
         else:
             return []
@@ -539,7 +542,7 @@ class Realms(Itemgroups):
         for tmp_p in self.items.values():
             tmp_p.already_explode = False
         for realm in self:
-            if realm.has('realm_members') and not realm.already_explode:
+            if hasattr(realm, 'realm_members') and not realm.already_explode:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_p in self:
