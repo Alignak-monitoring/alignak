@@ -20,17 +20,9 @@
 
 """alignak.satellitelink is deprecated. Please use alignak.objects.satellitelink now."""
 
-# TODO: make_deprecated is not found
-from alignak.old_daemon_link import deprecation, make_deprecated
 
+from alignak.old_daemon_link import make_deprecated_daemon_link
 
-deprecation(__doc__)
+from alignak.objects import satellitelink
 
-from alignak.objects.satellitelink import (
-    SatelliteLink,
-    SatelliteLinks,
-)
-
-# pylint: disable=C0103
-SatelliteLink = make_deprecated(SatelliteLink)
-SatelliteLinks = make_deprecated(SatelliteLinks)
+make_deprecated_daemon_link(satellitelink)
