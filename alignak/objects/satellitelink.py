@@ -351,32 +351,6 @@ class SatelliteLink(Item):
             self.con = None
             return False
 
-    def got_conf(self):
-        """Send a HTTP request to the satellite (GET /got_conf)
-        Used to know if the satellite has a conf
-        Actually only used for a receiverlink
-
-        :return: Boolean indicating if the satellite has a (specific) configuration
-        :type: bool
-        TODO: Merge with have_conf?
-        """
-        if self.con is None:
-            self.create_connection()
-
-        # If the connection failed to initialize, bail out
-        if self.con is None:
-            return False
-
-        try:
-            res = self.con.get('got_conf')
-            # Protect against bad return
-            if not isinstance(res, bool):
-                return False
-            return res
-        except HTTPEXCEPTIONS, exp:
-            self.con = None
-            return False
-
     def remove_from_conf(self, sched_id):
         """Send a HTTP request to the satellite (GET /remove_from_conf)
         Tell a satellite to remove a scheduler from conf

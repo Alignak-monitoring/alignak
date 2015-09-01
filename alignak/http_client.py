@@ -48,6 +48,7 @@
 
 """
 import cPickle
+import json
 import warnings
 import zlib
 
@@ -178,9 +179,12 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         for (key, value) in args.iteritems():
-            args[key] = zlib.compress(cPickle.dumps(value), 2)
+            args[key] = cPickle.dumps(value)
         try:
-            rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl)
+            headers = {'content-type': 'application/zlib'}
+            args = zlib.compress(json.dumps(args, ensure_ascii=False), 2)
+            rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl,
+                                          headers=headers)
             if rsp.status_code != 200:
                 raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
         except Exception as err:

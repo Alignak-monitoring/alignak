@@ -67,13 +67,8 @@ import sys
 import time
 import signal
 import select
-import random
 import ConfigParser
 import threading
-import traceback
-import cStringIO
-import logging
-import inspect
 from Queue import Empty
 
 # Try to see if we are in an android device or not
@@ -86,8 +81,7 @@ except ImportError:
     from multiprocessing.managers import SyncManager
 
 
-import alignak.http_daemon
-from alignak.http_daemon import HTTPDaemon, InvalidWorkDir
+from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
 from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.modulesctx import modulesctx
@@ -168,133 +162,6 @@ class InvalidPidFile(Exception):
     pass
 
 
-class Interface(object):
-    """Interface for inter satellites communications"""
-
-    #  'app' is to be set to the owner of this interface.
-    def __init__(self, app):
-        self.app = app
-        self.start_time = int(time.time())
-
-        self.running_id = "%d.%d" % (
-            self.start_time, random.randint(0, 100000000)
-        )
-
-    def ping(self):
-        """Test the connection to the daemon. Returns: pong
-
-        :return: string 'pong'
-        :rtype: str
-        """
-        return "pong"
-    ping.need_lock = False
-
-    def get_start_time(self):
-        """Get the start time of the daemon
-
-        :return: start time
-        :rtype: int
-        """
-        return self.start_time
-
-    def get_running_id(self):
-        """'Get the current running id of the daemon (scheduler)'
-
-        :return: running_ig
-        :rtype: int
-        """
-        return self.running_id
-    get_running_id.need_lock = False
-
-    def put_conf(self, conf):
-        """Send a new configuration to the daemon (internal)
-
-        :param conf: new conf to send
-        :return: None
-        """
-        self.app.new_conf = conf
-    put_conf.method = 'post'
-
-    def wait_new_conf(self):
-        """Ask the daemon to wait a new conf.
-        Reset cur_conf to wait new one
-
-        :return: None
-        """
-        self.app.cur_conf = None
-    wait_new_conf.need_lock = False
-
-    def have_conf(self):
-        """Get the daemon cur_conf state
-
-        :return: boolean indicating if the daemon has a conf
-        :rtype: bool
-        """
-        return self.app.cur_conf is not None
-    have_conf.need_lock = False
-
-    def set_log_level(self, loglevel):
-        """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
-
-        :param loglevel: a value in one of the above
-        :type loglevel: str
-        :return: None
-        """
-        return logger.setLevel(loglevel)
-
-    def get_log_level(self):
-        """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
-
-        :return: current log level
-        :rtype: str
-        """
-        return {logging.NOTSET: 'NOTSET',
-                logging.DEBUG: 'DEBUG',
-                logging.INFO: 'INFO',
-                logging.WARNING: 'WARNING',
-                logging.ERROR: 'ERROR',
-                logging.CRITICAL: 'CRITICAL'}.get(logger._level, 'UNKNOWN')
-
-    def api(self):
-        """List the methods available on the daemon
-
-        :return: a list of methods available
-        :rtype: list
-        """
-        return self.app.http_daemon.registered_fun_names
-
-    def api_full(self):
-        """List the api methods and their parameters
-
-        :return: a list of methods and parameters
-        :rtype: dict
-        """
-        res = {}
-        for (fname, fun) in self.app.http_daemon.registered_fun.iteritems():
-            fclean = fname.replace('_', '-')
-            argspec = inspect.getargspec(fun)
-            args = [a for a in argspec.args if a != 'self']
-            defaults = self.app.http_daemon.registered_fun_defaults.get(fname, {})
-            env = {}
-            # Get a string about the args and co
-            _s_nondef_args = ', '.join([a for a in args if a not in defaults])
-            _s_def_args = ', '.join(['%s=%s' % (k, v) for (k, v) in defaults.iteritems()])
-            _s_args = ''
-            if _s_nondef_args:
-                _s_args += _s_nondef_args
-            if _s_def_args:
-                _s_args += ', ' + _s_def_args
-            env['proto'] = '%s(%s)' % (fclean, _s_args)
-            env['need_lock'] = getattr(fun, 'need_lock', True)
-            env['method'] = getattr(fun, 'method', 'GET').upper()
-            env['encode'] = getattr(fun, 'encode', 'json')
-            doc = getattr(fun, '__doc__', '')
-            if doc:
-                env['doc'] = doc
-            res[fclean] = env
-        return res
-
-
 # If we are under android, we can't give parameters
 if IS_ANDROID:
     DEFAULT_WORK_DIR = '/sdcard/sl4a/scripts/'
@@ -365,6 +232,8 @@ class Daemon(object):
 
         self.new_conf = None  # used by controller to push conf
         self.cur_conf = None
+        self.conf_lock = threading.RLock()
+        self.lock = threading.RLock()
 
         # Flag to know if we need to dump memory or not
         self.need_dump_memory = False
@@ -415,7 +284,6 @@ class Daemon(object):
             self.http_thread = None
 
         if self.http_daemon:
-            self.http_daemon.close_sockets()
             self.http_daemon = None
 
         if self.manager:
@@ -797,11 +665,7 @@ class Daemon(object):
             :rtype: multiprocessing.managers.SyncManager
             """
             manager = SyncManager(('127.0.0.1', 0))
-            if os.name != 'nt' and not IS_PY26:
-                # manager in python2.6 don't have initializer..
-                manager.start(initializer=self.http_daemon.close_sockets)
-            else:
-                manager.start()
+            manager.start()
             return manager
 
     def do_daemon_init_and_start(self, fake=False):
@@ -826,13 +690,9 @@ class Daemon(object):
         # Then start to log all in the local file if asked so
         self.register_local_log()
         if self.is_daemon:
-            socket_fds = [sock.fileno() for sock in self.http_daemon.get_sockets()]
             # Do not close the local_log file too if it's open
             if self.local_log_fd:
-                socket_fds.append(self.local_log_fd)
-
-            socket_fds = tuple(socket_fds)
-            self.daemonize(skip_close_fds=socket_fds)
+                self.daemonize(skip_close_fds=tuple(self.local_log_fd))
         else:
             self.write_pid()
 
@@ -863,7 +723,6 @@ class Daemon(object):
 
         use_ssl = ssl_conf.use_ssl
         ca_cert = ssl_cert = ssl_key = ''
-        http_backend = self.http_backend
 
         # The SSL part
         if use_ssl:
@@ -885,12 +744,9 @@ class Daemon(object):
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be exec after
-        self.http_daemon = HTTPDaemon(self.host, self.port, http_backend,
+        self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                       use_ssl, ca_cert, ssl_key,
-                                      ssl_cert, ssl_conf.hard_ssl_name_check,
-                                      self.daemon_thread_pool_size)
-        # TODO: fix this "hack" :
-        alignak.http_daemon.daemon_inst = self.http_daemon
+                                      ssl_cert, self.daemon_thread_pool_size)
 
     def get_socks_activity(self, socks, timeout):
         """ Global loop part : wait for socket to be ready
@@ -1157,7 +1013,6 @@ class Daemon(object):
         :return: None
         """
         logger.info("HTTP main thread: I'm running")
-
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
         # so "no_lock" calls can always be directly answer without having a "locked" version to
         # finish
@@ -1165,12 +1020,7 @@ class Daemon(object):
             self.http_daemon.run()
         except Exception, exp:
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            output = cStringIO.StringIO()
-            traceback.print_exc(file=output)
-            logger.error("Back trace of this error: %s", output.getvalue())
-            output.close()
-            # Hard mode exit from a thread
-            os._exit(2)
+            raise exp
 
     def handle_requests(self, timeout, suppl_socks=None):
         """ Wait up to timeout to handle the requests.

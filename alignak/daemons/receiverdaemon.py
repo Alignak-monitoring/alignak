@@ -50,15 +50,11 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
-This modules provides class for the Receiver daemon
-and interfaces classes for it to communicate with other daemons
+This module provide Receiver class used to run a receiver daemon
 """
 import os
 import time
 import traceback
-import base64
-import zlib
-import cPickle
 
 from multiprocessing import active_children
 
@@ -68,45 +64,8 @@ from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.http_client import HTTPEXCEPTIONS
-from alignak.daemon import Interface
 from alignak.stats import statsmgr
-
-
-class IStats(Interface):
-    """
-    Interface for various stats about broker activity
-    """
-
-    def get_raw_stats(self):
-        """Get raw stats from the daemon::
-
-        * command_buffer_size: external command buffer size
-
-        :return: external command length
-        :rtype: dict
-        """
-        app = self.app  # TODO: remove this and use self directly...
-        res = {'command_buffer_size': len(app.external_commands)}
-        return res
-
-
-class IBroks(Interface):
-    """ Interface for Brokers:
-    They connect here and get all broks (data for brokers). Data must be ORDERED!
-    (initial status BEFORE update...)
-    """
-
-    def get_broks(self, bname):
-        """Wrapper of get_brok for app attribute
-
-        :param bname: Useless. TODO: Remove it
-        :type bname: str
-        :return: base64 zlib compress pickled broks
-        :rtype: str
-        """
-        res = self.app.get_broks()
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-    get_broks.encode = 'raw'
+from alignak.http.receiver_interface import ReceiverInterface
 
 
 class Receiver(Satellite):
@@ -147,8 +106,7 @@ class Receiver(Satellite):
         self.direct_routing = False
         self.accept_passive_unknown_check_results = False
 
-        self.istats = IStats(self)
-        self.ibroks = IBroks(self)
+        self.http_interface = ReceiverInterface(self)
 
         # Now create the external commander. It's just here to dispatch
         # the commands to schedulers
@@ -241,102 +199,103 @@ class Receiver(Satellite):
 
         :return: None
         """
-        conf = self.new_conf
-        self.new_conf = None
-        self.cur_conf = conf
-        # Got our name from the globals
-        if 'receiver_name' in conf['global']:
-            name = conf['global']['receiver_name']
-        else:
-            name = 'Unnamed receiver'
-        self.name = name
-        self.api_key = conf['global']['api_key']
-        self.secret = conf['global']['secret']
-        self.http_proxy = conf['global']['http_proxy']
-        self.statsd_host = conf['global']['statsd_host']
-        self.statsd_port = conf['global']['statsd_port']
-        self.statsd_prefix = conf['global']['statsd_prefix']
-        self.statsd_enabled = conf['global']['statsd_enabled']
-
-        statsmgr.register(self, self.name, 'receiver',
-                          api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
-                          statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                          statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-        logger.load_obj(self, name)
-        self.direct_routing = conf['global']['direct_routing']
-        self.accept_passive_unknown_check_results = \
-            conf['global']['accept_passive_unknown_check_results']
-
-        g_conf = conf['global']
-
-        # If we've got something in the schedulers, we do not want it anymore
-        for sched_id in conf['schedulers']:
-
-            already_got = False
-
-            # We can already got this conf id, but with another address
-            if sched_id in self.schedulers:
-                new_addr = conf['schedulers'][sched_id]['address']
-                old_addr = self.schedulers[sched_id]['address']
-                new_port = conf['schedulers'][sched_id]['port']
-                old_port = self.schedulers[sched_id]['port']
-                # Should got all the same to be ok :)
-                if new_addr == old_addr and new_port == old_port:
-                    already_got = True
-
-            if already_got:
-                logger.info("[%s] We already got the conf %d (%s)",
-                            self.name, sched_id, conf['schedulers'][sched_id]['name'])
-                wait_homerun = self.schedulers[sched_id]['wait_homerun']
-                actions = self.schedulers[sched_id]['actions']
-                external_commands = self.schedulers[sched_id]['external_commands']
-                con = self.schedulers[sched_id]['con']
-
-            sched = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = sched
-
-            if sched['name'] in g_conf['satellitemap']:
-                sched.update(g_conf['satellitemap'][sched['name']])
-
-            proto = 'http'
-            if sched['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
-
-            self.schedulers[sched_id]['uri'] = uri
-            if already_got:
-                self.schedulers[sched_id]['wait_homerun'] = wait_homerun
-                self.schedulers[sched_id]['actions'] = actions
-                self.schedulers[sched_id]['external_commands'] = external_commands
-                self.schedulers[sched_id]['con'] = con
+        with self.conf_lock:
+            conf = self.new_conf
+            self.new_conf = None
+            self.cur_conf = conf
+            # Got our name from the globals
+            if 'receiver_name' in conf['global']:
+                name = conf['global']['receiver_name']
             else:
-                self.schedulers[sched_id]['wait_homerun'] = {}
-                self.schedulers[sched_id]['actions'] = {}
-                self.schedulers[sched_id]['external_commands'] = []
-                self.schedulers[sched_id]['con'] = None
-            self.schedulers[sched_id]['running_id'] = 0
-            self.schedulers[sched_id]['active'] = sched['active']
-            self.schedulers[sched_id]['timeout'] = sched['timeout']
-            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                name = 'Unnamed receiver'
+            self.name = name
+            self.api_key = conf['global']['api_key']
+            self.secret = conf['global']['secret']
+            self.http_proxy = conf['global']['http_proxy']
+            self.statsd_host = conf['global']['statsd_host']
+            self.statsd_port = conf['global']['statsd_port']
+            self.statsd_prefix = conf['global']['statsd_prefix']
+            self.statsd_enabled = conf['global']['statsd_enabled']
 
-            # Do not connect if we are a passive satellite
-            if self.direct_routing and not already_got:
-                # And then we connect to it :)
-                self.pynag_con_init(sched_id)
+            statsmgr.register(self, self.name, 'receiver',
+                              api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
+                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
+            logger.load_obj(self, name)
+            self.direct_routing = conf['global']['direct_routing']
+            self.accept_passive_unknown_check_results = \
+                conf['global']['accept_passive_unknown_check_results']
 
-        logger.debug("[%s] Sending us configuration %s", self.name, conf)
+            g_conf = conf['global']
 
-        if not self.have_modules:
-            self.modules = mods = conf['global']['modules']
-            self.have_modules = True
-            logger.info("We received modules %s ", mods)
+            # If we've got something in the schedulers, we do not want it anymore
+            for sched_id in conf['schedulers']:
 
-        # Set our giving timezone from arbiter
-        use_timezone = conf['global']['use_timezone']
-        if use_timezone != 'NOTSET':
-            logger.info("Setting our timezone to %s", use_timezone)
-            os.environ['TZ'] = use_timezone
-            time.tzset()
+                already_got = False
+
+                # We can already got this conf id, but with another address
+                if sched_id in self.schedulers:
+                    new_addr = conf['schedulers'][sched_id]['address']
+                    old_addr = self.schedulers[sched_id]['address']
+                    new_port = conf['schedulers'][sched_id]['port']
+                    old_port = self.schedulers[sched_id]['port']
+                    # Should got all the same to be ok :)
+                    if new_addr == old_addr and new_port == old_port:
+                        already_got = True
+
+                if already_got:
+                    logger.info("[%s] We already got the conf %d (%s)",
+                                self.name, sched_id, conf['schedulers'][sched_id]['name'])
+                    wait_homerun = self.schedulers[sched_id]['wait_homerun']
+                    actions = self.schedulers[sched_id]['actions']
+                    external_commands = self.schedulers[sched_id]['external_commands']
+                    con = self.schedulers[sched_id]['con']
+
+                sched = conf['schedulers'][sched_id]
+                self.schedulers[sched_id] = sched
+
+                if sched['name'] in g_conf['satellitemap']:
+                    sched.update(g_conf['satellitemap'][sched['name']])
+
+                proto = 'http'
+                if sched['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
+
+                self.schedulers[sched_id]['uri'] = uri
+                if already_got:
+                    self.schedulers[sched_id]['wait_homerun'] = wait_homerun
+                    self.schedulers[sched_id]['actions'] = actions
+                    self.schedulers[sched_id]['external_commands'] = external_commands
+                    self.schedulers[sched_id]['con'] = con
+                else:
+                    self.schedulers[sched_id]['wait_homerun'] = {}
+                    self.schedulers[sched_id]['actions'] = {}
+                    self.schedulers[sched_id]['external_commands'] = []
+                    self.schedulers[sched_id]['con'] = None
+                self.schedulers[sched_id]['running_id'] = 0
+                self.schedulers[sched_id]['active'] = sched['active']
+                self.schedulers[sched_id]['timeout'] = sched['timeout']
+                self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+
+                # Do not connect if we are a passive satellite
+                if self.direct_routing and not already_got:
+                    # And then we connect to it :)
+                    self.pynag_con_init(sched_id)
+
+            logger.debug("[%s] Sending us configuration %s", self.name, conf)
+
+            if not self.have_modules:
+                self.modules = mods = conf['global']['modules']
+                self.have_modules = True
+                logger.info("We received modules %s ", mods)
+
+            # Set our giving timezone from arbiter
+            use_timezone = conf['global']['use_timezone']
+            if use_timezone != 'NOTSET':
+                logger.info("Setting our timezone to %s", use_timezone)
+                os.environ['TZ'] = use_timezone
+                time.tzset()
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
@@ -452,18 +411,6 @@ class Receiver(Satellite):
             self.do_daemon_init_and_start()
 
             self.load_modules_manager()
-
-            self.uri2 = self.http_daemon.register(self.interface)
-            logger.debug("The Arbiter uri it at %s", self.uri2)
-
-            self.uri3 = self.http_daemon.register(self.istats)
-
-            # Register ibroks
-            if self.ibroks is not None:
-                logger.debug("Deconnecting previous Broks Interface")
-                self.http_daemon.unregister(self.ibroks)
-            # Create and connect it
-            self.http_daemon.register(self.ibroks)
 
             #  We wait for initial conf
             self.wait_for_initial_conf()

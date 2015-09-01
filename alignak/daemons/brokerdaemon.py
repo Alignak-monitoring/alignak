@@ -55,8 +55,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This module provide IStats and Broker classes used to use and export data from scheduler with
-the modules of this broker
+This module provide Broker class used to run a broker daemon
 """
 
 import os
@@ -76,34 +75,7 @@ from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
 from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
-from alignak.daemon import Interface
-
-
-class IStats(Interface):
-    """
-    Interface for various stats about broker activity
-    """
-    doc = 'Get raw stats from the daemon'
-
-    def get_raw_stats(self):
-        """
-        Get stats (queue size) for each modules
-
-        :return: list of modules with queue_size
-        :rtype: list
-        """
-        app = self.app
-        res = []
-
-        insts = [inst for inst in app.modules_manager.instances if inst.is_external]
-        for inst in insts:
-            try:
-                res.append({'module_name': inst.get_name(), 'queue_size': inst.to_q.qsize()})
-            except Exception, exp:
-                res.append({'module_name': inst.get_name(), 'queue_size': 0})
-
-        return res
-    get_raw_stats.doc = doc
+from alignak.http.broker_interface import BrokerInterface
 
 
 class Broker(BaseSatellite):
@@ -150,7 +122,7 @@ class Broker(BaseSatellite):
 
         self.timeout = 1.0
 
-        self.istats = IStats(self)
+        self.http_interface = BrokerInterface(self)
 
     def add(self, elt):
         """Add elt to this broker
@@ -480,236 +452,237 @@ class Broker(BaseSatellite):
 
         :return: None
         """
-        conf = self.new_conf
-        self.new_conf = None
-        self.cur_conf = conf
-        # Got our name from the globals
-        g_conf = conf['global']
-        if 'broker_name' in g_conf:
-            name = g_conf['broker_name']
-        else:
-            name = 'Unnamed broker'
-        self.name = name
-        self.api_key = g_conf['api_key']
-        self.secret = g_conf['secret']
-        self.http_proxy = g_conf['http_proxy']
-        self.statsd_host = g_conf['statsd_host']
-        self.statsd_port = g_conf['statsd_port']
-        self.statsd_prefix = g_conf['statsd_prefix']
-        self.statsd_enabled = g_conf['statsd_enabled']
-
-        # We got a name so we can update the logger and the stats global objects
-        logger.load_obj(self, name)
-        statsmgr.register(self, name, 'broker',
-                          api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
-                          statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                          statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-
-        logger.debug("[%s] Sending us configuration %s", self.name, conf)
-        # If we've got something in the schedulers, we do not
-        # want it anymore
-        # self.schedulers.clear()
-        for sched_id in conf['schedulers']:
-            # Must look if we already have it to do not overdie our broks
-            already_got = False
-
-            # We can already got this conf id, but with another address
-            if sched_id in self.schedulers:
-                new_addr = conf['schedulers'][sched_id]['address']
-                old_addr = self.schedulers[sched_id]['address']
-                new_port = conf['schedulers'][sched_id]['port']
-                old_port = self.schedulers[sched_id]['port']
-                # Should got all the same to be ok :)
-                if new_addr == old_addr and new_port == old_port:
-                    already_got = True
-
-            if already_got:
-                broks = self.schedulers[sched_id]['broks']
-                running_id = self.schedulers[sched_id]['running_id']
+        with self.conf_lock:
+            conf = self.new_conf
+            self.new_conf = None
+            self.cur_conf = conf
+            # Got our name from the globals
+            g_conf = conf['global']
+            if 'broker_name' in g_conf:
+                name = g_conf['broker_name']
             else:
-                broks = {}
-                running_id = 0
-            sched = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = sched
+                name = 'Unnamed broker'
+            self.name = name
+            self.api_key = g_conf['api_key']
+            self.secret = g_conf['secret']
+            self.http_proxy = g_conf['http_proxy']
+            self.statsd_host = g_conf['statsd_host']
+            self.statsd_port = g_conf['statsd_port']
+            self.statsd_prefix = g_conf['statsd_prefix']
+            self.statsd_enabled = g_conf['statsd_enabled']
 
-            # replacing scheduler address and port by those defined in satellitemap
-            if sched['name'] in g_conf['satellitemap']:
-                sched = dict(sched)  # make a copy
-                sched.update(g_conf['satellitemap'][sched['name']])
-            proto = 'http'
-            if sched['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
-            self.schedulers[sched_id]['uri'] = uri
+            # We got a name so we can update the logger and the stats global objects
+            logger.load_obj(self, name)
+            statsmgr.register(self, name, 'broker',
+                              api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
+                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 
-            self.schedulers[sched_id]['broks'] = broks
-            self.schedulers[sched_id]['instance_id'] = sched['instance_id']
-            self.schedulers[sched_id]['running_id'] = running_id
-            self.schedulers[sched_id]['active'] = sched['active']
-            self.schedulers[sched_id]['last_connection'] = 0
-            self.schedulers[sched_id]['timeout'] = sched['timeout']
-            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+            logger.debug("[%s] Sending us configuration %s", self.name, conf)
+            # If we've got something in the schedulers, we do not
+            # want it anymore
+            # self.schedulers.clear()
+            for sched_id in conf['schedulers']:
+                # Must look if we already have it to do not overdie our broks
+                already_got = False
 
-        logger.info("We have our schedulers: %s ", self.schedulers)
+                # We can already got this conf id, but with another address
+                if sched_id in self.schedulers:
+                    new_addr = conf['schedulers'][sched_id]['address']
+                    old_addr = self.schedulers[sched_id]['address']
+                    new_port = conf['schedulers'][sched_id]['port']
+                    old_port = self.schedulers[sched_id]['port']
+                    # Should got all the same to be ok :)
+                    if new_addr == old_addr and new_port == old_port:
+                        already_got = True
 
-        # Now get arbiter
-        for arb_id in conf['arbiters']:
-            # Must look if we already have it
-            already_got = arb_id in self.arbiters
-            if already_got:
-                broks = self.arbiters[arb_id]['broks']
-            else:
-                broks = {}
-            arb = conf['arbiters'][arb_id]
-            self.arbiters[arb_id] = arb
+                if already_got:
+                    broks = self.schedulers[sched_id]['broks']
+                    running_id = self.schedulers[sched_id]['running_id']
+                else:
+                    broks = {}
+                    running_id = 0
+                sched = conf['schedulers'][sched_id]
+                self.schedulers[sched_id] = sched
 
-            # replacing arbiter address and port by those defined in satellitemap
-            if arb['name'] in g_conf['satellitemap']:
-                arb = dict(arb)  # make a copy
-                arb.update(g_conf['satellitemap'][arb['name']])
+                # replacing scheduler address and port by those defined in satellitemap
+                if sched['name'] in g_conf['satellitemap']:
+                    sched = dict(sched)  # make a copy
+                    sched.update(g_conf['satellitemap'][sched['name']])
+                proto = 'http'
+                if sched['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
+                self.schedulers[sched_id]['uri'] = uri
 
-            proto = 'http'
-            if arb['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, arb['address'], arb['port'])
-            self.arbiters[arb_id]['uri'] = uri
+                self.schedulers[sched_id]['broks'] = broks
+                self.schedulers[sched_id]['instance_id'] = sched['instance_id']
+                self.schedulers[sched_id]['running_id'] = running_id
+                self.schedulers[sched_id]['active'] = sched['active']
+                self.schedulers[sched_id]['last_connection'] = 0
+                self.schedulers[sched_id]['timeout'] = sched['timeout']
+                self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
-            self.arbiters[arb_id]['broks'] = broks
-            self.arbiters[arb_id]['instance_id'] = 0  # No use so all to 0
-            self.arbiters[arb_id]['running_id'] = 0
-            self.arbiters[arb_id]['last_connection'] = 0
+            logger.info("We have our schedulers: %s ", self.schedulers)
 
-            # We do not connect to the arbiter. Connection hangs
+            # Now get arbiter
+            for arb_id in conf['arbiters']:
+                # Must look if we already have it
+                already_got = arb_id in self.arbiters
+                if already_got:
+                    broks = self.arbiters[arb_id]['broks']
+                else:
+                    broks = {}
+                arb = conf['arbiters'][arb_id]
+                self.arbiters[arb_id] = arb
 
-        logger.info("We have our arbiters: %s ", self.arbiters)
+                # replacing arbiter address and port by those defined in satellitemap
+                if arb['name'] in g_conf['satellitemap']:
+                    arb = dict(arb)  # make a copy
+                    arb.update(g_conf['satellitemap'][arb['name']])
 
-        # Now for pollers
-        for pol_id in conf['pollers']:
-            # Must look if we already have it
-            already_got = pol_id in self.pollers
-            if already_got:
-                broks = self.pollers[pol_id]['broks']
-                running_id = self.schedulers[sched_id]['running_id']
-            else:
-                broks = {}
-                running_id = 0
-            poll = conf['pollers'][pol_id]
-            self.pollers[pol_id] = poll
+                proto = 'http'
+                if arb['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, arb['address'], arb['port'])
+                self.arbiters[arb_id]['uri'] = uri
 
-            # replacing poller address and port by those defined in satellitemap
-            if poll['name'] in g_conf['satellitemap']:
-                poll = dict(poll)  # make a copy
-                poll.update(g_conf['satellitemap'][poll['name']])
+                self.arbiters[arb_id]['broks'] = broks
+                self.arbiters[arb_id]['instance_id'] = 0  # No use so all to 0
+                self.arbiters[arb_id]['running_id'] = 0
+                self.arbiters[arb_id]['last_connection'] = 0
 
-            proto = 'http'
-            if poll['use_ssl']:
-                proto = 'https'
+                # We do not connect to the arbiter. Connection hangs
 
-            uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
-            self.pollers[pol_id]['uri'] = uri
+            logger.info("We have our arbiters: %s ", self.arbiters)
 
-            self.pollers[pol_id]['broks'] = broks
-            self.pollers[pol_id]['instance_id'] = 0  # No use so all to 0
-            self.pollers[pol_id]['running_id'] = running_id
-            self.pollers[pol_id]['last_connection'] = 0
+            # Now for pollers
+            for pol_id in conf['pollers']:
+                # Must look if we already have it
+                already_got = pol_id in self.pollers
+                if already_got:
+                    broks = self.pollers[pol_id]['broks']
+                    running_id = self.schedulers[sched_id]['running_id']
+                else:
+                    broks = {}
+                    running_id = 0
+                poll = conf['pollers'][pol_id]
+                self.pollers[pol_id] = poll
 
-#                    #And we connect to it
-#                    self.app.pynag_con_init(pol_id, 'poller')
+                # replacing poller address and port by those defined in satellitemap
+                if poll['name'] in g_conf['satellitemap']:
+                    poll = dict(poll)  # make a copy
+                    poll.update(g_conf['satellitemap'][poll['name']])
 
-        logger.info("We have our pollers: %s", self.pollers)
+                proto = 'http'
+                if poll['use_ssl']:
+                    proto = 'https'
 
-        # Now reactionners
-        for rea_id in conf['reactionners']:
-            # Must look if we already have it
-            already_got = rea_id in self.reactionners
-            if already_got:
-                broks = self.reactionners[rea_id]['broks']
-                running_id = self.schedulers[sched_id]['running_id']
-            else:
-                broks = {}
-                running_id = 0
+                uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
+                self.pollers[pol_id]['uri'] = uri
 
-            reac = conf['reactionners'][rea_id]
-            self.reactionners[rea_id] = reac
+                self.pollers[pol_id]['broks'] = broks
+                self.pollers[pol_id]['instance_id'] = 0  # No use so all to 0
+                self.pollers[pol_id]['running_id'] = running_id
+                self.pollers[pol_id]['last_connection'] = 0
 
-            # replacing reactionner address and port by those defined in satellitemap
-            if reac['name'] in g_conf['satellitemap']:
-                reac = dict(reac)  # make a copy
-                reac.update(g_conf['satellitemap'][reac['name']])
+    #                    #And we connect to it
+    #                    self.app.pynag_con_init(pol_id, 'poller')
 
-            proto = 'http'
-            if reac['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
-            self.reactionners[rea_id]['uri'] = uri
+            logger.info("We have our pollers: %s", self.pollers)
 
-            self.reactionners[rea_id]['broks'] = broks
-            self.reactionners[rea_id]['instance_id'] = 0  # No use so all to 0
-            self.reactionners[rea_id]['running_id'] = running_id
-            self.reactionners[rea_id]['last_connection'] = 0
+            # Now reactionners
+            for rea_id in conf['reactionners']:
+                # Must look if we already have it
+                already_got = rea_id in self.reactionners
+                if already_got:
+                    broks = self.reactionners[rea_id]['broks']
+                    running_id = self.schedulers[sched_id]['running_id']
+                else:
+                    broks = {}
+                    running_id = 0
 
-#                    #And we connect to it
-#                    self.app.pynag_con_init(rea_id, 'reactionner')
+                reac = conf['reactionners'][rea_id]
+                self.reactionners[rea_id] = reac
 
-        logger.info("We have our reactionners: %s", self.reactionners)
+                # replacing reactionner address and port by those defined in satellitemap
+                if reac['name'] in g_conf['satellitemap']:
+                    reac = dict(reac)  # make a copy
+                    reac.update(g_conf['satellitemap'][reac['name']])
 
-        # Now receivers
-        for rec_id in conf['receivers']:
-            # Must look if we already have it
-            already_got = rec_id in self.receivers
-            if already_got:
-                broks = self.receivers[rec_id]['broks']
-                running_id = self.schedulers[sched_id]['running_id']
-            else:
-                broks = {}
-                running_id = 0
+                proto = 'http'
+                if reac['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
+                self.reactionners[rea_id]['uri'] = uri
 
-            rec = conf['receivers'][rec_id]
-            self.receivers[rec_id] = rec
+                self.reactionners[rea_id]['broks'] = broks
+                self.reactionners[rea_id]['instance_id'] = 0  # No use so all to 0
+                self.reactionners[rea_id]['running_id'] = running_id
+                self.reactionners[rea_id]['last_connection'] = 0
 
-            # replacing reactionner address and port by those defined in satellitemap
-            if rec['name'] in g_conf['satellitemap']:
-                rec = dict(rec)  # make a copy
-                rec.update(g_conf['satellitemap'][rec['name']])
+    #                    #And we connect to it
+    #                    self.app.pynag_con_init(rea_id, 'reactionner')
 
-            proto = 'http'
-            if rec['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, rec['address'], rec['port'])
-            self.receivers[rec_id]['uri'] = uri
+            logger.info("We have our reactionners: %s", self.reactionners)
 
-            self.receivers[rec_id]['broks'] = broks
-            self.receivers[rec_id]['instance_id'] = 0  # No use so all to 0
-            self.receivers[rec_id]['running_id'] = running_id
-            self.receivers[rec_id]['last_connection'] = 0
+            # Now receivers
+            for rec_id in conf['receivers']:
+                # Must look if we already have it
+                already_got = rec_id in self.receivers
+                if already_got:
+                    broks = self.receivers[rec_id]['broks']
+                    running_id = self.schedulers[sched_id]['running_id']
+                else:
+                    broks = {}
+                    running_id = 0
 
-        if not self.have_modules:
-            self.modules = mods = conf['global']['modules']
-            self.have_modules = True
-            logger.info("We received modules %s ", mods)
+                rec = conf['receivers'][rec_id]
+                self.receivers[rec_id] = rec
 
-            # Ok now start, or restart them!
-            # Set modules, init them and start external ones
-            self.modules_manager.set_modules(self.modules)
-            self.do_load_modules()
-            self.modules_manager.start_external_instances()
+                # replacing reactionner address and port by those defined in satellitemap
+                if rec['name'] in g_conf['satellitemap']:
+                    rec = dict(rec)  # make a copy
+                    rec.update(g_conf['satellitemap'][rec['name']])
 
-        # Set our giving timezone from arbiter
-        use_timezone = conf['global']['use_timezone']
-        if use_timezone != 'NOTSET':
-            logger.info("Setting our timezone to %s", use_timezone)
-            os.environ['TZ'] = use_timezone
-            time.tzset()
+                proto = 'http'
+                if rec['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, rec['address'], rec['port'])
+                self.receivers[rec_id]['uri'] = uri
 
-        # Connection init with Schedulers
-        for sched_id in self.schedulers:
-            self.pynag_con_init(sched_id, i_type='scheduler')
+                self.receivers[rec_id]['broks'] = broks
+                self.receivers[rec_id]['instance_id'] = 0  # No use so all to 0
+                self.receivers[rec_id]['running_id'] = running_id
+                self.receivers[rec_id]['last_connection'] = 0
 
-        for pol_id in self.pollers:
-            self.pynag_con_init(pol_id, i_type='poller')
+            if not self.have_modules:
+                self.modules = mods = conf['global']['modules']
+                self.have_modules = True
+                logger.info("We received modules %s ", mods)
 
-        for rea_id in self.reactionners:
-            self.pynag_con_init(rea_id, i_type='reactionner')
+                # Ok now start, or restart them!
+                # Set modules, init them and start external ones
+                self.modules_manager.set_modules(self.modules)
+                self.do_load_modules()
+                self.modules_manager.start_external_instances()
+
+            # Set our giving timezone from arbiter
+            use_timezone = conf['global']['use_timezone']
+            if use_timezone != 'NOTSET':
+                logger.info("Setting our timezone to %s", use_timezone)
+                os.environ['TZ'] = use_timezone
+                time.tzset()
+
+            # Connection init with Schedulers
+            for sched_id in self.schedulers:
+                self.pynag_con_init(sched_id, i_type='scheduler')
+
+            for pol_id in self.pollers:
+                self.pynag_con_init(pol_id, i_type='poller')
+
+            for rea_id in self.reactionners:
+                self.pynag_con_init(rea_id, i_type='reactionner')
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)
@@ -909,11 +882,6 @@ class Broker(BaseSatellite):
             self.look_for_early_exit()
             self.do_daemon_init_and_start()
             self.load_modules_manager()
-
-            self.uri2 = self.http_daemon.register(self.interface)
-            logger.debug("The Arbiter uri it at %s", self.uri2)
-
-            self.uri3 = self.http_daemon.register(self.istats)
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
