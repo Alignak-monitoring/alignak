@@ -64,22 +64,28 @@ class TestDataranges(AlignakTest):
         self.assertEqual(10, ret)
 
     def test_calendardaterange_start_end_time(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {
-            '2015-07-20 01:50:00': {
-                'start': 1437868800,
-                'end': 1471737599
+            '2015-07-20 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1471737599 + local_offset
             },
-            '2015-07-26 01:50:00': {
-                'start': 1437868800,
-                'end': 1471737599
+            '2015-07-26 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1471737599 + local_offset
             },
-            '2016-01-01 01:50:00': {
-                'start': 1437868800,
-                'end': 1471737599
+            '2016-01-01 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1471737599 + local_offset
             },
-            '2016-08-21 01:50:00': {
-                'start': 1437868800,
-                'end': 1471737599
+            '2016-08-21 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1471737599 + local_offset
             },
         }
 
@@ -92,21 +98,27 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_start_end_time(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {}
         for x in xrange(1, 3):
-            data['2015-07-%02d 01:50:00' % x] = {
-                'start': 1435881600,
-                'end': 1435967999
+            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+                'start': 1435881600 + local_offset,
+                'end': 1435967999 + local_offset
             }
         for x in xrange(4, 10):
-            data['2015-07-%02d 01:50:00' % x] = {
-                'start': 1436486400,
-                'end': 1436572799
+            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+                'start': 1436486400 + local_offset,
+                'end': 1436572799 + local_offset
             }
         for x in xrange(11, 17):
-            data['2015-07-%02d 01:50:00' % x] = {
-                'start': 1437091200,
-                'end': 1437177599
+            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+                'start': 1437091200 + local_offset,
+                'end': 1437177599 + local_offset
             }
 
         # Time from next wednesday morning to next wednesday night
@@ -120,23 +132,33 @@ class TestDataranges(AlignakTest):
 
     def test_MonthWeekDayDaterange_start_end_time(self):
         data = {}
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         for x in xrange(1, 31):
-            data['2015-07-%02d 01:50:00' % x] = {
-                'start': 1436832000,
-                'end': 1440201599
+            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+                'start': 1436832000 + local_offset,
+                'end': 1440201599 + local_offset
             }
         for x in xrange(1, 21):
-            data['2015-08-%02d 01:50:00' % x] = {
-                'start': 1436832000,
-                'end': 1440201599
+            data['2015-08-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+                'start': 1436832000 + local_offset,
+                'end': 1440201599 + local_offset
             }
 
         for x in xrange(22, 31):
-            data['2015-08-%02d 01:50:00' % x] = {
-                'start': 1468281600,
-                'end': 1471651199
+            data['2015-08-%02d 01:50:00 %s ' % (x, local_hour_offset)] = {
+                'start': 1468281600 + local_offset,
+                'end': 1471651199 + local_offset
             }
 
+        # 2nd tuesday of July 2015 => 14
+        # 3rd friday of August 2015 => 21
+        # next : 2nd tuesday of July 2016 => 12
+        # next  3rd friday of August 2016 => 19
         caldate = MonthWeekDayDaterange(2015, 7, 0, 1, 2,
                                         2015, 8, 0, 4, 3, 0, '')
         for date_now in data:
@@ -147,22 +169,28 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdatedaterange_start_end_time(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {
-            '2015-07-20 01:50:00': {
-                'start': 1437868800,
-                'end': 1440115199
+            '2015-07-20 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1440115199 + local_offset
             },
-            '2015-07-26 01:50:00': {
-                'start': 1437868800,
-                'end': 1440115199
+            '2015-07-26 01:50:00 %s' % local_hour_offset: {
+                'start': 1437868800 + local_offset,
+                'end': 1440115199 + local_offset
             },
-            '2015-08-28 01:50:00': {
-                'start': 1469491200,
-                'end': 1471737599
+            '2015-08-28 01:50:00 %s' % local_hour_offset: {
+                'start': 1469491200 + local_offset,
+                'end': 1471737599 + local_offset
             },
-            '2016-01-01 01:50:00': {
-                'start': 1469491200,
-                'end': 1471737599
+            '2016-01-01 01:50:00 %s' % local_hour_offset: {
+                'start': 1469491200 + local_offset,
+                'end': 1471737599 + local_offset
             },
         }
         caldate = MonthDateDaterange(0, 7, 26, 0, 0,
@@ -175,22 +203,28 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {
-            '2015-07-07 01:50:00': {
-                'start': 1436745600,
-                'end': 1437523199
+            '2015-07-07 01:50:00 %s' % local_hour_offset: {
+                'start': 1436745600 + local_offset,
+                'end': 1437523199 + local_offset
             },
-            '2015-07-20 01:50:00': {
-                'start': 1436745600,
-                'end': 1437523199
+            '2015-07-20 01:50:00 %s' % local_hour_offset: {
+                'start': 1436745600 + local_offset,
+                'end': 1437523199 + local_offset
             },
-            '2015-07-24 01:50:00': {
-                'start': 1439164800,
-                'end': 1439942399
+            '2015-07-24 01:50:00 %s' % local_hour_offset: {
+                'start': 1439164800 + local_offset,
+                'end': 1439942399 + local_offset
             },
-            '2015-08-02 01:50:00': {
-                'start': 1439164800,
-                'end': 1439942399
+            '2015-08-02 01:50:00 %s' % local_hour_offset: {
+                'start': 1439164800 + local_offset,
+                'end': 1439942399 + local_offset
             },
         }
         # second monday - third tuesday
@@ -204,22 +238,28 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {
-            '2015-07-07 01:50:00': {
-                'start': 1438387200,
-                'end': 1438819199
+            '2015-07-07 01:50:00 %s' % local_hour_offset: {
+                'start': 1438387200 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-07-31 01:50:00': {
-                'start': 1438387200,
-                'end': 1438819199
+            '2015-07-31 01:50:00 %s' % local_hour_offset: {
+                'start': 1438387200 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-08-05 01:50:00': {
-                'start': 1438387200,
-                'end': 1438819199
+            '2015-08-05 01:50:00 %s' % local_hour_offset: {
+                'start': 1438387200 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-08-06 01:50:00': {
-                'start': 1441065600,
-                'end': 1441497599
+            '2015-08-06 01:50:00 %s' % local_hour_offset: {
+                'start': 1441065600 + local_offset,
+                'end': 1441497599 + local_offset
             },
         }
 
@@ -234,26 +274,32 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time_negative(self):
+        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_hour_offset = local_offset / 3600
+        if local_hour_offset >= 0:
+            local_hour_offset = "-%02d" % local_hour_offset
+        else:
+            local_hour_offset = "+%02d" % -local_hour_offset
         data = {
-            '2015-07-07 01:50:00': {
-                'start': 1438300800,
-                'end': 1438819199
+            '2015-07-07 01:50:00 %s' % local_hour_offset: {
+                'start': 1438300800 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-07-31 01:50:00': {
-                'start': 1438300800,
-                'end': 1438819199
+            '2015-07-31 01:50:00 %s' % local_hour_offset: {
+                'start': 1438300800 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-08-01 01:50:00': {
-                'start': 1438300800,
-                'end': 1438819199
+            '2015-08-01 01:50:00 %s' % local_hour_offset: {
+                'start': 1438300800 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-08-05 01:50:00': {
-                'start': 1438300800,
-                'end': 1438819199
+            '2015-08-05 01:50:00 %s' % local_hour_offset: {
+                'start': 1438300800 + local_offset,
+                'end': 1438819199 + local_offset
             },
-            '2015-08-06 01:50:00': {
-                'start': 1440979200,
-                'end': 1441497599
+            '2015-08-06 01:50:00 %s' % local_hour_offset: {
+                'start': 1440979200 + local_offset,
+                'end': 1441497599 + local_offset
             },
         }
 
