@@ -50,6 +50,11 @@ Brok are filled depending on their type (check_result, initial_state ...)
 
 """
 import cPickle
+try:
+    import ujson
+    UJSON_INSTALLED = True
+except ImportError:
+    UJSON_INSTALLED = False
 
 
 class Brok:
@@ -64,7 +69,10 @@ class Brok:
         self.type = _type
         self._id = self.__class__._id
         self.__class__._id += 1
-        self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
+        if self.use_ujson():
+            self.data = ujson.dumps(data)
+        else:
+            self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
         self.prepared = False
 
     def __str__(self):
@@ -78,7 +86,25 @@ class Brok:
         # Maybe the brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            self.data = cPickle.loads(self.data)
+            if self.use_ujson():
+                self.data = ujson.loads(self.data)
+            else:
+                self.data = cPickle.loads(self.data)
             if hasattr(self, 'instance_id'):
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
+
+    def use_ujson(self):
+        """
+        Check if we use ujson or cPickle
+
+        :return: True if type in list allowed, otherwise False
+        :rtype: bool
+        """
+        if not UJSON_INSTALLED:
+            return False
+        types_allowed = ['unknown_host_check_result', 'unknown_service_check_result', 'log',
+                         'notification_raise', 'clean_all_my_instance_id', 'initial_broks_done',
+                         'host_next_schedule', 'service_next_schedule', 'host_snapshot',
+                         'service_snapshot', 'host_check_result', 'service_check_result']
+        return self.type in types_allowed
