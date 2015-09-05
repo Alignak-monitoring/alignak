@@ -236,7 +236,6 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('ca_cert', 'etc/certs/ca.pem'),
         ('server_cert', 'etc/certs/server.cert'),
         ('hard_ssl_name_check', False),
-        ('http_backend', 'auto'),
 
         ('human_timestamp_log', False),
 

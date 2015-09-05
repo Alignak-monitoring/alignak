@@ -418,7 +418,6 @@ class Arbiter(Daemon):
         self.group = self.conf.alignak_group
         self.daemon_enabled = self.conf.daemon_enabled
         self.daemon_thread_pool_size = self.conf.daemon_thread_pool_size
-        self.http_backend = getattr(self.conf, 'http_backend', 'auto')
 
         self.accept_passive_unknown_check_results = BoolProp.pythonize(
             getattr(self.me, 'accept_passive_unknown_check_results', '0')

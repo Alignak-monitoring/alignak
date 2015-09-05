@@ -37,7 +37,6 @@ class Interface(GenericInterface):
 
 class Test_Alignak_Http_Client(unittest.TestCase):
 
-    http_backend = 'wsgiref'  # ho well
 
     def __init__(self, *a, **kw):
         super(Test_Alignak_Http_Client, self).__init__(*a, **kw)

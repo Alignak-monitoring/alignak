@@ -97,7 +97,6 @@ class testSchedulerInit(AlignakTest):
 
         d.load_config_file()
 
-        d.http_backend = 'wsgiref'
         d.do_daemon_init_and_start(fake=True)
         d.load_modules_manager()
 

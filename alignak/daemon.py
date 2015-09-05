@@ -201,7 +201,6 @@ class Daemon(object):
         'spare':         BoolProp(default=False),
         'max_queue_size': IntegerProp(default=0),
         'daemon_thread_pool_size': IntegerProp(default=8),
-        'http_backend':  StringProp(default='auto'),
     }
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
@@ -692,7 +691,7 @@ class Daemon(object):
         if self.is_daemon:
             # Do not close the local_log file too if it's open
             if self.local_log_fd:
-                self.daemonize(skip_close_fds=tuple(self.local_log_fd))
+                self.daemonize(skip_close_fds=(self.local_log_fd,))
         else:
             self.write_pid()
 
