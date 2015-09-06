@@ -199,8 +199,8 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/external_command.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/graph.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/graph.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/http_client.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/http_client.pyc
+644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/http/client.py
+644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/http/client.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/load.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/load.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/log.py

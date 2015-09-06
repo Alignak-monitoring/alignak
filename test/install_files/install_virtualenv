@@ -202,8 +202,8 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/external_command.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/graph.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/graph.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/http_client.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/http_client.pyc
+644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/http/client.py
+644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/http/client.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/load.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/load.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/log.py

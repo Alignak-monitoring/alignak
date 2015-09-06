@@ -88,7 +88,7 @@ import zlib
 import base64
 import threading
 
-from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.message import Message
@@ -198,7 +198,7 @@ class Satellite(BaseSatellite):
         :param _id: scheduler _id to connect to
         :type _id: int
         :return: scheduler connection object or None
-        :rtype: alignak.http_client.HTTPClient
+        :rtype: alignak.http.client.HTTPClient
         """
         _t0 = time.time()
         res = self.do_pynag_con_init(_id)
@@ -215,7 +215,7 @@ class Satellite(BaseSatellite):
         :param s_id: scheduler s_id to connect to
         :type s_id: int
         :return: scheduler connection object or None
-        :rtype: alignak.http_client.HTTPClient
+        :rtype: alignak.http.client.HTTPClient
         """
         sched = self.schedulers[s_id]
         if not sched['active']:

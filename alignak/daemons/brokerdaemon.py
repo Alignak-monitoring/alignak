@@ -74,7 +74,7 @@ from alignak.util import sort_by_ids
 from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
-from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.broker_interface import BrokerInterface
 
 

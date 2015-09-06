@@ -1,16 +1,15 @@
 from __future__ import print_function
-import cherrypy
 import time
 import socket
-import sys
 from multiprocessing import Process
-import mock
 import os
 
-from alignak.http.generic_interface import GenericInterface
-from alignak.http_client import HTTPClient
-from alignak.http.daemon import HTTPDaemon
+import cherrypy
+import mock
 
+from alignak.http.generic_interface import GenericInterface
+from alignak.http.client import HTTPClient
+from alignak.http.daemon import HTTPDaemon
 from alignak_test import unittest
 from alignak_tst_utils import get_free_port
 

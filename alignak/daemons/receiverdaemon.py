@@ -55,15 +55,13 @@ This module provide Receiver class used to run a receiver daemon
 import os
 import time
 import traceback
-
 from multiprocessing import active_children
-
 
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
 from alignak.external_command import ExternalCommand, ExternalCommandManager
-from alignak.http_client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.http.receiver_interface import ReceiverInterface
 

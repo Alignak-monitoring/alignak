@@ -72,9 +72,7 @@ import cStringIO
 import tempfile
 import traceback
 import cPickle
-
 import threading
-
 from collections import defaultdict
 
 from alignak.external_command import ExternalCommand
@@ -89,7 +87,7 @@ from alignak.acknowledge import Acknowledge
 from alignak.log import logger
 from alignak.util import nighty_five_percent
 from alignak.load import Load
-from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 

@@ -90,22 +90,24 @@ class testSchedulerInit(AlignakTest):
         if not hasattr(ssl, 'SSLContext'):
             print 'BAD ssl version for testing, bailing out'
             return
-        # New version have PROTOCOL_SSLv23 that will open v2 by default so wont fail as we expect it
-        if hasattr(ssl, "PROTOCOL_SSLv3"):
-            ctx = ssl.SSLContext(ssl.PROTOCOL_SSLv3)
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            self.conn = httplib.HTTPSConnection("localhost:9998", context=ctx)
-            self.assertRaises(ssl.SSLError, self.conn.connect)
-            try:
-                self.conn.connect()
-            except ssl.SSLError as e:
-                assert e.reason == 'SSLV3_ALERT_HANDSHAKE_FAILURE'
-            sleep(2)
-            pid = int(file("tmp/arbiterd.pid").read())
-            print ("KILLING %d" % pid)*50
-            os.kill(int(file("tmp/arbiterd.pid").read()), 2)
-            d.do_stop()
+
+        # ssl.PROTOCOL_SSLv3 attribute will be remove in ssl
+        # 3 is TLS1.0
+        ctx = ssl.SSLContext(3)
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        self.conn = httplib.HTTPSConnection("localhost:9998", context=ctx)
+        self.assertRaises(socket.error, self.conn.connect)
+        try:
+            self.conn.connect()
+        except socket.error as e:
+            self.assertEqual(e.errno, 104)
+
+        sleep(2)
+        pid = int(file("tmp/arbiterd.pid").read())
+        print ("KILLING %d" % pid)*50
+        os.kill(int(file("tmp/arbiterd.pid").read()), 2)
+        d.do_stop()
 
 
 if __name__ == '__main__':

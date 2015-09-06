@@ -18,4 +18,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide all class for Alignak HTTP communation.
-Most of files are for server side HTTP. Only http_client is for client side http"""
+Most of files are for server side HTTP. Only client.py is for client side http"""

@@ -46,14 +46,13 @@ This module provides an abstraction layer for communications between Alignak dae
 Used by the Arbiter
 """
 import time
-
 import cPickle
 
 from alignak.util import get_obj_name_two_args_and_void
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
 from alignak.log import logger
-from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 
 
 class SatelliteLink(Item):
