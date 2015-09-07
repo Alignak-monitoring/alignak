@@ -53,6 +53,7 @@
 
 import os
 import time
+import sys
 
 from alignak_test import (
     AlignakTest, time_hacker, unittest
@@ -70,8 +71,9 @@ class TestModuleManager(AlignakTest):
 
     # Try to see if the module manager can manage modules
     def test_modulemanager(self):
-        mod = Module({'module_name': 'DummyExternal', 'module_type': 'dummy_broker_external'})
-        self.modulemanager = ModulesManager('broker', "var/lib/alignak/modules", [])
+        mod = Module({'module_name': 'mod-example', 'module_type': 'example'})
+        path = sys.modules['alignak'].__path__[0] + '/modules'
+        self.modulemanager = ModulesManager('broker', path, [])
         self.modulemanager.set_modules([mod])
         self.modulemanager.load_and_init()
         # And start external ones, like our LiveStatus

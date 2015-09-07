@@ -10,3 +10,4 @@ pylint==1.4.1
 pep8==1.5.7
 pep257
 freezegun
+-e git+https://github.com/Alignak-monitoring/mod-example.git#egg=mod-example
