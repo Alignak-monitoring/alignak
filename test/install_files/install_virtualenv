@@ -391,13 +391,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak-ALIGNAKVERSION-SHORTPYVERSION.egg-info/requires.txt
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak-ALIGNAKVERSION-SHORTPYVERSION.egg-info/top_level.txt
 755 VIRTUALENVPATH/var/lib/alignak
-755 VIRTUALENVPATH/var/lib/alignak/cli
 755 VIRTUALENVPATH/var/lib/alignak/modules
-755 VIRTUALENVPATH/var/lib/alignak/cli/desc
-755 VIRTUALENVPATH/var/lib/alignak/cli/doc
-755 VIRTUALENVPATH/var/lib/alignak/cli/shinkenio
-644 VIRTUALENVPATH/var/lib/alignak/cli/desc/cli.py
-644 VIRTUALENVPATH/var/lib/alignak/cli/doc/cli.py
-644 VIRTUALENVPATH/var/lib/alignak/cli/shinkenio/cli.py
 755 VIRTUALENVPATH/var/log/alignak
 755 VIRTUALENVPATH/var/run/alignak

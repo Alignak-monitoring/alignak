@@ -44,9 +44,10 @@ class TestModuleManager_And_Packages(AlignakTest):
         mm.load_and_init()
 
         for mod in mm.imported_modules:
-            self.assertEqual(mod.expected_helpers_X, mod.helpers.X)
+            if mod.properties['type'].startswith("mod"):
+                self.assertEqual(mod.expected_helpers_X, mod.helpers.X)
 
-        mod1, mod2 = mm.imported_modules
+        _, mod1, mod2 = mm.imported_modules
         self.assertNotEqual(mod1.helpers.X, mod2.helpers.X)
 
 

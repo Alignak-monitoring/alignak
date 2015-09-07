@@ -62,8 +62,7 @@ except ImportError:
         print "Error: you need the json or simplejson module"
         raise
                                                 
-external_mapping = os.path.join(os.path.dirname(__file__),
-                                '..', 'libexec', 'external_mapping.py')
+external_mapping = os.path.join(os.path.dirname(__file__), 'libexec', 'external_mapping.py')
 
 
 class TestExternalMapping(AlignakTest):
