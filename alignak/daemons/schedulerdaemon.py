@@ -50,9 +50,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
-This module provide IChecks, IBroks, IStats, IForArbiter and Alignak classes used to
-communicate with other daemon (Poller, Broker, Arbiter)
-Alignak is the main scheduling daemon class
+This module provide Alignak which is the main scheduling daemon class
 """
 
 import os
@@ -60,8 +58,6 @@ import signal
 import time
 import traceback
 import cPickle
-import zlib
-import base64
 from multiprocessing import process
 
 
@@ -69,201 +65,11 @@ from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
+from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
-from alignak.satellite import BaseSatellite, IForArbiter as IArb, Interface
-from alignak.util import nighty_five_percent
+from alignak.satellite import BaseSatellite
 from alignak.stats import statsmgr
-
-
-class IChecks(Interface):
-    """ Interface for Workers:
-    They connect here and see if they are still OK with our running_id,
-    if not, they must drop their checks
-    """
-
-    # poller or reactionner is asking us our running_id
-    # def get_running_id(self):
-    #    return self.running_id
-
-    def get_checks(self, do_checks=False, do_actions=False, poller_tags=['None'],
-                   reactionner_tags=['None'], worker_name='none',
-                   module_types=['fork']):
-        """Get checks from scheduler, used by poller or reactionner (active ones)
-
-        :param do_checks: used for poller to get checks
-        :type do_checks: bool
-        :param do_actions: used for reactionner to get actions
-        :type do_actions: bool
-        :param poller_tags: pollers tags to filter on this poller
-        :type poller_tags: list
-        :param reactionner_tags: reactionner tags to filter on this reactionner
-        :type reactionner_tags: list
-        :param worker_name: Worker name asking (so that the scheduler add it to actions objects)
-        :type worker_name: str
-        :param module_types: Module type to filter actions/checks
-        :type module_types: list
-        :return: base64 zlib compress pickled check/action list
-        :rtype: str
-        """
-        # print "We ask us checks"
-        do_checks = (do_checks == 'True')
-        do_actions = (do_actions == 'True')
-        res = self.app.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
-                                         worker_name, module_types)
-        # print "Sending %d checks" % len(res)
-        self.app.nb_checks_send += len(res)
-
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-        # return zlib.compress(cPickle.dumps(res), 2)
-    get_checks.encode = 'raw'
-
-    def put_results(self, results):
-        """Put results to scheduler, used by poller and reactionners
-
-        :param results: results to handle
-        :type results:
-        :return: True or ?? (if lock acquire fails)
-        :rtype: bool
-        """
-        nb_received = len(results)
-        self.app.nb_check_received += nb_received
-        if nb_received != 0:
-            logger.debug("Received %d results", nb_received)
-        for result in results:
-            result.set_type_active()
-        with self.app.waiting_results_lock:
-            self.app.waiting_results.extend(results)
-
-        # for c in results:
-        # self.sched.put_results(c)
-        return True
-    put_results.method = 'post'
-    put_results.need_lock = False
-
-
-class IBroks(Interface):
-    """ Interface for Brokers:
-    They connect here and get all broks (data for brokers). Data must be ORDERED!
-    (initial status BEFORE update...)
-    """
-
-    def get_broks(self, bname):
-        """Get checks from scheduler, used by brokers
-
-        :param bname: broker name, used to filter broks
-        :type bname: str
-        :return: 64 zlib compress pickled brok list
-        :rtype: str
-        """
-        # Maybe it was not registered as it should, if so,
-        # do it for it
-        if bname not in self.app.brokers:
-            self.fill_initial_broks(bname)
-
-        # Now get the broks for this specific broker
-        res = self.app.get_broks(bname)
-        # got only one global counter for broks
-        self.app.nb_broks_send += len(res)
-        # we do not more have a full broks in queue
-        self.app.brokers[bname]['has_full_broks'] = False
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-        # return zlib.compress(cPickle.dumps(res), 2)
-    get_broks.encode = 'raw'
-
-    def fill_initial_broks(self, bname):
-        """Get initial_broks type broks from scheduler, used by brokers
-        Do not send broks, only make scheduler internal processing
-
-        :param bname: broker name, used to filter broks
-        :type bname: str
-        :return: None
-        TODO: Maybe we should check_last time we did it to prevent DDoS
-        """
-        if bname not in self.app.brokers:
-            logger.info("A new broker just connected : %s", bname)
-            self.app.brokers[bname] = {'broks': {}, 'has_full_broks': False}
-        env = self.app.brokers[bname]
-        if not env['has_full_broks']:
-            env['broks'].clear()
-            self.app.fill_initial_broks(bname, with_logs=True)
-
-
-class IStats(Interface):
-    """
-    Interface for various stats about scheduler activity
-    """
-
-    def get_raw_stats(self):
-        """Get raw stats from the daemon::
-
-        * nb_scheduled: number of scheduled checks (to launch in the future)
-        * nb_inpoller: number of check take by the pollers
-        * nb_zombies: number of zombie checks (should be close to zero)
-        * nb_notifications: number of notifications+event handlers
-        * latency: avg,min,max latency for the services (should be <10s)
-
-        :return: stats for scheduler
-        :rtype: dict
-        """
-        sched = self.app.sched
-
-        res = sched.get_checks_status_counts()
-
-        res = {
-            'nb_scheduled': res['scheduled'],
-            'nb_inpoller': res['inpoller'],
-            'nb_zombies': res['zombie'],
-            'nb_notifications': len(sched.actions)
-        }
-
-        # Spare schedulers do not have such properties
-        if hasattr(sched, 'services'):
-            # Get a overview of the latencies with just
-            # a 95 percentile view, but lso min/max values
-            latencies = [s.latency for s in sched.services]
-            lat_avg, lat_min, lat_max = nighty_five_percent(latencies)
-            res['latency'] = (0.0, 0.0, 0.0)
-            if lat_avg:
-                res['latency'] = (lat_avg, lat_min, lat_max)
-        return res
-
-
-class IForArbiter(IArb):
-    """ Interface for Arbiter. We ask him a for a conf and after that listen for instructions
-        from the arbiter. The arbiter is the interface to the administrator, so we must listen
-        carefully and give him the information he wants. Which could be for another scheduler """
-
-    def run_external_commands(self, cmds):
-        """Post external_commands to scheduler (from arbiter)
-        Wrapper to to app.sched.run_external_commands method
-
-        :param cmds: external commands list ro run
-        :type cmds: list
-        :return: None
-        """
-        self.app.sched.run_external_commands(cmds)
-    run_external_commands.method = 'POST'
-
-    def put_conf(self, conf):
-        """Post conf to scheduler (from arbiter)
-
-        :param conf: new configuration to load
-        :type conf: dict
-        :return: None
-        """
-        self.app.sched.die()
-        super(IForArbiter, self).put_conf(conf)
-    put_conf.method = 'POST'
-
-    def wait_new_conf(self):
-        """Ask to scheduler to wait for new conf (HTTP GET from arbiter)
-
-        :return: None
-        """
-        logger.debug("Arbiter wants me to wait for a new configuration")
-        self.app.sched.die()
-        super(IForArbiter, self).wait_new_conf()
 
 
 class Alignak(BaseSatellite):
@@ -283,12 +89,9 @@ class Alignak(BaseSatellite):
         BaseSatellite.__init__(self, 'scheduler', config_file, is_daemon, do_replace, debug,
                                debug_file)
 
-        self.interface = IForArbiter(self)
-        self.istats = IStats(self)
+        self.http_interface = SchedulerInterface(self)
         self.sched = Scheduler(self)
 
-        self.ichecks = None
-        self.ibroks = None
         self.must_run = True
 
         # Now the interface
@@ -300,18 +103,6 @@ class Alignak(BaseSatellite):
         self.pollers = {}
         self.reactionners = {}
         self.brokers = {}
-
-    def do_stop(self):
-        """Unregister http functions and call super(BaseSatellite, self).do_stop()
-
-        :return: None
-        """
-        if self.http_daemon:
-            if self.ibroks:
-                self.http_daemon.unregister(self.ibroks)
-            if self.ichecks:
-                self.http_daemon.unregister(self.ichecks)
-        super(Alignak, self).do_stop()
 
     def compensate_system_time_change(self, difference):
         """Compensate a system time change of difference for all hosts/services/checks/notifs
@@ -429,157 +220,139 @@ class Alignak(BaseSatellite):
 
         :return: None
         """
-        new_c = self.new_conf
-        conf_raw = new_c['conf']
-        override_conf = new_c['override_conf']
-        modules = new_c['modules']
-        satellites = new_c['satellites']
-        instance_name = new_c['instance_name']
-        push_flavor = new_c['push_flavor']
-        skip_initial_broks = new_c['skip_initial_broks']
-        accept_passive_unknown_chk_res = new_c['accept_passive_unknown_check_results']
-        api_key = new_c['api_key']
-        secret = new_c['secret']
-        http_proxy = new_c['http_proxy']
-        statsd_host = new_c['statsd_host']
-        statsd_port = new_c['statsd_port']
-        statsd_prefix = new_c['statsd_prefix']
-        statsd_enabled = new_c['statsd_enabled']
+        with self.conf_lock:
+            new_c = self.new_conf
+            conf_raw = new_c['conf']
+            override_conf = new_c['override_conf']
+            modules = new_c['modules']
+            satellites = new_c['satellites']
+            instance_name = new_c['instance_name']
+            push_flavor = new_c['push_flavor']
+            skip_initial_broks = new_c['skip_initial_broks']
+            accept_passive_unknown_chk_res = new_c['accept_passive_unknown_check_results']
+            api_key = new_c['api_key']
+            secret = new_c['secret']
+            http_proxy = new_c['http_proxy']
+            statsd_host = new_c['statsd_host']
+            statsd_port = new_c['statsd_port']
+            statsd_prefix = new_c['statsd_prefix']
+            statsd_enabled = new_c['statsd_enabled']
 
-        # horay, we got a name, we can set it in our stats objects
-        statsmgr.register(self.sched, instance_name, 'scheduler',
-                          api_key=api_key, secret=secret, http_proxy=http_proxy,
-                          statsd_host=statsd_host, statsd_port=statsd_port,
-                          statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
+            # horay, we got a name, we can set it in our stats objects
+            statsmgr.register(self.sched, instance_name, 'scheduler',
+                              api_key=api_key, secret=secret, http_proxy=http_proxy,
+                              statsd_host=statsd_host, statsd_port=statsd_port,
+                              statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
-        t00 = time.time()
-        conf = cPickle.loads(conf_raw)
-        logger.debug("Conf received at %d. Unserialized in %d secs", t00, time.time() - t00)
-        self.new_conf = None
+            t00 = time.time()
+            conf = cPickle.loads(conf_raw)
+            logger.debug("Conf received at %d. Unserialized in %d secs", t00, time.time() - t00)
+            self.new_conf = None
 
-        # Tag the conf with our data
-        self.conf = conf
-        self.conf.push_flavor = push_flavor
-        self.conf.instance_name = instance_name
-        self.conf.skip_initial_broks = skip_initial_broks
-        self.conf.accept_passive_unknown_check_results = accept_passive_unknown_chk_res
+            # Tag the conf with our data
+            self.conf = conf
+            self.conf.push_flavor = push_flavor
+            self.conf.instance_name = instance_name
+            self.conf.skip_initial_broks = skip_initial_broks
+            self.conf.accept_passive_unknown_check_results = accept_passive_unknown_chk_res
 
-        self.cur_conf = conf
-        self.override_conf = override_conf
-        self.modules = modules
-        self.satellites = satellites
-        # self.pollers = self.app.pollers
+            self.cur_conf = conf
+            self.override_conf = override_conf
+            self.modules = modules
+            self.satellites = satellites
+            # self.pollers = self.app.pollers
 
-        if self.conf.human_timestamp_log:
-            logger.set_human_format()
+            if self.conf.human_timestamp_log:
+                logger.set_human_format()
 
-        # Now We create our pollers
-        for pol_id in satellites['pollers']:
-            # Must look if we already have it
-            already_got = pol_id in self.pollers
-            poll = satellites['pollers'][pol_id]
-            self.pollers[pol_id] = poll
+            # Now We create our pollers
+            for pol_id in satellites['pollers']:
+                # Must look if we already have it
+                already_got = pol_id in self.pollers
+                poll = satellites['pollers'][pol_id]
+                self.pollers[pol_id] = poll
 
-            if poll['name'] in override_conf['satellitemap']:
-                poll = dict(poll)  # make a copy
-                poll.update(override_conf['satellitemap'][poll['name']])
+                if poll['name'] in override_conf['satellitemap']:
+                    poll = dict(poll)  # make a copy
+                    poll.update(override_conf['satellitemap'][poll['name']])
 
-            proto = 'http'
-            if poll['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
-            self.pollers[pol_id]['uri'] = uri
-            self.pollers[pol_id]['last_connection'] = 0
+                proto = 'http'
+                if poll['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
+                self.pollers[pol_id]['uri'] = uri
+                self.pollers[pol_id]['last_connection'] = 0
 
-        # Now We create our reactionners
-        for reac_id in satellites['reactionners']:
-            # Must look if we already have it
-            already_got = reac_id in self.reactionners
-            reac = satellites['reactionners'][reac_id]
-            self.reactionners[reac_id] = reac
+            # Now We create our reactionners
+            for reac_id in satellites['reactionners']:
+                # Must look if we already have it
+                already_got = reac_id in self.reactionners
+                reac = satellites['reactionners'][reac_id]
+                self.reactionners[reac_id] = reac
 
-            if reac['name'] in override_conf['satellitemap']:
-                reac = dict(reac)  # make a copy
-                reac.update(override_conf['satellitemap'][reac['name']])
+                if reac['name'] in override_conf['satellitemap']:
+                    reac = dict(reac)  # make a copy
+                    reac.update(override_conf['satellitemap'][reac['name']])
 
-            proto = 'http'
-            if poll['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
-            self.reactionners[reac_id]['uri'] = uri
-            self.reactionners[reac_id]['last_connection'] = 0
+                proto = 'http'
+                if poll['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
+                self.reactionners[reac_id]['uri'] = uri
+                self.reactionners[reac_id]['last_connection'] = 0
 
-        # First mix conf and override_conf to have our definitive conf
-        for prop in self.override_conf:
-            # print "Overriding the property %s with value %s" % (prop, self.override_conf[prop])
-            val = self.override_conf[prop]
-            setattr(self.conf, prop, val)
+            # First mix conf and override_conf to have our definitive conf
+            for prop in self.override_conf:
+                val = self.override_conf[prop]
+                setattr(self.conf, prop, val)
 
-        if self.conf.use_timezone != '':
-            logger.debug("Setting our timezone to %s", str(self.conf.use_timezone))
-            os.environ['TZ'] = self.conf.use_timezone
-            time.tzset()
+            if self.conf.use_timezone != '':
+                logger.debug("Setting our timezone to %s", str(self.conf.use_timezone))
+                os.environ['TZ'] = self.conf.use_timezone
+                time.tzset()
 
-        if len(self.modules) != 0:
-            logger.debug("I've got %s modules", str(self.modules))
+            if len(self.modules) != 0:
+                logger.debug("I've got %s modules", str(self.modules))
 
-        # TODO: if scheduler had previous modules instanciated it must clean them!
-        self.modules_manager.set_modules(self.modules)
-        self.do_load_modules()
+            # TODO: if scheduler had previous modules instanciated it must clean them!
+            self.modules_manager.set_modules(self.modules)
+            self.do_load_modules()
 
-        # give it an interface
-        # But first remove previous interface if exists
-        if self.ichecks is not None:
-            logger.debug("Deconnecting previous Check Interface")
-            self.http_daemon.unregister(self.ichecks)
-        # Now create and connect it
-        self.ichecks = IChecks(self.sched)
-        self.http_daemon.register(self.ichecks)
-        logger.debug("The Scheduler Interface uri is: %s", self.uri)
+            logger.info("Loading configuration.")
+            self.conf.explode_global_conf()
 
-        # Same for Broks
-        if self.ibroks is not None:
-            logger.debug("Deconnecting previous Broks Interface")
-            self.http_daemon.unregister(self.ibroks)
-        # Create and connect it
-        self.ibroks = IBroks(self.sched)
-        self.http_daemon.register(self.ibroks)
+            # we give sched it's conf
+            self.sched.reset()
+            self.sched.load_conf(self.conf)
+            self.sched.load_satellites(self.pollers, self.reactionners)
 
-        logger.info("Loading configuration.")
-        self.conf.explode_global_conf()
+            # We must update our Config dict macro with good value
+            # from the config parameters
+            self.sched.conf.fill_resource_macros_names_macros()
+            # print "DBG: got macros", self.sched.conf.macros
 
-        # we give sched it's conf
-        self.sched.reset()
-        self.sched.load_conf(self.conf)
-        self.sched.load_satellites(self.pollers, self.reactionners)
+            # Creating the Macroresolver Class & unique instance
+            m_solver = MacroResolver()
+            m_solver.init(self.conf)
 
-        # We must update our Config dict macro with good value
-        # from the config parameters
-        self.sched.conf.fill_resource_macros_names_macros()
-        # print "DBG: got macros", self.sched.conf.macros
+            # self.conf.dump()
+            # self.conf.quick_debug()
 
-        # Creating the Macroresolver Class & unique instance
-        m_solver = MacroResolver()
-        m_solver.init(self.conf)
+            # Now create the external commander
+            # it's a applyer: it role is not to dispatch commands,
+            # but to apply them
+            ecm = ExternalCommandManager(self.conf, 'applyer')
 
-        # self.conf.dump()
-        # self.conf.quick_debug()
+            # Scheduler need to know about external command to
+            # activate it if necessary
+            self.sched.load_external_command(ecm)
 
-        # Now create the external commander
-        # it's a applyer: it role is not to dispatch commands,
-        # but to apply them
-        ecm = ExternalCommandManager(self.conf, 'applyer')
+            # External command need the sched because he can raise checks
+            ecm.load_scheduler(self.sched)
 
-        # Scheduler need to know about external command to
-        # activate it if necessary
-        self.sched.load_external_command(ecm)
-
-        # External command need the sched because he can raise checks
-        ecm.load_scheduler(self.sched)
-
-        # We clear our schedulers managed (it's us :) )
-        # and set ourself in it
-        self.schedulers = {self.conf.instance_id: self.sched}
+            # We clear our schedulers managed (it's us :) )
+            # and set ourself in it
+            self.schedulers = {self.conf.instance_id: self.sched}
 
     def what_i_managed(self):
         """Get my managed dict (instance id and push_flavor)
@@ -597,12 +370,10 @@ class Alignak(BaseSatellite):
 
         * Init daemon
         * Load module manager
-        * Register http interfaces
         * Launch main loop
         * Catch any Exception that occurs
 
         :return: None
-        TODO : WTF I register then unregister self.interface ??
         """
         try:
             self.load_config_file()
@@ -615,13 +386,7 @@ class Alignak(BaseSatellite):
             self.look_for_early_exit()
             self.do_daemon_init_and_start()
             self.load_modules_manager()
-            self.http_daemon.register(self.interface)
-            self.http_daemon.register(self.istats)
 
-            # self.inject = Injector(self.sched)
-            # self.http_daemon.register(self.inject)
-
-            self.http_daemon.unregister(self.interface)
             self.uri = self.http_daemon.uri
             logger.info("[scheduler] General interface is at: %s", self.uri)
             self.do_mainloop()

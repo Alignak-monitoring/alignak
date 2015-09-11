@@ -20,12 +20,21 @@
 #
 
 import subprocess
-import signal
-import os
+import json
 from time import sleep
 import urllib
+
+import base64
+import zlib
+import cPickle
 from alignak_test import unittest
 
+from alignak.http.generic_interface import GenericInterface
+from alignak.http.receiver_interface import ReceiverInterface
+from alignak.http.arbiter_interface import ArbiterInterface
+from alignak.http.scheduler_interface import SchedulerInterface
+from alignak.http.broker_interface import BrokerInterface
+from alignak.check import Check
 
 class fullTest(unittest.TestCase):
     def _get_subproc_data(self, name):
@@ -82,7 +91,7 @@ class fullTest(unittest.TestCase):
                                '"arbiter": ["arbiter-master"], '
                                '"scheduler": ["scheduler-master"], '
                                '"receiver": ["receiver-1"], '
-                               '"poller": ["poller-master"]}')
+                               '"poller": ["poller-fail", "poller-master"]}')
 
         print("Testing have_conf")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
@@ -93,6 +102,28 @@ class fullTest(unittest.TestCase):
         for name, port in satellite_map.items():
             data = urllib.urlopen("http://127.0.0.1:%s/ping" % port).read()
             self.assertEqual(data, '"pong"', "Daemon %s  did not ping back!" % name)
+
+        print("Testing API")
+        for name, port in satellite_map.items():
+            data = urllib.urlopen("http://127.0.0.1:%s/api" % port).read()
+            name_to_interface = {'arbiter': ArbiterInterface,
+                                 'scheduler': SchedulerInterface,
+                                 'broker': BrokerInterface,
+                                 'poller': GenericInterface,
+                                 'reactionner': GenericInterface,
+                                 'receiver': ReceiverInterface}
+            expected_data = set(name_to_interface[name](None).api())
+            self.assertEqual(set(json.loads(data)), expected_data, "Daemon %s has a bad API!" % name)
+
+        print("Test get check on scheduler")
+        # We need to sleep 10s to be sure the first check can be launched now (check_interval = 5)
+        sleep(4)
+        raw_data = urllib.urlopen("http://127.0.0.1:%s/get_checks?do_checks=True&poller_tags=['TestPollerTag']" % satellite_map['scheduler']).read()
+        data = cPickle.loads(zlib.decompress(base64.b64decode(raw_data)))
+        self.assertIsInstance(data, list, "Data is not a list!")
+        self.assertNotEqual(len(data), 0, "List is empty!")
+        for elem in data:
+            self.assertIsInstance(elem, Check, "One elem of the list is not a Check!")
 
         print("Done testing")
         #os.kill(self.arb_proc.pid, signal.SIGHUP)  # This should log with debug level the Relaod Conf

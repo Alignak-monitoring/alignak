@@ -8,9 +8,10 @@ Subpackages
 
     alignak.bin
     alignak.daemons
+    alignak.http
     alignak.misc
+    alignak.modules
     alignak.objects
-    alignak.webui
 
 Submodules
 ----------
@@ -211,22 +212,6 @@ alignak.graph module
 --------------------
 
 .. automodule:: alignak.graph
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.http_client module
---------------------------
-
-.. automodule:: alignak.http_client
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.http_daemon module
---------------------------
-
-.. automodule:: alignak.http_daemon
     :members:
     :undoc-members:
     :show-inheritance:

@@ -48,7 +48,7 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.log import logger
-from alignak.http_client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPEXCEPTIONS
 
 
 class ReceiverLink(SatelliteLink):

@@ -88,12 +88,13 @@ import zlib
 import base64
 import threading
 
-from alignak.http_client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.generic_interface import GenericInterface
 
 from alignak.message import Message
 from alignak.worker import Worker
 from alignak.load import Load
-from alignak.daemon import Daemon, Interface
+from alignak.daemon import Daemon
 from alignak.log import logger
 from alignak.stats import statsmgr
 
@@ -104,176 +105,6 @@ class NotWorkerMod(Exception):
 
     """
     pass
-
-
-class IForArbiter(Interface):
-    """Interface for Arbiter, our big MASTER
-    All functions defined here are use by Arbiters
-
-    """
-
-    def remove_from_conf(self, sched_id):
-        """Remove a scheduler connection (internal)
-
-        :param sched_id: scheduler id to remove
-        :type sched_id: int
-        :return: None
-        """
-        try:
-            del self.app.schedulers[sched_id]
-        except KeyError:
-            pass
-
-    def what_i_managed(self):
-        """Arbiter ask me which scheduler id I manage
-
-        :return: managed configuration ids
-        :rtype: dict
-        """
-        logger.debug("The arbiter asked me what I manage. It's %s", self.app.what_i_managed())
-        return self.app.what_i_managed()
-    what_i_managed.need_lock = False
-
-    def wait_new_conf(self):
-        """Ask the daemon to drop its configuration and wait for a new one
-
-        :return: None
-        """
-        logger.debug("Arbiter wants me to wait for a new configuration")
-        self.app.schedulers.clear()
-        self.app.cur_conf = None
-
-    def push_broks(self, broks):
-        """Push broks objects to the daemon (internal)
-        Only used on a Broker daemon by the Arbiter
-
-        :param broks: Brok list
-        :type broks: list
-        :return: None
-        """
-        with self.app.arbiter_broks_lock:
-            self.app.arbiter_broks.extend(broks.values())
-    push_broks.method = 'post'
-    # We are using a Lock just for NOT lock this call from the arbiter :)
-    push_broks.need_lock = False
-
-    def get_external_commands(self):
-        """Get the external commands from the daemon (internal)
-        Use a lock for this call (not a global one, just for this method)
-
-        :return: Pickled external command list
-        :rtype: str
-        """
-        with self.app.external_commands_lock:
-            cmds = self.app.get_external_commands()
-            raw = cPickle.dumps(cmds)
-        return raw
-    get_external_commands.need_lock = False
-
-    def got_conf(self):
-        """'Does the daemon got configuration (receiver)
-        Only use for a Receiver daemon
-
-        :return: True if conf is not None, False otherwise
-        :rtype: bool
-        """
-        return self.app.cur_conf is not None
-    got_conf.need_lock = False
-
-    def push_host_names(self, sched_id, hnames):
-        """Push hostname/scheduler links
-        Use by the receivers to got the host names managed by the schedulers
-
-        :param sched_id: sheduler_id that manages hnames
-        :type sched_id: int
-        :param hnames: host names list
-        :type hnames: list
-        :return: None
-        """
-        self.app.push_host_names(sched_id, hnames)
-    push_host_names.method = 'post'
-
-
-class ISchedulers(Interface):
-    """Interface for Schedulers
-    If we are passive, they connect to this and send/get actions
-    All functions defined here are use by Schedulers
-
-    """
-
-    def push_actions(self, actions, sched_id):
-        """Get new actions from scheduler(internal)
-
-        :param actions: list of action to add
-        :type actions: list
-        :param sched_id: id of the scheduler sending actions
-        :type sched_id: int
-        :return:None
-        """
-        self.app.add_actions(actions, int(sched_id))
-    push_actions.method = 'post'
-
-    def get_returns(self, sched_id):
-        """Get actions returns (serialized)
-        for the scheduler with _id = sched_id
-
-        :param sched_id: id of the scheduler
-        :type sched_id: int
-        :return: serialized list
-        :rtype: str
-        """
-        # print "A scheduler ask me the returns", sched_id
-        ret = self.app.get_return_for_passive(int(sched_id))
-        # print "Send mack", len(ret), "returns"
-        return cPickle.dumps(ret)
-
-
-class IBroks(Interface):
-    """Interface for Brokers
-    They connect here and get all broks (data for brokers)
-    data must be ORDERED! (initial status BEFORE update...)
-    All functions defined here are use by Brokers
-
-    """
-
-    def get_broks(self, bname):
-        """Get broks from the daemon
-
-        :return: Brok list serialized and b64encoded
-        :rtype: str
-        """
-        res = self.app.get_broks()
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
-
-
-class IStats(Interface):
-    """
-    Interface for various stats about poller/reactionner activity
-    """
-
-    def get_raw_stats(self):
-        """Get raw stats from the daemon
-
-        :return: daemon stats
-        :rtype: dict
-        """
-        app = self.app
-        res = {}
-
-        for sched_id in app.schedulers:
-            sched = app.schedulers[sched_id]
-            lst = []
-            res[sched_id] = lst
-            for mod in app.q_by_mod:
-                # In workers we've got actions send to queue - queue size
-                for (q_id, queue) in app.q_by_mod[mod].items():
-                    lst.append({
-                        'scheduler_name': sched['name'],
-                        'module': mod,
-                        'queue_number': q_id,
-                        'queue_size': queue.qsize(),
-                        'return_queue_len': app.get_returns_queue_len()})
-        return res
 
 
 class BaseSatellite(Daemon):
@@ -289,8 +120,7 @@ class BaseSatellite(Daemon):
         self.schedulers = {}
 
         # Now we create the interfaces
-        self.interface = IForArbiter(self)
-        self.istats = IStats(self)
+        self.http_interface = GenericInterface(self)
 
         # Can have a queue of external_commands given by modules
         # will be taken by arbiter to process
@@ -308,22 +138,12 @@ class BaseSatellite(Daemon):
         """
         self.handle_requests(timeout)
 
-    def do_stop(self):
-        """Unregister http functions and call super(BaseSatellite, self).do_stop()
-
-        :return: None
-        """
-        if self.http_daemon and self.interface:
-            logger.info("[%s] Stopping all network connections", self.name)
-            self.http_daemon.unregister(self.interface)
-        super(BaseSatellite, self).do_stop()
-
     def what_i_managed(self):
         """Get the managed configuration by this satellite
 
         :return: a dict of scheduler id as key and push_flavor as values
         :rtype: dict
-        """
+"""
         res = {}
         for (key, val) in self.schedulers.iteritems():
             res[key] = val['push_flavor']
@@ -367,12 +187,6 @@ class Satellite(BaseSatellite):
         # Init stats like Load for workers
         self.wait_ratio = Load(initial_value=1)
 
-        self.brok_interface = IBroks(self)
-        self.scheduler_interface = ISchedulers(self)
-
-        # Just for having these attributes defined here. explicit > implicit ;)
-        self.uri2 = None
-        self.uri3 = None
         self.s = None
 
         self.returns_queue = None
@@ -384,7 +198,7 @@ class Satellite(BaseSatellite):
         :param _id: scheduler _id to connect to
         :type _id: int
         :return: scheduler connection object or None
-        :rtype: alignak.http_client.HTTPClient
+        :rtype: alignak.http.client.HTTPClient
         """
         _t0 = time.time()
         res = self.do_pynag_con_init(_id)
@@ -401,7 +215,7 @@ class Satellite(BaseSatellite):
         :param s_id: scheduler s_id to connect to
         :type s_id: int
         :return: scheduler connection object or None
-        :rtype: alignak.http_client.HTTPClient
+        :rtype: alignak.http.client.HTTPClient
         """
         sched = self.schedulers[s_id]
         if not sched['active']:
@@ -648,13 +462,6 @@ class Satellite(BaseSatellite):
             # A already dead worker or in a worker
             except (AttributeError, AssertionError):
                 pass
-        # Close the server socket if it was opened
-        if self.http_daemon:
-            if self.brok_interface:
-                self.http_daemon.unregister(self.brok_interface)
-            if self.scheduler_interface:
-                self.http_daemon.unregister(self.scheduler_interface)
-        # And then call our master stop from satellite code
         super(Satellite, self).do_stop()
 
     def add(self, elt):
@@ -1033,19 +840,10 @@ class Satellite(BaseSatellite):
         self.hook_point('tick')
 
     def do_post_daemon_init(self):
-        """Do this satellite (poller or reactionner) post "daemonize" init:
-        we must register our interfaces for 3 possible callers: arbiter,
-        schedulers or brokers
+        """Do this satellite (poller or reactionner) post "daemonize" init
 
         :return: None
         """
-
-        # And we register them
-        self.uri2 = self.http_daemon.register(self.interface)
-        self.uri3 = self.http_daemon.register(self.brok_interface)
-        self.uri4 = self.http_daemon.register(self.scheduler_interface)
-        self.uri5 = self.http_daemon.register(self.istats)
-
         # self.s = Queue() # Global Master -> Slave
         # We can open the Queue for fork AFTER
         self.q_by_mod['fork'] = {}
@@ -1069,141 +867,145 @@ class Satellite(BaseSatellite):
 
         :return: None
         """
-        conf = self.new_conf
-        logger.debug("[%s] Sending us a configuration %s", self.name, conf)
-        self.new_conf = None
-        self.cur_conf = conf
-        g_conf = conf['global']
+        with self.conf_lock:
+            conf = self.new_conf
+            logger.debug("[%s] Sending us a configuration %s", self.name, conf)
+            self.new_conf = None
+            self.cur_conf = conf
+            g_conf = conf['global']
 
-        # Got our name from the globals
-        if 'poller_name' in g_conf:
-            name = g_conf['poller_name']
-        elif 'reactionner_name' in g_conf:
-            name = g_conf['reactionner_name']
-        else:
-            name = 'Unnamed satellite'
-        self.name = name
-        # kernel.io part
-        self.api_key = g_conf['api_key']
-        self.secret = g_conf['secret']
-        self.http_proxy = g_conf['http_proxy']
-        # local statsd
-        self.statsd_host = g_conf['statsd_host']
-        self.statsd_port = g_conf['statsd_port']
-        self.statsd_prefix = g_conf['statsd_prefix']
-        self.statsd_enabled = g_conf['statsd_enabled']
-
-        # we got a name, we can now say it to our statsmgr
-        if 'poller_name' in g_conf:
-            statsmgr.register(self, self.name, 'poller',
-                              api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
-                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-        else:
-            statsmgr.register(self, self.name, 'reactionner',
-                              api_key=self.api_key, secret=self.secret,
-                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-
-        self.passive = g_conf['passive']
-        if self.passive:
-            logger.info("[%s] Passive mode enabled.", self.name)
-
-        # If we've got something in the schedulers, we do not want it anymore
-        for sched_id in conf['schedulers']:
-
-            already_got = False
-
-            # We can already got this conf id, but with another address
-            if sched_id in self.schedulers:
-                new_addr = conf['schedulers'][sched_id]['address']
-                old_addr = self.schedulers[sched_id]['address']
-                new_port = conf['schedulers'][sched_id]['port']
-                old_port = self.schedulers[sched_id]['port']
-
-                # Should got all the same to be ok :)
-                if new_addr == old_addr and new_port == old_port:
-                    already_got = True
-
-            if already_got:
-                logger.info("[%s] We already got the conf %d (%s)",
-                            self.name, sched_id, conf['schedulers'][sched_id]['name'])
-                wait_homerun = self.schedulers[sched_id]['wait_homerun']
-                actions = self.schedulers[sched_id]['actions']
-
-            sched = conf['schedulers'][sched_id]
-            self.schedulers[sched_id] = sched
-
-            if sched['name'] in g_conf['satellitemap']:
-                sched.update(g_conf['satellitemap'][sched['name']])
-            proto = 'http'
-            if sched['use_ssl']:
-                proto = 'https'
-            uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
-
-            self.schedulers[sched_id]['uri'] = uri
-            if already_got:
-                self.schedulers[sched_id]['wait_homerun'] = wait_homerun
-                self.schedulers[sched_id]['actions'] = actions
+            # Got our name from the globals
+            if 'poller_name' in g_conf:
+                name = g_conf['poller_name']
+            elif 'reactionner_name' in g_conf:
+                name = g_conf['reactionner_name']
             else:
-                self.schedulers[sched_id]['wait_homerun'] = {}
-                self.schedulers[sched_id]['actions'] = {}
-            self.schedulers[sched_id]['running_id'] = 0
-            self.schedulers[sched_id]['active'] = sched['active']
-            self.schedulers[sched_id]['timeout'] = sched['timeout']
-            self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                name = 'Unnamed satellite'
+            self.name = name
+            # kernel.io part
+            self.api_key = g_conf['api_key']
+            self.secret = g_conf['secret']
+            self.http_proxy = g_conf['http_proxy']
+            # local statsd
+            self.statsd_host = g_conf['statsd_host']
+            self.statsd_port = g_conf['statsd_port']
+            self.statsd_prefix = g_conf['statsd_prefix']
+            self.statsd_enabled = g_conf['statsd_enabled']
 
-            # Do not connect if we are a passive satellite
-            if not self.passive and not already_got:
-                # And then we connect to it :)
-                self.pynag_con_init(sched_id)
+            # we got a name, we can now say it to our statsmgr
+            if 'poller_name' in g_conf:
+                statsmgr.register(self, self.name, 'poller',
+                                  api_key=self.api_key, secret=self.secret,
+                                  http_proxy=self.http_proxy,
+                                  statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                                  statsd_prefix=self.statsd_prefix,
+                                  statsd_enabled=self.statsd_enabled)
+            else:
+                statsmgr.register(self, self.name, 'reactionner',
+                                  api_key=self.api_key, secret=self.secret,
+                                  statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                                  statsd_prefix=self.statsd_prefix,
+                                  statsd_enabled=self.statsd_enabled)
 
-        # Now the limit part, 0 mean: number of cpu of this machine :)
-        # if not available, use 4 (modern hardware)
-        self.max_workers = g_conf['max_workers']
-        if self.max_workers == 0 and not IS_ANDROID:
-            try:
-                self.max_workers = cpu_count()
-            except NotImplementedError:
-                self.max_workers = 4
-        logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
-        self.min_workers = g_conf['min_workers']
-        if self.min_workers == 0 and not IS_ANDROID:
-            try:
-                self.min_workers = cpu_count()
-            except NotImplementedError:
-                self.min_workers = 4
-        logger.info("[%s] Using min workers: %s", self.name, self.min_workers)
+            self.passive = g_conf['passive']
+            if self.passive:
+                logger.info("[%s] Passive mode enabled.", self.name)
 
-        self.processes_by_worker = g_conf['processes_by_worker']
-        self.polling_interval = g_conf['polling_interval']
-        self.timeout = self.polling_interval
+            # If we've got something in the schedulers, we do not want it anymore
+            for sched_id in conf['schedulers']:
 
-        # Now set tags
-        # ['None'] is the default tags
-        self.poller_tags = g_conf.get('poller_tags', ['None'])
-        self.reactionner_tags = g_conf.get('reactionner_tags', ['None'])
-        self.max_plugins_output_length = g_conf.get('max_plugins_output_length', 8192)
+                already_got = False
 
-        # Set our giving timezone from arbiter
-        use_timezone = g_conf['use_timezone']
-        if use_timezone != 'NOTSET':
-            logger.info("[%s] Setting our timezone to %s", self.name, use_timezone)
-            os.environ['TZ'] = use_timezone
-            time.tzset()
+                # We can already got this conf id, but with another address
+                if sched_id in self.schedulers:
+                    new_addr = conf['schedulers'][sched_id]['address']
+                    old_addr = self.schedulers[sched_id]['address']
+                    new_port = conf['schedulers'][sched_id]['port']
+                    old_port = self.schedulers[sched_id]['port']
 
-        logger.info("We have our schedulers: %s", str(self.schedulers))
+                    # Should got all the same to be ok :)
+                    if new_addr == old_addr and new_port == old_port:
+                        already_got = True
 
-        # Now manage modules
-        # TODO: check how to better handle this with modules_manager..
-        mods = g_conf['modules']
-        for module in mods:
-            # If we already got it, bypass
-            if module.module_type not in self.q_by_mod:
-                logger.debug("Add module object %s", str(module))
-                self.modules_manager.modules.append(module)
-                logger.info("[%s] Got module: %s ", self.name, module.module_type)
-                self.q_by_mod[module.module_type] = {}
+                if already_got:
+                    logger.info("[%s] We already got the conf %d (%s)",
+                                self.name, sched_id, conf['schedulers'][sched_id]['name'])
+                    wait_homerun = self.schedulers[sched_id]['wait_homerun']
+                    actions = self.schedulers[sched_id]['actions']
+
+                sched = conf['schedulers'][sched_id]
+                self.schedulers[sched_id] = sched
+
+                if sched['name'] in g_conf['satellitemap']:
+                    sched.update(g_conf['satellitemap'][sched['name']])
+                proto = 'http'
+                if sched['use_ssl']:
+                    proto = 'https'
+                uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
+
+                self.schedulers[sched_id]['uri'] = uri
+                if already_got:
+                    self.schedulers[sched_id]['wait_homerun'] = wait_homerun
+                    self.schedulers[sched_id]['actions'] = actions
+                else:
+                    self.schedulers[sched_id]['wait_homerun'] = {}
+                    self.schedulers[sched_id]['actions'] = {}
+                self.schedulers[sched_id]['running_id'] = 0
+                self.schedulers[sched_id]['active'] = sched['active']
+                self.schedulers[sched_id]['timeout'] = sched['timeout']
+                self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+
+                # Do not connect if we are a passive satellite
+                if not self.passive and not already_got:
+                    # And then we connect to it :)
+                    self.pynag_con_init(sched_id)
+
+            # Now the limit part, 0 mean: number of cpu of this machine :)
+            # if not available, use 4 (modern hardware)
+            self.max_workers = g_conf['max_workers']
+            if self.max_workers == 0 and not IS_ANDROID:
+                try:
+                    self.max_workers = cpu_count()
+                except NotImplementedError:
+                    self.max_workers = 4
+            logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
+            self.min_workers = g_conf['min_workers']
+            if self.min_workers == 0 and not IS_ANDROID:
+                try:
+                    self.min_workers = cpu_count()
+                except NotImplementedError:
+                    self.min_workers = 4
+            logger.info("[%s] Using min workers: %s", self.name, self.min_workers)
+
+            self.processes_by_worker = g_conf['processes_by_worker']
+            self.polling_interval = g_conf['polling_interval']
+            self.timeout = self.polling_interval
+
+            # Now set tags
+            # ['None'] is the default tags
+            self.poller_tags = g_conf.get('poller_tags', ['None'])
+            self.reactionner_tags = g_conf.get('reactionner_tags', ['None'])
+            self.max_plugins_output_length = g_conf.get('max_plugins_output_length', 8192)
+
+            # Set our giving timezone from arbiter
+            use_timezone = g_conf['use_timezone']
+            if use_timezone != 'NOTSET':
+                logger.info("[%s] Setting our timezone to %s", self.name, use_timezone)
+                os.environ['TZ'] = use_timezone
+                time.tzset()
+
+            logger.info("We have our schedulers: %s", str(self.schedulers))
+
+            # Now manage modules
+            # TODO: check how to better handle this with modules_manager..
+            mods = g_conf['modules']
+            for module in mods:
+                # If we already got it, bypass
+                if module.module_type not in self.q_by_mod:
+                    logger.debug("Add module object %s", str(module))
+                    self.modules_manager.modules.append(module)
+                    logger.info("[%s] Got module: %s ", self.name, module.module_type)
+                    self.q_by_mod[module.module_type] = {}
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon

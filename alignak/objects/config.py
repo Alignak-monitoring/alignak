@@ -609,9 +609,6 @@ class Config(Item):
         'resource_macros_names':
             ListProp(default=[]),
 
-        'http_backend':
-            StringProp(default='auto'),
-
         # SSL PART
         # global boolean for know if we use ssl or not
         'use_ssl':

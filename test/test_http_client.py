@@ -1,39 +1,41 @@
 from __future__ import print_function
-
 import time
 import socket
-import sys
 from multiprocessing import Process
-import mock
 import os
 
-from alignak import daemon
-from alignak.http_client import HTTPClient
-from alignak.http_daemon import HTTPDaemon
+import cherrypy
+import mock
 
+from alignak.http.generic_interface import GenericInterface
+from alignak.http.client import HTTPClient
+from alignak.http.daemon import HTTPDaemon
 from alignak_test import unittest
 from alignak_tst_utils import get_free_port
 
 
-class Interface(daemon.Interface):
+class Interface(GenericInterface):
     # subclass daemon.Interface but we can even define custom methods here:
     # say:
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def get_method(self, a, b, c=1):
         return a, b, c
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def put_method(self, a, b=3):
         return a, b
-    put_method.method = 'put'
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def post_method(self, a, b=3):
         return a, b
-    post_method.method = 'post'
 
 
 class Test_Alignak_Http_Client(unittest.TestCase):
 
-    http_backend = 'wsgiref'  # ho well
 
     def __init__(self, *a, **kw):
         super(Test_Alignak_Http_Client, self).__init__(*a, **kw)
@@ -65,14 +67,16 @@ class Test_Alignak_Http_Client(unittest.TestCase):
             self.__client = HTTPClient(addr, port)
             self.__client.timeout = 2000
             self.__client.data_timeout = 20000
-            self.__server = HTTPDaemon(addr, port,
-                http_backend=self.http_backend,
-                use_ssl=False, ca_cert=None, ssl_key=None, ssl_cert=None,
-                hard_ssl_name_check=False, daemon_thread_pool_size=4
-            )
+
             self.__mocked_app = mock.MagicMock()
             self.__dispatcher = Interface(self.__mocked_app)
-            self.__server.register(self.__dispatcher)
+            self.__server = HTTPDaemon(addr, port,
+                http_interface=self.__dispatcher,
+                use_ssl=False, ca_cert=None, ssl_key=None, ssl_cert=None,
+                daemon_thread_pool_size=4
+            )
+
+            #self.__server.register(self.__dispatcher)
             self.__process = Process(target=self._run_http_server)
             self.__process.start()
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -117,20 +121,10 @@ class Test_Alignak_Http_Client(unittest.TestCase):
         # But by post method you get an str/bytes object (of a list)..
         self.assertEqual('[1, 2]', rsp)
 
-    @unittest.skipIf(True, "Getting method not allowed from bottle apparently.. "
-                           "anyway this method isn't used by anything but to upload "
-                           "stats to kernel.io."
-                           "So that doesn't matter actually.")
     def test_put(self):
         cli = self.__client
         rsp = cli.put('put_method', data=dict(a=1, b=2))
-        self.assertEqual("don't know", rsp)
-
-
-
-class Test_Alignak_Http_Client_With_CherrPy_Backend(Test_Alignak_Http_Client):
-
-    http_backend = 'cherrypy'  # ho well
+        self.assertEqual('["1", "2"]', rsp)
 
 
 if __name__ == '__main__':

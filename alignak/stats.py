@@ -53,9 +53,7 @@ import base64
 import socket
 
 from alignak.log import logger
-
-
-from alignak.http_client import HTTPClient, HTTPException
+from alignak.http.client import HTTPClient, HTTPException
 
 
 BLOCK_SIZE = 16

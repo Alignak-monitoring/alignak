@@ -51,7 +51,7 @@ import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
-from alignak.http_client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPEXCEPTIONS
 from alignak.log import logger
 
 

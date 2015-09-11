@@ -54,19 +54,18 @@ from __future__ import print_function
 import os
 import tempfile
 import shutil
-import time
 
 from alignak_tst_utils import get_free_port
-from alignak_test import unittest, time_hacker
+from alignak_test import unittest
 
-import alignak.log as alignak_log
 from alignak.daemon import InvalidPidFile, InvalidWorkDir
-from alignak.http_daemon import PortNotFree
 from alignak.daemons.pollerdaemon import Poller
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak.daemons.arbiterdaemon import Arbiter
+from alignak.http.daemon import PortNotFree
+import time
 
 try:
     import pwd, grp
@@ -103,7 +102,7 @@ class template_Daemon_Bad_Start():
 
     @classmethod
     def setUpClass(cls):
-        time_hacker.set_real_time()  # just to be sure..
+        #time_hacker.set_real_time()  # just to be sure..
         # the daemons startup code does actually a `chrdir`,
         # in Daemon.change_to_workdir,
         # so in order to be always safe, let's save the cwd when we are setup,
@@ -128,7 +127,7 @@ class template_Daemon_Bad_Start():
 
     def get_daemon(self):
 
-        alignak_log.local_log = None  # otherwise get some "trashs" logs..
+        #alignak_log.local_log = None  # otherwise get some "trashs" logs..
         d = self.create_daemon()
 
         # configuration is actually "relative" :
@@ -138,7 +137,6 @@ class template_Daemon_Bad_Start():
         os.chdir(self._launch_dir)
 
         d.load_config_file()
-        d.http_backend = 'wsgiref'
         d.port = get_free_port()
         d.pidfile = "pidfile"
         self.get_login_and_group(d)
@@ -152,6 +150,7 @@ class template_Daemon_Bad_Start():
         d = self.get_daemon()
         d.workdir = tempfile.mkdtemp()
         d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
+
 
         with self.assertRaises(InvalidPidFile):
             self.start_daemon(d)
@@ -173,6 +172,7 @@ class template_Daemon_Bad_Start():
 
         temp = tempfile.mkdtemp()
         d1.workdir = temp
+        d1.host = "127.0.0.1"  # Force all interfaces
 
         self.start_daemon(d1)
         # so that second daemon will not see first started one:
@@ -181,13 +181,29 @@ class template_Daemon_Bad_Start():
 
         d2 = self.get_daemon()
         d2.workdir = d1.workdir
+        d2.host = "127.0.0.1"  # Force all interfaces
         d2.port = d1.http_daemon.port
 
         with self.assertRaises(PortNotFree):
-            self.start_daemon(d2)
+            # Do start by hand because we don't want to run the thread.
+            # PortNotFree will occur here not in the thread.
+            d2.change_to_user_group()
+            d2.change_to_workdir()
+            d2.check_parallel_run()
+            d2.setup_communication_daemon()
+            d2.http_daemon_thread()
 
+
+        d2.http_daemon.srv.ready = False
+        time.sleep(1)
+        d2.http_daemon.srv.requests.stop()
         d2.do_stop()
+
+        d1.http_daemon.srv.ready = False
+        time.sleep(1)
+        d1.http_daemon.srv.requests.stop()
         d1.do_stop()
+
         shutil.rmtree(d1.workdir)
 
 #############################################################################

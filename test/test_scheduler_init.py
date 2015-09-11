@@ -97,18 +97,8 @@ class testSchedulerInit(AlignakTest):
 
         d.load_config_file()
 
-        d.http_backend = 'wsgiref'
         d.do_daemon_init_and_start(fake=True)
         d.load_modules_manager()
-
-        # Test registered function list
-        d.http_daemon.register(d.interface)
-        reg_list = d.http_daemon.registered_fun
-        expected_list = ['get_external_commands', 'get_running_id', 'got_conf', 'have_conf',
-                         'ping', 'push_broks', 'push_host_names', 'put_conf', 'remove_from_conf',
-                         'run_external_commands', 'set_log_level', 'wait_new_conf', 'what_i_managed']
-        for fun in expected_list:
-            assert(fun in reg_list)
 
         # Launch an arbiter so that the scheduler get a conf and init
         args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0]]
@@ -123,14 +113,6 @@ class testSchedulerInit(AlignakTest):
 
         d.setup_new_conf()
 
-        # Test registered function list again, so that there is no overriden functions
-        reg_list = d.http_daemon.registered_fun
-        expected_list = ['get_external_commands', 'get_running_id', 'got_conf', 'have_conf',
-                         'ping', 'push_broks', 'push_host_names', 'put_conf', 'remove_from_conf',
-                         'run_external_commands', 'set_log_level', 'wait_new_conf', 'what_i_managed',
-                         'get_checks', 'put_results', 'fill_initial_broks', 'get_broks']
-        for fun in expected_list:
-            assert(fun in reg_list)
 
 
         # Test that use_ssl parameter generates the good uri

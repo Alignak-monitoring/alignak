@@ -61,7 +61,6 @@ import re
 from multiprocessing import Queue, Process
 import warnings
 
-import alignak.http_daemon
 from alignak.log import logger
 from alignak.misc.common import setproctitle
 
@@ -368,10 +367,6 @@ class BaseModule(object):
         :return: None
         """
         self.set_proctitle(self.name)
-
-        # TODO: fix this hack:
-        if alignak.http_daemon.daemon_inst:
-            alignak.http_daemon.daemon_inst.close_sockets()
 
         self.set_signal_handler()
         logger.info("[%s[%d]]: Now running..", self.name, os.getpid())

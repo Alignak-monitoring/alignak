@@ -277,7 +277,7 @@ class Dispatcher:
         for realm in self.realms:
             for rec in realm.receivers:
                 # If the receiver does not have a conf, must got one :)
-                if rec.reachable and not rec.got_conf():
+                if rec.reachable and not rec.have_conf():
                     self.dispatch_ok = False  # so we will redispatch all
                     rec.need_conf = True
 
