@@ -11,6 +11,9 @@ def get_init_scripts(config):
     if 'win' in sys.platform:
         pass
     elif 'linux' in sys.platform or 'sunos5' in sys.platform:
+        if 'fedora' in platform.dist()[0]:
+            data_files = data_files + "\nsystemd/* = /usr/lib/systemd/system/*"
+        else:    
         data_files = data_files + "\netc/init.d = bin/init.d/*"
         data_files = data_files + "\netc/default = bin/default/alignak.in"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
