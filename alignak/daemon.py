@@ -1026,7 +1026,7 @@ class Daemon(object):
         If suppl_socks is given it also looks for activity on that list of fd.
 
         :param timeout: timeout to wait for activity
-        :type timeout: int
+        :type timeout: float
         :param suppl_socks: list of fd to wait for activity
         :type suppl_socks: None | list
         :return:Returns a 3-tuple:

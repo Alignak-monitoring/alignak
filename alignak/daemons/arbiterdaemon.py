@@ -746,27 +746,10 @@ class Arbiter(Daemon):
         timeout = 1.0
 
         while self.must_run and not self.interrupted:
-            elapsed, ins, _ = self.handle_requests(timeout, suppl_socks)
-
-            # If FIFO, read external command
-            if ins:
-                now = time.time()
-                ext_cmds = self.external_command.get()
-                if ext_cmds:
-                    for ext_cmd in ext_cmds:
-                        self.external_commands.append(ext_cmd)
-                else:
-                    self.fifo = self.external_command.open()
-                    if self.fifo is not None:
-                        suppl_socks = [self.fifo]
-                    else:
-                        suppl_socks = None
-                elapsed += time.time() - now
-
-            if elapsed or ins:
-                timeout -= elapsed
-                if timeout > 0:  # only continue if we are not over timeout
-                    continue
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _ = self.handle_requests(timeout, suppl_socks)
 
             # Timeout
             timeout = 1.0  # reset the timeout value
