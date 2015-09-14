@@ -652,19 +652,15 @@ class Arbiter(Daemon):
         logger.info("I'll wait master for %d seconds", master_timeout)
 
         while not self.interrupted:
-            elapsed, _, tcdiff = self.handle_requests(timeout)
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _, _, tcdiff = self.handle_requests(timeout)
             # if there was a system Time Change (tcdiff) then we have to adapt last_master_speak:
             if self.new_conf:
                 self.setup_new_conf()
             if tcdiff:
                 self.last_master_speack += tcdiff
-            if elapsed:
-                self.last_master_speack = time.time()
-                timeout -= elapsed
-                if timeout > 0:
-                    continue
-
-            timeout = 1.0
             sys.stdout.write(".")
             sys.stdout.flush()
 

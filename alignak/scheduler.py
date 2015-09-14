@@ -1981,11 +1981,10 @@ class Scheduler(object):
             # Ok, go to send our broks to our external modules
             # self.send_broks_to_modules()
 
-            elapsed, _, _ = self.sched_daemon.handle_requests(timeout)
-            if elapsed:
-                timeout -= elapsed
-                if timeout > 0:
-                    continue
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _ = self.sched_daemon.handle_requests(timeout)
 
             self.load_one_min.update_load(self.sched_daemon.sleep_time)
 
@@ -1997,7 +1996,6 @@ class Scheduler(object):
             self.sched_daemon.sleep_time = 0.0
 
             # Timeout or time over
-            timeout = 1.0
             ticks += 1
 
             # Do recurrent works like schedule, consume
