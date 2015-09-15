@@ -90,7 +90,8 @@ class Property(object):
                  fill_brok=None, conf_send_preparation=None,
                  brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
-                 override=False, managed=True, split_on_coma=True, merging='uniq'):
+                 override=False, managed=True, split_on_coma=True,
+                 keep_empty=False, merging='uniq'):
 
         """
         `default`: default value to be used if this property is not set.
@@ -154,6 +155,7 @@ class Property(object):
         self.unused = False
         self.merging = merging
         self.split_on_coma = split_on_coma
+        self.keep_empty = keep_empty
 
     def pythonize(self, val):
         """Generic pythonize method
@@ -324,9 +326,11 @@ class ListProp(Property):
         :rtype: list
         """
         if isinstance(val, list):
-            return [s.strip() for s in list_split(val, self.split_on_coma)]
+            return [s.strip() for s in list_split(val, self.split_on_coma)
+                    if s.strip() != '' or self.keep_empty]
         else:
-            return [s.strip() for s in to_split(val, self.split_on_coma)]
+            return [s.strip() for s in to_split(val, self.split_on_coma)
+                    if s.strip() != '' or self.keep_empty]
 
 
 class LogLevelProp(StringProp):
