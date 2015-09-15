@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=C0103
 """This module provide VERSION if we try to import alignak.bin.VERSION
 It will raise a warning to notify user/dev
 
