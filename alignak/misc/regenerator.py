@@ -202,18 +202,18 @@ class Regenerator(object):
         if manage and self.want_brok(brok):
             return manage(brok)
 
-    def update_element(self, e, data):
+    def update_element(self, item, data):
         """
         Update object attibute with value contained in data keys
 
-        :param e: A alignak object
-        :type e: alignak.object.Item
+        :param item: A alignak object
+        :type item: alignak.object.Item
         :param data: the dict containing attribute to update
         :type data: dict
         :return: None
         """
         for prop in data:
-            setattr(e, prop, data[prop])
+            setattr(item, prop, data[prop])
 
     def all_done_linking(self, inst_id):
         """
@@ -422,40 +422,40 @@ class Regenerator(object):
         del self.inp_services[inst_id]
         del self.inp_servicegroups[inst_id]
 
-    def linkify_a_command(self, o, prop):
+    def linkify_a_command(self, obj, prop):
         """
-        Replace the command_name by the command object in o.prop
+        Replace the command_name by the command object in obj.prop
 
-        :param o: A host or a service
-        :type o: alignak.objects.schedulingitem.SchedulingItem
+        :param obj: A host or a service
+        :type obj: alignak.objects.schedulingitem.SchedulingItem
         :param prop: an attribute to replace ("check_command" or "event_handler")
         :type prop: str
         :return: None
         """
-        commandcall = getattr(o, prop, None)
+        commandcall = getattr(obj, prop, None)
         # if the command call is void, bypass it
         if not commandcall:
-            setattr(o, prop, None)
+            setattr(obj, prop, None)
             return
         cmdname = commandcall.command
         command = self.commands.find_by_name(cmdname)
         commandcall.command = command
 
-    def linkify_commands(self, o, prop):
+    def linkify_commands(self, obj, prop):
         """
-        Replace the command_name by the command object in o.prop
+        Replace the command_name by the command object in obj.prop
 
-        :param o: A notification way object
-        :type o: alignak.objects.notificationway.NotificationWay
+        :param obj: A notification way object
+        :type obj: alignak.objects.notificationway.NotificationWay
         :param prop: an attribute to replace
                      ('host_notification_commands' or 'service_notification_commands')
         :type prop: str
         :return: None
         """
-        commandcalls = getattr(o, prop, None)
+        commandcalls = getattr(obj, prop, None)
         if not commandcalls:
             # If do not have a command list, put a void list instead
-            setattr(o, prop, [])
+            setattr(obj, prop, [])
             return
 
         for commandcall in commandcalls:
@@ -463,54 +463,54 @@ class Regenerator(object):
             command = self.commands.find_by_name(cmdname)
             commandcall.command = command
 
-    def linkify_a_timeperiod(self, o, prop):
+    def linkify_a_timeperiod(self, obj, prop):
         """
-        Replace the timeperiod_name by the timeperiod object in o.prop
+        Replace the timeperiod_name by the timeperiod object in obj.prop
 
-        :param o: A notification way object
-        :type o: alignak.objects.notificationway.NotificationWay
+        :param obj: A notification way object
+        :type obj: alignak.objects.notificationway.NotificationWay
         :param prop: an attribute to replace
                      ('host_notification_period' or 'service_notification_period')
         :type prop: str
         :return: None
         """
-        raw_timeperiod = getattr(o, prop, None)
+        raw_timeperiod = getattr(obj, prop, None)
         if not raw_timeperiod:
-            setattr(o, prop, None)
+            setattr(obj, prop, None)
             return
         tpname = raw_timeperiod.timeperiod_name
         timeperiod = self.timeperiods.find_by_name(tpname)
-        setattr(o, prop, timeperiod)
+        setattr(obj, prop, timeperiod)
 
-    def linkify_a_timeperiod_by_name(self, o, prop):
+    def linkify_a_timeperiod_by_name(self, obj, prop):
         """
-        Replace the timeperiod_name by the timeperiod object in o.prop
+        Replace the timeperiod_name by the timeperiod object in obj.prop
 
-        :param o: A host or a service
-        :type o: alignak.objects.SchedulingItem
+        :param obj: A host or a service
+        :type obj: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
                      ('notification_period' or 'check_period')
         :type prop: str
         :return: None
         """
-        tpname = getattr(o, prop, None)
+        tpname = getattr(obj, prop, None)
         if not tpname:
-            setattr(o, prop, None)
+            setattr(obj, prop, None)
             return
         timeperiod = self.timeperiods.find_by_name(tpname)
-        setattr(o, prop, timeperiod)
+        setattr(obj, prop, timeperiod)
 
-    def linkify_contacts(self, o, prop):
+    def linkify_contacts(self, obj, prop):
         """
-        Replace the contact_name by the contact object in o.prop
+        Replace the contact_name by the contact object in obj.prop
 
-        :param o: A host or a service
-        :type o: alignak.objects.SchedulingItem
+        :param obj: A host or a service
+        :type obj: alignak.objects.SchedulingItem
         :param prop: an attribute to replace ('contacts')
         :type prop: str
         :return: None
         """
-        contacts = getattr(o, prop)
+        contacts = getattr(obj, prop)
 
         if not contacts:
             return
@@ -520,26 +520,26 @@ class Regenerator(object):
             contact = self.contacts.find_by_name(cname)
             if contact:
                 new_v.append(contact)
-        setattr(o, prop, new_v)
+        setattr(obj, prop, new_v)
 
-    def linkify_dict_srv_and_hosts(self, o, prop):
+    def linkify_dict_srv_and_hosts(self, obj, prop):
         """
-        Replace the dict with host and service name by the host or service object in o.prop
+        Replace the dict with host and service name by the host or service object in obj.prop
 
-        :param o: A host or a service
-        :type o: alignak.objects.SchedulingItem
+        :param obj: A host or a service
+        :type obj: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
             ('impacts', 'source_problems', 'parent_dependencies' or 'child_dependencies'))
         :type prop: str
         :return: None
         """
-        problems = getattr(o, prop)
+        problems = getattr(obj, prop)
 
         if not problems:
-            setattr(o, prop, [])
+            setattr(obj, prop, [])
 
         new_v = []
-        # print "Linkify Dict SRV/Host", v, o.get_name(), prop
+        # print "Linkify Dict SRV/Host", v, obj.get_name(), prop
         for name in problems['services']:
             elts = name.split('/')
             hname = elts[0]
@@ -551,30 +551,30 @@ class Regenerator(object):
             host = self.hosts.find_by_name(hname)
             if host:
                 new_v.append(host)
-        setattr(o, prop, new_v)
+        setattr(obj, prop, new_v)
 
-    def linkify_host_and_hosts(self, o, prop):
+    def linkify_host_and_hosts(self, obj, prop):
         """
-        Replace the host_name by the host object in o.prop
+        Replace the host_name by the host object in obj.prop
 
-        :param o: A host or a service
-        :type o: alignak.objects.SchedulingItem
+        :param obj: A host or a service
+        :type obj: alignak.objects.SchedulingItem
         :param prop: an attribute to replace
             (''parents' 'childs')
         :type prop: str
         :return: None
         """
-        hosts = getattr(o, prop)
+        hosts = getattr(obj, prop)
 
         if not hosts:
-            setattr(o, prop, [])
+            setattr(obj, prop, [])
 
         new_v = []
         for hname in hosts:
             host = self.hosts.find_by_name(hname)
             if host:
                 new_v.append(host)
-        setattr(o, prop, new_v)
+        setattr(obj, prop, new_v)
 
 ###############
 # Brok management part
@@ -593,15 +593,15 @@ class Regenerator(object):
 # INITIAL PART
 #######
 
-    def manage_program_status_brok(self, b):
+    def manage_program_status_brok(self, brok):
         """
         Manage program_status brok : Reset objects for the given config id
 
-        :param b: Brok containing new config
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new config
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         c_id = data['instance_id']
         safe_print("Regenerator: Creating config:", c_id)
 
@@ -648,15 +648,15 @@ class Regenerator(object):
         for servicegroup in self.servicegroups:
             servicegroup.members = [s for s in servicegroup.members if s.instance_id != c_id]
 
-    def manage_initial_host_status_brok(self, b):
+    def manage_initial_host_status_brok(self, brok):
         """
         Manage initial_host_status brok : Update host object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         hname = data['host_name']
         inst_id = data['instance_id']
 
@@ -678,15 +678,15 @@ class Regenerator(object):
         # Ok, put in in the in progress hosts
         inp_hosts[host._id] = host
 
-    def manage_initial_hostgroup_status_brok(self, b):
+    def manage_initial_hostgroup_status_brok(self, brok):
         """
         Manage initial_hostgroup_status brok : Update hostgroup object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         hgname = data['hostgroup_name']
         inst_id = data['instance_id']
 
@@ -709,15 +709,15 @@ class Regenerator(object):
         # so now only save it
         inp_hostgroups[hostgroup._id] = hostgroup
 
-    def manage_initial_service_status_brok(self, b):
+    def manage_initial_service_status_brok(self, brok):
         """
         Manage initial_service_status brok : Update service object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         hname = data['host_name']
         sdesc = data['service_description']
         inst_id = data['instance_id']
@@ -740,15 +740,15 @@ class Regenerator(object):
         # Ok, put in in the in progress hosts
         inp_services[serv._id] = serv
 
-    def manage_initial_servicegroup_status_brok(self, b):
+    def manage_initial_servicegroup_status_brok(self, brok):
         """
         Manage initial_servicegroup_status brok : Update servicegroup object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         sgname = data['servicegroup_name']
         inst_id = data['instance_id']
 
@@ -771,15 +771,15 @@ class Regenerator(object):
         # so now only save it
         inp_servicegroups[servicegroup._id] = servicegroup
 
-    def manage_initial_contact_status_brok(self, b):
+    def manage_initial_contact_status_brok(self, brok):
         """
         Manage initial_contact_status brok : Update contact object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         cname = data['contact_name']
         safe_print("Contact with data", data)
         contact = self.contacts.find_by_name(cname)
@@ -827,15 +827,15 @@ class Regenerator(object):
 
         contact.notificationways = new_notifways
 
-    def manage_initial_contactgroup_status_brok(self, b):
+    def manage_initial_contactgroup_status_brok(self, brok):
         """
         Manage initial_contactgroup_status brok : Update contactgroup object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         cgname = data['contactgroup_name']
         inst_id = data['instance_id']
 
@@ -858,15 +858,15 @@ class Regenerator(object):
         # so now only save it
         inp_contactgroups[contactgroup._id] = contactgroup
 
-    def manage_initial_timeperiod_status_brok(self, b):
+    def manage_initial_timeperiod_status_brok(self, brok):
         """
         Manage initial_timeperiod_status brok : Update timeperiod object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         # print "Creating timeperiod", data
         tpname = data['timeperiod_name']
 
@@ -880,15 +880,15 @@ class Regenerator(object):
             self.update_element(timeperiod, data)
             self.timeperiods.add_item(timeperiod)
 
-    def manage_initial_command_status_brok(self, b):
+    def manage_initial_command_status_brok(self, brok):
         """
         Manage initial_command_status brok : Update command object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         cname = data['command_name']
 
         command = self.commands.find_by_name(cname)
@@ -901,15 +901,15 @@ class Regenerator(object):
             self.update_element(command, data)
             self.commands.add_item(command)
 
-    def manage_initial_scheduler_status_brok(self, b):
+    def manage_initial_scheduler_status_brok(self, brok):
         """
         Manage initial_scheduler_status brok : Update scheduler object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         scheduler_name = data['scheduler_name']
         print "Creating Scheduler:", scheduler_name, data
         sched = SchedulerLink({})
@@ -920,15 +920,15 @@ class Regenerator(object):
         self.schedulers[scheduler_name] = sched
         print "scheduler added"
 
-    def manage_initial_poller_status_brok(self, b):
+    def manage_initial_poller_status_brok(self, brok):
         """
         Manage initial_poller_status brok : Update poller object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         poller_name = data['poller_name']
         print "Creating Poller:", poller_name, data
         poller = PollerLink({})
@@ -939,15 +939,15 @@ class Regenerator(object):
         self.pollers[poller_name] = poller
         print "poller added"
 
-    def manage_initial_reactionner_status_brok(self, b):
+    def manage_initial_reactionner_status_brok(self, brok):
         """
         Manage initial_reactionner_status brok : Update reactionner object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         reactionner_name = data['reactionner_name']
         print "Creating Reactionner:", reactionner_name, data
         reac = ReactionnerLink({})
@@ -958,15 +958,15 @@ class Regenerator(object):
         self.reactionners[reactionner_name] = reac
         print "reactionner added"
 
-    def manage_initial_broker_status_brok(self, b):
+    def manage_initial_broker_status_brok(self, brok):
         """
         Manage initial_broker_status brok : Update broker object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         broker_name = data['broker_name']
         print "Creating Broker:", broker_name, data
         broker = BrokerLink({})
@@ -977,15 +977,15 @@ class Regenerator(object):
         self.brokers[broker_name] = broker
         print "broker added"
 
-    def manage_initial_receiver_status_brok(self, b):
+    def manage_initial_receiver_status_brok(self, brok):
         """
         Manage initial_receiver_status brok : Update receiver object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         receiver_name = data['receiver_name']
         print "Creating Receiver:", receiver_name, data
         receiver = ReceiverLink({})
@@ -996,15 +996,15 @@ class Regenerator(object):
         self.receivers[receiver_name] = receiver
         print "receiver added"
 
-    def manage_initial_broks_done_brok(self, b):
+    def manage_initial_broks_done_brok(self, brok):
         """
         Manage initial_broks_done brok : Call all_done_linking with the instance_id in the brok
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        inst_id = b.data['instance_id']
+        inst_id = brok.data['instance_id']
         print "Finish the configuration of instance", inst_id
         self.all_done_linking(inst_id)
 
@@ -1013,15 +1013,15 @@ class Regenerator(object):
 # Status Update part
 #################
 
-    def manage_update_program_status_brok(self, b):
+    def manage_update_program_status_brok(self, brok):
         """
         Manage update_program_status brok : Update config object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         c_id = data['instance_id']
 
         # If we got an update about an unknown instance, cry and ask for a full
@@ -1040,12 +1040,12 @@ class Regenerator(object):
         conf = self.configs[c_id]
         self.update_element(conf, data)
 
-    def manage_update_host_status_brok(self, b):
+    def manage_update_host_status_brok(self, brok):
         """
         Manage update_host_status brok : Update host object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
         # There are some properties that should not change and are already linked
@@ -1056,12 +1056,12 @@ class Regenerator(object):
                       'maintenance_period', 'realm', 'customs', 'escalations']
 
         # some are only use when a topology change happened
-        toplogy_change = b.data['topology_change']
+        toplogy_change = brok.data['topology_change']
         if not toplogy_change:
             other_to_clean = ['childs', 'parents', 'child_dependencies', 'parent_dependencies']
             clean_prop.extend(other_to_clean)
 
-        data = b.data
+        data = brok.data
         for prop in clean_prop:
             del data[prop]
 
@@ -1069,7 +1069,7 @@ class Regenerator(object):
         host = self.hosts.find_by_name(hname)
 
         if host:
-            self.before_after_hook(b, host)
+            self.before_after_hook(brok, host)
             self.update_element(host, data)
 
             # We can have some change in our impacts and source problems.
@@ -1088,12 +1088,12 @@ class Regenerator(object):
             for dtc in host.downtimes + host.comments:
                 dtc.ref = host
 
-    def manage_update_service_status_brok(self, b):
+    def manage_update_service_status_brok(self, brok):
         """
         Manage update_service_status brok : Update service object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
         # There are some properties that should not change and are already linked
@@ -1104,12 +1104,12 @@ class Regenerator(object):
                       'maintenance_period', 'customs', 'escalations']
 
         # some are only use when a topology change happened
-        toplogy_change = b.data['topology_change']
+        toplogy_change = brok.data['topology_change']
         if not toplogy_change:
             other_to_clean = ['child_dependencies', 'parent_dependencies']
             clean_prop.extend(other_to_clean)
 
-        data = b.data
+        data = brok.data
         for prop in clean_prop:
             del data[prop]
 
@@ -1117,7 +1117,7 @@ class Regenerator(object):
         sdesc = data['service_description']
         serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
         if serv:
-            self.before_after_hook(b, serv)
+            self.before_after_hook(brok, serv)
             self.update_element(serv, data)
 
             # We can have some change in our impacts and source problems.
@@ -1133,15 +1133,15 @@ class Regenerator(object):
             for dtc in serv.downtimes + serv.comments:
                 dtc.ref = serv
 
-    def manage_update_broker_status_brok(self, b):
+    def manage_update_broker_status_brok(self, brok):
         """
         Manage update_broker_status brok : Update broker object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         broker_name = data['broker_name']
         try:
             broker = self.brokers[broker_name]
@@ -1149,15 +1149,15 @@ class Regenerator(object):
         except Exception:
             pass
 
-    def manage_update_receiver_status_brok(self, b):
+    def manage_update_receiver_status_brok(self, brok):
         """
         Manage update_receiver_status brok : Update receiver object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         receiver_name = data['receiver_name']
         try:
             receiver = self.receivers[receiver_name]
@@ -1165,15 +1165,15 @@ class Regenerator(object):
         except Exception:
             pass
 
-    def manage_update_reactionner_status_brok(self, b):
+    def manage_update_reactionner_status_brok(self, brok):
         """
         Manage update_reactionner_status brok : Update reactionner object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         reactionner_name = data['reactionner_name']
         try:
             reactionner = self.reactionners[reactionner_name]
@@ -1181,15 +1181,15 @@ class Regenerator(object):
         except Exception:
             pass
 
-    def manage_update_poller_status_brok(self, b):
+    def manage_update_poller_status_brok(self, brok):
         """
         Manage update_poller_status brok : Update poller object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         poller_name = data['poller_name']
         try:
             poller = self.pollers[poller_name]
@@ -1197,15 +1197,15 @@ class Regenerator(object):
         except Exception:
             pass
 
-    def manage_update_scheduler_status_brok(self, b):
+    def manage_update_scheduler_status_brok(self, brok):
         """
         Manage update_scheduler_status brok : Update scheduler object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         scheduler_name = data['scheduler_name']
         try:
             scheduler = self.schedulers[scheduler_name]
@@ -1218,51 +1218,51 @@ class Regenerator(object):
 #################
 # Check result and schedule part
 #################
-    def manage_host_check_result_brok(self, b):
+    def manage_host_check_result_brok(self, brok):
         """
         Manage host_check_result brok : Update host object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         hname = data['host_name']
 
         host = self.hosts.find_by_name(hname)
         if host:
-            self.before_after_hook(b, host)
+            self.before_after_hook(brok, host)
             self.update_element(host, data)
 
-    def manage_host_next_schedule_brok(self, b):
+    def manage_host_next_schedule_brok(self, brok):
         """
         Manage initial_timeperiod_status brok : Same as manage_host_check_result_brok
 
         :return: None
         """
-        self.manage_host_check_result_brok(b)
+        self.manage_host_check_result_brok(brok)
 
-    def manage_service_check_result_brok(self, b):
+    def manage_service_check_result_brok(self, brok):
         """
         Manage service_check_result brok : Update service object
 
-        :param b: Brok containing new data
-        :type b: alignak.objects.brok.Brok
+        :param brok: Brok containing new data
+        :type brok: alignak.objects.brok.Brok
         :return: None
         """
-        data = b.data
+        data = brok.data
         hname = data['host_name']
         sdesc = data['service_description']
         serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
         if serv:
-            self.before_after_hook(b, serv)
+            self.before_after_hook(brok, serv)
             self.update_element(serv, data)
 
-    def manage_service_next_schedule_brok(self, b):
+    def manage_service_next_schedule_brok(self, brok):
         """
         Manage service_next_schedule brok : Same as manage_service_check_result_brok
         A service check update have just arrived, we UPDATE data info with this
 
         :return: None
         """
-        self.manage_service_check_result_brok(b)
+        self.manage_service_check_result_brok(brok)
