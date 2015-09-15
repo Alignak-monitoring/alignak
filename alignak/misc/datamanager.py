@@ -55,6 +55,8 @@ a simple class providing accessor to various Alignak object"
 Used by module such as Livestatus and Webui
 """
 
+import warnings
+
 from alignak.util import safe_print
 from alignak.misc.sorter import hst_srv_sort, last_state_change_earlier
 from alignak.misc.filter import only_related_to
@@ -66,17 +68,38 @@ class DataManager(object):
     (host, services) through a regenerator object.
     """
     def __init__(self):
-        self.rg = None
+        self.reg = None
 
-    def load(self, rg):
+    @property
+    def rg(self):  # pylint: disable=C0103
+        """Getter for rg, raise deprecation warning
+
+        :return: self.reg
+        """
+        warnings.warn("Access to deprecated attribute rg of Datamanager class",
+                      DeprecationWarning, stacklevel=2)
+        return self.reg
+
+    @rg.setter
+    def rg(self, value):  # pylint: disable=C0103
+        """Setter for rg, raise deprecation warning
+
+        :param value: value to set
+        :return: None
+        """
+        warnings.warn("Access to deprecated attribute rg of Datamanager class",
+                      DeprecationWarning, stacklevel=2)
+        self.reg = value
+
+    def load(self, regenerator):
         """
         Set the regenerator attribute
 
-        :param rg: regenerator object
-        :type rg: alignak.misc.regenerator.Regenerator
+        :param regenerator: regenerator object
+        :type regenerator: alignak.misc.regenerator.Regenerator
         :return: None
         """
-        self.rg = rg
+        self.reg = regenerator
 
     def get_host(self, hname):
         """
@@ -88,9 +111,9 @@ class DataManager(object):
         :rtype: alignak.objects.host.Host
         """
         # UI will launch us names in str, we got unicode
-        # in our rg, so we must manage it here
+        # in our reg, so we must manage it here
         hname = hname.decode('utf8', 'ignore')
-        return self.rg.hosts.find_by_name(hname)
+        return self.reg.hosts.find_by_name(hname)
 
     def get_service(self, hname, sdesc):
         """
@@ -103,7 +126,7 @@ class DataManager(object):
         """
         hname = hname.decode('utf8', 'ignore')
         sdesc = sdesc.decode('utf8', 'ignore')
-        return self.rg.services.find_srv_by_name_and_hostname(hname, sdesc)
+        return self.reg.services.find_srv_by_name_and_hostname(hname, sdesc)
 
     def get_all_hosts_and_services(self):
         """
@@ -113,8 +136,8 @@ class DataManager(object):
         :rtype: list
         """
         all_items = []
-        all_items.extend(self.rg.hosts)
-        all_items.extend(self.rg.services)
+        all_items.extend(self.reg.hosts)
+        all_items.extend(self.reg.services)
         return all_items
 
     def get_contact(self, name):
@@ -127,7 +150,7 @@ class DataManager(object):
         :rtype: alignak.objects.contact.Contact
         """
         name = name.decode('utf8', 'ignore')
-        return self.rg.contacts.find_by_name(name)
+        return self.reg.contacts.find_by_name(name)
 
     def get_contactgroup(self, name):
         """
@@ -139,7 +162,7 @@ class DataManager(object):
         :rtype: alignak.objects.contactgroup.Contactgroup
         """
         name = name.decode('utf8', 'ignore')
-        return self.rg.contactgroups.find_by_name(name)
+        return self.reg.contactgroups.find_by_name(name)
 
     def get_contacts(self):
         """
@@ -148,7 +171,7 @@ class DataManager(object):
         :return: List of all contacts
         :rtype: list
         """
-        return self.rg.contacts
+        return self.reg.contacts
 
     def get_hostgroups(self):
         """
@@ -157,7 +180,7 @@ class DataManager(object):
         :return: List of all hostgroups
         :rtype: list
         """
-        return self.rg.hostgroups
+        return self.reg.hostgroups
 
     def get_hostgroup(self, name):
         """
@@ -168,7 +191,7 @@ class DataManager(object):
         :return: the Contact object with hostgroup_name=name
         :rtype: alignak.objects.hostgroup.Hostgroup
         """
-        return self.rg.hostgroups.find_by_name(name)
+        return self.reg.hostgroups.find_by_name(name)
 
     def get_servicegroups(self):
         """
@@ -177,7 +200,7 @@ class DataManager(object):
         :return: List of all servicegroups
         :rtype: list
         """
-        return self.rg.servicegroups
+        return self.reg.servicegroups
 
     def get_servicegroup(self, name):
         """
@@ -188,7 +211,7 @@ class DataManager(object):
         :return: the Contact object with servicegroup_name=name
         :rtype: alignak.objects.servicegroup.Servicegroup
         """
-        return self.rg.servicegroups.find_by_name(name)
+        return self.reg.servicegroups.find_by_name(name)
 
     def get_hostgroups_sorted(self, selected=''):
         """
@@ -203,17 +226,17 @@ class DataManager(object):
         res = []
         selected = selected.strip()
 
-        hg_names = [hg.get_name() for hg in self.rg.hostgroups
+        hg_names = [hg.get_name() for hg in self.reg.hostgroups
                     if len(hg.members) > 0 and hg.get_name() != selected]
         hg_names.sort()
-        hgs = [self.rg.hostgroups.find_by_name(n) for n in hg_names]
-        hgvoid_names = [hg.get_name() for hg in self.rg.hostgroups
+        hgs = [self.reg.hostgroups.find_by_name(n) for n in hg_names]
+        hgvoid_names = [hg.get_name() for hg in self.reg.hostgroups
                         if len(hg.members) == 0 and hg.get_name() != selected]
         hgvoid_names.sort()
-        hgvoids = [self.rg.hostgroups.find_by_name(n) for n in hgvoid_names]
+        hgvoids = [self.reg.hostgroups.find_by_name(n) for n in hgvoid_names]
 
         if selected:
-            hostgroup = self.rg.hostgroups.find_by_name(selected)
+            hostgroup = self.reg.hostgroups.find_by_name(selected)
             if hostgroup:
                 res.append(hostgroup)
 
@@ -229,7 +252,7 @@ class DataManager(object):
         :return: List of all hosts
         :rtype: list
         """
-        return self.rg.hosts
+        return self.reg.hosts
 
     def get_services(self):
         """
@@ -238,7 +261,7 @@ class DataManager(object):
         :return: List of all services
         :rtype: list
         """
-        return self.rg.services
+        return self.reg.services
 
     def get_schedulers(self):
         """
@@ -247,7 +270,7 @@ class DataManager(object):
         :return: List of all schedulers
         :rtype: list
         """
-        return self.rg.schedulers
+        return self.reg.schedulers
 
     def get_pollers(self):
         """
@@ -256,7 +279,7 @@ class DataManager(object):
         :return: List of all pollers
         :rtype: list
         """
-        return self.rg.pollers
+        return self.reg.pollers
 
     def get_brokers(self):
         """
@@ -265,7 +288,7 @@ class DataManager(object):
         :return: List of all brokers
         :rtype: list
         """
-        return self.rg.brokers
+        return self.reg.brokers
 
     def get_receivers(self):
         """
@@ -274,7 +297,7 @@ class DataManager(object):
         :return: List of all receivers
         :rtype: list
         """
-        return self.rg.receivers
+        return self.reg.receivers
 
     def get_reactionners(self):
         """
@@ -283,7 +306,7 @@ class DataManager(object):
         :return: List of all reactionners
         :rtype: list
         """
-        return self.rg.reactionners
+        return self.reg.reactionners
 
     def get_program_start(self):
         """
@@ -292,7 +315,7 @@ class DataManager(object):
         :return: Timestamp representing start time
         :rtype: int | None
         """
-        for conf in self.rg.configs.values():
+        for conf in self.reg.configs.values():
             return conf.program_start
         return None
 
@@ -303,9 +326,9 @@ class DataManager(object):
         :return: List of all realms
         :rtype: list
         """
-        return self.rg.realms
+        return self.reg.realms
 
-    def get_realm(self, r):
+    def get_realm(self, realm):
         """
         Get a specific realm, but this will return None always
 
@@ -315,8 +338,8 @@ class DataManager(object):
         :rtype: alignak.objects.realm.Realm | None
         TODO: Remove this
         """
-        if r in self.rg.realms:
-            return r
+        if realm in self.reg.realms:
+            return realm
         return None
 
     def get_host_tags_sorted(self):
@@ -327,10 +350,10 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        names = self.rg.tags.keys()
+        names = self.reg.tags.keys()
         names.sort()
         for name in names:
-            res.append((name, self.rg.tags[name]))
+            res.append((name, self.reg.tags[name]))
         return res
 
     def get_hosts_tagged_with(self, tag):
@@ -356,10 +379,10 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        names = self.rg.services_tags.keys()
+        names = self.reg.services_tags.keys()
         names.sort()
         for name in names:
-            res.append((name, self.rg.services_tags[name]))
+            res.append((name, self.reg.services_tags[name]))
         return res
 
     def get_important_impacts(self):
@@ -373,11 +396,11 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        for serv in self.rg.services:
+        for serv in self.reg.services:
             if serv.is_impact and serv.state not in ['OK', 'PENDING']:
                 if serv.business_impact > 2:
                     res.append(serv)
-        for host in self.rg.hosts:
+        for host in self.reg.hosts:
             if host.is_impact and host.state not in ['UP', 'PENDING']:
                 if host.business_impact > 2:
                     res.append(host)
@@ -401,17 +424,17 @@ class DataManager(object):
         """
         res = []
         if not get_acknowledged:
-            res.extend([s for s in self.rg.services
+            res.extend([s for s in self.reg.services
                         if s.state not in ['OK', 'PENDING'] and
                         not s.is_impact and not s.problem_has_been_acknowledged and
                         not s.host.problem_has_been_acknowledged])
-            res.extend([h for h in self.rg.hosts
+            res.extend([h for h in self.reg.hosts
                         if h.state not in ['UP', 'PENDING'] and
                         not h.is_impact and not h.problem_has_been_acknowledged])
         else:
-            res.extend([s for s in self.rg.services
+            res.extend([s for s in self.reg.services
                         if s.state not in ['OK', 'PENDING'] and not s.is_impact])
-            res.extend([h for h in self.rg.hosts
+            res.extend([h for h in self.reg.hosts
                         if h.state not in ['UP', 'PENDING'] and not h.is_impact])
 
         if to_sort:
@@ -437,7 +460,7 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        for serv in self.rg.services:
+        for serv in self.reg.services:
             if serv.is_impact and serv.state not in ['OK', 'PENDING']:
                 # If s is acked, pass
                 if serv.problem_has_been_acknowledged:
@@ -446,7 +469,7 @@ class DataManager(object):
                 if sum(1 for p in serv.source_problems
                        if not p.problem_has_been_acknowledged) > 0:
                     res.append(serv)
-        for host in self.rg.hosts:
+        for host in self.reg.hosts:
             if host.is_impact and host.state not in ['UP', 'PENDING']:
                 # If h is acked, pass
                 if host.problem_has_been_acknowledged:
@@ -476,9 +499,9 @@ class DataManager(object):
         :rtype: list
         """
         res = []
-        res.extend([s for s in self.rg.services
+        res.extend([s for s in self.reg.services
                     if s.state not in ['OK', 'PENDING'] and not s.is_impact])
-        res.extend([h for h in self.rg.hosts
+        res.extend([h for h in self.reg.hosts
                     if h.state not in ['UP', 'PENDING'] and not h.is_impact])
         return len(only_related_to(res, user))
 
@@ -498,7 +521,7 @@ class DataManager(object):
         :return: An integer representing the number of items
         :rtype: int
         """
-        return len(self.rg.services) + len(self.rg.hosts)
+        return len(self.reg.services) + len(self.reg.hosts)
 
     def get_important_elements(self):
         """
@@ -512,9 +535,9 @@ class DataManager(object):
         res = []
         # We want REALLY important things, so business_impact > 2, but not just IT elements that are
         # root problems, so we look only for config defined my_own_business_impact value too
-        res.extend([s for s in self.rg.services
+        res.extend([s for s in self.reg.services
                     if s.business_impact > 2 and not 0 <= s.my_own_business_impact <= 2])
-        res.extend([h for h in self.rg.hosts
+        res.extend([h for h in self.reg.hosts
                     if h.business_impact > 2 and not 0 <= h.my_own_business_impact <= 2])
         print "DUMP IMPORTANT"
         for i in res:
@@ -532,9 +555,9 @@ class DataManager(object):
         :return: An integer between 0 and 2
         :rtype: int
         """
-        h_states = [h.state_id for h in self.rg.hosts
+        h_states = [h.state_id for h in self.reg.hosts
                     if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
-        s_states = [s.state_id for s in self.rg.services
+        s_states = [s.state_id for s in self.reg.services
                     if s.business_impact > 2 and s.is_impact and s.state_id in [1, 2]]
         print "get_overall_state:: hosts and services business problems", h_states, s_states
         if len(h_states) == 0:
@@ -558,8 +581,8 @@ class DataManager(object):
         :return: An integer between 0 and 2
         :rtype: int
         """
-        h_states = [h.state_id for h in self.rg.hosts if h.is_problem and h.state_id in [1, 2]]
-        s_states = [s.state_id for s in self.rg.services if s.is_problem and s.state_id in [1, 2]]
+        h_states = [h.state_id for h in self.reg.hosts if h.is_problem and h.state_id in [1, 2]]
+        s_states = [s.state_id for s in self.reg.services if s.is_problem and s.state_id in [1, 2]]
         if len(h_states) == 0:
             h_state = 0
         else:
@@ -581,9 +604,9 @@ class DataManager(object):
         :return: An integer representing the percentage of services fulfilling the above condition
         :rtype: int
         """
-        all_services = self.rg.services
+        all_services = self.reg.services
         problem_services = []
-        problem_services.extend([s for s in self.rg.services
+        problem_services.extend([s for s in self.reg.services
                                  if s.state not in ['OK', 'PENDING'] and not s.is_impact])
         if len(all_services) == 0:
             res = 0
@@ -600,9 +623,9 @@ class DataManager(object):
         :return: An integer representing the percentage of hosts fulfilling the above condition
         :rtype: int
         """
-        all_hosts = self.rg.hosts
+        all_hosts = self.reg.hosts
         problem_hosts = []
-        problem_hosts.extend([s for s in self.rg.hosts
+        problem_hosts.extend([s for s in self.reg.hosts
                               if s.state not in ['UP', 'PENDING'] and not s.is_impact])
         if len(all_hosts) == 0:
             res = 0
@@ -622,9 +645,9 @@ class DataManager(object):
          fulfilling the above condition
          :rtype: int
         """
-        h_states = [h.state_id for h in self.rg.hosts
+        h_states = [h.state_id for h in self.reg.hosts
                     if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
-        s_states = [s.state_id for s in self.rg.services
+        s_states = [s.state_id for s in self.reg.services
                     if s.business_impact > 2 and s.is_impact and s.state_id in [1, 2]]
         print "get_len_overall_state:: hosts and services business problems", h_states, s_states
         # Just return the number of impacting elements
