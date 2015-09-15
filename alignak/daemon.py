@@ -1026,7 +1026,7 @@ class Daemon(object):
         If suppl_socks is given it also looks for activity on that list of fd.
 
         :param timeout: timeout to wait for activity
-        :type timeout: int
+        :type timeout: float
         :param suppl_socks: list of fd to wait for activity
         :type suppl_socks: None | list
         :return:Returns a 3-tuple:
@@ -1102,15 +1102,12 @@ class Daemon(object):
         TODO: Clean this
         """
         logger.info("Waiting for initial configuration")
-        cur_timeout = timeout
         # Arbiter do not already set our have_conf param
         while not self.new_conf and not self.interrupted:
-            elapsed, _, _ = self.handle_requests(cur_timeout)
-            if elapsed:
-                cur_timeout -= elapsed
-                if cur_timeout > 0:
-                    continue
-                cur_timeout = timeout
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _ = self.handle_requests(timeout)
             sys.stdout.write(".")
             sys.stdout.flush()
 

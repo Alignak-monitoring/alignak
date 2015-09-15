@@ -652,19 +652,15 @@ class Arbiter(Daemon):
         logger.info("I'll wait master for %d seconds", master_timeout)
 
         while not self.interrupted:
-            elapsed, _, tcdiff = self.handle_requests(timeout)
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _, _, tcdiff = self.handle_requests(timeout)
             # if there was a system Time Change (tcdiff) then we have to adapt last_master_speak:
             if self.new_conf:
                 self.setup_new_conf()
             if tcdiff:
                 self.last_master_speack += tcdiff
-            if elapsed:
-                self.last_master_speack = time.time()
-                timeout -= elapsed
-                if timeout > 0:
-                    continue
-
-            timeout = 1.0
             sys.stdout.write(".")
             sys.stdout.flush()
 
@@ -746,27 +742,10 @@ class Arbiter(Daemon):
         timeout = 1.0
 
         while self.must_run and not self.interrupted:
-            elapsed, ins, _ = self.handle_requests(timeout, suppl_socks)
-
-            # If FIFO, read external command
-            if ins:
-                now = time.time()
-                ext_cmds = self.external_command.get()
-                if ext_cmds:
-                    for ext_cmd in ext_cmds:
-                        self.external_commands.append(ext_cmd)
-                else:
-                    self.fifo = self.external_command.open()
-                    if self.fifo is not None:
-                        suppl_socks = [self.fifo]
-                    else:
-                        suppl_socks = None
-                elapsed += time.time() - now
-
-            if elapsed or ins:
-                timeout -= elapsed
-                if timeout > 0:  # only continue if we are not over timeout
-                    continue
+            # This is basically sleep(timeout) and returns 0, [], int
+            # We could only paste here only the code "used" but it could be
+            # harder to maintain.
+            _ = self.handle_requests(timeout, suppl_socks)
 
             # Timeout
             timeout = 1.0  # reset the timeout value
