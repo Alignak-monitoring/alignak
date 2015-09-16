@@ -186,15 +186,15 @@ class Notification(Action):
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Notification('', '', '', '', '', '', '', _id=self._id))
 
-    def is_launchable(self, t):
+    def is_launchable(self, timestamp):
         """Check if this notification can be launched base on time
 
-        :param t: time to compare
-        :type t: int
-        :return: True if t >= self.t_to_go, False otherwise
+        :param timestamp: time to compare
+        :type timestamp: int
+        :return: True if timestamp >= self.t_to_go, False otherwise
         :rtype: bool
         """
-        return t >= self.t_to_go
+        return timestamp >= self.t_to_go
 
     def is_administrative(self):
         """Check if this notification is "administrative"
@@ -220,15 +220,15 @@ class Notification(Action):
         """
         return self._id
 
-    def get_return_from(self, n):
+    def get_return_from(self, notif):
         """Setter of exit_status and execution_time attributes
 
-        :param n: notification to get data from
-        :type n: alignak.notification.Notification
+        :param notif: notification to get data from
+        :type notif: alignak.notification.Notification
         :return: None
         """
-        self.exit_status = n.exit_status
-        self.execution_time = n.execution_time
+        self.exit_status = notif.exit_status
+        self.execution_time = notif.execution_time
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
