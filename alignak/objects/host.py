@@ -659,8 +659,8 @@ class Host(SchedulingItem):
     }
 
     # Manage ADDRESSX macros by adding them dynamically
-    for _i in range(32):
-        macros['HOSTADDRESS%d' % _i] = 'address%d' % _i
+    for i in range(32):
+        macros['HOSTADDRESS%d' % i] = 'address%d' % i
 
     # This tab is used to transform old parameters name into new ones
     # so from Nagios2 format, to Nagios3 ones.
@@ -933,11 +933,11 @@ class Host(SchedulingItem):
         # and father list in mine
         self.parent_dependencies.remove(other)
 
-    def add_host_act_dependency(self, h, status, timeperiod, inherits_parent):
+    def add_host_act_dependency(self, host, status, timeperiod, inherits_parent):
         """Add logical act_dependency between two hosts.
 
-        :param h: other host we want to add the dependency
-        :type h: alignak.objects.host.Host
+        :param host: other host we want to add the dependency
+        :type host: alignak.objects.host.Host
         :param status: notification failure criteria, notification for a dependent host may vary
         :type status: list
         :param timeperiod: dependency period. Timeperiod for dependency may vary
@@ -951,18 +951,18 @@ class Host(SchedulingItem):
         TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
         """
         # I add him in MY list
-        self.act_depend_of.append((h, status, 'logic_dep', timeperiod, inherits_parent))
+        self.act_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
         # And I add me in it's list
-        h.act_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
+        host.act_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
 
         # And the parent/child dep lists too
-        h.register_son_in_parent_child_dependencies(self)
+        host.register_son_in_parent_child_dependencies(self)
 
-    def add_business_rule_act_dependency(self, h, status, timeperiod, inherits_parent):
+    def add_business_rule_act_dependency(self, host, status, timeperiod, inherits_parent):
         """Add business act_dependency between two hosts.
 
-        :param h: other host we want to add the dependency
-        :type h: alignak.objects.host.Host
+        :param host: other host we want to add the dependency
+        :type host: alignak.objects.host.Host
         :param status: notification failure criteria, notification for a dependent host may vary
         :type status: list
         :param timeperiod: dependency period. Timeperiod for dependency may vary
@@ -974,17 +974,17 @@ class Host(SchedulingItem):
         """
         # first I add the other the I depend on in MY list
         # I only register so he know that I WILL be a impact
-        self.act_depend_of_me.append((h, status, 'business_dep',
+        self.act_depend_of_me.append((host, status, 'business_dep',
                                       timeperiod, inherits_parent))
 
         # And the parent/child dep lists too
-        self.register_son_in_parent_child_dependencies(h)
+        self.register_son_in_parent_child_dependencies(host)
 
-    def add_host_chk_dependency(self, h, status, timeperiod, inherits_parent):
+    def add_host_chk_dependency(self, host, status, timeperiod, inherits_parent):
         """Add logic chk_dependency between two hosts.
 
-        :param h: other host we want to add the dependency
-        :type h: alignak.objects.host.Host
+        :param host: other host we want to add the dependency
+        :type host: alignak.objects.host.Host
         :param status: notification failure criteria, notification for a dependent host may vary
         :type status: list
         :param timeperiod: dependency period. Timeperiod for dependency may vary
@@ -995,13 +995,13 @@ class Host(SchedulingItem):
         TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
         """
         # I add him in MY list
-        self.chk_depend_of.append((h, status, 'logic_dep', timeperiod, inherits_parent))
+        self.chk_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
         # And I add me in it's list
-        h.chk_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
+        host.chk_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
 
         # And we fill parent/childs dep for brok purpose
-        # Here self depend on h
-        h.register_son_in_parent_child_dependencies(self)
+        # Here self depend on host
+        host.register_son_in_parent_child_dependencies(self)
 
     def add_service_link(self, service):
         """Add a service to the service list of this host
@@ -1221,22 +1221,22 @@ class Host(SchedulingItem):
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
 
-    def raise_notification_log_entry(self, n):
+    def raise_notification_log_entry(self, notif):
         """Raise HOST NOTIFICATION entry (critical level)
         Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;
                      *command.get_name()*;*output*"
         Example : "HOST NOTIFICATION: superadmin;server;UP;notify-by-rss;no output"
 
-        :param n: notification object created by host alert
-        :type n: alignak.objects.notification.Notification
+        :param notif: notification object created by host alert
+        :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = n.contact
-        command = n.command_call
-        if n.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
-                      'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
-                      'FLAPPINGDISABLED'):
-            state = '%s (%s)' % (n.type, self.state)
+        contact = notif.contact
+        command = notif.command_call
+        if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
+                          'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
+                          'FLAPPINGDISABLED'):
+            state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
         if self.__class__.log_notifications:
@@ -1374,26 +1374,26 @@ class Host(SchedulingItem):
                       "Scheduled downtime for host has been cancelled."
                       % (self.get_name()))
 
-    def manage_stalking(self, c):
+    def manage_stalking(self, check):
         """Check if the host need stalking or not (immediate recheck)
         If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
         Raise a log entry (info level) if stalk is needed
 
-        :param c: finshed check (c.status == 'waitconsume')
-        :type c: alignak.check.Check
+        :param check: finshed check (check.status == 'waitconsume')
+        :type check: alignak.check.Check
         :return: None
         """
         need_stalk = False
-        if c.status == 'waitconsume':
-            if c.exit_status == 0 and 'o' in self.stalking_options:
+        if check.status == 'waitconsume':
+            if check.exit_status == 0 and 'o' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 1 and 'd' in self.stalking_options:
+            elif check.exit_status == 1 and 'd' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 2 and 'd' in self.stalking_options:
+            elif check.exit_status == 2 and 'd' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 3 and 'u' in self.stalking_options:
+            elif check.exit_status == 3 and 'u' in self.stalking_options:
                 need_stalk = True
-            if c.output != self.output:
+            if check.output != self.output:
                 need_stalk = False
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
@@ -1447,30 +1447,30 @@ class Host(SchedulingItem):
         """
         return [self]
 
-    def get_data_for_notifications(self, contact, n):
+    def get_data_for_notifications(self, contact, notif):
         """Get data for a notification
 
         :param contact: The contact to return
         :type contact:
-        :param n: the notification to return
-        :type n:
+        :param notif: the notification to return
+        :type notif:
         :return: list containing a the host and the given parameters
         :rtype: list
         """
-        return [self, contact, n]
+        return [self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, n, contact):
+    def notification_is_blocked_by_contact(self, notif, contact):
         """Check if the notification is blocked by this contact.
 
-        :param n: notification created earlier
-        :type n: alignak.notification.Notification
+        :param notif: notification created earlier
+        :type notif: alignak.notification.Notification
         :param contact: contact we want to notify
-        :type n: alignak.objects.contact.Contact
+        :type notif: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return not contact.want_host_notification(self.last_chk, self.state, n.type,
-                                                  self.business_impact, n.command_call)
+        return not contact.want_host_notification(self.last_chk, self.state, notif.type,
+                                                  self.business_impact, notif.command_call)
 
     def get_duration_sec(self):
         """Get duration in seconds. (cast it before returning)
