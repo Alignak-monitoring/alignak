@@ -115,7 +115,7 @@ class EventHandler(Action):
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(EventHandler('', _id=self._id, is_snapshot=self.is_snapshot))
 
-    def get_return_from(self, e):
+    def get_return_from(self, e_handler):
         """Setter of the following attributes::
 
         * exit_status
@@ -125,16 +125,16 @@ class EventHandler(Action):
         * execution_time
         * perf_data
 
-        :param e: event handler to get data from
-        :type e: alignak.eventhandler.EventHandler
+        :param e_handler: event handler to get data from
+        :type e_handler: alignak.eventhandler.EventHandler
         :return: None
         """
-        self.exit_status = e.exit_status
-        self.output = e.output
-        self.long_output = getattr(e, 'long_output', '')
-        self.check_time = e.check_time
-        self.execution_time = getattr(e, 'execution_time', 0.0)
-        self.perf_data = getattr(e, 'perf_data', '')
+        self.exit_status = e_handler.exit_status
+        self.output = e_handler.output
+        self.long_output = getattr(e_handler, 'long_output', '')
+        self.check_time = e_handler.check_time
+        self.execution_time = getattr(e_handler, 'execution_time', 0.0)
+        self.perf_data = getattr(e_handler, 'perf_data', '')
 
     def get_outputs(self, out, max_plugins_output_length):
         """Setter of output attribute
@@ -147,16 +147,16 @@ class EventHandler(Action):
         """
         self.output = out
 
-    def is_launchable(self, t):
+    def is_launchable(self, timestamp):
         """Check if this event handler can be launched base on time
 
-        :param t: time to compare
-        :type t: int
+        :param timestamp: time to compare
+        :type timestamp: int
         :return: True if t >= self.t_to_go, False otherwise
         :rtype: bool
         TODO: Duplicate from Notification.is_launchable
         """
-        return t >= self.t_to_go
+        return timestamp >= self.t_to_go
 
     def __str__(self):
         return "Check %d status:%s command:%s" % (self._id, self.status, self.command)
