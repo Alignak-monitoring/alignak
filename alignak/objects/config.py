@@ -1415,26 +1415,26 @@ class Config(Item):
             for realm in self.realms:
                 processes = []
                 for (i, conf) in realm.confs.iteritems():
-                    def Serialize_config(q, rname, i, conf):
+                    def serialize_config(comm_q, rname, cid, conf):
                         """Pickle the config. Used in subprocesses to pickle all config faster
 
-                        :param q: Queue to communicate
+                        :param comm_q: Queue to communicate
                         :param rname: realm name
-                        :param i: configuration id
+                        :param cid: configuration id
                         :param conf: configuration to serialize
                         :return: None (put in queue)
                         """
                         # Remember to protect the local conf hostgroups too!
                         conf.hostgroups.prepare_for_sending()
-                        logger.debug('[%s] Serializing the configuration %d', rname, i)
+                        logger.debug('[%s] Serializing the configuration %d', rname, cid)
                         t00 = time.time()
                         res = cPickle.dumps(conf, cPickle.HIGHEST_PROTOCOL)
                         logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
-                                     rname, i, time.time() - t00, len(res))
-                        q.append((i, res))
+                                     rname, cid, time.time() - t00, len(res))
+                        comm_q.append((cid, res))
 
                     # Prepare a sub-process that will manage the pickle computation
-                    proc = Process(target=Serialize_config,
+                    proc = Process(target=serialize_config,
                                    name="serializer-%s-%d" % (realm.get_name(), i),
                                    args=(child_q, realm.get_name(), i, conf))
                     proc.start()
