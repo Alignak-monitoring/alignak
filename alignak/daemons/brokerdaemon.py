@@ -311,18 +311,18 @@ class Broker(BaseSatellite):
 
         logger.info("Connection OK to the %s %s", i_type, links[s_id]['name'])
 
-    def manage_brok(self, b):
+    def manage_brok(self, brok):
         """Get a brok.
         We put brok data to the modules
 
-        :param b: object with data
-        :type b: object
+        :param brok: object with data
+        :type brok: object
         :return: None
         """
         # Call all modules if they catch the call
         for mod in self.modules_manager.get_internal_instances():
             try:
-                mod.manage_brok(b)
+                mod.manage_brok(brok)
             except Exception, exp:
                 logger.debug(str(exp.__dict__))
                 logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
