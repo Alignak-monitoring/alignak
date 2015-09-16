@@ -159,15 +159,15 @@ class Timerange(object):
             return self.hend * 3600 + self.mend * 60
         return 0
 
-    def is_time_valid(self, t):
+    def is_time_valid(self, timestamp):
         """Check if time is valid for this Timerange
 
-        :param t: time to check
-        :type t: int
+        :param timestamp: time to check
+        :type timestamp: int
         :return: True if time is valid (in interval), False otherwise
         :rtype: bool
         """
-        sec_from_morning = get_sec_from_morning(t)
+        sec_from_morning = get_sec_from_morning(timestamp)
         return (self.is_valid and
                 self.hstart * 3600 + self.mstart * 60 <=
                 sec_from_morning <=
@@ -268,20 +268,20 @@ class AbstractDaterange(object):
         logger.warning("Calling function get_start_and_end_time which is not implemented")
         raise NotImplementedError()
 
-    def is_time_valid(self, t):
+    def is_time_valid(self, timestamp):
         """Check if time is valid for one of the timerange.
 
-        :param t: time to check
-        :type t: int
+        :param timestamp: time to check
+        :type timestamp: int
         :return: True if one of the timerange is valid for t, False otherwise
         :rtype: bool
         """
         # print "****Look for time valid for", time.asctime(time.localtime(t))
-        if self.is_time_day_valid(t):
+        if self.is_time_day_valid(timestamp):
             # print "is time day valid"
             for timerange in self.timeranges:
                 # print tr, "is valid?", tr.is_time_valid(t)
-                if timerange.is_time_valid(t):
+                if timerange.is_time_valid(timestamp):
                     # print "return True"
                     return True
         return False
@@ -308,58 +308,58 @@ class AbstractDaterange(object):
             mins.append(timerange.get_first_sec_out_from_morning())
         return min(mins)
 
-    def get_min_from_t(self, t):
+    def get_min_from_t(self, timestamp):
         """Get next time from t where a timerange is valid (withing range)
 
-        :param t: base time to look for the next one
+        :param timestamp: base time to look for the next one
         :return: time where a timerange is valid
         :rtype: int
         """
-        if self.is_time_valid(t):
-            return t
-        t_day_epoch = get_day(t)
+        if self.is_time_valid(timestamp):
+            return timestamp
+        t_day_epoch = get_day(timestamp)
         tr_mins = self.get_min_sec_from_morning()
         return t_day_epoch + tr_mins
 
-    def is_time_day_valid(self, t):
+    def is_time_day_valid(self, timestamp):
         """Check if t is within start time and end time of the DateRange
 
-        :param t: time to check
-        :type t: int
+        :param timestamp: time to check
+        :type timestamp: int
         :return: True if t in range, False otherwise
         :rtype: bool
         """
-        (start_time, end_time) = self.get_start_and_end_time(t)
-        if start_time <= t <= end_time:
+        (start_time, end_time) = self.get_start_and_end_time(timestamp)
+        if start_time <= timestamp <= end_time:
             return True
         else:
             return False
 
-    def is_time_day_invalid(self, t):
+    def is_time_day_invalid(self, timestamp):
         """Check if t is out of start time and end time of the DateRange
 
-        :param t: time to check
-        :type t: int
+        :param timestamp: time to check
+        :type timestamp: int
         :return: False if t in range, True otherwise
         :rtype: bool
         TODO: Remove this function. Duplication
         """
-        (start_time, end_time) = self.get_start_and_end_time(t)
-        if start_time <= t <= end_time:
+        (start_time, end_time) = self.get_start_and_end_time(timestamp)
+        if start_time <= timestamp <= end_time:
             return False
         else:
             return True
 
-    def get_next_future_timerange_valid(self, t):
+    def get_next_future_timerange_valid(self, timestamp):
         """Get the next valid timerange (next timerange start in timeranges attribute)
 
-        :param t: base time
-        :type t: int
+        :param timestamp: base time
+        :type timestamp: int
         :return: next time when a timerange is valid
         :rtype: None | int
         """
         # print "Look for get_next_future_timerange_valid for t", t, time.asctime(time.localtime(t))
-        sec_from_morning = get_sec_from_morning(t)
+        sec_from_morning = get_sec_from_morning(timestamp)
         starts = []
         for timerange in self.timeranges:
             tr_start = timerange.hstart * 3600 + timerange.mstart * 60
@@ -370,18 +370,18 @@ class AbstractDaterange(object):
         else:
             return None
 
-    def get_next_future_timerange_invalid(self, t):
+    def get_next_future_timerange_invalid(self, timestamp):
         """Get next invalid time for timeranges
 
-        :param t: time to check
-        :type t: int
+        :param timestamp: time to check
+        :type timestamp: int
         :return: next time when a timerange is not valid
         :rtype: None | int
         TODO: Looks like this function is buggy, start time should not be
         included in returned values
         """
         # print 'Call for get_next_future_timerange_invalid from ', time.asctime(time.localtime(t))
-        sec_from_morning = get_sec_from_morning(t)
+        sec_from_morning = get_sec_from_morning(timestamp)
         # print 'sec from morning', sec_from_morning
         ends = []
         for timerange in self.timeranges:
@@ -400,52 +400,52 @@ class AbstractDaterange(object):
         else:
             return None
 
-    def get_next_valid_day(self, t):
+    def get_next_valid_day(self, timestamp):
         """Get next valid day for timerange
 
-        :param t: time we compute from
-        :type t: int
+        :param timestamp: time we compute from
+        :type timestamp: int
         :return: timestamp of the next valid day (midnight) in LOCAL time.
         :rtype: int | None
         """
-        if self.get_next_future_timerange_valid(t) is None:
+        if self.get_next_future_timerange_valid(timestamp) is None:
             # this day is finish, we check for next period
-            (start_time, end_time) = self.get_start_and_end_time(get_day(t) + 86400)
+            (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp) + 86400)
         else:
-            (start_time, end_time) = self.get_start_and_end_time(t)
+            (start_time, end_time) = self.get_start_and_end_time(timestamp)
 
-        if t <= start_time:
+        if timestamp <= start_time:
             return get_day(start_time)
 
-        if self.is_time_day_valid(t):
-            return get_day(t)
+        if self.is_time_day_valid(timestamp):
+            return get_day(timestamp)
         return None
 
-    def get_next_valid_time_from_t(self, t):
+    def get_next_valid_time_from_t(self, timestamp):
         """Get next valid time for time range
 
-        :param t: time we compute from
-        :type t: int
+        :param timestamp: time we compute from
+        :type timestamp: int
         :return: timestamp of the next valid time (LOCAL TIME)
         :rtype: int | None
         """
         # print "\tDR Get next valid from:", time.asctime(time.localtime(t))
         # print "DR Get next valid from:", t
-        if self.is_time_valid(t):
-            return t
+        if self.is_time_valid(timestamp):
+            return timestamp
 
         # print "DR Get next valid from:", time.asctime(time.localtime(t))
         # First we search fot the day of t
-        t_day = self.get_next_valid_day(t)
+        t_day = self.get_next_valid_day(timestamp)
 
         # print "DR: T next valid day", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
-        if t < t_day:
+        if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_valid(t_day)
         else:  # t is in this day, so look from t (can be in the evening or so)
-            sec_from_morning = self.get_next_future_timerange_valid(t)
+            sec_from_morning = self.get_next_future_timerange_valid(timestamp)
         # print "DR: sec from morning", sec_from_morning
 
         if sec_from_morning is not None:
@@ -454,8 +454,8 @@ class AbstractDaterange(object):
 
         # Then we search for the next day of t
         # The sec will be the min of the day
-        t = get_day(t) + 86400
-        t_day2 = self.get_next_valid_day(t)
+        timestamp = get_day(timestamp) + 86400
+        t_day2 = self.get_next_valid_day(timestamp)
         sec_from_morning = self.get_next_future_timerange_valid(t_day2)
         if t_day2 is not None and sec_from_morning is not None:
             return t_day2 + sec_from_morning
@@ -463,32 +463,32 @@ class AbstractDaterange(object):
             # I'm not find any valid time
             return None
 
-    def get_next_invalid_day(self, t):
+    def get_next_invalid_day(self, timestamp):
         """Get next day where timerange is not active
 
-        :param t: time we compute from
-        :type t: int
+        :param timestamp: time we compute from
+        :type timestamp: int
         :return: timestamp of the next invalid day (midnight) in LOCAL time.
         :rtype: int | None
         """
         # print "Look in", self.__dict__
         # print 'DR: get_next_invalid_day for', time.asctime(time.localtime(t))
-        if self.is_time_day_invalid(t):
+        if self.is_time_day_invalid(timestamp):
             # print "EARLY RETURN"
-            return t
+            return timestamp
 
-        next_future_timerange_invalid = self.get_next_future_timerange_invalid(t)
+        next_future_timerange_invalid = self.get_next_future_timerange_invalid(timestamp)
         # print "next_future_timerange_invalid:", next_future_timerange_invalid
 
         # If today there is no more unavailable timerange, search the next day
         if next_future_timerange_invalid is None:
             # print 'DR: get_next_future_timerange_invalid is None'
             # this day is finish, we check for next period
-            (start_time, end_time) = self.get_start_and_end_time(get_day(t))
+            (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp))
         else:
             # print 'DR: get_next_future_timerange_invalid is',
             # print time.asctime(time.localtime(next_future_timerange_invalid))
-            (start_time, end_time) = self.get_start_and_end_time(t)
+            (start_time, end_time) = self.get_start_and_end_time(timestamp)
 
         # (start_time, end_time) = self.get_start_and_end_time(t)
 
@@ -497,10 +497,10 @@ class AbstractDaterange(object):
         # The next invalid day can be t day if there a possible
         # invalid time range (timerange is not 00->24
         if next_future_timerange_invalid is not None:
-            if start_time <= t <= end_time:
+            if start_time <= timestamp <= end_time:
                 # print "Early Return next invalid day:", time.asctime(time.localtime(get_day(t)))
-                return get_day(t)
-            if start_time >= t:
+                return get_day(timestamp)
+            if start_time >= timestamp:
                 # print "start_time >= t:", time.asctime(time.localtime(get_day(start_time)))
                 return get_day(start_time)
         else:
@@ -510,27 +510,27 @@ class AbstractDaterange(object):
 
         return None
 
-    def get_next_invalid_time_from_t(self, t):
+    def get_next_invalid_time_from_t(self, timestamp):
         """Get next invalid time for time range
 
-        :param t: time we compute from
-        :type t: int
+        :param timestamp: time we compute from
+        :type timestamp: int
         :return: timestamp of the next invalid time (LOCAL TIME)
         :rtype: int
         """
-        if not self.is_time_valid(t):
-            return t
+        if not self.is_time_valid(timestamp):
+            return timestamp
 
         # First we search fot the day of t
-        t_day = self.get_next_invalid_day(t)
+        t_day = self.get_next_invalid_day(timestamp)
         # print "FUCK NEXT DAY", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
-        if t < t_day:
+        if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_invalid(t_day)
         else:  # t is in this day, so look from t (can be in the evening or so)
-            sec_from_morning = self.get_next_future_timerange_invalid(t)
+            sec_from_morning = self.get_next_future_timerange_invalid(timestamp)
         # print "DR: sec from morning", sec_from_morning
 
         # tr can't be valid, or it will be return at the beginning
@@ -549,8 +549,8 @@ class AbstractDaterange(object):
 
         # Then we search for the next day of t
         # The sec will be the min of the day
-        t = get_day(t) + 86400
-        t_day2 = self.get_next_invalid_day(t)
+        timestamp = get_day(timestamp) + 86400
+        t_day2 = self.get_next_invalid_day(timestamp)
         sec_from_morning = self.get_next_future_timerange_invalid(t_day2)
         if t_day2 is not None and sec_from_morning is not None:
             return t_day2 + sec_from_morning + 1

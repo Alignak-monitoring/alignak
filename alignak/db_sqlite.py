@@ -66,7 +66,7 @@ class DBSqlite(DB):
 
         :return: None
         """
-        self.db = sqlite3.connect(self.db_path)
+        self.db = sqlite3.connect(self.db_path)  # pylint: disable=C0103
         self.db_cursor = self.db.cursor()
 
     def execute_query(self, query):

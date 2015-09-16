@@ -79,7 +79,7 @@ class DBOracle(DB):
         """
         connstr = '%s/%s@%s' % (self.user, self.password, self.database)
 
-        self.db = connect_function(connstr)
+        self.db = connect_function(connstr)  # pylint: disable=C0103
         self.db_cursor = self.db.cursor()
         self.db_cursor.arraysize = 50
 
