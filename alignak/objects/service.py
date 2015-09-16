@@ -1173,22 +1173,22 @@ class Service(SchedulingItem):
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
 
-    def raise_notification_log_entry(self, n):
+    def raise_notification_log_entry(self, notif):
         """Raise SERVICE NOTIFICATION entry (critical level)
         Format is : "SERVICE NOTIFICATION: *contact.get_name()*;*host.get_name()*;*self.get_name()*
                     ;*state*;*command.get_name()*;*output*"
         Example : "SERVICE NOTIFICATION: superadmin;server;Load;UP;notify-by-rss;no output"
 
-        :param n: notification object created by service alert
-        :type n: alignak.objects.notification.Notification
+        :param notif: notification object created by service alert
+        :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = n.contact
-        command = n.command_call
-        if n.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
-                      'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
-                      'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            state = '%s (%s)' % (n.type, self.state)
+        contact = notif.contact
+        command = notif.command_call
+        if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
+                          'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
+                          'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+            state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
         if self.__class__.log_notifications:
@@ -1321,30 +1321,30 @@ class Service(SchedulingItem):
                         "Scheduled downtime for service has been cancelled."
             % (self.host.get_name(), self.get_name()))
 
-    def manage_stalking(self, c):
+    def manage_stalking(self, check):
         """Check if the service need stalking or not (immediate recheck)
         If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
         Raise a log entry (info level) if stalk is needed
 
-        :param c: finshed check (c.status == 'waitconsume')
-        :type c: alignak.check.Check
+        :param check: finshed check (check.status == 'waitconsume')
+        :type check: alignak.check.Check
         :return: None
         """
         need_stalk = False
-        if c.status == 'waitconsume':
-            if c.exit_status == 0 and 'o' in self.stalking_options:
+        if check.status == 'waitconsume':
+            if check.exit_status == 0 and 'o' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 1 and 'w' in self.stalking_options:
+            elif check.exit_status == 1 and 'w' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 2 and 'c' in self.stalking_options:
+            elif check.exit_status == 2 and 'check' in self.stalking_options:
                 need_stalk = True
-            elif c.exit_status == 3 and 'u' in self.stalking_options:
+            elif check.exit_status == 3 and 'u' in self.stalking_options:
                 need_stalk = True
 
-            if c.output == self.output:
+            if check.output == self.output:
                 need_stalk = False
         if need_stalk:
-            logger.info("Stalking %s: %s", self.get_name(), c.output)
+            logger.info("Stalking %s: %s", self.get_name(), check.output)
 
     def get_data_for_checks(self):
         """Get data for a check
@@ -1362,30 +1362,31 @@ class Service(SchedulingItem):
         """
         return [self.host, self]
 
-    def get_data_for_notifications(self, contact, n):
+    def get_data_for_notifications(self, contact, notif):
         """Get data for a notification
 
         :param contact: The contact to return
         :type contact:
-        :param n: the notification to return
-        :type n:
+        :param notif: the notification to return
+        :type notif:
         :return: list containing the service, the host and the given parameters
         :rtype: list
         """
-        return [self.host, self, contact, n]
+        return [self.host, self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, n, contact):
+    def notification_is_blocked_by_contact(self, notif, contact):
         """Check if the notification is blocked by this contact.
 
-        :param n: notification created earlier
-        :type n: alignak.notification.Notification
+        :param notif: notification created earlier
+        :type notif: alignak.notification.Notification
         :param contact: contact we want to notify
-        :type n: alignak.objects.contact.Contact
+        :type notif: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
         return not contact.want_service_notification(self.last_chk, self.state,
-                                                     n.type, self.business_impact, n.command_call)
+                                                     notif.type, self.business_impact,
+                                                     notif.command_call)
 
     def get_duration_sec(self):
         """Get duration in seconds. (cast it before returning)
@@ -2020,14 +2021,14 @@ class Services(Items):
         for sid in to_del:
             del self.items[sid]
 
-    def explode_services_from_hosts(self, hosts, s, hnames):
+    def explode_services_from_hosts(self, hosts, service, hnames):
         """
         Explodes a service based on a lis of hosts.
 
         :param hosts: The hosts container
         :type hosts:
-        :param s: The base service to explode
-        :type s:
+        :param service: The base service to explode
+        :type service:
         :param hnames:  The host_name list to explode service on
         :type hnames: str
         :return: None
@@ -2059,13 +2060,13 @@ class Services(Items):
         for hname in duplicate_for_hosts:
             host = hosts.find_by_name(hname)
             if host is None:
-                err = 'Error: The hostname %s is unknown for the ' \
-                      'service %s!' % (hname, s.get_name())
-                s.configuration_errors.append(err)
+                err = 'Error: The hostname %service is unknown for the ' \
+                      'service %service!' % (hname, service.get_name())
+                service.configuration_errors.append(err)
                 continue
-            if host.is_excluded_for(s):
+            if host.is_excluded_for(service):
                 continue
-            new_s = s.copy()
+            new_s = service.copy()
             new_s.host_name = hname
             self.add_item(new_s)
 
@@ -2118,16 +2119,16 @@ class Services(Items):
                 for name in hosts.find_hosts_that_use_template(hname):
                     self._local_create_service(hosts, name, service)
 
-    def explode_services_duplicates(self, hosts, s):
+    def explode_services_duplicates(self, hosts, service):
         """
         Explodes services holding a `duplicate_foreach` clause.
 
         :param hosts: The hosts container
         :type hosts: alignak.objects.host.Hosts
-        :param s: The service to explode
-        :type s: alignak.objects.service.Service
+        :param service: The service to explode
+        :type service: alignak.objects.service.Service
         """
-        hname = getattr(s, "host_name", None)
+        hname = getattr(service, "host_name", None)
         if hname is None:
             return
 
@@ -2136,47 +2137,47 @@ class Services(Items):
         host = hosts.find_by_name(hname.strip())
 
         if host is None:
-            err = 'Error: The hostname %s is unknown for the ' \
-                  'service %s!' % (hname, s.get_name())
-            s.configuration_errors.append(err)
+            err = 'Error: The hostname %service is unknown for the ' \
+                  'service %service!' % (hname, service.get_name())
+            service.configuration_errors.append(err)
             return
 
         # Duplicate services
-        for new_s in s.duplicate(host):
+        for new_s in service.duplicate(host):
             if host.is_excluded_for(new_s):
                 continue
             # Adds concrete instance
             self.add_item(new_s)
 
-    def register_service_into_servicegroups(self, s, servicegroups):
+    def register_service_into_servicegroups(self, service, servicegroups):
         """
         Registers a service into the service groups declared in its
         `servicegroups` attribute.
 
-        :param s: The service to register
-        :type s:
+        :param service: The service to register
+        :type service:
         :param servicegroups: The servicegroups container
         :type servicegroups:
         :return: None
         """
-        if hasattr(s, 'service_description'):
-            sname = s.service_description
-            shname = getattr(s, 'host_name', '')
-            if hasattr(s, 'servicegroups'):
+        if hasattr(service, 'service_description'):
+            sname = service.service_description
+            shname = getattr(service, 'host_name', '')
+            if hasattr(service, 'servicegroups'):
                 # Todo: See if we can remove this if
-                if isinstance(s.servicegroups, list):
-                    sgs = s.servicegroups
+                if isinstance(service.servicegroups, list):
+                    sgs = service.servicegroups
                 else:
-                    sgs = s.servicegroups.split(',')
+                    sgs = service.servicegroups.split(',')
                 for servicegroup in sgs:
                     servicegroups.add_member([shname, sname], servicegroup.strip())
 
-    def register_service_dependencies(self, s, servicedependencies):
+    def register_service_dependencies(self, service, servicedependencies):
         """
         Registers a service dependencies.
 
-        :param s: The service to register
-        :type s:
+        :param service: The service to register
+        :type service:
         :param servicedependencies: The servicedependencies container
         :type servicedependencies:
         :return: None
@@ -2185,7 +2186,7 @@ class Services(Items):
         # We just create serviceDep with goods values (as STRING!),
         # the link pass will be done after
         sdeps = [d.strip() for d in
-                 getattr(s, "service_dependencies", [])]
+                 getattr(service, "service_dependencies", [])]
         # %2=0 are for hosts, !=0 are for service_description
         i = 0
         hname = ''
@@ -2194,13 +2195,13 @@ class Services(Items):
                 hname = elt
             else:  # description
                 desc = elt
-                # we can register it (s) (depend on) -> (hname, desc)
-                # If we do not have enough data for s, it's no use
-                if hasattr(s, 'service_description') and hasattr(s, 'host_name'):
+                # we can register it (service) (depend on) -> (hname, desc)
+                # If we do not have enough data for service, it'service no use
+                if hasattr(service, 'service_description') and hasattr(service, 'host_name'):
                     if hname == '':
-                        hname = s.host_name
+                        hname = service.host_name
                     servicedependencies.add_service_dependency(
-                        s.host_name, s.service_description, hname, desc)
+                        service.host_name, service.service_description, hname, desc)
             i += 1
 
     # We create new service if necessary (host groups and co)
