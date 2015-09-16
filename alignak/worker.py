@@ -91,9 +91,9 @@ class Worker:
     _mortal = None
     _idletime = None
     _timeout = None
-    _c = None
+    _control_q = None
 
-    def __init__(self, _id, s, returns_queue, processes_by_worker, mortal=True, timeout=300,
+    def __init__(self, _id, slave_q, returns_queue, processes_by_worker, mortal=True, timeout=300,
                  max_plugins_output_length=8192, target=None, loaded_into='unknown',
                  http_daemon=None):
         self._id = self.__class__._id
@@ -102,13 +102,13 @@ class Worker:
         self._mortal = mortal
         self._idletime = 0
         self._timeout = timeout
-        self.s = None
+        self.slave_q = None
         self.processes_by_worker = processes_by_worker
-        self._c = Queue()  # Private Control queue for the Worker
+        self._control_q = Queue()  # Private Control queue for the Worker
         # By default, take our own code
         if target is None:
             target = self.work
-        self._process = Process(target=target, args=(s, returns_queue, self._c))
+        self._process = Process(target=target, args=(slave_q, returns_queue, self._control_q))
         self.returns_queue = returns_queue
         self.max_plugins_output_length = max_plugins_output_length
         self.i_am_dying = False
@@ -148,12 +148,12 @@ class Worker:
             self._process.terminate()
         # Is we are with a Manager() way
         # there should be not such functions
-        if hasattr(self._c, 'close'):
-            self._c.close()
-            self._c.join_thread()
-        if hasattr(self.s, 'close'):
-            self.s.close()
-            self.s.join_thread()
+        if hasattr(self._control_q, 'close'):
+            self._control_q.close()
+            self._control_q.join_thread()
+        if hasattr(self.slave_q, 'close'):
+            self.slave_q.close()
+            self.slave_q.join_thread()
 
     def join(self, timeout=None):
         """
@@ -206,13 +206,13 @@ class Worker:
 
     def send_message(self, msg):
         """
-        Wrapper for calling put method of the _c attribute
+        Wrapper for calling put method of the _control_q attribute
 
         :param msg: the message to put in queue
         :type msg: str
         :return: None
         """
-        self._c.put(msg)
+        self._control_q.put(msg)
 
     def set_zombie(self):
         """
@@ -233,7 +233,7 @@ class Worker:
         try:
             while len(self.checks) < self.processes_by_worker:
                 # print "I", self._id, "wait for a message"
-                msg = self.s.get(block=False)
+                msg = self.slave_q.get(block=False)
                 if msg is not None:
                     self.checks.append(msg.get_data())
                 # print "I", self._id, "I've got a message!"
@@ -319,44 +319,44 @@ class Worker:
         else:
             return 0
 
-    def work(self, s, returns_queue, c):
+    def work(self, slave_q, returns_queue, control_q):
         """
         Wrapper function for work in order to catch the exception
         to see the real work, look at do_work
 
-        :param s: Global Queue Master->Slave
-        :type s: Queue.Queue
+        :param slave_q: Global Queue Master->Slave
+        :type slave_q: Queue.Queue
         :param returns_queue: queue managed by manager
         :type returns_queue: Queue.Queue
-        :param c: Control Queue for the worker
-        :type c: Queue.Queue
+        :param control_q: Control Queue for the worker
+        :type control_q: Queue.Queue
         :return: None
         """
         try:
-            self.do_work(s, returns_queue, c)
+            self.do_work(slave_q, returns_queue, control_q)
         # Catch any exception, try to print it and exit anyway
         except Exception, exp:
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
-            logger.error("Worker '%d' exit with an unmanaged exception : %s",
+            logger.error("Worker '%d' exit with an unmanaged exception : %slave_q",
                          self._id, output.getvalue())
             output.close()
             # Ok I die now
             raise
 
-    def do_work(self, s, returns_queue, c):
+    def do_work(self, slave_q, returns_queue, control_q):
         """
         Main function of the worker.
         * Get checks
         * Launch new checks
         * Manage finished checks
 
-        :param s: Global Queue Master->Slave
-        :type s: Queue.Queue
+        :param slave_q: Global Queue Master->Slave
+        :type slave_q: Queue.Queue
         :param returns_queue: queue managed by manager
         :type returns_queue: Queue.Queue
-        :param c: Control Queue for the worker
-        :type c: Queue.Queue
+        :param control_q: Control Queue for the worker
+        :type control_q: Queue.Queue
         :return: None
         """
         # restore default signal handler for the workers:
@@ -369,7 +369,7 @@ class Worker:
         timeout = 1.0
         self.checks = []
         self.returns_queue = returns_queue
-        self.s = s
+        self.slave_q = slave_q
         self.t_each_loop = time.time()
         while True:
             begin = time.time()
@@ -388,7 +388,7 @@ class Worker:
 
             # Now get order from master
             try:
-                cmsg = c.get(block=False)
+                cmsg = control_q.get(block=False)
                 if cmsg.get_type() == 'Die':
                     logger.debug("[%d] Dad say we are dying...", self._id)
                     break

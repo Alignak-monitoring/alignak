@@ -104,7 +104,7 @@ class TestTimeout(AlignakTest):
 
         w.checks = []
         w.returns_queue = from_queue
-        w.s = to_queue
+        w.slave_q = to_queue
         w.c = control_queue
         # Now we simulate the Worker's work() routine. We can't call it
         # as w.work() because it is an endless loop
