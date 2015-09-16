@@ -231,7 +231,7 @@ class Timeperiod(Item):
             res[other] = ''
         return res
 
-    def is_time_valid(self, t):
+    def is_time_valid(self, timestamp):
         """
         Check if a time is valid or not
 
@@ -240,31 +240,31 @@ class Timeperiod(Item):
         """
         if hasattr(self, 'exclude'):
             for daterange in self.exclude:
-                if daterange.is_time_valid(t):
+                if daterange.is_time_valid(timestamp):
                     return False
         for daterange in self.dateranges:
-            if daterange.is_time_valid(t):
+            if daterange.is_time_valid(timestamp):
                 return True
         return False
 
     # will give the first time > t which is valid
-    def get_min_from_t(self, t):
+    def get_min_from_t(self, timestamp):
         """
-        Get the first time > t which is valid
+        Get the first time > timestamp which is valid
 
-        :param t: number of seconds
-        :type t: int
+        :param timestamp: number of seconds
+        :type timestamp: int
         :return: number of seconds
         :rtype: int
         TODO: not used, so delete it
         """
         mins_incl = []
         for daterange in self.dateranges:
-            mins_incl.append(daterange.get_min_from_t(t))
+            mins_incl.append(daterange.get_min_from_t(timestamp))
         return min(mins_incl)
 
     # will give the first time > t which is not valid
-    def get_not_in_min_from_t(self, f):
+    def get_not_in_min_from_t(self, first):
         """
 
         :return: None
@@ -272,31 +272,31 @@ class Timeperiod(Item):
         """
         pass
 
-    def find_next_valid_time_from_cache(self, t):
+    def find_next_valid_time_from_cache(self, timestamp):
         """
         Get the next valid time from cache
 
-        :param t: number of seconds
-        :type t: int
+        :param timestamp: number of seconds
+        :type timestamp: int
         :return: Nothing or time in seconds
         :rtype: None or int
         """
         try:
-            return self.cache[t]
+            return self.cache[timestamp]
         except KeyError:
             return None
 
-    def find_next_invalid_time_from_cache(self, t):
+    def find_next_invalid_time_from_cache(self, timestamp):
         """
         Get the next invalid time from cache
 
-        :param t: number of seconds
-        :type t: int
+        :param timestamp: number of seconds
+        :type timestamp: int
         :return: Nothing or time in seconds
         :rtype: None or int
         """
         try:
-            return self.invalid_cache[t]
+            return self.invalid_cache[timestamp]
         except KeyError:
             return None
 
@@ -358,22 +358,22 @@ class Timeperiod(Item):
         for timestamp in t_to_del:
             del self.invalid_cache[timestamp]
 
-    def get_next_valid_time_from_t(self, t):
+    def get_next_valid_time_from_t(self, timestamp):
         """
         Get next valid time from the cache
 
-        :param t: number of seconds
-        :type t: int
+        :param timestamp: number of seconds
+        :type timestamp: int
         :return: Nothing or time in seconds
         :rtype: None or int
         """
-        t = int(t)
-        original_t = t
+        timestamp = int(timestamp)
+        original_t = timestamp
 
         # logger.debug("[%s] Check valid time for %s" %
-        #  ( self.get_name(), time.asctime(time.localtime(t)))
+        #  ( self.get_name(), time.asctime(time.localtime(timestamp)))
 
-        res_from_cache = self.find_next_valid_time_from_cache(t)
+        res_from_cache = self.find_next_valid_time_from_cache(timestamp)
         if res_from_cache is not None:
             return res_from_cache
 
@@ -388,7 +388,7 @@ class Timeperiod(Item):
             s_dr_mins = []
 
             for datarange in self.dateranges:
-                dr_mins.append(datarange.get_next_valid_time_from_t(t))
+                dr_mins.append(datarange.get_next_valid_time_from_t(timestamp))
 
             s_dr_mins = sorted([d for d in dr_mins if d is not None])
 
@@ -419,9 +419,9 @@ class Timeperiod(Item):
             if local_min is None:
                 still_loop = False
             else:
-                t = local_min
+                timestamp = local_min
                 # No loop more than one year
-                if t > original_t + 3600 * 24 * 366 + 1:
+                if timestamp > original_t + 3600 * 24 * 366 + 1:
                     still_loop = False
                     local_min = None
 
@@ -429,30 +429,30 @@ class Timeperiod(Item):
         self.cache[original_t] = local_min
         return local_min
 
-    def get_next_invalid_time_from_t(self, t):
+    def get_next_invalid_time_from_t(self, timestamp):
         """
         Get next invalid time from the cache
 
-        :param t: number of seconds
-        :type t: int
+        :param timestamp: number of seconds
+        :type timestamp: int
         :return: Nothing or time in seconds
         :rtype: None or int
         """
-        # time.asctime(time.localtime(t)), t
-        t = int(t)
-        original_t = t
+        # time.asctime(time.localtime(timestamp)), timestamp
+        timestamp = int(timestamp)
+        original_t = timestamp
         still_loop = True
 
         # First try to find in cache
-        res_from_cache = self.find_next_invalid_time_from_cache(t)
+        res_from_cache = self.find_next_invalid_time_from_cache(timestamp)
         if res_from_cache is not None:
             return res_from_cache
 
-        # Then look, maybe t is already invalid
-        if not self.is_time_valid(t):
-            return t
+        # Then look, maybe timestamp is already invalid
+        if not self.is_time_valid(timestamp):
+            return timestamp
 
-        local_min = t
+        local_min = timestamp
         res = None
         # Loop for all minutes...
         while still_loop:
@@ -487,10 +487,10 @@ class Timeperiod(Item):
                     #     print "FUCK bad result\n\n\n"
             # print "Inval"
             # for v in val_inval:
-            #    print "\t", time.asctime(time.localtime(v))
+            #    print "\timestamp", time.asctime(time.localtime(v))
             # print "Valid"
             # for v in val_valids:
-            #    print "\t", time.asctime(time.localtime(v))
+            #    print "\timestamp", time.asctime(time.localtime(v))
 
             if dr_mins != []:
                 local_min = min(dr_mins)
