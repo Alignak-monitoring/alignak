@@ -112,7 +112,7 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, t, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -123,8 +123,8 @@ class NotificationWay(Item):
         * state does not match service_notification_options for problem, recovery and flapping
         * state does not match host_notification_options for downtime
 
-        :param t: time we want to notify the contact (usually now)
-        :type t: int
+        :param timestamp: time we want to notify the contact (usually now)
+        :type timestamp: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
         :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
@@ -149,17 +149,17 @@ class NotificationWay(Item):
         if business_impact < self.min_business_impact:
             return False
 
-        valid = self.service_notification_period.is_time_valid(t)
+        valid = self.service_notification_period.is_time_valid(timestamp)
         if 'n' in self.service_notification_options:
             return False
-        t = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-             'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's'}
+        timestamp = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
+                     'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's'}
         if n_type == 'PROBLEM':
-            if state in t:
-                return valid and t[state] in self.service_notification_options
+            if state in timestamp:
+                return valid and timestamp[state] in self.service_notification_options
         elif n_type == 'RECOVERY':
-            if n_type in t:
-                return valid and t[n_type] in self.service_notification_options
+            if n_type in timestamp:
+                return valid and timestamp[n_type] in self.service_notification_options
         elif n_type == 'ACKNOWLEDGEMENT':
             return valid
         elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
@@ -171,7 +171,7 @@ class NotificationWay(Item):
 
         return False
 
-    def want_host_notification(self, t, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -182,8 +182,8 @@ class NotificationWay(Item):
         * state does not match host_notification_options for problem, recovery, flapping and dt
 
 
-        :param t: time we want to notify the contact (usually now)
-        :type t: int
+        :param timestamp: time we want to notify the contact (usually now)
+        :type timestamp: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
         :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
@@ -208,17 +208,17 @@ class NotificationWay(Item):
         if cmd and cmd not in self.host_notification_commands:
             return False
 
-        valid = self.host_notification_period.is_time_valid(t)
+        valid = self.host_notification_period.is_time_valid(timestamp)
         if 'n' in self.host_notification_options:
             return False
-        t = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
-             'FLAPPING': 'f', 'DOWNTIME': 's'}
+        timestamp = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
+                     'FLAPPING': 'f', 'DOWNTIME': 's'}
         if n_type == 'PROBLEM':
-            if state in t:
-                return valid and t[state] in self.host_notification_options
+            if state in timestamp:
+                return valid and timestamp[state] in self.host_notification_options
         elif n_type == 'RECOVERY':
-            if n_type in t:
-                return valid and t[n_type] in self.host_notification_options
+            if n_type in timestamp:
+                return valid and timestamp[n_type] in self.host_notification_options
         elif n_type == 'ACKNOWLEDGEMENT':
             return valid
         elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
