@@ -240,15 +240,15 @@ class Itemgroups(Items):
         for i in self:
             i.fill_default()
 
-    def add(self, ig):
+    def add(self, itemgroup):
         """
         Add an item (itemgroup) to Itemgroups
 
-        :param ig: an item
-        :type ig: alignak.objects.itemgroup.Itemgroup
+        :param itemgroup: an item
+        :type itemgroup: alignak.objects.itemgroup.Itemgroup
         :return: None
         """
-        self.add_item(ig)
+        self.add_item(itemgroup)
 
     def get_members_by_name(self, gname):
         """
