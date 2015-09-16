@@ -187,7 +187,7 @@ class Satellite(BaseSatellite):
         # Init stats like Load for workers
         self.wait_ratio = Load(initial_value=1)
 
-        self.s = None
+        self.slave_q = None
 
         self.returns_queue = None
         self.q_by_mod = {}
@@ -564,26 +564,26 @@ class Satellite(BaseSatellite):
             del self.q_by_mod[mod]
         # TODO: if len(workers) > 2*wish, maybe we can kill a worker?
 
-    def _got_queue_from_action(self, a):
-        """Find a queue for the action depending on the module.
-        The id is found with a modulo on action id
+    def _got_queue_from_action(self, action):
+        """Find action queue for the action depending on the module.
+        The id is found with action modulo on action id
 
-        :param a: the action that need a queue to be assigned
-        :type a: object
+        :param a: the action that need action queue to be assigned
+        :type action: object
         :return: worker id and queue. (0, None) if no queue for the module_type
         :rtype: tuple
         """
         # get the module name, if not, take fork
-        mod = getattr(a, 'module_type', 'fork')
+        mod = getattr(action, 'module_type', 'fork')
         queues = self.q_by_mod[mod].items()
 
         # Maybe there is no more queue, it's very bad!
         if len(queues) == 0:
             return (0, None)
 
-        # if not get a round robin index to get a queue based
+        # if not get action round robin index to get action queue based
         # on the action id
-        rr_idx = a._id % len(queues)
+        rr_idx = action._id % len(queues)
         (index, queue) = queues[rr_idx]
 
         # return the id of the worker (i), and its queue
@@ -607,17 +607,17 @@ class Satellite(BaseSatellite):
             act.status = 'queue'
             self.assign_to_a_queue(act)
 
-    def assign_to_a_queue(self, a):
-        """Take an action and put it to a queue
+    def assign_to_a_queue(self, action):
+        """Take an action and put it to action queue
 
-        :param a: action to put
-        :type a: alignak.action.Action
+        :param action: action to put
+        :type action: alignak.action.Action
         :return: None
         """
-        msg = Message(_id=0, _type='Do', data=a)
-        (index, queue) = self._got_queue_from_action(a)
+        msg = Message(_id=0, _type='Do', data=action)
+        (index, queue) = self._got_queue_from_action(action)
         # Tag the action as "in the worker i"
-        a.worker_id = index
+        action.worker_id = index
         if queue is not None:
             queue.put(msg)
 

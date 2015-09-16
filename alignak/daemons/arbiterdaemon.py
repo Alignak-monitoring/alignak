@@ -100,7 +100,7 @@ class Arbiter(Daemon):
 
         self.broks = {}
         self.is_master = False
-        self.me = None
+        self.myself = None
 
         self.nb_broks_send = 0
 
@@ -186,17 +186,17 @@ class Arbiter(Daemon):
                 brok = sat.get_initial_status_brok()
                 self.add(brok)
 
-    def load_external_command(self, e):
+    def load_external_command(self, ecm):
         """Set external_command attribute to the external command manager
         and fifo attribute to a new fifo fd
 
-        :param e: External command manager to set
-        :type e: alignak.external_command.ExternalCommandManager
+        :param ecm: External command manager to set
+        :type ecm: alignak.external_command.ExternalCommandManager
         :return: None
         TODO: Is fifo useful?
         """
-        self.external_command = e
-        self.fifo = e.open()
+        self.external_command = ecm
+        self.fifo = ecm.open()
 
     def get_daemon_links(self, daemon_type):
         """Get the name of arbiter link (here arbiters)
@@ -243,8 +243,8 @@ class Arbiter(Daemon):
         for arb in self.conf.arbiters:
             if arb.is_me(self.arb_name):
                 arb.need_conf = False
-                self.me = arb
-                self.is_master = not self.me.spare
+                self.myself = arb
+                self.is_master = not self.myself.spare
                 if self.is_master:
                     logger.info("I am the master Arbiter: %s", arb.get_name())
                 else:
@@ -263,18 +263,18 @@ class Arbiter(Daemon):
                                   statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
                 # Set myself as alive ;)
-                self.me.alive = True
+                self.myself.alive = True
             else:  # not me
                 arb.need_conf = True
 
-        if not self.me:
+        if not self.myself:
             sys.exit("Error: I cannot find my own Arbiter object, I bail out. \
                      To solve it, please change the host_name parameter in \
                      the object Arbiter in the file alignak-specific.cfg. \
                      With the value %s \
                      Thanks." % socket.gethostname())
 
-        logger.info("My own modules: " + ','.join([m.get_name() for m in self.me.modules]))
+        logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
 
         self.modules_dir = getattr(self.conf, 'modules_dir', '')
 
@@ -283,7 +283,7 @@ class Arbiter(Daemon):
         # we request the instances without them being *started*
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
-        self.modules_manager.set_modules(self.me.modules)
+        self.modules_manager.set_modules(self.myself.modules)
         self.do_load_modules()
 
         # Call modules that manage this read configuration pass
@@ -420,7 +420,7 @@ class Arbiter(Daemon):
         self.daemon_thread_pool_size = self.conf.daemon_thread_pool_size
 
         self.accept_passive_unknown_check_results = BoolProp.pythonize(
-            getattr(self.me, 'accept_passive_unknown_check_results', '0')
+            getattr(self.myself, 'accept_passive_unknown_check_results', '0')
         )
 
         # If the user sets a workdir, lets use it. If not, use the
@@ -431,8 +431,8 @@ class Arbiter(Daemon):
             self.workdir = self.conf.workdir
 
         #  We need to set self.host & self.port to be used by do_daemon_init_and_start
-        self.host = self.me.address
-        self.port = self.me.port
+        self.host = self.myself.address
+        self.port = self.myself.port
 
         logger.info("Configuration Loaded")
 
@@ -614,7 +614,7 @@ class Arbiter(Daemon):
             self.conf = conf
             for arb in self.conf.arbiters:
                 if (arb.address, arb.port) == (self.host, self.port):
-                    self.me = arb
+                    self.myself = arb
                     arb.is_me = lambda x: True  # we now definitively know who we are, just keep it.
                 else:
                     arb.is_me = lambda x: False  # and we know who we are not, just keep it.
@@ -627,7 +627,7 @@ class Arbiter(Daemon):
         """
         # If I am a spare, I wait for the master arbiter to send me
         # true conf.
-        if self.me.spare:
+        if self.myself.spare:
             logger.debug("I wait for master")
             self.wait_for_master_death()
 
@@ -668,7 +668,7 @@ class Arbiter(Daemon):
             now = time.time()
             if now - self.last_master_speack > master_timeout:
                 logger.info("Arbiter Master is dead. The arbiter %s take the lead",
-                            self.me.get_name())
+                            self.myself.get_name())
                 for arb in self.conf.arbiters:
                     if not arb.spare:
                         arb.alive = False
@@ -716,12 +716,12 @@ class Arbiter(Daemon):
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
             if arb.is_me(self.arb_name):
-                self.me = arb
+                self.myself = arb
 
         if self.conf.human_timestamp_log:
             logger.set_human_format()
         logger.info("Begin to dispatch configurations to satellites")
-        self.dispatcher = Dispatcher(self.conf, self.me)
+        self.dispatcher = Dispatcher(self.conf, self.myself)
         self.dispatcher.check_alive()
         self.dispatcher.check_dispatch()
         # REF: doc/alignak-conf-dispatching.png (3)
@@ -866,12 +866,12 @@ class Arbiter(Daemon):
         now = int(time.time())
         # call the daemon one
         res = super(Arbiter, self).get_stats_struct()
-        res.update({'name': self.me.get_name(), 'type': 'arbiter'})
+        res.update({'name': self.myself.get_name(), 'type': 'arbiter'})
         res['hosts'] = len(self.conf.hosts)
         res['services'] = len(self.conf.services)
         metrics = res['metrics']
         # metrics specific
         metrics.append('arbiter.%s.external-commands.queue %d %d' %
-                       (self.me.get_name(), len(self.external_commands), now))
+                       (self.myself.get_name(), len(self.external_commands), now))
 
         return res

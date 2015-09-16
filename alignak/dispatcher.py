@@ -337,24 +337,24 @@ class Dispatcher:
                                         r_id, satellite.get_name())
                             satellite.remove_from_conf(id)
 
-    def get_scheduler_ordered_list(self, r):
+    def get_scheduler_ordered_list(self, realm):
         """Get sorted scheduler list for a specific realm
 
-        :param r: realm we want scheduler from
-        :type r: object
+        :param realm: realm we want scheduler from
+        :type realm: object
         :return: sorted scheduler list
         :rtype: list[alignak.objects.schedulerlink.SchedulerLink]
         """
         # get scheds, alive and no spare first
         scheds = []
-        for sched in r.schedulers:
+        for sched in realm.schedulers:
             scheds.append(sched)
 
         # now the spare scheds of higher realms
         # they are after the sched of realm, so
         # they will be used after the spare of
         # the realm
-        for higher_r in r.higher_realms:
+        for higher_r in realm.higher_realms:
             for sched in higher_r.schedulers:
                 if sched.spare:
                     scheds.append(sched)

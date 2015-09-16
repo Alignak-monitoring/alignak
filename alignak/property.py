@@ -383,14 +383,14 @@ class DictProp(Property):
         """
         val = unique_value(val)
 
-        def split(kv):
+        def split(keyval):
             """Split key-value string into (key,value)
 
-            :param kv: key value string
+            :param keyval: key value string
             :return: key, value
             :rtype: tuple
             """
-            matches = re.match(r"^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", kv)
+            matches = re.match(r"^\s*([^\s]+)\s*=\s*([^\s]+)\s*$", keyval)
             if matches is None:
                 raise ValueError
 

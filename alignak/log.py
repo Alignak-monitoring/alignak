@@ -216,19 +216,19 @@ class Log(logging.Logger):
         # Todo : Do we need this now we use logging?
         return handler.stream.fileno()
 
-    def set_human_format(self, on=True):
+    def set_human_format(self, human=True):
         """
         Set the output as human format.
 
-        If the optional parameter `on` is False, the timestamps format
+        If the optional parameter `human` is False, the timestamps format
         will be reset to the default format.
 
-        :param on: True if want timestamp in human format, otherwise False
-        :type on: bool
+        :param human: True if want timestamp in human format, otherwise False
+        :type human: bool
         :return: None
         """
         global HUMAN_TIMESTAMP_LOG
-        HUMAN_TIMESTAMP_LOG = bool(on)
+        HUMAN_TIMESTAMP_LOG = bool(human)
 
         # Apply/Remove the human format to all handlers except the brok one.
         for handler in self.handlers:

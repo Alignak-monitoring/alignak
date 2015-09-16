@@ -52,23 +52,23 @@ Helper functions for some sorting
 """
 
 
-def hst_srv_sort(s1, s2):
+def hst_srv_sort(s01, s02):
     """
     Sort host and service by impact then state then name
 
-    :param s1: A host or service to compare
-    :type s1: alignak.objects.schedulingitem.SchedulingItem
-    :param s2: Another host or service to compare
-    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :param s01: A host or service to compare
+    :type s01: alignak.objects.schedulingitem.SchedulingItem
+    :param s02: Another host or service to compare
+    :type s02: alignak.objects.schedulingitem.SchedulingItem
     :return:
-      * -1 if s1 > s2
-      * 0 if s1 == s2 (not true)
-      * 1 if s1 < s2
+      * -1 if s01 > s02
+      * 0 if s01 == s02 (not true)
+      * 1 if s01 < s02
     :rtype: int
     """
-    if s1.business_impact > s2.business_impact:
+    if s01.business_impact > s02.business_impact:
         return -1
-    if s2.business_impact > s1.business_impact:
+    if s02.business_impact > s01.business_impact:
         return 1
 
     # Ok, we compute a importance value so
@@ -78,8 +78,8 @@ def hst_srv_sort(s1, s2):
     tab = {'host': {0: 0, 1: 4, 2: 1},
            'service': {0: 0, 1: 2, 2: 3, 3: 1}
            }
-    state1 = tab[s1.__class__.my_type].get(s1.state_id, 0)
-    state2 = tab[s2.__class__.my_type].get(s2.state_id, 0)
+    state1 = tab[s01.__class__.my_type].get(s01.state_id, 0)
+    state2 = tab[s02.__class__.my_type].get(s02.state_id, 0)
     # ok, here, same business_impact
     # Compare warn and crit state
     if state1 > state2:
@@ -88,24 +88,24 @@ def hst_srv_sort(s1, s2):
         return 1
 
     # Ok, so by name...
-    if s1.get_full_name() > s2.get_full_name():
+    if s01.get_full_name() > s02.get_full_name():
         return 1
     else:
         return -1
 
 
-def worse_first(s1, s2):
+def worse_first(s01, s02):
     """
     Sort host and service by state then impact then name
 
-    :param s1: A host or service to compare
-    :type s1: alignak.objects.schedulingitem.SchedulingItem
-    :param s2: Another host or service to compare
-    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :param s01: A host or service to compare
+    :type s01: alignak.objects.schedulingitem.SchedulingItem
+    :param s02: Another host or service to compare
+    :type s02: alignak.objects.schedulingitem.SchedulingItem
     :return:
-      * -1 if s1 > s2
-      * 0 if s1 == s2 (not true)
-      * 1 if s1 < s2
+      * -1 if s01 > s02
+      * 0 if s01 == s02 (not true)
+      * 1 if s01 < s02
     :rtype: int
     """
     # Ok, we compute a importance value so
@@ -115,8 +115,8 @@ def worse_first(s1, s2):
     tab = {'host': {0: 0, 1: 4, 2: 1},
            'service': {0: 0, 1: 2, 2: 3, 3: 1}
            }
-    state1 = tab[s1.__class__.my_type].get(s1.state_id, 0)
-    state2 = tab[s2.__class__.my_type].get(s2.state_id, 0)
+    state1 = tab[s01.__class__.my_type].get(s01.state_id, 0)
+    state2 = tab[s02.__class__.my_type].get(s02.state_id, 0)
 
     # ok, here, same business_impact
     # Compare warn and crit state
@@ -126,38 +126,38 @@ def worse_first(s1, s2):
         return 1
 
     # Same? ok by business impact
-    if s1.business_impact > s2.business_impact:
+    if s01.business_impact > s02.business_impact:
         return -1
-    if s2.business_impact > s1.business_impact:
+    if s02.business_impact > s01.business_impact:
         return 1
 
     # Ok, so by name...
     # Ok, so by name...
-    if s1.get_full_name() > s2.get_full_name():
+    if s01.get_full_name() > s02.get_full_name():
         return -1
     else:
         return 1
 
 
-def last_state_change_earlier(s1, s2):
+def last_state_change_earlier(s01, s02):
     """
     Sort host and service by last_state_change
 
-    :param s1: A host or service to compare
-    :type s1: alignak.objects.schedulingitem.SchedulingItem
-    :param s2: Another host or service to compare
-    :type s2: alignak.objects.schedulingitem.SchedulingItem
+    :param s01: A host or service to compare
+    :type s01: alignak.objects.schedulingitem.SchedulingItem
+    :param s02: Another host or service to compare
+    :type s02: alignak.objects.schedulingitem.SchedulingItem
     :return:
-      * -1 if s1 > s2
-      * 0 if s1 == s2 (not true)
-      * 1 if s1 < s2
+      * -1 if s01 > s02
+      * 0 if s01 == s02 (not true)
+      * 1 if s01 < s02
     :rtype: int
     """
     # ok, here, same business_impact
     # Compare warn and crit state
-    if s1.last_state_change > s2.last_state_change:
+    if s01.last_state_change > s02.last_state_change:
         return -1
-    if s1.last_state_change < s2.last_state_change:
+    if s01.last_state_change < s02.last_state_change:
         return 1
 
     return 0

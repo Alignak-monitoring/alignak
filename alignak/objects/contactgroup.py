@@ -180,15 +180,15 @@ class Contactgroups(Itemgroups):
             return []
         return contactgroup.get_contacts()
 
-    def add_contactgroup(self, cg):
+    def add_contactgroup(self, contactgroup):
         """Wrapper for add_item method
         Add a contactgroup to the contactgroup list
 
-        :param cg: contact group to add
-        :type cg:
+        :param contactgroup: contact group to add
+        :type contactgroup:
         :return: None
         """
-        self.add_item(cg)
+        self.add_item(contactgroup)
 
     def linkify(self, contacts):
         """Create link between objects::

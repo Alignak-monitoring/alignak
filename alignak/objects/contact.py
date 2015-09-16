@@ -152,11 +152,11 @@ class Contact(Item):
         except AttributeError:
             return 'UnnamedContact'
 
-    def want_service_notification(self, t, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
 
-        :param t: time we want to notify the contact (usually now)
-        :type t: int
+        :param timestamp: time we want to notify the contact (usually now)
+        :type timestamp: int
         :param state: host or service state ("WARNING", "CRITICAL" ..)
         :type state: str
         :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
@@ -179,18 +179,19 @@ class Contact(Item):
         # Now the rest is for sub notificationways. If one is OK, we are ok
         # We will filter in another phase
         for notifway in self.notificationways:
-            nw_b = notifway.want_service_notification(t, state, n_type, business_impact, cmd)
+            nw_b = notifway.want_service_notification(timestamp,
+                                                      state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
         # Oh... no one is ok for it? so no, sorry
         return False
 
-    def want_host_notification(self, t, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
 
-        :param t: time we want to notify the contact (usually now)
-        :type t: int
+        :param timestamp: time we want to notify the contact (usually now)
+        :type timestamp: int
         :param state: host or service state ("UP", "DOWN" ..)
         :type state: str
         :param n_type: type of notification ("PROBLEM", "RECOVERY" ..)
@@ -213,7 +214,7 @@ class Contact(Item):
         # Now it's all for sub notificationways. If one is OK, we are OK
         # We will filter in another phase
         for notifway in self.notificationways:
-            nw_b = notifway.want_host_notification(t, state, n_type, business_impact, cmd)
+            nw_b = notifway.want_host_notification(timestamp, state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 

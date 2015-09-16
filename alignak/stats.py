@@ -167,28 +167,28 @@ class Stats(object):
             logger.error('Cannot create statsd socket: %s', exp)
             return
 
-    def incr(self, k, v):
+    def incr(self, key, value):
         """Increments a key with value
 
-        :param k: key to edit
-        :type k: str
-        :param v: value to add
+        :param key: key to edit
+        :type key: str
+        :param value: value to add
         :type v: int
         :return: None
         """
-        _min, _max, number, _sum = self.stats.get(k, (None, None, 0, 0))
+        _min, _max, number, _sum = self.stats.get(key, (None, None, 0, 0))
         number += 1
-        _sum += v
-        if _min is None or v < _min:
-            _min = v
-        if _max is None or v > _max:
-            _max = v
-        self.stats[k] = (_min, _max, number, _sum)
+        _sum += value
+        if _min is None or value < _min:
+            _min = value
+        if _max is None or value > _max:
+            _max = value
+        self.stats[key] = (_min, _max, number, _sum)
 
         # Manage local statd part
         if self.statsd_sock and self.name:
-            # beware, we are sending ms here, v is in s
-            packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, k, v * 1000)
+            # beware, we are sending ms here, value is in s
+            packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, key, value * 1000)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
             except (socket.error, socket.gaierror), exp:

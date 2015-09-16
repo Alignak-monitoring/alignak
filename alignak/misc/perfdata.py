@@ -83,12 +83,12 @@ class Metric:
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
-    def __init__(self, s):
+    def __init__(self, string):
         self.name = self.value = self.uom = \
             self.warning = self.critical = self.min = self.max = None
-        s = s.strip()
-        # print "Analysis string", s
-        matches = METRIC_PATTERN.match(s)
+        string = string.strip()
+        # print "Analysis string", string
+        matches = METRIC_PATTERN.match(string)
         if matches:
             # Get the name but remove all ' in it
             self.name = matches.group(1).replace("'", "")
@@ -119,9 +119,9 @@ class PerfDatas:
     """
     Class providing performance data extracted from a check output
     """
-    def __init__(self, s):
-        s = s or ''
-        elts = PERFDATA_SPLIT_PATTERN.findall(s)
+    def __init__(self, string):
+        string = string or ''
+        elts = PERFDATA_SPLIT_PATTERN.findall(string)
         elts = [e for e in elts if e != '']
         self.metrics = {}
         for elem in elts:

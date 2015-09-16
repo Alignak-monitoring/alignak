@@ -63,7 +63,7 @@ import json
 try:
     from ClusterShell.NodeSet import NodeSet, NodeSetParseRangeError
 except ImportError:
-    NodeSet = None
+    NodeSet = None  # pylint: disable=C0103
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger
@@ -251,55 +251,55 @@ def get_end_of_day(year, month_id, day):
     return end_time_epoch
 
 
-def print_date(t):
+def print_date(timestamp):
     """Get date (local) in asc format from timestamp
 
-    example : 'Thu Jan  1 01:00:00 1970' (for t=0 in a EUW server)
+    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
 
-    :param t: timestamp
-    :type t; int
+    :param timestamp: timestamp
+    :type timestamp; int
     :return: formatted time
     :rtype: int
     TODO: Missing timezone
     """
-    return time.asctime(time.localtime(t))
+    return time.asctime(time.localtime(timestamp))
 
 
-def get_day(t):
-    """Get timestamp of the beginning of the day (local) given by t
+def get_day(timestamp):
+    """Get timestamp of the beginning of the day (local) given by timestamp
 
-    :param t: time to get day from
-    :type t: int
+    :param timestamp: time to get day from
+    :type timestamp: int
     :return: timestamp
     :rtype: int
     TODO: Missing timezone
     """
-    return int(t - get_sec_from_morning(t))
+    return int(timestamp - get_sec_from_morning(timestamp))
 
 
-def get_wday(t):
+def get_wday(timestamp):
     """Get week day from date
 
-    :param t: timestamp date
-    :type t: int
+    :param timestamp: timestamp date
+    :type timestamp: int
     :return: weekday (0-6)
     :rtype: int
     TODO: Missing timezone
     """
-    t_lt = time.localtime(t)
+    t_lt = time.localtime(timestamp)
     return t_lt.tm_wday
 
 
-def get_sec_from_morning(t):
-    """Get the numbers of seconds elapsed since the beginning of the day (local) given by t
+def get_sec_from_morning(timestamp):
+    """Get the numbers of seconds elapsed since the beginning of the day (local) given by timestamp
 
-    :param t: time to get amount of second from
-    :type t: int
+    :param timestamp: time to get amount of second from
+    :type timestamp: int
     :return: timestamp
     :rtype: int
     TODO: Missing timezone
     """
-    t_lt = time.localtime(t)
+    t_lt = time.localtime(timestamp)
     return t_lt.tm_hour * 3600 + t_lt.tm_min * 60 + t_lt.tm_sec
 
 
@@ -327,11 +327,11 @@ def get_start_of_day(year, month_id, day):
     return start_time_epoch
 
 
-def format_t_into_dhms_format(t):
+def format_t_into_dhms_format(timestamp):
     """ Convert an amount of second into day, hour, min and sec
 
-    :param t: seconds
-    :type t: int
+    :param timestamp: seconds
+    :type timestamp: int
     :return: 'Ad Bh Cm Ds'
     :rtype: str
 
@@ -342,10 +342,10 @@ def format_t_into_dhms_format(t):
     '0d 1h 0m 0s'
 
     """
-    mins, t = divmod(t, 60)
+    mins, timestamp = divmod(timestamp, 60)
     hour, mins = divmod(mins, 60)
     day, hour = divmod(hour, 24)
-    return '%sd %sh %sm %ss' % (day, hour, mins, t)
+    return '%sd %sh %sm %ss' % (day, hour, mins, timestamp)
 
 
 # ################################ Pythonization ###########################
@@ -487,29 +487,29 @@ def to_bool(val):
         return False
 
 
-def from_bool_to_string(b):
+def from_bool_to_string(boolean):
     """Convert a bool to a string representation
 
-    :param b: bool to convert
-    :type b: bool
-    :return: if b '1' ,else '0'
+    :param boolean: bool to convert
+    :type boolean: bool
+    :return: if boolean '1' ,else '0'
     :rtype: str
     """
-    if b:
+    if boolean:
         return '1'
     else:
         return '0'
 
 
-def from_bool_to_int(b):
+def from_bool_to_int(boolean):
     """Convert a bool to a int representation
 
-    :param b: bool to convert
-    :type b: bool
-    :return: if b 1 ,else 0
+    :param boolean: bool to convert
+    :type boolean: bool
+    :return: if boolean 1 ,else 0
     :rtype: int
     """
-    if b:
+    if boolean:
         return 1
     else:
         return 0
@@ -686,30 +686,30 @@ def get_obj_full_name(obj):
         return obj.get_name()
 
 
-def get_customs_keys(d):
+def get_customs_keys(dic):
     """Get a list of keys of the custom dict
     without the first char
 
     Used for macros (_name key)
 
-    :param d: dict to parse
-    :type d: dict
+    :param dic: dict to parse
+    :type dic: dict
     :return: list of keys
     :rtype: list
     """
-    return [k[1:] for k in d.keys()]
+    return [k[1:] for k in dic.keys()]
 
 
-def get_customs_values(d):
+def get_customs_values(dic):
     """Wrapper for values() method
 
-    :param d: dict
-    :type d: dict
-    :return: d.values
+    :param dic: dict
+    :type dic: dict
+    :return: dic.values
     :rtype:
     TODO: Remove it?
     """
-    return d.values()
+    return dic.values()
 
 
 def unique_value(val):
@@ -733,90 +733,92 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
-def scheduler_no_spare_first(x, y):
+def scheduler_no_spare_first(x00, y00):
     """Compare two satellite link based on spare attribute(scheduler usually)
 
-    :param x: first link to compare
-    :type x:
-    :param y: second link to compare
-    :type y:
-    :return: x > y (1) if x.spare and not y.spare, x == y (0) if both spare, x < y (-1) else
+    :param x00: first link to compare
+    :type x00:
+    :param y00: second link to compare
+    :type y00:
+    :return: x00 > y00 (1) if x00.spare and not y00.spare,
+             x00 == y00 (0) if both spare,
+             x00 < y00 (-1) else
     :rtype: int
     """
-    if x.spare and not y.spare:
+    if x00.spare and not y00.spare:
         return 1
-    elif x.spare and y.spare:
+    elif x00.spare and y00.spare:
         return 0
     else:
         return -1
 
 
-def alive_then_spare_then_deads(x, y):
+def alive_then_spare_then_deads(x00, y00):
     """Compare two satellite link
     based on alive attribute then spare attribute
 
-    :param x: first link to compare
-    :type x:
-    :param y: second link to compare
-    :type y:
-    :return: x > y (1) if x alive and not y or both alive but x not spare
-             x == y (0) if both alive and spare
-             x < y (-1) else
+    :param x00: first link to compare
+    :type x00:
+    :param y00: second link to compare
+    :type y00:
+    :return: x00 > y00 (1) if x00 alive and not y00 or both alive but x00 not spare
+             x00 == y00 (0) if both alive and spare
+             x00 < y00 (-1) else
     :rtype: int
     TODO: Rework it
     """
     # First are alive
-    if x.alive and not y.alive:
+    if x00.alive and not y00.alive:
         return -1
-    if y.alive and not x.alive:
+    if y00.alive and not x00.alive:
         return 0
     # if not alive both, I really don't care...
-    if not x.alive and not y.alive:
+    if not x00.alive and not y00.alive:
         return -1
     # Ok, both are alive... now spare after no spare
-    if not x.spare:
+    if not x00.spare:
         return -1
-    # x is a spare, so y must be before, even if
-    # y is a spare
-    if not y.spare:
+    # x00 is a spare, so y00 must be before, even if
+    # y00 is a spare
+    if not y00.spare:
         return 1
     return 0
 
 
-def sort_by_ids(x, y):
-    """Compare x, y base on their id
+def sort_by_ids(x00, y00):
+    """Compare x00, y00 base on their id
 
-    :param x: first elem to compare
-    :type x: int
-    :param y: second elem to compare
-    :type y: int
-    :return: x > y (1) if x._id > y._id, x == y (0) if id equals, x < y (-1) else
+    :param x00: first elem to compare
+    :type x00: int
+    :param y00: second elem to compare
+    :type y00: int
+    :return: x00 > y00 (1) if x00._id > y00._id, x00 == y00 (0) if id equals, x00 < y00 (-1) else
     :rtype: int
     """
-    if x._id < y._id:
+    if x00._id < y00._id:
         return -1
-    if x._id > y._id:
+    if x00._id > y00._id:
         return 1
     # So is equal
     return 0
 
 
-def nighty_five_percent(t):
+def nighty_five_percent(table):
     """
     From a tab, get the avg, min, max
     for the tab values, but not the lower ones
     and higher ones that are too distinct
     than major ones
 
-    :param t: list of value to compute
-    :type t:
+    :param table: list of value to compute
+    :type table:
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    t02 = copy.copy(t)
+    t02 = copy.copy(table)
     t02.sort()
 
-    length = len(t)
+    length = len(table)
 
     # If void tab, wtf??
     if length == 0:

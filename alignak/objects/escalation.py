@@ -102,7 +102,7 @@ class Escalation(Item):
         """
         return self.escalation_name
 
-    def is_eligible(self, t, status, notif_number, in_notif_time, interval):
+    def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval):
         """Check if the escalation is eligible (notification is escalated or not)
 
         Escalation is NOT eligible in ONE of the following condition is fulfilled::
@@ -114,8 +114,8 @@ class Escalation(Item):
         * status does not matches escalation_options ('WARNING' <=> 'w' ...)
         * escalation_period is not legit for this time (now usually)
 
-        :param t: timestamp to check if timeperiod is valid
-        :type t: int
+        :param timestamp: timestamp to check if timeperiod is valid
+        :type timestamp: int
         :param status: item status (one of the small_states key)
         :type status: str
         :param notif_number: current notification number
@@ -158,7 +158,8 @@ class Escalation(Item):
             return False
 
         # Maybe the time is not in our escalation_period
-        if self.escalation_period is not None and not self.escalation_period.is_time_valid(t):
+        if self.escalation_period is not None and \
+                not self.escalation_period.is_time_valid(timestamp):
             return False
 
         # Ok, I do not see why not escalade. So it's True :)
@@ -287,14 +288,14 @@ class Escalations(Items):
         self.linkify_es_by_s(services)
         self.linkify_es_by_h(hosts)
 
-    def add_escalation(self, es):
+    def add_escalation(self, escalation):
         """Wrapper for add_item method
 
-        :param es: escalation to add to item dict
-        :type es: alignak.objects.escalation.Escalation
+        :param escalation: escalation to add to item dict
+        :type escalation: alignak.objects.escalation.Escalation
         :return: None
         """
-        self.add_item(es)
+        self.add_item(escalation)
 
     def linkify_es_by_s(self, services):
         """Add each escalation object into service.escalation attribute

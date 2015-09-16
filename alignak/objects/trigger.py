@@ -124,10 +124,10 @@ class Trigger(Item):
                 'code_src': self.code_src,
                 'trigger_broker_raise_enabled': self.trigger_broker_raise_enabled}
 
-    def __setstate__(self, d):
-        self.trigger_name = d['trigger_name']
-        self.code_src = d['code_src']
-        self.trigger_broker_raise_enabled = d['trigger_broker_raise_enabled']
+    def __setstate__(self, dic):
+        self.trigger_name = dic['trigger_name']
+        self.code_src = dic['code_src']
+        self.trigger_broker_raise_enabled = dic['trigger_broker_raise_enabled']
 
 
 class Triggers(Items):

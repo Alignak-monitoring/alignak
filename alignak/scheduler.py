@@ -336,14 +336,14 @@ class Scheduler(object):
         except Exception, exp:
             logger.error("Error in writing the dump file %s : %s", path, str(exp))
 
-    def load_external_command(self, e):
+    def load_external_command(self, ecm):
         """Setter for external_command attribute
 
-        :param e: new value
-        :type e: alignak.external_command.ExternalCommandManager
+        :param ecm: new value
+        :type ecm: alignak.external_command.ExternalCommandManager
         :return: None
         """
-        self.external_command = e
+        self.external_command = ecm
 
     def run_external_commands(self, cmds):
         """Run external commands Arbiter/Receiver sent
@@ -407,17 +407,17 @@ class Scheduler(object):
             brok = notif.get_initial_status_brok()
             self.add(brok)
 
-    def add_check(self, c):
+    def add_check(self, check):
         """Add a check into checks list
 
-        :param c: check to add
-        :type c: alignak.check.Check
+        :param check: check to add
+        :type check: alignak.check.Check
         :return: None
         """
-        self.checks[c._id] = c
+        self.checks[check._id] = check
         # A new check means the host/service changes its next_check
         # need to be refreshed
-        brok = c.ref.get_next_schedule_brok()
+        brok = check.ref.get_next_schedule_brok()
         self.add(brok)
 
     def add_eventhandler(self, action):
@@ -430,16 +430,16 @@ class Scheduler(object):
         # print "Add an event Handler", elt._id
         self.actions[action._id] = action
 
-    def add_downtime(self, dt):
+    def add_downtime(self, downtime):
         """Add a downtime into downtimes list
 
-        :param dt: downtime to add
-        :type dt: alignak.downtime.Downtime
+        :param downtime: downtime to add
+        :type downtime: alignak.downtime.Downtime
         :return: None
         """
-        self.downtimes[dt._id] = dt
-        if dt.extra_comment:
-            self.add_comment(dt.extra_comment)
+        self.downtimes[downtime._id] = downtime
+        if downtime.extra_comment:
+            self.add_comment(downtime.extra_comment)
 
     def add_contactdowntime(self, contact_dt):
         """Add a contact downtime into contact_downtimes list
@@ -840,32 +840,32 @@ class Scheduler(object):
                         res.append(new_a)
         return res
 
-    def put_results(self, c):
+    def put_results(self, action):
         """Get result from pollers/reactionners (actives ones)
 
-        :param c: check / action / eventhandler to handle
-        :type c:
+        :param action: check / action / eventhandler to handle
+        :type action:
         :return: None
         """
-        if c.is_a == 'notification':
+        if action.is_a == 'notification':
             # We will only see childnotifications here
             try:
                 timeout = False
-                if c.status == 'timeout':
+                if action.status == 'timeout':
                     # Unfortunately the remove_in_progress_notification
                     # sets the status to zombie, so we need to save it here.
                     timeout = True
-                    execution_time = c.execution_time
+                    execution_time = action.execution_time
 
                 # Add protection for strange charset
-                if isinstance(c.output, str):
-                    c.output = c.output.decode('utf8', 'ignore')
+                if isinstance(action.output, str):
+                    action.output = action.output.decode('utf8', 'ignore')
 
-                self.actions[c._id].get_return_from(c)
-                item = self.actions[c._id].ref
-                item.remove_in_progress_notification(c)
-                self.actions[c._id].status = 'zombie'
-                item.last_notification = c.check_time
+                self.actions[action._id].get_return_from(action)
+                item = self.actions[action._id].ref
+                item.remove_in_progress_notification(action)
+                self.actions[action._id].status = 'zombie'
+                item.last_notification = action.check_time
 
                 # And we ask the item to update it's state
                 self.get_and_register_status_brok(item)
@@ -874,54 +874,55 @@ class Scheduler(object):
                 if timeout:
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %d seconds",
-                                   self.actions[c._id].contact.contact_name,
-                                   self.actions[c._id].ref.__class__.my_type,
-                                   self.actions[c._id].command,
+                                   self.actions[action._id].contact.contact_name,
+                                   self.actions[action._id].ref.__class__.my_type,
+                                   self.actions[action._id].command,
                                    int(execution_time))
-                elif c.exit_status != 0:
+                elif action.exit_status != 0:
                     logger.warning("The notification command '%s' raised an error "
-                                   "(exit code=%d): '%s'", c.command, c.exit_status, c.output)
+                                   "(exit code=%d): '%s'",
+                                   action.command, action.exit_status, action.output)
 
             except KeyError, exp:  # bad number for notif, not that bad
                 logger.warning('put_results:: get unknown notification : %s ', str(exp))
 
             except AttributeError, exp:  # bad object, drop it
                 logger.warning('put_results:: get bad notification : %s ', str(exp))
-        elif c.is_a == 'check':
+        elif action.is_a == 'check':
             try:
-                if c.status == 'timeout':
-                    c.output = "(%s Check Timed Out)" %\
-                               self.checks[c._id].ref.__class__.my_type.capitalize()
-                    c.long_output = c.output
-                    c.exit_status = self.conf.timeout_exit_status
-                self.checks[c._id].get_return_from(c)
-                self.checks[c._id].status = 'waitconsume'
+                if action.status == 'timeout':
+                    action.output = "(%s Check Timed Out)" %\
+                                    self.checks[action._id].ref.__class__.my_type.capitalize()
+                    action.long_output = action.output
+                    action.exit_status = self.conf.timeout_exit_status
+                self.checks[action._id].get_return_from(action)
+                self.checks[action._id].status = 'waitconsume'
             except KeyError, exp:
                 pass
 
-        elif c.is_a == 'eventhandler':
+        elif action.is_a == 'eventhandler':
             try:
-                old_action = self.actions[c._id]
+                old_action = self.actions[action._id]
                 old_action.status = 'zombie'
             except KeyError:  # cannot find old action
                 return
-            if c.status == 'timeout':
+            if action.status == 'timeout':
                 _type = 'event handler'
-                if c.is_snapshot:
+                if action.is_snapshot:
                     _type = 'snapshot'
                 logger.warning("%s %s command '%s ' timed out after %d seconds",
-                               self.actions[c._id].ref.__class__.my_type.capitalize(),
+                               self.actions[action._id].ref.__class__.my_type.capitalize(),
                                _type,
-                               self.actions[c._id].command,
-                               int(c.execution_time))
+                               self.actions[action._id].command,
+                               int(action.execution_time))
 
             # If it's a snapshot we should get the output an export it
-            if c.is_snapshot:
-                old_action.get_return_from(c)
+            if action.is_snapshot:
+                old_action.get_return_from(action)
                 brok = old_action.ref.get_snapshot_brok(old_action.output, old_action.exit_status)
                 self.add(brok)
         else:
-            logger.error("The received result type in unknown! %s", str(c.is_a))
+            logger.error("The received result type in unknown! %s", str(action.is_a))
 
     def get_links_from_type(self, s_type):
         """Get poller link or reactionner link depending on the wanted type
@@ -1907,16 +1908,16 @@ class Scheduler(object):
             u_time, s_time = elem
             stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
 
-        def p_sort(e1, e2):
+        def p_sort(e01, e02):
             """Compare elems by u_time param
 
-            :param e1: first elem to compare
-            :param e2: second elem to compare
-            :return: 1 if e1['u_time'] > e2['u_time'], -1 if e1['u_time'] < e2['u_time'], else 0
+            :param e01: first elem to compare
+            :param e02: second elem to compare
+            :return: 1 if e01['u_time'] > e02['u_time'], -1 if e01['u_time'] < e02['u_time'], else 0
             """
-            if e1['u_time'] > e2['u_time']:
+            if e01['u_time'] > e02['u_time']:
                 return 1
-            if e1['u_time'] < e2['u_time']:
+            if e01['u_time'] < e02['u_time']:
                 return -1
             return 0
         stats.sort(p_sort)

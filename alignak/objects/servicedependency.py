@@ -153,11 +153,11 @@ class Servicedependencies(Items):
         servicedep = Servicedependency(prop)
         self.add_item(servicedep)
 
-    def explode_hostgroup(self, sd, hostgroups):
+    def explode_hostgroup(self, svc_dep, hostgroups):
         """Explode a service dependency for each member of hostgroup
 
-        :param sd: service dependency to explode
-        :type sd: alignak.objects.servicedependency.Servicedependency
+        :param svc_dep: service dependency to explode
+        :type svc_dep: alignak.objects.servicedependency.Servicedependency
         :param hostgroups: used to find hostgroup objects
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return:None
@@ -165,13 +165,13 @@ class Servicedependencies(Items):
         # We will create a service dependency for each host part of the host group
 
         # First get services
-        snames = [d.strip() for d in sd.service_description.split(',')]
+        snames = [d.strip() for d in svc_dep.service_description.split(',')]
 
         # And dep services
-        dep_snames = [d.strip() for d in sd.dependent_service_description.split(',')]
+        dep_snames = [d.strip() for d in svc_dep.dependent_service_description.split(',')]
 
         # Now for each host into hostgroup we will create a service dependency object
-        hg_names = [n.strip() for n in sd.hostgroup_name.split(',')]
+        hg_names = [n.strip() for n in svc_dep.hostgroup_name.split(',')]
         for hg_name in hg_names:
             hostgroup = hostgroups.find_by_name(hg_name)
             if hostgroup is None:
@@ -183,7 +183,7 @@ class Servicedependencies(Items):
             for hname in hnames:
                 for dep_sname in dep_snames:
                     for sname in snames:
-                        new_sd = sd.copy()
+                        new_sd = svc_dep.copy()
                         new_sd.host_name = hname
                         new_sd.service_description = sname
                         new_sd.dependent_host_name = hname

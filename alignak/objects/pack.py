@@ -56,7 +56,7 @@ import re
 try:
     import json
 except ImportError:
-    json = None
+    json = None  # pylint: disable=C0103
 
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp

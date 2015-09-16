@@ -83,6 +83,7 @@ class DBMysql(DB):
 
         # self.db = MySQLdb.connect (host = "localhost", user = "root",
         #                            passwd = "root", db = "merlin")
+        # pylint: disable=C0103
         self.db = MySQLdb.connect(host=self.host, user=self.user,
                                   passwd=self.password, db=self.database,
                                   port=self.port)

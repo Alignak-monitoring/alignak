@@ -155,20 +155,20 @@ class Receiver(Satellite):
         sched = self.schedulers.get(item, None)
         return sched
 
-    def manage_brok(self, b):
+    def manage_brok(self, brok):
         """Send brok to modules. Modules have to implement their own manage_brok function.
         They usually do if they inherits from basemodule
         REF: doc/receiver-modules.png (4-5)
 
-        :param b: brok to manage
-        :type b: alignak.brok.Brok
+        :param brok: brok to manage
+        :type brok: alignak.brok.Brok
         :return: None
         """
         to_del = []
         # Call all modules if they catch the call
         for mod in self.modules_manager.get_internal_instances():
             try:
-                mod.manage_brok(b)
+                mod.manage_brok(brok)
             except Exception, exp:
                 logger.warning("The mod %s raise an exception: %s, I kill it",
                                mod.get_name(), str(exp))

@@ -138,24 +138,24 @@ class MacroResolver(Borg):
         # Try cache :)
         # self.cache = {}
 
-    def _get_macros(self, s):
-        """Get all macros of a string
+    def _get_macros(self, chain):
+        """Get all macros of a chain
         Cut '$' char and create a dict with the following structure::
 
         { 'MacroSTR1' : {'val': '', 'type': 'unknown'}
           'MacroSTR2' : {'val': '', 'type': 'unknown'}
         }
 
-        :param s: string to parse
-        :type s: str
+        :param chain: chain to parse
+        :type chain: str
         :return: dict with macro parsed as key
         :rtype: dict
         """
-        # if s in self.cache:
-        #    return self.cache[s]
+        # if chain in self.cache:
+        #    return self.cache[chain]
 
         regex = re.compile(r'(\$)')
-        elts = regex.split(s)
+        elts = regex.split(chain)
         macros = {}
         in_macro = False
         for elt in elts:
@@ -164,7 +164,7 @@ class MacroResolver(Borg):
             elif in_macro:
                 macros[elt] = {'val': '', 'type': 'unknown'}
 
-        # self.cache[s] = macros
+        # self.cache[chain] = macros
         if '' in macros:
             del macros['']
         return macros
@@ -195,18 +195,18 @@ class MacroResolver(Borg):
             else:
                 return ''
 
-    def _delete_unwanted_caracters(self, s):
-        """Remove not wanted char from string
+    def _delete_unwanted_caracters(self, chain):
+        """Remove not wanted char from chain
         unwanted char are illegal_macro_output_chars attribute
 
-        :param s: string to remove char from
-        :type s: str
-        :return: string cleaned
+        :param chain: chain to remove char from
+        :type chain: str
+        :return: chain cleaned
         :rtype: str
         """
         for char in self.illegal_macro_output_chars:
-            s = s.replace(char, '')
-        return s
+            chain = chain.replace(char, '')
+        return chain
 
     def get_env_macros(self, data):
         """Get all environment macros from data
