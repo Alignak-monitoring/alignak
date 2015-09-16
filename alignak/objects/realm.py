@@ -518,19 +518,19 @@ class Realms(Itemgroups):
         for realm in self.items.values():
             self.recur_higer_realms(realm, realm.realm_members)
 
-    def recur_higer_realms(self, r, sons):
+    def recur_higer_realms(self, parent_r, sons):
         """Add sub-realms (parent / son)
 
-        :param r: parent realm
-        :type r: alignak.objects.realm.Realm
+        :param parent_r: parent realm
+        :type parent_r: alignak.objects.realm.Realm
         :param sons: sons realm
         :type sons: list[alignak.objects.realm.Realm]
         :return: None
         """
         for sub_p in sons:
-            sub_p.higher_realms.append(r)
+            sub_p.higher_realms.append(parent_r)
             # and call for our sons too
-            self.recur_higer_realms(r, sub_p.realm_members)
+            self.recur_higer_realms(parent_r, sub_p.realm_members)
 
     def explode(self):
         """Explode realms with each realm_members
