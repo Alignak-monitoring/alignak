@@ -106,4 +106,4 @@ DICT_MODATTR = {
 try:
     from setproctitle import setproctitle  # pylint: disable=W0611
 except ImportError as err:
-    setproctitle = lambda s: None
+    setproctitle = lambda s: None  # pylint: disable=C0103

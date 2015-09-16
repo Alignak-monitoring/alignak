@@ -38,7 +38,7 @@ try:
     from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
 except ImportError:
     SSL = None
-    pyOpenSSLAdapter = None
+    pyOpenSSLAdapter = None  # pylint: disable=C0103
 
 
 # load global helper objects for logs and stats computation

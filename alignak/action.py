@@ -66,9 +66,9 @@ import signal
 # Try to read in non-blocking mode, from now this only from now on
 # Unix systems
 try:
-    import fcntl
+    import fcntl  # pylint: disable=C0103
 except ImportError:
-    fcntl = None
+    fcntl = None  # pylint: disable=C0103
 
 from alignak.log import logger
 from alignak.property import BoolProp, IntegerProp, FloatProp

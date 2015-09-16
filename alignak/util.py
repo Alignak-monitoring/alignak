@@ -63,7 +63,7 @@ import json
 try:
     from ClusterShell.NodeSet import NodeSet, NodeSetParseRangeError
 except ImportError:
-    NodeSet = None
+    NodeSet = None  # pylint: disable=C0103
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger
