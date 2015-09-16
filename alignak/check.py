@@ -139,31 +139,31 @@ class Check(Action):
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(Check('', '', '', '', '', _id=self._id))
 
-    def get_return_from(self, c):
+    def get_return_from(self, check):
         """Update check data from action (notification for instance)
 
-        :param c: action to get data from
-        :type c: alignak.action.Action
+        :param check: action to get data from
+        :type check: alignak.action.Action
         :return: None
         """
-        self.exit_status = c.exit_status
-        self.output = c.output
-        self.long_output = c.long_output
-        self.check_time = c.check_time
-        self.execution_time = c.execution_time
-        self.perf_data = c.perf_data
-        self.u_time = c.u_time
-        self.s_time = c.s_time
+        self.exit_status = check.exit_status
+        self.output = check.output
+        self.long_output = check.long_output
+        self.check_time = check.check_time
+        self.execution_time = check.execution_time
+        self.perf_data = check.perf_data
+        self.u_time = check.u_time
+        self.s_time = check.s_time
 
-    def is_launchable(self, t):
+    def is_launchable(self, timestamp):
         """Check if the check can be launched
 
-        :param t: time to compare with t_to_go attribute
-        :type t: int
+        :param timestamp: time to compare with t_to_go attribute
+        :type timestamp: int
         :return: True if t > self.t_to_go, False otherwise
         :rtype: bool
         """
-        return t > self.t_to_go
+        return timestamp > self.t_to_go
 
     def __str__(self):
         return "Check %d status:%s command:%s ref:%s" % \
