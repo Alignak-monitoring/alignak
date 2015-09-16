@@ -76,7 +76,7 @@ def declared(function):
 
 
 @declared
-def up(obj, output):
+def up(obj, output):  # pylint: disable=C0103
     """ Set a host in UP state
 
     :param obj: object
@@ -102,7 +102,7 @@ def down(obj, output):
 
 
 @declared
-def ok(obj, output):
+def ok(obj, output):  # pylint: disable=C0103
     """ Set a service in OK state
 
     :param obj: object
