@@ -65,13 +65,13 @@ from alignak.basemodule import BaseModule
 from alignak.log import logger
 
 
-def uniform_module_type(s):
+def uniform_module_type(mod_name):
     """Replace _ by - in string
 
-    :param s: string to edit
+    :param mod_name: string to edit
     :return: module name with - instead of _
     """
-    return s.replace('_', '-')
+    return mod_name.replace('_', '-')
 
 
 class ModulesManager(object):
