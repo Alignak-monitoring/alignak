@@ -54,7 +54,7 @@ from alignak_test import *
 class TestComplexHostgroups(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_complex_hostgroups.cfg')
+        self.setup_with_file(['etc/alignak_complex_hostgroups.cfg'])
 
     def get_svc(self):
         return self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")

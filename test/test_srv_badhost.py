@@ -53,7 +53,7 @@ from alignak_test import *
 class TestServiceWhithBadHost(AlignakTest):
     def setUp(self):
         try:
-            self.setup_with_file('etc/alignak_srv_badhost.cfg')
+            self.setup_with_file(['etc/alignak_srv_badhost.cfg'])
         except AttributeError:
             pass
 

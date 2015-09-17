@@ -53,7 +53,7 @@ from alignak_test import *
 class TestHostGroupNoHost(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_hostgroup_no_host.cfg')
+        self.setup_with_file(['etc/alignak_hostgroup_no_host.cfg'])
 
     def test_hostgroup_wit_no_host(self):
         self.assertTrue(self.sched.conf.conf_is_correct)

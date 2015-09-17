@@ -53,7 +53,7 @@ from alignak_test import *
 class TestBadSatRealmConf(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_sat_realm_conf.cfg')
+        self.setup_with_file(['etc/alignak_bad_sat_realm_conf.cfg'])
 
     def test_badconf(self):
         self.assertFalse(self.conf.conf_is_correct)

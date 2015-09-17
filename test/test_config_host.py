@@ -25,7 +25,7 @@ from alignak_test import *
 
 class TestConfigHost(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/host_config_all.cfg')
+        self.setup_with_file(['etc/host_config_all.cfg'])
 
     def test_initial_state_down(self):
         cg = self.sched.hosts.find_by_name('test_host_0')

@@ -50,7 +50,7 @@ from alignak_test import *
 
 class TestServiceDescriptionInheritance(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_description_inheritance.cfg')
+        self.setup_with_file(['etc/alignak_service_description_inheritance.cfg'])
 
     def test_service_description_inheritance(self):
         self.print_header()

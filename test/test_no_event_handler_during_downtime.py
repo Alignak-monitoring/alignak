@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNoEventHandlerDuringDowntime(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_no_event_handler_during_downtime.cfg')
+        self.setup_with_file(['etc/alignak_no_event_handler_during_downtime.cfg'])
 
     def test_no_event_handler_during_downtime(self):
 

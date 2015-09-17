@@ -52,7 +52,7 @@ from alignak_test import *
 class TestMultipleNotHG(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_multiple_not_hostgroups.cfg')
+        self.setup_with_file(['etc/alignak_multiple_not_hostgroups.cfg'])
 
     def test_dummy(self):
 

@@ -52,7 +52,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_multi_hostgroups_def.cfg')
+        self.setup_with_file(['etc/alignak_multi_hostgroups_def.cfg'])
 
     def test_dummy(self):
         #

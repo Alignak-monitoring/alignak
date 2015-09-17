@@ -53,15 +53,15 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_host_missing_adress.cfg')
+        self.setup_with_file(['etc/alignak_host_missing_adress.cfg'])
 
     def test_host_missing_adress(self):
         # The router got no adress. It should be set with the
         # host_name instead and should nto be an error
         now = time.time()
-        router = self.sched.hosts.find_by_name("test_router_0")
+        router = self.sched.hosts.find_by_name("test_router_00")
         print "router adress:", router.address
-        self.assertEqual('test_router_0', router.address)
+        self.assertEqual('test_router_00', router.address)
 
 if __name__ == '__main__':
     unittest.main()

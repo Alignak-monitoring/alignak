@@ -54,7 +54,7 @@ from alignak_test import unittest, AlignakTest, time_hacker
 class TestBusinesscorrelNotifications(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator_notifications.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator_notifications.cfg'])
 
     def test_bprule_standard_notifications(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_default")

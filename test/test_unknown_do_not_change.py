@@ -53,12 +53,6 @@ from alignak_test import *
 
 class TestUnknownNotChangeState(AlignakTest):
 
-    # Uncomment this is you want to use a specific configuration
-    # for your test
-    #def setUp(self):
-    #    self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
-
-
     # We got problem with unknown results on bad connections
     # for critical services and host: if it was in a notification pass
     # then the notification is restarted, but it's just a missing data,

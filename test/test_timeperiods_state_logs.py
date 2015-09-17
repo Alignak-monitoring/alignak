@@ -52,12 +52,6 @@ from alignak_test import *
 
 class TestTPStateLog(AlignakTest):
 
-    # Uncomment this is you want to use a specific configuration
-    # for your test
-    #def setUp(self):
-    #    self.setup_with_file('etc/alignak_timeperiods_state_logs.cfg')
-
-
     # A timeperiod state change should raise a log, and only when change.
     def test_tp_state_log(self):
         now = time.time()

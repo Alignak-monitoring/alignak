@@ -53,7 +53,7 @@ from alignak_test import *
 class TestCritMod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_critmodulation.cfg')
+        self.setup_with_file(['etc/alignak_critmodulation.cfg'])
 
     def test_critmodulation_def(self):
         #
@@ -63,7 +63,7 @@ class TestCritMod(AlignakTest):
         print "Get our criticity modulation"
         cm = self.sched.conf.businessimpactmodulations.find_by_name('CritMod')
         self.assertIsNot(cm, None)
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         print svc.business_impact_modulations
         self.assertIn(cm, svc.business_impact_modulations)
 

@@ -55,7 +55,7 @@ from alignak_test import unittest, AlignakTest
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_notif_way.cfg')
+        self.setup_with_file(['etc/alignak_notif_way.cfg'])
 
     def test_contact_def(self):
         #

@@ -50,7 +50,7 @@ from alignak_test import *
 
 class TestBadServiceDependencies(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_servicedependencies.cfg')
+        self.setup_with_file(['etc/alignak_bad_servicedependencies.cfg'])
 
     def test_bad_conf(self):
         self.assertFalse(self.conf.conf_is_correct)

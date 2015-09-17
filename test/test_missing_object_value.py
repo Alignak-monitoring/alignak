@@ -53,7 +53,7 @@ from alignak_test import *
 class TestMissingObjectValue(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_missing_object_value.cfg')
+        self.setup_with_file(['etc/alignak_missing_object_value.cfg'])
 
     def test_missing_object_value(self):
         #
@@ -69,7 +69,7 @@ class TestMissingObjectValue(AlignakTest):
         router = self.conf.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # The service is mising a value for active_check_enabled, it's an error.

@@ -53,9 +53,6 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
-
     def test_dummy(self):
         #
         # Config is not correct because of a wrong relative path

@@ -26,7 +26,7 @@ from alignak_test import *
 class TestHostEmptyHg(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_host_empty_hg.cfg')
+        self.setup_with_file(['etc/alignak_host_empty_hg.cfg'])
 
 
     def test_host_empty_hg(self):

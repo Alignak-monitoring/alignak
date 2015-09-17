@@ -59,7 +59,7 @@ class TestMacroResolver(AlignakTest):
     # setUp is inherited from AlignakTest
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_macroresolver.cfg')
+        self.setup_with_file(['etc/alignak_macroresolver.cfg'])
                 
 
     def get_mr(self):

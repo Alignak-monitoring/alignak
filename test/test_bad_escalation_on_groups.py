@@ -53,7 +53,7 @@ from alignak_test import *
 class TestBadEscaOnGroups(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_escalation_on_groups.cfg')
+        self.setup_with_file(['etc/alignak_bad_escalation_on_groups.cfg'])
 
     def test_escalation_inheritance(self):
         #
@@ -62,13 +62,13 @@ class TestBadEscaOnGroups(AlignakTest):
         #
         print "Get the hosts and services"
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_badesc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_badesc", "test_ok_0_badesc")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         print svc.escalations

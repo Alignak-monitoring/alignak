@@ -53,7 +53,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_dot_virg_in_command.cfg')
+        self.setup_with_file(['etc/alignak_dot_virg_in_command.cfg'])
 
     def test_dummy(self):
         #
@@ -68,7 +68,7 @@ class TestConfig(AlignakTest):
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         print svc.event_handler.args

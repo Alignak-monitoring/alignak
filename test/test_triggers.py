@@ -53,7 +53,7 @@ from alignak.objects.trigger import Trigger
 
 class TestTriggers(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_triggers.cfg')
+        self.setup_with_file(['etc/alignak_triggers.cfg'])
 
     # Try to catch the perf_datas of self
     def test_function_perf(self):

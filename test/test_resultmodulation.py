@@ -53,16 +53,16 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_resultmodulation.cfg')
+        self.setup_with_file(['etc/alignak_resultmodulation.cfg'])
 
     def get_svc(self):
-        return self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        return self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_resmod")
 
     def get_host(self):
         return self.sched.hosts.find_by_name("test_host_0")
 
     def get_router(self):
-        return self.sched.hosts.find_by_name("test_router_0")
+        return self.sched.hosts.find_by_name("test_router_0_resmod")
 
     def test_service_resultmodulation(self):
         svc = self.get_svc()
@@ -84,8 +84,8 @@ class TestConfig(AlignakTest):
 
         # Now look for the inheritaed thing
         # resultmodulation is a inplicit inherited parameter
-        # and router define it, but not test_router_0/test_ok_0. So this service should also be impacted
-        svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_ok_0")
+        # and router define it, but not test_router_0_resmod/test_ok_0_resmod. So this service should also be impacted
+        svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0_resmod", "test_ok_0_resmod")
         self.assertEqual(router.resultmodulations, svc2.resultmodulations)
 
         self.scheduler_loop(2, [[svc2, 2, 'BAD | value1=0 value2=0']])

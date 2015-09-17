@@ -56,7 +56,7 @@ from alignak.macroresolver import MacroResolver
 class TestBusinesscorrelOutput(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator_output.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator_output.cfg'])
 
     def test_bprule_empty_output(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "empty_bp_rule_output")

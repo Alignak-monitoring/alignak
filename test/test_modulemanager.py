@@ -66,7 +66,7 @@ modules_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'mo
 
 class TestModuleManager(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
+        self.setup_with_file([])
         time_hacker.set_real_time()
 
     # Try to see if the module manager can manage modules

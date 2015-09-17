@@ -25,7 +25,7 @@ from alignak.brok import Brok
 
 class TestReversedList(AlignakTest):
     def setUp(self):
-        self.setup_with_file("etc/alignak_service_withhost_exclude.cfg")
+        self.setup_with_file(["etc/alignak_service_withhost_exclude.cfg"])
 
     def test_reversed_list(self):
         """ Test to ensure new conf is properly merge with different servicegroup definition
@@ -46,7 +46,7 @@ class TestReversedList(AlignakTest):
         reg.all_done_linking(0)
 
 
-        self.setup_with_file("etc/alignak_reversed_list.cfg")
+        self.setup_with_file(["etc/alignak_reversed_list.cfg"])
 
         reg.all_done_linking(0)
 

@@ -138,9 +138,9 @@ class Pluginconf(object):
 class AlignakTest(unittest.TestCase):
     time_hacker = TimeHacker()
     def setUp(self):
-        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
+        self.setup_with_file(['etc/alignak_1r_1h_1s.cfg'], add_default=False)
 
-    def setup_with_file(self, path):
+    def setup_with_file(self, paths, add_default=True):
         self.time_hacker.set_my_time()
         self.print_header()
         # i am arbiter-like
@@ -148,7 +148,9 @@ class AlignakTest(unittest.TestCase):
         self.me = None
         self.log = logger
         self.log.load_obj(self)
-        self.config_files = [path]
+        if add_default:
+            paths.insert(0, 'etc/alignak_1r_1h_1s.cfg')
+        self.config_files = paths
         self.conf = Config()
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)

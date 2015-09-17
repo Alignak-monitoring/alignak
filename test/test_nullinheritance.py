@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestNullInheritance(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_nullinheritance.cfg')
+        self.setup_with_file(['etc/alignak_nullinheritance.cfg'])
 
     # We search to see if null as value really delete the inheritance
     # of a property

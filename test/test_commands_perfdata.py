@@ -54,7 +54,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_commands_perfdata.cfg')
+        self.setup_with_file(['etc/alignak_commands_perfdata.cfg'])
 
     def test_service_perfdata_command(self):
         self.print_header()

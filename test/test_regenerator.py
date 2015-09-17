@@ -58,7 +58,7 @@ from alignak.misc.regenerator import Regenerator
 
 class TestRegenerator(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_regenerator.cfg')
+        self.setup_with_file(['etc/alignak_regenerator.cfg'])
 
     def look_for_same_values(self):
         # Look at Regenerator values

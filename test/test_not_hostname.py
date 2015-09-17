@@ -56,7 +56,7 @@ from alignak_test import unittest, AlignakTest
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_not_hostname.cfg')
+        self.setup_with_file(['etc/alignak_not_hostname.cfg'])
 
     def test_not_hostname_in_service(self):
         # The service is apply with a host_group on "test_host_0","test_host_1"

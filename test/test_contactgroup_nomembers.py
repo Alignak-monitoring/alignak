@@ -53,7 +53,7 @@ from alignak_test import *
 class TestContactgroupWitoutMembers(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_contactgroup_nomembers.cfg')
+        self.setup_with_file(['etc/alignak_contactgroup_nomembers.cfg'])
 
     # It seems that a contact group with no member cause some crash for the arbiter.
     # should fix it :)

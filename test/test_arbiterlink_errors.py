@@ -50,9 +50,6 @@ from alignak_test import *
 
 class TestArbiterError(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
-
     def test_arbiter_error(self):
         arbiterlink = self.conf.arbiters.find_by_name('Default-Arbiter')
         self.assertListEqual(arbiterlink.configuration_errors, [])

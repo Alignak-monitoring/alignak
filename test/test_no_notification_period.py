@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNoNotificationPeriod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_no_notification_period.cfg')
+        self.setup_with_file(['etc/alignak_no_notification_period.cfg'])
 
     # no notification period should do a 24x7 like period
     # so a None, but always valid in create_notification

@@ -55,7 +55,7 @@ class TestDisableActiveChecks(AlignakTest):
     # Uncomment this is you want to use a specific configuration
     # for your test
     #def setUp(self):
-    #    self.setup_with_file('etc/alignak_disable_active_checks.cfg')
+    #    self.setup_with_file(['etc/alignak_disable_active_checks.cfg'])
 
 
     # We try to disable the actie checks and see if it's really done

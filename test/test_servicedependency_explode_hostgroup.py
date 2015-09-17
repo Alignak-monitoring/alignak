@@ -53,7 +53,7 @@ class TestServiceDepAndGroups(AlignakTest):
     #Uncomment this is you want to use a specific configuration
     #for your test
     def setUp(self):
-        self.setup_with_file('etc/alignak_servicedependency_explode_hostgroup.cfg')
+        self.setup_with_file(['etc/alignak_servicedependency_explode_hostgroup.cfg'])
 
 
     #Change ME :)

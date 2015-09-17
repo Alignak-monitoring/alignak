@@ -49,7 +49,7 @@ from alignak_test import *
 
 class TestBadServiceInterval(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_service_interval.cfg')
+        self.setup_with_file(['etc/alignak_bad_service_interval.cfg'])
 
     def test_bad_conf(self):
         self.assertFalse(self.conf.conf_is_correct)

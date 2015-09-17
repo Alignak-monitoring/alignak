@@ -56,7 +56,7 @@ from alignak_test import *
 class TestBusinesscorrel(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator.cfg'])
 
     # We will try a simple bd1 OR db2
     def test_simple_or_business_correlator(self):
@@ -1536,7 +1536,7 @@ class TestConfigBroken(AlignakTest):
     """A class with a broken configuration, where business rules reference unknown hosts/services"""
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator_broken.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator_broken.cfg'])
 
 
     def test_conf_is_correct(self):
@@ -1557,7 +1557,7 @@ class TestConfigBroken(AlignakTest):
         # Error: [items] In Simple_1Of_1unk_svc is incorrect ; from etc/business_correlator_broken/services.cfg
         self.assertEqual(3, len([log for log in logs if re.search('Simple_1Of_1unk_svc', log)]) )
         self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/db3', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_svc.+from etc.+business_correlator_broken.+services.cfg', log)]) )
+        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_svc.+from etc.+business_correlator_broken.cfg', log)]) )
         # Info: ERP_unk_svc: my business rule is invalid
         # Info: ERP_unk_svc: Business rule uses unknown service test_host_0/web100
         # Info: ERP_unk_svc: Business rule uses unknown service test_host_0/lvs100
@@ -1565,13 +1565,13 @@ class TestConfigBroken(AlignakTest):
         self.assertEqual(4, len([log for log in logs if re.search('ERP_unk_svc', log)]) )
         self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/web100', log)]) )
         self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/lvs100', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('ERP_unk_svc.+from etc.+business_correlator_broken.+services.cfg', log)]) )
+        self.assertEqual(1, len([log for log in logs if re.search('ERP_unk_svc.+from etc.+business_correlator_broken.cfg', log)]) )
         # Info: Simple_1Of_1unk_host: my business rule is invalid
         # Info: Simple_1Of_1unk_host: Business rule uses unknown host test_host_9
         # Error: [items] In Simple_1Of_1unk_host is incorrect ; from etc/business_correlator_broken/services.cfg
         self.assertEqual(3, len([log for log in logs if re.search('Simple_1Of_1unk_host', log)]) )
         self.assertEqual(1, len([log for log in logs if re.search('host test_host_9', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_host.+from etc.+business_correlator_broken.+services.cfg', log)]) )
+        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_host.+from etc.+business_correlator_broken.cfg', log)]) )
 
         # Now the number of all failed business rules.
         self.assertEqual(3, len([log for log in logs if re.search('my business rule is invalid', log)]) )

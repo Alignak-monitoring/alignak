@@ -62,7 +62,7 @@ from alignak.objects.host import Host
 class TestFreshness(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_freshness.cfg')
+        self.setup_with_file(['etc/alignak_freshness.cfg'])
 
     # Check if the check_freshnes is doing it's job
     def test_check_freshness(self):
@@ -70,7 +70,7 @@ class TestFreshness(AlignakTest):
         # We want an eventhandelr (the perfdata command) to be put in the actions dict
         # after we got a service check
         now = time.time()
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 

@@ -51,7 +51,7 @@ from alignak_test import *
 class TestNonStrippedList(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_non_stripped_list.cfg')
+        self.setup_with_file(['etc/alignak_non_stripped_list.cfg'])
 
     def test_dummy(self):
         now = time.time()

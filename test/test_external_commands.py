@@ -61,7 +61,7 @@ class TestConfig(AlignakTest):
     # setUp is inherited from AlignakTest
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_external_commands.cfg')
+        self.setup_with_file(['etc/alignak_external_commands.cfg'])
         time_hacker.set_real_time()
 
     def send_cmd(self, line):

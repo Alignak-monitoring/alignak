@@ -52,7 +52,7 @@ from alignak_test import *
 class TestHostGroupWithSpace(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_hostgroup_with_space.cfg')
+        self.setup_with_file(['etc/alignak_hostgroup_with_space.cfg'])
 
 
     def test_hostgroup_with_space(self):

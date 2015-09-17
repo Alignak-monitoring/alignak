@@ -141,7 +141,7 @@ class BadBroker(BrokerLink):
 
 class TestPassivePoller(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_passive_pollers.cfg')
+        self.setup_with_file(['etc/alignak_passive_pollers.cfg'])
 
     def test_simple_passive_pollers(self):
         print "The dispatcher", self.dispatcher

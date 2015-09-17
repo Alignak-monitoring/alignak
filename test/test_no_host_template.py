@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNoHostTemplate(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_no_host_template.cfg')
+        self.setup_with_file(['etc/alignak_no_host_template.cfg'])
 
     def test_host_without_a_template(self):
         #

@@ -53,10 +53,10 @@ from alignak_test import *
 class TestLinkifyTemplate(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_linkify_template.cfg')
+        self.setup_with_file(['etc/alignak_linkify_template.cfg'])
 
     def test_linkify_template(self):
-        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         b = svc.is_correct()
         self.assertFalse(b)
 

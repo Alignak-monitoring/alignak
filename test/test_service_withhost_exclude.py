@@ -52,7 +52,7 @@ from alignak_test import *
 
 class Testservice_withhost_exclude(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_withhost_exclude.cfg')
+        self.setup_with_file(['etc/alignak_service_withhost_exclude.cfg'])
 
     def test_service_withhost_exclude(self):
         #

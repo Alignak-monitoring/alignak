@@ -54,7 +54,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_timeperiod_inheritance.cfg')
+        self.setup_with_file(['etc/alignak_timeperiod_inheritance.cfg'])
 
     def test_dummy(self):
         #
@@ -63,7 +63,7 @@ class TestConfig(AlignakTest):
         #
         print "Get the Timeperiods"
         now = time.time()
-        tp = self.sched.timeperiods.find_by_name("24x7")
+        tp = self.sched.timeperiods.find_by_name("24x77")
         print "TP", tp.__dict__
 
         # sunday should be inherited from templates

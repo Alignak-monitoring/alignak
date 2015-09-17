@@ -52,18 +52,18 @@ from alignak_test import *
 
 class TestSrvTplOnHostTpl(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_tpl_on_host_tpl.cfg')
+        self.setup_with_file(['etc/alignak_service_tpl_on_host_tpl.cfg'])
 
     # Look is a service template apply on a host one will
     # make hosts that inherit from it got such service
     def test_service_tpl_on_host_tpl(self):
         # In fact the whole thing will be to have the service defined :)
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_thp")
         print "All the test_host_0 services"
         for s in host.services:
             print s.get_dbg_name()
 
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Service_Template_Description")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_thp", "Service_Template_Description")
         self.assertIsNot(svc, None)
 
     # And look for multy layer template too. Like a service is apply on

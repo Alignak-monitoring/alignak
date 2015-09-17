@@ -56,7 +56,7 @@ sys.setcheckinterval(10000)
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_dependencies.cfg')
+        self.setup_with_file(['etc/alignak_dependencies.cfg'])
 
     def test_service_dependencies(self):
         self.print_header()

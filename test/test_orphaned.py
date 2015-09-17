@@ -51,10 +51,6 @@ from alignak_test import *
 
 
 class TestOrphaned(AlignakTest):
-    # Uncomment this is you want to use a specific configuration
-    # for your test
-    #def setUp(self):
-    #    self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
 
     def test_orphaned(self):
         #

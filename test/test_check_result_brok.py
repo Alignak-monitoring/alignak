@@ -30,7 +30,7 @@ class Test_CheckResult_Brok(AlignakTest):
     expected_svc_command_name = 'check_service'
 
     def setUp(self):
-        self.setup_with_file(self.cfg_file)
+        self.setup_with_file([self.cfg_file])
 
     def test_host_check_result_brok_has_command_name(self):
         host = self.sched.hosts.find_by_name('test_host_0')
@@ -53,3 +53,6 @@ class Test_CheckResult_Brok_Host_No_command(Test_CheckResult_Brok):
     cfg_file = 'etc/alignak_host_without_cmd.cfg'
 
     expected_host_command_name = "_internal_host_up"
+
+if __name__ == "__main__":
+    unittest.main()

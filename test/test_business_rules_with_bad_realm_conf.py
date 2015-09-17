@@ -54,7 +54,7 @@ from alignak_test import *
 class TestBusinessRulesBadRealmConf(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_rules_bad_realm_conf.cfg')
+        self.setup_with_file(['etc/alignak_business_rules_bad_realm_conf.cfg'])
 
     def test_bad_conf(self):
         self.assertFalse(self.conf.conf_is_correct)

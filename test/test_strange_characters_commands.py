@@ -55,7 +55,7 @@ from alignak_test import *
 
 class TestStrangeCaracterInCommands(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_strange_characters_commands.cfg')
+        self.setup_with_file(['etc/alignak_strange_characters_commands.cfg'])
         time_hacker.set_real_time()
 
     # Try to call check dummy with very strange caracters and co, see if it run or
@@ -75,7 +75,7 @@ class TestStrangeCaracterInCommands(AlignakTest):
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_strange")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         #self.scheduler_loop(2, [[host, 0, 'UP | value1=1 value2=2'], [router, 0, 'UP | rtt=10'], [svc, 2, 'BAD | value1=0 value2=0']])
