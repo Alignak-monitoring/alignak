@@ -53,7 +53,7 @@ from alignak_test import *
 class TestHostspecialSched(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_nohostsched.cfg')
+        self.setup_with_file(['etc/alignak_nohostsched.cfg'])
 
     # The hosts can have no check_period nor check_interval.
     # It's valid, and say: 24x7 and 5min interval in fact.

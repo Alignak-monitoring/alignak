@@ -53,7 +53,7 @@ from alignak_test import *
 class TestSrvOnMissingTemplate(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_on_missing_template.cfg')
+        self.setup_with_file(['etc/alignak_service_on_missing_template.cfg'])
 
     def test_missing_template(self):
         #

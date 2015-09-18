@@ -54,7 +54,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_timeperiods.cfg')
+        self.setup_with_file(['etc/alignak_bad_timeperiods.cfg'])
 
     def test_bad_timeperiod(self):
         print "Get the bad timeperiod"

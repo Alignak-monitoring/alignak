@@ -52,7 +52,7 @@ from alignak_test import *
 class TestMacroModulations(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_macromodulations.cfg')
+        self.setup_with_file(['etc/alignak_macromodulations.cfg'])
 
     def test_dummy(self):
         #

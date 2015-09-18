@@ -50,7 +50,7 @@ from alignak_test import *
 class TestInheritanceAndPlus(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_inheritance_and_plus.cfg')
+        self.setup_with_file(['etc/alignak_inheritance_and_plus.cfg'])
 
     def test_inheritance_and_plus(self):
         #

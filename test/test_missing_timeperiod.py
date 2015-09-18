@@ -52,7 +52,7 @@ from alignak_test import *
 class TestMissingTimeperiod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_missing_timeperiod.cfg')
+        self.setup_with_file(['etc/alignak_missing_timeperiod.cfg'])
 
     def test_dummy(self):
         self.assertFalse(self.conf.conf_is_correct)

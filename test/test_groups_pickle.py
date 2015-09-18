@@ -50,7 +50,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_groups_pickle.cfg')
+        self.setup_with_file(['etc/alignak_groups_pickle.cfg'])
 
     def test_dispatch(self):
         

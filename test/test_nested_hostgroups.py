@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNestedHostgroups(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_nested_hostgroups.cfg')
+        self.setup_with_file(['etc/alignak_nested_hostgroups.cfg'])
 
     # We got the service "NestedService" apply in High level
     # group. And this one got a sub group, low one. each got ONE

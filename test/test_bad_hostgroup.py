@@ -51,7 +51,7 @@ from alignak_test import *
 class TestBadHostGroupConf(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_hg_conf.cfg')
+        self.setup_with_file(['etc/alignak_bad_hg_conf.cfg'])
 
     def test_bad_conf(self):
         self.assertFalse(self.conf.conf_is_correct)

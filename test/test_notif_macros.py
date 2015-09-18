@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNotifMacros(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_notif_macros.cfg')
+        self.setup_with_file(['etc/alignak_notif_macros.cfg'])
 
     def test_notif_macro(self):
         #

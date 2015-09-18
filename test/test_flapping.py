@@ -54,7 +54,7 @@ from alignak_test import *
 class TestFlapping(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_flapping.cfg')
+        self.setup_with_file(['etc/alignak_flapping.cfg'])
 
     def test_flapping(self):
         #

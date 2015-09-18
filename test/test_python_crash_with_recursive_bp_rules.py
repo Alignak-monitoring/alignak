@@ -51,7 +51,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_python_crash_with_recursive_bp_rules.cfg')
+        self.setup_with_file(['etc/alignak_python_crash_with_recursive_bp_rules.cfg'])
 
     def test_dummy(self):
         #

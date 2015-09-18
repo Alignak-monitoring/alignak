@@ -53,7 +53,7 @@ from alignak_test import *
 class TestWarnAboutNoBrokerInRealm(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_no_broker_in_realm_warning.cfg')
+        self.setup_with_file(['etc/alignak_no_broker_in_realm_warning.cfg'])
 
     def test_no_broker_in_realm_warning(self):
         dist = self.conf.realms.find_by_name("Distant")

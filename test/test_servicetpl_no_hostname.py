@@ -50,7 +50,7 @@ from alignak_test import *
 class TestsericeTplNoHostname(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_servicetpl_no_hostname.cfg')
+        self.setup_with_file(['etc/alignak_servicetpl_no_hostname.cfg'])
 
     def test_dummy(self):
         #

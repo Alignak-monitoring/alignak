@@ -64,7 +64,7 @@ PROFILE_BP_RULE_RE_PROCESSING = False
 class TestBusinesscorrelExpand(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator_expand_expression.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator_expand_expression.cfg'])
 
     def test_hostgroup_expansion_bprule_simple_host_srv(self):
         for name in ("bprule_00", "bprule_01", "bprule_02", "bprule_03", "bprule_04", "bprule_05", "bprule_06"):
@@ -449,7 +449,7 @@ class TestBusinesscorrelExpand(AlignakTest):
 class TestConfigBroken(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_business_correlator_expand_expression_broken.cfg')
+        self.setup_with_file(['etc/alignak_business_correlator_expand_expression_broken.cfg'])
 
     def test_hostgroup_expansion_errors(self):
         self.assertFalse(self.conf.conf_is_correct)

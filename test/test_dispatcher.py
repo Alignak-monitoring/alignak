@@ -141,7 +141,7 @@ class BadBroker(BrokerLink):
 class TestDispatcher(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_dispatcher.cfg')
+        self.setup_with_file(['etc/alignak_dispatcher.cfg'])
 
     def test_simple_dispatch(self):
         for r in self.conf.realms:
@@ -342,7 +342,7 @@ class TestDispatcher(AlignakTest):
 class TestDispatcherMultiBroker(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_dispatcher_multibrokers.cfg')
+        self.setup_with_file(['etc/alignak_dispatcher_multibrokers.cfg'])
 
     def test_simple_dispatch(self):
         print "The dispatcher", self.dispatcher

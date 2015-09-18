@@ -54,14 +54,14 @@ from alignak.objects.serviceescalation import Serviceescalation
 class TestEscalations(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_escalations.cfg')
+        self.setup_with_file(['etc/alignak_escalations.cfg'])
         time_hacker.set_real_time()
 
     def test_wildcard_in_service_descrption(self):
         self.print_header()
         sid = int(Serviceescalation._id) - 1
         generated = self.sched.conf.escalations.find_by_name('Generated-Serviceescalation-%d' % sid)
-        for svc in self.sched.services.find_srvs_by_hostname("test_host_0"):
+        for svc in self.sched.services.find_srvs_by_hostname("test_host_0_esc"):
             self.assertIn(generated, svc.escalations)
 
     def test_simple_escalation(self):
@@ -70,10 +70,10 @@ class TestEscalations(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_00")
 
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
@@ -186,10 +186,10 @@ class TestEscalations(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_time")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time")
 
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
@@ -320,10 +320,10 @@ class TestEscalations(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_time")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time")
 
         # To make tests quicker we make notifications send very quickly
         # 1 day notification interval
@@ -475,10 +475,10 @@ class TestEscalations(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = [] # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_time_long_notif_interval")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time_long_notif_interval")
         # For this specific test, notif interval will be something like 10s
         #svc.notification_interval = 0.1
 

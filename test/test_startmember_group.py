@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestStarMemberGroup(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_startmember_group.cfg')
+        self.setup_with_file(['etc/alignak_startmember_group.cfg'])
 
     # Check if service apply on a hostgroup * is good or not
     def test_starmembergroupdef(self):

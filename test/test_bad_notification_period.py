@@ -53,7 +53,7 @@ from alignak_test import *
 class TestBadNotificationPeriod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_notification_period.cfg')
+        self.setup_with_file(['etc/alignak_bad_notification_period.cfg'])
 
     # if a notif period is bad, should be catched!
     def test_bad_notification_period(self):

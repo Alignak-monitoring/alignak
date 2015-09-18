@@ -53,7 +53,7 @@ from alignak_test import *
 class TestGroupwithNoAlias(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_groups_with_no_alias.cfg')
+        self.setup_with_file(['etc/alignak_groups_with_no_alias.cfg'])
 
     def test_look_for_alias(self):
         #

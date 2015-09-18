@@ -50,7 +50,7 @@ from alignak_test import *
 class TestNoCheckPeriod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_no_check_period.cfg')
+        self.setup_with_file(['etc/alignak_no_check_period.cfg'])
 
     def test_no_check_period(self):
         self.assertTrue(self.conf.conf_is_correct)

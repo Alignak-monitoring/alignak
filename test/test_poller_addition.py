@@ -148,7 +148,7 @@ class BadBroker(BrokerLink):
 
 class TestPollerAddition(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_dispatcher.cfg')
+        self.setup_with_file(['etc/alignak_dispatcher.cfg'])
 
     def test_simple_dispatch_and_addition(self):
         print "The dispatcher", self.dispatcher

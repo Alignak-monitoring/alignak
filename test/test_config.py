@@ -54,7 +54,7 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_broken_1.cfg')
+        self.setup_with_file(['etc/alignak_broken_1.cfg'])
 
     def test_conf_is_correct(self):
         #

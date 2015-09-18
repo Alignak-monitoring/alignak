@@ -52,7 +52,7 @@ from alignak_test import *
 class TestCheckModulations(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_checkmodulations.cfg')
+        self.setup_with_file(['etc/alignak_checkmodulations.cfg'])
 
     def test_dummy(self):
         #

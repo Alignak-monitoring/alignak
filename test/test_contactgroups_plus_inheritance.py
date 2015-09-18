@@ -54,7 +54,7 @@ from alignak_test import *
 class TestPlusInInheritance(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_contactgroups_plus_inheritance.cfg')
+        self.setup_with_file(['etc/alignak_contactgroups_plus_inheritance.cfg'])
 
     def _dump(self, h):
         print "Dumping host", h.get_name()

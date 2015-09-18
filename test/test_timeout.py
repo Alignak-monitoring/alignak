@@ -63,14 +63,14 @@ modconf = Module()
 class TestTimeout(AlignakTest):
     def setUp(self):
         # we have an external process, so we must un-fake time functions
-        self.setup_with_file('etc/alignak_check_timeout.cfg')
+        self.setup_with_file(['etc/alignak_check_timeout.cfg'])
         time_hacker.set_real_time()
 
     def test_notification_timeout(self):
         if os.name == 'nt':
             return
 
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_timeout")
 
         # These queues connect a poller/reactionner with a worker
         to_queue = Queue()
@@ -148,7 +148,7 @@ class TestTimeout(AlignakTest):
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_timeout")
         print svc.checks_in_progress
         cs = svc.checks_in_progress
         self.assertEqual(1, len(cs))

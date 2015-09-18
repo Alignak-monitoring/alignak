@@ -62,7 +62,7 @@ class TestMissingimportedFrom(AlignakTest):
 
     def setUp(self):
         #logger.setLevel('DEBUG')
-        self.setup_with_file('etc/alignak_missing_imported_from_module_property.cfg')
+        self.setup_with_file(['etc/alignak_missing_imported_from_module_property.cfg'])
 
     # we are loading a module (dummy_arbiter) that is givving objects WITHOUT
     # setting imported_from. One host got a warning, and this can crash without the imported_from setting

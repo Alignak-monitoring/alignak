@@ -55,7 +55,7 @@ from alignak_test import *
 
 class TestProblemImpact(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_problem_impact.cfg')
+        self.setup_with_file(['etc/alignak_problem_impact.cfg'])
 
     def test_problems_impacts(self):
         self.print_header()

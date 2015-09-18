@@ -53,27 +53,27 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_generators.cfg')
+        self.setup_with_file(['etc/alignak_service_generators.cfg'])
 
     def test_service_generators(self):
 
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_gen")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "test_ok_0")
 
-        print "All service of", "test_host_0"
+        print "All service of", "test_host_0_gen"
         for s in host.services:
             print s.get_name()
         # We ask for 4 services with our disks :)
-        svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service C")
-        svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service D")
-        svc_e = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service E")
-        svc_f = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service F")
-        svc_g = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service G")
+        svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service C")
+        svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service D")
+        svc_e = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service E")
+        svc_f = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service F")
+        svc_g = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service G")
 
         self.assertIsNot(svc_c, None)
         self.assertIsNot(svc_d, None)
@@ -93,7 +93,7 @@ class TestConfig(AlignakTest):
 
 
         # Now check that the dependencies are also created as Generated Service C Dependant -> Generated Service C
-        svc_c_dep = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service C Dependant")
+        svc_c_dep = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service C Dependant")
         self.assertIsNot(svc_c_dep, None)
         # Dep version should a child of svc
         self.assertIn(svc_c_dep, svc_c.child_dependencies)
@@ -103,23 +103,23 @@ class TestConfig(AlignakTest):
         
 
     def test_service_generators_not(self):
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_0_gen")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         router = self.sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "test_ok_0")
 
-        print "All service of", "test_host_0"
+        print "All service of", "test_host_0_gen"
         for s in host.services:
             print s.get_name()
         # We ask for 4 services with our disks :)
-        svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service NOT C")
-        svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service NOT D")
-        svc_e = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service NOT E")
-        svc_f = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service NOT F")
-        svc_g = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Generated Service NOT G")
+        svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT C")
+        svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT D")
+        svc_e = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT E")
+        svc_f = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT F")
+        svc_g = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT G")
 
         self.assertIsNot(svc_c, None)
         self.assertIsNot(svc_d, None)

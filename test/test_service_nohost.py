@@ -53,7 +53,7 @@ from alignak_test import *
 
 class TestServiceNoHost(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_nohost.cfg')
+        self.setup_with_file(['etc/alignak_service_nohost.cfg'])
 
     def test_service_with_no_host(self):
         # A service that has no host to be linked to should raise on error.

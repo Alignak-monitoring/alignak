@@ -53,7 +53,7 @@ from alignak_test import *
 class TestNoHostCheck(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_not_execute_host_check.cfg')
+        self.setup_with_file(['etc/alignak_not_execute_host_check.cfg'])
 
     # We must look taht host checks are disable, and services ones are running
     def test_no_host_check(self):

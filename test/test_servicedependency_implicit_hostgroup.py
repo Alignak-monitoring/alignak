@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestServiceDepAndGroups(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_servicedependency_implicit_hostgroup.cfg')
+        self.setup_with_file(['etc/alignak_servicedependency_implicit_hostgroup.cfg'])
 
     def test_implicithostgroups(self):
         #

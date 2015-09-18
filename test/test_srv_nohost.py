@@ -51,8 +51,6 @@ from alignak_test import *
 
 
 class TestServiceWhitNoHost(AlignakTest):
-    def setUp(self):
-        self.setup_with_file('etc/alignak_srv_nohost.cfg')
 
     # Nagios allow service with no host to exist, it will just drop them
     def test_ServiceWhitNoHost(self):

@@ -53,7 +53,7 @@ from alignak_test import *
 class TestHostDepWithNodepname(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_hostdep_withno_depname.cfg')
+        self.setup_with_file(['etc/alignak_hostdep_withno_depname.cfg'])
 
     def test_hostdep_withno_depname(self):
         #

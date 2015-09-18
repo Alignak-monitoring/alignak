@@ -53,13 +53,13 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_template_inheritance.cfg')
+        self.setup_with_file(['etc/alignak_service_template_inheritance.cfg'])
 
     def test_action_url(self):
         # base-service-prod,no-graph
-        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_inh")
         # no-graph,base-service-prod
-        svc2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_1")
+        svc2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_1_inh")
         self.assertTrue(svc1.action_url.startswith("/"))
         self.assertEqual(True, svc1.process_perf_data)
         self.assertFalse(svc2.action_url)

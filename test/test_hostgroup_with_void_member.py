@@ -51,7 +51,7 @@ from alignak_test import *
 class TestHostgroupAndContactGroupWithVoidMember(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_hostgroup_with_void_member.cfg')
+        self.setup_with_file(['etc/alignak_hostgroup_with_void_member.cfg'])
 
     def test_me(self):
         self.assertTrue(self.sched.conf.is_correct)

@@ -52,7 +52,7 @@ from alignak_test import *
 class TestUnknownEventHandler(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_uknown_event_handler.cfg')
+        self.setup_with_file(['etc/alignak_uknown_event_handler.cfg'])
 
     def test_dummy(self):
         self.assertFalse(self.conf.conf_is_correct)

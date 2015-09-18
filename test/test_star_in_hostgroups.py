@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestStarInGroups(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_star_in_hostgroups.cfg')
+        self.setup_with_file(['etc/alignak_star_in_hostgroups.cfg'])
 
     # If we reach a good start, we are ok :)
     # the bug was that an * hostgroup expand get all host_name != ''

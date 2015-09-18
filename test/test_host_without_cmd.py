@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestConfig(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_host_without_cmd.cfg')
+        self.setup_with_file(['etc/alignak_host_without_cmd.cfg'])
 
     def test_host_is_down(self):
         self.print_header()

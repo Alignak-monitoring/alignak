@@ -25,7 +25,7 @@ from alignak_test import *
 
 class TestConfigService(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/service_config_all.cfg')
+        self.setup_with_file(['etc/service_config_all.cfg'])
 
     def test_initial_state_warning(self):
         cg = self.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_0')

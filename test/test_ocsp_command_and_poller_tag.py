@@ -50,7 +50,7 @@ from alignak_test import *
 class TestOCSPwithPollerTag(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_ocsp_command_and_poller_tag.cfg')
+        self.setup_with_file(['etc/alignak_ocsp_command_and_poller_tag.cfg'])
 
     def test_ocsp_with_poller_tag(self):
         host = self.sched.hosts.find_by_name("mysuperhost")

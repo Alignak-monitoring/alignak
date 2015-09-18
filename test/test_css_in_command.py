@@ -53,7 +53,7 @@ from alignak_test import *
 class TestCssInCommands(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_css_in_command.cfg')
+        self.setup_with_file(['etc/alignak_css_in_command.cfg'])
 
     def test_dummy(self):
         r = self.conf.conf_is_correct

@@ -54,9 +54,6 @@ from alignak.log import logger
 
 class TestConfig(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file('etc/alignak_1r_1h_1s.cfg')
-
     # Try to raise an utf8 log message
     def test_utf8log(self):
         sutf = 'h\351h\351'  # Latin Small Letter E with acute in Latin-1

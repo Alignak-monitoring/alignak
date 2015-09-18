@@ -53,7 +53,7 @@ from alignak_test import *
 class TestCustomsonservicehosgroups(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_customs_on_service_hosgroups.cfg')
+        self.setup_with_file(['etc/alignak_customs_on_service_hosgroups.cfg'])
 
     # We look for 3 services: on defined as direct on 1 hosts, on other
     # on 2 hsots, and a last one on a hostgroup

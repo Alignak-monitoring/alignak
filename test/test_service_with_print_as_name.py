@@ -52,7 +52,7 @@ from alignak_test import *
 
 class TestServiceWithPrintName(AlignakTest):
     def setUp(self):
-        self.setup_with_file('etc/alignak_service_with_print_as_name.cfg')
+        self.setup_with_file(['etc/alignak_service_with_print_as_name.cfg'])
 
     def test_service_with_print_as_name(self):
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "print")

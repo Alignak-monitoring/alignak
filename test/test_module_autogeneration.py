@@ -50,9 +50,6 @@ from alignak_test import *
 
 class TestModuleAutogeneration(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file('etc/alignak_module_autogeneration.cfg')
-
     def test_module_autogeneration(self):
         arbiterlink = self.conf.arbiters.find_by_name('Default-Arbiter')
         modules = [m.module_name for m in arbiterlink.modules]

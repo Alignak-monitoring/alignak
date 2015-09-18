@@ -54,7 +54,7 @@ from alignak_test import unittest, AlignakTest
 class TestPropertyOverride(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/exclude_include_services.cfg')
+        self.setup_with_file(['etc/exclude_include_services.cfg'])
 
     def test_exclude_services(self):
         hst1 = self.sched.hosts.find_by_name("test_host_01")

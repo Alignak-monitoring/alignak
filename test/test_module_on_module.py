@@ -53,7 +53,7 @@ from alignak_test import *
 class TestModuleOnModule(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_module_on_module.cfg')
+        self.setup_with_file(['etc/alignak_module_on_module.cfg'])
 
     def test_module_on_module(self):
         #
@@ -62,7 +62,7 @@ class TestModuleOnModule(AlignakTest):
         #
         print "Get the hosts and services"
         now = time.time()
-        mod1 = self.sched.conf.modules.find_by_name("Simple-log")
+        mod1 = self.sched.conf.modules.find_by_name("Simple-log2")
         self.assertIsNot(mod1, None)
         print "Got module", mod1.get_name()
         mod_sub = self.sched.conf.modules.find_by_name("ToNdodb_Mysql")

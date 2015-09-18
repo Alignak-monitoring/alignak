@@ -54,7 +54,7 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_obsess.cfg')
+        self.setup_with_file(['etc/alignak_obsess.cfg'])
 
     def test_ocsp(self):
         self.print_header()
@@ -62,10 +62,10 @@ class TestConfig(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_00")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         #--------------------------------------------------------------
@@ -79,7 +79,7 @@ class TestConfig(AlignakTest):
         self.assertEqual(1, self.count_actions())
 
         now = time.time()
-        cmd = "[%lu] STOP_OBSESSING_OVER_SVC;test_host_0;test_ok_0" % now
+        cmd = "[%lu] STOP_OBSESSING_OVER_SVC;test_host_00;test_ok_00" % now
         self.sched.run_external_command(cmd)
         self.sched.get_new_actions()
         self.worker_loop()
@@ -92,7 +92,7 @@ class TestConfig(AlignakTest):
         self.assertEqual(0, self.count_actions())
 
         now = time.time()
-        cmd = "[%lu] START_OBSESSING_OVER_SVC;test_host_0;test_ok_0" % now
+        cmd = "[%lu] START_OBSESSING_OVER_SVC;test_host_00;test_ok_00" % now
         self.sched.run_external_command(cmd)
         self.sched.get_new_actions()
         self.worker_loop()
@@ -126,7 +126,7 @@ class TestConfig(AlignakTest):
         # critical notification
         # run loop -> another notification
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         router = self.sched.hosts.find_by_name("test_router_0")

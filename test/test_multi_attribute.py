@@ -55,7 +55,7 @@ from alignak_test import unittest, AlignakTest
 class TestMultiVuledAttributes(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_multi_attribute.cfg')
+        self.setup_with_file(['etc/alignak_multi_attribute.cfg'])
 
     def test_multi_valued_attributes(self):
         hst1 = self.sched.hosts.find_by_name("test_host_01")

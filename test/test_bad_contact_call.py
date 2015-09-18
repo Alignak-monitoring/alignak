@@ -54,11 +54,11 @@ from alignak_test import *
 class TestConfig(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file('etc/alignak_bad_contact_call.cfg')
+        self.setup_with_file(['etc/alignak_bad_contact_call.cfg'])
 
     def test_bad_contact_call(self):
         # The service got a unknow contact. It should raise an error
-        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_badcon")
         print "Contacts:", svc.contacts
         self.assertEqual(False, svc.is_correct())
 
