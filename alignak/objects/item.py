@@ -61,6 +61,7 @@ elements like service, hosts or contacts.
 """
 import time
 import itertools
+import warnings
 
 from copy import copy
 
@@ -182,6 +183,27 @@ class Item(object):
             else:
                 setattr(self, key, val)
 
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Getter for id, raise deprecation warning
+
+        :return: self._id
+        """
+        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        return self._id
+
+    @id.setter
+    def id(self, value):  # pylint: disable=C0103
+        """Setter for id, raise deprecation warning
+
+        :param value: value to set
+        :return: None
+        """
+        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        self._id = value
+
     def compact_unique_attr_value(self, val):
         """
         Get value of first element of list if val is a list
@@ -261,15 +283,6 @@ class Item(object):
         :rtype: str
         """
         return getattr(self, 'name', "unknown")
-
-    def get_id(self):
-        """
-        Get the id of the item
-
-        :return: the object id
-        :rtype: int
-        """
-        return self._id
 
     def __str__(self):
         cls_name = self.__class__.__name__

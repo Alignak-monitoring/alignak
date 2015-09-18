@@ -47,6 +47,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
+import warnings
 
 
 class Comment:
@@ -135,14 +136,26 @@ class Comment:
     def __str__(self):
         return "Comment id=%d %s" % (self._id, self.comment)
 
-    def get_id(self):
-        """
-        Get the id of the item
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Getter for id, raise deprecation warning
 
-        :return: the object id
-        :rtype: int
+        :return: self._id
         """
+        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
         return self._id
+
+    @id.setter
+    def id(self, value):  # pylint: disable=C0103
+        """Setter for id, raise deprecation warning
+
+        :param value: value to set
+        :return: None
+        """
+        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        self._id = value
 
     def __getstate__(self):
         """Call by pickle to dataify the comment
