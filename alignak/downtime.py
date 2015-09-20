@@ -53,6 +53,7 @@ See detailed concepts below
 """
 import datetime
 import time
+import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.brok import Brok
@@ -143,14 +144,26 @@ class Downtime:
         return "%s %s Downtime id=%d %s - %s" % (
             active, d_type, self._id, time.ctime(self.start_time), time.ctime(self.end_time))
 
-    def get_id(self):
-        """
-        Get the id of the item
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Getter for id, raise deprecation warning
 
-        :return: the object id
-        :rtype: int
+        :return: self._id
         """
+        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
         return self._id
+
+    @id.setter
+    def id(self, value):  # pylint: disable=C0103
+        """Setter for id, raise deprecation warning
+
+        :param value: value to set
+        :return: None
+        """
+        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        self._id = value
 
     def trigger_me(self, other_downtime):
         """Wrapper to activate_me.append function
