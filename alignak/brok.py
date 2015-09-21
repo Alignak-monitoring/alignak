@@ -50,6 +50,7 @@ Brok are filled depending on their type (check_result, initial_state ...)
 
 """
 import cPickle
+import warnings
 try:
     import ujson
     UJSON_INSTALLED = True
@@ -77,6 +78,25 @@ class Brok:
 
     def __str__(self):
         return str(self.__dict__) + '\n'
+
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Getter for id, raise deprecation warning
+        :return: self._id
+        """
+        warnings.warn("Access to deprecated attribute id %s class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        return self._id
+
+    @id.setter
+    def id(self, value):  # pylint: disable=C0103
+        """Setter for id, raise deprecation warning
+        :param value: value to set
+        :return: None
+        """
+        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
+                      DeprecationWarning, stacklevel=2)
+        self._id = value
 
     def prepare(self):
         """Unpickle data from data attribute and add instance_id key if necessary
