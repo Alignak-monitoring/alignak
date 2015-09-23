@@ -55,25 +55,7 @@
  schedulers (and the associated actions) and take the new ones instead.
 """
 
-import sys
-import os
 import optparse
-
-# Try to see if we are in an android device or not
-import imp
-try:
-    imp.find_module('android')
-    IS_ANDROID = True
-except ImportError:
-    IS_ANDROID = False
-
-
-if IS_ANDROID is not None:
-    # Add our main script dir
-    if os.path.exists('/sdcard/sl4a/scripts/'):
-        sys.path.append('/sdcard/sl4a/scripts/')
-        os.chdir('/sdcard/sl4a/scripts/')
-
 
 from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak import __version__

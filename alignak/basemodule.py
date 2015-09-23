@@ -140,15 +140,18 @@ class BaseModule(object):
         self.loaded_into = daemon_name
 
     def create_queues(self, manager=None):
-        """The manager is None on android, but a true Manager() elsewhere
+        """
         Create the shared queues that will be used by alignak daemon
         process and this module process.
         But clear queues if they were already set before recreating new one.
 
-        :param manager: None on android, otherwise Manager() object
+        :param manager: Manager() object
         :type manager: None | object
         :return: None
         """
+        # NB: actually this method is only referenced in the alignak tests,
+        # but without the manager parameter set..
+        # TODO: clarify all that (this manager+queues story) and continue clean-clean-clean
         self.clear_queues(manager)
         # If no Manager() object, go with classic Queue()
         if not manager:
@@ -161,7 +164,7 @@ class BaseModule(object):
     def clear_queues(self, manager):
         """Release the resources associated to the queues of this instance
 
-        :param manager: None on android, otherwise Manager() object
+        :param manager: Manager() object
         :type manager: None | object
         :return: None
         """

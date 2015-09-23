@@ -50,20 +50,7 @@
 This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
 """
 from Queue import Empty
-
-# In android, we should use threads, not process
-import imp
-try:
-    imp.find_module('android')
-    IS_ANDROID = True
-except ImportError:
-    IS_ANDROID = False
-
-if not IS_ANDROID:
-    from multiprocessing import Process, Queue
-else:
-    from Queue import Queue
-    from threading import Thread as Process
+from multiprocessing import Process, Queue
 
 import os
 import time
@@ -144,8 +131,7 @@ class Worker:
         :return: None
         """
         # We can just terminate process, not threads
-        if not IS_ANDROID:
-            self._process.terminate()
+        self._process.terminate()
         # Is we are with a Manager() way
         # there should be not such functions
         if hasattr(self._control_q, 'close'):
@@ -360,9 +346,7 @@ class Worker:
         :return: None
         """
         # restore default signal handler for the workers:
-        # but on android, we are a thread, so don't do it
-        if not IS_ANDROID:
-            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
         self.set_proctitle()
 

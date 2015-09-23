@@ -70,15 +70,7 @@ import select
 import ConfigParser
 import threading
 from Queue import Empty
-
-# Try to see if we are in an android device or not
-import imp
-try:
-    imp.find_module('android')
-    IS_ANDROID = True
-except ImportError:
-    IS_ANDROID = False
-    from multiprocessing.managers import SyncManager
+from multiprocessing.managers import SyncManager
 
 
 from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
@@ -120,7 +112,7 @@ try:
         :rtype: list
         """
         return getgrall()
-except ImportError, exp:  # Like in nt system or Android
+except ImportError, exp:  # Like in nt system
     # temporary workaround:
     def get_cur_user():
         """Fake getpwuid
@@ -162,13 +154,8 @@ class InvalidPidFile(Exception):
     pass
 
 
-# If we are under android, we can't give parameters
-if IS_ANDROID:
-    DEFAULT_WORK_DIR = '/sdcard/sl4a/scripts/'
-    DEFAULT_LIB_DIR = DEFAULT_WORK_DIR
-else:
-    DEFAULT_WORK_DIR = '/var/run/alignak/'
-    DEFAULT_LIB_DIR = '/var/lib/alignak/'
+DEFAULT_WORK_DIR = '/var/run/alignak/'
+DEFAULT_LIB_DIR = '/var/lib/alignak/'
 
 
 class Daemon(object):
@@ -647,25 +634,18 @@ class Daemon(object):
         del self.debug_output
         self.set_proctitle()
 
-    if IS_ANDROID:
-        def _create_manager(self):
-            """Fake _create_manager for android
+    # The Manager is a sub-process, so we must be sure it won't have
+    # a socket of your http server alive
+    @staticmethod
+    def _create_manager():
+        """Instanciate and start a SyncManager
 
-            :return: None
-            """
-            pass
-    else:
-        # The Manager is a sub-process, so we must be sure it won't have
-        # a socket of your http server alive
-        def _create_manager(self):
-            """Instanciate and start a SyncManager
-
-            :return: the manager
-            :rtype: multiprocessing.managers.SyncManager
-            """
-            manager = SyncManager(('127.0.0.1', 0))
-            manager.start()
-            return manager
+        :return: the manager
+        :rtype: multiprocessing.managers.SyncManager
+        """
+        manager = SyncManager(('127.0.0.1', 0))
+        manager.start()
+        return manager
 
     def do_daemon_init_and_start(self, fake=False):
         """Main daemon function.
@@ -838,10 +818,6 @@ class Daemon(object):
         """
         if insane is None:
             insane = not self.idontcareaboutsecurity
-
-        if IS_ANDROID:
-            logger.warning("You can't change user on this system")
-            return
 
         # TODO: change user on nt
         if os.name == 'nt':
