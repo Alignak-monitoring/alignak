@@ -60,10 +60,6 @@ import copy
 import sys
 import os
 import json
-try:
-    from ClusterShell.NodeSet import NodeSet, NodeSetParseRangeError
-except ImportError:
-    NodeSet = None  # pylint: disable=C0103
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger
@@ -860,244 +856,114 @@ def strip_and_uniq(tab):
 
 # ################### Pattern change application (mainly for host) #######
 
+class KeyValueSyntaxError(ValueError):
+    """Syntax error on a duplicate_foreach value"""
 
-def expand_xy_pattern(pattern):
-    """Yield element in nodeset value for pattern
+KEY_VALUES_REGEX = re.compile(
+    '^'
+    # should not be necessary, cause what we get is already stripped:
+    # r"\s*"
+    r'(?P<key>[^$]+?)'   # key, composed of anything but a $, optionally followed by some spaces
+    r'\s*'
+    r'(?P<values>'       # optional values, composed of a bare '$(something)$' zero or more times
+    + (
+        r'(?:\$\([^)]+?\)\$\s*)*'
+    ) +
+    r')\s*'   # followed by optional values, which are composed of ..
+    '$'
+)
 
-    :param pattern:
-    :type pattern: str
-    :return: Nome
+VALUE_REGEX = re.compile(
+    r'\$\(([^)]+)\)\$'
+)
+
+RANGE_REGEX = re.compile(
+    r'^'
+    r'(?P<before>[^\[]*)'
+    r'(?:\['
+    r'(?P<from>\d+)'
+    r'-'
+    r'(?P<to>\d+)'
+    r'(?:/(?P<step>\d+))?'
+    r'\])?'
+    r'(?P<after>.*)'
+    r'$')
+
+
+def expand_ranges(value):
     """
-    nodeset = NodeSet(str(pattern))
-    if len(nodeset) > 1:
-        for elem in nodeset:
-            for expand in expand_xy_pattern(elem):
-                yield expand
+    :param str value: The value to be "expanded".
+    :return: A generator to yield the different resulting values from expanding
+             the eventual ranges present in the input value.
+
+    >>> tuple(expand_ranges("Item [1-3] - Bla"))
+    ('Item 1 - Bla', 'Item 2 - Bla', 'Item 3 - Bla')
+    >>> tuple(expand_ranges("X[1-10/2]Y"))
+    ('X1Y', 'X3Y', 'X5Y', 'X7Y', 'X9Y')
+    >>> tuple(expand_ranges("[1-6/2] [1-3]"))
+    ('1 1', '1 2', '1 3', '3 1', '3 2', '3 3', '5 1', '5 2', '5 3')
+    """
+    match_dict = RANGE_REGEX.match(value).groupdict()  # the regex is supposed to always match..
+    before = match_dict['before']
+    after = match_dict['after']
+    from_value = match_dict['from']
+    if from_value is None:
+        yield value
     else:
-        yield pattern
+        # we have a [x-y] range
+        from_value = int(from_value)
+        to_value = int(match_dict['to']) + 1  # y is inclusive
+        step = int(match_dict['step'] or 1)
+        for idx in range(from_value, to_value, step):
+            # yield "%s%s%s" % (before, idx, after)
+            for sub_val in expand_ranges("%s%s%s" % (before, idx, after)):
+                yield sub_val
 
 
-def got_generation_rule_pattern_change(xy_couples):
-    """generate all pattern change as recursive list.
-
-    For example, for a [(1,3),(1,4),(1,5)] xy_couples,
-    it will generate a 60 item list with:
-    Rule: [1, '[1-5]', [1, '[1-4]', [1, '[1-3]', []]]]
-    Rule: [1, '[1-5]', [1, '[1-4]', [2, '[1-3]', []]]]
-    [...]
-
-    :param xy_couples: list of 2-tuple integer
-    :type xy_couples: list
-    :return: list of rules
-    :rtype: list
-    """
-    res = []
-    xy_cpl = xy_couples
-    if xy_couples == []:
-        return []
-    (x00, y00) = xy_cpl[0]
-    for i in xrange(x00, y00 + 1):
-        rules = got_generation_rule_pattern_change(xy_cpl[1:])
-        if rules != []:
-            for elem in rules:
-                res.append([i, '[%d-%d]' % (x00, y00), elem])
-        else:
-            res.append([i, '[%d-%d]' % (x00, y00), []])
-    return res
-
-
-def apply_change_recursive_pattern_change(string, rule):
-    """Apply a recursive pattern change
-    generate by the got_generation_rule_pattern_change function.
-
-    It take one entry of this list, and apply recursively the change to string
-
-    :param s: string to edit
-    :type s: str
-    :param rule: rule to apply
-    :type rule:
-    :return: modified string with rule values
-    :rtype: str
-
-    >>> apply_change_recursive_pattern_change("Unit [1-3] Port [1-4] Admin [1-5]", \
-                                              [1, '[1-5]', [2, '[1-4]', [3, '[1-3]', []]]] \
-                                            )
-    'Unit 3 Port 2 Admin 1'
-
-    """
-    # print "Try to change %s" % s, 'with', rule
-    # new_s = s
-    (new_val, match, lst) = rule
-    # print "replace %s by %s" % (r'%s' % m, str(i)), 'in', s
-    string = string.replace(r'%s' % match, str(new_val))
-    # print "And got", s
-    if lst == []:
-        return string
-    return apply_change_recursive_pattern_change(string, lst)
-
-GET_KEY_VALUE_SEQUENCE_ERROR_NOERROR = 0
-GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX = 1
-GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT = 2
-GET_KEY_VALUE_SEQUENCE_ERROR_NODE = 3
-
-
-def get_key_value_sequence(entry, default_value=None):
+def generate_key_value_sequences(entry, default_value):
     """Parse a key value config entry (used in duplicate foreach)
 
     If we have a key that look like [X-Y] we will expand it into Y-X+1 keys
 
-    :param entry: line to parse
-    :type entry: str
-    :param default_value: default value if nothing specified
+    :param str entry: The config line to be parsed.
+    :param str default_value: The default value to be used when none is available.
+    :return: a generator yielding dicts with 'KEY' & 'VALUE' & 'VALUE1' keys,
+             with eventual others 'VALUEx' (x 1 -> N) keys.
 
-    Example ::
-    get_key_value_sequence("var$(/var)$,root $(/)$")
-
-    ([{'KEY': 'var', 'VALUE': '/var', 'VALUE1': '/var'},
-    {'KEY': 'root', 'VALUE': '/', 'VALUE1': '/'}],
-    0)
-
-    :type default_value:
-    :return: tuple with a list of dict and error code
-    :rtype: tuple
+    >>> rsp = list(generate_key_value_sequences("var$(/var)$,root $(/)$"))
+    >>> import pprint
+    >>> pprint.pprint(rsp)
+    [{'KEY': 'var', 'VALUE': '/var', 'VALUE1': '/var'},
+     {'KEY': 'root', 'VALUE': '/', 'VALUE1': '/'}]
     """
-    array1 = []
-    array2 = []
-    conf_entry = entry
-
-    # match a key$(value1..n)$
-    keyval_pattern_txt = r"""
-\s*(?P<key>[^,]+?)(?P<values>(\$\(.*?\)\$)*)(?:[,]|$)
-"""
-    keyval_pattern = re.compile('(?x)' + keyval_pattern_txt)
-    # match a whole sequence of key$(value1..n)$
-    all_keyval_pattern = re.compile('(?x)^(' + keyval_pattern_txt + ')+$')
-    # match a single value
-    value_pattern = re.compile(r'(?:\$\((?P<val>.*?)\)\$)')
-    # match a sequence of values
-    all_value_pattern = re.compile(r'^(?:\$\(.*?\)\$)+$')
-
-    if all_keyval_pattern.match(conf_entry):
-        for mat in re.finditer(keyval_pattern, conf_entry):
-            r_dict = {'KEY': mat.group('key')}
-            # The key is in mat.group('key')
-            # If there are also value(s)...
-            if mat.group('values'):
-                if all_value_pattern.match(mat.group('values')):
-                    # If there are multiple values, loop over them
-                    valnum = 1
-                    for val in re.finditer(value_pattern, mat.group('values')):
-                        r_dict['VALUE' + str(valnum)] = val.group('val')
-                        valnum += 1
-                else:
-                    # Value syntax error
-                    return (None, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX)
-            else:
-                r_dict['VALUE1'] = None
-            array1.append(r_dict)
-    else:
-        # Something is wrong with the values. (Maybe unbalanced '$(')
-        # TODO: count opening and closing brackets in the pattern
-        return (None, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX)
-
-    # now fill the empty values with the default value
-    for r_dict in array1:
-        if r_dict['VALUE1'] is None:
-            if default_value is None:
-                return (None, GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT)
-            else:
-                r_dict['VALUE1'] = default_value
-        r_dict['VALUE'] = r_dict['VALUE1']
-
-    # Now create new one but for [X-Y] matchs
-    #  array1 holds the original entries. Some of the keys may contain wildcards
-    #  array2 is filled with originals and inflated wildcards
-
-    if NodeSet is None:
-        # The pattern that will say if we have a [X-Y] key.
-        pat = re.compile(r'\[(\d*)-(\d*)\]')
-
-    for r_dict in array1:
-
-        key = r_dict['KEY']
-        orig_key = r_dict['KEY']
-
-        # We have no choice, we cannot use NodeSet, so we use the
-        # simple regexp
-        if NodeSet is None:
-            matches = pat.search(key)
-            got_xy = (matches is not None)
-        else:  # Try to look with a nodeset check directly
-            try:
-                nodeset = NodeSet(str(key))
-                # If we have more than 1 element, we have a xy thing
-                got_xy = (len(nodeset) != 1)
-            except NodeSetParseRangeError:
-                return (None, GET_KEY_VALUE_SEQUENCE_ERROR_NODE)
-
-        # Now we've got our couples of X-Y. If no void,
-        # we were with a "key generator"
-
-        if got_xy:
-            # Ok 2 cases: we have the NodeSet lib or not.
-            # if not, we use the dumb algo (quick, but manage less
-            # cases like /N or , in patterns)
-            if NodeSet is None:  # us the old algo
-                still_loop = True
-                xy_couples = []  # will get all X-Y couples
-                while still_loop:
-                    matches = pat.search(key)
-                    if matches is not None:  # we've find one X-Y
-                        (x00, y00) = matches.groups()
-                        (x00, y00) = (int(x00), int(y00))
-                        xy_couples.append((x00, y00))
-                        # We must search if we've gotother X-Y, so
-                        # we delete this one, and loop
-                        key = key.replace('[%d-%d]' % (x00, y00), 'Z' * 10)
-                    else:  # no more X-Y in it
-                        still_loop = False
-
-                # Now we have our xy_couples, we can manage them
-
-                # We search all pattern change rules
-                rules = got_generation_rule_pattern_change(xy_couples)
-
-                # Then we apply them all to get ours final keys
-                for rule in rules:
-                    res = apply_change_recursive_pattern_change(orig_key, rule)
-                    new_r = {}
-                    for key in r_dict:
-                        new_r[key] = r_dict[key]
-                    new_r['KEY'] = res
-                    array2.append(new_r)
-
-            else:
-                # The key was just a generator, we can remove it
-                # keys_to_del.append(orig_key)
-
-                # We search all pattern change rules
-                # rules = got_generation_rule_pattern_change(xy_couples)
-                nodes_set = expand_xy_pattern(orig_key)
-                new_keys = list(nodes_set)
-
-                # Then we apply them all to get ours final keys
-                for new_key in new_keys:
-                    # res = apply_change_recursive_pattern_change(orig_key, rule)
-                    new_r = {}
-                    for key in r_dict:
-                        new_r[key] = r_dict[key]
-                    new_r['KEY'] = new_key
-                    array2.append(new_r)
-        else:
-            # There were no wildcards
-            array2.append(r_dict)
-    # t1 = time.time()
-    # print "***********Diff", t1 -t0
-
-    return (array2, GET_KEY_VALUE_SEQUENCE_ERROR_NOERROR)
+    no_one_yielded = True
+    for value in entry.split(','):
+        value = value.strip()
+        if not value:
+            continue
+        full_match = KEY_VALUES_REGEX.match(value)
+        if full_match is None:
+            raise KeyValueSyntaxError("%r is an invalid key(-values) pattern" % value)
+        key = full_match.group(1)
+        tmp = {'KEY': key}
+        values = full_match.group(2)
+        if values:  # there is, at least, one value provided
+            for idx, value_match in enumerate(VALUE_REGEX.finditer(values), 1):
+                tmp['VALUE%s' % idx] = value_match.group(1)
+        else:  # no value provided for this key, use the default provided:
+            tmp['VALUE1'] = default_value
+        tmp['VALUE'] = tmp['VALUE1']  # alias from VALUE -> VALUE1
+        for subkey in expand_ranges(key):
+            current = tmp.copy()
+            current['KEY'] = subkey
+            yield current
+            no_one_yielded = False
+    if no_one_yielded:
+        raise KeyValueSyntaxError('At least one key must be present')
 
 
 # ############################## Files management #######################
+
 def expect_file_dirs(root, path):
     """We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
     /tmp/toto/toto2/ will really exists so we can copy it. Try to make if  needed

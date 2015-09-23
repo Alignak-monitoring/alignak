@@ -76,11 +76,16 @@ from alignak.objects.item import Items
 from alignak.objects.schedulingitem import SchedulingItem
 
 from alignak.autoslots import AutoSlots
-from alignak.util import strip_and_uniq, format_t_into_dhms_format, to_svc_hst_distinct_lists, \
-    get_key_value_sequence, GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX,\
-    GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT, GET_KEY_VALUE_SEQUENCE_ERROR_NODE,\
-    to_list_string_of_names, to_list_of_names, to_name_if_possible, \
-    is_complex_expr
+from alignak.util import (
+    strip_and_uniq,
+    format_t_into_dhms_format,
+    to_svc_hst_distinct_lists,
+    generate_key_value_sequences,
+    to_list_string_of_names,
+    to_list_of_names,
+    to_name_if_possible,
+    is_complex_expr,
+    KeyValueSyntaxError)
 from alignak.property import BoolProp, IntegerProp, FloatProp,\
     CharProp, StringProp, ListProp, DictProp
 from alignak.macroresolver import MacroResolver
@@ -906,12 +911,12 @@ class Service(SchedulingItem):
         :rtype: list
         """
 
+        duplicates = []
+
         # In macro, it's all in UPPER case
         prop = self.duplicate_foreach.strip().upper()
         if prop not in host.customs:  # If I do not have the property, we bail out
-            return []
-
-        duplicates = []
+            return duplicates
 
         # Get the list entry, and the not one if there is one
         entry = host.customs[prop]
@@ -923,65 +928,58 @@ class Service(SchedulingItem):
         default_value = getattr(self, 'default_value', '')
         # Transform the generator string to a list
         # Missing values are filled with the default value
-        (key_values, errcode) = get_key_value_sequence(entry, default_value)
+        try:
+            key_values = tuple(generate_key_value_sequences(entry, default_value))
+        except KeyValueSyntaxError as exc:
+            fmt_dict = {
+                'prop': self.duplicate_foreach,
+                'host': host.get_name(),
+                'svc': self.service_description,
+                'entry': entry,
+                'exc': exc,
+            }
+            err = (
+                "The custom property %(prop)r of the "
+                "host %(host)r is not a valid entry for a service generator: %(exc)s, "
+                "with entry=%(entry)r") % fmt_dict
+            logger.warning(err)
+            host.configuration_errors.append(err)
+            return duplicates
 
-        if key_values:
-            for key_value in key_values:
-                key = key_value['KEY']
-                # Maybe this key is in the NOT list, if so, skip it
-                if key in not_keys:
-                    continue
-                value = key_value['VALUE']
-                new_s = self.copy()
-                new_s.host_name = host.get_name()
-                if self.is_tpl():  # if template, the new one is not
-                    new_s.register = 1
-                for key in key_value:
-                    if key == 'KEY':
-                        if hasattr(self, 'service_description'):
-                            # We want to change all illegal chars to a _ sign.
-                            # We can't use class.illegal_obj_char
-                            # because in the "explode" phase, we do not have access to this data! :(
-                            safe_key_value = re.sub(r'[' + "`~!$%^&*\"|'<>?,()=" + ']+', '_',
-                                                    key_value[key])
-                            new_s.service_description = self.service_description.replace(
-                                '$' + key + '$', safe_key_value
-                            )
-                    # Here is a list of property where we will expand the $KEY$ by the value
-                    _the_expandables = ['check_command', 'aggregation', 'event_handler']
-                    for prop in _the_expandables:
-                        if hasattr(self, prop):
-                            # here we can replace VALUE, VALUE1, VALUE2,...
-                            setattr(new_s, prop, getattr(new_s, prop).replace('$' + key + '$',
-                                                                              key_value[key]))
-                    if hasattr(self, 'service_dependencies'):
-                        for i, servicedep in enumerate(new_s.service_dependencies):
-                            new_s.service_dependencies[i] = servicedep.replace(
-                                '$' + key + '$', key_value[key]
-                            )
-                # And then add in our list this new service
-                duplicates.append(new_s)
-        else:
-            # If error, we should link the error to the host, because self is
-            # a template, and so won't be checked not print!
-            if errcode == GET_KEY_VALUE_SEQUENCE_ERROR_SYNTAX:
-                err = "The custom property '%s' of the host '%s'" \
-                      "is not a valid entry %s for a service generator" % \
-                      (self.duplicate_foreach.strip(), host.get_name(), entry)
-                logger.warning(err)
-                host.configuration_errors.append(err)
-            elif errcode == GET_KEY_VALUE_SEQUENCE_ERROR_NODEFAULT:
-                err = "The custom property '%s 'of the host '%s' has empty " \
-                      "values %s but the service %s has no default_value" % \
-                      (self.duplicate_foreach.strip(),
-                       host.get_name(), entry, self.service_description)
-                logger.warning(err)
-                host.configuration_errors.append(err)
-            elif errcode == GET_KEY_VALUE_SEQUENCE_ERROR_NODE:
-                err = "The custom property '%s' of the host '%s' has an invalid node range %s" % \
-                      (self.duplicate_foreach.strip(), host.get_name(), entry)
-                logger.warning(err)
-                host.configuration_errors.append(err)
+        for key_value in key_values:
+            key = key_value['KEY']
+            # Maybe this key is in the NOT list, if so, skip it
+            if key in not_keys:
+                continue
+            new_s = self.copy()
+            new_s.host_name = host.get_name()
+            if self.is_tpl():  # if template, the new one is not
+                new_s.register = 1
+            for key in key_value:
+                if key == 'KEY':
+                    if hasattr(self, 'service_description'):
+                        # We want to change all illegal chars to a _ sign.
+                        # We can't use class.illegal_obj_char
+                        # because in the "explode" phase, we do not have access to this data! :(
+                        safe_key_value = re.sub(r'[' + "`~!$%^&*\"|'<>?,()=" + ']+', '_',
+                                                key_value[key])
+                        new_s.service_description = self.service_description.replace(
+                            '$' + key + '$', safe_key_value
+                        )
+                # Here is a list of property where we will expand the $KEY$ by the value
+                _the_expandables = ['check_command', 'aggregation', 'event_handler']
+                for prop in _the_expandables:
+                    if hasattr(self, prop):
+                        # here we can replace VALUE, VALUE1, VALUE2,...
+                        setattr(new_s, prop, getattr(new_s, prop).replace('$' + key + '$',
+                                                                          key_value[key]))
+                if hasattr(self, 'service_dependencies'):
+                    for i, servicedep in enumerate(new_s.service_dependencies):
+                        new_s.service_dependencies[i] = servicedep.replace(
+                            '$' + key + '$', key_value[key]
+                        )
+            # And then add in our list this new service
+            duplicates.append(new_s)
 
         return duplicates
 
