@@ -47,6 +47,7 @@
 import unittest2 as unittest
 
 import string
+from alignak.objects.item import Items
 
 from alignak_test import time_hacker
 from alignak.log import logger
@@ -64,18 +65,38 @@ from alignak.objects.timeperiod import Timeperiod
 
 class TestEndParsingType(unittest.TestCase):
 
+    def check_object_property(self, obj, prop):
+        if prop in (
+                'realm',  # Realm
+                'check_period',    # CheckPeriod
+                'check_command',  # CommandCall
+                'event_handler',  # CommandCall
+                'notification_period',  # Timeperiod
+                'service_notification_period',  # Timeperiod
+                'host_notification_period',  # Timeperiod
+        ):
+            # currently not supported / handled or badly parsed / decoded properties values..
+            # TODO: consider to also handles them properly ..
+            return
+        value = getattr(obj, prop, None)
+        if value is not None:
+            obj_expected_type = self.map_type(obj.properties[prop])
+            self.assertIsInstance(value, obj_expected_type,
+                                  "The %s attr/property of %s object isn't a %s: %s, value=%r" %
+                                  (prop, obj, obj_expected_type, value.__class__, value))
+
     def map_type(self, obj):
-        # TODO: Replace all str with unicode when done in property.default attribute
+        # TODO: Replace all basestring with unicode when done in property.default attribute
         # TODO: Fix ToGuessProp as it may be a list.
 
         if isinstance(obj, ListProp):
             return list
 
         if isinstance(obj, StringProp):
-            return str
+            return basestring
 
         if isinstance(obj, UnusedProp):
-            return str
+            return basestring
 
         if isinstance(obj, BoolProp):
             return bool
@@ -87,16 +108,16 @@ class TestEndParsingType(unittest.TestCase):
             return float
 
         if isinstance(obj, CharProp):
-            return str
+            return basestring
 
         if isinstance(obj, DictProp):
             return dict
 
         if isinstance(obj, AddrProp):
-            return str
+            return basestring
 
         if isinstance(obj, ToGuessProp):
-            return str
+            return basestring
 
     def print_header(self):
         print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
@@ -109,6 +130,12 @@ class TestEndParsingType(unittest.TestCase):
             return
         if isinstance(b, ExternalCommand):
             self.sched.run_external_command(b.cmd_line)
+
+    def check_objects_from(self, container):
+        self.assertIsInstance(container, Items)
+        for obj in container:
+            for prop in obj.properties:
+                self.check_object_property(obj, prop)
 
     def test_types(self):
         path = 'etc/alignak_1r_1h_1s.cfg'
@@ -150,46 +177,10 @@ class TestEndParsingType(unittest.TestCase):
         self.conf.create_business_rules_dependencies()
         self.conf.is_correct()
 
-        # Cannot do it for all obj for now. We have to ensure unicode everywhere fist
+        ###############
 
-        for objs in [self.conf.arbiters]:
-            for obj in objs:
-                #print "=== obj : %s ===" % obj.__class__
-                for prop in obj.properties:
-                    if hasattr(obj, prop):
-                        value = getattr(obj, prop)
-                        # We should get ride of None, maybe use the "neutral" value for type
-                        if value is not None:
-                            #print("TESTING %s with value %s" % (prop, value))
-                            self.assertIsInstance(value, self.map_type(obj.properties[prop]))
-                        else:
-                            print("Skipping %s " % prop)
-                #print "==="
-
-        # Manual check of several attr for self.conf.contacts
-        # because contacts contains unicode attr
-        for contact in self.conf.contacts:
-            for prop in ["notificationways", "host_notification_commands", "service_notification_commands"]:
-                if hasattr(contact, prop):
-                    value = getattr(contact, prop)
-                    # We should get ride of None, maybe use the "neutral" value for type
-                    if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
-                        self.assertIsInstance(value, self.map_type(contact.properties[prop]))
-                    else:
-                        print("Skipping %s " % prop)
-
-        # Same here
-        for notifway in self.conf.notificationways:
-            for prop in ["host_notification_commands", "service_notification_commands"]:
-                if hasattr(notifway, prop):
-                    value = getattr(notifway, prop)
-                    # We should get ride of None, maybe use the "neutral" value for type
-                    if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
-                        self.assertIsInstance(value, self.map_type(notifway.properties[prop]))
-                    else:
-                        print("Skipping %s " % prop)
+        for objects in (self.conf.arbiters, self.conf.contacts, self.conf.notificationways, self.conf.hosts):
+            self.check_objects_from(objects)
 
         print "== test Check() =="
         check = Check('OK', 'check_ping', 0, 10.0)
