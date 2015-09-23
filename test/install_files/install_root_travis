@@ -37,7 +37,6 @@
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/reactionner-master.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/scheduler-master.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/receiver-master.cfg
-644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/reactionner-android-sms.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/arbiter-master.cfg
 755 /usr/local/etc/alignak/arbiter_cfg/objects
 755 /usr/local/etc/alignak/arbiter_cfg/objects/sample
@@ -72,7 +71,6 @@
 755 /usr/local/etc/alignak/arbiter_cfg/objects/dependencies
 644 /usr/local/etc/alignak/arbiter_cfg/objects/dependencies/sample.cfg
 755 /usr/local/etc/alignak/arbiter_cfg/objects/notificationways
-644 /usr/local/etc/alignak/arbiter_cfg/objects/notificationways/sms-android.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/notificationways/email.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/notificationways/detailled-email.cfg
 755 /usr/local/etc/alignak/arbiter_cfg/objects/hostgroups
@@ -90,7 +88,6 @@
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_host_alive.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_tcp.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/notify-host-by-xmpp.cfg
-644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/notify-service-by-android-sms.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/detailled-service-by-email.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_snmp_time.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/notify-service-by-email.cfg
@@ -98,7 +95,6 @@
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/reload-alignak.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_dig.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/configuration-check.cfg
-644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/notify-host-by-android-sms.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_ping.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/detailled-host-by-email.cfg
 644 /usr/local/etc/alignak/arbiter_cfg/objects/commands/check_nrpe.cfg
