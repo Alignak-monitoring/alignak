@@ -150,6 +150,7 @@ class AlignakTest(unittest.TestCase):
         self.log.load_obj(self)
         if not isinstance(paths, list):
             paths = [paths]  # Fix for modules tests
+            add_default = False # Don't mix config
         if add_default:
             paths.insert(0, 'etc/alignak_1r_1h_1s.cfg')
         self.config_files = paths
