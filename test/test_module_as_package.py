@@ -43,12 +43,19 @@ class TestModuleManager_And_Packages(AlignakTest):
         mm = self.modulemanager = ModulesManager('broker', modules_dir, mods)
         mm.load_and_init()
 
+        modA = None
+        modB = None
         for mod in mm.imported_modules:
+            if mod.__package__ == 'modA':
+                modA = mod
+            elif mod.__package__ == 'modB':
+                modB = mod
+
             if mod.properties['type'].startswith("mod"):
                 self.assertEqual(mod.expected_helpers_X, mod.helpers.X)
-
-        _, mod1, mod2 = mm.imported_modules
-        self.assertNotEqual(mod1.helpers.X, mod2.helpers.X)
+        self.assertIsNotNone(modA)
+        self.assertIsNotNone(modB)
+        self.assertNotEqual(modA.helpers.X, modB.helpers.X)
 
 
 
