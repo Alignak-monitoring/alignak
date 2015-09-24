@@ -128,15 +128,18 @@ class TimeHacker(object):
             self.in_real_time = True
 
 
-
-
 class Pluginconf(object):
     pass
 
 
-
 class AlignakTest(unittest.TestCase):
+
     time_hacker = TimeHacker()
+
+    if sys.version_info < (2, 7):
+        def assertRegex(self, *args, **kwargs):
+            return self.assertRegexpMatches(*args, **kwargs)
+
     def setUp(self):
         self.setup_with_file(['etc/alignak_1r_1h_1s.cfg'], add_default=False)
 
