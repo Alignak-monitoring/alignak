@@ -191,7 +191,7 @@ class LogCollectMixin:
         for i, length in enumerate(lenlist):
             self.assertEqual(len(loglist[i]), length)
             if length != 0:
-                self.assertRegexpMatches(loglist[i][0], patterns[i])
+                self.assertRegex(loglist[i][0], patterns[i])
         return loglist
 
 

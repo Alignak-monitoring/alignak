@@ -26,6 +26,7 @@ from alignak.objects.reactionnerlink import ReactionnerLink
 from alignak.objects.receiverlink import ReceiverLink
 from alignak.objects.pollerlink import PollerLink
 
+
 class template_DaemonLink_get_name():
     def get_link(self):
         cls = self.daemon_link
@@ -34,7 +35,7 @@ class template_DaemonLink_get_name():
     def test_get_name(self):
         link = self.get_link()
         try:
-            self.assertEquals("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())
+            self.assertEqual("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())
         except AttributeError:
             self.assertTrue(False, "get_name should not raise AttributeError")
 
