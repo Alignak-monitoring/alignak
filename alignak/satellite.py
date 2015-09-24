@@ -64,20 +64,7 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
  Schedulers (and actions into) and takes the new ones.
 """
 
-
-# Try to see if we are in an android device or not
-import imp
-try:
-    imp.find_module('android')
-    IS_ANDROID = True
-except ImportError:
-    IS_ANDROID = False
-
-
-if not IS_ANDROID:
-    from multiprocessing import Queue, active_children, cpu_count
-else:
-    from Queue import Queue
+from multiprocessing import active_children, cpu_count
 
 import os
 import copy
@@ -402,10 +389,7 @@ class Satellite(BaseSatellite):
         """
         # create the input queue of this worker
         try:
-            if IS_ANDROID:
-                queue = Queue()
-            else:
-                queue = self.manager.Queue()
+            queue = self.manager.Queue()
         # If we got no /dev/shm on linux-based system, we can got problem here.
         # Must raise with a good message
         except OSError, exp:
@@ -499,10 +483,8 @@ class Satellite(BaseSatellite):
 
         :return: None
         """
-        # In android, we are using threads, so there is not active_children call
-        if not IS_ANDROID:
-            # Active children make a join with everyone, useful :)
-            active_children()
+        # Active children make a join with everyone, useful :)
+        active_children()
 
         w_to_del = []
         for worker in self.workers.values():
@@ -848,14 +830,7 @@ class Satellite(BaseSatellite):
         # We can open the Queue for fork AFTER
         self.q_by_mod['fork'] = {}
 
-        # Under Android, we do not have multiprocessing lib
-        # so use standard Queue threads things
-        # but in multiprocess, we are also using a Queue(). It's just
-        # not the same
-        if IS_ANDROID:
-            self.returns_queue = Queue()
-        else:
-            self.returns_queue = self.manager.Queue()
+        self.returns_queue = self.manager.Queue()
 
         # For multiprocess things, we should not have
         # socket timeouts.
@@ -963,14 +938,14 @@ class Satellite(BaseSatellite):
             # Now the limit part, 0 mean: number of cpu of this machine :)
             # if not available, use 4 (modern hardware)
             self.max_workers = g_conf['max_workers']
-            if self.max_workers == 0 and not IS_ANDROID:
+            if self.max_workers == 0:
                 try:
                     self.max_workers = cpu_count()
                 except NotImplementedError:
                     self.max_workers = 4
             logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
             self.min_workers = g_conf['min_workers']
-            if self.min_workers == 0 and not IS_ANDROID:
+            if self.min_workers == 0:
                 try:
                     self.min_workers = cpu_count()
                 except NotImplementedError:
