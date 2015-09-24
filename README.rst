@@ -58,7 +58,7 @@ It will only update the alignak lib and scripts, but won't touch your current co
 Running
 -------
 
-Alignak is installed with `init.d` scripts, enables them at boot time and starts them right after the install process ends. Depending on your Linux-based distro you only need to do:
+Alignak is installed with `init.d` scripts, enables them at boot time and starts them right after the install process ends. Depending on your Linux-based distro you only need to do: ::
 
   chkconfig --add alignak
   chkconfig alignak on
@@ -85,7 +85,7 @@ Logs are in /var/log/alignak
 I got a bug, how to launch the daemons in debug mode?
 =====================================================
 
-You only need to launch:
+You only need to launch: ::
 
   /etc/init.d/alignak -d start
 
