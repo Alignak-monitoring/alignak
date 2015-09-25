@@ -206,11 +206,16 @@ function launch_and_assert {
 -------------------------------
 END
     local start=$(date +%s)
+    if test $SCRIPT == "test_module_backcompatible.py"; then
+      $HOOK=""
+     else
+      $HOOK="../alignak/shinken_import_hook.py"
+    fi
     if test $COVERAGE == "NOCOVERAGE"; then
-      ${PYTHONTOOLS}/nosetests -v -s --with-xunit ../alignak/shinken_import_hook.py ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
+      ${PYTHONTOOLS}/nosetests -v -s --with-xunit $HOOK ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
       res=$?
     else
-      ${PYTHONTOOLS}/nosetests -v -s --with-xunit --with-coverage ../alignak/shinken_import_hook.py ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
+      ${PYTHONTOOLS}/nosetests -v -s --with-xunit --with-coverage $HOOK ./$SCRIPT --xunit-file="$RESULTSDIR/xml/$NAME.xml"
       res=$?
       mv .coverage .coverage.$COUNT
       COUNT=$((COUNT + 1))
