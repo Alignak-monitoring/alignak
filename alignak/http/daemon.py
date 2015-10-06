@@ -85,7 +85,9 @@ class HTTPDaemon(object):
                 'request.body.processors': {'application/x-www-form-urlencoded': process_urlencoded,
                                             'multipart/form-data': process_multipart_form_data,
                                             'multipart': process_multipart,
-                                            'application/zlib': zlib_processor}
+                                            'application/zlib': zlib_processor},
+                'tools.gzip.on': True,
+                'tools.gzip.mime_types': ['text/*', 'application/json']
             }
         }
         # disable console logging of cherrypy when not in DEBUG
