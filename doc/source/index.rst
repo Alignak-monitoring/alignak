@@ -12,8 +12,8 @@ Contents:
    :maxdepth: 2
 
 
+   diagrams
    reference/alignak
-
 
 Indices and tables
 ==================
