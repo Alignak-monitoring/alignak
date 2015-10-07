@@ -233,7 +233,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/__init__.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/_deprecated_VERSION.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/_deprecated_VERSION.pyc
-755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_arbiter.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_arbiter.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/bin/alignak_broker.py

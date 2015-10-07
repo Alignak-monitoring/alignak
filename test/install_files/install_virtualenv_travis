@@ -233,7 +233,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/__init__.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/_deprecated_VERSION.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/_deprecated_VERSION.pyc
-755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_arbiter.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_arbiter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/bin/alignak_broker.py
