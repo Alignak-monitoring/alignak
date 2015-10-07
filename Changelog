@@ -2,7 +2,32 @@
 Alignak ChangeLog
 #################
 
-x.y.z
------
+0.1 (2015-10-07)
+----------------
 
-First release.
+FIX:
+ * Parsing - allow empty field for ListProp (regression)
+ * Various fix included in code cleaning (config parsing, HTTP layer...)
+
+ENHANCEMENT:
+ * Pylint code quality (80%)
+ * Timeperiods - Parsing and detection (+ tests)
+ * Config - File structure of etc folder
+
+ADDITION:
+ * Python namespaces support 
+ * Tests - Functionals tests (API focused)
+
+DELETION :
+ * Bottle (replaced by cherrypy)
+ * Pycurl (replaced by requests)
+ * Termcolor (added in requirements)
+ * Importlib (added in requirements)
+ * Ordereddict (added in test requirements)
+ * Dupllication in config test files
+ * Dead code in wait_new_conf
+ * Wsgi support for http deamon
+ * Android support
+ * Alignak CLI
+
+
