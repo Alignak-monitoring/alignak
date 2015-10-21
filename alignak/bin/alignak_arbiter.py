@@ -72,7 +72,7 @@ if os.name != 'nt':
         sys.setrecursionlimit(int(STACKSIZE_SOFT * 2.4 + 3200))
 
 
-from alignak import __version__
+from alignak.version import VERSION
 from alignak.daemons.arbiterdaemon import Arbiter
 
 
@@ -83,7 +83,7 @@ def main():
     """
     parser = optparse.OptionParser(
         "%prog [options] -c configfile [-c additional_config_file]",
-        version="%prog: " + __version__)
+        version="%prog: " + VERSION)
     parser.add_option('-c', '--config', action='append',
                       dest="config_files", metavar="CONFIG-FILE",
                       help=('Config file (your nagios.cfg). Multiple -c can be '

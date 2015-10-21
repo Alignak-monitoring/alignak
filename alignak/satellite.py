@@ -989,7 +989,7 @@ class Satellite(BaseSatellite):
         ::
 
            { 'metrics': ['%s.%s.external-commands.queue %d %d'],
-             'version': __version__,
+             'version': VERSION,
              'name': self.name,
              'type': _type,
              'passive': self.passive,

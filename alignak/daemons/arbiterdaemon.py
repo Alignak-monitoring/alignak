@@ -849,7 +849,7 @@ class Arbiter(Daemon):
         ::
 
            { 'metrics': ['arbiter.%s.external-commands.queue %d %d'],
-             'version': __version__,
+             'version': VERSION,
              'name': self.name,
              'type': 'arbiter',
              'hosts': len(self.conf.hosts)

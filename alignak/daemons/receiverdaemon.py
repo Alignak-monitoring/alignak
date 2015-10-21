@@ -438,7 +438,7 @@ class Receiver(Satellite):
         ::
 
            { 'metrics': ['%s.%s.external-commands.queue %d %d'],
-             'version': __version__,
+             'version': VERSION,
              'name': self.name,
              'direct_routing': self.direct_routing,
              'type': _type,
