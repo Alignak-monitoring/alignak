@@ -46,9 +46,6 @@
 This file has to be as small as possible in order to namespace to work.
 
 """
-from .version import VERSION as __version__
-
-
 from . import shinken_import_hook
 
 

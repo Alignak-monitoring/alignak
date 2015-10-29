@@ -1830,7 +1830,7 @@ class Scheduler(object):
            { 'metrics': ['scheduler.%s.checks.%s %d %d', 'scheduler.%s.%s.queue %d %d',
                          'scheduler.%s.%s %d %d', 'scheduler.%s.latency.min %f %d',
                          'scheduler.%s.latency.avg %f %d', 'scheduler.%s.latency.max %f %d'],
-             'version': __version__,
+             'version': VERSION,
              'name': instance_name,
              'type': 'scheduler',
              'modules': [
