@@ -225,9 +225,10 @@ class ModulesManager(object):
 
         modules_files = []
         for path in modules_paths:
-            for fname in listdir(path):
-                if isdir(join(path, fname)):
-                    modules_files.append({'path': path, 'name': fname})
+            if os.path.exists(path):
+                for fname in listdir(path):
+                    if isdir(join(path, fname)):
+                        modules_files.append({'path': path, 'name': fname})
 
         del self.imported_modules[:]
         for module in modules_files:
