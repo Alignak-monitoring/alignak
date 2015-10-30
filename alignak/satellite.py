@@ -973,11 +973,12 @@ class Satellite(BaseSatellite):
             # Now manage modules
             # TODO: check how to better handle this with modules_manager..
             mods = g_conf['modules']
+            self.new_modules_conf = []
             for module in mods:
                 # If we already got it, bypass
                 if module.module_type not in self.q_by_mod:
                     logger.debug("Add module object %s", str(module))
-                    self.modules_manager.modules.append(module)
+                    self.new_modules_conf.append(module)
                     logger.info("[%s] Got module: %s ", self.name, module.module_type)
                     self.q_by_mod[module.module_type] = {}
 
@@ -1048,8 +1049,7 @@ class Satellite(BaseSatellite):
             self.setup_new_conf()
 
             # We can load our modules now
-            self.modules_manager.set_modules(self.modules_manager.modules)
-            self.do_load_modules()
+            self.do_load_modules(self.new_modules_conf)
             # And even start external ones
             self.modules_manager.start_external_instances()
 

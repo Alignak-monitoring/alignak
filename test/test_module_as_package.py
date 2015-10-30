@@ -25,9 +25,6 @@ from alignak.objects.module import Module
 from alignak.modulesmanager import ModulesManager
 
 
-
-modules_dir = join(dirname(abspath(__file__)), 'test_module_as_package')
-
 class TestModuleManager_And_Packages(AlignakTest):
     ''' Test to make sure that we correctly import alignak modules.
     '''
@@ -40,12 +37,13 @@ class TestModuleManager_And_Packages(AlignakTest):
 
         mods = (modconfA, modconfB)
 
-        mm = self.modulemanager = ModulesManager('broker', modules_dir, mods)
-        mm.load_and_init()
+        mm = self.modulemanager = ModulesManager('broker', None)
+
+        mm.load_and_init(mods)
 
         modA = None
         modB = None
-        for mod in mm.imported_modules:
+        for _, mod in mm.modules_assoc:
             if mod.__package__ == 'modA':
                 modA = mod
             elif mod.__package__ == 'modB':
@@ -56,7 +54,6 @@ class TestModuleManager_And_Packages(AlignakTest):
         self.assertIsNotNone(modA)
         self.assertIsNotNone(modB)
         self.assertNotEqual(modA.helpers.X, modB.helpers.X)
-
 
 
 if __name__ == '__main__':

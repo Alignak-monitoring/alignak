@@ -126,7 +126,6 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('prefix', '/usr/local/alignak/'),
         ('workdir', '/var/run/alignak/'),
         ('config_base_dir', ''),
-        ('modules_dir', '/var/lib/alignak/modules'),
         ('use_local_log', True),
         ('log_level', 'WARNING'),
         ('local_log', '/var/log/alignak/arbiterd.log'),

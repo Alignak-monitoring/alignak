@@ -222,7 +222,7 @@ class BaseModule(object):
         self.properties['process'] = proc  # TODO: temporary
         logger.info("%s is now started ; pid=%d", self.name, proc.pid)
 
-    def __kill(self):
+    def kill(self):
         """Sometime terminate() is not enough, we must "help"
         external modules to die...
 
@@ -252,7 +252,7 @@ class BaseModule(object):
             if self.process.is_alive():
                 logger.warning("%r is still alive normal kill, I help it to die",
                                self.get_name())
-                self.__kill()
+                self.kill()
                 self.process.join(1)
                 if self.process.is_alive():
                     logger.error("%r still alive after brutal kill, I leave it.",
@@ -362,6 +362,14 @@ class BaseModule(object):
         :return: None
         """
         setproctitle("alignak-%s module: %s" % (self.loaded_into, name))
+
+    def main(self):
+        """
+        Main function of BaseModule
+
+        :return: None
+        """
+        logger.info("BaseModule.main() not defined in your %s", self.__class__)
 
     def _main(self):
         """module "main" method. Only used by external modules.

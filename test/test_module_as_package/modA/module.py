@@ -31,12 +31,9 @@ properties = {
 def get_instance(plugin):
     return ThisModule(plugin)
 
+
 class ThisModule(BaseModule):
     pass
-
-
-
-import helpers
 
 expected_helpers_X = 'A'
 

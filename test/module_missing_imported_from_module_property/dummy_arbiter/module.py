@@ -74,7 +74,6 @@ class Dummy_arbiter(BaseModule):
         logger.info("[Dummy Arbiter] Initialization of the dummy arbiter module")
         #self.return_queue = self.properties['from_queue']
 
-
     # Ok, main function that is called in the CONFIGURATION phase
     def get_objects(self):
         logger.info("[Dummy Arbiter] Ask me for objects to return")
