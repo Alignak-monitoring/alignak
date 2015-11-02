@@ -218,7 +218,7 @@ class Satellite(BaseSatellite):
         try:
             sch_con = sched['con'] = HTTPClient(
                 uri=uri, strong_ssl=sched['hard_ssl_name_check'],
-                timeout=timeout, data_timeout=data_timeout)
+                timeout=timeout, data_timeout=data_timeout, name='Scheduler ' + sname)
         except HTTPEXCEPTIONS, exp:
             logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
                            self.name, sname, str(exp))

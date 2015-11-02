@@ -984,7 +984,8 @@ class Scheduler(object):
 
         uri = links[s_id]['uri']
         try:
-            links[s_id]['con'] = HTTPClient(uri=uri, strong_ssl=links[s_id]['hard_ssl_name_check'])
+            links[s_id]['con'] = HTTPClient(uri=uri, strong_ssl=links[s_id]['hard_ssl_name_check'],
+                                            name=s_type)
             con = links[s_id]['con']
         except HTTPEXCEPTIONS, exp:
             logger.warning("Connection problem to the %s %s: %s",
