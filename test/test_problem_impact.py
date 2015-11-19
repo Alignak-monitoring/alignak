@@ -148,7 +148,7 @@ class TestProblemImpact(AlignakTest):
 
         # Now impacts should really be .. impacts :)
         for s in all_servers:
-            self.assertEqual(True, s.is_impact)
+            self.assertEqual(True, s.is_impacted)
             self.assertEqual('UNREACHABLE', s.state)
             # And check the services are impacted too
             for svc in s.services:
@@ -184,7 +184,7 @@ class TestProblemImpact(AlignakTest):
         # And check if it's no more in sources problems of others servers
         for s in all_servers:
             # Still impacted by the other server
-            self.assertEqual(True, s.is_impact)
+            self.assertEqual(True, s.is_impacted)
             self.assertEqual([host_router_1], s.source_problems)
 
         #--------------------------------------------------------------
@@ -205,7 +205,7 @@ class TestProblemImpact(AlignakTest):
         # And check if it's no more in sources problems of others servers
         for s in all_servers:
             # Still impacted by the other server
-            self.assertEqual(False, s.is_impact)
+            self.assertEqual(False, s.is_impacted)
             self.assertEqual('UP', s.state)
             self.assertEqual([], s.source_problems)
 
@@ -316,7 +316,7 @@ class TestProblemImpact(AlignakTest):
 
         # Now impacts should really be .. impacts :)
         for s in all_servers:
-            self.assertEqual(True, s.is_impact)
+            self.assertEqual(True, s.is_impacted)
             self.assertEqual('UNREACHABLE', s.state)
             # And check the services are impacted too
             for svc in s.services:
@@ -374,7 +374,7 @@ class TestProblemImpact(AlignakTest):
         # And check if it's no more in sources problems of others servers
         for s in all_servers:
             # Still impacted by the other server
-            self.assertEqual(True, s.is_impact)
+            self.assertEqual(True, s.is_impacted)
             self.assertEqual([host_router_1], s.source_problems)
 
         #--------------------------------------------------------------
@@ -395,7 +395,7 @@ class TestProblemImpact(AlignakTest):
         # And check if it's no more in sources problems of others servers
         for s in all_servers:
             # Still impacted by the other server
-            self.assertEqual(False, s.is_impact)
+            self.assertEqual(False, s.is_impacted)
             self.assertEqual('UP', s.state)
             self.assertEqual([], s.source_problems)
 
