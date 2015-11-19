@@ -182,6 +182,7 @@ class ActionBase(object):
         self.stdoutdata = ''
         self.stderrdata = ''
 
+        logger.debug("Launch command: %s", self.command)
         return self.execute__()  # OS specific part
 
     def get_outputs(self, out, max_plugins_output_length):
@@ -226,6 +227,7 @@ class ActionBase(object):
                     self.perf_data += ' ' + elts[1].strip().replace('___PROTECT_PIPE___', '|')
         # long_output is all non output and perfline, join with \n
         self.long_output = '\n'.join(long_output)
+        logger.debug("Command result for '%s': %s", self.command, self.output)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
