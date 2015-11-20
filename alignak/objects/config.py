@@ -2000,6 +2000,8 @@ class Config(Item):
         self.hostsextinfo.linkify_templates()
         self.servicesextinfo.linkify_templates()
         self.escalations.linkify_templates()
+        self.commands.linkify_templates()
+        self.triggers.linkify_templates()
         # But also old srv and host escalations
         self.serviceescalations.linkify_templates()
         self.hostescalations.linkify_templates()
