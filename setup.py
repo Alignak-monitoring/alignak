@@ -3,6 +3,7 @@
 
 import os
 import setuptools
+import pwd
 
 
 # Fix for debian 7 python that raise error on at_exit at the end of setup.py
@@ -31,3 +32,9 @@ setuptools.setup(
     pbr=True,
 )
 
+try:
+    uid = pwd.getpwnam("alignak").pw_uid
+    os.chown('/usr/local/var/run/alignak', uid, -1)
+    os.chown('/usr/local/var/log/alignak', uid, -1)
+except:
+    print "[Warning] alignak username not exist!"
