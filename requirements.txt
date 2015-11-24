@@ -1,5 +1,5 @@
 CherryPy
-requests==2.7.0
+requests>=2.7.0
 importlib
 pbr
 termcolor==1.1.0
