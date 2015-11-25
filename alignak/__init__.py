@@ -48,5 +48,4 @@ This file has to be as small as possible in order to namespace to work.
 """
 from . import shinken_import_hook
 
-
-__import__('pkg_resources').declare_namespace(__name__)
+from .version import VERSION as __version__

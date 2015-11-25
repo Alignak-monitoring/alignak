@@ -769,8 +769,8 @@ class Daemon(object):
             self.modules_dir = modules_dir
         logger.info("Modules directory: %s", modules_dir)
         if not os.path.exists(modules_dir):
-            raise RuntimeError("The modules directory '%s' is missing! Bailing out."
-                               "Please fix your configuration" % (modules_dir,))
+            logger.warning("The modules directory '%s' is missing ! "
+                           "Please fix your configuration", modules_dir)
         return modules_dir
 
     def check_and_del_zombie_modules(self):
