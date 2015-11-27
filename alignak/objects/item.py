@@ -540,7 +540,7 @@ class Item(object):
 
         for prop, entry in properties.items():
             if not hasattr(self, prop) and entry.required:
-                logger.warning("[item::%s] %s property is missing", self.get_name(), prop)
+                logger.error("[item::%s] %s property is missing", self.get_name(), prop)
                 state = False
 
         return state

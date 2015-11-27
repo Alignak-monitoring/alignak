@@ -117,7 +117,7 @@ class MacroModulation(Item):
         for prop, entry in cls.properties.items():
             if prop not in cls._special_properties:
                 if not hasattr(self, prop) and entry.required:
-                    logger.warning(
+                    logger.error(
                         "[macromodulation::%s] %s property not set", self.get_name(), prop
                     )
                     state = False  # Bad boy...
