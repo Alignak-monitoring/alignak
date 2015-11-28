@@ -46,7 +46,6 @@ from alignak.objects.module import Module
 
 from alignak.dispatcher import Dispatcher
 from alignak.log import logger
-from alignak.modulesctx import modulesctx
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager, ExternalCommand
@@ -75,9 +74,6 @@ from alignak_tst_utils import safe_print
 
 # Modules are by default on the ../modules
 myself = os.path.abspath(__file__)
-
-global modules_dir
-modules_dir = os.environ.get('ALIGNAK_MODULES_DIR', "modules")
 
 
 class __DUMMY:
@@ -169,22 +165,18 @@ class AlignakTest(unittest.TestCase):
         # and the modules loading phase. As it has its own modulesmanager, should
         # not impact scheduler modules ones, especially we are asking for arbiter type :)
         if len(self.conf.arbiters) == 1:
-            arbdaemon = Arbiter([''],[''], False, False, None, None)
-            # only load if the module_dir is reallyexisting, so was set explicitly
-            # in the test configuration
-            if os.path.exists(getattr(self.conf, 'modules_dir', '')):
-                arbdaemon.modules_dir = self.conf.modules_dir
-                arbdaemon.load_modules_manager()
-            
-                # we request the instances without them being *started*
-                # (for those that are concerned ("external" modules):
-                # we will *start* these instances after we have been daemonized (if requested)
-                me = None
-                for arb in self.conf.arbiters:
-                    me = arb
-                    arbdaemon.modules_manager.set_modules(arb.modules)
-                    arbdaemon.do_load_modules()
-                    arbdaemon.load_modules_configuration_objects(raw_objects)
+            arbdaemon = Arbiter([''], [''], False, False, None, None)
+
+            arbdaemon.load_modules_manager()
+
+            # we request the instances without them being *started*
+            # (for those that are concerned ("external" modules):
+            # we will *start* these instances after we have been daemonized (if requested)
+            me = None
+            for arb in self.conf.arbiters:
+                me = arb
+                arbdaemon.do_load_modules(arb.modules)
+                arbdaemon.load_modules_configuration_objects(raw_objects)
 
         self.conf.create_objects(raw_objects)
         self.conf.instance_id = 0
@@ -225,7 +217,6 @@ class AlignakTest(unittest.TestCase):
         scheddaemon = Alignak(None, False, False, False, None, None)
         self.scheddaemon = scheddaemon
         self.sched = scheddaemon.sched
-        scheddaemon.modules_dir = modules_dir
         scheddaemon.load_modules_manager()
         # Remember to clean the logs we just created before launching tests
         self.clear_logs()

@@ -10,5 +10,5 @@ pylint==1.4.4
 pep8==1.5.7
 pep257
 freezegun
--e git+https://github.com/Alignak-monitoring/mod-example.git#egg=mod-example
+-e git+https://github.com/Alignak-monitoring/alignak-module-example.git#egg=alignak-module-example
 ordereddict==1.1

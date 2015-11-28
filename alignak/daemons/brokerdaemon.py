@@ -662,8 +662,7 @@ class Broker(BaseSatellite):
 
                 # Ok now start, or restart them!
                 # Set modules, init them and start external ones
-                self.modules_manager.set_modules(self.modules)
-                self.do_load_modules()
+                self.do_load_modules(self.modules)
                 self.modules_manager.start_external_instances()
 
             # Set our giving timezone from arbiter

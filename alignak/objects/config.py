@@ -160,9 +160,6 @@ class Config(Item):
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
 
-        'modules_dir':
-            StringProp(default='/var/lib/alignak/modules'),
-
         'use_local_log':
             BoolProp(default=True),
 
@@ -779,8 +776,7 @@ class Config(Item):
     # so from Nagios2 format, to Nagios3 ones
     old_properties = {
         'nagios_user':  'alignak_user',
-        'nagios_group': 'alignak_group',
-        'modulesdir': 'modules_dir',
+        'nagios_group': 'alignak_group'
     }
 
     read_config_silent = 0

@@ -49,52 +49,26 @@
 
 """
 
-import os
 import time
-import sys
 import traceback
 import cStringIO
 
 import importlib
 
-from os.path import join, isdir, abspath
-from os import listdir
 
 from alignak.basemodule import BaseModule
 from alignak.log import logger
 
 
-def uniform_module_type(mod_name):
-    """Replace _ by - in string
-
-    :param mod_name: string to edit
-    :return: module name with - instead of _
-    """
-    return mod_name.replace('_', '-')
-
-
 class ModulesManager(object):
     """This class is use to manage modules and call callback"""
 
-    def __init__(self, modules_type, modules_path, modules):
-        self.modules_path = modules_path
+    def __init__(self, modules_type, manager, max_queue_size=0):
         self.modules_type = modules_type
-        self.modules = modules
-        self.allowed_types = [uniform_module_type(plug.module_type) for plug in modules]
-        self.imported_modules = []
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
-        self.max_queue_size = 0
-        self.manager = None
-
-    def load_manager(self, manager):
-        """Setter for manager attribute
-
-        :param manager: value to set
-        :type manager: str
-        :return: None
-        """
+        self.max_queue_size = max_queue_size
         self.manager = manager
 
     def set_modules(self, modules):
@@ -106,7 +80,6 @@ class ModulesManager(object):
         :return: None
         """
         self.modules = modules
-        self.allowed_types = [uniform_module_type(mod.module_type) for mod in modules]
 
     def set_max_queue_size(self, max_queue_size):
         """Setter for max_queue_size attribute
@@ -117,146 +90,55 @@ class ModulesManager(object):
         """
         self.max_queue_size = max_queue_size
 
-    def load_and_init(self):
+    def load_and_init(self, mod_confs):
         """Import, instanciate & "init" the modules we have been requested
 
         :return: None
         """
-        self.load()
+        self.load(mod_confs)
         self.get_instances()
 
-    @classmethod
-    def try_best_load(cls, name, package=None):
-        """Try to load module in the bast way possible (using importlib)
-
-        :param name: module name to load
-        :type name: str
-        :param package: package name to load module from
-        :type package:
-        :return: None | module
-        :rtype:
+    @staticmethod
+    def find_module_properties_and_get_instance(module, mod_name):
         """
-        try:
-            mod = importlib.import_module(name, package)
-        except Exception as err:
-            logger.warning("Cannot import %s : %s",
-                           '%s.%s' % (package, name) if package else name,
-                           err)
-            return
-        # if the module have a 'properties' and a 'get_instance'
-        # then we are happy and we'll use that:
-        try:
-            mod.properties
-            mod.get_instance
-        except AttributeError:
-            return
-        return mod
+        Get properties and get_instance of a module
 
-    @classmethod
-    def try_very_bad_load(cls, mod_dir):
-        """Try to load module in a bad way (Inserting mod_dir to sys.path)
-        then try to import module (module.py file) in this directory with importlib
-
-        :param mod_dir: module directory to load
-        :type mod_dir: str
-        :return: None
-        """
-        prev_module = sys.modules.get('module')  # cache locally any previously imported 'module' ..
-        logger.warning(
-            "Trying to load %r as an (very-)old-style alignak \"module\" : "
-            "by adding its path to sys.path. This can be (very) bad in case "
-            "of name conflicts within the files part of %s and others "
-            "top-level python modules; I'll try to limit that.",
-            # by removing the mod_dir from sys.path after while.
-            mod_dir, mod_dir
-        )
-        sys.path.insert(0, mod_dir)
-        try:
-            return importlib.import_module('module')
-        except Exception as err:
-            logger.exception("Could not import bare 'module.py' from %s : %s", mod_dir, err)
-            return
-        finally:
-            sys.path.remove(mod_dir)
-            if prev_module is not None:  # and restore it after we have loaded our one (or not)
-                sys.modules['module'] = prev_module
-
-    @classmethod
-    def try_load(cls, mod_name, mod_dir=None):
-        """Try in three different ways to load a module
-
-        :param mod_name: module name to load
+        :param module: module object
+        :type module: object
+        :param mod_name: Name of the module
         :type mod_name: str
-        :param mod_dir: module directory where module is
-        :type mod_dir: str | None
-        :return: module
-        :rtype: object
-        """
-        msg = ''
-        mod = cls.try_best_load(mod_name)
-        if mod:
-            msg = "Correctly loaded %s as a very-new-style alignak module :)"
-        else:
-            mod = cls.try_best_load('.module', mod_name)
-            if mod:
-                msg = "Correctly loaded %s as an old-new-style alignak module :|"
-            elif mod_dir:
-                mod = cls.try_very_bad_load(mod_dir)
-                if mod:
-                    msg = "Correctly loaded %s as a very old-style alignak module :s"
-        if msg:
-            logger.info(msg, mod_name)
-        return mod
-
-    def load(self):
-        """Try to import the requested modules ; put the imported modules in self.imported_modules.
-        The previous imported modules, if any, are cleaned before.
-
         :return: None
         """
-        if self.modules_path not in sys.path:
-            sys.path.append(self.modules_path)
+        try:
+            module.properties
+            module.get_instance
+        except AttributeError:
+            pass
+        else:
+            # good module style
+            return
+        submod = importlib.import_module('.module', mod_name)
+        # old style:
+        module.properties = submod.properties
+        module.get_instance = submod.get_instance
 
-        alignak_modules_path = sys.modules['alignak'].__path__[0] + '/modules'
-        if alignak_modules_path not in sys.path:
-            sys.path.append(alignak_modules_path)
-
-        modules_paths = [alignak_modules_path, self.modules_path]
-
-        modules_files = []
-        for path in modules_paths:
-            if os.path.exists(path):
-                for fname in listdir(path):
-                    if isdir(join(path, fname)):
-                        modules_files.append({'path': path, 'name': fname})
-
-        del self.imported_modules[:]
-        for module in modules_files:
-            mod_file = abspath(join(module['path'], module['name'], 'module.py'))
-            mod_dir = os.path.normpath(os.path.dirname(mod_file))
-            mod = self.try_load(module['name'], mod_dir)
-            if not mod:
-                continue
-            try:
-                is_our_type = self.modules_type in mod.properties['daemons']
-            except Exception as err:
-                logger.warning("Bad module file for %s : cannot check its properties['daemons']"
-                               "attribute : %s", mod_file, err)
-            else:  # We want to keep only the modules of our type
-                if is_our_type:
-                    self.imported_modules.append(mod)
-
+    def load(self, mod_confs):
+        """
+        Try to import the requested modules ; put the imported modules in self.imported_modules.
+        """
         # Now we want to find in theses modules the ones we are looking for
         del self.modules_assoc[:]
-        for mod_conf in self.modules:
-            module_type = uniform_module_type(mod_conf.module_type)
-            for module in self.imported_modules:
-                if uniform_module_type(module.properties['type']) == module_type:
-                    self.modules_assoc.append((mod_conf, module))
-                    break
-            else:  # No module is suitable, we emit a Warning
-                logger.warning("The module type %s for %s was not found in modules!",
-                               module_type, mod_conf.get_name())
+        for mod_conf in mod_confs:
+            try:
+                module = importlib.import_module(mod_conf.module_type)
+                self.find_module_properties_and_get_instance(module, mod_conf.module_type)
+                self.modules_assoc.append((mod_conf, module))
+            except ImportError:
+                logger.warning("Module %s (%s) can't be loaded, not found", mod_conf.module_type,
+                               mod_conf.module_name)
+            except AttributeError:
+                logger.warning("Module %s (%s) can't be loaded because attributes errors",
+                               mod_conf.module_type, mod_conf.module_name)
 
     def try_instance_init(self, inst, late_start=False):
         """Try to "init" the given module instance.

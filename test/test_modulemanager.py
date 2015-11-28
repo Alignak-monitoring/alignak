@@ -62,10 +62,7 @@ from alignak_test import (
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
 
-modules_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), '..', 'modules')
 
-
-@unittest.skipIf(True, "temporary disabled")
 class TestModuleManager(AlignakTest):
 
     def setUp(self):
@@ -74,11 +71,9 @@ class TestModuleManager(AlignakTest):
 
     # Try to see if the module manager can manage modules
     def test_modulemanager(self):
-        mod = Module({'module_name': 'mod-example', 'module_type': 'example'})
-        path = sys.modules['alignak'].__path__[0] + '/modules'
-        self.modulemanager = ModulesManager('broker', path, [])
-        self.modulemanager.set_modules([mod])
-        self.modulemanager.load_and_init()
+        mod = Module({'module_name': 'mod-example', 'module_type': 'alignak_module_example'})
+        self.modulemanager = ModulesManager('broker', None)
+        self.modulemanager.load_and_init([mod])
         # And start external ones, like our LiveStatus
         self.modulemanager.start_external_instances()
         print "I correctly loaded the modules: %s " % ([inst.get_name() for inst in self.modulemanager.instances])
@@ -86,9 +81,9 @@ class TestModuleManager(AlignakTest):
         print "*** First kill ****"
         # Now I will try to kill the livestatus module
         ls = self.modulemanager.instances[0]
-        ls._BaseModule__kill()
-
-        time.sleep(1)
+        " :type: alignak.basemodule.BaseModule "
+        ls.kill()
+        time.sleep(0.1)
         print "Check alive?"
         print "Is alive?", ls.process.is_alive()
         # Should be dead
@@ -118,8 +113,8 @@ class TestModuleManager(AlignakTest):
         self.assertEqual([], self.modulemanager.to_restart)
 
         # Now we look for time restart so we kill it again
-        ls._BaseModule__kill()
-        time.sleep(1)
+        ls.kill()
+        time.sleep(0.2)
         self.assertFalse(ls.process.is_alive())
 
         # Should be too early

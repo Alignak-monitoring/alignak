@@ -75,9 +75,8 @@ from multiprocessing.managers import SyncManager
 from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
 from alignak.log import logger
 from alignak.stats import statsmgr
-from alignak.modulesctx import modulesctx
 from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp,\
+from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
     LogLevelProp
 from alignak.misc.common import setproctitle
 
@@ -171,7 +170,6 @@ class Daemon(object):
         #
         # as returned once the daemon is started.
         'workdir':       PathProp(default=DEFAULT_WORK_DIR),
-        'modules_dir':    PathProp(default=os.path.join(DEFAULT_LIB_DIR, 'modules')),
         'host':          StringProp(default='0.0.0.0'),
         'user':          StringProp(default=get_cur_user()),
         'group':         StringProp(default=get_cur_group()),
@@ -336,12 +334,12 @@ class Daemon(object):
                 break
         self.request_stop()
 
-    def do_load_modules(self):
+    def do_load_modules(self, mod_confs):
         """Wrapper for calling load_and_init method of modules_manager attribute
 
         :return: None
         """
-        self.modules_manager.load_and_init()
+        self.modules_manager.load_and_init(mod_confs)
         logger.info("I correctly loaded the modules: [%s]",
                     ','.join([inst.get_name() for inst in self.modules_manager.instances]))
 
@@ -386,14 +384,8 @@ class Daemon(object):
 
         :return: None
         """
-        if not modulesctx.get_modulesdir():
-            modulesctx.set_modulesdir(self.find_modules_path())
-        self.modules_manager = ModulesManager(self.name, self.find_modules_path(), [])
-        # Set the modules watchdogs
-        # TOFIX: Beware, the arbiter do not have the max_queue_size property
-        self.modules_manager.set_max_queue_size(getattr(self, 'max_queue_size', 0))
-        # And make the module manager load the sub-process Queue() manager
-        self.modules_manager.load_manager(self.manager)
+        self.modules_manager = ModulesManager(self.name, self.manager,
+                                              max_queue_size=getattr(self, 'max_queue_size', 0))
 
     def change_to_workdir(self):
         """Change working directory to working attribute
@@ -749,29 +741,6 @@ class Daemon(object):
                 return []
             raise
         return ins
-
-    def find_modules_path(self):
-        """
-        Find the absolute path of the alignak module directory and returns it.
-        If the directory do not exist, we must exit!
-
-        :return: modules_dir path
-        :rtype: str
-        """
-        modules_dir = getattr(self, 'modules_dir', None)
-        if not modules_dir:
-            modules_dir = modulesctx.get_modulesdir()
-            if not modules_dir:
-                logger.error("Your configuration is missing the path to the modules (modules_dir). "
-                             "I set it by default to /var/lib/alignak/modules. Please configure it")
-                modules_dir = '/var/lib/alignak/modules'
-                modulesctx.set_modulesdir(modules_dir)
-            self.modules_dir = modules_dir
-        logger.info("Modules directory: %s", modules_dir)
-        if not os.path.exists(modules_dir):
-            logger.warning("The modules directory '%s' is missing ! "
-                           "Please fix your configuration", modules_dir)
-        return modules_dir
 
     def check_and_del_zombie_modules(self):
         """Check alive instance and try to restart the dead ones

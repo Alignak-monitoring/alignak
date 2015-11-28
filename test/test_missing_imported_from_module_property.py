@@ -46,6 +46,7 @@
 
 import os
 import time
+import sys
 
 from alignak_test import (
     AlignakTest, time_hacker, unittest
@@ -54,8 +55,6 @@ from alignak_test import (
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
 from alignak.log import logger
-
-modules_dir = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'module_missing_imported_from_module_property')
 
 
 class TestMissingimportedFrom(AlignakTest):
@@ -69,7 +68,6 @@ class TestMissingimportedFrom(AlignakTest):
     # in the arbiterdaemon part.
     def test_missing_imported_from(self):
         self.assertTrue(self.sched.conf.is_correct)
-    
 
 
 if __name__ == '__main__':

@@ -275,15 +275,12 @@ class Arbiter(Daemon):
 
         logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
 
-        self.modules_dir = getattr(self.conf, 'modules_dir', '')
-
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
         # we request the instances without them being *started*
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
-        self.modules_manager.set_modules(self.myself.modules)
-        self.do_load_modules()
+        self.do_load_modules(self.myself.modules)
 
         # Call modules that manage this read configuration pass
         self.hook_point('read_configuration')
@@ -522,8 +519,7 @@ class Arbiter(Daemon):
 
         print self.modules_manager.instances
         # Ok now all we need is the import module
-        self.modules_manager.set_modules([mig_mod])
-        self.do_load_modules()
+        self.do_load_modules([mig_mod])
         print self.modules_manager.instances
         if len(self.modules_manager.instances) == 0:
             print "Error during the initialization of the import module. Bailing out"

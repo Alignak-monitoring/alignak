@@ -314,8 +314,7 @@ class Alignak(BaseSatellite):
                 logger.debug("I've got %s modules", str(self.modules))
 
             # TODO: if scheduler had previous modules instanciated it must clean them!
-            self.modules_manager.set_modules(self.modules)
-            self.do_load_modules()
+            self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")
             self.conf.explode_global_conf()

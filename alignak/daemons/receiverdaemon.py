@@ -415,8 +415,7 @@ class Receiver(Satellite):
                 return
 
             self.setup_new_conf()
-            self.modules_manager.set_modules(self.modules)
-            self.do_load_modules()
+            self.do_load_modules(self.modules)
             # and start external modules too
             self.modules_manager.start_external_instances()
 
