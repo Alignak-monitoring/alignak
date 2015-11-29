@@ -520,8 +520,8 @@ class TestDispatcherMultiBroker(AlignakTest):
         self.assert_any_log_match('Dispatch OK of configuration 0 to reactionner reactionner-all-1')
         self.assert_any_log_match('Dispatch OK of configuration 0 to poller poller-all-1')
 
-        self.assert_any_log_match('Dispatch OK of configuration 1 to broker broker-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to broker broker-all-2')
+        self.assert_any_log_match('Dispatch OK of configuration [01] to broker broker-all-1')
+        self.assert_any_log_match('Dispatch OK of configuration [01] to broker broker-all-2')
         self.clear_logs()
 
 
