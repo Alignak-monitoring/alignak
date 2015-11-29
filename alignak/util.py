@@ -748,36 +748,24 @@ def scheduler_no_spare_first(x00, y00):
         return -1
 
 
-def alive_then_spare_then_deads(x00, y00):
+def alive_then_spare_then_deads(sat1, sat2):
     """Compare two satellite link
     based on alive attribute then spare attribute
 
-    :param x00: first link to compare
-    :type x00:
-    :param y00: second link to compare
-    :type y00:
-    :return: x00 > y00 (1) if x00 alive and not y00 or both alive but x00 not spare
-             x00 == y00 (0) if both alive and spare
-             x00 < y00 (-1) else
+    :param sat1: first link to compare
+    :type sat1:
+    :param sat2: second link to compare
+    :type sat2:
+    :return: sat1 > sat2 (1) if sat1 alive and not sat2 or both alive but sat1 not spare
+             sat1 == sat2 (0) if both alive and spare
+             sat1 < sat2 (-1) else
     :rtype: int
-    TODO: Rework it
     """
-    # First are alive
-    if x00.alive and not y00.alive:
-        return -1
-    if y00.alive and not x00.alive:
+    if sat1.alive == sat2.alive and sat1.spare == sat2.spare:
         return 0
-    # if not alive both, I really don't care...
-    if not x00.alive and not y00.alive:
+    if not sat2.alive or (sat2.alive and sat2.spare and sat1.alive):
         return -1
-    # Ok, both are alive... now spare after no spare
-    if not x00.spare:
-        return -1
-    # x00 is a spare, so y00 must be before, even if
-    # y00 is a spare
-    if not y00.spare:
-        return 1
-    return 0
+    return 1
 
 
 def sort_by_ids(x00, y00):
