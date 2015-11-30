@@ -71,7 +71,7 @@ class TestModuleManager(AlignakTest):
 
     # Try to see if the module manager can manage modules
     def test_modulemanager(self):
-        mod = Module({'module_name': 'mod-example', 'module_type': 'alignak_module_example'})
+        mod = Module({'module_alias': 'mod-example', 'python_name': 'alignak_module_example'})
         self.modulemanager = ModulesManager('broker', None)
         self.modulemanager.load_and_init([mod])
         # And start external ones, like our LiveStatus

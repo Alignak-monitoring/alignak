@@ -130,15 +130,15 @@ class ModulesManager(object):
         del self.modules_assoc[:]
         for mod_conf in mod_confs:
             try:
-                module = importlib.import_module(mod_conf.module_type)
-                self.find_module_properties_and_get_instance(module, mod_conf.module_type)
+                module = importlib.import_module(mod_conf.python_name)
+                self.find_module_properties_and_get_instance(module, mod_conf.python_name)
                 self.modules_assoc.append((mod_conf, module))
             except ImportError:
-                logger.warning("Module %s (%s) can't be loaded, not found", mod_conf.module_type,
-                               mod_conf.module_name)
+                logger.warning("Module %s (%s) can't be loaded, not found", mod_conf.python_name,
+                               mod_conf.module_alias)
             except AttributeError:
                 logger.warning("Module %s (%s) can't be loaded because attributes errors",
-                               mod_conf.module_type, mod_conf.module_name)
+                               mod_conf.python_name, mod_conf.module_alias)
 
     def try_instance_init(self, inst, late_start=False):
         """Try to "init" the given module instance.

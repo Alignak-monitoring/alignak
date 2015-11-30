@@ -51,8 +51,8 @@ class BrokerInterface(GenericInterface):
         insts = [inst for inst in app.modules_manager.instances if inst.is_external]
         for inst in insts:
             try:
-                res.append({'module_name': inst.get_name(), 'queue_size': inst.to_q.qsize()})
+                res.append({'module_alias': inst.get_name(), 'queue_size': inst.to_q.qsize()})
             except Exception, exp:
-                res.append({'module_name': inst.get_name(), 'queue_size': 0})
+                res.append({'module_alias': inst.get_name(), 'queue_size': 0})
 
         return res

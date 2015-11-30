@@ -32,8 +32,8 @@ class TestModuleManager_And_Packages(AlignakTest):
     def test_conflicting_modules(self):
 
         # prepare 2 modconfs:
-        modconfA = Module({'module_name': 'whatever', 'module_type': 'modA'})
-        modconfB = Module({'module_name': '42',       'module_type': 'modB'})
+        modconfA = Module({'module_alias': 'whatever', 'python_name': 'modA'})
+        modconfB = Module({'module_alias': '42',       'python_name': 'modB'})
 
         mods = (modconfA, modconfB)
 
