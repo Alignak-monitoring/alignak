@@ -504,14 +504,17 @@ do_reload_() {
         if [ $checkrc -ne 0 ]; then
            return 1
         fi
+        pid=$(getmodpid "$mod")
+        # send SIGHUP signal to reload configuration
+        kill -1 $pid
+        rc=$?
+    else
+        # if not the arbiter module, reload == restart
+        do_restart_ $mod
     fi
-    stopoutput=$(do_stop "$mod")
-    startoutput=$(do_start "$mod")
-    rc=$?
     if [ $rc -eq 0 ]; then
         echo_success
     else
-        log_failure_msg "$startoutput"
         echo_failure
     fi
     return $rc
