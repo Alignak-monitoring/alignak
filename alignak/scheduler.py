@@ -84,7 +84,7 @@ from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.acknowledge import Acknowledge
 from alignak.log import logger
-from alignak.util import nighty_five_percent
+from alignak.util import average_percentile
 from alignak.load import Load
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
@@ -1853,7 +1853,7 @@ class Scheduler(object):
         # Get a overview of the latencies with just
         # a 95 percentile view, but lso min/max values
         latencies = [s.latency for s in self.services]
-        lat_avg, lat_min, lat_max = nighty_five_percent(latencies)
+        lat_avg, lat_min, lat_max = average_percentile(latencies)
         res['latency'] = (0.0, 0.0, 0.0)
         if lat_avg:
             res['latency'] = {'avg': lat_avg, 'min': lat_min, 'max': lat_max}
@@ -2032,7 +2032,7 @@ class Scheduler(object):
             # Get a overview of the latencies with just
             # a 95 percentile view, but lso min/max values
             latencies = [s.latency for s in self.services]
-            lat_avg, lat_min, lat_max = nighty_five_percent(latencies)
+            lat_avg, lat_min, lat_max = average_percentile(latencies)
             if lat_avg is not None:
                 logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
 
