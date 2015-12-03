@@ -120,44 +120,6 @@ class ArbiterLink(SatelliteLink):
             self.con = None
             return False
 
-    def get_satellite_list(self, daemon_type):
-        """
-        Get list of satellites
-
-        :param daemon_type: name of daemon to check
-        :type daemon_type: str
-        :return: list of satellites
-        :rtype: list
-        """
-        if self.con is None:
-            self.create_connection()
-        try:
-            satlist = self.con.get_satellite_list(daemon_type)
-            return satlist
-        except HTTPEXCEPTIONS, exp:
-            self.con = None
-            return []
-
-    def get_satellite_status(self, daemon_type, name):
-        """
-        Get the status of a satellite
-
-        :param daemon_type: type of daemon
-        :type daemon_type: str
-        :param name: Name of daemon
-        :type name: str
-        :return: dictionary of status
-        :rtype: dict
-        """
-        if self.con is None:
-            self.create_connection()
-        try:
-            satlist = self.con.get_satellite_status(daemon_type, name)
-            return satlist
-        except HTTPEXCEPTIONS, exp:
-            self.con = None
-            return {}
-
     def get_all_states(self):
         """
         Get states of all satellites

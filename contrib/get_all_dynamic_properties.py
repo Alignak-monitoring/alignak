@@ -8,6 +8,7 @@ import inspect
 import fileinput
 from alignak.objects import *
 from alignak.objects.config import Config
+from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
@@ -19,7 +20,13 @@ properties.extend(['global_low_flap_threshold', 'global_high_flap_threshold', 'l
                    'enable_predictive_dependency_checks', 'cached_check_horizon', 'check_timeout',
                    'obsess_over', 'perfdata_command', 'perfdata_file', 'perfdata_file_template',
                    'perfdata_file_mode', 'perfdata_file_processing_command', 'check_for_orphaned',
-                   'global_check_freshness', 'execute_checks'])
+                   'global_check_freshness', 'execute_checks', 'timeperiods', 'services',
+                   'servicegroups', 'commands', 'hosts', 'hostgroups', 'contacts', 'contactgroups',
+                   'notificationways', 'checkmodulations', 'macromodulations',
+                   'servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
+                   'reactionners', 'brokers', 'receivers', 'pollers', 'realms', 'modules',
+                   'resultmodulations', 'businessimpactmodulations', 'escalations',
+                   'serviceescalations', 'hostescalations', 'hostsextinfo', 'servicesextinfo'])
 
 for name, obj in clsmembers:
     if hasattr(obj, 'properties'):
