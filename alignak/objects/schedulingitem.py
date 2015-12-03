@@ -2031,7 +2031,7 @@ class SchedulingItem(Item):
         if self.problem_has_been_acknowledged:
             logger.debug("[item::%s] deleting acknowledge of %s",
                          self.get_name(),
-                         self.get_dbg_name())
+                         self.get_full_name())
             self.problem_has_been_acknowledged = False
             # Should not be deleted, a None is Good
             self.acknowledgement = None
@@ -2051,3 +2051,196 @@ class SchedulingItem(Item):
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem()
+
+    def raise_alert_log_entry(self):
+        """Raise ALERT entry (critical level)
+        It's defined in right objects (Host and Service)
+
+        :return: None
+        """
+        pass
+
+    def is_state(self, status):
+        """Return if status match the current item status
+
+        :param status: status to compare. Usually comes from config files
+        :type status: str
+        :return: True
+        :rtype: bool
+        """
+        return True
+
+    def raise_freshness_log_entry(self, t_stale_by, t_threshold):
+        """Raise freshness alert entry (warning level)
+        Format is : "The results of host '*get_name()*' are stale by *t_stale_by*
+                     (threshold=*t_threshold*).  I'm forcing an immediate check of the host."
+        Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s
+                   (threshold=0d 1h 0m 0s). ..."
+
+        :param t_stale_by: time in seconds the host has been in a stale state
+        :type t_stale_by: int
+        :param t_threshold: threshold (seconds) to trigger this log entry
+        :type t_threshold: int
+        :return: None
+        """
+        pass
+
+    def raise_snapshot_log_entry(self, command):
+        """Raise HOST SNAPSHOT entry (critical level)
+        Format is : "HOST SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
+                    *command.get_name()*"
+        Example : "HOST SNAPSHOT: server;UP;HARD;1;notify-by-rss"
+
+        :param command: Snapshot command launched
+        :type command: alignak.objects.command.Command
+        :return: None
+        """
+        pass
+
+    def raise_flapping_start_log_entry(self, change_ratio, threshold):
+        """Raise FLAPPING ALERT START entry (critical level)
+
+        :param change_ratio: percent of changing state
+        :type change_ratio: float
+        :param threshold: threshold (percent) to trigger this log entry
+        :type threshold: float
+        :return: None
+        """
+        pass
+
+    def raise_event_handler_log_entry(self, command):
+        """Raise EVENT HANDLER entry (critical level)
+
+        :param command: Handler launched
+        :type command: alignak.objects.command.Command
+        :return: None
+        """
+        pass
+
+    def raise_flapping_stop_log_entry(self, change_ratio, threshold):
+        """Raise FLAPPING ALERT STOPPED entry (critical level)
+
+        :param change_ratio: percent of changing state
+        :type change_ratio: float
+        :param threshold: threshold (percent) to trigger this log entry
+        :type threshold: float
+        :return: None
+        """
+        pass
+
+    def raise_notification_log_entry(self, notif):
+        """Raise NOTIFICATION entry (critical level)
+        :param notif: notification object created by service alert
+        :type notif: alignak.objects.notification.Notification
+        :return: None
+        """
+        pass
+
+    def get_data_for_checks(self):
+        """Get data for a check
+
+        :return: list containing the service and the linked host
+        :rtype: list
+        """
+        return []
+
+    def get_data_for_event_handler(self):
+        """Get data for an event handler
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        """
+        return []
+
+    def get_data_for_notifications(self, contact, notif):
+        """Get data for a notification
+
+        :param contact: The contact to return
+        :type contact:
+        :param notif: the notification to return
+        :type notif:
+        :return: list
+        :rtype: list
+        """
+        return []
+
+    def set_impact_state(self):
+        """We just go an impact, so we go unreachable
+        But only if we enable this state change in the conf
+
+        :return: None
+        """
+        pass
+
+    def unset_impact_state(self):
+        """We just go an impact, so we go unreachable
+        But only if we enable this state change in the conf
+
+        :return: None
+        """
+        pass
+
+    def last_time_non_ok_or_up(self):
+        """Get the last time the item was in a non-OK state
+
+        :return: return 0
+        :rtype: int
+        """
+        return 0
+
+    def set_unreachable(self):
+        """
+        Set unreachable
+
+        :return: None
+        """
+        pass
+
+    def manage_stalking(self, check):
+        """Check if the item need stalking or not (immediate recheck)
+
+        :param check: finshed check (check.status == 'waitconsume')
+        :type check: alignak.check.Check
+        :return: None
+        """
+        pass
+
+    def set_state_from_exit_status(self, status):
+        """Set the state with the status of a check. Also update last_state
+
+        :param status: integer between 0 and 3
+        :type status: int
+        :return: None
+        """
+        pass
+
+    def get_obsessive_compulsive_processor_command(self):
+        """Create action for obsessive compulsive commands if such option is enabled
+
+        :return: None
+        """
+        pass
+
+    def notification_is_blocked_by_item(self, n_type, t_wished=None):
+        """Check if a notification is blocked by item
+
+        :param n_type: notification type
+        :type n_type:
+        :param t_wished: the time we should like to notify the host (mostly now)
+        :type t_wished: float
+        :return: True if ONE of the above condition was met, otherwise False
+        :rtype: bool
+        """
+        return False
+
+    def notification_is_blocked_by_contact(self, notif, contact):
+        """Check if the notification is blocked by this contact.
+
+        :param notif: notification created earlier
+        :type notif: alignak.notification.Notification
+        :param contact: contact we want to notify
+        :type notif: alignak.objects.contact.Contact
+        :return: True if the notification is blocked, False otherwise
+        :rtype: bool
+        """
+        return False

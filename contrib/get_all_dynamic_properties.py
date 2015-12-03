@@ -7,10 +7,19 @@ import sys
 import inspect
 import fileinput
 from alignak.objects import *
+from alignak.objects.config import Config
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
 properties = ['REQUEST' ,'acl_users', 'aq_parent']
+
+# Properties defined in class_inherit
+properties.extend(['global_low_flap_threshold', 'global_high_flap_threshold', 'log_retries',
+                   'global_event_handler', 'max_check_spread',
+                   'enable_predictive_dependency_checks', 'cached_check_horizon', 'check_timeout',
+                   'obsess_over', 'perfdata_command', 'perfdata_file', 'perfdata_file_template',
+                   'perfdata_file_mode', 'perfdata_file_processing_command', 'check_for_orphaned',
+                   'global_check_freshness', 'execute_checks'])
 
 for name, obj in clsmembers:
     if hasattr(obj, 'properties'):

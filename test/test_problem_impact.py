@@ -136,8 +136,8 @@ class TestProblemImpact(AlignakTest):
             self.assertEqual(5, h.business_impact)
             for s in all_servers:
                 self.assertIn(s, h.impacts)
-                self.assertIn(s.get_dbg_name(), host_router_0_brok.data['impacts']['hosts'])
-                self.assertIn(s.get_dbg_name(), host_router_1_brok.data['impacts']['hosts'])
+                self.assertIn(s.get_full_name(), host_router_0_brok.data['impacts']['hosts'])
+                self.assertIn(s.get_full_name(), host_router_1_brok.data['impacts']['hosts'])
 
         # Should have host notification, but it's not so simple:
         # our contact say: not under 5, and our hosts are 2. But
@@ -154,8 +154,8 @@ class TestProblemImpact(AlignakTest):
             for svc in s.services:
                 print "Service state", svc.state
                 self.assertEqual('UNKNOWN', svc.state)
-                self.assertIn(svc.get_dbg_name(), host_router_0_brok.data['impacts']['services'])
-                self.assertIn(svc.get_dbg_name(), host_router_1_brok.data['impacts']['services'])
+                self.assertIn(svc.get_full_name(), host_router_0_brok.data['impacts']['services'])
+                self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
                 self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
@@ -163,7 +163,7 @@ class TestProblemImpact(AlignakTest):
                 self.assertIn(h, s.source_problems)
                 brk_hst = s.get_update_status_brok()
                 brk_hst.prepare()
-                self.assertIn(h.get_dbg_name(), brk_hst.data['source_problems']['hosts'])
+                self.assertIn(h.get_full_name(), brk_hst.data['source_problems']['hosts'])
 
         #--------------------------------------------------------------
         # One router get UP now
@@ -304,8 +304,8 @@ class TestProblemImpact(AlignakTest):
             self.assertEqual(2, h.business_impact)
             for s in all_servers:
                 self.assertIn(s, h.impacts)
-                self.assertIn(s.get_dbg_name(), host_router_0_brok.data['impacts']['hosts'])
-                self.assertIn(s.get_dbg_name(), host_router_1_brok.data['impacts']['hosts'])
+                self.assertIn(s.get_full_name(), host_router_0_brok.data['impacts']['hosts'])
+                self.assertIn(s.get_full_name(), host_router_1_brok.data['impacts']['hosts'])
 
         # Should have host notification, but it's not so simple:
         # our contact say: not under 5, and our hosts are 2. And here
@@ -322,8 +322,8 @@ class TestProblemImpact(AlignakTest):
             for svc in s.services:
                 print "Service state", svc.state
                 self.assertEqual('UNKNOWN', svc.state)
-                self.assertIn(svc.get_dbg_name(), host_router_0_brok.data['impacts']['services'])
-                self.assertIn(svc.get_dbg_name(), host_router_1_brok.data['impacts']['services'])
+                self.assertIn(svc.get_full_name(), host_router_0_brok.data['impacts']['services'])
+                self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
                 self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
@@ -331,7 +331,7 @@ class TestProblemImpact(AlignakTest):
                 self.assertIn(h, s.source_problems)
                 brk_hst = s.get_update_status_brok()
                 brk_hst.prepare()
-                self.assertIn(h.get_dbg_name(), brk_hst.data['source_problems']['hosts'])
+                self.assertIn(h.get_full_name(), brk_hst.data['source_problems']['hosts'])
 
 
         for h in all_hosts:

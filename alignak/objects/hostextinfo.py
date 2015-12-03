@@ -155,15 +155,6 @@ class HostExtInfo(Item):
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
 
-    def get_dbg_name(self):
-        """Get the host name for debugging (host_name)
-
-        :return: service extinfo  host name
-        :rtype: str
-        TODO: Remove this function, get_name is doing it
-        """
-        return self.host_name
-
     def get_full_name(self):
         """Get the full name for debugging (host_name)
 

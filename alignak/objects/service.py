@@ -660,15 +660,6 @@ class Service(SchedulingItem):
         """
         return ','.join([sg.get_name() for sg in self.servicegroups])
 
-    def get_dbg_name(self):
-        """Get the full name for debugging (host_name/service_description)
-
-        :return: service full name
-        :rtype: str
-        TODO: Remove this function
-        """
-        return "%s/%s" % (self.host.host_name, self.service_description)
-
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
 
@@ -992,13 +983,6 @@ class Service(SchedulingItem):
 #                                  __/ |
 #                                 |___/
 ####
-
-    def set_unreachable(self):
-        """Does nothing. Unreachable means nothing for a service
-
-        :return: None
-        """
-        pass
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable

@@ -150,7 +150,7 @@ class ContactDowntime:
         :return: data pickled
         :rtype: list
         """
-        # print "Asking a getstate for a downtime on", self.ref.get_dbg_name()
+        # print "Asking a getstate for a downtime on", self.ref.get_full_name()
         cls = self.__class__
         # id is not in *_properties
         res = [self._id]

@@ -613,11 +613,10 @@ def to_svc_hst_distinct_lists(ref, tab):
     res = {'hosts': [], 'services': []}
     for elem in tab:
         cls = elem.__class__
+        name = elem.get_full_name()
         if cls.my_type == 'service':
-            name = elem.get_dbg_name()
             res['services'].append(name)
         else:
-            name = elem.get_dbg_name()
             res['hosts'].append(name)
     return res
 

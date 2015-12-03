@@ -116,7 +116,7 @@ class TestComplexHostgroups(AlignakTest):
 
         # First the service define for the host linux_0 only
         svc = self.find_service('test_linux_web_prod_0', 'linux_0')
-        print "Service linux_0 only", svc.get_dbg_name()
+        print "Service linux_0 only", svc.get_full_name()
         r = self.srv_define_only_on('linux_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_linux_file_prod_0])
         self.assertEqual(True, r)
 
