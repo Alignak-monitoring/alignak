@@ -111,8 +111,6 @@ class Resultmodulation(Item):
 
         :return: None
         """
-        # First apply Item pythonize
-        super(Resultmodulation, self).pythonize()
 
         # Then very special cases
         # Intify the exit_codes_match, and make list
