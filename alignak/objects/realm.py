@@ -97,6 +97,11 @@ class Realm(Itemgroup):
         'REALMMEMBERS': 'members',
     }
 
+    potential_pollers = []
+    potential_reactionners = []
+    potential_brokers = []
+    potential_receivers = []
+
     def get_name(self):
         """Accessor to realm_name attribute
 
