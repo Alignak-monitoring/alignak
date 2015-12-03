@@ -9,6 +9,7 @@ import fileinput
 from alignak.objects import *
 from alignak.objects.config import Config
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
+from alignak.objects.checkmodulation import CheckModulation, CheckModulations
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
