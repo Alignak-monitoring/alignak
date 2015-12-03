@@ -115,7 +115,8 @@ class Item(object):
 
         self.customs = {}  # for custom variables
         self.plus = {}  # for value with a +
-        self.old_properties = {}
+        if not hasattr(self, 'old_properties'):
+            self.old_properties = {}
 
         self.init_running_properties()
         # [0] = +  -> new key-plus
