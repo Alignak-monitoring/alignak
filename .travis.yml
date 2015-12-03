@@ -18,7 +18,7 @@ script:
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
   - unset PYTHONWARNINGS
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pylint --rcfile=.pylintrc --disable=all --enable=C0111 --enable=W0403 --enable=W0106 --enable=W1401 --enable=W0614 --enable=W0107 --enable=C0204 --enable=W0109  --enable=W0223  --enable=W0311  --enable=W0404  --enable=W0623  --enable=W0633 --enable=W0640  --enable=W0105 --enable=W0141 --enable=C0325 --enable=W1201 --enable=W0231 --enable=W0611 --enable=C0326 --enable=W0122 --enable=E0102 --enable=W0401 --enable=W0622 --enable=C0103 -r no alignak/*; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pylint --rcfile=.pylintrc --disable=all --enable=C0111 --enable=W0403 --enable=W0106 --enable=W1401 --enable=W0614 --enable=W0107 --enable=C0204 --enable=W0109  --enable=W0223  --enable=W0311  --enable=W0404  --enable=W0623  --enable=W0633 --enable=W0640  --enable=W0105 --enable=W0141 --enable=C0325 --enable=W1201 --enable=W0231 --enable=W0611 --enable=C0326 --enable=W0122 --enable=E0102 --enable=W0401 --enable=W0622 --enable=C0103 --enable=E1101 -r no alignak/*; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
   - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..
