@@ -73,6 +73,8 @@ from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
 from alignak.dependencynode import DependencyNodeFactory
+from alignak.acknowledge import Acknowledge
+from alignak.comment import Comment
 from alignak.log import logger
 
 
@@ -1970,3 +1972,82 @@ class SchedulingItem(Item):
         # SchedulingItem in its check_result brok
         if brok_type == 'check_result':
             data['command_name'] = self.check_command.command.command_name
+
+    def acknowledge_problem(self, sticky, notify, persistent, author, comment, end_time=0):
+        """
+        Add an acknowledge
+
+        :param sticky: acknowledge will be always present is host return in UP state
+        :type sticky: integer
+        :param notify: if to 1, send a notification
+        :type notify: integer
+        :param persistent: if 1, keep this acknowledge when Alignak restart
+        :type persistent: integer
+        :param author: name of the author or the acknowledge
+        :type author: str
+        :param comment: comment (description) of the acknowledge
+        :type comment: str
+        :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
+        :type end_time: int
+        :return: None
+        """
+        if self.state != self.ok_up:
+            if notify:
+                self.create_notifications('ACKNOWLEDGEMENT')
+            self.problem_has_been_acknowledged = True
+            if sticky == 2:
+                sticky = True
+            else:
+                sticky = False
+            ack = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
+            self.acknowledgement = ack
+            if self.my_type == 'host':
+                comment_type = 1
+            else:
+                comment_type = 2
+            comm = Comment(self, persistent, author, comment,
+                           comment_type, 4, 0, False, 0)
+            self.add_comment(comm)
+            self.broks.append(self.get_update_status_brok())
+
+    def check_for_expire_acknowledge(self):
+        """
+        If have acknowledge and is expired, delete it
+
+        :return: None
+        """
+        if (self.acknowledgement and
+                self.acknowledgement.end_time != 0 and
+                self.acknowledgement.end_time < time.time()):
+            self.unacknowledge_problem()
+
+    def unacknowledge_problem(self):
+        """
+        Remove the acknowledge, reset the flag. The comment is deleted except if the acknowledge
+        is defined to be persistent
+
+        :return: None
+        """
+        if self.problem_has_been_acknowledged:
+            logger.debug("[item::%s] deleting acknowledge of %s",
+                         self.get_name(),
+                         self.get_dbg_name())
+            self.problem_has_been_acknowledged = False
+            # Should not be deleted, a None is Good
+            self.acknowledgement = None
+            # del self.acknowledgement
+            # find comments of non-persistent ack-comments and delete them too
+            for comm in self.comments:
+                if comm.entry_type == 4 and not comm.persistent:
+                    self.del_comment(comm._id)
+            self.broks.append(self.get_update_status_brok())
+
+    def unacknowledge_problem_if_not_sticky(self):
+        """
+        Remove the acknowledge if it is not sticky
+
+        :return: None
+        """
+        if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
+            if not self.acknowledgement.sticky:
+                self.unacknowledge_problem()
