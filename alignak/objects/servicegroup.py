@@ -73,6 +73,7 @@ class Servicegroup(Itemgroup):
         'notes':             StringProp(default='', fill_brok=['full_status']),
         'notes_url':         StringProp(default='', fill_brok=['full_status']),
         'action_url':        StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_members': StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
