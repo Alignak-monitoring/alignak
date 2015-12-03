@@ -104,7 +104,6 @@ class Item(object):
     my_type = ''
     ok_up = ''
 
-
     def __init__(self, params={}):
         # We have our own id of My Class type :)
         # use set attr for going into the slots
