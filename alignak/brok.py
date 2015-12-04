@@ -68,8 +68,10 @@ class Brok:
     def __init__(self, _type, data):
         self.type = _type
         self._id = self.__class__._id
+        self.instance_id = None
         self.__class__._id += 1
         if self.use_ujson():
+            # pylint: disable=E1101
             self.data = ujson.dumps(data)
         else:
             self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
@@ -106,10 +108,11 @@ class Brok:
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
             if self.use_ujson():
+                # pylint: disable=E1101
                 self.data = ujson.loads(self.data)
             else:
                 self.data = cPickle.loads(self.data)
-            if hasattr(self, 'instance_id'):
+            if hasattr(self, 'instance_id') and self.instance_id is not None:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
 

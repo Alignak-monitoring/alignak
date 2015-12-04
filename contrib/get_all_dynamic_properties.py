@@ -11,6 +11,7 @@ from alignak.objects.config import Config
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.checkmodulation import CheckModulation, CheckModulations
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
+from alignak.action import ActionBase
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 
@@ -28,7 +29,9 @@ properties.extend(['global_low_flap_threshold', 'global_high_flap_threshold', 'l
                    'servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
                    'reactionners', 'brokers', 'receivers', 'pollers', 'realms', 'modules',
                    'resultmodulations', 'businessimpactmodulations', 'escalations',
-                   'serviceescalations', 'hostescalations', 'hostsextinfo', 'servicesextinfo'])
+                   'serviceescalations', 'hostescalations', 'hostsextinfo', 'servicesextinfo',
+                   '_id', 'status', 'command', 't_to_go', 'timeout', 'env', 'module_type',
+                   'execution_time', 'u_time', 's_time'])
 
 for name, obj in clsmembers:
     if hasattr(obj, 'properties'):

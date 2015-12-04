@@ -342,6 +342,19 @@ class ActionBase(object):
                 return True
         return False
 
+    def execute__(self):
+        """Execute action in a subprocess
+
+        :return: None
+        """
+        pass
+
+    def kill__(self):
+        """Kill the action and close fds
+
+        :return: None
+        """
+        pass
 
 #
 # OS specific "execute__" & "kill__" are defined by "Action" class
