@@ -55,10 +55,10 @@ macros solving, sorting, parsing, file handling, filters.
 """
 import time
 import re
-import copy
 import sys
 import os
 import json
+import numpy as np
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger
@@ -786,42 +786,25 @@ def sort_by_ids(x00, y00):
     return 0
 
 
-def nighty_five_percent(table):
+def average_percentile(values):
     """
-    From a tab, get the avg, min, max
-    for the tab values, but not the lower ones
-    and higher ones that are too distinct
-    than major ones
+    Get the average, min percentile (5%) and
+    max percentile (95%) of a list of values.
 
-    :param table: list of value to compute
-    :type table:
+    :param values: list of value to compute
+    :type values: list
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    t02 = copy.copy(table)
-    t02.sort()
+    length = len(values)
 
-    length = len(table)
-
-    # If void tab, wtf??
     if length == 0:
-        return (None, None, None)
+        return None, None, None
 
-    t_reduce = t02
-    # only take a part if we got more
-    # than 100 elements, or it's a non sense
-    if length > 100:
-        offset = int(length * 0.05)
-        t_reduce = t_reduce[offset:-offset]
-
-    reduce_len = len(t_reduce)
-    reduce_sum = sum(t_reduce)
-
-    reduce_avg = float(reduce_sum) / reduce_len
-    reduce_max = max(t_reduce)
-    reduce_min = min(t_reduce)
-
-    return (reduce_avg, reduce_min, reduce_max)
+    value_avg = round(float(sum(values)) / length, 1)
+    value_max = round(np.percentile(values, 95), 1)
+    value_min = round(np.percentile(values, 5), 1)
+    return value_avg, value_min, value_max
 
 
 # #################### Cleaning ##############

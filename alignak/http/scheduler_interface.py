@@ -25,7 +25,7 @@ import zlib
 
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
-from alignak.util import nighty_five_percent
+from alignak.util import average_percentile
 
 
 class SchedulerInterface(GenericInterface):
@@ -156,13 +156,20 @@ class SchedulerInterface(GenericInterface):
 
         # Spare schedulers do not have such properties
         if hasattr(sched, 'services'):
-            # Get a overview of the latencies with just
-            # a 95 percentile view, but lso min/max values
+            # Get a overview of the latencies with:
+            #  * average
+            #  * maximum (95 percentile)
+            #  * minimum (5 percentile)
             latencies = [s.latency for s in sched.services]
-            lat_avg, lat_min, lat_max = nighty_five_percent(latencies)
-            res['latency'] = (0.0, 0.0, 0.0)
+            latencies.extend([s.latency for s in sched.hosts])
+            lat_avg, lat_min, lat_max = average_percentile(latencies)
+            res['latency_average'] = 0.0
+            res['latency_minimun'] = 0.0
+            res['latency_maximum'] = 0.0
             if lat_avg:
-                res['latency'] = (lat_avg, lat_min, lat_max)
+                res['latency_average'] = lat_avg
+                res['latency_minimun'] = lat_min
+                res['latency_maximum'] = lat_max
         return res
 
     @cherrypy.expose
