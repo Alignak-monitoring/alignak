@@ -69,8 +69,8 @@ class Module(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'module_name': StringProp(),
-        'module_type': StringProp(),
+        'module_alias': StringProp(),
+        'python_name': StringProp(),
         'modules': ListProp(default=[''], split_on_coma=True),
     })
 
@@ -84,10 +84,10 @@ class Module(Item):
         :return: Name of module
         :rtype: str
         """
-        return self.module_name
+        return self.module_alias
 
     def __repr__(self):
-        return '<module type=%s name=%s />' % (self.module_type, self.module_name)
+        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
 
     __str__ = __repr__
 
@@ -97,7 +97,7 @@ class Modules(Items):
     Class to manage list of Module
     Modules is used to regroup all Module
     """
-    name_property = "module_name"
+    name_property = "module_alias"
     inner_class = Module
 
     def linkify(self):

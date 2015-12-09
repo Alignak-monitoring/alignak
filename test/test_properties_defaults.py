@@ -583,7 +583,7 @@ class TestModule(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['module_name', 'module_type']
+    without_default = ['module_alias', 'python_name']
 
     properties = dict([
         ('imported_from', 'unknown'),

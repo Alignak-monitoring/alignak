@@ -976,11 +976,11 @@ class Satellite(BaseSatellite):
             self.new_modules_conf = []
             for module in mods:
                 # If we already got it, bypass
-                if module.module_type not in self.q_by_mod:
+                if module.python_name not in self.q_by_mod:
                     logger.debug("Add module object %s", str(module))
                     self.new_modules_conf.append(module)
-                    logger.info("[%s] Got module: %s ", self.name, module.module_type)
-                    self.q_by_mod[module.module_type] = {}
+                    logger.info("[%s] Got module: %s ", self.name, module.python_name)
+                    self.q_by_mod[module.python_name] = {}
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
