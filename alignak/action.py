@@ -107,6 +107,7 @@ class ActionBase(object):
     actions and checks.
     """
     _id = 0
+    process = None
 
     properties = {
         'is_a':             StringProp(default=''),
@@ -491,4 +492,4 @@ else:
             :return: None
             TODO: This look like python2.5 style. Maybe we change that.
             """
-            ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1)
+            ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1) # pylint: disable=E1101
