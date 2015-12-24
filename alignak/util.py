@@ -801,6 +801,7 @@ def average_percentile(values):
         return None, None, None
 
     value_avg = round(float(sum(values)) / length, 1)
+    # pylint: disable=E1101
     value_max = round(np.percentile(values, 95), 1)
     value_min = round(np.percentile(values, 5), 1)
     return value_avg, value_min, value_max

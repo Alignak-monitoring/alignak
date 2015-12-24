@@ -492,4 +492,5 @@ else:
             :return: None
             TODO: This look like python2.5 style. Maybe we change that.
             """
-            ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1) # pylint: disable=E1101
+            # pylint: disable=E1101
+            ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1)
