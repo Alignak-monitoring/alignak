@@ -200,7 +200,7 @@ class Daemon(object):
         self.debug_file = debug_file
         self.interrupted = False
         self.pidfile = None
-        self.http_interface = GenericInterface()
+        self.http_interface = GenericInterface(object)
 
         # Track time
         now = time.time()
