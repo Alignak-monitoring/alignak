@@ -59,7 +59,7 @@ from alignak.log import logger
 from alignak.objects.host import Hosts
 from alignak.objects.service import Services
 
-OBJS = {'hosts': Hosts(), 'services': Services()}
+OBJS = {'hosts': Hosts({}), 'services': Services({})}
 TRIGGER_FUNCTIONS = {}
 
 
