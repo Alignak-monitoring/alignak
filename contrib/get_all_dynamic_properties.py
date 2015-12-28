@@ -12,6 +12,7 @@ from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.checkmodulation import CheckModulation, CheckModulations
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.action import ActionBase
+from alignak.daemon import Daemon
 
 clsmembers = inspect.getmembers(sys.modules[__name__], inspect.isclass)
 

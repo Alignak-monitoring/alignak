@@ -79,6 +79,7 @@ from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
     LogLevelProp
 from alignak.misc.common import setproctitle
+from alignak.http.generic_interface import GenericInterface
 
 
 try:
@@ -198,6 +199,8 @@ class Daemon(object):
         self.debug = debug
         self.debug_file = debug_file
         self.interrupted = False
+        self.pidfile = None
+        self.http_interface = GenericInterface()
 
         # Track time
         now = time.time()
@@ -211,6 +214,7 @@ class Daemon(object):
         # Log init
         # self.log = logger
         # self.log.load_obj(self)
+        # pylint: disable=E1101
         logger.load_obj(self)
 
         self.new_conf = None  # used by controller to push conf

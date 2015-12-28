@@ -714,6 +714,7 @@ class Arbiter(Daemon):
                 self.myself = arb
 
         if self.conf.human_timestamp_log:
+            # pylint: disable=E1101
             logger.set_human_format()
         logger.info("Begin to dispatch configurations to satellites")
         self.dispatcher = Dispatcher(self.conf, self.myself)

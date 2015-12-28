@@ -471,6 +471,7 @@ class Broker(BaseSatellite):
             self.statsd_enabled = g_conf['statsd_enabled']
 
             # We got a name so we can update the logger and the stats global objects
+            # pylint: disable=E1101
             logger.load_obj(self, name)
             statsmgr.register(self, name, 'broker',
                               api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,

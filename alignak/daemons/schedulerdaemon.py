@@ -262,6 +262,7 @@ class Alignak(BaseSatellite):
             # self.pollers = self.app.pollers
 
             if self.conf.human_timestamp_log:
+                # pylint: disable=E1101
                 logger.set_human_format()
 
             # Now We create our pollers
