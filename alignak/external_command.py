@@ -512,7 +512,7 @@ class ExternalCommandManager:
                     os.mkfifo(self.pipe_path, 0660)
                     open(self.pipe_path, 'w+', os.O_NONBLOCK)
                 except OSError, exp:
-                    self.error("Pipe creation failed (%s): %s" % (self.pipe_path, str(exp)))
+                    logger.error("Pipe creation failed (%s): %s", self.pipe_path, str(exp))
                     return None
         self.fifo = os.open(self.pipe_path, os.O_NONBLOCK)
         return self.fifo
