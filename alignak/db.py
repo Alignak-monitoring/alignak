@@ -175,19 +175,3 @@ class DB(object):
 
         query = query + query_follow + where_clause
         return query
-
-    def fetchone(self):
-        """Just get an entry
-
-        :return: an entry
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchone()
-
-    def fetchall(self):
-        """Get all entry
-
-        :return: all entries
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchall()

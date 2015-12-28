@@ -78,3 +78,19 @@ class DBSqlite(DB):
         logger.debug("[SqliteDB] Info: I run query '%s'", query)
         self.db_cursor.execute(query)
         self.db.commit()
+
+    def fetchone(self):
+        """Just get an entry
+
+        :return: an entry
+        :rtype: tuple | None
+        """
+        return self.db_cursor.fetchone()
+
+    def fetchall(self):
+        """Get all entry
+
+        :return: all entries
+        :rtype: tuple | None
+        """
+        return self.db_cursor.fetchall()
