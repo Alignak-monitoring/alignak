@@ -4,10 +4,10 @@
 # -r ./requirements.txt
 
 # for pylint to succeed with Python2.6 , we actually need all these specific versions:
-pylint==1.3.1
-astroid==1.2.1
-six==1.4.0
-unittest2==0.5.1
+pylint
+astroid
+six
+unittest2
 
 # endfor pytlint
 
