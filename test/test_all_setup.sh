@@ -8,6 +8,7 @@ SUFFIX_TESTFILE=""
 # Big travis specific part
 if [[ "$TRAVIS" == "true" ]]; then
     sudo apt-get install -y python-virtualenv mlocate
+    sudo pip install virtualenv
     sudo updatedb # Debugging purpose
     SKIP_PERMISSION=1  # Umask on travis is different, causing some file to have a bad chmod
     SUFFIX_TESTFILE="_travis" # Some file are also missing
