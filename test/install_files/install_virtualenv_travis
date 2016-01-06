@@ -14,8 +14,6 @@
 644 VIRTUALENVPATH/etc/alignak/daemons/brokerd.ini
 644 VIRTUALENVPATH/etc/alignak/daemons/pollerd.ini
 644 VIRTUALENVPATH/etc/alignak/daemons/reactionnerd.ini
-755 VIRTUALENVPATH/etc/alignak/modules
-644 VIRTUALENVPATH/etc/alignak/modules/sample.cfg
 755 VIRTUALENVPATH/etc/alignak/arbiter_cfg
 644 VIRTUALENVPATH/etc/alignak/arbiter_cfg/daemons_cfg
 644 VIRTUALENVPATH/etc/alignak/arbiter_cfg/daemons_cfg/poller-master.cfg
@@ -192,8 +190,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/message.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/message.pyc
 755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/modulesctx.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/modulesctx.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/modulesmanager.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/modulesmanager.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/notification.py

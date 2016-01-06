@@ -18,7 +18,7 @@ if [[ "$TRAVIS" == "true" ]]; then
 
     # Remove Travis "virtualenv"
     unset VIRTUAL_ENV
-    PATH=${PATH#*:}
+    #PATH=${PATH#*:}
     rm -rf alignak.egg-info
 fi
 
