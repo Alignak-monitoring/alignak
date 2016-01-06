@@ -14,8 +14,6 @@
 644 /usr/local/etc/alignak/daemons/brokerd.ini
 644 /usr/local/etc/alignak/daemons/pollerd.ini
 644 /usr/local/etc/alignak/daemons/reactionnerd.ini
-755 /usr/local/etc/alignak/modules
-644 /usr/local/etc/alignak/modules/sample.cfg
 755 /usr/local/etc/alignak/arbiter_cfg
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg
 644 /usr/local/etc/alignak/arbiter_cfg/daemons_cfg/poller-master.cfg
@@ -192,8 +190,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/message.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/message.pyc
 755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/misc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/modulesctx.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/modulesctx.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/modulesmanager.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/modulesmanager.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/notification.py
