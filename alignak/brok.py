@@ -112,7 +112,7 @@ class Brok:
                 self.data = ujson.loads(self.data)
             else:
                 self.data = cPickle.loads(self.data)
-            if hasattr(self, 'instance_id') and self.instance_id is not None:
+            if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
 

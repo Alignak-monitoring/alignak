@@ -2072,12 +2072,12 @@ class SchedulingItem(Item):
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
         """Raise freshness alert entry (warning level)
-        Format is : "The results of host '*get_name()*' are stale by *t_stale_by*
-                     (threshold=*t_threshold*).  I'm forcing an immediate check of the host."
+        Format is : "The results of item '*get_name()*' are stale by *t_stale_by*
+                     (threshold=*t_threshold*).  I'm forcing an immediate check of the item."
         Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s
                    (threshold=0d 1h 0m 0s). ..."
 
-        :param t_stale_by: time in seconds the host has been in a stale state
+        :param t_stale_by: time in seconds the item has been in a stale state
         :type t_stale_by: int
         :param t_threshold: threshold (seconds) to trigger this log entry
         :type t_threshold: int
@@ -2086,8 +2086,8 @@ class SchedulingItem(Item):
         pass
 
     def raise_snapshot_log_entry(self, command):
-        """Raise HOST SNAPSHOT entry (critical level)
-        Format is : "HOST SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
+        """Raise item SNAPSHOT entry (critical level)
+        Format is : "UTEM SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
                     *command.get_name()*"
         Example : "HOST SNAPSHOT: server;UP;HARD;1;notify-by-rss"
 
@@ -2147,7 +2147,7 @@ class SchedulingItem(Item):
     def get_data_for_event_handler(self):
         """Get data for an event handler
 
-        :return: list containing a single host (this one)
+        :return: list containing a single item (this one)
         :rtype: list
         """
         return []
