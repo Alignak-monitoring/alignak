@@ -105,21 +105,6 @@ class Resultmodulation(Item):
 
         return return_code
 
-    def pythonize(self):
-        """Pythonization function for Resultmodulation.
-        We override it because we need to convert exit code into integers
-
-        :return: None
-        """
-        # Then very special cases
-        # Intify the exit_codes_match, and make list
-        self.exit_codes_match = [int(ec) for ec in getattr(self, 'exit_codes_match', [])]
-
-        if hasattr(self, 'exit_code_modulation'):
-            self.exit_code_modulation = int(self.exit_code_modulation)
-        else:
-            self.exit_code_modulation = None
-
 
 class Resultmodulations(Items):
     """Resultmodulations class allowed to handle easily several CheckModulation objects
