@@ -159,6 +159,7 @@ class Scheduler(object):
         self.nb_check_received = 0
 
         # Log init
+        # pylint: disable=E1101
         logger.load_obj(self)
 
         self.instance_id = 0  # Temporary set. Will be erase later

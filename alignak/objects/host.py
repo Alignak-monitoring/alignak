@@ -848,14 +848,6 @@ class Host(SchedulingItem):
                 groupnames = "%s, %s" % (groupnames, hostgroup.get_name())
         return groupnames
 
-    def get_dbg_name(self):
-        """Accessor to host_name attribute
-
-        :return: host_name
-        :rtype: str
-        """
-        return self.host_name
-
     def get_full_name(self):
         """Accessor to host_name attribute
 

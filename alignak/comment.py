@@ -47,6 +47,7 @@
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
 import warnings
+from alignak.log import logger
 
 
 class Comment:
@@ -207,7 +208,7 @@ class Comment:
         # if not, we will do errors!
         # -1 because of the '_id' prop
         if len(cls.properties) != (len(state) - 1):
-            self.debug("Passing comment")
+            logger.debug("Passing comment")
             return
 
         self._id = state.pop()

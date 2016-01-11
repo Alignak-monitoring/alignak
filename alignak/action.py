@@ -107,6 +107,7 @@ class ActionBase(object):
     actions and checks.
     """
     _id = 0
+    process = None
 
     properties = {
         'is_a':             StringProp(default=''),
@@ -342,6 +343,19 @@ class ActionBase(object):
                 return True
         return False
 
+    def execute__(self):
+        """Execute action in a subprocess
+
+        :return: None
+        """
+        pass
+
+    def kill__(self):
+        """Kill the action and close fds
+
+        :return: None
+        """
+        pass
 
 #
 # OS specific "execute__" & "kill__" are defined by "Action" class
@@ -478,4 +492,5 @@ else:
             :return: None
             TODO: This look like python2.5 style. Maybe we change that.
             """
+            # pylint: disable=E1101
             ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1)

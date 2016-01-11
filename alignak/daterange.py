@@ -185,6 +185,7 @@ class AbstractDaterange(object):
     """AbstractDaterange class provides functions to deal with a range of dates
     It is subclassed for more granularity (weekday, month ...)
     """
+    timeranges = []
 
     def __str__(self):
         # TODO: What's the point of returning '' always

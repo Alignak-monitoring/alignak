@@ -56,7 +56,6 @@ The objects package contains definition classes of the different objects
 from alignak.objects.item import Item, Items
 from alignak.objects.timeperiod import Timeperiod, Timeperiods
 from alignak.objects.schedulingitem import SchedulingItem
-from alignak.objects.matchingitem import MatchingItem
 from alignak.objects.service import Service, Services
 from alignak.objects.command import Command, Commands
 from alignak.objects.resultmodulation import Resultmodulation, Resultmodulations

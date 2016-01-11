@@ -182,6 +182,7 @@ class DB(object):
         :return: an entry
         :rtype: tuple | None
         """
+        # pylint: disable=E1101
         return self.db_cursor.fetchone()
 
     def fetchall(self):
@@ -190,4 +191,5 @@ class DB(object):
         :return: all entries
         :rtype: tuple | None
         """
+        # pylint: disable=E1101
         return self.db_cursor.fetchall()

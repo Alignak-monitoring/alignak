@@ -806,6 +806,8 @@ class Config(Item):
         self.triggers = Triggers({})
         self.packs_dirs = []
         self.packs = Packs({})
+        self.hosts = Hosts({})
+        self.services = Services({})
 
     def get_name(self):
         """Get config name
@@ -1343,13 +1345,6 @@ class Config(Item):
         # Ok, now update all realms with backlinks of
         # satellites
         self.realms.prepare_for_satellites_conf()
-
-    def remove_exclusions(self):
-        """Removes service exceptions based on host configuration
-
-        :return:None
-        """
-        return self.services.remove_exclusions(self.hosts)
 
     def clean(self):
         """Wrapper for calling the clean method of services attribute

@@ -159,6 +159,9 @@ class Satellite(BaseSatellite):
     Subclassed by Receiver, Reactionner and Poller
 
     """
+    do_checks = False
+    do_actions = False
+    my_type = ''
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
 

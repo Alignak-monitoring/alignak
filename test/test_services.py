@@ -63,9 +63,9 @@ class TestService(AlignakTest):
     # Look if get_*_name return the good result
     def test_get_name(self):
         svc = self.get_svc()
-        print svc.get_dbg_name()
+        print svc.get_full_name()
         self.assertEqual('test_ok_0', svc.get_name())
-        self.assertEqual('test_host_0/test_ok_0', svc.get_dbg_name())
+        self.assertEqual('test_host_0/test_ok_0', svc.get_full_name())
 
 
     # getstate should be with all properties in dict class + id

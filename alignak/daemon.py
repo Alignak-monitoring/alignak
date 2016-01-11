@@ -198,6 +198,7 @@ class Daemon(object):
         self.debug = debug
         self.debug_file = debug_file
         self.interrupted = False
+        self.pidfile = None
 
         # Track time
         now = time.time()
@@ -211,6 +212,7 @@ class Daemon(object):
         # Log init
         # self.log = logger
         # self.log.load_obj(self)
+        # pylint: disable=E1101
         logger.load_obj(self)
 
         self.new_conf = None  # used by controller to push conf
@@ -720,6 +722,7 @@ class Daemon(object):
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be exec after
+        # pylint: disable=E1101
         self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                       use_ssl, ca_cert, ssl_key,
                                       ssl_cert, self.daemon_thread_pool_size)

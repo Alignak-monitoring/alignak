@@ -787,6 +787,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
+        ('servicegroup_members', ''),
         ])
 
     def setUp(self):

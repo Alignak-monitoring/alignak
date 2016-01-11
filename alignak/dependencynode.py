@@ -595,6 +595,7 @@ class DependencyNodeFactory(object):
             obj, error = self.find_object(pattern, hosts, services)
             if obj is not None:
                 # Set host or service
+                # pylint: disable=E1101
                 node.operand = obj.__class__.my_type
                 node.sons.append(obj)
             else:

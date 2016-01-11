@@ -127,7 +127,7 @@ class GenericInterface(object):
                 logging.INFO: 'INFO',
                 logging.WARNING: 'WARNING',
                 logging.ERROR: 'ERROR',
-                logging.CRITICAL: 'CRITICAL'}.get(logger._level, 'UNKNOWN')
+                logging.CRITICAL: 'CRITICAL'}.get(logger.level, 'UNKNOWN')
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

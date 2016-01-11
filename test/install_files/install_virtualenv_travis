@@ -325,8 +325,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/itemgroup.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/macromodulation.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/macromodulation.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/matchingitem.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/matchingitem.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/module.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/module.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/notificationway.py

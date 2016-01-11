@@ -63,9 +63,9 @@ class TestHost(AlignakTest):
     # Look if get_*_name return the good result
     def test_get_name(self):
         hst = self.get_hst()
-        print hst.get_dbg_name()
+        print hst.get_full_name()
         self.assertEqual('test_host_0', hst.get_name())
-        self.assertEqual('test_host_0', hst.get_dbg_name())
+        self.assertEqual('test_host_0', hst.get_full_name())
 
 
     # getstate should be with all properties in dict class + id

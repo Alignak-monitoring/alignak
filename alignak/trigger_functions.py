@@ -56,8 +56,10 @@ import re
 
 from alignak.misc.perfdata import PerfDatas
 from alignak.log import logger
+from alignak.objects.host import Hosts
+from alignak.objects.service import Services
 
-OBJS = {'hosts': [], 'services': []}
+OBJS = {'hosts': Hosts({}), 'services': Services({})}
 TRIGGER_FUNCTIONS = {}
 
 
@@ -284,7 +286,7 @@ def allperfs(obj_ref):
 
 @declared
 def get_object(ref):
-    """ Retrive object (service/host) from name
+    """ Retrieve object (service/host) from name
 
     :param ref:
     :type ref:
