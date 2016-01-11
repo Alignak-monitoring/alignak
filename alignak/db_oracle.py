@@ -115,19 +115,3 @@ class DBOracle(DB):
             logger.warning("[DBOracle] Warning: a query raise an unknown error: %s, %s",
                            query, exp)
             logger.warning(exp.__dict__)
-
-    def fetchone(self):
-        """Just get an entry
-
-        :return: an entry
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchone()
-
-    def fetchall(self):
-        """Get all entry
-
-        :return: all entries
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchall()

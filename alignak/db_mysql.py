@@ -119,19 +119,3 @@ class DBMysql(DB):
         except ProgrammingError, exp:
             logger.warning("[MysqlDB] A query raised a programming error: %s, %s", query, exp)
             return False
-
-    def fetchone(self):
-        """Just get an entry
-
-        :return: an entry
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchone()
-
-    def fetchall(self):
-        """Get all entry
-
-        :return: all entries
-        :rtype: tuple | None
-        """
-        return self.db_cursor.fetchall()
