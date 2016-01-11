@@ -79,7 +79,6 @@ from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
     LogLevelProp
 from alignak.misc.common import setproctitle
-from alignak.http.generic_interface import GenericInterface
 
 
 try:
@@ -200,7 +199,6 @@ class Daemon(object):
         self.debug_file = debug_file
         self.interrupted = False
         self.pidfile = None
-        self.http_interface = GenericInterface(object)
 
         # Track time
         now = time.time()
@@ -724,6 +722,7 @@ class Daemon(object):
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be exec after
+        # pylint: disable=E1101
         self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                       use_ssl, ca_cert, ssl_key,
                                       ssl_cert, self.daemon_thread_pool_size)
