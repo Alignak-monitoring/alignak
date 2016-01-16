@@ -53,12 +53,13 @@ no use in running part
 
 
 from alignak.objects.item import Item, Items
+from alignak.objects.genericextinfo import GenericExtInfo
 
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp
 
 
-class HostExtInfo(Item):
+class HostExtInfo(GenericExtInfo):
     """HostExtInfo class is made to handle some parameters of SchedulingItem::
 
     * notes
@@ -112,57 +113,6 @@ class HostExtInfo(Item):
         'HOSTNOTESURL':      'notes_url',
         'HOSTNOTES':         'notes',
     }
-
-#######
-#                   __ _                       _   _
-#                  / _(_)                     | | (_)
-#   ___ ___  _ __ | |_ _  __ _ _   _ _ __ __ _| |_ _  ___  _ __
-#  / __/ _ \| '_ \|  _| |/ _` | | | | '__/ _` | __| |/ _ \| '_ \
-# | (_| (_) | | | | | | | (_| | |_| | | | (_| | |_| | (_) | | | |
-#  \___\___/|_| |_|_| |_|\__, |\__,_|_|  \__,_|\__|_|\___/|_| |_|
-#                         __/ |
-#                        |___/
-######
-
-    def is_correct(self):
-        """
-        Check if this object is correct
-
-        :return: True, always.
-        :rtype: bool
-        TODO: Clean this function
-        """
-        state = True
-        cls = self.__class__
-
-        return state
-
-    def get_name(self):
-        """Accessor to host_name attribute or name if first not defined
-
-        :return: host name or name
-        :rtype: str
-        TODO: Clean this function
-        """
-        if not self.is_tpl():
-            try:
-                return self.host_name
-            except AttributeError:  # outch, no hostname
-                return 'UNNAMEDHOST'
-        else:
-            try:
-                return self.name
-            except AttributeError:  # outch, no name for this template
-                return 'UNNAMEDHOSTTEMPLATE'
-
-    def get_full_name(self):
-        """Get the full name for debugging (host_name)
-
-        :return: service extinfo  host name
-        :rtype: str
-        TODO: Remove this function, get_name is doing it
-        """
-        return self.host_name
 
 
 class HostsExtInfo(Items):

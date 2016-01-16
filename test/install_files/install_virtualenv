@@ -309,6 +309,8 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/contactgroup.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/escalation.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/escalation.pyc
+644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/genericextinfo.py
+644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/genericextinfo.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/host.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/host.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/hostdependency.py
