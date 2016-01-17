@@ -357,6 +357,34 @@ class ActionBase(object):
         """
         pass
 
+    def __getstate__(self):
+        """Call by pickle for dataify the object.
+        We dont want to pickle ref
+
+        :return: dict containing notification data
+        :rtype: dict
+        """
+        cls = self.__class__
+        # id is not in *_properties
+        res = {'_id': self._id}
+        for prop in cls.properties:
+            if hasattr(self, prop):
+                res[prop] = getattr(self, prop)
+
+        return res
+
+    def __setstate__(self, state):
+        """Inverted function of getstate
+
+        :param state: state to restore
+        :type state: dict
+        :return: None
+        """
+        cls = self.__class__
+        self._id = state['_id']
+        for prop in cls.properties:
+            if prop in state:
+                setattr(self, prop, state[prop])
 #
 # OS specific "execute__" & "kill__" are defined by "Action" class
 # definition:
