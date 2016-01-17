@@ -1001,16 +1001,6 @@ class Service(SchedulingItem):
             self.state = 'UNKNOWN'  # exit code UNDETERMINED
             self.state_id = 3
 
-    def unset_impact_state(self):
-        """Unset impact, only if impact state change is set in configuration
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
-            self.state = self.state_before_impact
-            self.state_id = self.state_id_before_impact
-
     def set_state_from_exit_status(self, status):
         """Set the state in UP, WARNING, CRITICAL or UNKNOWN
         with the status of a check. Also update last_state

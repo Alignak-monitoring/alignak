@@ -2173,12 +2173,14 @@ class SchedulingItem(Item):
         pass
 
     def unset_impact_state(self):
-        """We just go an impact, so we go unreachable
-        But only if we enable this state change in the conf
+        """Unset impact, only if impact state change is set in configuration
 
         :return: None
         """
-        pass
+        cls = self.__class__
+        if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
+            self.state = self.state_before_impact
+            self.state_id = self.state_id_before_impact
 
     def last_time_non_ok_or_up(self):
         """Get the last time the item was in a non-OK state
