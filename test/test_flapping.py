@@ -72,7 +72,7 @@ class TestFlapping(AlignakTest):
         self.assertTrue(svc.flap_detection_enabled)
 
         print 'A' * 41, svc.low_flap_threshold
-        self.assertEqual(-1, svc.low_flap_threshold)
+        self.assertEqual(25, svc.low_flap_threshold)
 
         # Now 1 test with a bad state
         self.scheduler_loop(1, [[svc, 2, 'Crit']])
