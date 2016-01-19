@@ -65,6 +65,6 @@ class Poller(Satellite):
         'local_log': PathProp(default='pollerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
         super(Poller, self).__init__('poller', config_file, is_daemon, do_replace, debug,
                                      debug_file)

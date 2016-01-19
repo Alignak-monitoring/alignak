@@ -366,9 +366,9 @@ do_check() {
     [ "$DEBUG" = 1 ] && DEBUGCMD="--debug $VAR/${mod}-debug.log"
     if ! test "$ALIGNAKSPECIFICCFG"
     then
-       $BIN/alignak-arbiter -v -c "$ALIGNAKCFG" $DEBUGCMD 2>&1
+       $BIN/alignak-arbiter -V -c "$ALIGNAKCFG" $DEBUGCMD 2>&1
     else
-       $BIN/alignak-arbiter -v -c "$ALIGNAKCFG" -c "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
+       $BIN/alignak-arbiter -V -c "$ALIGNAKCFG" -c "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
     fi
     return $?
 }

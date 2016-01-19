@@ -123,7 +123,7 @@ class template_Daemon_Bad_Start():
 
     def create_daemon(self):
         cls = self.daemon_cls
-        return cls(daemons_config[cls], False, True, False, None, '')
+        return cls(daemons_config[cls], False, True, False, None)
 
     def get_daemon(self):
 

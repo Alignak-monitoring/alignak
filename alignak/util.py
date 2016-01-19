@@ -59,9 +59,11 @@ import sys
 import os
 import json
 import numpy as np
+import argparse
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger
+from alignak.version import VERSION
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
@@ -1282,3 +1284,32 @@ def is_complex_expr(expr):
         if char in expr:
             return True
     return False
+
+
+def parse_daemon_args(arbiter=False):
+    """Generic parsing function for daemons
+
+    :param arbiter: Do we parse args for arbiter?
+    :type arbiter: bool
+    :return: args
+
+    TODO : Remove, profile, name, migrate, analyse opt from code
+    """
+    parser = argparse.ArgumentParser(version="%(prog)s " + VERSION)
+    if arbiter:
+        parser.add_argument('-c', '--config', action='append', dest="config_files",
+                            help='Configuration file(s),'
+                                 'multiple -c can be used, they will be concatenated')
+        parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
+                            help="Verify config file and exit")
+    else:
+        parser.add_argument('-c', '--config', dest="config_file", required=True,
+                            help='Config file')
+    parser.add_argument('-d', '--daemon', dest="is_daemon", action='store_true',
+                        help='Run as a daemon')
+    parser.add_argument('-r', '--replace', dest="do_replace", action='store_true',
+                        help='Replace previous running daemon')
+    parser.add_argument('--debugfile', dest="debug_file",
+                        help="File to dump debug logs")
+
+    return parser.parse_args()
