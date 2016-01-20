@@ -112,6 +112,8 @@ class Host(SchedulingItem):
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = SchedulingItem.properties.copy()
     properties.update({
+        'host_name':
+            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'alias':
             StringProp(fill_brok=['full_status']),
         'address':
@@ -292,74 +294,14 @@ class Host(SchedulingItem):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
+        state = super(Host, self).is_correct()
         cls = self.__class__
-
-        source = getattr(self, 'imported_from', 'unknown')
-
-        special_properties = ['check_period', 'notification_interval',
-                              'notification_period']
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[host::%s] %s property not set", self.get_name(), prop)
-                    state = False  # Bad boy...
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[host::%s] %s", self.get_name(), err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[host::%s] %s", self.get_name(), err)
-
-        if not hasattr(self, 'notification_period'):
-            self.notification_period = None
-
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            logger.warning("The host %s has no contacts nor contact_groups in (%s)",
-                           self.get_name(), source)
-
-        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("%s: my event_handler %s is invalid",
-                         self.get_name(), self.event_handler.command)
-            state = False
-
-        if getattr(self, 'check_command', None) is None:
-            logger.error("%s: I've got no check_command", self.get_name())
-            state = False
-        # Ok got a command, but maybe it's invalid
-        else:
-            if not self.check_command.is_valid():
-                logger.error("%s: my check_command %s is invalid",
-                             self.get_name(), self.check_command.command)
-                state = False
-            if self.got_business_rule:
-                if not self.business_rule.is_valid():
-                    logger.error("%s: my business rule is invalid", self.get_name(),)
-                    for bperror in self.business_rule.configuration_errors:
-                        logger.error("[host::%s] %s", self.get_name(), bperror)
-                    state = False
-
-        if (not hasattr(self, 'notification_interval') and
-                self.notifications_enabled is True):
-            logger.error("%s: I've got no notification_interval but "
-                         "I've got notifications enabled", self.get_name())
-            state = False
-
-        # if no check_period, means 24x7, like for services
-        if not hasattr(self, 'check_period'):
-            self.check_period = None
 
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    logger.error("%s: My host_name got the character %s that is not allowed.",
-                                 self.get_name(), char)
+                    logger.error("[%s::%s] host_name got an illegal character: %s",
+                                 self.my_type, self.get_name(), char)
                     state = False
 
         return state

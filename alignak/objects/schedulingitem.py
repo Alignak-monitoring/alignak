@@ -92,8 +92,6 @@ class SchedulingItem(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'host_name':
-            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'display_name':
             StringProp(default='', fill_brok=['full_status']),
         'initial_state':
@@ -109,7 +107,8 @@ class SchedulingItem(Item):
         'passive_checks_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status'],
+                       special=True),
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
@@ -137,11 +136,12 @@ class SchedulingItem(Item):
             ListProp(default=[], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
         'notification_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
+            IntegerProp(default=60, fill_brok=['full_status'], special=True),
         'first_notification_delay':
             IntegerProp(default=0, fill_brok=['full_status']),
         'notification_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status'],
+                       special=True),
         'notifications_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'stalking_options':
@@ -438,6 +438,8 @@ class SchedulingItem(Item):
         'retry_check_interval':    'retry_interval',
         'criticity':    'business_impact',
     }
+
+    special_properties = []
 
     def __getstate__(self):
         """Call by pickle to data-ify the host
@@ -2598,3 +2600,68 @@ class SchedulingItem(Item):
         :rtype: bool
         """
         return False
+
+    def is_correct(self):
+
+        state = True
+
+        for prop, entry in self.__class__.properties.items():
+            if not entry.special and not hasattr(self, prop) and entry.required:
+                logger.error("[%s::%s] %s property not set",
+                             self.my_type, self.get_name(), prop)
+                state = False
+
+        # Then look if we have some errors in the conf
+        # Juts print warnings, but raise errors
+        for err in self.configuration_warnings:
+            logger.warning("[%s::%s] %s", self.my_type, self.get_name(), err)
+
+        # Raised all previously saw errors like unknown contacts and co
+        if self.configuration_errors != []:
+            state = False
+            for err in self.configuration_errors:
+                logger.error("[%s::%s] %s", self.my_type, self.get_name(), err)
+
+        # If no notif period, set it to None, mean 24x7
+        if not hasattr(self, 'notification_period'):
+            self.notification_period = None
+
+        # Ok now we manage special cases...
+        if self.notifications_enabled and self.contacts == []:
+            logger.warning("[%s::%s] no contacts nor contact_groups property",
+                           self.my_type, self.get_name())
+
+        # If we got an event handler, it should be valid
+        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
+            logger.error("[%s::%s] event_handler '%s' is invalid",
+                         self.my_type, self.get_name(), self.event_handler.command)
+            state = False
+
+        if not hasattr(self, 'check_command'):
+            logger.error("[%s::%s] no check_command", self.my_type, self.get_name())
+            state = False
+        # Ok got a command, but maybe it's invalid
+        else:
+            if not self.check_command.is_valid():
+                logger.error("[%s::%s] check_command '%s' invalid",
+                             self.my_type, self.get_name(), self.check_command.command)
+                state = False
+            if self.got_business_rule:
+                if not self.business_rule.is_valid():
+                    logger.error("[%s::%s] business_rule invalid",
+                                 self.my_type, self.get_name())
+                    for bperror in self.business_rule.configuration_errors:
+                        logger.error("[%s::%s]: %s", self.my_type, self.get_name(), bperror)
+                    state = False
+
+        if not hasattr(self, 'notification_interval') \
+                and self.notifications_enabled is True:
+            logger.error("[%s::%s] no notification_interval but notifications enabled",
+                         self.my_type, self.get_name())
+            state = False
+
+        # if no check_period, means 24x7, like for services
+        if not hasattr(self, 'check_period'):
+            self.check_period = None
+
+        return state

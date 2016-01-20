@@ -113,8 +113,10 @@ class Service(SchedulingItem):
     # no_slots: do not take this property for __slots__
     properties = SchedulingItem.properties.copy()
     properties.update({
+        'host_name':
+            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule'], special=True),
         'hostgroup_name':
-            StringProp(default='', fill_brok=['full_status'], merging='join'),
+            StringProp(default='', fill_brok=['full_status'], merging='join', special=True),
         'service_description':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'servicegroups':
@@ -368,87 +370,26 @@ class Service(SchedulingItem):
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
         """
-        state = True
+        state = super(Service, self).is_correct()
         cls = self.__class__
-
-        source = getattr(self, 'imported_from', 'unknown')
-
-        desc = getattr(self, 'service_description', 'unnamed')
-        hname = getattr(self, 'host_name', 'unnamed')
-
-        special_properties = ('check_period', 'notification_interval', 'host_name',
-                              'hostgroup_name', 'notification_period')
-
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("The service %s on host '%s' does not have %s", desc, hname, prop)
-                    state = False  # Bad boy...
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[service::%s] %s", desc, err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[service::%s] %s", self.get_full_name(), err)
-
-        # If no notif period, set it to None, mean 24x7
-        if not hasattr(self, 'notification_period'):
-            self.notification_period = None
-
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            logger.warning("The service '%s' in the host '%s' does not have "
-                           "contacts nor contact_groups in '%s'", desc, hname, source)
 
         # Set display_name if need
         if getattr(self, 'display_name', '') == '':
             self.display_name = getattr(self, 'service_description', '')
 
-        # If we got an event handler, it should be valid
-        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("%s: my event_handler %s is invalid",
-                         self.get_name(), self.event_handler.command)
-            state = False
-
-        if not hasattr(self, 'check_command'):
-            logger.error("%s: I've got no check_command", self.get_name())
-            state = False
-        # Ok got a command, but maybe it's invalid
-        else:
-            if not self.check_command.is_valid():
-                logger.error("%s: my check_command %s is invalid",
-                             self.get_name(), self.check_command.command)
-                state = False
-            if self.got_business_rule:
-                if not self.business_rule.is_valid():
-                    logger.error("%s: my business rule is invalid", self.get_name(),)
-                    for bperror in self.business_rule.configuration_errors:
-                        logger.error("%s: %s", self.get_name(), bperror)
-                    state = False
-        if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:
-            logger.error("%s: I've got no notification_interval but "
-                         "I've got notifications enabled", self.get_name())
-            state = False
         if not self.host_name:
-            logger.error("The service '%s' is not bound do any host.", desc)
+            logger.error("[%s::%s] not bound do any host.", self.my_type, self.get_name())
             state = False
         elif self.host is None:
-            logger.error("The service '%s' got an unknown host_name '%s'.", desc, self.host_name)
+            logger.error("[%s::%s] unknown host_name '%s'",
+                         self.my_type, self.get_name(), self.host_name)
             state = False
 
-        if not hasattr(self, 'check_period'):
-            self.check_period = None
         if hasattr(self, 'service_description'):
             for char in cls.illegal_object_name_chars:
                 if char in self.service_description:
-                    logger.error("%s: My service_description got the "
-                                 "character %s that is not allowed.", self.get_name(), char)
+                    logger.error("[%s::%s] service_description got an illegal character: %s",
+                                 self.my_type, self.get_name(), char)
                     state = False
         return state
 
