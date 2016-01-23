@@ -916,7 +916,7 @@ class Items(object):
             else:
                 self.add_item(i, index_items)
 
-    def manage_conflict(self, item, name, partial=False):
+    def manage_conflict(self, item, name):
         """
         Cheks if an object holding the same name already exists in the index.
 
@@ -938,10 +938,11 @@ class Items(object):
         """
         if item.is_tpl():
             existing = self.name_to_template[name]
-        elif partial:
-            existing = self.name_to_partial[name]
         else:
             existing = self.name_to_item[name]
+        if existing == item:
+            return item
+
         existing_prio = getattr(
             existing,
             "definition_order",

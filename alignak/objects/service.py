@@ -68,7 +68,6 @@ If you look at the scheduling part, look at the scheduling item class"""
 
 import time
 import re
-import itertools
 
 
 from alignak.objects.item import Items
@@ -1192,10 +1191,14 @@ class Services(Items):
     name_property = 'unique_key'  # only used by (un)indexitem (via 'name_property')
     inner_class = Service  # use for know what is in items
 
-    def __init__(self, items, index_items=True):
-        self.partial_services = {}
-        self.name_to_partial = {}
-        super(Services, self).__init__(items, index_items)
+    def add_items(self, items, index_items):
+
+        # We only index template, service need to apply inheritance first to be able to be indexed
+        for item in items:
+            if item.is_tpl():
+                self.add_template(item)
+            else:
+                self.items[item._id] = item
 
     def add_template(self, tpl):
         """
@@ -1219,7 +1222,7 @@ class Services(Items):
             tpl = self.index_template(tpl)
         self.templates[tpl._id] = tpl
 
-    def add_item(self, item, index=True, was_partial=False):
+    def add_item(self, item, index=True):
         """
         Adds and index an item into the `items` container.
 
@@ -1230,8 +1233,6 @@ class Services(Items):
         :type item:
         :param index: Flag indicating if the item should be indexed
         :type index: bool
-        :param was_partial: True if was partial, otherwise False
-        :type was_partial: bool
         :return: None
         """
         objcls = self.inner_class.my_type
@@ -1243,78 +1244,16 @@ class Services(Items):
             in_file = " in %s" % source
         else:
             in_file = ""
-        if not hname and not hgname and not sdesc:
-            mesg = "a %s has been defined without host_name nor " \
-                   "hostgroups nor service_description%s" % (objcls, in_file)
+        if not hname and not hgname:
+            mesg = "a %s has been defined without host_name nor hostgroups%s" % (objcls, in_file)
             item.configuration_errors.append(mesg)
-        elif not sdesc or sdesc and not hgname and not hname and not was_partial:
-            self.add_partial_service(item, index, (objcls, hname, hgname, sdesc, in_file))
-            return
+        if not sdesc:
+            mesg = "a %s has been defined without service_description%s" % (objcls, in_file)
+            item.configuration_errors.append(mesg)
 
         if index is True:
             item = self.index_item(item)
         self.items[item._id] = item
-
-    def add_partial_service(self, item, index=True, var_tuple=tuple()):
-        """Add a partial service.
-        ie : A service that does not have service_description or host_name/host_group
-        We have to index them differently and try to inherit from our template to get one
-        of the previous parameter
-
-        :param item: service to add
-        :type item: alignak.objects.service.Service
-        :param index: whether to index it or not. Not used
-        :type index: bool
-        :param var_tuple: tuple containing object class, host_name, hostgroup_name,
-                          service_description and file it was parsed from (from logging purpose)
-        :type var_tuple: tuple
-        :return: None
-        """
-        if len(var_tuple) == 0:
-            return
-
-        objcls, hname, hgname, sdesc, in_file = var_tuple
-        use = getattr(item, 'use', [])
-
-        if use == []:
-            mesg = "a %s has been defined without host_name nor " \
-                   "hostgroups nor service_description and " \
-                   "there is no use to create a unique key%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
-            return
-
-        use = ','.join(use)
-        if sdesc:
-            name = "::".join((sdesc, use))
-        elif hname:
-            name = "::".join((hname, use))
-        else:
-            name = "::".join((hgname, use))
-
-        if name in self.name_to_partial:
-            item = self.manage_conflict(item, name, partial=True)
-        self.name_to_partial[name] = item
-
-        self.partial_services[item._id] = item
-
-    def apply_partial_inheritance(self, prop):
-        """Apply partial inheritance. Because of partial services we need to
-        override this function from SchedulingItem
-
-        :param prop: property to inherit from
-        :type prop: str
-        :return: None
-        """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            i.get_property_by_inheritance(prop)
-            # If a "null" attribute was inherited, delete it
-            try:
-                if getattr(i, prop) == 'null':
-                    delattr(i, prop)
-            except AttributeError:
-                pass
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1322,34 +1261,11 @@ class Services(Items):
 
         :return: None
         """
-        # We check for all Class properties if the host has it
-        # if not, it check all host templates for a value
-        cls = self.inner_class
-        for prop in cls.properties:
-            self.apply_partial_inheritance(prop)
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            i.get_customs_properties_by_inheritance()
+        super(Services, self).apply_inheritance()
 
-        for i in self.partial_services.itervalues():
-            self.add_item(i, True, True)
-
-        del self.partial_services
-        del self.name_to_partial
-
-    def linkify_templates(self):
-        """Create link between objects
-
-        :return: None
-        """
-        # First we create a list of all templates
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            self.linkify_item_templates(i)
-        for i in self:
-            i.tags = self.get_all_tags(i)
+        # add_item only ensure we can build a key for services later (after explode)
+        for item in self.items.values():
+            self.add_item(item, False)
 
     def find_srvs_by_hostname(self, host_name):
         """Get all services from a host based on a host_name
