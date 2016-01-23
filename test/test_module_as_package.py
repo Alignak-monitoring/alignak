@@ -17,7 +17,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-from os.path import abspath, dirname, join
 
 from alignak_test import unittest, AlignakTest
 
@@ -32,8 +31,10 @@ class TestModuleManager_And_Packages(AlignakTest):
     def test_conflicting_modules(self):
 
         # prepare 2 modconfs:
-        modconfA = Module({'module_alias': 'whatever', 'python_name': 'modA'})
-        modconfB = Module({'module_alias': '42',       'python_name': 'modB'})
+        modconfA = Module({'module_alias': 'whatever',
+                           'python_name': 'test_module_as_package_dir.modA'})
+        modconfB = Module({'module_alias': '42',
+                           'python_name': 'test_module_as_package_dir.modB'})
 
         mods = (modconfA, modconfB)
 
@@ -44,9 +45,9 @@ class TestModuleManager_And_Packages(AlignakTest):
         modA = None
         modB = None
         for _, mod in mm.modules_assoc:
-            if mod.__package__ == 'modA':
+            if mod.__package__ == 'test_module_as_package_dir.modA':
                 modA = mod
-            elif mod.__package__ == 'modB':
+            elif mod.__package__ == 'test_module_as_package_dir.modB':
                 modB = mod
 
             if mod.properties['type'].startswith("mod"):

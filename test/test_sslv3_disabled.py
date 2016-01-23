@@ -43,7 +43,8 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This test checks that sslv3 is disabled when SSL is used with a cherrypy backend to secure against the Poodle vulnerability (https://poodlebleed.com)
+# This test checks that sslv3 is disabled when SSL is used with a
+# cherrypy backend to secure against the Poodle vulnerability (https://poodlebleed.com)
 
 import subprocess
 from time import sleep
