@@ -1196,15 +1196,6 @@ class Items(object):
                                  self.templates.itervalues()):
             i.old_properties_names_to_new()
 
-    def pythonize(self):
-        """
-        Pythonize items
-
-        :return: None
-        """
-        for i_id in self.items:
-            self.items[i_id].pythonize()
-
     def find_tpl_by_name(self, name):
         """
         Find template by name
@@ -1221,7 +1212,7 @@ class Items(object):
         Get all tags of an item
 
         :param item: an item
-        :type item: object
+        :type item: Item
         :return: list of tags
         :rtype: list
         """
@@ -1237,7 +1228,7 @@ class Items(object):
         Link templates
 
         :param item: an item
-        :type item: object
+        :type item: Item
         :return: None
         """
         tpls = []
