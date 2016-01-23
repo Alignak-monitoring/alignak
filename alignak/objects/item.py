@@ -206,25 +206,6 @@ class Item(object):
                       DeprecationWarning, stacklevel=2)
         self._id = value
 
-    def compact_unique_attr_value(self, val):
-        """
-        Get value of first element of list if val is a list
-
-        :param val: simple value (string, integer...) or list
-        :type val: list or other (string, integer...)
-        :return: value
-        :rtype: str
-        """
-        if isinstance(val, list):
-            if len(val) > 1:
-                return val
-            elif len(val) == 0:
-                return ''
-            else:
-                return val[0]
-        else:
-            return val
-
     def init_running_properties(self):
         """
         Init the running_properties.
