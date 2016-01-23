@@ -2,6 +2,34 @@
 Alignak ChangeLog
 #################
 
+0.2 (2016-01-23)
+----------------
+
+FIX:
+ * Clean readme
+ * Installation with PIP, cause a fatal error (related with namespaces)
+ * Rewrite function of util: average_percentile because code give wrong 95 percentile
+ * Author for automatic downtimes.
+
+ENHANCEMENT:
+ * Allow python requests to 2.7.0 and after
+ * Display configuration error like error instead info
+ * New modules manager. They need be installed with pip (see https://github.com/Alignak-monitoring/alignak-module-example)
+ * Simplify function alive_then_spare_then_deads
+ * Prevent memleak in any module worker who use logging
+ * Init script - Clean and add fallbacks for lsb functions
+ * Pylint E1101
+ * Setup.cfg - Stick to the pypi one
+
+ADDITION:
+ * In debug mode, display external command run and display the result
+ * Add SIGHUP generation in init script and signal catching in daemon.py
+
+DELETION :
+ * Namespace package 
+ * Pythonize function (unused)
+
+
 0.1 (2015-10-07)
 ----------------
 
