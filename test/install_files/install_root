@@ -370,6 +370,5 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak-ALIGNAKVERSION.egg-info/requires.txt
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak-ALIGNAKVERSION.egg-info/top_level.txt
 755 /usr/local/var/lib/alignak
-755 /usr/local/var/lib/alignak/modules
 755 /usr/local/var/log/alignak
 755 /usr/local/var/run/alignak
