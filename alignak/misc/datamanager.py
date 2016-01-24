@@ -389,18 +389,18 @@ class DataManager(object):
         Get hosts and services with :
         * not OK state
         * business impact > 2
-        * is_impact flag true
+        * is_impacted flag true
 
         :return: list of host and services
         :rtype: list
         """
         res = []
         for serv in self.reg.services:
-            if serv.is_impact and serv.state not in ['OK', 'PENDING']:
+            if serv.is_impacted and serv.state not in ['OK', 'PENDING']:
                 if serv.business_impact > 2:
                     res.append(serv)
         for host in self.reg.hosts:
-            if host.is_impact and host.state not in ['UP', 'PENDING']:
+            if host.is_impacted and host.state not in ['UP', 'PENDING']:
                 if host.business_impact > 2:
                     res.append(host)
         return res
@@ -410,7 +410,7 @@ class DataManager(object):
         Get hosts and services with:
 
         * not OK state
-        * is_impact flag false
+        * is_impacted flag false
         * Do not include acknowledged items by default
         * Sort items by default
 
@@ -425,16 +425,16 @@ class DataManager(object):
         if not get_acknowledged:
             res.extend([s for s in self.reg.services
                         if s.state not in ['OK', 'PENDING'] and
-                        not s.is_impact and not s.problem_has_been_acknowledged and
+                        not s.is_impacted and not s.problem_has_been_acknowledged and
                         not s.host.problem_has_been_acknowledged])
             res.extend([h for h in self.reg.hosts
                         if h.state not in ['UP', 'PENDING'] and
-                        not h.is_impact and not h.problem_has_been_acknowledged])
+                        not h.is_impacted and not h.problem_has_been_acknowledged])
         else:
             res.extend([s for s in self.reg.services
-                        if s.state not in ['OK', 'PENDING'] and not s.is_impact])
+                        if s.state not in ['OK', 'PENDING'] and not s.is_impacted])
             res.extend([h for h in self.reg.hosts
-                        if h.state not in ['UP', 'PENDING'] and not h.is_impact])
+                        if h.state not in ['UP', 'PENDING'] and not h.is_impacted])
 
         if to_sort:
             res.sort(hst_srv_sort)
@@ -460,7 +460,7 @@ class DataManager(object):
         """
         res = []
         for serv in self.reg.services:
-            if serv.is_impact and serv.state not in ['OK', 'PENDING']:
+            if serv.is_impacted and serv.state not in ['OK', 'PENDING']:
                 # If s is acked, pass
                 if serv.problem_has_been_acknowledged:
                     continue
@@ -469,7 +469,7 @@ class DataManager(object):
                        if not p.problem_has_been_acknowledged) > 0:
                     res.append(serv)
         for host in self.reg.hosts:
-            if host.is_impact and host.state not in ['UP', 'PENDING']:
+            if host.is_impacted and host.state not in ['UP', 'PENDING']:
                 # If h is acked, pass
                 if host.problem_has_been_acknowledged:
                     continue
@@ -499,9 +499,9 @@ class DataManager(object):
         """
         res = []
         res.extend([s for s in self.reg.services
-                    if s.state not in ['OK', 'PENDING'] and not s.is_impact])
+                    if s.state not in ['OK', 'PENDING'] and not s.is_impacted])
         res.extend([h for h in self.reg.hosts
-                    if h.state not in ['UP', 'PENDING'] and not h.is_impact])
+                    if h.state not in ['UP', 'PENDING'] and not h.is_impacted])
         return len(only_related_to(res, user))
 
     def get_nb_impacts(self):
@@ -547,7 +547,7 @@ class DataManager(object):
         """
         Get the worst state of all hosts and service with:
         * business impact > 2
-        * is_impact flag true
+        * is_impacted flag true
         * state_id equals 1 or 2 (warning or critical state)
         Used for aggregation
 
@@ -555,9 +555,9 @@ class DataManager(object):
         :rtype: int
         """
         h_states = [h.state_id for h in self.reg.hosts
-                    if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
+                    if h.business_impact > 2 and h.is_impacted and h.state_id in [1, 2]]
         s_states = [s.state_id for s in self.reg.services
-                    if s.business_impact > 2 and s.is_impact and s.state_id in [1, 2]]
+                    if s.business_impact > 2 and s.is_impacted and s.state_id in [1, 2]]
         print "get_overall_state:: hosts and services business problems", h_states, s_states
         if len(h_states) == 0:
             h_state = 0
@@ -573,7 +573,7 @@ class DataManager(object):
     def get_overall_it_state(self):
         """
         Get the worst state of all hosts and services with:
-        * is_impact flag true
+        * is_impacted flag true
         * state_id equals 1 or 2 (warning or critical state)
         Used for aggregation
 
@@ -597,7 +597,7 @@ class DataManager(object):
     def get_per_service_state(self):
         """
         Get the percentage of services with :
-        * is_impact flag false
+        * is_impacted flag false
         * not OK state
 
         :return: An integer representing the percentage of services fulfilling the above condition
@@ -606,7 +606,7 @@ class DataManager(object):
         all_services = self.reg.services
         problem_services = []
         problem_services.extend([s for s in self.reg.services
-                                 if s.state not in ['OK', 'PENDING'] and not s.is_impact])
+                                 if s.state not in ['OK', 'PENDING'] and not s.is_impacted])
         if len(all_services) == 0:
             res = 0
         else:
@@ -616,7 +616,7 @@ class DataManager(object):
     def get_per_hosts_state(self):
         """
         Get the percentage of hosts with :
-        * is_impact flag false
+        * is_impacted flag false
         * not OK state
 
         :return: An integer representing the percentage of hosts fulfilling the above condition
@@ -625,7 +625,7 @@ class DataManager(object):
         all_hosts = self.reg.hosts
         problem_hosts = []
         problem_hosts.extend([s for s in self.reg.hosts
-                              if s.state not in ['UP', 'PENDING'] and not s.is_impact])
+                              if s.state not in ['UP', 'PENDING'] and not s.is_impacted])
         if len(all_hosts) == 0:
             res = 0
         else:
@@ -645,9 +645,9 @@ class DataManager(object):
          :rtype: int
         """
         h_states = [h.state_id for h in self.reg.hosts
-                    if h.business_impact > 2 and h.is_impact and h.state_id in [1, 2]]
+                    if h.business_impact > 2 and h.is_impacted and h.state_id in [1, 2]]
         s_states = [s.state_id for s in self.reg.services
-                    if s.business_impact > 2 and s.is_impact and s.state_id in [1, 2]]
+                    if s.business_impact > 2 and s.is_impacted and s.state_id in [1, 2]]
         print "get_len_overall_state:: hosts and services business problems", h_states, s_states
         # Just return the number of impacting elements
         return len(h_states) + len(s_states)

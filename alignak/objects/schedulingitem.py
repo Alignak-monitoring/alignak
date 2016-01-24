@@ -398,16 +398,16 @@ class SchedulingItem(Item):
             return []
 
         now = time.time()
-        was_an_impact = self.is_impact
+        was_an_impact = self.is_impacted
         # Our father already look of he impacts us. So if we are here,
         # it's that we really are impacted
-        self.is_impact = True
+        self.is_impacted = True
 
         impacts = []
         # Ok, if we are impacted, we can add it in our
         # problem list
         # TODO: remove this unused check
-        if self.is_impact:
+        if self.is_impacted:
             # Maybe I was a problem myself, now I can say: not my fault!
             if self.is_problem:
                 self.no_more_a_problem()
@@ -454,7 +454,7 @@ class SchedulingItem(Item):
         # are not aware of the remove of the impact state because it's not ordered
         # so we can just look at if we still have some problem in our list
         if len(self.source_problems) == 0:
-            self.is_impact = False
+            self.is_impacted = False
             # No more an impact, we can unset the impact state
             self.unset_impact_state()
 

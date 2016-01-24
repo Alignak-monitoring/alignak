@@ -459,7 +459,7 @@ class Service(SchedulingItem):
 
         # Problem/impact part
         'is_problem':         BoolProp(default=False, fill_brok=['full_status']),
-        'is_impact':          BoolProp(default=False, fill_brok=['full_status']),
+        'is_impacted':        BoolProp(default=False, fill_brok=['full_status']),
         # the save value of our business_impact for "problems"
         'my_own_business_impact':   IntegerProp(default=-1, fill_brok=['full_status']),
         # list of problems that make us an impact
@@ -1030,7 +1030,7 @@ class Service(SchedulingItem):
         # but only if the global conf have enable the impact state change
         cls = self.__class__
         if cls.enable_problem_impacts_states_change \
-                and self.is_impact \
+                and self.is_impacted \
                 and not self.state_changed_since_impact:
             self.last_state = self.state_before_impact
         else:  # standard case

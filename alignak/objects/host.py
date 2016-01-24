@@ -530,7 +530,7 @@ class Host(SchedulingItem):
         'is_problem':
             StringProp(default=False, fill_brok=['full_status']),
 
-        'is_impact':
+        'is_impacted':
             StringProp(default=False, fill_brok=['full_status']),
 
         # the save value of our business_impact for "problems"
@@ -1109,7 +1109,7 @@ class Host(SchedulingItem):
         # And only if we enable the impact state change
         cls = self.__class__
         if (cls.enable_problem_impacts_states_change and
-                self.is_impact and
+                self.is_impacted and
                 not self.state_changed_since_impact):
             self.last_state = self.state_before_impact
         else:
