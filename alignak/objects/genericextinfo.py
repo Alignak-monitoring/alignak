@@ -46,30 +46,10 @@ class GenericExtInfo(Item):
 #                        |___/
 ######
 
-    def is_correct(self):
-        """
-        Check if this object is correct
-
-        :return: True, always.
-        :rtype: bool
-        TODO: Clean this function
-        """
-        return True
-
     def get_name(self):
         """Accessor to host_name attribute or name if first not defined
 
-        :return: host name (no sense)
+        :return: host name, use to search the host to merge
         :rtype: str
-        TODO: Clean this function
         """
-        if not self.is_tpl():
-            try:
-                return self.host_name
-            except AttributeError:  # outch, no hostname
-                return 'UNNAMEDHOST'
-        else:
-            try:
-                return self.name
-            except AttributeError:  # outch, no name for this template
-                return 'UNNAMEDHOSTTEMPLATE'
+        return getattr(self, 'host_name', getattr(self, 'name', 'UNKNOWN'))
