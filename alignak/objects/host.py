@@ -72,9 +72,8 @@ from alignak.objects.schedulingitem import SchedulingItem
 
 from alignak.autoslots import AutoSlots
 from alignak.util import (format_t_into_dhms_format, to_hostnames_list, get_obj_name,
-                          to_svc_hst_distinct_lists, to_list_string_of_names, to_list_of_names,
-                          to_name_if_possible)
-from alignak.property import BoolProp, IntegerProp, FloatProp, CharProp, StringProp, ListProp
+                          to_list_string_of_names)
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result
@@ -117,8 +116,6 @@ class Host(SchedulingItem):
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'alias':
             StringProp(fill_brok=['full_status']),
-        'display_name':
-            StringProp(default='', fill_brok=['full_status']),
         'address':
             StringProp(fill_brok=['full_status']),
         'parents':
@@ -129,76 +126,14 @@ class Host(SchedulingItem):
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
-        'initial_state':
-            CharProp(default='o', fill_brok=['full_status']),
-        'max_check_attempts':
-            IntegerProp(default=1, fill_brok=['full_status']),
-        'check_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
-        'retry_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
-        'active_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'passive_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
         'obsess_over_host':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'check_freshness':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'event_handler':
-            StringProp(default='', fill_brok=['full_status']),
-        'event_handler_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'low_flap_threshold':
-            IntegerProp(default=25, fill_brok=['full_status']),
-        'high_flap_threshold':
-            IntegerProp(default=50, fill_brok=['full_status']),
-        'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
             ListProp(default=['o', 'd', 'u'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
-        'process_perf_data':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'retain_nonstatus_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'contacts':
-            ListProp(default=[], brok_transformation=to_list_of_names,
-                     fill_brok=['full_status'], merging='join', split_on_coma=True),
-        'contact_groups':
-            ListProp(default=[], fill_brok=['full_status'],
-                     merging='join', split_on_coma=True),
-        'notification_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
-        'first_notification_delay':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'notification_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
         'notification_options':
             ListProp(default=['d', 'u', 'r', 'f'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
-        'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'stalking_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-        'notes':
-            StringProp(default='', fill_brok=['full_status']),
-        'notes_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'action_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image_alt':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_set':
-            StringProp(default='', fill_brok=['full_status']),
         'vrml_image':
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
@@ -210,297 +145,39 @@ class Host(SchedulingItem):
             StringProp(default='', fill_brok=['full_status'], no_slots=True),
         '3d_coords':
             StringProp(default='', fill_brok=['full_status'], no_slots=True),
-        'failure_prediction_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
-
         # New to alignak
         # 'fill_brok' is ok because in scheduler it's already
         # a string from conf_send_preparation
         'realm':
             StringProp(default=None, fill_brok=['full_status'], conf_send_preparation=get_obj_name),
-        'poller_tag':
-            StringProp(default='None'),
-        'reactionner_tag':
-            StringProp(default='None'),
-        'resultmodulations':
-            ListProp(default=[], merging='join'),
-        'business_impact_modulations':
-            ListProp(default=[], merging='join'),
-        'escalations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
-        'maintenance_period':
-            StringProp(default='', brok_transformation=to_name_if_possible,
-                       fill_brok=['full_status']),
-        'time_to_orphanage':
-            IntegerProp(default=300, fill_brok=['full_status']),
         'service_overrides':
             ListProp(default=[], merging='duplicate', split_on_coma=False),
         'service_excludes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
         'service_includes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
-        'labels':
-            ListProp(default=[], fill_brok=['full_status'], merging='join',
-                     split_on_coma=True),
-
-        # BUSINESS CORRELATOR PART
-        # Business rules output format template
-        'business_rule_output_template':
-            StringProp(default='', fill_brok=['full_status']),
-        # Business rules notifications mode
-        'business_rule_smart_notifications':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Treat downtimes as acknowledgements in smart notifications
-        'business_rule_downtime_as_ack':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Enforces child nodes notification options
-        'business_rule_host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-        'business_rule_service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-
-        # Business impact value
-        'business_impact':
-            IntegerProp(default=2, fill_brok=['full_status']),
-
-        # Load some triggers
-        'trigger':
-            StringProp(default=''),
-        'trigger_name':
-            StringProp(default=''),
-        'trigger_broker_raise_enabled':
-            BoolProp(default=False),
-
-        # Trending
-        'trending_policies':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
-        # Our modulations. By defualt void, but will filled by an inner if need
-        'checkmodulations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-        'macromodulations':
-            ListProp(default=[], merging='join'),
-
-        # Custom views
-        'custom_views':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
-        # Snapshot part
-        'snapshot_enabled':
-            BoolProp(default=False),
-        'snapshot_command':
-            StringProp(default=''),
-        'snapshot_period':
-            StringProp(default=''),
         'snapshot_criteria':
             ListProp(default=['d', 'u'], fill_brok=['full_status'], merging='join'),
-        'snapshot_interval':
-            IntegerProp(default=5),
     })
 
     # properties set only for running purpose
     # retention: save/load this property from retention
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
-        'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
-        'last_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'next_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'next_schedule'], retention=True),
-        'in_checking':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result', 'next_schedule']),
-        'in_maintenance':
-            IntegerProp(default=None, fill_brok=['full_status'], retention=True),
-        'latency':
-            FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'attempt':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'state':
             StringProp(default='UP', fill_brok=['full_status', 'check_result'],
                        retention=True),
-        'state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'state_type_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'current_event_id':
-            StringProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state':
-            StringProp(default='PENDING', fill_brok=['full_status', 'check_result'],
-                       retention=True),
-        'last_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state':
-            StringProp(default='PENDING', fill_brok=['full_status'], retention=True),
-        'last_hard_state_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'last_time_up':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_down':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'duration_sec':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'long_output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'is_flapping':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'flapping_comment_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        # No broks for _depend_of because of to much links to hosts/services
-        # dependencies for actions like notif of event handler, so AFTER check return
-        'act_depend_of':
-            ListProp(default=[]),
-
-        # dependencies for checks raise, so BEFORE checks
-        'chk_depend_of':
-            ListProp(default=[]),
-
-        # elements that depend of me, so the reverse than just upper
-        'act_depend_of_me':
-            ListProp(default=[]),
-
-        # elements that depend of me
-        'chk_depend_of_me':
-            ListProp(default=[]),
-        'last_state_update':
-            StringProp(default=0, fill_brok=['full_status'], retention=True),
-
         # no brok ,to much links
         'services':
             StringProp(default=[]),
-
-        # No broks, it's just internal, and checks have too links
-        'checks_in_progress':
-            StringProp(default=[]),
-
-        # No broks, it's just internal, and checks have too links
-        'notifications_in_progress':
-            StringProp(default={}, retention=True),
-
-        'downtimes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'comments':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'flapping_changes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'percent_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'problem_has_been_acknowledged':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'acknowledgement':
-            StringProp(default=None, retention=True),
-
-        'acknowledgement_type':
-            IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'check_type':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'has_been_checked':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'should_be_scheduled':
-            IntegerProp(default=1, fill_brok=['full_status'], retention=True),
-
-        'last_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'current_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'execution_time':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'u_time':
-            FloatProp(default=0.0),
-
-        's_time':
-            FloatProp(default=0.0),
-
-        'last_notification':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
-
-        'current_notification_number':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'current_notification_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'check_flapping_recovery_notification':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-
-        'scheduled_downtime_depth':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'pending_flex_downtime':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'start_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'end_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'early_timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'return_code':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'perf_data':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-
-        'last_perf_data':
-            StringProp(default='', retention=True),
-
-        'customs':
-            StringProp(default={}, fill_brok=['full_status']),
-
         'got_default_realm':
             BoolProp(default=False),
-
-        # use for having all contacts we have notified
-        # Warning: for the notified_contacts retention save, we save only the names of the
-        # contacts, and we should RELINK
-        # them when we load it.
-        'notified_contacts':
-            StringProp(default=set(), retention=True, retention_preparation=to_list_of_names),
-
-        'in_scheduled_downtime':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'in_scheduled_downtime_during_last_check':
-            BoolProp(default=False, retention=True),
-
-        # put here checks and notif raised
-        'actions':
-            StringProp(default=[]),
-
-        # and here broks raised
-        'broks':
-            StringProp(default=[]),
 
         # For knowing with which elements we are in relation
         # of dep.
@@ -509,102 +186,18 @@ class Host(SchedulingItem):
         'childs':
             StringProp(brok_transformation=to_hostnames_list, default=[],
                        fill_brok=['full_status']),
-
-        # Here it's the elements we are depending on
-        # so our parents as network relation, or a host
-        # we are depending in a hostdependency
-        # or even if we are business based.
-        'parent_dependencies':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=set(),
-                       fill_brok=['full_status']),
-
-        # Here it's the guys that depend on us. So it's the total
-        # opposite of the parent_dependencies
-        'child_dependencies':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists,
-                       default=set(),
-                       fill_brok=['full_status']),
-
-
-        # Problem/impact part
-        'is_problem':
-            StringProp(default=False, fill_brok=['full_status']),
-
-        'is_impact':
-            StringProp(default=False, fill_brok=['full_status']),
-
-        # the save value of our business_impact for "problems"
-        'my_own_business_impact':
-            IntegerProp(default=-1, fill_brok=['full_status']),
-
-        # list of problems that make us an impact
-        'source_problems':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=[],
-                       fill_brok=['full_status']),
-
-        # list of the impact I'm the cause of
-        'impacts':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=[],
-                       fill_brok=['full_status']),
-
-        # keep a trace of the old state before being an impact
-        'state_before_impact':
-            StringProp(default='PENDING'),
-
-        # keep a trace of the old state id before being an impact
-        'state_id_before_impact':
-            StringProp(default=0),
-
-        # if the state change, we know so we do not revert it
-        'state_changed_since_impact':
-            StringProp(default=False),
-
-        # BUSINESS CORRELATOR PART
-        # Say if we are business based rule or not
-        'got_business_rule':
-            BoolProp(default=False, fill_brok=['full_status']),
-
-        # Previously processed business rule (with macro expanded)
-        'processed_business_rule':
-            StringProp(default="", fill_brok=['full_status']),
-
-        # Our Dependency node for the business rule
-        'business_rule':
-            StringProp(default=None),
-
-        # Manage the unknown/unreach during hard state
-        # From now its not really used
-        'in_hard_unknown_reach_phase':
-            BoolProp(default=False, retention=True),
-
-        'was_in_hard_unknown_reach_phase':
-            BoolProp(default=False, retention=True),
-
         'state_before_hard_unknown_reach_phase':
             StringProp(default='UP', retention=True),
-
-        # Set if the element just change its father/son topology
-        'topology_change':
-            BoolProp(default=False, fill_brok=['full_status']),
 
         # Keep in mind our pack id after the cutting phase
         'pack_id':
             IntegerProp(default=-1),
-
-        # Trigger list
-        'triggers':
-        StringProp(default=[]),
-
-        # snapshots part
-        'last_snapshot':  IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        # Keep the string of the last command launched for this element
-        'last_check_command': StringProp(default=''),
     })
 
     # Hosts macros and prop that give the information
     # the prop can be callable or not
-    macros = {
+    macros = SchedulingItem.macros.copy()
+    macros.update({
         'HOSTNAME':          'host_name',
         'HOSTDISPLAYNAME':   'display_name',
         'HOSTALIAS':         'alias',
@@ -652,11 +245,7 @@ class Host(SchedulingItem):
         'TOTALHOSTSERVICESUNKNOWN': 'get_total_services_unknown',
         'TOTALHOSTSERVICESCRITICAL': 'get_total_services_critical',
         'HOSTBUSINESSIMPACT':  'business_impact',
-        # Business rules output formatting related macros
-        'STATUS':            'get_status',
-        'SHORTSTATUS':       'get_short_status',
-        'FULLNAME':          'get_full_name',
-    }
+    })
 
     # Manage ADDRESSX macros by adding them dynamically
     for i in range(32):
@@ -665,13 +254,10 @@ class Host(SchedulingItem):
     # This tab is used to transform old parameters name into new ones
     # so from Nagios2 format, to Nagios3 ones.
     # Or Alignak deprecated names like criticity
-    old_properties = {
-        'normal_check_interval': 'check_interval',
-        'retry_check_interval': 'retry_interval',
-        'criticity': 'business_impact',
+    old_properties = SchedulingItem.old_properties.copy()
+    old_properties.update({
         'hostgroup': 'hostgroups',
-        # 'criticitymodulations': 'business_impact_modulations',
-    }
+    })
 
 #######
 #                   __ _                       _   _
@@ -708,74 +294,14 @@ class Host(SchedulingItem):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
+        state = super(Host, self).is_correct()
         cls = self.__class__
-
-        source = getattr(self, 'imported_from', 'unknown')
-
-        special_properties = ['check_period', 'notification_interval',
-                              'notification_period']
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[host::%s] %s property not set", self.get_name(), prop)
-                    state = False  # Bad boy...
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[host::%s] %s", self.get_name(), err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[host::%s] %s", self.get_name(), err)
-
-        if not hasattr(self, 'notification_period'):
-            self.notification_period = None
-
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            logger.warning("The host %s has no contacts nor contact_groups in (%s)",
-                           self.get_name(), source)
-
-        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("%s: my event_handler %s is invalid",
-                         self.get_name(), self.event_handler.command)
-            state = False
-
-        if getattr(self, 'check_command', None) is None:
-            logger.error("%s: I've got no check_command", self.get_name())
-            state = False
-        # Ok got a command, but maybe it's invalid
-        else:
-            if not self.check_command.is_valid():
-                logger.error("%s: my check_command %s is invalid",
-                             self.get_name(), self.check_command.command)
-                state = False
-            if self.got_business_rule:
-                if not self.business_rule.is_valid():
-                    logger.error("%s: my business rule is invalid", self.get_name(),)
-                    for bperror in self.business_rule.configuration_errors:
-                        logger.error("[host::%s] %s", self.get_name(), bperror)
-                    state = False
-
-        if (not hasattr(self, 'notification_interval') and
-                self.notifications_enabled is True):
-            logger.error("%s: I've got no notification_interval but "
-                         "I've got notifications enabled", self.get_name())
-            state = False
-
-        # if no check_period, means 24x7, like for services
-        if not hasattr(self, 'check_period'):
-            self.check_period = None
 
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    logger.error("%s: My host_name got the character %s that is not allowed.",
-                                 self.get_name(), char)
+                    logger.error("[%s::%s] host_name got an illegal character: %s",
+                                 self.my_type, self.get_name(), char)
                     state = False
 
         return state
@@ -1080,16 +606,6 @@ class Host(SchedulingItem):
             self.state_changed_since_impact = False
             self.state = 'UNREACHABLE'  # exit code UNDETERMINED
             self.state_id = 2
-
-    def unset_impact_state(self):
-        """Unset impact, only if impact state change is set in configuration
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
-            self.state = self.state_before_impact
-            self.state_id = self.state_id_before_impact
 
     def set_state_from_exit_status(self, status):
         """Set the state in UP, DOWN, or UNDETERMINED

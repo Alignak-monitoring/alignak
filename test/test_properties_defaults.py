@@ -72,7 +72,7 @@ class PropertiesTester(object):
                 ( ListProp, StringProp, IntegerProp ),
                 msg='property %r is not `ListProp` or `StringProp` but %r' % (name, item.properties[name])
             )
-            self.assertTrue(item.properties[name].required)
+            self.assertTrue(item.properties[name].required, msg='property %r is required' % name)
 
     def test_default_values(self):
         item = self.item # shortcut
@@ -801,8 +801,7 @@ class TestService(PropertiesTester, AlignakTest):
 
     without_default = [
         'host_name', 'service_description',
-        'check_command', 'check_interval',
-        'retry_interval', 'check_period', 'notification_period']
+        'check_command', 'check_period', 'notification_period']
 
     properties = dict([
         ('imported_from', 'unknown'),
@@ -823,8 +822,10 @@ class TestService(PropertiesTester, AlignakTest):
         ('freshness_threshold', 0),
         ('event_handler', ''),
         ('event_handler_enabled', False),
-        ('low_flap_threshold', -1),
-        ('high_flap_threshold', -1),
+        ('check_interval', 0),
+        ('retry_interval', 0),
+        ('low_flap_threshold', 25),
+        ('high_flap_threshold', 50),
         ('flap_detection_enabled', True),
         ('flap_detection_options', ['o','w','c','u']),
         ('process_perf_data', True),
@@ -874,8 +875,8 @@ class TestService(PropertiesTester, AlignakTest):
         ('snapshot_enabled', False),
         ('snapshot_period', ''),
         ('snapshot_criteria', ['w','c','u']),
-        ('business_rule_host_notification_options', None),
-        ('business_rule_service_notification_options', None),
+        ('business_rule_host_notification_options', ['']),
+        ('business_rule_service_notification_options', ['']),
         ('host_dependency_enabled', True),
         ])
 

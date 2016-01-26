@@ -1574,7 +1574,7 @@ class TestConfigBroken(AlignakTest):
         self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_host.+from etc.+business_correlator_broken.cfg', log)]) )
 
         # Now the number of all failed business rules.
-        self.assertEqual(3, len([log for log in logs if re.search('my business rule is invalid', log)]) )
+        self.assertEqual(3, len([log for log in logs if re.search('business_rule invalid', log)]) )
 
 
 

@@ -64,7 +64,7 @@ class Testservice_without_host(AlignakTest):
             0,
             len([ log
                     for log in logs
-                    if re.search("The service 'WillError' got an unknown host_name 'NOEXIST'",
+                    if re.search("\[service::WillError\] unknown host_name 'NOEXIST'",
                             log)
             ]))
 

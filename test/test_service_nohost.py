@@ -68,7 +68,7 @@ class TestServiceNoHost(AlignakTest):
             len( [ log
                         for log in logs
                         if re.search(
-                                'a service item has been defined without unique_key ',
+                                'a service has been defined without host_name nor hostgroups',
                                 log)
             ])
         )

@@ -68,7 +68,6 @@ If you look at the scheduling part, look at the scheduling item class"""
 
 import time
 import re
-import itertools
 
 
 from alignak.objects.item import Items
@@ -78,15 +77,11 @@ from alignak.autoslots import AutoSlots
 from alignak.util import (
     strip_and_uniq,
     format_t_into_dhms_format,
-    to_svc_hst_distinct_lists,
     generate_key_value_sequences,
     to_list_string_of_names,
-    to_list_of_names,
-    to_name_if_possible,
     is_complex_expr,
     KeyValueSyntaxError)
-from alignak.property import BoolProp, IntegerProp, FloatProp,\
-    CharProp, StringProp, ListProp, DictProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result
@@ -118,13 +113,11 @@ class Service(SchedulingItem):
     properties = SchedulingItem.properties.copy()
     properties.update({
         'host_name':
-            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
+            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule'], special=True),
         'hostgroup_name':
-            StringProp(default='', fill_brok=['full_status'], merging='join'),
+            StringProp(default='', fill_brok=['full_status'], merging='join', special=True),
         'service_description':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
-        'display_name':
-            StringProp(default='', fill_brok=['full_status']),
         'servicegroups':
             ListProp(default=[], fill_brok=['full_status'],
                      brok_transformation=to_list_string_of_names, merging='join'),
@@ -132,117 +125,20 @@ class Service(SchedulingItem):
             BoolProp(default=False, fill_brok=['full_status']),
         'check_command':
             StringProp(fill_brok=['full_status']),
-        'initial_state':
-            CharProp(default='o', fill_brok=['full_status']),
-        'max_check_attempts':
-            IntegerProp(default=1, fill_brok=['full_status']),
-        'check_interval':
-            IntegerProp(fill_brok=['full_status', 'check_result']),
-        'retry_interval':
-            IntegerProp(fill_brok=['full_status', 'check_result']),
-        'active_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'passive_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
         'obsess_over_service':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'check_freshness':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'event_handler':
-            StringProp(default='', fill_brok=['full_status']),
-        'event_handler_enabled':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'low_flap_threshold':
-            IntegerProp(default=-1, fill_brok=['full_status']),
-        'high_flap_threshold':
-            IntegerProp(default=-1, fill_brok=['full_status']),
-        'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
             ListProp(default=['o', 'w', 'c', 'u'], fill_brok=['full_status'], split_on_coma=True),
-        'process_perf_data':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'retain_nonstatus_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'notification_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
-        'first_notification_delay':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'notification_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
         'notification_options':
             ListProp(default=['w', 'u', 'c', 'r', 'f', 's'],
                      fill_brok=['full_status'], split_on_coma=True),
-        'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'contacts':
-            ListProp(default=[], brok_transformation=to_list_of_names,
-                     fill_brok=['full_status'], merging='join'),
-        'contact_groups':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-        'stalking_options':
-            ListProp(default=[''], fill_brok=['full_status'], merging='join'),
-        'notes':
-            StringProp(default='', fill_brok=['full_status']),
-        'notes_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'action_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image_alt':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_set':
-            StringProp(default='', fill_brok=['full_status']),
-        'failure_prediction_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
         'parallelize_check':
             BoolProp(default=True, fill_brok=['full_status']),
-
-        # Alignak specific
-        'poller_tag':
-            StringProp(default='None'),
-        'reactionner_tag':
-            StringProp(default='None'),
-        'resultmodulations':
-            ListProp(default=[], merging='join'),
-        'business_impact_modulations':
-            ListProp(default=[], merging='join'),
-        'escalations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
-        'maintenance_period':
-            StringProp(default='',
-                       brok_transformation=to_name_if_possible, fill_brok=['full_status']),
-        'time_to_orphanage':
-            IntegerProp(default=300, fill_brok=['full_status']),
         'merge_host_contacts':
             BoolProp(default=False, fill_brok=['full_status']),
-        'labels':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+
         'host_dependency_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
-
-        # BUSINESS CORRELATOR PART
-        # Business rules output format template
-        'business_rule_output_template':
-            StringProp(default='', fill_brok=['full_status']),
-        # Business rules notifications mode
-        'business_rule_smart_notifications':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Treat downtimes as acknowledgements in smart notifications
-        'business_rule_downtime_as_ack':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Enforces child nodes notification options
-        'business_rule_host_notification_options':
-            ListProp(default=None, fill_brok=['full_status'], split_on_coma=True),
-        'business_rule_service_notification_options':
-            ListProp(default=None, fill_brok=['full_status'], split_on_coma=True),
 
         # Easy Service dep definition
         'service_dependencies':  # TODO: find a way to brok it?
@@ -254,92 +150,19 @@ class Service(SchedulingItem):
         'default_value':
             StringProp(default=''),
 
-        # Business_Impact value
-        'business_impact':
-            IntegerProp(default=2, fill_brok=['full_status']),
-
-        # Load some triggers
-        'trigger':
-            StringProp(default=''),
-        'trigger_name':
-            StringProp(default=''),
-        'trigger_broker_raise_enabled':
-            BoolProp(default=False),
-
-        # Trending
-        'trending_policies':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
-        # Our check ways. By defualt void, but will filled by an inner if need
-        'checkmodulations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-        'macromodulations':
-            ListProp(default=[], merging='join'),
-
-        # Custom views
-        'custom_views':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
         # UI aggregation
         'aggregation':
             StringProp(default='', fill_brok=['full_status']),
-
-        # Snapshot part
-        'snapshot_enabled':
-            BoolProp(default=False),
-        'snapshot_command':
-            StringProp(default=''),
-        'snapshot_period':
-            StringProp(default=''),
         'snapshot_criteria':
             ListProp(default=['w', 'c', 'u'], fill_brok=['full_status'], merging='join'),
-        'snapshot_interval':
-            IntegerProp(default=5),
-
     })
 
     # properties used in the running state
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
-        'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
-        'last_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'next_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'next_schedule'], retention=True),
-        'in_checking':
-            BoolProp(default=False,
-                     fill_brok=['full_status', 'check_result', 'next_schedule'], retention=True),
-        'in_maintenance':
-            IntegerProp(default=None, fill_brok=['full_status'], retention=True),
-        'latency':
-            FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True,),
-        'attempt':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'state':
             StringProp(default='OK',
                        fill_brok=['full_status', 'check_result'], retention=True),
-        'state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'current_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state':
-            StringProp(default='PENDING',
-                       fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state':
-            StringProp(default='PENDING', fill_brok=['full_status'], retention=True),
-        'last_hard_state_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'last_time_ok':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_warning':
@@ -348,177 +171,17 @@ class Service(SchedulingItem):
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unknown':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'duration_sec':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'state_type_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'long_output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'is_flapping':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        #  dependencies for actions like notif of event handler,
-        # so AFTER check return
-        'act_depend_of':
-            ListProp(default=[]),
-        # dependencies for checks raise, so BEFORE checks
-        'chk_depend_of':
-            ListProp(default=[]),
-        # elements that depend of me, so the reverse than just upper
-        'act_depend_of_me':
-            ListProp(default=[]),
-        # elements that depend of me
-        'chk_depend_of_me':
-            ListProp(default=[]),
-
-        'last_state_update':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
-        # no brok because checks are too linked
-        'checks_in_progress':
-            ListProp(default=[]),
-        # no broks because notifications are too linked
-        'notifications_in_progress': DictProp(default={}, retention=True),
-        'downtimes':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
-        'comments':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
-        'flapping_changes':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
-        'flapping_comment_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'percent_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'problem_has_been_acknowledged':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
-        'acknowledgement':
-            StringProp(default=None, retention=True),
-        'acknowledgement_type':
-            IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
-        'check_type':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'has_been_checked':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'should_be_scheduled':
-            IntegerProp(default=1, fill_brok=['full_status'], retention=True),
-        'last_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'current_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'execution_time':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'u_time':
-            FloatProp(default=0.0),
-        's_time':
-            FloatProp(default=0.0),
-        'last_notification':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
-        'current_notification_number':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'current_notification_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'check_flapping_recovery_notification':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'scheduled_downtime_depth':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'pending_flex_downtime':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'start_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'end_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'early_timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'return_code':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'perf_data':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'last_perf_data':
-            StringProp(default='', retention=True),
         'host':
             StringProp(default=None),
-        'customs':
-            DictProp(default={}, fill_brok=['full_status']),
-        # Warning: for the notified_contacts retention save,
-        # we save only the names of the contacts, and we should RELINK
-        # them when we load it.
-        # use for having all contacts we have notified
-        'notified_contacts':  ListProp(default=set(),
-                                       retention=True,
-                                       retention_preparation=to_list_of_names),
-        'in_scheduled_downtime': BoolProp(
-            default=False, fill_brok=['full_status', 'check_result'], retention=True),
-        'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
-        'actions':            ListProp(default=[]),  # put here checks and notif raised
-        'broks':              ListProp(default=[]),  # and here broks raised
-
-
-        # Problem/impact part
-        'is_problem':         BoolProp(default=False, fill_brok=['full_status']),
-        'is_impact':          BoolProp(default=False, fill_brok=['full_status']),
-        # the save value of our business_impact for "problems"
-        'my_own_business_impact':   IntegerProp(default=-1, fill_brok=['full_status']),
-        # list of problems that make us an impact
-        'source_problems':    ListProp(default=[],
-                                       fill_brok=['full_status'],
-                                       brok_transformation=to_svc_hst_distinct_lists),
-        # list of the impact I'm the cause of
-        'impacts':            ListProp(default=[],
-                                       fill_brok=['full_status'],
-                                       brok_transformation=to_svc_hst_distinct_lists),
-        # keep a trace of the old state before being an impact
-        'state_before_impact': StringProp(default='PENDING'),
-        # keep a trace of the old state id before being an impact
-        'state_id_before_impact': IntegerProp(default=0),
-        # if the state change, we know so we do not revert it
-        'state_changed_since_impact': BoolProp(default=False),
-
-        # BUSINESS CORRELATOR PART
-        # Say if we are business based rule or not
-        'got_business_rule': BoolProp(default=False, fill_brok=['full_status']),
-        # Previously processed business rule (with macro expanded)
-        'processed_business_rule': StringProp(default="", fill_brok=['full_status']),
-        # Our Dependency node for the business rule
-        'business_rule': StringProp(default=None),
-
-
-        # Here it's the elements we are depending on
-        # so our parents as network relation, or a host
-        # we are depending in a hostdependency
-        # or even if we are business based.
-        'parent_dependencies': StringProp(default=set(),
-                                          brok_transformation=to_svc_hst_distinct_lists,
-                                          fill_brok=['full_status']),
-        # Here it's the guys that depend on us. So it's the total
-        # opposite of the parent_dependencies
-        'child_dependencies': StringProp(brok_transformation=to_svc_hst_distinct_lists,
-                                         default=set(), fill_brok=['full_status']),
-
-        # Manage the unknown/unreach during hard state
-        'in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
-        'was_in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
         'state_before_hard_unknown_reach_phase': StringProp(default='OK', retention=True),
 
-        # Set if the element just change its father/son topology
-        'topology_change': BoolProp(default=False, fill_brok=['full_status']),
 
-        # Trigger list
-        'triggers': ListProp(default=[]),
-
-        # snapshots part
-        'last_snapshot':  IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        # Keep the string of the last command launched for this element
-        'last_check_command': StringProp(default=''),
 
     })
 
     # Mapping between Macros and properties (can be prop or a function)
-    macros = {
+    macros = SchedulingItem.macros.copy()
+    macros.update({
         'SERVICEDESC':            'service_description',
         'SERVICEDISPLAYNAME':     'display_name',
         'SERVICESTATE':           'state',
@@ -560,23 +223,16 @@ class Service(SchedulingItem):
         'SERVICENOTESURL':        'notes_url',
         'SERVICENOTES':           'notes',
         'SERVICEBUSINESSIMPACT':  'business_impact',
-        # Business rules output formatting related macros
-        'STATUS':                 'get_status',
-        'SHORTSTATUS':            'get_short_status',
-        'FULLNAME':               'get_full_name',
-    }
+    })
 
     # This tab is used to transform old parameters name into new ones
     # so from Nagios2 format, to Nagios3 ones.
     # Or Alignak deprecated names like criticity
-    old_properties = {
-        'normal_check_interval':    'check_interval',
-        'retry_check_interval':    'retry_interval',
-        'criticity':    'business_impact',
+    old_properties = SchedulingItem.old_properties.copy()
+    old_properties.update({
         'hostgroup':    'hostgroup_name',
         'hostgroups':    'hostgroup_name',
-        # 'criticitymodulations':    'business_impact_modulations',
-    }
+    })
 
 #######
 #                   __ _                       _   _
@@ -713,87 +369,26 @@ class Service(SchedulingItem):
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
         """
-        state = True
+        state = super(Service, self).is_correct()
         cls = self.__class__
-
-        source = getattr(self, 'imported_from', 'unknown')
-
-        desc = getattr(self, 'service_description', 'unnamed')
-        hname = getattr(self, 'host_name', 'unnamed')
-
-        special_properties = ('check_period', 'notification_interval', 'host_name',
-                              'hostgroup_name', 'notification_period')
-
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("The service %s on host '%s' does not have %s", desc, hname, prop)
-                    state = False  # Bad boy...
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[service::%s] %s", desc, err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[service::%s] %s", self.get_full_name(), err)
-
-        # If no notif period, set it to None, mean 24x7
-        if not hasattr(self, 'notification_period'):
-            self.notification_period = None
-
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            logger.warning("The service '%s' in the host '%s' does not have "
-                           "contacts nor contact_groups in '%s'", desc, hname, source)
 
         # Set display_name if need
         if getattr(self, 'display_name', '') == '':
             self.display_name = getattr(self, 'service_description', '')
 
-        # If we got an event handler, it should be valid
-        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("%s: my event_handler %s is invalid",
-                         self.get_name(), self.event_handler.command)
-            state = False
-
-        if not hasattr(self, 'check_command'):
-            logger.error("%s: I've got no check_command", self.get_name())
-            state = False
-        # Ok got a command, but maybe it's invalid
-        else:
-            if not self.check_command.is_valid():
-                logger.error("%s: my check_command %s is invalid",
-                             self.get_name(), self.check_command.command)
-                state = False
-            if self.got_business_rule:
-                if not self.business_rule.is_valid():
-                    logger.error("%s: my business rule is invalid", self.get_name(),)
-                    for bperror in self.business_rule.configuration_errors:
-                        logger.error("%s: %s", self.get_name(), bperror)
-                    state = False
-        if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:
-            logger.error("%s: I've got no notification_interval but "
-                         "I've got notifications enabled", self.get_name())
-            state = False
         if not self.host_name:
-            logger.error("The service '%s' is not bound do any host.", desc)
+            logger.error("[%s::%s] not bound do any host.", self.my_type, self.get_name())
             state = False
         elif self.host is None:
-            logger.error("The service '%s' got an unknown host_name '%s'.", desc, self.host_name)
+            logger.error("[%s::%s] unknown host_name '%s'",
+                         self.my_type, self.get_name(), self.host_name)
             state = False
 
-        if not hasattr(self, 'check_period'):
-            self.check_period = None
         if hasattr(self, 'service_description'):
             for char in cls.illegal_object_name_chars:
                 if char in self.service_description:
-                    logger.error("%s: My service_description got the "
-                                 "character %s that is not allowed.", self.get_name(), char)
+                    logger.error("[%s::%s] service_description got an illegal character: %s",
+                                 self.my_type, self.get_name(), char)
                     state = False
         return state
 
@@ -1000,16 +595,6 @@ class Service(SchedulingItem):
             self.state_changed_since_impact = False
             self.state = 'UNKNOWN'  # exit code UNDETERMINED
             self.state_id = 3
-
-    def unset_impact_state(self):
-        """Unset impact, only if impact state change is set in configuration
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
-            self.state = self.state_before_impact
-            self.state_id = self.state_id_before_impact
 
     def set_state_from_exit_status(self, status):
         """Set the state in UP, WARNING, CRITICAL or UNKNOWN
@@ -1606,10 +1191,14 @@ class Services(Items):
     name_property = 'unique_key'  # only used by (un)indexitem (via 'name_property')
     inner_class = Service  # use for know what is in items
 
-    def __init__(self, items, index_items=True):
-        self.partial_services = {}
-        self.name_to_partial = {}
-        super(Services, self).__init__(items, index_items)
+    def add_items(self, items, index_items):
+
+        # We only index template, service need to apply inheritance first to be able to be indexed
+        for item in items:
+            if item.is_tpl():
+                self.add_template(item)
+            else:
+                self.items[item._id] = item
 
     def add_template(self, tpl):
         """
@@ -1633,7 +1222,7 @@ class Services(Items):
             tpl = self.index_template(tpl)
         self.templates[tpl._id] = tpl
 
-    def add_item(self, item, index=True, was_partial=False):
+    def add_item(self, item, index=True):
         """
         Adds and index an item into the `items` container.
 
@@ -1644,8 +1233,6 @@ class Services(Items):
         :type item:
         :param index: Flag indicating if the item should be indexed
         :type index: bool
-        :param was_partial: True if was partial, otherwise False
-        :type was_partial: bool
         :return: None
         """
         objcls = self.inner_class.my_type
@@ -1657,78 +1244,16 @@ class Services(Items):
             in_file = " in %s" % source
         else:
             in_file = ""
-        if not hname and not hgname and not sdesc:
-            mesg = "a %s has been defined without host_name nor " \
-                   "hostgroups nor service_description%s" % (objcls, in_file)
+        if not hname and not hgname:
+            mesg = "a %s has been defined without host_name nor hostgroups%s" % (objcls, in_file)
             item.configuration_errors.append(mesg)
-        elif not sdesc or sdesc and not hgname and not hname and not was_partial:
-            self.add_partial_service(item, index, (objcls, hname, hgname, sdesc, in_file))
-            return
+        if not sdesc:
+            mesg = "a %s has been defined without service_description%s" % (objcls, in_file)
+            item.configuration_errors.append(mesg)
 
         if index is True:
             item = self.index_item(item)
         self.items[item._id] = item
-
-    def add_partial_service(self, item, index=True, var_tuple=tuple()):
-        """Add a partial service.
-        ie : A service that does not have service_description or host_name/host_group
-        We have to index them differently and try to inherit from our template to get one
-        of the previous parameter
-
-        :param item: service to add
-        :type item: alignak.objects.service.Service
-        :param index: whether to index it or not. Not used
-        :type index: bool
-        :param var_tuple: tuple containing object class, host_name, hostgroup_name,
-                          service_description and file it was parsed from (from logging purpose)
-        :type var_tuple: tuple
-        :return: None
-        """
-        if len(var_tuple) == 0:
-            return
-
-        objcls, hname, hgname, sdesc, in_file = var_tuple
-        use = getattr(item, 'use', [])
-
-        if use == []:
-            mesg = "a %s has been defined without host_name nor " \
-                   "hostgroups nor service_description and " \
-                   "there is no use to create a unique key%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
-            return
-
-        use = ','.join(use)
-        if sdesc:
-            name = "::".join((sdesc, use))
-        elif hname:
-            name = "::".join((hname, use))
-        else:
-            name = "::".join((hgname, use))
-
-        if name in self.name_to_partial:
-            item = self.manage_conflict(item, name, partial=True)
-        self.name_to_partial[name] = item
-
-        self.partial_services[item._id] = item
-
-    def apply_partial_inheritance(self, prop):
-        """Apply partial inheritance. Because of partial services we need to
-        override this function from SchedulingItem
-
-        :param prop: property to inherit from
-        :type prop: str
-        :return: None
-        """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            i.get_property_by_inheritance(prop)
-            # If a "null" attribute was inherited, delete it
-            try:
-                if getattr(i, prop) == 'null':
-                    delattr(i, prop)
-            except AttributeError:
-                pass
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1736,34 +1261,11 @@ class Services(Items):
 
         :return: None
         """
-        # We check for all Class properties if the host has it
-        # if not, it check all host templates for a value
-        cls = self.inner_class
-        for prop in cls.properties:
-            self.apply_partial_inheritance(prop)
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            i.get_customs_properties_by_inheritance()
+        super(Services, self).apply_inheritance()
 
-        for i in self.partial_services.itervalues():
-            self.add_item(i, True, True)
-
-        del self.partial_services
-        del self.name_to_partial
-
-    def linkify_templates(self):
-        """Create link between objects
-
-        :return: None
-        """
-        # First we create a list of all templates
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.partial_services.itervalues(),
-                                 self.templates.itervalues()):
-            self.linkify_item_templates(i)
-        for i in self:
-            i.tags = self.get_all_tags(i)
+        # add_item only ensure we can build a key for services later (after explode)
+        for item in self.items.values():
+            self.add_item(item, False)
 
     def find_srvs_by_hostname(self, host_name):
         """Get all services from a host based on a host_name

@@ -90,7 +90,7 @@ class Property(object):
                  brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
                  override=False, managed=True, split_on_coma=True,
-                 keep_empty=False, merging='uniq'):
+                 keep_empty=False, merging='uniq', special=False):
 
         """
         `default`: default value to be used if this property is not set.
@@ -134,6 +134,9 @@ class Property(object):
         merging: for merging properties, should we take only one or we can
                      link with ,
 
+        special: Is this property "special" : need a special management
+        see is_correct function in host and service
+
         """
 
         self.default = default
@@ -155,6 +158,7 @@ class Property(object):
         self.merging = merging
         self.split_on_coma = split_on_coma
         self.keep_empty = keep_empty
+        self.special = special
 
     def pythonize(self, val):
         """Generic pythonize method

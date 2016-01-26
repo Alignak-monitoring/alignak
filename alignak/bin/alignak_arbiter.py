@@ -54,7 +54,6 @@ It also reads orders form users (nagios.cmd) and sends them to schedulers.
 
 import os
 import sys
-import optparse
 
 
 # We try to raise up recursion limit on
@@ -72,8 +71,8 @@ if os.name != 'nt':
         sys.setrecursionlimit(int(STACKSIZE_SOFT * 2.4 + 3200))
 
 
-from alignak.version import VERSION
 from alignak.daemons.arbiterdaemon import Arbiter
+from alignak.util import parse_daemon_args
 
 
 def main():
@@ -81,55 +80,15 @@ def main():
 
     :return: None
     """
-    parser = optparse.OptionParser(
-        "%prog [options] -c configfile [-c additional_config_file]",
-        version="%prog: " + VERSION)
-    parser.add_option('-c', '--config', action='append',
-                      dest="config_files", metavar="CONFIG-FILE",
-                      help=('Config file (your nagios.cfg). Multiple -c can be '
-                            'used, it will be like if all files was just one'))
-    parser.add_option('-d', '--daemon', action='store_true',
-                      dest="is_daemon",
-                      help="Run in daemon mode")
-    parser.add_option('-r', '--replace', action='store_true',
-                      dest="do_replace",
-                      help="Replace previous running arbiter")
-    parser.add_option('--debugfile', dest='debug_file',
-                      help=("Debug file. Default: not used "
-                            "(why debug a bug free program? :) )"))
-    parser.add_option("-v", "--verify-config",
-                      dest="verify_only", action="store_true",
-                      help="Verify config file and exit")
-    parser.add_option("-p", "--profile",
-                      dest="profile",
-                      help="Dump a profile file. Need the python cProfile librairy")
-    parser.add_option("-a", "--analyse",
-                      dest="analyse",
-                      help="Dump an analyse statistics file, for support")
-    parser.add_option("-m", "--migrate",
-                      dest="migrate",
-                      help="Migrate the raw configuration read from the arbiter to another "
-                           "module. --> VERY EXPERIMENTAL!")
-    parser.add_option("-n", "--name",
-                      dest="arb_name",
-                      help="Give the arbiter name to use. Optionnal, will use the hostaddress "
-                           "if not provide to find it.")
+    args = parse_daemon_args(True)
 
-    opts, args = parser.parse_args()
-
-    if not opts.config_files:
-        parser.error("Requires at least one config file (option -c/--config")
-    if args:
-        parser.error("Does not accept any argument. Use option -c/--config")
+    if not args.config_files:
+        print "Requires at least one config file (option -c/--config"
+        sys.exit(2)
 
     # Protect for windows multiprocessing that will RELAUNCH all
-    daemon = Arbiter(debug=opts.debug_file is not None, **opts.__dict__)
-    if not opts.profile:
-        daemon.main()
-    else:
-        # For perf tuning:
-        import cProfile
-        cProfile.run('''daemon.main()''', opts.profile)
+    daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
+    daemon.main()
 
 
 if __name__ == '__main__':
