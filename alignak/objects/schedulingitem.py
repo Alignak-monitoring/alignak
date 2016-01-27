@@ -638,7 +638,7 @@ class SchedulingItem(Item):
         # and they should be cool to register them so I've got
         # my impacts list
         impacts = list(self.impacts)
-        for (impact, status, dep_type, timeperiod, inh_par) in self.act_depend_of_me:
+        for (impact, status, _, timeperiod, _) in self.act_depend_of_me:
             # Check if the status is ok for impact
             for stat in status:
                 if self.is_state(stat):
@@ -777,7 +777,7 @@ class SchedulingItem(Item):
                 self.source_problems.append(prob)
             # we should send this problem to all potential impact that
             # depend on us
-            for (impact, status, dep_type, timeperiod, inh_par) in self.act_depend_of_me:
+            for (impact, status, _, timeperiod, _) in self.act_depend_of_me:
                 # Check if the status is ok for impact
                 for stat in status:
                     if self.is_state(stat):
@@ -831,7 +831,7 @@ class SchedulingItem(Item):
         # So if one logic is Raise, is dep
         # is one network is no ok, is not dep
         # at the end, raise no dep
-        for (dep, status, n_type, timeperiod, inh_par) in self.act_depend_of:
+        for (dep, status, n_type, _, _) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
             if n_type == 'logic_dep':
                 for stat in status:
@@ -861,7 +861,7 @@ class SchedulingItem(Item):
         """
         parent_is_down = []
         # We must have all parents raised to be unreachable
-        for (dep, status, n_type, timeperiod, inh_par) in self.act_depend_of:
+        for (dep, status, n_type, _, _) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
             if n_type == 'network_dep':
                 p_is_down = False
@@ -935,7 +935,7 @@ class SchedulingItem(Item):
         now = time.time()
         cls = self.__class__
         checks = []
-        for (dep, status, _, timeperiod, inh_par) in self.act_depend_of:
+        for (dep, _, _, timeperiod, _) in self.act_depend_of:
             # If the dep timeperiod is not valid, do notraise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
@@ -2306,7 +2306,7 @@ class SchedulingItem(Item):
         for trigger in self.triggers:
             try:
                 trigger.eval(self)
-            except Exception, exp:
+            except Exception:
                 logger.error(
                     "We got an exception from a trigger on %s for %s",
                     self.get_full_name().decode('utf8', 'ignore'), str(traceback.format_exc())
