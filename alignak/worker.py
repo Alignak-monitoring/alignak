@@ -231,13 +231,13 @@ class Worker(object):
                 if msg is not None:
                     self.checks.append(msg.get_data())
                 # print "I", self._id, "I've got a message!"
-        except Empty, exp:
+        except Empty:
             if len(self.checks) == 0:
                 self._idletime += 1
                 time.sleep(1)
         # Maybe the Queue() is not available, if so, just return
         # get back to work :)
-        except IOError, exp:
+        except IOError:
             return
 
     def launch_new_checks(self):
@@ -329,7 +329,7 @@ class Worker(object):
         try:
             self.do_work(slave_q, returns_queue, control_q)
         # Catch any exception, try to print it and exit anyway
-        except Exception, exp:
+        except Exception:
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("Worker '%d' exit with an unmanaged exception : %slave_q",
@@ -365,8 +365,6 @@ class Worker(object):
         self.t_each_loop = time.time()
         while True:
             begin = time.time()
-            msg = None
-            cmsg = None
 
             # If we are dying (big problem!) we do not
             # take new jobs, we just finished the current one
