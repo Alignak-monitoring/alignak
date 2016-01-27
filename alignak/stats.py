@@ -212,7 +212,7 @@ class Stats(object):
 
         data = pad(data)
 
-        aes = AES.new(key, AES.MODE_CBC, ivs[:16])
+        aes = AES.new(key, AES.MODE_CBC, ivs[:16])  # pylint: disable=E0602
 
         encrypted = aes.encrypt(data)
         return base64.urlsafe_b64encode(encrypted)

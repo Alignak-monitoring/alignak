@@ -509,7 +509,7 @@ else:
                 self.process = subprocess.Popen(
                     cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     env=self.local_env, shell=True)
-            except WindowsError, exp:
+            except WindowsError, exp: # pylint: disable=E0602
                 logger.info("We kill the process: %s %s", exp, self.command)
                 self.status = 'timeout'
                 self.execution_time = time.time() - self.check_time
