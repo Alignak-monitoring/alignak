@@ -1431,7 +1431,7 @@ class Services(Items):
                           (self.get_name(), hst_name)
                     serv.configuration_warnings.append(err)
                     continue
-            except AttributeError, exp:
+            except AttributeError:
                 pass  # Will be catch at the is_correct moment
 
     def linkify_s_by_sg(self, servicegroups):
