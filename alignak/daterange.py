@@ -410,9 +410,9 @@ class AbstractDaterange(object):
         """
         if self.get_next_future_timerange_valid(timestamp) is None:
             # this day is finish, we check for next period
-            (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp) + 86400)
+            (start_time, _) = self.get_start_and_end_time(get_day(timestamp) + 86400)
         else:
-            (start_time, end_time) = self.get_start_and_end_time(timestamp)
+            (start_time, _) = self.get_start_and_end_time(timestamp)
 
         if timestamp <= start_time:
             return get_day(start_time)
