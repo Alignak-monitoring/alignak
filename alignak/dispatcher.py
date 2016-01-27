@@ -431,8 +431,6 @@ class Dispatcher:
                                         realm.get_name(), sched.get_name())
                             continue
 
-                        # We tag conf with the instance_name = scheduler_name
-                        instance_name = sched.scheduler_name
                         # We give this configuration a new 'flavor'
                         conf.push_flavor = random.randint(1, 1000000)
                         # REF: doc/alignak-conf-dispatching.png (3)
