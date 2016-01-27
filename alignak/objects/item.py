@@ -146,7 +146,8 @@ class Item(object):
                     else:
                         val = ''
                 else:
-                    warning = "Guessing the property %s type because it is not in %s object properties" % \
+                    warning = "Guessing the property %s type because" \
+                              "it is not in %s object properties" % \
                               (key, cls.__name__)
                     self.configuration_warnings.append(warning)
                     val = ToGuessProp.pythonize(params[key])
