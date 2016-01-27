@@ -769,7 +769,7 @@ class Daemon(object):
         """
         try:
             return getpwnam(self.user)[2]
-        except KeyError, exp:
+        except KeyError:
             logger.error("The user %s is unknown", self.user)
             return None
 
@@ -781,7 +781,7 @@ class Daemon(object):
         """
         try:
             return getgrnam(self.group)[2]
-        except KeyError, exp:
+        except KeyError:
             logger.error("The group %s is unknown", self.group)
             return None
 
