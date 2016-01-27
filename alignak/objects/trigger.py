@@ -145,7 +145,7 @@ class Triggers(Items):
         :return: None
         """
         # Now walk for it
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for t_file in files:
                 if re.search(r"\.trig$", t_file):
                     path = os.path.join(root, t_file)
