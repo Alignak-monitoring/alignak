@@ -297,7 +297,7 @@ class ModulesManager(object):
                 queue_size = 0
                 try:
                     queue_size = inst.to_q.qsize()
-                except Exception, exp:
+                except Exception:
                     pass
                 if queue_size > self.max_queue_size:
                     logger.error("The external module %s got a too high brok queue size (%s > %s)!",
