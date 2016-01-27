@@ -399,7 +399,7 @@ class Item(object):
                         value = list(getattr(self, prop))
                         value.extend(self.get_plus_and_delete(prop))
                         # Template should keep their '+'
-                        if self.is_tpl() and not value[0] == '+':
+                        if self.is_tpl() and value[0] != '+':
                             value.insert(0, '+')
                         setattr(self, prop, value)
                     return value
@@ -420,7 +420,7 @@ class Item(object):
             # Template should keep their '+' chain
             # We must say it's a '+' value, so our son will now that it must
             # still loop
-            if self.is_tpl() and value != [] and not value[0] == '+':
+            if self.is_tpl() and value != [] and value[0] != '+':
                 value.insert(0, '+')
 
             setattr(self, prop, value)

@@ -2115,7 +2115,7 @@ class Config(Item):
                         if not r_o:
                             continue
                         elt_r = elt.get_realm().realm_name
-                        if not elt_r == e_r:
+                        if elt_r != e_r:
                             logger.error("Business_rule '%s' got hosts from another realm: %s",
                                          item.get_full_name(), elt_r)
                             self.add_error("Error: Business_rule '%s' got hosts from another "
