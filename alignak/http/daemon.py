@@ -34,7 +34,7 @@ from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_m
 
 try:
     from OpenSSL import SSL
-    from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
+    from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
 except ImportError:
     SSL = None
     pyOpenSSLAdapter = None  # pylint: disable=C0103

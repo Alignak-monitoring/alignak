@@ -82,10 +82,8 @@ from alignak.misc.common import setproctitle
 
 
 try:
-    import pwd
-    import grp
-    from pwd import getpwnam
-    from grp import getgrnam, getgrall
+    from pwd import getpwnam, getpwuid
+    from grp import getgrnam, getgrall, getgrgid
 
     def get_cur_user():
         """Wrapper for getpwuid
@@ -93,7 +91,7 @@ try:
         :return: user name
         :rtype: str
         """
-        return pwd.getpwuid(os.getuid()).pw_name
+        return getpwuid(os.getuid()).pw_name
 
     def get_cur_group():
         """Wrapper for getgrgid
@@ -101,7 +99,7 @@ try:
         :return: group name
         :rtype: str
         """
-        return grp.getgrgid(os.getgid()).gr_name
+        return getgrgid(os.getgid()).gr_name
 
     def get_all_groups():
         """Wrapper for getgrall

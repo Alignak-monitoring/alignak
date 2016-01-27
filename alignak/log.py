@@ -58,8 +58,8 @@ import logging
 import sys
 import os
 import stat
-from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler
-from logging.handlers import TimedRotatingFileHandler
+from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler  # pylint: disable=C0412
+from logging.handlers import TimedRotatingFileHandler  # pylint: disable=C0412
 
 from termcolor import cprint
 
