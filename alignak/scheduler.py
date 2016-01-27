@@ -269,7 +269,7 @@ class Scheduler(object):
         :return: None
         """
         for key in self.recurrent_works:
-            (name, fun, old_tick) = self.recurrent_works[key]
+            (name, fun, _) = self.recurrent_works[key]
             if name == f_name:
                 logger.debug("Changing the tick to %d for the function %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
@@ -576,7 +576,7 @@ class Scheduler(object):
         # For broks and actions, it's more simple
         # or brosk, manage global but also all brokers queue
         b_lists = [self.broks]
-        for (bname, elem) in self.brokers.iteritems():
+        for elem in self.brokers.values():
             b_lists.append(elem['broks'])
         for broks in b_lists:
             if len(broks) > max_broks:
@@ -1082,7 +1082,6 @@ class Scheduler(object):
         for poll in [p for p in self.pollers.values() if p['passive']]:
             logger.debug("I will get actions from the poller %s", str(poll))
             con = poll['con']
-            poller_tags = poll['poller_tags']
             if con is not None:
                 try:
                     # initial ping must be quick
@@ -1128,7 +1127,6 @@ class Scheduler(object):
         for poll in [poll for poll in self.reactionners.values() if poll['passive']]:
             logger.debug("I will get actions from the reactionner %s", str(poll))
             con = poll['con']
-            reactionner_tags = poll['reactionner_tags']
             if con is not None:
                 try:
                     # initial ping must be quick

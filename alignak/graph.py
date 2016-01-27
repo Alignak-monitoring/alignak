@@ -95,7 +95,7 @@ class Graph:
         try:
             self.nodes[from_node].append(to_node)
         # If from_node does not exist, add it with its son
-        except KeyError, exp:
+        except KeyError:
             self.nodes[from_node] = [to_node]
 
     def loop_check(self):

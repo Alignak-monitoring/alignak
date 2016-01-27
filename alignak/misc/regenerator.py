@@ -304,7 +304,7 @@ class Regenerator(object):
         # Link SERVICEGROUPS with services
         for servicegroup in inp_servicegroups:
             new_members = []
-            for (i, sname) in servicegroup.members:
+            for (i, _) in servicegroup.members:
                 if i not in inp_services:
                     continue
                 serv = inp_services[i]
@@ -656,7 +656,6 @@ class Regenerator(object):
         :return: None
         """
         data = brok.data
-        hname = data['host_name']
         inst_id = data['instance_id']
 
         # Try to get the inp progress Hosts
@@ -665,7 +664,6 @@ class Regenerator(object):
         except Exception, exp:  # not good. we will cry in theprogram update
             print "Not good!", exp
             return
-        # safe_print("Creating a host: %s in instance %d" % (hname, inst_id))
 
         host = Host({})
         self.update_element(host, data)
@@ -717,8 +715,6 @@ class Regenerator(object):
         :return: None
         """
         data = brok.data
-        hname = data['host_name']
-        sdesc = data['service_description']
         inst_id = data['instance_id']
 
         # Try to get the inp progress Hosts
@@ -727,7 +723,6 @@ class Regenerator(object):
         except Exception, exp:  # not good. we will cry in theprogram update
             print "Not good!", exp
             return
-        # safe_print("Creating a service: %s/%s in instance %d" % (hname, sdesc, inst_id))
 
         serv = Service({})
         self.update_element(serv, data)

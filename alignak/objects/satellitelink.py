@@ -316,7 +316,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('wait_new_conf')
             return True
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return False
 
@@ -345,7 +345,7 @@ class SatelliteLink(Item):
             if not isinstance(res, bool):
                 return False
             return res
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return False
 
@@ -369,7 +369,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('remove_from_conf', {'sched_id': sched_id})
             return True
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return False
 
@@ -458,7 +458,7 @@ class SatelliteLink(Item):
             self.con.get('ping')
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return False
 
@@ -487,7 +487,7 @@ class SatelliteLink(Item):
                 self.con = None
                 return []
             return tab
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return []
         except AttributeError:

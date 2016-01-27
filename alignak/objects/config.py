@@ -973,7 +973,7 @@ class Config(Item):
                     self.packs_dirs.append(cfg_dir_name)
 
                     # Now walk for it.
-                    for root, dirs, files in os.walk(cfg_dir_name, followlinks=True):
+                    for root, _, files in os.walk(cfg_dir_name, followlinks=True):
                         for c_file in files:
                             if re.search(r"\.cfg$", c_file):
                                 if self.read_config_silent == 0:
@@ -2201,21 +2201,21 @@ class Config(Item):
                 if parent is not None:
                     links.add((parent, host))
             # Add the others dependencies
-            for (dep, tmp, tmp2, tmp3, tmp4) in host.act_depend_of:
+            for (dep, _, _, _, _) in host.act_depend_of:
                 links.add((dep, host))
-            for (dep, tmp, tmp2, tmp3, tmp4) in host.chk_depend_of:
+            for (dep, _, _, _, _) in host.chk_depend_of:
                 links.add((dep, host))
 
         # For services: they are link with their own host but we need
         # To have the hosts of service dep in the same pack too
         for serv in self.services:
-            for (dep, tmp, tmp2, tmp3, tmp4) in serv.act_depend_of:
+            for (dep, _, _, _, _) in serv.act_depend_of:
                 # I don't care about dep host: they are just the host
                 # of the service...
                 if hasattr(dep, 'host'):
                     links.add((dep.host, serv.host))
             # The other type of dep
-            for (dep, tmp, tmp2, tmp3, tmp4) in serv.chk_depend_of:
+            for (dep, _, _, _, _) in serv.chk_depend_of:
                 links.add((dep.host, serv.host))
 
         # For host/service that are business based, we need to

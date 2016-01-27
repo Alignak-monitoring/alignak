@@ -335,7 +335,6 @@ def get_objects(ref):
         hname = elts[0]
         sdesc = elts[1]
     logger.debug("[trigger get_objects] Look for %s %s", hname, sdesc)
-    res = []
     hosts = []
     services = []
 
