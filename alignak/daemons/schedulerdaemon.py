@@ -268,7 +268,6 @@ class Alignak(BaseSatellite):
             # Now We create our pollers
             for pol_id in satellites['pollers']:
                 # Must look if we already have it
-                already_got = pol_id in self.pollers
                 poll = satellites['pollers'][pol_id]
                 self.pollers[pol_id] = poll
 
@@ -286,7 +285,6 @@ class Alignak(BaseSatellite):
             # Now We create our reactionners
             for reac_id in satellites['reactionners']:
                 # Must look if we already have it
-                already_got = reac_id in self.reactionners
                 reac = satellites['reactionners'][reac_id]
                 self.reactionners[reac_id] = reac
 
@@ -389,6 +387,6 @@ class Alignak(BaseSatellite):
             self.uri = self.http_daemon.uri
             logger.info("[scheduler] General interface is at: %s", self.uri)
             self.do_mainloop()
-        except Exception, exp:
+        except Exception:
             self.print_unrecoverable(traceback.format_exc())
             raise
