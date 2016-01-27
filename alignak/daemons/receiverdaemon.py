@@ -426,7 +426,7 @@ class Receiver(Satellite):
             # Now the main loop
             self.do_mainloop()
 
-        except Exception, exp:
+        except Exception:
             self.print_unrecoverable(traceback.format_exc())
             raise
 
