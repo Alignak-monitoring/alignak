@@ -178,7 +178,7 @@ def jsonify_r(obj):
         try:
             json.dumps(obj)
             return obj
-        except Exception, exp:
+        except Exception:
             return None
     properties = cls.properties.keys()
     if hasattr(cls, 'running_properties'):
@@ -195,7 +195,7 @@ def jsonify_r(obj):
                 val = sorted(val)
             json.dumps(val)
             res[prop] = val
-        except Exception, exp:
+        except Exception:
             if isinstance(val, list):
                 lst = []
                 for subval in val:
