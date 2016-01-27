@@ -414,7 +414,7 @@ class Host(SchedulingItem):
         :return: True if other in act_depend_of list, otherwise False
         :rtype: bool
         """
-        for (host, status, _, timeperiod, inherits_parent) in self.act_depend_of:
+        for (host, _, _, _, _) in self.act_depend_of:
             if host == other:
                 return True
         return False
