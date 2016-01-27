@@ -185,10 +185,10 @@ class MacroResolver(Borg):
                 return unicode(value())
             else:
                 return unicode(value)
-        except AttributeError, exp:
+        except AttributeError:
             # Return no value
             return ''
-        except UnicodeError, exp:
+        except UnicodeError:
             if isinstance(value, str):
                 return unicode(value, 'utf8', errors='ignore')
             else:
