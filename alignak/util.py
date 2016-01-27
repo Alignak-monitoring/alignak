@@ -131,7 +131,7 @@ def split_semicolon(line, maxsplit=None):
     splitted_line_size = len(splitted_line)
 
     # if maxsplit is not specified, we set it to the number of part
-    if maxsplit is None or 0 > maxsplit:
+    if maxsplit is None or maxsplit < 0:
         maxsplit = splitted_line_size
 
     # Join parts  to the next one, if ends with a '\'
