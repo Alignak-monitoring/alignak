@@ -294,6 +294,7 @@ class Item(object):
             if not hasattr(self, prop) and entry.has_default:
                 setattr(self, prop, entry.default)
 
+    @classmethod
     def load_global_conf(cls, conf):
         """
         Load configuration of parent object
@@ -315,9 +316,6 @@ class Item(object):
                             setattr(cls, prop, value)
                         else:
                             setattr(cls, change_name, value)
-
-    # Make this method a classmethod
-    load_global_conf = classmethod(load_global_conf)
 
     def get_templates(self):
         """
