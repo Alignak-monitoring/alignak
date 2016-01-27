@@ -190,7 +190,7 @@ class Stats(object):
             packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, key, value * 1000)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
-            except (socket.error, socket.gaierror), exp:
+            except (socket.error, socket.gaierror):
                 pass  # cannot send? ok not a huge problem here and cannot
                 # log because it will be far too verbose :p
 
