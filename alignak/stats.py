@@ -64,8 +64,8 @@ def pad(data):
     :param data: initial data
     :return: data padded to fit BLOCK_SIZE
     """
-    pad = BLOCK_SIZE - len(data) % BLOCK_SIZE
-    return data + pad * chr(pad)
+    pad_data = BLOCK_SIZE - len(data) % BLOCK_SIZE
+    return data + pad_data * chr(pad_data)
 
 
 def unpad(padded):
@@ -74,8 +74,7 @@ def unpad(padded):
     :param padded: padded data
     :return: unpadded data
     """
-    pad = ord(padded[-1])
-    return padded[:-pad]
+    return padded[:-ord(padded[-1])]
 
 
 class Stats(object):
