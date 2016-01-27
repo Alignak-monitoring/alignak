@@ -116,7 +116,7 @@ class ArbiterLink(SatelliteLink):
         try:
             self.con.get('do_not_run')
             return True
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return False
 
@@ -132,7 +132,7 @@ class ArbiterLink(SatelliteLink):
         try:
             res = self.con.get('get_all_states')
             return res
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return None
 
@@ -153,7 +153,7 @@ class ArbiterLink(SatelliteLink):
             print properties
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
             return res
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS:
             self.con = None
             return None
 
