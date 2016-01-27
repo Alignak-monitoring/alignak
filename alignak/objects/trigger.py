@@ -95,7 +95,7 @@ class Trigger(Item):
         """
         self.code_bin = compile(self.code_src, "<irc>", "exec")
 
-    def eval(myself, ctx):
+    def eval(self, ctx):
         """Execute the trigger
 
         :param myself: self object but self will be use after exec (locals)
@@ -104,19 +104,21 @@ class Trigger(Item):
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-        self = ctx
 
         # Ok we can declare for this trigger call our functions
         for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
             locals()[name] = fun
 
-        code = myself.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
+        code = self.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
+        env = dict(locals())
+        env["self"] = ctx
+        del env["ctx"]
         try:
-            exec code in dict(locals())  # pylint: disable=W0122
+            exec code in env  # pylint: disable=W0122
         except Exception as err:
-            set_value(self, "UNKNOWN: Trigger error: %s" % err, "", 3)
+            set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
-                         '%s', self.host_name, myself.trigger_name, err, traceback.format_exc())
+                         '%s', ctx.host_name, self.trigger_name, err, traceback.format_exc())
 
     def __getstate__(self):
         return {'trigger_name': self.trigger_name,
