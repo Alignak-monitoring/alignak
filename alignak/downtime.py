@@ -271,7 +271,7 @@ class Downtime:
             )
         else:
             hours, remainder = divmod(self.duration, 3600)
-            minutes, seconds = divmod(remainder, 60)
+            minutes, _ = divmod(remainder, 60)
             text = ("This %s has been scheduled for flexible downtime starting between %s and %s "
                     "and lasting for a period of %d hours and %d minutes. "
                     "Notifications for the %s will not be sent out during that time period." % (
