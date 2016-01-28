@@ -170,17 +170,17 @@ class ArbiterInterface(GenericInterface):
 
                 for props in all_props:
                     for prop in props:
-                        if hasattr(daemon, prop):
-                            val = getattr(daemon, prop)
-                            if prop == "realm":
-                                if hasattr(val, "realm_name"):
-                                    env[prop] = val.realm_name
-                            # give a try to a json able object
-                            try:
-                                json.dumps(val)
-                                env[prop] = val
-                            except Exception, exp:
-                                logger.debug('%s', exp)
+                        if not hasattr(daemon, prop):
+                            continue
+                        val = getattr(daemon, prop)
+                        if prop == "realm" and hasattr(val, "realm_name"):
+                            env[prop] = val.realm_name
+                        # give a try to a json able object
+                        try:
+                            json.dumps(val)
+                            env[prop] = val
+                        except Exception, exp:
+                            logger.debug('%s', exp)
                 lst.append(env)
         return res
 

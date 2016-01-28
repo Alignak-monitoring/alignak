@@ -975,24 +975,25 @@ class Config(Item):
                     # Now walk for it.
                     for root, _, files in os.walk(cfg_dir_name, followlinks=True):
                         for c_file in files:
-                            if re.search(r"\.cfg$", c_file):
-                                if self.read_config_silent == 0:
-                                    logger.info("Processing object config file '%s'",
-                                                os.path.join(root, c_file))
-                                try:
-                                    res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                              (os.path.join(root, c_file)) + os.linesep)
-                                    file_d = open(os.path.join(root, c_file), 'rU')
-                                    res.write(file_d.read().decode('utf8', 'replace'))
-                                    # Be sure to separate files data
-                                    res.write(os.linesep)
-                                    file_d.close()
-                                except IOError, exp:
-                                    logger.error("Cannot open config file '%s' for reading: %s",
-                                                 os.path.join(root, c_file), exp)
-                                    # The configuration is invalid
-                                    # because we have a bad file!
-                                    self.conf_is_correct = False
+                            if not re.search(r"\.cfg$", c_file):
+                                continue
+                            if self.read_config_silent == 0:
+                                logger.info("Processing object config file '%s'",
+                                            os.path.join(root, c_file))
+                            try:
+                                res.write(os.linesep + '# IMPORTEDFROM=%s' %
+                                          (os.path.join(root, c_file)) + os.linesep)
+                                file_d = open(os.path.join(root, c_file), 'rU')
+                                res.write(file_d.read().decode('utf8', 'replace'))
+                                # Be sure to separate files data
+                                res.write(os.linesep)
+                                file_d.close()
+                            except IOError, exp:
+                                logger.error("Cannot open config file '%s' for reading: %s",
+                                             os.path.join(root, c_file), exp)
+                                # The configuration is invalid
+                                # because we have a bad file!
+                                self.conf_is_correct = False
                 elif re.search("^triggers_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
