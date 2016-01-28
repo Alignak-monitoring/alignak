@@ -71,21 +71,9 @@ import threading
 from Queue import Empty
 from multiprocessing.managers import SyncManager
 
-
-from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
-from alignak.log import logger
-from alignak.stats import statsmgr
-from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
-    LogLevelProp
-from alignak.misc.common import setproctitle
-
-
 try:
-    import pwd
-    import grp
-    from pwd import getpwnam
-    from grp import getgrnam, getgrall
+    from pwd import getpwnam, getpwuid
+    from grp import getgrnam, getgrall, getgrgid
 
     def get_cur_user():
         """Wrapper for getpwuid
@@ -93,7 +81,7 @@ try:
         :return: user name
         :rtype: str
         """
-        return pwd.getpwuid(os.getuid()).pw_name
+        return getpwuid(os.getuid()).pw_name
 
     def get_cur_group():
         """Wrapper for getgrgid
@@ -101,7 +89,7 @@ try:
         :return: group name
         :rtype: str
         """
-        return grp.getgrgid(os.getgid()).gr_name
+        return getgrgid(os.getgid()).gr_name
 
     def get_all_groups():
         """Wrapper for getgrall
@@ -136,6 +124,14 @@ except ImportError, exp:  # Like in nt system
         """
         return []
 
+from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
+from alignak.log import logger
+from alignak.stats import statsmgr
+from alignak.modulesmanager import ModulesManager
+from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
+    LogLevelProp
+from alignak.misc.common import setproctitle
+from alignak.version import VERSION
 
 IS_PY26 = sys.version_info[:2] < (2, 7)
 
@@ -144,7 +140,6 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
-from alignak.version import VERSION
 
 
 class InvalidPidFile(Exception):

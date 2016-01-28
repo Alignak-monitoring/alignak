@@ -562,7 +562,7 @@ class Broker(BaseSatellite):
                 already_got = pol_id in self.pollers
                 if already_got:
                     broks = self.pollers[pol_id]['broks']
-                    running_id = self.schedulers[sched_id]['running_id']
+                    running_id = self.pollers[pol_id]['running_id']
                 else:
                     broks = {}
                     running_id = 0
@@ -597,7 +597,7 @@ class Broker(BaseSatellite):
                 already_got = rea_id in self.reactionners
                 if already_got:
                     broks = self.reactionners[rea_id]['broks']
-                    running_id = self.schedulers[sched_id]['running_id']
+                    running_id = self.reactionners[rea_id]['running_id']
                 else:
                     broks = {}
                     running_id = 0
@@ -632,7 +632,7 @@ class Broker(BaseSatellite):
                 already_got = rec_id in self.receivers
                 if already_got:
                     broks = self.receivers[rec_id]['broks']
-                    running_id = self.schedulers[sched_id]['running_id']
+                    running_id = self.receivers[rec_id]['running_id']
                 else:
                     broks = {}
                     running_id = 0

@@ -285,14 +285,15 @@ class MacroResolver(Borg):
                 if macros[macro]['type'] == 'class':
                     cls = macros[macro]['class']
                     for elt in data:
-                        if elt is not None and elt.__class__ == cls:
-                            prop = cls.macros[macro]
-                            macros[macro]['val'] = self._get_value_from_element(elt, prop)
-                            # Now check if we do not have a 'output' macro. If so, we must
-                            # delete all special characters that can be dangerous
-                            if macro in self.output_macros:
-                                macros[macro]['val'] = \
-                                    self._delete_unwanted_caracters(macros[macro]['val'])
+                        if elt is None or elt.__class__ != cls:
+                            continue
+                        prop = cls.macros[macro]
+                        macros[macro]['val'] = self._get_value_from_element(elt, prop)
+                        # Now check if we do not have a 'output' macro. If so, we must
+                        # delete all special characters that can be dangerous
+                        if macro in self.output_macros:
+                            macros[macro]['val'] = \
+                                self._delete_unwanted_caracters(macros[macro]['val'])
                 if macros[macro]['type'] == 'CUSTOM':
                     cls_type = macros[macro]['class']
                     # Beware : only cut the first _HOST value, so the macro name can have it on it..
@@ -301,18 +302,19 @@ class MacroResolver(Borg):
                     # Now we get the element in data that have the type HOST
                     # and we check if it got the custom value
                     for elt in data:
-                        if elt is not None and elt.__class__.my_type.upper() == cls_type:
-                            if '_' + macro_name in elt.customs:
-                                macros[macro]['val'] = elt.customs['_' + macro_name]
-                            # Then look on the macromodulations, in reserver order, so
-                            # the last to set, will be the firt to have. (yes, don't want to play
-                            # with break and such things sorry...)
-                            mms = getattr(elt, 'macromodulations', [])
-                            for macromod in mms[::-1]:
-                                # Look if the modulation got the value,
-                                # but also if it's currently active
-                                if '_' + macro_name in macromod.customs and macromod.is_active():
-                                    macros[macro]['val'] = macromod.customs['_' + macro_name]
+                        if elt is None or elt.__class__.my_type.upper() != cls_type:
+                            continue
+                        if '_' + macro_name in elt.customs:
+                            macros[macro]['val'] = elt.customs['_' + macro_name]
+                        # Then look on the macromodulations, in reserver order, so
+                        # the last to set, will be the firt to have. (yes, don't want to play
+                        # with break and such things sorry...)
+                        mms = getattr(elt, 'macromodulations', [])
+                        for macromod in mms[::-1]:
+                            # Look if the modulation got the value,
+                            # but also if it's currently active
+                            if '_' + macro_name in macromod.customs and macromod.is_active():
+                                macros[macro]['val'] = macromod.customs['_' + macro_name]
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
 

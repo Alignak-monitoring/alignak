@@ -108,7 +108,7 @@ class Modules(Items):
         """
         self.linkify_s_by_plug()
 
-    def linkify_s_by_plug(self):
+    def linkify_s_by_plug(self, modules=None):
         """
         Link modules
 

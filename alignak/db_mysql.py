@@ -50,9 +50,9 @@
 """This module provide DBMysql class to access MYSQL databases
 
 """
-import MySQLdb
-from MySQLdb import IntegrityError
-from MySQLdb import ProgrammingError
+import MySQLdb  # pylint: disable=E0401
+from MySQLdb import IntegrityError  # pylint: disable=E0401
+from MySQLdb import ProgrammingError  # pylint: disable=E0401
 
 
 from alignak.db import DB

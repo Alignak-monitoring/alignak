@@ -56,9 +56,8 @@ Each class implements a pythonize method that cast data into the wanted type.
 
 """
 import re
-
-from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 import logging
+from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
            'CharProp', 'StringProp', 'ListProp',

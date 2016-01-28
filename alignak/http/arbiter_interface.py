@@ -17,9 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Arbiter."""
-import cherrypy
 import json
 import time
+
+import cherrypy
 
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
@@ -33,7 +34,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash):
+    def have_conf(self, magic_hash=0):
         """Does the daemon got a configuration (internal) (HTTP GET)
 
         :param magic_hash: magic hash of configuration
@@ -170,17 +171,17 @@ class ArbiterInterface(GenericInterface):
 
                 for props in all_props:
                     for prop in props:
-                        if hasattr(daemon, prop):
-                            val = getattr(daemon, prop)
-                            if prop == "realm":
-                                if hasattr(val, "realm_name"):
-                                    env[prop] = val.realm_name
-                            # give a try to a json able object
-                            try:
-                                json.dumps(val)
-                                env[prop] = val
-                            except Exception, exp:
-                                logger.debug('%s', exp)
+                        if not hasattr(daemon, prop):
+                            continue
+                        val = getattr(daemon, prop)
+                        if prop == "realm" and hasattr(val, "realm_name"):
+                            env[prop] = val.realm_name
+                        # give a try to a json able object
+                        try:
+                            json.dumps(val)
+                            env[prop] = val
+                        except Exception, exp:
+                            logger.debug('%s', exp)
                 lst.append(env)
         return res
 

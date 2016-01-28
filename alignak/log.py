@@ -58,8 +58,8 @@ import logging
 import sys
 import os
 import stat
-from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler
-from logging.handlers import TimedRotatingFileHandler
+from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler  # pylint: disable=C0412
+from logging.handlers import TimedRotatingFileHandler  # pylint: disable=C0412
 
 from termcolor import cprint
 
@@ -199,7 +199,8 @@ class Log(logging.Logger):
             # It can be one of the stat.S_IS* (FIFO? CHR?)
             handler = FileHandler(path)
         else:
-            handler = TimedRotatingFileHandler(path, 'midnight', backupCount=5)
+            handler = TimedRotatingFileHandler(path, 'midnight',  # pylint: disable=R0204
+                                               backupCount=5)
         if level is not None:
             handler.setLevel(level)
         if self.name is not None:

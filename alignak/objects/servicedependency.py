@@ -108,7 +108,8 @@ class Servicedependency(Item):
 
 
 class Servicedependencies(Items):
-    """Servicedependencies manage a list of Servicedependency objects, used for parsing configuration
+    """Servicedependencies manage a list of Servicedependency objects,
+       used for parsing configuration
 
     """
     inner_class = Servicedependency  # use for know what is in items

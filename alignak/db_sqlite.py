@@ -47,9 +47,9 @@
 """This module provide DBSqlite class to access SQLite databases
 
 """
+import sqlite3
 from alignak.db import DB
 from alignak.log import logger
-import sqlite3
 
 
 class DBSqlite(DB):

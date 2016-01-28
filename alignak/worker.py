@@ -180,15 +180,15 @@ class Worker(object):
         """
         return self._mortal and self._idletime > self._timeout
 
-    def add_idletime(self, time):
+    def add_idletime(self, amount):
         """
         Increment idletime
 
-        :param time: time to increment in seconds
-        :type time: int
+        :param amount: time to increment in seconds
+        :type amount: int
         :return: None
         """
-        self._idletime += time
+        self._idletime += amount
 
     def reset_idle(self):
         """

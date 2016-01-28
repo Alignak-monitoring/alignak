@@ -81,7 +81,8 @@ class Businessimpactmodulation(Item):
 
 
 class Businessimpactmodulations(Items):
-    """Businessimpactmodulations class allowed to handle easily several Businessimpactmodulation objects
+    """Businessimpactmodulations class allowed to handle easily
+       several Businessimpactmodulation objects
 
     """
     name_property = "business_impact_modulation_name"

@@ -146,7 +146,8 @@ class Item(object):
                     else:
                         val = ''
                 else:
-                    warning = "Guessing the property %s type because it is not in %s object properties" % \
+                    warning = "Guessing the property %s type because" \
+                              "it is not in %s object properties" % \
                               (key, cls.__name__)
                     self.configuration_warnings.append(warning)
                     val = ToGuessProp.pythonize(params[key])
@@ -294,6 +295,7 @@ class Item(object):
             if not hasattr(self, prop) and entry.has_default:
                 setattr(self, prop, entry.default)
 
+    @classmethod
     def load_global_conf(cls, conf):
         """
         Load configuration of parent object
@@ -315,9 +317,6 @@ class Item(object):
                             setattr(cls, prop, value)
                         else:
                             setattr(cls, change_name, value)
-
-    # Make this method a classmethod
-    load_global_conf = classmethod(load_global_conf)
 
     def get_templates(self):
         """
@@ -401,7 +400,7 @@ class Item(object):
                         value = list(getattr(self, prop))
                         value.extend(self.get_plus_and_delete(prop))
                         # Template should keep their '+'
-                        if self.is_tpl() and not value[0] == '+':
+                        if self.is_tpl() and value[0] != '+':
                             value.insert(0, '+')
                         setattr(self, prop, value)
                     return value
@@ -422,7 +421,7 @@ class Item(object):
             # Template should keep their '+' chain
             # We must say it's a '+' value, so our son will now that it must
             # still loop
-            if self.is_tpl() and value != [] and not value[0] == '+':
+            if self.is_tpl() and value != [] and value[0] != '+':
                 value.insert(0, '+')
 
             setattr(self, prop, value)
@@ -827,7 +826,7 @@ class Item(object):
                                                            tname))
         self.triggers = new_triggers
 
-    def dump(self):
+    def dump(self, dfile=None):
         """
         Dump properties
 

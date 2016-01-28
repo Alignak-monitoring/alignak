@@ -975,24 +975,25 @@ class Config(Item):
                     # Now walk for it.
                     for root, _, files in os.walk(cfg_dir_name, followlinks=True):
                         for c_file in files:
-                            if re.search(r"\.cfg$", c_file):
-                                if self.read_config_silent == 0:
-                                    logger.info("Processing object config file '%s'",
-                                                os.path.join(root, c_file))
-                                try:
-                                    res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                              (os.path.join(root, c_file)) + os.linesep)
-                                    file_d = open(os.path.join(root, c_file), 'rU')
-                                    res.write(file_d.read().decode('utf8', 'replace'))
-                                    # Be sure to separate files data
-                                    res.write(os.linesep)
-                                    file_d.close()
-                                except IOError, exp:
-                                    logger.error("Cannot open config file '%s' for reading: %s",
-                                                 os.path.join(root, c_file), exp)
-                                    # The configuration is invalid
-                                    # because we have a bad file!
-                                    self.conf_is_correct = False
+                            if not re.search(r"\.cfg$", c_file):
+                                continue
+                            if self.read_config_silent == 0:
+                                logger.info("Processing object config file '%s'",
+                                            os.path.join(root, c_file))
+                            try:
+                                res.write(os.linesep + '# IMPORTEDFROM=%s' %
+                                          (os.path.join(root, c_file)) + os.linesep)
+                                file_d = open(os.path.join(root, c_file), 'rU')
+                                res.write(file_d.read().decode('utf8', 'replace'))
+                                # Be sure to separate files data
+                                res.write(os.linesep)
+                                file_d.close()
+                            except IOError, exp:
+                                logger.error("Cannot open config file '%s' for reading: %s",
+                                             os.path.join(root, c_file), exp)
+                                # The configuration is invalid
+                                # because we have a bad file!
+                                self.conf_is_correct = False
                 elif re.search("^triggers_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -1122,18 +1123,18 @@ class Config(Item):
         for o_type in objectscfg:
             objects[o_type] = []
             for items in objectscfg[o_type]:
-                tmp = {}
+                tmp_obj = {}
                 for line in items:
                     elts = self._cut_line(line)
                     if elts == []:
                         continue
                     prop = elts[0]
-                    if prop not in tmp:
-                        tmp[prop] = []
+                    if prop not in tmp_obj:
+                        tmp_obj[prop] = []
                     value = ' '.join(elts[1:])
-                    tmp[prop].append(value)
-                if tmp != {}:
-                    objects[o_type].append(tmp)
+                    tmp_obj[prop].append(value)
+                if tmp_obj != {}:
+                    objects[o_type].append(tmp_obj)
 
         return objects
 
@@ -2115,7 +2116,7 @@ class Config(Item):
                         if not r_o:
                             continue
                         elt_r = elt.get_realm().realm_name
-                        if not elt_r == e_r:
+                        if elt_r != e_r:
                             logger.error("Business_rule '%s' got hosts from another realm: %s",
                                          item.get_full_name(), elt_r)
                             self.add_error("Error: Business_rule '%s' got hosts from another "
@@ -2220,7 +2221,7 @@ class Config(Item):
 
         # For host/service that are business based, we need to
         # link them too
-        for serv in [serv for serv in self.services if serv.got_business_rule]:
+        for serv in [srv for srv in self.services if srv.got_business_rule]:
             for elem in serv.business_rule.list_all_elements():
                 if hasattr(elem, 'host'):  # if it's a service
                     if elem.host != serv.host:  # do not a host with itself
@@ -2230,7 +2231,7 @@ class Config(Item):
                         links.add((elem, serv.host))
 
         # Same for hosts of course
-        for host in [host for host in self.hosts if host.got_business_rule]:
+        for host in [hst for hst in self.hosts if hst.got_business_rule]:
             for elem in host.business_rule.list_all_elements():
                 if hasattr(elem, 'host'):  # if it's a service
                     if elem.host != host:
@@ -2380,7 +2381,7 @@ class Config(Item):
 
             # Now in packs we have the number of packs [h1, h2, etc]
             # equal to the number of schedulers.
-            realm.packs = packs
+            realm.packs = packs  # pylint: disable=R0204
 
         for what in (self.contacts, self.hosts, self.services, self.commands):
             logger.info("Number of %s : %d", type(what).__name__, len(what))
@@ -2540,11 +2541,11 @@ class Config(Item):
             self.confs[i].instance_id = i
             random.seed(time.time())
 
-    def dump(self, f=None):
+    def dump(self, dfile=None):
         """Dump configuration to a file in a JSON format
 
-        :param f: the file to dump
-        :type f: file
+        :param dfile: the file to dump
+        :type dfile: file
         :return: None
         """
         dmp = {}
@@ -2576,14 +2577,14 @@ class Config(Item):
                 objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
             dmp[category] = objs
 
-        if f is None:
+        if dfile is None:
             temp_d = tempfile.gettempdir()
             path = os.path.join(temp_d, 'alignak-config-dump-%d' % time.time())
-            f = open(path, "wb")
+            dfile = open(path, "wb")
             close = True
         else:
             close = False
-        f.write(
+        dfile.write(
             json.dumps(
                 dmp,
                 indent=4,
@@ -2592,7 +2593,7 @@ class Config(Item):
             )
         )
         if close is True:
-            f.close()
+            dfile.close()
 
 
 def lazy():

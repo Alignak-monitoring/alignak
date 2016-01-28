@@ -445,35 +445,38 @@ class Arbiter(Daemon):
         # got items for us
         for inst in self.modules_manager.instances:
             # TODO : clean
-            if hasattr(inst, 'get_objects'):
-                _t0 = time.time()
-                try:
-                    objs = inst.get_objects()
-                except Exception, exp:
-                    logger.error("Instance %s raised an exception %s. Log and continue to run",
-                                 inst.get_name(), str(exp))
-                    output = cStringIO.StringIO()
-                    traceback.print_exc(file=output)
-                    logger.error("Back trace of this remove: %s", output.getvalue())
-                    output.close()
+            if not hasattr(inst, 'get_objects'):
+                return
+
+            _t0 = time.time()
+            try:
+                objs = inst.get_objects()
+            except Exception, exp:
+                logger.error("Instance %s raised an exception %s. Log and continue to run",
+                             inst.get_name(), str(exp))
+                output = cStringIO.StringIO()
+                traceback.print_exc(file=output)
+                logger.error("Back trace of this remove: %s", output.getvalue())
+                output.close()
+                continue
+            statsmgr.incr('hook.get-objects', time.time() - _t0)
+            types_creations = self.conf.types_creations
+            for type_c in types_creations:
+                (_, _, prop, dummy) = types_creations[type_c]
+                if prop not in objs:
                     continue
-                statsmgr.incr('hook.get-objects', time.time() - _t0)
-                types_creations = self.conf.types_creations
-                for type_c in types_creations:
-                    (_, _, prop, dummy) = types_creations[type_c]
-                    if prop in objs:
-                        for obj in objs[prop]:
-                            # test if raw_objects[k] are already set - if not, add empty array
-                            if type_c not in raw_objects:
-                                raw_objects[type_c] = []
-                            # put the imported_from property if the module is not already setting
-                            # it so we know where does this object came from
-                            if 'imported_from' not in obj:
-                                obj['imported_from'] = 'module:%s' % inst.get_name()
-                            # now append the object
-                            raw_objects[type_c].append(obj)
-                        logger.debug("Added %i objects to %s from module %s",
-                                     len(objs[prop]), type_c, inst.get_name())
+                for obj in objs[prop]:
+                    # test if raw_objects[k] are already set - if not, add empty array
+                    if type_c not in raw_objects:
+                        raw_objects[type_c] = []
+                    # put the imported_from property if the module is not already setting
+                    # it so we know where does this object came from
+                    if 'imported_from' not in obj:
+                        obj['imported_from'] = 'module:%s' % inst.get_name()
+                    # now append the object
+                    raw_objects[type_c].append(obj)
+                logger.debug("Added %i objects to %s from module %s",
+                             len(objs[prop]), type_c, inst.get_name())
 
     def launch_analyse(self):
         """Print the number of objects we have for each type.

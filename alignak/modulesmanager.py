@@ -109,9 +109,10 @@ class ModulesManager(object):
         :type mod_name: str
         :return: None
         """
+        # Simple way to test if we have the required attributes
         try:
-            module.properties
-            module.get_instance
+            module.properties   # pylint:disable=W0104
+            module.get_instance  # pylint:disable=W0104
         except AttributeError:
             pass
         else:
