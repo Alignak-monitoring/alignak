@@ -259,9 +259,8 @@ class Dispatcher:
                                                realm.get_name(), kind, satellite.get_name())
                                 continue
 
-                            if satellite.alive and (
-                                        not satellite.reachable or
-                                        satellite.do_i_manage(cfg_id, push_flavor)):
+                            if satellite.alive and (not satellite.reachable or
+                                                    satellite.do_i_manage(cfg_id, push_flavor)):
                                 continue
 
                             logger.warning('[%s] The %s %s seems to be down, '

@@ -112,7 +112,7 @@ class ModulesManager(object):
         # Simple way to test if we have the required attributes
         try:
             module.properties   # pylint:disable=W0104
-            module.get_instance # pylint:disable=W0104
+            module.get_instance  # pylint:disable=W0104
         except AttributeError:
             pass
         else:

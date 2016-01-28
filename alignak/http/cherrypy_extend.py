@@ -28,6 +28,7 @@ import zlib
 import cherrypy
 from cherrypy._cpcompat import ntou
 
+
 def zlib_processor(entity):
     """Read application/zlib data and put content into entity.params for later use.
 
