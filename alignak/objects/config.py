@@ -2540,11 +2540,11 @@ class Config(Item):
             self.confs[i].instance_id = i
             random.seed(time.time())
 
-    def dump(self, f=None):
+    def dump(self, dfile=None):
         """Dump configuration to a file in a JSON format
 
-        :param f: the file to dump
-        :type f: file
+        :param dfile: the file to dump
+        :type dfile: file
         :return: None
         """
         dmp = {}
@@ -2576,14 +2576,14 @@ class Config(Item):
                 objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
             dmp[category] = objs
 
-        if f is None:
+        if dfile is None:
             temp_d = tempfile.gettempdir()
             path = os.path.join(temp_d, 'alignak-config-dump-%d' % time.time())
-            f = open(path, "wb")
+            dfile = open(path, "wb")
             close = True
         else:
             close = False
-        f.write(
+        dfile.write(
             json.dumps(
                 dmp,
                 indent=4,
@@ -2592,7 +2592,7 @@ class Config(Item):
             )
         )
         if close is True:
-            f.close()
+            dfile.close()
 
 
 def lazy():

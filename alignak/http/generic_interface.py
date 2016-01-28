@@ -95,7 +95,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def have_conf(self):
+    def have_conf(self, magic_hash=None):
         """Get the daemon cur_conf state
 
         :return: boolean indicating if the daemon has a conf

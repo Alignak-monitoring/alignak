@@ -826,7 +826,7 @@ class Item(object):
                                                            tname))
         self.triggers = new_triggers
 
-    def dump(self):
+    def dump(self, dfile=None):
         """
         Dump properties
 

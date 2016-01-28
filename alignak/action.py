@@ -343,7 +343,7 @@ class ActionBase(object):
                 return True
         return False
 
-    def execute__(self):
+    def execute__(self, force_shell=False):
         """Execute action in a subprocess
 
         :return: None
@@ -402,8 +402,6 @@ if os.name != 'nt':
         def execute__(self, force_shell=sys.version_info < (2, 7)):
             """Execute action in a subprocess
 
-            :param force_shell: if True, force execution in a shell
-            :type force_shell: bool
             :return: None or str 'toomanyopenfiles'
             TODO: Clean this
             """
@@ -486,7 +484,7 @@ else:
 
         properties = ActionBase.properties.copy()
 
-        def execute__(self):
+        def execute__(self, force_shell=False):
             """Execute action in a subprocess
 
             :return: None

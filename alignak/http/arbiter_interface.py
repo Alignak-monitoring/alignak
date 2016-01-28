@@ -33,7 +33,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash):
+    def have_conf(self, magic_hash=0):
         """Does the daemon got a configuration (internal) (HTTP GET)
 
         :param magic_hash: magic hash of configuration
