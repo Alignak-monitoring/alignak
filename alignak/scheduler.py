@@ -1124,7 +1124,7 @@ class Scheduler(object):
                 self.pynag_con_init(poll['instance_id'], s_type='poller')
 
         # We loop for our passive reactionners
-        for poll in [poll for poll in self.reactionners.values() if poll['passive']]:
+        for poll in [pol for pol in self.reactionners.values() if pol['passive']]:
             logger.debug("I will get actions from the reactionner %s", str(poll))
             con = poll['con']
             if con is not None:

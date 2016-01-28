@@ -2220,7 +2220,7 @@ class Config(Item):
 
         # For host/service that are business based, we need to
         # link them too
-        for serv in [serv for serv in self.services if serv.got_business_rule]:
+        for serv in [srv for srv in self.services if srv.got_business_rule]:
             for elem in serv.business_rule.list_all_elements():
                 if hasattr(elem, 'host'):  # if it's a service
                     if elem.host != serv.host:  # do not a host with itself
@@ -2230,7 +2230,7 @@ class Config(Item):
                         links.add((elem, serv.host))
 
         # Same for hosts of course
-        for host in [host for host in self.hosts if host.got_business_rule]:
+        for host in [hst for hst in self.hosts if hst.got_business_rule]:
             for elem in host.business_rule.list_all_elements():
                 if hasattr(elem, 'host'):  # if it's a service
                     if elem.host != host:
