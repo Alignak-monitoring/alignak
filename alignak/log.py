@@ -199,7 +199,8 @@ class Log(logging.Logger):
             # It can be one of the stat.S_IS* (FIFO? CHR?)
             handler = FileHandler(path)
         else:
-            handler = TimedRotatingFileHandler(path, 'midnight', backupCount=5)
+            handler = TimedRotatingFileHandler(path, 'midnight',  # pylint: disable=R0204
+                                               backupCount=5)
         if level is not None:
             handler.setLevel(level)
         if self.name is not None:

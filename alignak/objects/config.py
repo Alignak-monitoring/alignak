@@ -1122,18 +1122,18 @@ class Config(Item):
         for o_type in objectscfg:
             objects[o_type] = []
             for items in objectscfg[o_type]:
-                tmp = {}
+                tmp_obj = {}
                 for line in items:
                     elts = self._cut_line(line)
                     if elts == []:
                         continue
                     prop = elts[0]
-                    if prop not in tmp:
-                        tmp[prop] = []
+                    if prop not in tmp_obj:
+                        tmp_obj[prop] = []
                     value = ' '.join(elts[1:])
-                    tmp[prop].append(value)
-                if tmp != {}:
-                    objects[o_type].append(tmp)
+                    tmp_obj[prop].append(value)
+                if tmp_obj != {}:
+                    objects[o_type].append(tmp_obj)
 
         return objects
 
@@ -2380,7 +2380,7 @@ class Config(Item):
 
             # Now in packs we have the number of packs [h1, h2, etc]
             # equal to the number of schedulers.
-            realm.packs = packs
+            realm.packs = packs  # pylint: disable=R0204
 
         for what in (self.contacts, self.hosts, self.services, self.commands):
             logger.info("Number of %s : %d", type(what).__name__, len(what))

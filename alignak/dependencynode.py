@@ -334,11 +334,11 @@ class DependencyNode(object):
         """
         nb_sons = len(self.sons)
         # Need a list for assignment
-        self.of_values = list(self.of_values)
+        new_values = list(self.of_values)
         for i in [0, 1, 2]:
-            if self.of_values[i] == '0':
-                self.of_values[i] = str(nb_sons)
-        self.of_values = tuple(self.of_values)
+            if new_values[i] == '0':
+                new_values[i] = str(nb_sons)
+        self.of_values = tuple(new_values)
 
     def is_valid(self):
         """Check if all leaves are correct (no error)
