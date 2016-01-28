@@ -21,12 +21,12 @@ in order to parse specific HTTP content type
 See http://cherrypy.readthedocs.org/en/latest/pkg/cherrypy.html#module-cherrypy._cpreqbody
 for details about custom processors in Cherrypy
 """
-import cherrypy
-from cherrypy._cpcompat import ntou
 import cPickle
 import json
 import zlib
 
+import cherrypy
+from cherrypy._cpcompat import ntou
 
 def zlib_processor(entity):
     """Read application/zlib data and put content into entity.params for later use.

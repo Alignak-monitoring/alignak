@@ -58,8 +58,9 @@ import re
 import sys
 import os
 import json
-import numpy as np
 import argparse
+
+import numpy as np
 
 from alignak.macroresolver import MacroResolver
 from alignak.log import logger

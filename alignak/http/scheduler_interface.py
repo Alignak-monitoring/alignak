@@ -18,10 +18,11 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a SCheduler."""
 
-import cherrypy
 import base64
 import cPickle
 import zlib
+
+import cherrypy
 
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface

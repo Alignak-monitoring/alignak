@@ -21,13 +21,14 @@ Any Alignak satellite have at least those functions exposed over network
 See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTPP apps.
 """
 import base64
-import cherrypy
 import cPickle
 import inspect
 import logging
 import random
 import time
 import zlib
+
+import cherrypy
 
 from alignak.log import logger
 

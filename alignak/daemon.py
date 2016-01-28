@@ -71,16 +71,6 @@ import threading
 from Queue import Empty
 from multiprocessing.managers import SyncManager
 
-
-from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
-from alignak.log import logger
-from alignak.stats import statsmgr
-from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
-    LogLevelProp
-from alignak.misc.common import setproctitle
-
-
 try:
     from pwd import getpwnam, getpwuid
     from grp import getgrnam, getgrall, getgrgid
@@ -134,6 +124,14 @@ except ImportError, exp:  # Like in nt system
         """
         return []
 
+from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
+from alignak.log import logger
+from alignak.stats import statsmgr
+from alignak.modulesmanager import ModulesManager
+from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
+    LogLevelProp
+from alignak.misc.common import setproctitle
+from alignak.version import VERSION
 
 IS_PY26 = sys.version_info[:2] < (2, 7)
 
@@ -142,7 +140,6 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
-from alignak.version import VERSION
 
 
 class InvalidPidFile(Exception):

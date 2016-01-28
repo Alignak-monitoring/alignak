@@ -17,9 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Arbiter."""
-import cherrypy
 import json
 import time
+
+import cherrypy
 
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
