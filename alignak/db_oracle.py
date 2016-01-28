@@ -49,13 +49,13 @@
 
 """
 # Failed to import will be catch by __init__.py
-from cx_Oracle import connect as connect_function
-from cx_Oracle import IntegrityError as IntegrityError_exp
-from cx_Oracle import ProgrammingError as ProgrammingError_exp
-from cx_Oracle import DatabaseError as DatabaseError_exp
-from cx_Oracle import InternalError as InternalError_exp
-from cx_Oracle import DataError as DataError_exp
-from cx_Oracle import OperationalError as OperationalError_exp
+from cx_Oracle import connect as connect_function  # pylint: disable=E0401
+from cx_Oracle import IntegrityError as IntegrityError_exp  # pylint: disable=E0401
+from cx_Oracle import ProgrammingError as ProgrammingError_exp  # pylint: disable=E0401
+from cx_Oracle import DatabaseError as DatabaseError_exp  # pylint: disable=E0401
+from cx_Oracle import InternalError as InternalError_exp  # pylint: disable=E0401
+from cx_Oracle import DataError as DataError_exp  # pylint: disable=E0401
+from cx_Oracle import OperationalError as OperationalError_exp  # pylint: disable=E0401
 
 from alignak.db import DB
 from alignak.log import logger
