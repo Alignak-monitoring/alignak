@@ -34,9 +34,9 @@ class SchedulerInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_checks(self, do_checks=False, do_actions=False, poller_tags=['None'],
-                   reactionner_tags=['None'], worker_name='none',
-                   module_types=['fork']):
+    def get_checks(self, do_checks=False, do_actions=False, poller_tags=None,
+                   reactionner_tags=None, worker_name='none',
+                   module_types=None):
         """Get checks from scheduler, used by poller or reactionner (active ones)
 
         :param do_checks: used for poller to get checks
@@ -55,6 +55,12 @@ class SchedulerInterface(GenericInterface):
         :rtype: str
         """
         # print "We ask us checks"
+        if poller_tags is None:
+            poller_tags = ['None']
+        if reactionner_tags is None:
+            reactionner_tags = ['None']
+        if module_types is None:
+            module_types = ['fork']
         do_checks = (do_checks == 'True')
         do_actions = (do_actions == 'True')
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,

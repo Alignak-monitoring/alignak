@@ -136,7 +136,7 @@ class ArbiterLink(SatelliteLink):
             self.con = None
             return None
 
-    def get_objects_properties(self, table, properties=[]):
+    def get_objects_properties(self, table, properties=None):
         """
         Get properties of objects
 
@@ -147,6 +147,8 @@ class ArbiterLink(SatelliteLink):
         :return: list of objects
         :rtype: list | None
         """
+        if properties is None:
+            properties = []
         if self.con is None:
             self.create_connection()
         try:

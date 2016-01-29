@@ -142,7 +142,7 @@ class HTTPClient(object):
                 'https': proxy,
             }
 
-    def get(self, path, args={}, wait='short'):
+    def get(self, path, args=None, wait='short'):
         """Do a GET HTTP request
 
         :param path: path to do the request
@@ -153,6 +153,8 @@ class HTTPClient(object):
         :type wait: int
         :return: None
         """
+        if args is None:
+            args = {}
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:

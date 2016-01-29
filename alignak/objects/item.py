@@ -104,7 +104,7 @@ class Item(object):
     my_type = ''
     ok_up = ''
 
-    def __init__(self, params={}):
+    def __init__(self, params=None):
         # We have our own id of My Class type :)
         # use set attr for going into the slots
         # instead of __dict__ :)
@@ -120,6 +120,8 @@ class Item(object):
         self.init_running_properties()
         # [0] = +  -> new key-plus
         # [0] = _  -> new custom entry in UPPER case
+        if params is None:
+            params = {}
         for key in params:
             # We want to create instance of object with the good type.
             # Here we've just parsed config files so everything is a list.

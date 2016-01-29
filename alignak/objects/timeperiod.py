@@ -156,7 +156,7 @@ class Timeperiod(Item):
     })
     running_properties = Item.running_properties.copy()
 
-    def __init__(self, params={}):
+    def __init__(self, params=None):
         self._id = Timeperiod._id
         Timeperiod._id += 1
         self.unresolved = []
@@ -168,6 +168,9 @@ class Timeperiod(Item):
         self.invalid_cache = {}  # same but for invalid search
         self.is_active = None
         self.tags = set()
+
+        if params is None:
+            params = {}
 
         # Get standard params
         standard_params = dict([(k, v) for k, v in params.items()

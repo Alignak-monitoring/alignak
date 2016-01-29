@@ -121,7 +121,7 @@ class Notification(Action):
                  reason_type=1, state=0, ack_author='', ack_data='',
                  escalated=False, contacts_notified=0,
                  start_time=0, end_time=0, notification_type=0, _id=None,
-                 notif_nb=1, timeout=10, env={}, module_type='fork',
+                 notif_nb=1, timeout=10, env=None, module_type='fork',
                  reactionner_tag='None', enable_environment_macros=False):
 
         self.is_a = 'notification'
@@ -152,7 +152,10 @@ class Notification(Action):
         except Exception:
             self.service_description = service_description
 
-        self.env = env
+        if env is not None:
+            self.env = env
+        else:
+            self.env = {}
         self.module_type = module_type
         self.t_to_go = t_to_go
         self.notif_nb = notif_nb

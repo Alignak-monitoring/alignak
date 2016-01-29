@@ -78,7 +78,7 @@ class EventHandler(Action):
     })
 
     # _id = 0  #Is common to Actions
-    def __init__(self, command, _id=None, ref=None, timeout=10, env={},
+    def __init__(self, command, _id=None, ref=None, timeout=10,
                  module_type='fork', reactionner_tag='None', is_snapshot=False):
         self.is_a = 'eventhandler'
         self.type = ''

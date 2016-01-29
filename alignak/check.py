@@ -86,7 +86,7 @@ class Check(Action):
 
     def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
                  timeout=10, poller_tag='None', reactionner_tag='None',
-                 env={}, module_type='fork', from_trigger=False, dependency_check=False):
+                 env=None, module_type='fork', from_trigger=False, dependency_check=False):
 
         self.is_a = 'check'
         self.type = ''
@@ -117,7 +117,10 @@ class Check(Action):
         self.poller_tag = poller_tag
         self.reactionner_tag = reactionner_tag
         self.module_type = module_type
-        self.env = env
+        if env is not None:
+            self.env = env
+        else:
+            self.env = {}
         # we keep the reference of the poller that will take us
         self.worker = 'none'
         # If it's a business rule, manage it as a special check
