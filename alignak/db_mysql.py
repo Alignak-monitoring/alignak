@@ -51,8 +51,8 @@
 
 """
 import MySQLdb  # pylint: disable=E0401
-from MySQLdb import IntegrityError  # pylint: disable=E0401
-from MySQLdb import ProgrammingError  # pylint: disable=E0401
+from MySQLdb import IntegrityError  # pylint: disable=E0401,E0611
+from MySQLdb import ProgrammingError  # pylint: disable=E0401,E0611
 
 
 from alignak.db import DB
