@@ -163,7 +163,7 @@ class CheckModulations(Items):
         self.linkify_with_timeperiods(timeperiods, 'check_period')
         self.linkify_one_command_with_commands(commands, 'check_command')
 
-    def new_inner_member(self, name=None, params={}):
+    def new_inner_member(self, name=None, params=None):
         """Create a CheckModulation object and add it to items
 
         :param name: CheckModulation name
@@ -175,6 +175,10 @@ class CheckModulations(Items):
         """
         if name is None:
             name = CheckModulation._id
+
+        if params is None:
+            params = {}
+
         params['checkmodulation_name'] = name
         # print "Asking a new inner checkmodulation from name %s with params %s" % (name, params)
         checkmodulation = CheckModulation(params)

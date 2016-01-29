@@ -88,8 +88,10 @@ class Command(Item):
         'enable_environment_macros': BoolProp(default=False),
     })
 
-    def __init__(self, params={}):
+    def __init__(self, params=None):
 
+        if params is None:
+            params = {}
         super(Command, self).__init__(params)
 
         if not hasattr(self, 'timeout'):

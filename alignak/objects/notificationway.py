@@ -341,7 +341,7 @@ class NotificationWays(Items):
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
-    def new_inner_member(self, name=None, params={}):
+    def new_inner_member(self, name=None, params=None):
         """Create new instance of NotificationWay with given name and parameters
         and add it to the item list
 
@@ -353,6 +353,8 @@ class NotificationWays(Items):
         """
         if name is None:
             name = NotificationWay._id
+        if params is None:
+            params = {}
         params['notificationway_name'] = name
         # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
         notificationway = NotificationWay(params)

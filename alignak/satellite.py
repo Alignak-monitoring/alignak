@@ -372,7 +372,7 @@ class Satellite(BaseSatellite):
 
         return ret.values()
 
-    def create_and_launch_worker(self, module_name='fork', mortal=True,
+    def create_and_launch_worker(self, module_name='fork', mortal=True,  # pylint: disable=W0102
                                  __warned=set()):
         """Create and launch a new worker, and put it into self.workers
          It can be mortal or not

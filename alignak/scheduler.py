@@ -769,8 +769,8 @@ class Scheduler(object):
                         self.actions[act._id].status = 'zombie'
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
-                          poller_tags=['None'], reactionner_tags=['None'],
-                          worker_name='none', module_types=['fork']
+                          poller_tags=None, reactionner_tags=None,
+                          worker_name='none', module_types=None
                           ):
         """Get actions/checks for reactionner/poller
         Called by poller to get checks
@@ -794,6 +794,12 @@ class Scheduler(object):
         res = []
         now = time.time()
 
+        if poller_tags is None:
+            poller_tags = ['None']
+        if reactionner_tags is None:
+            reactionner_tags = ['None']
+        if module_types is None:
+            module_types = ['fork']
         # If poller want to do checks
         if do_checks:
             for chk in self.checks.values():
