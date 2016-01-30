@@ -65,6 +65,7 @@ handle downtime, problems / acknowledgment etc.
 The major part of monitoring "intelligence" is in this module.
 
 """
+# pylint: disable=C0302
 import time
 import os
 import cStringIO
