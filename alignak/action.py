@@ -475,7 +475,7 @@ if os.name != 'nt':
 
 else:
 
-    import ctypes  # pylint: disable=C0411
+    import ctypes  # pylint: disable=C0411,C0413
 
     class Action(ActionBase):
         """Action class for Windows systems
