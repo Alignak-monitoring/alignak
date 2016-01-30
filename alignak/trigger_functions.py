@@ -309,7 +309,7 @@ def get_object(ref):
 @declared
 def get_objects(ref):
     """ TODO: check this description
-        Retrive objects (service/host) from names
+        Retrieve objects (service/host) from names
 
     :param ref:
     :type ref:
@@ -325,7 +325,7 @@ def get_objects(ref):
     if '*' not in name:
         return [get_object(name)]
 
-    # Ok we look for spliting the host or service thing
+    # Ok we look for splitting the host or service thing
     hname = ''
     sdesc = ''
     if '/' not in name:
@@ -351,7 +351,7 @@ def get_objects(ref):
             if regex.search(host.get_name()):
                 hosts.append(host)
 
-    # Maybe the user ask for justs hosts :)
+    # Maybe the user ask for only hosts :)
     if not sdesc:
         return hosts
 

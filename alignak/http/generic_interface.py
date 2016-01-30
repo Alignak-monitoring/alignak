@@ -18,7 +18,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a generic HTTP interface for all satellites.
 Any Alignak satellite have at least those functions exposed over network
-See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTPP apps.
+See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTTP apps.
 """
 import base64
 import cPickle

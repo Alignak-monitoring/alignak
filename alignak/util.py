@@ -114,7 +114,7 @@ def split_semicolon(line, maxsplit=None):
     :type line: str
     :param maxsplit: maximum of split to dot
     :type maxsplitL int
-    :return: splitted line
+    :return: split line
     :rtype: list
 
     >>> split_semicolon('a,b;c;;g')
@@ -127,42 +127,42 @@ def split_semicolon(line, maxsplit=None):
     ['a,b', 'c;', 'g']
     """
     # Split on ';' character
-    splitted_line = line.split(';')
+    split_line = line.split(';')
 
-    splitted_line_size = len(splitted_line)
+    split_line_size = len(split_line)
 
     # if maxsplit is not specified, we set it to the number of part
     if maxsplit is None or maxsplit < 0:
-        maxsplit = splitted_line_size
+        maxsplit = split_line_size
 
     # Join parts  to the next one, if ends with a '\'
     # because we mustn't split if the semicolon is escaped
     i = 0
-    while i < splitted_line_size - 1:
+    while i < split_line_size - 1:
 
         # for each part, check if its ends with a '\'
-        ends = splitted_line[i].endswith('\\')
+        ends = split_line[i].endswith('\\')
 
         if ends:
             # remove the last character '\'
-            splitted_line[i] = splitted_line[i][:-1]
+            split_line[i] = split_line[i][:-1]
 
         # append the next part to the current if it is not the last and the current
         # ends with '\' or if there is more than maxsplit parts
-        if (ends or i >= maxsplit) and i < splitted_line_size - 1:
+        if (ends or i >= maxsplit) and i < split_line_size - 1:
 
-            splitted_line[i] = ";".join([splitted_line[i], splitted_line[i + 1]])
+            split_line[i] = ";".join([split_line[i], split_line[i + 1]])
 
             # delete the next part
-            del splitted_line[i + 1]
-            splitted_line_size -= 1
+            del split_line[i + 1]
+            split_line_size -= 1
 
         # increase i only if we don't have append because after append the new
         # string can end with '\'
         else:
             i += 1
 
-    return splitted_line
+    return split_line
 
 
 def jsonify_r(obj):
@@ -390,7 +390,7 @@ def to_split(val, split_on_coma=True):
     :type val:
     :param split_on_coma:
     :type split_on_coma: bool
-    :return: splitted value on comma
+    :return: split value on comma
     :rtype: list
 
     >>> to_split('a,b,c')
@@ -423,7 +423,7 @@ def list_split(val, split_on_coma=True):
     :type val:
     :param split_on_coma:
     :type split_on_coma: bool
-    :return: list with splitted member on comma
+    :return: list with split member on comma
     :rtype: list
 
     >>> list_split(['a,b,c'], False)
@@ -667,7 +667,7 @@ def get_obj_name_two_args_and_void(obj, value):
 
 
 def get_obj_full_name(obj):
-    """Wrapepr to call obj.get_full_name or obj.get_name
+    """Wrapper to call obj.get_full_name or obj.get_name
 
     :param obj: object name
     :type obj: object
@@ -715,7 +715,7 @@ def unique_value(val):
     :type val:
     :return: single value
     :rtype: str
-    TODO: Raise erro/warning instead of silently removing something
+    TODO: Raise error/warning instead of silently removing something
     """
     if isinstance(val, list):
         if val:
@@ -966,7 +966,7 @@ def expect_file_dirs(root, path):
 # ####################### Services/hosts search filters  #######################
 # Filters used in services or hosts find_by_filter method
 # Return callback functions which are passed host or service instances, and
-# should return a boolean value that indicates if the inscance mached the
+# should return a boolean value that indicates if the instance matched the
 # filter
 def filter_any(name):
     """Filter for host

@@ -80,7 +80,7 @@ def hst_srv_sort(s01, s02):
     state1 = tab[s01.__class__.my_type].get(s01.state_id, 0)
     state2 = tab[s02.__class__.my_type].get(s02.state_id, 0)
     # ok, here, same business_impact
-    # Compare warn and crit state
+    # Compare warning and critical state
     if state1 > state2:
         return -1
     if state2 > state1:
@@ -108,8 +108,8 @@ def worse_first(s01, s02):
     :rtype: int
     """
     # Ok, we compute a importance value so
-    # For host, the order is UP, UNREACH, DOWN
-    # For service: OK, UNKNOWN, WARNING, CRIT
+    # For host, the order is UP, UNREACHABLE, DOWN
+    # For service: OK, UNKNOWN, WARNING, CRITICAL
     # And DOWN is before CRITICAL (potential more impact)
     tab = {'host': {0: 0, 1: 4, 2: 1},
            'service': {0: 0, 1: 2, 2: 3, 3: 1}
@@ -118,7 +118,7 @@ def worse_first(s01, s02):
     state2 = tab[s02.__class__.my_type].get(s02.state_id, 0)
 
     # ok, here, same business_impact
-    # Compare warn and crit state
+    # Compare warning and critical state
     if state1 > state2:
         return -1
     if state2 > state1:
@@ -153,7 +153,7 @@ def last_state_change_earlier(s01, s02):
     :rtype: int
     """
     # ok, here, same business_impact
-    # Compare warn and crit state
+    # Compare warning and critical state
     if s01.last_state_change > s02.last_state_change:
         return -1
     if s01.last_state_change < s02.last_state_change:

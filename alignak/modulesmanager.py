@@ -91,7 +91,7 @@ class ModulesManager(object):
         self.max_queue_size = max_queue_size
 
     def load_and_init(self, mod_confs):
-        """Import, instanciate & "init" the modules we have been requested
+        """Import, instantiate & "init" the modules we have been requested
 
         :return: None
         """

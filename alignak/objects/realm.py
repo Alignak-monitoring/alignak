@@ -187,9 +187,9 @@ class Realm(Itemgroup):
             return []
 
     def get_all_subs_satellites_by_type(self, sat_type):
-        """Get all satellites of the wated type in this realm recursively
+        """Get all satellites of the wanted type in this realm recursively
 
-        :param sat_type: satelitte type wanted (scheduler, poller ..)
+        :param sat_type: satellite type wanted (scheduler, poller ..)
         :type sat_type:
         :return: list of satellite in this realm
         :rtype: list

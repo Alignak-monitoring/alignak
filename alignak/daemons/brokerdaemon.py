@@ -81,7 +81,7 @@ class Broker(BaseSatellite):
     """
     Class to manage a Broker daemon
     A Broker is used to get data from Scheduler and send them to modules. These modules in most
-    cases export to other softwares, databases...
+    cases export to other software, databases...
     """
     properties = BaseSatellite.properties.copy()
     properties.update({
@@ -142,7 +142,7 @@ class Broker(BaseSatellite):
             self.broks_internal_raised.append(elt)
             return
         elif cls_type == 'externalcommand':
-            logger.debug("Enqueuing an external command '%s'", str(ExternalCommand.__dict__))
+            logger.debug("Queuing an external command '%s'", str(ExternalCommand.__dict__))
             self.external_commands.append(elt)
         # Maybe we got a Message from the modules, it's way to ask something
         # like from now a full data from a scheduler for example.
@@ -152,7 +152,7 @@ class Broker(BaseSatellite):
             if elt.get_type() == 'NeedData':
                 data = elt.get_data()
                 # Full instance id means: I got no data for this scheduler
-                # so give me all dumbass!
+                # so give me all dumb-ass!
                 if 'full_instance_id' in data:
                     c_id = data['full_instance_id']
                     source = elt.source
@@ -767,7 +767,7 @@ class Broker(BaseSatellite):
         # Also reap broks sent from the arbiters
         self.interger_arbiter_broks()
 
-        # Main job, go get broks in our distants daemons
+        # Main job, go get broks in our distant daemons
         types = ['scheduler', 'poller', 'reactionner', 'receiver']
         for _type in types:
             _t0 = time.time()
@@ -786,9 +786,9 @@ class Broker(BaseSatellite):
         ext_modules = self.modules_manager.get_external_instances()
         to_send = [brok for brok in self.broks if getattr(brok, 'need_send_to_ext', True)]
 
-        # Send our pack to all external modules to_q queue so they can get the wole packet
+        # Send our pack to all external modules to_q queue so they can get the whole packet
         # beware, the sub-process/queue can be die/close, so we put to restart the whole module
-        # instead of killing ourself :)
+        # instead of killing ourselves :)
         for mod in ext_modules:
             try:
                 mod.to_q.put(to_send)

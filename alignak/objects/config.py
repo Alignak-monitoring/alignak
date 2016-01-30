@@ -129,7 +129,7 @@ NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
 
 class Config(Item):
     """Config is the class to read, load and manipulate the user
- configuration. It read a main cfg (alignak.cfg) and get all informations
+ configuration. It read a main cfg (alignak.cfg) and get all information
  from it. It create objects, make link between them, clean them, and cut
  them into independent parts. The main user of this is Arbiter, but schedulers
  use it too (but far less)
@@ -887,7 +887,7 @@ class Config(Item):
         self.old_properties_names_to_new()
 
     def _cut_line(self, line):
-        """Split the line on withespaces and remove empty chunks
+        """Split the line on whitespaces and remove empty chunks
 
         :param line: the line to split
         :type line: str
@@ -1372,7 +1372,7 @@ class Config(Item):
 
         # There are two ways of configuration serializing
         # One if to use the serial way, the other is with use_multiprocesses_serializer
-        # to call to sub-wrokers to do the job.
+        # to call to sub-workers to do the job.
         # TODO : enable on windows? I'm not sure it will work, must give a test
         if os.name == 'nt' or not self.use_multiprocesses_serializer:
             logger.info('Using the default serialization pass')
@@ -1447,7 +1447,7 @@ class Config(Item):
                     time.sleep(0.1)
 
                 # Check if we got the good number of configuration,
-                #  maybe one of the cildren got problems?
+                #  maybe one of the children got problems?
                 if len(child_q) != len(realm.confs):
                     logger.error("Something goes wrong in the configuration serializations, "
                                  "please restart Alignak Arbiter")
@@ -1525,7 +1525,7 @@ class Config(Item):
                 logger.info(line)
 
             logger.warning("Unmanaged configuration statement, do you really need it?"
-                           "Ask for it on the developer mailinglist %s or submit a pull "
+                           "Ask for it on the developer mailing list %s or submit a pull "
                            "request on the Alignak github ", mailing_list_uri)
 
     def override_properties(self):
@@ -2291,16 +2291,16 @@ class Config(Item):
         # The load balancing is for a loop, so all
         # hosts of a realm (in a pack) will be dispatch
         # in the schedulers of this realm
-        # REF: doc/pack-agregation.png
+        # REF: doc/pack-aggregation.png
 
         # Count the numbers of elements in all the realms, to compare it the total number of hosts
         nb_elements_all_realms = 0
         for realm in self.realms:
             # print "Load balancing realm", r.get_name()
             packs = {}
-            # create roundrobin iterator for id of cfg
-            # So dispatching is loadbalanced in a realm
-            # but add a entry in the roundrobin tourniquet for
+            # create round-robin iterator for id of cfg
+            # So dispatching is load balanced in a realm
+            # but add a entry in the round-robin tourniquet for
             # every weight point schedulers (so Weight round robin)
             weight_list = []
             no_spare_schedulers = [serv for serv in realm.schedulers if not serv.spare]
@@ -2341,7 +2341,7 @@ class Config(Item):
             assoc = {}
 
             # Now we explode the numerous packs into nb_packs reals packs:
-            # we 'load balance' them in a roundrobin way
+            # we 'load balance' them in a round-robin way
             for pack in realm.packs:
                 valid_value = False
                 old_pack = -1
@@ -2462,7 +2462,7 @@ class Config(Item):
         self.create_packs(nb_parts)
 
         # We've got all big packs and get elements into configurations
-        # REF: doc/pack-agregation.png
+        # REF: doc/pack-aggregation.png
         offset = 0
         for realm in self.realms:
             for i in realm.packs:

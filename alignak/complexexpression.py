@@ -165,7 +165,7 @@ class ComplexExpressionFactory(object):
         complex_node = False
 
         # Look if it's a complex pattern (with rule) or
-        # if it's a leaf ofit, like a host/service
+        # if it's a leaf of it, like a host/service
         for char in '()+&|,':
             if char in pattern:
                 complex_node = True
@@ -251,7 +251,7 @@ class ComplexExpressionFactory(object):
                     # node.sons.append(o)
 
             elif char == ')':
-                # print "Need closeing a sub expression?", tmp
+                # print "Need closing a sub expression?", tmp
                 stacked_par -= 1
 
                 if stacked_par < 0:

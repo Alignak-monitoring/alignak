@@ -245,7 +245,7 @@ class Alignak(BaseSatellite):
 
             t00 = time.time()
             conf = cPickle.loads(conf_raw)
-            logger.debug("Conf received at %d. Unserialized in %d secs", t00, time.time() - t00)
+            logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
             # Tag the conf with our data
@@ -312,7 +312,7 @@ class Alignak(BaseSatellite):
             if len(self.modules) != 0:
                 logger.debug("I've got %s modules", str(self.modules))
 
-            # TODO: if scheduler had previous modules instanciated it must clean them!
+            # TODO: if scheduler had previous modules instantiated it must clean them!
             self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")
@@ -348,7 +348,7 @@ class Alignak(BaseSatellite):
             ecm.load_scheduler(self.sched)
 
             # We clear our schedulers managed (it's us :) )
-            # and set ourself in it
+            # and set ourselves in it
             self.schedulers = {self.conf.instance_id: self.sched}
 
     def what_i_managed(self):

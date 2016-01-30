@@ -461,7 +461,7 @@ class DataManager(object):
         res = []
         for serv in self.reg.services:
             if serv.is_impact and serv.state not in ['OK', 'PENDING']:
-                # If s is acked, pass
+                # If s is acknowledged, pass
                 if serv.problem_has_been_acknowledged:
                     continue
                 # We search for impacts that were NOT currently managed
@@ -470,7 +470,7 @@ class DataManager(object):
                     res.append(serv)
         for host in self.reg.hosts:
             if host.is_impact and host.state not in ['UP', 'PENDING']:
-                # If h is acked, pass
+                # If h is acknowledged, pass
                 if host.problem_has_been_acknowledged:
                     continue
                 # We search for impacts that were NOT currently managed

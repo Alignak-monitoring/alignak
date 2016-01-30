@@ -132,7 +132,7 @@ class ServicesExtInfo(Items):
                 serv = services.find_srv_by_name_and_hostname(host_name,
                                                               extinfo.service_description)
                 if serv is not None:
-                    # FUUUUUUUUUUsion
+                    # Fusion
                     self.merge_extinfo(serv, extinfo)
 
     def merge_extinfo(self, service, extinfo):

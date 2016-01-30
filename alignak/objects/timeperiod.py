@@ -74,7 +74,7 @@
 #
 #  '([a-z]*) (\d+) - ([a-z]*) (\d+) / (\d+) ([0-9:, -]+)' => len = 6
 #  e.g.: february 1 - march 15 / 3 => MONTH DATE
-#  e.g.: monday 2 - thusday 3 / 2 => WEEK DAY
+#  e.g.: monday 2 - thursday 3 / 2 => WEEK DAY
 #  e.g.: day 2 - day 6 / 3 => MONTH DAY
 #
 #  '([a-z]*) (\d+) - (\d+) / (\d+) ([0-9:, -]+)' => len = 6
@@ -92,7 +92,7 @@
 #
 #  '([a-z]*) (\d+) - ([a-z]*) (\d+) ([0-9:, -]+)' => len = 5
 #  e.g.: february 1 - march 15  => MONTH DATE
-#  e.g.: monday 2 - thusday 3  => WEEK DAY
+#  e.g.: monday 2 - thursday 3  => WEEK DAY
 #  e.g.: day 2 - day 6  => MONTH DAY
 #
 #  '([a-z]*) (\d+) ([0-9:, -]+)' => len = 3
@@ -101,10 +101,10 @@
 #  e.g.: day 3 => MONTH DAY
 #
 #  '([a-z]*) (\d+) ([a-z]*) ([0-9:, -]+)' => len = 4
-#  e.g.: thusday 3 february => MONTH WEEK DAY
+#  e.g.: thursday 3 february => MONTH WEEK DAY
 #
 #  '([a-z]*) ([0-9:, -]+)' => len = 6
-#  e.g.: thusday => normal values
+#  e.g.: thursday => normal values
 #
 # Types: CALENDAR_DATE
 #        MONTH WEEK DAY
@@ -164,7 +164,7 @@ class Timeperiod(Item):
         self.exclude = []
 
         self.invalid_entries = []
-        self.cache = {}  # For tunning purpose only
+        self.cache = {}  # For tuning purpose only
         self.invalid_cache = {}  # same but for invalid search
         self.is_active = None
         self.tags = set()
@@ -881,7 +881,7 @@ class Timeperiod(Item):
 
     def explode(self):
         """
-        Try to resolv all unresolved elements
+        Try to resolve all unresolved elements
 
         :param timeperiods: Timeperiods object
         :type timeperiods:
@@ -961,7 +961,7 @@ class Timeperiods(Items):
 
     def explode(self):
         """
-        Try to resolv each timeperiod
+        Try to resolve each timeperiod
 
         :return: None
         """

@@ -371,7 +371,7 @@ class Contacts(Items):
         :type notificationways: alignak.objects.notificationway.Notificationways
         :return: None
         """
-        # Contactgroups property need to be fullfill for got the informations
+        # Contactgroups property need to be fulfill for got the information
         self.apply_partial_inheritance('contactgroups')
         # _special properties maybe came from a template, so
         # import them before grok ourselves
@@ -380,7 +380,7 @@ class Contacts(Items):
                 continue
             self.apply_partial_inheritance(prop)
 
-        # Register ourself into the contactsgroups we are in
+        # Register ourselves into the contactsgroups we are in
         for contact in self:
             if not (hasattr(contact, 'contact_name') and hasattr(contact, 'contactgroups')):
                 continue

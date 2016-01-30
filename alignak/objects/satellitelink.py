@@ -167,7 +167,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('ping')
             self.con.post('put_conf', {'conf': conf}, wait='long')
-            print "PUT CONF SUCESS", self.get_name()
+            print "PUT CONF SUCCESS", self.get_name()
             return True
         except HTTPEXCEPTIONS, exp:
             self.con = None
@@ -226,7 +226,7 @@ class SatelliteLink(Item):
         """Go in reachable=False and add a failed attempt
         if we reach the max, go dead
 
-        :param reason: the reason of adding an attemps (stack trace sometimes)
+        :param reason: the reason of adding an attempts (stack trace sometimes)
         :type reason: str
         :return: None
         """
@@ -400,7 +400,7 @@ class SatelliteLink(Item):
                 self.managed_confs = {}
                 return
 
-            # Ok protect against json that is chaning keys as string instead of int
+            # Ok protect against json that is changing keys as string instead of int
             tab_cleaned = {}
             for (key, val) in tab.iteritems():
                 try:
@@ -411,7 +411,7 @@ class SatelliteLink(Item):
             # We can update our list now
             self.managed_confs = tab_cleaned
         except HTTPEXCEPTIONS, exp:
-            print "EXCEPTION INwhat_i_managed", str(exp)
+            print "EXCEPTION IN what_i_managed", str(exp)
             # A timeout is not a crime, put this case aside
             # TODO : fix the timeout part?
             self.con = None
@@ -468,7 +468,7 @@ class SatelliteLink(Item):
         Get external commands from satellite.
         Unpickle data received.
 
-        :return: External Command list on succes, [] on failure
+        :return: External Command list on success, [] on failure
         :rtype: list
         """
         if self.con is None:

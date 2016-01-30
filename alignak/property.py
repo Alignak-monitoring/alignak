@@ -110,7 +110,7 @@ class Property(object):
         `retention_preparation`: function, if set, will go this function before
                      being save to the retention data
         `split_on_coma`: indicates that list property value should not be
-                     splitted on coma delimiter (values conain comas that
+                     split on coma delimiter (values conain comas that
                      we want to keep).
 
         Only for the initial call:
@@ -458,7 +458,7 @@ class ToGuessProp(Property):
             # If we have a list with a unique value just use it
             return val[0]
         else:
-            # Well, can't choose to remove somthing.
+            # Well, can't choose to remove something.
             return val
 
 

@@ -181,7 +181,7 @@ class Host(SchedulingItem):
 
         # For knowing with which elements we are in relation
         # of dep.
-        # childs are the hosts that have US as parent, so
+        # children are the hosts that have US as parent, so
         # only a network dep
         'childs':
             StringProp(brok_transformation=to_hostnames_list, default=[],
@@ -445,7 +445,7 @@ class Host(SchedulingItem):
         for tup in to_del:
             other.act_depend_of_me.remove(tup)
 
-        # Remove in child/parents deps too
+        # Remove in child/parents dependencies too
         # Me in father list
         other.child_dependencies.remove(self)
         # and father list in mine
@@ -517,7 +517,7 @@ class Host(SchedulingItem):
         # And I add me in it's list
         host.chk_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
 
-        # And we fill parent/childs dep for brok purpose
+        # And we fill parent/children dep for brok purpose
         # Here self depend on host
         host.register_son_in_parent_child_dependencies(self)
 
@@ -546,7 +546,7 @@ class Host(SchedulingItem):
 
         :param service:
         :type service: alignak.objects.service.Service
-        :return: True if is ecvluded, otherwise False
+        :return: True if is excluded, otherwise False
         :rtype: bool
         """
         return self.is_excluded_for_sdesc(service.service_description, service.is_tpl())
@@ -887,7 +887,7 @@ class Host(SchedulingItem):
         If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
         Raise a log entry (info level) if stalk is needed
 
-        :param check: finshed check (check.status == 'waitconsume')
+        :param check: finished check (check.status == 'waitconsume')
         :type check: alignak.check.Check
         :return: None
         """
@@ -1085,7 +1085,7 @@ class Host(SchedulingItem):
             return True
 
         # Block if business rule smart notifications is enabled and all its
-        # childs have been acknowledged or are under downtime.
+        # children have been acknowledged or are under downtime.
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked() is True \
@@ -1198,7 +1198,7 @@ class Host(SchedulingItem):
             return self.state
 
     def get_downtime(self):
-        """Accessor to scheduled_downtime_depth attribue
+        """Accessor to scheduled_downtime_depth attribute
 
         :return: scheduled downtime depth
         :rtype: str

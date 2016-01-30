@@ -412,7 +412,7 @@ class SchedulingItem(Item):
         # opposite of the parent_dependencies
         'child_dependencies': StringProp(brok_transformation=to_svc_hst_distinct_lists,
                                          default=set(), fill_brok=['full_status']),
-        # Manage the unknown/unreach during hard state
+        # Manage the unknown/unreachable during hard state
         'in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
         'was_in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
         # Set if the element just change its father/son topology
@@ -936,7 +936,7 @@ class SchedulingItem(Item):
         cls = self.__class__
         checks = []
         for (dep, _, _, timeperiod, _) in self.act_depend_of:
-            # If the dep timeperiod is not valid, do notraise the dep,
+            # If the dep timeperiod is not valid, do not raise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
                 # if the update is 'fresh', do not raise dep,
@@ -1354,8 +1354,8 @@ class SchedulingItem(Item):
 
         # By design modulation: if we got a host, we should look at the
         # use_aggressive_host_checking flag we should module 1 (warning return):
-        # 1 & agressive => DOWN/2
-        # 1 & !agressive => UP/0
+        # 1 & aggressive => DOWN/2
+        # 1 & !aggressive => UP/0
         cls = self.__class__
         if chk.exit_status == 1 and self.__class__.my_type == 'host':
             if cls.use_aggressive_host_checking:
@@ -1576,7 +1576,7 @@ class SchedulingItem(Item):
                 # PROBLEM/IMPACT
                 # Forces problem/impact registration even if no state change
                 # was detected as we may have a non OK state restored from
-                # retetion data. This way, we rebuild problem/impact hierarchy.
+                # retention data. This way, we rebuild problem/impact hierarchy.
                 # I'm a problem only if I'm the root problem,
                 # so not no_action:
                 if not no_action:
@@ -1888,13 +1888,13 @@ class SchedulingItem(Item):
         for contact in contacts:
             # We do not want to notify again a contact with
             # notification interval == 0 that has been already
-            # notified. Can happen when a service exit a dowtime
-            # and still in crit/warn (and not ack)
+            # notified. Can happen when a service exit a downtime
+            # and still in critical/warning (and not acknowledge)
             if notif.type == "PROBLEM" and \
                     self.notification_interval == 0 \
                     and contact in self.notified_contacts:
                 continue
-            # Get the property name for notif commands, like
+            # Get the property name for notification commands, like
             # service_notification_commands for service
             notif_commands = contact.get_notification_commands(cls.my_type)
 
@@ -2001,7 +2001,7 @@ class SchedulingItem(Item):
             data = self.get_data_for_checks()
             command_line = macroresolver.resolve_command(check_command, data)
 
-            # remember it, for pure debuging purpose
+            # remember it, for pure debugging purpose
             self.last_check_command = command_line
 
             # By default env is void
@@ -2135,7 +2135,7 @@ class SchedulingItem(Item):
         the $STATUS$, $SHORTSTATUS$ and $FULLNAME$ macro which name is common
         to hosts and services may be used to ease template writing.
 
-        Caution: only childs in state not OK are displayed.
+        Caution: only children in state not OK are displayed.
 
         Example:
           A business rule with a format string looking like
@@ -2204,15 +2204,15 @@ class SchedulingItem(Item):
                     # Problem hast been acknowledged
                     acknowledged += 1
                 # Only check problems under downtime if we are
-                # explicitely told to do so.
+                # explicitly told to do so.
                 elif self.business_rule_downtime_as_ack is True:
                     if src_prob.scheduled_downtime_depth > 0:
                         # Problem is under downtime, and downtimes should be
-                        # traeted as acknowledgements
+                        # treated as acknowledgements
                         acknowledged += 1
                     elif hasattr(src_prob, "host") and src_prob.host.scheduled_downtime_depth > 0:
                         # Host is under downtime, and downtimes should be
-                        # traeted as acknowledgements
+                        # treated as acknowledgements
                         acknowledged += 1
 
         return acknowledged == len(self.source_problems)
@@ -2311,7 +2311,7 @@ class SchedulingItem(Item):
                 )
 
     def fill_data_brok_from(self, data, brok_type):
-        """Fill data brok dependending onthe brok_type
+        """Fill data brok dependent on the brok_type
 
         :param data: data to fill
         :type data: dict
@@ -2436,7 +2436,7 @@ class SchedulingItem(Item):
 
     def raise_snapshot_log_entry(self, command):
         """Raise item SNAPSHOT entry (critical level)
-        Format is : "UTEM SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
+        Format is : "ITEM SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
                     *command.get_name()*"
         Example : "HOST SNAPSHOT: server;UP;HARD;1;notify-by-rss"
 
@@ -2550,7 +2550,7 @@ class SchedulingItem(Item):
     def manage_stalking(self, check):
         """Check if the item need stalking or not (immediate recheck)
 
-        :param check: finshed check (check.status == 'waitconsume')
+        :param check: finished check (check.status == 'waitconsume')
         :type check: alignak.check.Check
         :return: None
         """

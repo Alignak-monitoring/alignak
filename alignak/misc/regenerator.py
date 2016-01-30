@@ -81,7 +81,7 @@ class Regenerator(object):
     """
     def __init__(self):
 
-        # Our Real datas
+        # Our Real data
         self.configs = {}
         self.hosts = Hosts([])
         self.services = Services([])
@@ -203,7 +203,7 @@ class Regenerator(object):
 
     def update_element(self, item, data):
         """
-        Update object attibute with value contained in data keys
+        Update object attribute with value contained in data keys
 
         :param item: A alignak object
         :type item: alignak.object.Item
@@ -661,7 +661,7 @@ class Regenerator(object):
         # Try to get the inp progress Hosts
         try:
             inp_hosts = self.inp_hosts[inst_id]
-        except Exception, exp:  # not good. we will cry in theprogram update
+        except Exception, exp:  # not good. we will cry in the program update
             print "Not good!", exp
             return
 
@@ -749,7 +749,7 @@ class Regenerator(object):
         # Try to get the inp progress Hostgroups
         try:
             inp_servicegroups = self.inp_servicegroups[inst_id]
-        except Exception, exp:  # not good. we will cry in theprogram update
+        except Exception, exp:  # not good. we will cry in the program update
             print "Not good!", exp
             return
 
@@ -1050,8 +1050,8 @@ class Regenerator(object):
                       'maintenance_period', 'realm', 'customs', 'escalations']
 
         # some are only use when a topology change happened
-        toplogy_change = brok.data['topology_change']
-        if not toplogy_change:
+        topology_change = brok.data['topology_change']
+        if not topology_change:
             other_to_clean = ['childs', 'parents', 'child_dependencies', 'parent_dependencies']
             clean_prop.extend(other_to_clean)
 
@@ -1071,7 +1071,7 @@ class Regenerator(object):
             self.linkify_dict_srv_and_hosts(host, 'source_problems')
 
             # If the topology change, update it
-            if toplogy_change:
+            if topology_change:
                 print "Topology change for", host.get_name(), host.parent_dependencies
                 self.linkify_host_and_hosts(host, 'parents')
                 self.linkify_host_and_hosts(host, 'childs')
@@ -1098,8 +1098,8 @@ class Regenerator(object):
                       'maintenance_period', 'customs', 'escalations']
 
         # some are only use when a topology change happened
-        toplogy_change = brok.data['topology_change']
-        if not toplogy_change:
+        topology_change = brok.data['topology_change']
+        if not topology_change:
             other_to_clean = ['child_dependencies', 'parent_dependencies']
             clean_prop.extend(other_to_clean)
 
@@ -1119,7 +1119,7 @@ class Regenerator(object):
             self.linkify_dict_srv_and_hosts(serv, 'source_problems')
 
             # If the topology change, update it
-            if toplogy_change:
+            if topology_change:
                 self.linkify_dict_srv_and_hosts(serv, 'parent_dependencies')
                 self.linkify_dict_srv_and_hosts(serv, 'child_dependencies')
 

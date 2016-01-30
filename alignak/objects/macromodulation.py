@@ -102,7 +102,7 @@ class MacroModulation(Item):
         """
         Check if the macromodulation is valid and have all properties defined
 
-        :return: True if valide, otherwise False
+        :return: True if valid, otherwise False
         :rtype: bool
         """
         state = True

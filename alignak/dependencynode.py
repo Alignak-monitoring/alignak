@@ -223,7 +223,7 @@ class DependencyNode(object):
         # First we get the state of all our sons
         states = [s.get_state() for s in self.sons]
 
-        # We search for OK, WARN or CRIT applications
+        # We search for OK, WARNING or CRITICAL applications
         # And we will choice between them
         nb_search_ok = self.of_values[0]
         nb_search_warn = self.of_values[1]
@@ -388,7 +388,7 @@ class DependencyNodeFactory(object):
         complex_node = False
 
         # Look if it's a complex pattern (with rule) or
-        # if it's a leaf ofit, like a host/service
+        # if it's a leaf of it, like a host/service
         for char in '()&|':
             if char in pattern:
                 complex_node = True
@@ -470,7 +470,7 @@ class DependencyNodeFactory(object):
                     tmp += char
 
             elif char == ')':
-                # print "Need closeing a sub expression?", tmp
+                # print "Need closing a sub expression?", tmp
                 stacked_par -= 1
 
                 if stacked_par < 0:

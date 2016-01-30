@@ -111,8 +111,8 @@ class Contactgroup(Itemgroup):
         # its contactgroup_members attribute, even if it's empty / the empty list.
         if hasattr(self, 'contactgroup_members'):
             # more over: it should already be in the list form,
-            # not anymore in the "bare" string from as readed
-            # from configuration (files or db or whaterver)
+            # not anymore in the "bare" string from as read
+            # from configuration (files or db or whatever)
             return [m.strip() for m in self.contactgroup_members.split(',')]
         else:
             return []
@@ -213,7 +213,7 @@ class Contactgroups(Itemgroups):
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the begining so don't care about spaces
+                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
                 if mbr == '':  # void entry, skip this
                     continue
                 member = contacts.find_by_name(mbr)
@@ -236,7 +236,7 @@ class Contactgroups(Itemgroups):
         :param cname: contact name
         :type cname: str
         :param cgname: contact group name
-        :type cgname: strr
+        :type cgname: str
         :return: None
         """
         contactgroup = self.find_by_name(cgname)
