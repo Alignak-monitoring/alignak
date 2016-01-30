@@ -45,10 +45,7 @@ class ArbiterInterface(GenericInterface):
         # Beware, we got an str in entry, not an int
         magic_hash = int(magic_hash)
         # I've got a conf and a good one
-        if self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash:
-            return True
-        else:  # I've no conf or a bad one
-            return False
+        return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
 
     @cherrypy.expose
     def put_conf(self, conf):
