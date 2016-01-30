@@ -330,10 +330,7 @@ class AbstractDaterange(object):
         :rtype: bool
         """
         (start_time, end_time) = self.get_start_and_end_time(timestamp)
-        if start_time <= timestamp <= end_time:
-            return True
-        else:
-            return False
+        return start_time <= timestamp <= end_time
 
     def is_time_day_invalid(self, timestamp):
         """Check if t is out of start time and end time of the DateRange
