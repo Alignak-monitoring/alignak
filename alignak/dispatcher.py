@@ -372,7 +372,7 @@ class Dispatcher:
 
         return scheds
 
-    def dispatch(self):
+    def dispatch(self):  # pylint: disable=R0915
         """Dispatch configuration to other daemons
         REF: doc/alignak-conf-dispatching.png (3)
 

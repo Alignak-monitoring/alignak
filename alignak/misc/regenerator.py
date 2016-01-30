@@ -214,7 +214,7 @@ class Regenerator(object):  # pylint: disable=R0904
         for prop in data:
             setattr(item, prop, data[prop])
 
-    def all_done_linking(self, inst_id):
+    def all_done_linking(self, inst_id):  # pylint: disable=R0915
         """
         Link all data (objects) in a specific instance
 

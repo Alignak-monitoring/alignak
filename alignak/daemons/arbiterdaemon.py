@@ -208,7 +208,7 @@ class Arbiter(Daemon):
         # the attribute name to get these differs for schedulers and arbiters
         return daemon_type + 's'
 
-    def load_config_file(self):
+    def load_config_file(self):  # pylint: disable=R0915
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters

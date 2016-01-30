@@ -2177,7 +2177,7 @@ class Config(Item):  # pylint: disable=R0904
         for err in self.configuration_errors:
             logger.error(err)
 
-    def create_packs(self, nb_packs):
+    def create_packs(self, nb_packs):  # pylint: disable=R0915
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.

@@ -446,7 +446,7 @@ class Broker(BaseSatellite):
             child.join(1)
         super(Broker, self).do_stop()
 
-    def setup_new_conf(self):
+    def setup_new_conf(self):  # pylint: disable=R0915
         """Parse new configuration and initialize all required
 
         :return: None

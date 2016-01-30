@@ -685,7 +685,7 @@ class ExternalCommandManager:
                 # sched.run_external_command(command)
                 sched.external_commands.append(command)
 
-    def get_command_and_args(self, command, extcmd=None):
+    def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0915
         """Parse command and get args
 
         :param command: command line to parse

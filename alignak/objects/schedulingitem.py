@@ -1276,7 +1276,7 @@ class SchedulingItem(Item):
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
 
-    def consume_result(self, chk):
+    def consume_result(self, chk):  # pylint: disable=R0915
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
