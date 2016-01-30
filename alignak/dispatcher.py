@@ -178,7 +178,7 @@ class Dispatcher:
             if arb != self.arbiter and self.arbiter and not self.arbiter.spare:
                 if not arb.have_conf(self.conf.magic_hash):
                     if not hasattr(self.conf, 'whole_conf_pack'):
-                        logger.error('CRITICAL: the arbiter try to send a configureion but '
+                        logger.error('CRITICAL: the arbiter try to send a configuration but '
                                      'it is not a MASTER one?? Look at your configuration.')
                         continue
                     arb.put_conf(self.conf.whole_conf_pack)
@@ -450,13 +450,13 @@ class Dispatcher:
                             'skip_initial_broks': sched.skip_initial_broks,
                             'accept_passive_unknown_check_results':
                                 sched.accept_passive_unknown_check_results,
-                            # shiken.io part
+                            # shinken.io part
                             'api_key': self.conf.api_key,
                             'secret': self.conf.secret,
                             'http_proxy': self.conf.http_proxy,
                             # statsd one too because OlivierHA love statsd
                             # and after some years of effort he manages to make me
-                            # understand the powerfullness of metrics :)
+                            # understand the powerfulness of metrics :)
                             'statsd_host': self.conf.statsd_host,
                             'statsd_port': self.conf.statsd_port,
                             'statsd_prefix': self.conf.statsd_prefix,
@@ -540,7 +540,7 @@ class Dispatcher:
                         # If we got a broker, we make the list to pop a new
                         # item first for each scheduler, so it will smooth the load
                         # But the spare must stay at the end ;)
-                        # WARNING : skip this if we are in a complet broker link realm
+                        # WARNING : skip this if we are in a complete broker link realm
                         if kind == "broker" and not realm.broker_complete_links:
                             nospare = [s for s in satellites if not s.spare]
                             # Should look over the list, not over
@@ -633,7 +633,7 @@ class Dispatcher:
                         if rec.reachable:
                             is_sent = rec.put_conf(rec.cfg)
                         else:
-                            logger.info('[%s] Skyping configuration sent to offline receiver %s',
+                            logger.info('[%s] Skipping configuration sent to offline receiver %s',
                                         realm.get_name(), rec.get_name())
                         if is_sent:
                             rec.active = True

@@ -134,7 +134,7 @@ class HostsExtInfo(Items):
             host_name = extinfo.get_name()
             host = hosts.find_by_name(host_name)
             if host is not None:
-                # FUUUUUUUUUUsion
+                # Fusion
                 self.merge_extinfo(host, extinfo)
 
     def merge_extinfo(self, host, extinfo):

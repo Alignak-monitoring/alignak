@@ -308,7 +308,7 @@ class Daemon(object):
             self.request_stop()
 
     def do_loop_turn(self):
-        """Abstract method for deamon loop turn.
+        """Abstract method for daemon loop turn.
         It must be overridden by class inheriting from Daemon
 
         :return: None
@@ -383,7 +383,7 @@ class Daemon(object):
             self.relative_paths_to_full(os.path.dirname(self.config_file))
 
     def load_modules_manager(self):
-        """Instanciate Modulesmanager and load the SyncManager (multiprocessing)
+        """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
 
         :return: None
         """
@@ -632,7 +632,7 @@ class Daemon(object):
     # a socket of your http server alive
     @staticmethod
     def _create_manager():
-        """Instanciate and start a SyncManager
+        """Instantiate and start a SyncManager
 
         :return: the manager
         :rtype: multiprocessing.managers.SyncManager
@@ -958,7 +958,7 @@ class Daemon(object):
             logger.info(line)
 
     def http_daemon_thread(self):
-        """Main fonction of the http daemon thread will loop forever unless we stop the root daemon
+        """Main function of the http daemon thread will loop forever unless we stop the root daemon
 
         :return: None
         """
@@ -995,7 +995,7 @@ class Daemon(object):
         if suppl_socks:
             socks.extend(suppl_socks)
 
-        # Ok give me the socks taht moved during the timeout max
+        # Ok give me the socks that moved during the timeout max
         ins = self.get_socks_activity(socks, timeout)
         # Ok now get back the global lock!
         tcdiff = self.check_for_system_time_change()
@@ -1063,7 +1063,7 @@ class Daemon(object):
             sys.stdout.flush()
 
     def hook_point(self, hook_name):
-        """Used to call module function that may define a hook fonction
+        """Used to call module function that may define a hook function
         for hook_name
 
         :param hook_name: function name we may hook in module

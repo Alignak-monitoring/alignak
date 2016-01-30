@@ -57,7 +57,7 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
-This module provie Arbiter class used to run a arbiter daemon
+This module provide Arbiter class used to run a arbiter daemon
 """
 import sys
 import os
@@ -326,7 +326,7 @@ class Arbiter(Daemon):
         # Remove templates from config
         self.conf.remove_templates()
 
-        # Overrides sepecific service instaces properties
+        # Overrides specific service instances properties
         self.conf.override_properties()
 
         # Linkify objects to each other

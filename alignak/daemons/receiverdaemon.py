@@ -126,7 +126,7 @@ class Receiver(Satellite):
             self.broks[elt._id] = elt
             return
         elif cls_type == 'externalcommand':
-            logger.debug("Enqueuing an external command: %s", str(ExternalCommand.__dict__))
+            logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))
             self.unprocessed_external_commands.append(elt)
 
     def push_host_names(self, sched_id, hnames):

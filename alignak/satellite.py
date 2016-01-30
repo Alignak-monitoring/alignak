@@ -240,7 +240,7 @@ class Satellite(BaseSatellite):
             return
 
         # The schedulers have been restarted: it has a new run_id.
-        # So we clear all verifs, they are obsolete now.
+        # So we clear all verifications, they are obsolete now.
         if sched['running_id'] != 0 and new_run_id != running_id:
             logger.info("[%s] The running id of the scheduler %s changed, "
                         "we must clear its actions",
@@ -465,7 +465,7 @@ class Satellite(BaseSatellite):
             self.broks[elt._id] = elt
             return
         elif cls_type == 'externalcommand':
-            logger.debug("Enqueuing an external command '%s'", str(elt.__dict__))
+            logger.debug("Queuing an external command '%s'", str(elt.__dict__))
             with self.external_commands_lock:
                 self.external_commands.append(elt)
 
@@ -1010,7 +1010,7 @@ class Satellite(BaseSatellite):
         res = super(Satellite, self).get_stats_struct()
         _type = self.__class__.my_type
         res.update({'name': self.name, 'type': _type})
-        # The receiver do nto have a passie prop
+        # The receiver do not have a passive prop
         if hasattr(self, 'passive'):
             res['passive'] = self.passive
         metrics = res['metrics']

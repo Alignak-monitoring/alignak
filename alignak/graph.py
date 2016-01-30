@@ -126,12 +126,12 @@ class Graph:
 
     def dfs_loop_search(self, root):
         """Main algorithm to look for loop.
-        It tags nodes and find ones stucked in loop.
+        It tags nodes and find ones stuck in loop.
 
         * Init all nodes with DFS_UNCHECKED value
         * DFS_TEMPORARY_CHECKED means we found it once
         * DFS_OK : this node (and all sons) are fine
-        * DFS_NEAR_LOOP : One froblem was found in of of the son
+        * DFS_NEAR_LOOP : One problem was found in of of the son
         * DFS_LOOP_INSIDE : This node is part of a loop
 
         :param root: Root of the dependency tree
@@ -150,7 +150,7 @@ class Graph:
                 child_status = child.dfs_loop_status
 
             # If a child has already been temporary checked, it's a problem,
-            # loop inside, and its a acked status
+            # loop inside, and its a checked status
             if child_status == 'DFS_TEMPORARY_CHECKED':
                 child.dfs_loop_status = 'DFS_LOOP_INSIDE'
                 root.dfs_loop_status = 'DFS_LOOP_INSIDE'
@@ -211,7 +211,7 @@ class Graph:
         ret.update(self.nodes[root])
 
         for child in self.nodes[root]:
-            # I just don't care about already checked childs
+            # I just don't care about already checked children
             if child.dfs_loop_status == 'DFS_UNCHECKED':
                 ret.update(self.dfs_get_all_childs(child))
 

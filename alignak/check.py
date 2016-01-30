@@ -47,7 +47,7 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provides Check classe which is a simple abstraction for monitoring checks
+"""This module provides Check class which is a simple abstraction for monitoring checks
 
 """
 from alignak.action import Action
@@ -64,7 +64,7 @@ class Check(Action):
     # AutoSlots create the __slots__ with properties and
     # running_properties names
 
-    # FIXME : reenable AutoSlots if possible
+    # FIXME : re-enable AutoSlots if possible
     # __metaclass__ = AutoSlots
 
     my_type = 'check'

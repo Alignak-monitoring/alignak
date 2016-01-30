@@ -87,7 +87,7 @@ import os
 import sys
 
 
-# We try to raise up recusion limit on
+# We try to raise up recursion limit on
 # but we don't have resource module on windows
 if os.name != 'nt':
     import resource

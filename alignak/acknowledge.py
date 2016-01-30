@@ -117,7 +117,7 @@ class Acknowledge:
 
     def __setstate__(self, state):
         """
-        Inversed function of getstate
+        Inverse function of getstate
 
         :param state: it's the state
         :type state: dict

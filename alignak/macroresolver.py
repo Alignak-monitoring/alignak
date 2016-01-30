@@ -114,7 +114,7 @@ class MacroResolver(Borg):
         :return: None
         """
 
-        # For searching class and elements for ondemand
+        # For searching class and elements for on-demand
         # we need link to types
         self.conf = conf
         self.lists_on_demand = []
@@ -306,8 +306,8 @@ class MacroResolver(Borg):
                             continue
                         if '_' + macro_name in elt.customs:
                             macros[macro]['val'] = elt.customs['_' + macro_name]
-                        # Then look on the macromodulations, in reserver order, so
-                        # the last to set, will be the firt to have. (yes, don't want to play
+                        # Then look on the macromodulations, in reverse order, so
+                        # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
                         mms = getattr(elt, 'macromodulations', [])
                         for macromod in mms[::-1]:

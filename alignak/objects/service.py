@@ -892,7 +892,7 @@ class Service(SchedulingItem):
         If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
         Raise a log entry (info level) if stalk is needed
 
-        :param check: finshed check (check.status == 'waitconsume')
+        :param check: finished check (check.status == 'waitconsume')
         :type check: alignak.check.Check
         :return: None
         """
@@ -1112,7 +1112,7 @@ class Service(SchedulingItem):
             return True
 
         # Block if business rule smart notifications is enabled and all its
-        # childs have been acknowledged or are under downtime.
+        # children have been acknowledged or are under downtime.
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked() is True \
@@ -1175,7 +1175,7 @@ class Service(SchedulingItem):
             return self.state
 
     def get_downtime(self):
-        """Accessor to scheduled_downtime_depth attribue
+        """Accessor to scheduled_downtime_depth attribute
 
         :return: scheduled downtime depth
         :rtype: str
@@ -1691,7 +1691,7 @@ class Services(Items):
     def explode(self, hosts, hostgroups, contactgroups,
                 servicegroups, servicedependencies, triggers):
         """
-        Explodes services, from host_name, hostgroup_name, and from templetes.
+        Explodes services, from host_name, hostgroup_name, and from templates.
 
         :param hosts: The hosts container
         :type hosts:
@@ -1757,7 +1757,7 @@ class Services(Items):
         for service in to_remove:
             self.remove_item(service)
 
-        # Servicegroups property need to be fullfill for got the informations
+        # Servicegroups property need to be fulfill for got the information
         # And then just register to this service_group
         for serv in self:
             self.register_service_into_servicegroups(serv, servicegroups)

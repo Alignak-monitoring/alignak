@@ -98,7 +98,7 @@ class Servicegroup(Itemgroup):
 
     def get_name(self):
         """
-        Get the name of the servicegrop
+        Get the name of the servicegroup
 
         :return: the servicegroup name string
         :rtype: str
@@ -182,7 +182,7 @@ class Servicegroups(Itemgroups):
         """
         We just search for each host the id of the host
         and replace the name by the id
-        TODO: very slow for hight services, so search with host list,
+        TODO: very slow for high services, so search with host list,
         not service one
 
         :param hosts: hosts object

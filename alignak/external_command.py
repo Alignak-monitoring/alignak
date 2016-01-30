@@ -3393,7 +3393,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(host)
 
     def start_obsessing_over_host_checks(self):
-        """Enable obssessing over host check (globally)
+        """Enable obsessing over host check (globally)
         Format of the line that triggers function call::
 
         START_OBSESSING_OVER_HOST_CHECKS
@@ -3407,12 +3407,12 @@ class ExternalCommandManager:
             self.sched.get_and_register_update_program_status_brok()
 
     def start_obsessing_over_svc(self, service):
-        """Enable obssessing over service for a service
+        """Enable obsessing over service for a service
         Format of the line that triggers function call::
 
         START_OBSESSING_OVER_SVC;<host_name>;<service_description>
 
-        :param service: service to obssess over
+        :param service: service to obsess over
         :type service: alignak.objects.service.Service
         :return: None
         """
@@ -3422,7 +3422,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(service)
 
     def start_obsessing_over_svc_checks(self):
-        """Enable obssessing over service check (globally)
+        """Enable obsessing over service check (globally)
         Format of the line that triggers function call::
 
         START_OBSESSING_OVER_SVC_CHECKS
@@ -3507,7 +3507,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(host)
 
     def stop_obsessing_over_host_checks(self):
-        """Disable obssessing over host check (globally)
+        """Disable obsessing over host check (globally)
         Format of the line that triggers function call::
 
         STOP_OBSESSING_OVER_HOST_CHECKS
@@ -3521,12 +3521,12 @@ class ExternalCommandManager:
             self.sched.get_and_register_update_program_status_brok()
 
     def stop_obsessing_over_svc(self, service):
-        """Disable obssessing over service for a service
+        """Disable obsessing over service for a service
         Format of the line that triggers function call::
 
         STOP_OBSESSING_OVER_SVC;<host_name>;<service_description>
 
-        :param service: service to obssess over
+        :param service: service to obsess over
         :type service: alignak.objects.service.Service
         :return: None
         """
@@ -3536,7 +3536,7 @@ class ExternalCommandManager:
             self.sched.get_and_register_status_brok(service)
 
     def stop_obsessing_over_svc_checks(self):
-        """Disable obssessing over service check (globally)
+        """Disable obsessing over service check (globally)
         Format of the line that triggers function call::
 
         STOP_OBSESSING_OVER_SVC_CHECKS

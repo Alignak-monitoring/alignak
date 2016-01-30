@@ -52,7 +52,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
 This module provide logging facilities for Alignak.
-There is a custom log handler that create broks for every log emited with level < debug
+There is a custom log handler that create broks for every log emitted with level < debug
 """
 import logging
 import sys

@@ -213,7 +213,7 @@ class Scheduler(object):
     def load_conf(self, conf):
         """Load configuration received from Arbiter
 
-        :param conf: configuration to laod
+        :param conf: configuration to load
         :type conf: alignak.objects.config.Config
         :return: None
         """
@@ -1925,7 +1925,7 @@ class Scheduler(object):
                 return -1
             return 0
         stats.sort(p_sort)
-        # takethe first 10 ones for the put
+        # take the first 10 ones for the put
         res['commands'] = stats[:10]
         return res
 
@@ -1993,7 +1993,7 @@ class Scheduler(object):
 
             self.load_one_min.update_load(self.sched_daemon.sleep_time)
 
-            # load of the scheduler is the percert of time it is waiting
+            # load of the scheduler is the percent of time it is waiting
             load = min(100, 100.0 - self.load_one_min.get_load() * 100)
             logger.debug("Load: (sleep) %.2f (average: %.2f) -> %d%%",
                          self.sched_daemon.sleep_time, self.load_one_min.get_load(), load)
@@ -2066,6 +2066,6 @@ class Scheduler(object):
 
             self.hook_point('scheduler_tick')
 
-        # WE must save the retention at the quit BY OURSELF
+        # WE must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
         self.update_retention_file(True)

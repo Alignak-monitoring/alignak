@@ -16,7 +16,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provide a specific HTTP interface for a SCheduler."""
+"""This module provide a specific HTTP interface for a Scheduler."""
 
 import base64
 import cPickle
@@ -171,11 +171,11 @@ class SchedulerInterface(GenericInterface):
             latencies.extend([s.latency for s in sched.hosts])
             lat_avg, lat_min, lat_max = average_percentile(latencies)
             res['latency_average'] = 0.0
-            res['latency_minimun'] = 0.0
+            res['latency_minimum'] = 0.0
             res['latency_maximum'] = 0.0
             if lat_avg:
                 res['latency_average'] = lat_avg
-                res['latency_minimun'] = lat_min
+                res['latency_minimum'] = lat_min
                 res['latency_maximum'] = lat_max
         return res
 

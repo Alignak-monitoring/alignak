@@ -46,7 +46,7 @@
 """
 This is the class of the Arbiter. Its role is to read configuration,
 cut it, and send it to other elements like schedulers, reactionners
-or pollers. It is also responsible for the high avaibility feature.
+or pollers. It is also responsible for the high availability feature.
 For example, if a scheduler dies, it sends the late scheduler's conf
 to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.

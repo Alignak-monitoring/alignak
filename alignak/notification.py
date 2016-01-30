@@ -137,7 +137,7 @@ class Notification(Action):
         self.command_call = command_call
         self.output = None
         self.execution_time = 0.0
-        self.u_time = 0.0  # user executon time
+        self.u_time = 0.0  # user execution time
         self.s_time = 0.0  # system execution time
 
         self.ref = ref

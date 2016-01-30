@@ -89,7 +89,7 @@ class HTTPClient(object):
 
     @property
     def con(self):
-        """Deprecated properrty of HTTPClient
+        """Deprecated property of HTTPClient
 
         :return: connection
         :rtype: object

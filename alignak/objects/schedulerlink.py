@@ -84,7 +84,7 @@ class SchedulerLink(SatelliteLink):
         :type commands:
         :return: False, None
         :rtype: bool | None
-        TODO: need recode this fonction because return types are too many
+        TODO: need recode this function because return types are too many
         """
         if self.con is None:
             self.create_connection()

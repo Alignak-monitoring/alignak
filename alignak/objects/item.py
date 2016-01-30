@@ -251,7 +251,7 @@ class Item(object):
 
     def clean(self):
         """
-        Clean properties only need when initilize & configure
+        Clean properties only need when initialize & configure
 
         :return: None
         """
@@ -919,10 +919,10 @@ class Items(object):
 
     def manage_conflict(self, item, name):
         """
-        Cheks if an object holding the same name already exists in the index.
+        Checks if an object holding the same name already exists in the index.
 
         If so, it compares their definition order: the lowest definition order
-        is kept. If definiton order equal, an error is risen.Item
+        is kept. If definition order equal, an error is risen.Item
 
         The method returns the item that should be added after it has decided
         which one should be kept.
@@ -1059,7 +1059,7 @@ class Items(object):
 
     def index_item(self, item):
         """
-        Indexe an item into our `name_to_item` dictionary.
+        Index an item into our `name_to_item` dictionary.
         If an object holding the same item's name/key already exists in the index
         then the conflict is managed by the `manage_conflict` method.
 
@@ -1333,7 +1333,7 @@ class Items(object):
 
     def apply_partial_inheritance(self, prop):
         """
-        Define property with inherance value of the property
+        Define property with inheritance value of the property
 
         :param prop: property
         :type prop: str
@@ -1351,7 +1351,7 @@ class Items(object):
 
     def apply_inheritance(self):
         """
-        For all items and templates inherite properties and custom variables.
+        For all items and templates inherit properties and custom variables.
 
         :return: None
         """
