@@ -479,10 +479,7 @@ def to_bool(val):
     :return: True if val == '1' or val == 'on' or val == 'true' or val == 'True', else False
     :rtype: bool
     """
-    if val == '1' or val == 'on' or val == 'true' or val == 'True':
-        return True
-    else:
-        return False
+    return val in ['1', 'on', 'true', 'True']
 
 
 def from_bool_to_string(boolean):
