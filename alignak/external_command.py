@@ -700,27 +700,15 @@ class ExternalCommandManager:
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
         part1 = elts[0]
-
         elts2 = part1.split(' ')
-        # print "Elts2:", elts2
-        if len(elts2) != 2:
-            logger.debug("Malformed command '%s'", command)
-            return None
-        timestamp = elts2[0]
-        # Now we will get the timestamps as [123456]
-        if not timestamp.startswith('[') or not timestamp.endswith(']'):
-            logger.debug("Malformed command '%s'", command)
-            return None
-        # Ok we remove the [ ]
-        timestamp = timestamp[1:-1]
-        try:  # is an int or not?
+        try:
+            timestamp = elts2[0]
+            timestamp = timestamp[1:-1]
+            c_name = elts2[1].lower()
             self.current_timestamp = to_int(timestamp)
-        except ValueError:
+        except (ValueError, IndexError):
             logger.debug("Malformed command '%s'", command)
             return None
-
-        # Now get the command
-        c_name = elts2[1].lower()
 
         # safe_print("Get command name", c_name)
         if c_name not in ExternalCommandManager.commands:
