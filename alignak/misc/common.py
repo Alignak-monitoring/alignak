@@ -44,6 +44,10 @@ This module is used for common variables in Alignak.
 Previously some of those variables were linked to a specific class which made no sense.
 """
 from collections import namedtuple
+try:
+    from setproctitle import setproctitle  # pylint: disable=W0611
+except ImportError as err:
+    setproctitle = lambda s: None  # pylint: disable=C0103
 
 ModAttr = namedtuple('ModAttr', ['modattr', 'attribute', 'value'])
 
@@ -101,8 +105,3 @@ DICT_MODATTR = {
     "notification_period": ModAttr("MODATTR_NOTIFICATION_TIMEPERIOD", "notification_period", 65536),
 
 }
-
-try:
-    from setproctitle import setproctitle  # pylint: disable=W0611
-except ImportError as err:
-    setproctitle = lambda s: None  # pylint: disable=C0103

@@ -124,10 +124,7 @@ class Check(Action):
         # we keep the reference of the poller that will take us
         self.worker = 'none'
         # If it's a business rule, manage it as a special check
-        if ref and ref.got_business_rule or command.startswith('_internal'):
-            self.internal = True
-        else:
-            self.internal = False
+        self.internal = ref and ref.got_business_rule or command.startswith('_internal')
         self.from_trigger = from_trigger
         self.dependency_check = dependency_check
 

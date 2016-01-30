@@ -71,9 +71,6 @@ from alignak.brok import Brok
 # name = None
 HUMAN_TIMESTAMP_LOG = False
 
-__brokhandler__ = None
-
-
 DEFAULT_FORMATTER = Formatter('[%(created)i] %(levelname)s: %(message)s')
 DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
 HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
@@ -162,7 +159,6 @@ class Log(logging.Logger):
         :type name_: str | None
         :return: None
         """
-        global __brokhandler__
         __brokhandler__ = BrokHandler(obj)
         if name_ is not None or self.name is not None:
             if name_ is not None:
@@ -227,7 +223,7 @@ class Log(logging.Logger):
         :type human: bool
         :return: None
         """
-        global HUMAN_TIMESTAMP_LOG
+        global HUMAN_TIMESTAMP_LOG  # pylint: disable=W0603
         HUMAN_TIMESTAMP_LOG = bool(human)
 
         # Apply/Remove the human format to all handlers except the brok one.

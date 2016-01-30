@@ -99,10 +99,7 @@ class CommandCall(DummyCommandCall):
         self.get_command_and_args()
         self.command = commands.find_by_name(self.command.strip())
         self.late_relink_done = False  # To do not relink again and again the same commandcall
-        if self.command is not None:
-            self.valid = True
-        else:
-            self.valid = False
+        self.valid = self.command is not None
         if self.valid:
             # If the host/service do not give an override poller_tag, take
             # the one of the command

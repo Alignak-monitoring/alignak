@@ -1086,7 +1086,7 @@ class Config(Item):
             # A define must be catch and the type save
             # The old entry must be save before
             elif re.search("^define", line) is not None:
-                if re.search(r".*\{.*$", line) is not None:
+                if re.search(r".*\{.*$", line) is not None:  # pylint: disable=R0102
                     in_define = True
                 else:
                     almost_in_define = True
