@@ -75,7 +75,7 @@ from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
 
 
-class ExternalCommand:
+class ExternalCommand:  # pylint: disable=R0903
     """ExternalCommand class is only an object with a cmd_line attribute.
     All parsing and execution is done in manager
 

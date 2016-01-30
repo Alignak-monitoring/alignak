@@ -58,7 +58,7 @@ from alignak.property import StringProp, IntegerProp, BoolProp
 from alignak.autoslots import AutoSlots
 
 
-class DummyCommand(object):
+class DummyCommand(object):  # pylint: disable=R0903
     """
     Class used to set __autoslots__ because can't set it
     in same class you use

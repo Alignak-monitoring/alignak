@@ -78,7 +78,7 @@ def guess_int_or_float(val):
         return None
 
 
-class Metric:
+class Metric:  # pylint: disable=R0903
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
@@ -114,7 +114,7 @@ class Metric:
         return string
 
 
-class PerfDatas:
+class PerfDatas:  # pylint: disable=R0903
     """
     Class providing performance data extracted from a check output
     """
