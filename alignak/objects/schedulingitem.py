@@ -2214,10 +2214,8 @@ class SchedulingItem(Item):
                         # Host is under downtime, and downtimes should be
                         # traeted as acknowledgements
                         acknowledged += 1
-        if acknowledged == len(self.source_problems):
-            return True
-        else:
-            return False
+
+        return acknowledged == len(self.source_problems)
 
     def manage_internal_check(self, hosts, services, check):
         """Manage internal commands such as ::
@@ -2349,10 +2347,7 @@ class SchedulingItem(Item):
             if notify:
                 self.create_notifications('ACKNOWLEDGEMENT')
             self.problem_has_been_acknowledged = True
-            if sticky == 2:
-                sticky = True
-            else:
-                sticky = False
+            sticky = sticky == 2
             ack = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
             self.acknowledgement = ack
             if self.my_type == 'host':
