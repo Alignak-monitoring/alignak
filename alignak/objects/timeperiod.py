@@ -605,7 +605,7 @@ class Timeperiod(Item):
 
         return string
 
-    def resolve_daterange(self, dateranges, entry):
+    def resolve_daterange(self, dateranges, entry):  # pylint: disable=R0911
         """
         Try to solve dateranges (special cases)
 

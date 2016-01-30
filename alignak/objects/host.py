@@ -1036,46 +1036,34 @@ class Host(SchedulingItem):
         # custom notification -> false
 
         # Block if notifications are program-wide disabled
-        if not self.enable_notifications:
-            return True
-
-        # Does the notification period allow sending out this notification?
-        if (self.notification_period is not None and
-                not self.notification_period.is_time_valid(t_wished)):
-            return True
-
         # Block if notifications are disabled for this host
-        if not self.notifications_enabled:
-            return True
-
         # Block if the current status is in the notification_options d,u,r,f,s
-        if 'n' in self.notification_options:
+        # Does the notification period allow sending out this notification?
+        if not self.enable_notifications or \
+                not self.notifications_enabled or \
+                'n' in self.notification_options or \
+                (self.notification_period is not None and
+                 not self.notification_period.is_time_valid(t_wished)):
             return True
 
-        if n_type in ('PROBLEM', 'RECOVERY'):
-            if self.state == 'DOWN' and 'd' not in self.notification_options:
-                return True
-            if self.state == 'UP' and 'r' not in self.notification_options:
-                return True
-            if self.state == 'UNREACHABLE' and 'u' not in self.notification_options:
-                return True
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
-                and 'f' not in self.notification_options):
+        if n_type in ('PROBLEM', 'RECOVERY') and (
+                self.state == 'DOWN' and 'd' not in self.notification_options or
+                self.state == 'UP' and 'r' not in self.notification_options or
+                self.state == 'UNREACHABLE' and 'u' not in self.notification_options):
             return True
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
+                and 'f' not in self.notification_options) or \
+            (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
                 and 's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == 'ACKNOWLEDGEMENT':
-            if self.state == self.ok_up:
-                return True
-
         # Flapping
-        if n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            # TODO block if not notify_on_flapping
-            if self.scheduled_downtime_depth > 0:
-                return True
+        # TODO block if not notify_on_flapping
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                self.scheduled_downtime_depth > 0) or \
+                n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+            return True
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
@@ -1087,11 +1075,9 @@ class Host(SchedulingItem):
             return True
 
         # Block if the status is SOFT
-        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
-            return True
-
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
+        if self.state_type == 'SOFT' and n_type == 'PROBLEM' or \
+                self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
             return True
 
         # Block if flapping

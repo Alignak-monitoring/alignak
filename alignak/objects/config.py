@@ -65,7 +65,7 @@
  from it. It create objects, make link between them, clean them, and cut
  them into independent parts. The main user of this is Arbiter, but schedulers
  use it too (but far less)"""
-
+# pylint: disable=C0302
 import re
 import sys
 import string

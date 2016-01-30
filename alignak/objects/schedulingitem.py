@@ -60,7 +60,7 @@
 will find all scheduling related functions, like the schedule
 or the consume_check. It's a very important class!
 """
-
+# pylint: disable=C0302
 import re
 import random
 import time

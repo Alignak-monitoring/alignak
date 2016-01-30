@@ -34,7 +34,14 @@ load-plugins=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=W0142
+
+# C1001 : *Old-style class defined.*. Reenable when cPickle is dropped
+# I0011 : *Locally disabling %s (%s)* Try to reduce that.
+# W0511 : *FIXME or XXX is detected.* Reenable when done. To link with roadmap
+# W0212 : *Access to a protected member %s of a client class*. Reenable when _id replace by uuid
+# W0201 : *Attribute %r defined outside __init__*. Because we instanciate object with properties dict
+# C0330:  *Wrong %s indentation%s%s.* Conflict with pep8
+disable=C1001,W0201,W0212,I0011,W0511,C0330
 
 
 [REPORTS]
@@ -233,7 +240,7 @@ single-line-if-stmt=no
 no-space-check=trailing-comma,dict-separator
 
 # Maximum number of lines in a module
-max-module-lines=1000
+max-module-lines=1500
 
 # String used as indentation unit. This is usually " " (4 spaces) or "\t" (1
 # tab).
@@ -265,7 +272,7 @@ ignored-argument-names=_.*
 max-locals=15
 
 # Maximum number of return / yield for function / method body
-max-returns=6
+max-returns=10
 
 # Maximum number of branch for function / method body
 max-branches=12
@@ -311,3 +318,4 @@ int-import-graph=
 overgeneral-exceptions=Exception
 
 max-nested-blocks=6
+max-bool-expr=10

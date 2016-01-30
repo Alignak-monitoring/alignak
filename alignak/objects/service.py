@@ -65,7 +65,7 @@
 
 """ This Class is the service one, s it manage all service specific thing.
 If you look at the scheduling part, look at the scheduling item class"""
-
+# pylint: disable=C0302
 import time
 import re
 
@@ -1046,30 +1046,23 @@ class Service(SchedulingItem):
         # pass if this is a custom notification
 
         # Block if notifications are program-wide disabled
-        if not self.enable_notifications:
-            return True
-
-        # Does the notification period allow sending out this notification?
-        if self.notification_period is not None \
-                and not self.notification_period.is_time_valid(t_wished):
-            return True
-
         # Block if notifications are disabled for this service
-        if not self.notifications_enabled:
+        # Block if the current status is in the notification_options w,u,c,r,f,s
+        # Does the notification period allow sending out this notification?
+        if not self.enable_notifications or \
+                not self.notifications_enabled or \
+                (self.notification_period is not None
+                    and not self.notification_period.is_time_valid(t_wished)) or \
+                'n' in self.notification_options:
             return True
 
-        # Block if the current status is in the notification_options w,u,c,r,f,s
-        if 'n' in self.notification_options:
+        if n_type in ('PROBLEM', 'RECOVERY') and (
+            self.state == 'UNKNOWN' and 'u' not in self.notification_options or
+            self.state == 'WARNING' and 'w' not in self.notification_options or
+            self.state == 'CRITICAL' and 'c' not in self.notification_options or
+            self.state == 'OK' and 'r' not in self.notification_options
+        ):
             return True
-        if n_type in ('PROBLEM', 'RECOVERY'):
-            if self.state == 'UNKNOWN' and 'u' not in self.notification_options:
-                return True
-            if self.state == 'WARNING' and 'w' not in self.notification_options:
-                return True
-            if self.state == 'CRITICAL' and 'c' not in self.notification_options:
-                return True
-            if self.state == 'OK' and 'r' not in self.notification_options:
-                return True
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
                 and 'f' not in self.notification_options):
             return True
@@ -1078,16 +1071,13 @@ class Service(SchedulingItem):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == 'ACKNOWLEDGEMENT':
-            if self.state == self.ok_up:
-                return True
+        # Block if host is in a scheduled downtime
+        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up or \
+                self.host.scheduled_downtime_depth > 0:
+            return True
 
         # When in downtime, only allow end-of-downtime notifications
         if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
-            return True
-
-        # Block if host is in a scheduled downtime
-        if self.host.scheduled_downtime_depth > 0:
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
@@ -1096,19 +1086,15 @@ class Service(SchedulingItem):
             return True
 
         # Block if the status is SOFT
-        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
-            return True
-
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
-            return True
-
         # Block if flapping
-        if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            return True
-
         # Block if host is down
-        if self.host.state != self.host.ok_up:
+        if self.state_type == 'SOFT' and n_type == 'PROBLEM' or \
+                self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT' or \
+                self.is_flapping and n_type not in ('FLAPPINGSTART',
+                                                    'FLAPPINGSTOP',
+                                                    'FLAPPINGDISABLED') or \
+                self.host.state != self.host.ok_up:
             return True
 
         # Block if business rule smart notifications is enabled and all its

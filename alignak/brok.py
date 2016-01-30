@@ -57,7 +57,7 @@ except ImportError:
     UJSON_INSTALLED = False
 
 
-class Brok:
+class Brok:  # pylint: disable=E1001
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
     """
