@@ -58,6 +58,7 @@ Used to process command sent by users
 
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import os
 import time
 import re

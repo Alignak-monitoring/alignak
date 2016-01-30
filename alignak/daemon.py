@@ -59,6 +59,7 @@
 """
 This module provides abstraction for creating daemon in Alignak
 """
+# pylint: disable=R0904
 from __future__ import print_function
 import os
 import errno

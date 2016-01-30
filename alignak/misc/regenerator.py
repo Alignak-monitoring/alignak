@@ -74,7 +74,7 @@ from alignak.util import safe_print
 from alignak.message import Message
 
 
-class Regenerator(object):
+class Regenerator(object):  # pylint: disable=R0904
     """
     Class for a Regenerator.
     It gets broks, and "regenerate" real objects from them

@@ -127,7 +127,7 @@ NO_LONGER_USED = ('This parameter is not longer take from the main file, but mus
 NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
 
 
-class Config(Item):
+class Config(Item):  # pylint: disable=R0904
     """Config is the class to read, load and manipulate the user
  configuration. It read a main cfg (alignak.cfg) and get all information
  from it. It create objects, make link between them, clean them, and cut

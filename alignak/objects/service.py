@@ -66,6 +66,7 @@
 """ This Class is the service one, s it manage all service specific thing.
 If you look at the scheduling part, look at the scheduling item class"""
 # pylint: disable=C0302
+# pylint: disable=R0904
 import time
 import re
 

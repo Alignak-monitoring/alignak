@@ -59,6 +59,7 @@ This class is a base class for nearly all configuration
 elements like service, hosts or contacts.
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import time
 import itertools
 import warnings

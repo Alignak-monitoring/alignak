@@ -79,7 +79,7 @@ from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result
 
 
-class Host(SchedulingItem):
+class Host(SchedulingItem):  # pylint: disable=R0904
     """Host class implements monitoring concepts for host.
     For example it defines parents, check_interval, check_command  etc.
     """

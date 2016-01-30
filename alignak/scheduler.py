@@ -66,6 +66,7 @@ The major part of monitoring "intelligence" is in this module.
 
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import time
 import os
 import cStringIO

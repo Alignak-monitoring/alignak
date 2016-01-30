@@ -61,7 +61,7 @@ from alignak.misc.sorter import hst_srv_sort, last_state_change_earlier
 from alignak.misc.filter import only_related_to
 
 
-class DataManager(object):
+class DataManager(object):  # pylint: disable=R0904
     """
     DataManager provide a set of accessor to Alignak objects
     (host, services) through a regenerator object.
