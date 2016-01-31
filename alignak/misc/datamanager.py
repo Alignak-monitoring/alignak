@@ -687,7 +687,8 @@ class DataManager(object):  # pylint: disable=R0904
         print "get_business_parents::Give elements", res
         return res
 
-    def guess_root_problems(self, obj):
+    @staticmethod
+    def guess_root_problems(obj):
         """
         Get the list of services with :
         * a state_id != 0 (not OK state)
