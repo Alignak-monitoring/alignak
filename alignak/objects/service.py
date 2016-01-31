@@ -1619,7 +1619,8 @@ class Services(Items):
             # Adds concrete instance
             self.add_item(new_s)
 
-    def register_service_into_servicegroups(self, service, servicegroups):
+    @staticmethod
+    def register_service_into_servicegroups(service, servicegroups):
         """
         Registers a service into the service groups declared in its
         `servicegroups` attribute.
@@ -1642,7 +1643,8 @@ class Services(Items):
                 for servicegroup in sgs:
                     servicegroups.add_member([shname, sname], servicegroup.strip())
 
-    def register_service_dependencies(self, service, servicedependencies):
+    @staticmethod
+    def register_service_dependencies(service, servicedependencies):
         """
         Registers a service dependencies.
 
