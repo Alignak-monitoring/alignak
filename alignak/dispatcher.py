@@ -166,7 +166,7 @@ class Dispatcher:
                 arb.update_infos()
                 # print "Arb", arb.get_name(), "alive?", arb.alive, arb.__dict__
 
-    def check_dispatch(self):
+    def check_dispatch(self):  # pylint:disable=R0912
         """Check if all active items are still alive
 
         :return: None
@@ -340,7 +340,8 @@ class Dispatcher:
                                 r_id, satellite.get_name())
                     satellite.remove_from_conf(id)
 
-    def get_scheduler_ordered_list(self, realm):
+    @staticmethod
+    def get_scheduler_ordered_list(realm):
         """Get sorted scheduler list for a specific realm
 
         :param realm: realm we want scheduler from
@@ -372,7 +373,7 @@ class Dispatcher:
 
         return scheds
 
-    def dispatch(self):  # pylint: disable=R0915,R0914
+    def dispatch(self):  # pylint: disable=R0915,R0914,R0912
         """Dispatch configuration to other daemons
         REF: doc/alignak-conf-dispatching.png (3)
 
