@@ -83,7 +83,7 @@ class Alignak(BaseSatellite):
         'local_log': PathProp(default='schedulerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile=''):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
 
         BaseSatellite.__init__(self, 'scheduler', config_file, is_daemon, do_replace, debug,
                                debug_file)
