@@ -2177,7 +2177,7 @@ class Config(Item):  # pylint: disable=R0904
         for err in self.configuration_errors:
             logger.error(err)
 
-    def create_packs(self, nb_packs):  # pylint: disable=R0915
+    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
@@ -2246,19 +2246,17 @@ class Config(Item):  # pylint: disable=R0904
             graph.add_edge(dep, host)
             graph.add_edge(host, dep)
 
-        # Access_list from a node il all nodes that are connected
-        # with it: it's a list of ours mini_packs
-        tmp_packs = graph.get_accessibility_packs()
-
         # Now We find the default realm
         default_realm = None
         for realm in self.realms:
             if hasattr(realm, 'default') and realm.default:
                 default_realm = realm
 
+        # Access_list from a node il all nodes that are connected
+        # with it: it's a list of ours mini_packs
         # Now we look if all elements of all packs have the
         # same realm. If not, not good!
-        for pack in tmp_packs:
+        for pack in graph.get_accessibility_packs():
             tmp_realms = set()
             for elt in pack:
                 if elt.realm is not None:
@@ -2268,12 +2266,10 @@ class Config(Item):  # pylint: disable=R0904
                                "because there a more than one realm in one pack (host relations):")
                 for host in pack:
                     if host.realm is None:
-                        err = '   the host %s do not have a realm' % host.get_name()
-                        self.add_error(err)
+                        self.add_error('   the host %s do not have a realm' % host.get_name())
                     else:
-                        err = '   the host %s is in the realm %s' % (host.get_name(),
-                                                                     host.realm.get_name())
-                        self.add_error(err)
+                        self.add_error('   the host %s is in the realm %s' %
+                                       (host.get_name(), host.realm.get_name()))
             if len(tmp_realms) == 1:  # Ok, good
                 realm = tmp_realms.pop()  # There is just one element
                 realm.packs.append(pack)
@@ -2281,12 +2277,10 @@ class Config(Item):  # pylint: disable=R0904
                 if default_realm is not None:
                     default_realm.packs.append(pack)
                 else:
-                    err = ("Error: some hosts do not have a realm and you do not "
-                           "defined a default realm!")
-                    self.add_error(err)
+                    self.add_error("Error: some hosts do not have a realm and you do not "
+                                   "defined a default realm!")
                     for host in pack:
-                        err = '    Impacted host: %s ' % host.get_name()
-                        self.add_error(err)
+                        self.add_error('    Impacted host: %s ' % host.get_name())
 
         # The load balancing is for a loop, so all
         # hosts of a realm (in a pack) will be dispatch
@@ -2365,7 +2359,6 @@ class Config(Item):  # pylint: disable=R0904
                         # print 'Outch found a change sorry', old_i, old_pack
                         valid_value = False
                 # print 'Is valid?', elt.get_name(), valid_value, old_pack
-                i = None
                 # If it's a valid sub pack and the pack id really exist, use it!
                 if valid_value and old_pack in packindices:
                     # print 'Use a old id for pack', old_pack, [h.get_name() for h in pack]
@@ -2466,8 +2459,7 @@ class Config(Item):  # pylint: disable=R0904
         offset = 0
         for realm in self.realms:
             for i in realm.packs:
-                pack = realm.packs[i]
-                for host in pack:
+                for host in realm.packs[i]:
                     host.pack_id = i
                     self.confs[i + offset].hosts.append(host)
                     for serv in host.services:
@@ -2490,9 +2482,8 @@ class Config(Item):  # pylint: disable=R0904
             # Fill host groups
             for ori_hg in self.hostgroups:
                 hostgroup = cfg.hostgroups.find_by_name(ori_hg.get_name())
-                mbrs = ori_hg.members
                 mbrs_id = []
-                for host in mbrs:
+                for host in ori_hg.members:
                     if host is not None:
                         mbrs_id.append(host._id)
                 for host in cfg.hosts:

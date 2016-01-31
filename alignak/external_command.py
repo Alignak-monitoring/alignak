@@ -701,12 +701,10 @@ class ExternalCommandManager:
         # safe_print("Trying to resolve", command)
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
-        part1 = elts[0]
-        elts2 = part1.split(' ')
         try:
-            timestamp = elts2[0]
+            timestamp, c_name = elts[0].split(' ')
             timestamp = timestamp[1:-1]
-            c_name = elts2[1].lower()
+            c_name = c_name.lower()
             self.current_timestamp = to_int(timestamp)
         except (ValueError, IndexError):
             logger.debug("Malformed command '%s'", command)
