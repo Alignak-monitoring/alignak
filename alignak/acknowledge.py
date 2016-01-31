@@ -51,7 +51,7 @@ implements acknowledgment for notification. Basically used for parsing.
 """
 
 
-class Acknowledge:
+class Acknowledge:  # pylint: disable=R0903
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
@@ -99,6 +99,7 @@ class Acknowledge:
         self.end_time = end_time
         self.author = author
         self.comment = comment
+        self.persistent = persistent
 
     def __getstate__(self):
         """Call by pickle for dataify the acknowledge

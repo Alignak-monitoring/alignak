@@ -111,7 +111,7 @@ class DBOracle(DB):
         except OperationalError_exp, exp:
             logger.warning("[DBOracle] Warning: a query raise an operational error: %s, %s",
                            query, exp)
-        except Exception, exp:
+        except Exception, exp:  # pylint: disable=W0703
             logger.warning("[DBOracle] Warning: a query raise an unknown error: %s, %s",
                            query, exp)
             logger.warning(exp.__dict__)

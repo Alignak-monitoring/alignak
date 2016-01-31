@@ -59,7 +59,7 @@ from alignak.property import BoolProp, IntegerProp, StringProp, FloatProp
 from alignak.autoslots import AutoSlots
 
 
-class Notification(Action):
+class Notification(Action):  # pylint: disable=R0902
     """Notification class, inherits from action class. Used to notify contacts
      and execute notification command defined in configuration
 
@@ -115,8 +115,8 @@ class Notification(Action):
         'SERVICENOTIFICATIONID':    '_id'
     }
 
-    def __init__(self, _type='PROBLEM', status='scheduled', command='UNSET',
-                 command_call=None, ref=None, contact=None, t_to_go=0.0,
+    def __init__(self, _type='PROBLEM', status='scheduled',  # pylint: disable=R0913
+                 command='UNSET', command_call=None, ref=None, contact=None, t_to_go=0.0,
                  contact_name='', host_name='', service_description='',
                  reason_type=1, state=0, ack_author='', ack_data='',
                  escalated=False, contacts_notified=0,
@@ -145,11 +145,11 @@ class Notification(Action):
         # Set host_name and description from the ref
         try:
             self.host_name = self.ref.host_name
-        except Exception:
+        except AttributeError:
             self.host_name = host_name
         try:
             self.service_description = self.ref.service_description
-        except Exception:
+        except AttributeError:
             self.service_description = service_description
 
         if env is not None:

@@ -61,7 +61,7 @@ from alignak.misc.sorter import hst_srv_sort, last_state_change_earlier
 from alignak.misc.filter import only_related_to
 
 
-class DataManager(object):
+class DataManager(object):  # pylint: disable=R0904
     """
     DataManager provide a set of accessor to Alignak objects
     (host, services) through a regenerator object.
@@ -687,7 +687,8 @@ class DataManager(object):
         print "get_business_parents::Give elements", res
         return res
 
-    def guess_root_problems(self, obj):
+    @staticmethod
+    def guess_root_problems(obj):
         """
         Get the list of services with :
         * a state_id != 0 (not OK state)

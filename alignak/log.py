@@ -98,7 +98,7 @@ class BrokHandler(Handler):
             msg = self.format(record)
             brok = Brok('log', {'log': msg + '\n'})
             self._broker.add(brok)
-        except Exception:
+        except TypeError:
             self.handleError(record)
 
 
@@ -114,7 +114,7 @@ class ColorStreamHandler(StreamHandler):
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:
             print msg.encode('ascii', 'ignore')
-        except Exception:
+        except TypeError:
             self.handleError(record)
 
 
@@ -301,7 +301,7 @@ if hasattr(sys.stdout, 'isatty'):
     logger.addHandler(CSH)
 
 
-def naglog_result(level, result, *args):
+def naglog_result(level, result):
     """
     Function use for old Nag compatibility. We to set format properly for this call only.
 

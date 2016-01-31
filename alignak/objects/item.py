@@ -59,6 +59,7 @@ This class is a base class for nearly all configuration
 elements like service, hosts or contacts.
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import time
 import itertools
 import warnings
@@ -829,7 +830,7 @@ class Item(object):
                                                            tname))
         self.triggers = new_triggers
 
-    def dump(self, dfile=None):
+    def dump(self, dfile=None):  # pylint: disable=W0613
         """
         Dump properties
 
@@ -887,7 +888,8 @@ class Items(object):
         self.configuration_errors = []
         self.add_items(items, index_items)
 
-    def get_source(self, item):
+    @staticmethod
+    def get_source(item):
         """
         Get source, so with what system we import this item
 
@@ -1459,7 +1461,8 @@ class Items(object):
                         continue
                 i.business_impact_modulations = new_business_impact_modulations
 
-    def explode_contact_groups_into_contacts(self, item, contactgroups):
+    @staticmethod
+    def explode_contact_groups_into_contacts(item, contactgroups):
         """
         Get all contacts of contact_groups and put them in contacts container
 
@@ -1521,7 +1524,8 @@ class Items(object):
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod)
 
-    def create_commandcall(self, prop, commands, command):
+    @staticmethod
+    def create_commandcall(prop, commands, command):
         """
         Create commandCall object with command
 
@@ -1670,7 +1674,8 @@ class Items(object):
                     item.configuration_errors.append(err)
             item.modules = new_modules
 
-    def evaluate_hostgroup_expression(self, expr, hosts, hostgroups, look_in='hostgroups'):
+    @staticmethod
+    def evaluate_hostgroup_expression(expr, hosts, hostgroups, look_in='hostgroups'):
         """
         Evaluate hostgroup expression
 
@@ -1705,7 +1710,8 @@ class Items(object):
         # HOOK DBG
         return list(set_res)
 
-    def get_hosts_from_hostgroups(self, hgname, hostgroups):
+    @staticmethod
+    def get_hosts_from_hostgroups(hgname, hostgroups):
         """
         Get hosts of hostgroups
 

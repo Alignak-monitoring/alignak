@@ -166,7 +166,7 @@ class Dispatcher:
                 arb.update_infos()
                 # print "Arb", arb.get_name(), "alive?", arb.alive, arb.__dict__
 
-    def check_dispatch(self):
+    def check_dispatch(self):  # pylint:disable=R0912
         """Check if all active items are still alive
 
         :return: None
@@ -340,7 +340,8 @@ class Dispatcher:
                                 r_id, satellite.get_name())
                     satellite.remove_from_conf(id)
 
-    def get_scheduler_ordered_list(self, realm):
+    @staticmethod
+    def get_scheduler_ordered_list(realm):
         """Get sorted scheduler list for a specific realm
 
         :param realm: realm we want scheduler from
@@ -372,7 +373,7 @@ class Dispatcher:
 
         return scheds
 
-    def dispatch(self):
+    def dispatch(self):  # pylint: disable=R0915,R0914,R0912
         """Dispatch configuration to other daemons
         REF: doc/alignak-conf-dispatching.png (3)
 
@@ -439,13 +440,12 @@ class Dispatcher:
                         conf.push_flavor = random.randint(1, 1000000)
                         # REF: doc/alignak-conf-dispatching.png (3)
                         # REF: doc/alignak-scheduler-lost.png (2)
-                        override_conf = sched.get_override_configuration()
-                        satellites_for_sched = realm.get_satellites_links_for_scheduler()
-                        s_conf = realm.serialized_confs[conf._id]
                         # Prepare the conf before sending it
                         conf_package = {
-                            'conf': s_conf, 'override_conf': override_conf,
-                            'modules': sched.modules, 'satellites': satellites_for_sched,
+                            'conf': realm.serialized_confs[conf._id],
+                            'override_conf': sched.get_override_configuration(),
+                            'modules': sched.modules,
+                            'satellites': realm.get_satellites_links_for_scheduler(),
                             'instance_name': sched.scheduler_name, 'push_flavor': conf.push_flavor,
                             'skip_initial_broks': sched.skip_initial_broks,
                             'accept_passive_unknown_check_results':
@@ -495,8 +495,7 @@ class Dispatcher:
                         break
 
             # We pop conf to dispatch, so it must be no more conf...
-            conf_to_dispatch = [cfg for cfg in self.conf.confs.values() if not cfg.is_assigned]
-            nb_missed = len(conf_to_dispatch)
+            nb_missed = len([cfg for cfg in self.conf.confs.values() if not cfg.is_assigned])
             if nb_missed > 0:
                 logger.warning("All schedulers configurations are not dispatched, %d are missing",
                                nb_missed)

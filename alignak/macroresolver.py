@@ -137,7 +137,8 @@ class MacroResolver(Borg):
         # Try cache :)
         # self.cache = {}
 
-    def _get_macros(self, chain):
+    @staticmethod
+    def _get_macros(chain):
         """Get all macros of a chain
         Cut '$' char and create a dict with the following structure::
 
@@ -168,7 +169,8 @@ class MacroResolver(Borg):
             del macros['']
         return macros
 
-    def _get_value_from_element(self, elt, prop):
+    @staticmethod
+    def _get_value_from_element(elt, prop):
         """Get value from a element's property
         the property may be a function to call.
 
@@ -348,7 +350,8 @@ class MacroResolver(Borg):
         c_line = com.command.command_line
         return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
 
-    def _get_type_of_macro(self, macros, clss):
+    @staticmethod
+    def _get_type_of_macro(macros, clss):
         r"""Set macros types
 
         Example::
@@ -396,7 +399,8 @@ class MacroResolver(Borg):
                     macros[macro]['class'] = cls
                     continue
 
-    def _resolve_argn(self, macro, args):
+    @staticmethod
+    def _resolve_argn(macro, args):
         """Get argument from macro name
         ie : $ARG3$ -> args[2]
 
@@ -474,7 +478,8 @@ class MacroResolver(Borg):
             return val
         return ''
 
-    def _get_long_date_time(self):
+    @staticmethod
+    def _get_long_date_time():
         """Get long date time
 
         Example : Fri 15 May 11:42:39 CEST 2009
@@ -486,7 +491,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%a %d %b %H:%M:%S %Z %Y").decode('UTF-8', 'ignore')
 
-    def _get_short_date_time(self):
+    @staticmethod
+    def _get_short_date_time():
         """Get short date time
 
         Example : 10-13-2000 00:30:28
@@ -498,7 +504,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%d-%m-%Y %H:%M:%S")
 
-    def _get_date(self):
+    @staticmethod
+    def _get_date():
         """Get date
 
         Example : 10-13-2000
@@ -510,7 +517,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%d-%m-%Y")
 
-    def _get_time(self):
+    @staticmethod
+    def _get_time():
         """Get date time
 
         Example : 00:30:28
@@ -522,7 +530,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%H:%M:%S")
 
-    def _get_timet(self):
+    @staticmethod
+    def _get_timet():
         """Get epoch time
 
         Example : 1437143291
@@ -549,7 +558,8 @@ class MacroResolver(Borg):
     _get_total_hosts_down = lambda s: s._tot_hosts_by_state('DOWN')
     _get_total_hosts_unreachable = lambda s: s._tot_hosts_by_state('UNREACHABLE')
 
-    def _get_total_hosts_unreachable_unhandled(self):
+    @staticmethod
+    def _get_total_hosts_unreachable_unhandled():
         """DOES NOTHING( Should get the number of unreachable hosts not handled)
 
         :return: 0 always
@@ -566,7 +576,8 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.is_problem)
 
-    def _get_total_hosts_problems_unhandled(self):
+    @staticmethod
+    def _get_total_hosts_problems_unhandled():
         """DOES NOTHING( Should get the number of host problems not handled)
 
         :return: 0 always
@@ -594,7 +605,8 @@ class MacroResolver(Borg):
 
     _get_total_service_unknown = lambda s: s._tot_services_by_state('UNKNOWN')
 
-    def _get_total_services_warning_unhandled(self):
+    @staticmethod
+    def _get_total_services_warning_unhandled():
         """DOES NOTHING (Should get the number of warning services not handled)
 
         :return: 0 always
@@ -603,7 +615,8 @@ class MacroResolver(Borg):
         """
         return 0
 
-    def _get_total_services_critical_unhandled(self):
+    @staticmethod
+    def _get_total_services_critical_unhandled():
         """DOES NOTHING (Should get the number of critical services not handled)
 
         :return: 0 always
@@ -612,7 +625,8 @@ class MacroResolver(Borg):
         """
         return 0
 
-    def _get_total_services_unknown_unhandled(self):
+    @staticmethod
+    def _get_total_services_unknown_unhandled():
         """DOES NOTHING (Should get the number of unknown services not handled)
 
         :return: 0 always
@@ -629,7 +643,8 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.is_problem)
 
-    def _get_total_service_problems_unhandled(self):
+    @staticmethod
+    def _get_total_service_problems_unhandled():
         """DOES NOTHING (Should get the number of service problems not handled)
 
         :return: 0 always
@@ -638,7 +653,8 @@ class MacroResolver(Borg):
         """
         return 0
 
-    def _get_process_start_time(self):
+    @staticmethod
+    def _get_process_start_time():
         """DOES NOTHING ( Should get process start time)
 
         :return: 0 always
@@ -647,7 +663,8 @@ class MacroResolver(Borg):
         """
         return 0
 
-    def _get_events_start_time(self):
+    @staticmethod
+    def _get_events_start_time():
         """DOES NOTHING ( Should get events start time)
 
         :return: 0 always

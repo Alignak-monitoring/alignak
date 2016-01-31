@@ -74,7 +74,7 @@ from alignak.util import safe_print
 from alignak.message import Message
 
 
-class Regenerator(object):
+class Regenerator(object):  # pylint: disable=R0904,R0902
     """
     Class for a Regenerator.
     It gets broks, and "regenerate" real objects from them
@@ -201,7 +201,8 @@ class Regenerator(object):
         if manage and self.want_brok(brok):
             return manage(brok)
 
-    def update_element(self, item, data):
+    @staticmethod
+    def update_element(item, data):
         """
         Update object attribute with value contained in data keys
 
@@ -214,7 +215,7 @@ class Regenerator(object):
         for prop in data:
             setattr(item, prop, data[prop])
 
-    def all_done_linking(self, inst_id):
+    def all_done_linking(self, inst_id):  # pylint: disable=R0915,R0914,R0912
         """
         Link all data (objects) in a specific instance
 
@@ -245,7 +246,7 @@ class Regenerator(object):
             inp_contactgroups = self.inp_contactgroups[inst_id]
             inp_services = self.inp_services[inst_id]
             inp_servicegroups = self.inp_servicegroups[inst_id]
-        except Exception, exp:
+        except KeyError, exp:
             print "Warning all done: ", exp
             return
 
@@ -661,7 +662,7 @@ class Regenerator(object):
         # Try to get the inp progress Hosts
         try:
             inp_hosts = self.inp_hosts[inst_id]
-        except Exception, exp:  # not good. we will cry in the program update
+        except KeyError, exp:  # not good. we will cry in the program update
             print "Not good!", exp
             return
 
@@ -690,7 +691,7 @@ class Regenerator(object):
         # Try to get the inp progress Hostgroups
         try:
             inp_hostgroups = self.inp_hostgroups[inst_id]
-        except Exception, exp:  # not good. we will cry in theprogram update
+        except KeyError, exp:  # not good. we will cry in theprogram update
             print "Not good!", exp
             return
 
@@ -720,7 +721,7 @@ class Regenerator(object):
         # Try to get the inp progress Hosts
         try:
             inp_services = self.inp_services[inst_id]
-        except Exception, exp:  # not good. we will cry in theprogram update
+        except KeyError, exp:  # not good. we will cry in theprogram update
             print "Not good!", exp
             return
 
@@ -749,7 +750,7 @@ class Regenerator(object):
         # Try to get the inp progress Hostgroups
         try:
             inp_servicegroups = self.inp_servicegroups[inst_id]
-        except Exception, exp:  # not good. we will cry in the program update
+        except KeyError, exp:  # not good. we will cry in the program update
             print "Not good!", exp
             return
 
@@ -836,7 +837,7 @@ class Regenerator(object):
         # Try to get the inp progress Contactgroups
         try:
             inp_contactgroups = self.inp_contactgroups[inst_id]
-        except Exception, exp:  # not good. we will cry in theprogram update
+        except KeyError, exp:  # not good. we will cry in theprogram update
             print "Not good!", exp
             return
 
@@ -1140,7 +1141,7 @@ class Regenerator(object):
         try:
             broker = self.brokers[broker_name]
             self.update_element(broker, data)
-        except Exception:
+        except KeyError:
             pass
 
     def manage_update_receiver_status_brok(self, brok):
@@ -1156,7 +1157,7 @@ class Regenerator(object):
         try:
             receiver = self.receivers[receiver_name]
             self.update_element(receiver, data)
-        except Exception:
+        except KeyError:
             pass
 
     def manage_update_reactionner_status_brok(self, brok):
@@ -1172,7 +1173,7 @@ class Regenerator(object):
         try:
             reactionner = self.reactionners[reactionner_name]
             self.update_element(reactionner, data)
-        except Exception:
+        except KeyError:
             pass
 
     def manage_update_poller_status_brok(self, brok):
@@ -1188,7 +1189,7 @@ class Regenerator(object):
         try:
             poller = self.pollers[poller_name]
             self.update_element(poller, data)
-        except Exception:
+        except KeyError:
             pass
 
     def manage_update_scheduler_status_brok(self, brok):
@@ -1205,7 +1206,7 @@ class Regenerator(object):
             scheduler = self.schedulers[scheduler_name]
             self.update_element(scheduler, data)
             # print "S:", s
-        except Exception:
+        except KeyError:
             pass
 
 

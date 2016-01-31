@@ -16,7 +16,7 @@
 # GNU Affero General Public License for more details.
 #
 # You should have received a copy of the GNU Affero General Public License
-# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+# along with Alignak.  If not, see <http://www.gnu.org  /licenses/>.
 #
 #
 # This file incorporates work covered by the following copyright and
@@ -137,7 +137,8 @@ class HostsExtInfo(Items):
                 # Fusion
                 self.merge_extinfo(host, extinfo)
 
-    def merge_extinfo(self, host, extinfo):
+    @staticmethod
+    def merge_extinfo(host, extinfo):
         """Merge extended host information into a host
 
         :param host: the host to edit

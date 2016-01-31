@@ -58,6 +58,7 @@ Used to process command sent by users
 
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import os
 import time
 import re
@@ -74,7 +75,7 @@ from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
 
 
-class ExternalCommand:
+class ExternalCommand:  # pylint: disable=R0903
     """ExternalCommand class is only an object with a cmd_line attribute.
     All parsing and execution is done in manager
 
@@ -684,7 +685,7 @@ class ExternalCommandManager:
                 # sched.run_external_command(command)
                 sched.external_commands.append(command)
 
-    def get_command_and_args(self, command, extcmd=None):
+    def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0915,R0912
         """Parse command and get args
 
         :param command: command line to parse
@@ -700,12 +701,10 @@ class ExternalCommandManager:
         # safe_print("Trying to resolve", command)
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
-        part1 = elts[0]
-        elts2 = part1.split(' ')
         try:
-            timestamp = elts2[0]
+            timestamp, c_name = elts[0].split(' ')
             timestamp = timestamp[1:-1]
-            c_name = elts2[1].lower()
+            c_name = c_name.lower()
             self.current_timestamp = to_int(timestamp)
         except (ValueError, IndexError):
             logger.debug("Malformed command '%s'", command)
@@ -859,7 +858,8 @@ class ExternalCommandManager:
             logger.debug("Sorry, the arguments are not corrects (%s)", str(args))
             return None
 
-    def change_contact_modsattr(self, contact, value):
+    @staticmethod
+    def change_contact_modsattr(contact, value):
         """Change contact modified service attribute value
         Format of the line that triggers function call::
 
@@ -873,7 +873,8 @@ class ExternalCommandManager:
         """
         contact.modified_service_attributes = long(value)
 
-    def change_contact_modhattr(self, contact, value):
+    @staticmethod
+    def change_contact_modhattr(contact, value):
         """Change contact modified host attribute value
         Format of the line that triggers function call::
 
@@ -887,7 +888,8 @@ class ExternalCommandManager:
         """
         contact.modified_host_attributes = long(value)
 
-    def change_contact_modattr(self, contact, value):
+    @staticmethod
+    def change_contact_modattr(contact, value):
         """Change contact modified attribute value
         Format of the line that triggers function call::
 
@@ -957,7 +959,8 @@ class ExternalCommandManager:
         host.add_comment(comm)
         self.sched.add(comm)
 
-    def acknowledge_svc_problem(self, service, sticky, notify, persistent, author, comment):
+    @staticmethod
+    def acknowledge_svc_problem(service, sticky, notify, persistent, author, comment):
         """Acknowledge a service problem
         Format of the line that triggers function call::
 
@@ -980,7 +983,8 @@ class ExternalCommandManager:
         """
         service.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    def acknowledge_host_problem(self, host, sticky, notify, persistent, author, comment):
+    @staticmethod
+    def acknowledge_host_problem(host, sticky, notify, persistent, author, comment):
         """Acknowledge a host problem
         Format of the line that triggers function call::
 
@@ -1003,7 +1007,8 @@ class ExternalCommandManager:
         """
         host.acknowledge_problem(sticky, notify, persistent, author, comment)
 
-    def acknowledge_svc_problem_expire(self, service, sticky, notify,
+    @staticmethod
+    def acknowledge_svc_problem_expire(service, sticky, notify,
                                        persistent, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1029,7 +1034,8 @@ class ExternalCommandManager:
         """
         service.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
 
-    def acknowledge_host_problem_expire(self, host, sticky, notify,
+    @staticmethod
+    def acknowledge_host_problem_expire(host, sticky, notify,
                                         persistent, end_time, author, comment):
         """Acknowledge a host problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1073,7 +1079,8 @@ class ExternalCommandManager:
         contact.service_notification_period = notification_timeperiod
         self.sched.get_and_register_status_brok(contact)
 
-    def change_custom_contact_var(self, contact, varname, varvalue):
+    @staticmethod
+    def change_custom_contact_var(contact, varname, varvalue):
         """Change custom contact variable
         Format of the line that triggers function call::
 
@@ -1090,7 +1097,8 @@ class ExternalCommandManager:
         contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         contact.customs[varname.upper()] = varvalue
 
-    def change_custom_host_var(self, host, varname, varvalue):
+    @staticmethod
+    def change_custom_host_var(host, varname, varvalue):
         """Change custom host variable
         Format of the line that triggers function call::
 
@@ -1107,7 +1115,8 @@ class ExternalCommandManager:
         host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
         host.customs[varname.upper()] = varvalue
 
-    def change_custom_svc_var(self, service, varname, varvalue):
+    @staticmethod
+    def change_custom_svc_var(service, varname, varvalue):
         """Change custom service variable
         Format of the line that triggers function call::
 
@@ -1198,7 +1207,8 @@ class ExternalCommandManager:
         host.event_handler = CommandCall(self.commands, event_handler_command)
         self.sched.get_and_register_status_brok(host)
 
-    def change_host_modattr(self, host, value):
+    @staticmethod
+    def change_host_modattr(host, value):
         """Change host modified attributes
         Format of the line that triggers function call::
 
@@ -2782,7 +2792,8 @@ class ExternalCommandManager:
         """
         pass
 
-    def remove_host_acknowledgement(self, host):
+    @staticmethod
+    def remove_host_acknowledgement(host):
         """Remove an acknowledgment on a host
         Format of the line that triggers function call::
 
@@ -2794,7 +2805,8 @@ class ExternalCommandManager:
         """
         host.unacknowledge_problem()
 
-    def remove_svc_acknowledgement(self, service):
+    @staticmethod
+    def remove_svc_acknowledgement(service):
         """Remove an acknowledgment on a service
         Format of the line that triggers function call::
 
@@ -3538,7 +3550,8 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    def launch_svc_event_handler(self, service):
+    @staticmethod
+    def launch_svc_event_handler(service):
         """Launch event handler for a service
         Format of the line that triggers function call::
 
@@ -3550,7 +3563,8 @@ class ExternalCommandManager:
         """
         service.get_event_handlers(externalcmd=True)
 
-    def launch_host_event_handler(self, host):
+    @staticmethod
+    def launch_host_event_handler(host):
         """Launch event handler for a service
         Format of the line that triggers function call::
 

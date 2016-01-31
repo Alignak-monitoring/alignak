@@ -59,6 +59,7 @@
 """
 This module provides abstraction for creating daemon in Alignak
 """
+# pylint: disable=R0904
 from __future__ import print_function
 import os
 import errno
@@ -151,7 +152,7 @@ DEFAULT_WORK_DIR = '/var/run/alignak/'
 DEFAULT_LIB_DIR = '/var/lib/alignak/'
 
 
-class Daemon(object):
+class Daemon(object):  # pylint: disable=R0902
     """Class providing daemon level call for Alignak
         TODO: Consider clean this code and use standard libs
     """
@@ -262,7 +263,7 @@ class Daemon(object):
                 logger.warning("http_thread failed to terminate. Calling _Thread__stop")
                 try:
                     self.http_thread._Thread__stop()
-                except Exception:
+                except Exception:  # pylint: disable=W0703
                     pass
             self.http_thread = None
 
@@ -356,7 +357,8 @@ class Daemon(object):
         """
         pass
 
-    def dump_memory(self):
+    @staticmethod
+    def dump_memory():
         """Try to dump memory
         Does not really work :/
 
@@ -410,7 +412,7 @@ class Daemon(object):
         logger.debug("Unlinking %s", self.pidfile)
         try:
             os.unlink(self.pidfile)
-        except Exception, exp:
+        except OSError, exp:
             logger.error("Got an error unlinking our pidfile: %s", exp)
 
     def register_local_log(self):
@@ -428,7 +430,8 @@ class Daemon(object):
                 sys.exit(2)
             logger.info("Using the local log file '%s'", self.local_log)
 
-    def check_shm(self):
+    @staticmethod
+    def check_shm():
         """ Check /dev/shm right permissions
 
         :return: None
@@ -480,13 +483,14 @@ class Daemon(object):
         self.__open_pidfile()
         try:
             pid = int(self.fpid.readline().strip(' \r\n'))
-        except Exception as err:
+        except (IOError, ValueError) as err:
             logger.info("Stale pidfile exists at %s (%s). Reusing it.", err, self.pidfile)
             return
 
         try:
             os.kill(pid, 0)
-        except Exception as err:  # consider any exception as a stale pidfile.
+        except Exception as err:  # pylint: disable=W0703
+            # consider any exception as a stale pidfile.
             # this includes :
             #  * PermissionError when a process with same pid exists but is executed by another user
             #  * ProcessLookupError: [Errno 3] No such process
@@ -527,7 +531,8 @@ class Daemon(object):
         self.fpid.close()
         del self.fpid  # no longer needed
 
-    def close_fds(self, skip_close_fds):
+    @staticmethod
+    def close_fds(skip_close_fds):
         """Close all the process file descriptors.
         Skip the descriptors present in the skip_close_fds list
 
@@ -584,7 +589,7 @@ class Daemon(object):
         if pid != 0:
             # In the father: we check if our child exit correctly
             # it has to write the pid of our future little child..
-            def do_exit(sig, frame):
+            def do_exit(sig, frame):  # pylint: disable=W0613
                 """Exit handler if wait too long during fork
 
                 :param sig: signal
@@ -722,7 +727,8 @@ class Daemon(object):
                                       use_ssl, ca_cert, ssl_key,
                                       ssl_cert, self.daemon_thread_pool_size)
 
-    def get_socks_activity(self, socks, timeout):
+    @staticmethod
+    def get_socks_activity(socks, timeout):
         """ Global loop part : wait for socket to be ready
 
         :param socks: a socket file descriptor list
@@ -890,7 +896,7 @@ class Daemon(object):
                 setattr(self, prop, path)
                 # print "Setting %s for %s" % (path, prop)
 
-    def manage_signal(self, sig, frame):
+    def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Manage signals caught by the daemon
         signal.SIGUSR1 : dump_memory
         signal.SIGUSR2 : dump_object (nothing)
@@ -938,7 +944,8 @@ class Daemon(object):
         """
         setproctitle("alignak-%s" % self.name)
 
-    def get_header(self):
+    @staticmethod
+    def get_header():
         """Get the log file header
 
         :return: A string list containing project name, version, licence etc.
@@ -968,7 +975,7 @@ class Daemon(object):
         # finish
         try:
             self.http_daemon.run()
-        except Exception, exp:
+        except Exception, exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             raise exp
 
@@ -1035,7 +1042,7 @@ class Daemon(object):
 
         return difference
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference):  # pylint: disable=R0201
         """Default action for system time change. Actually a log is done
 
         :return: None
@@ -1077,13 +1084,13 @@ class Daemon(object):
                 fun = getattr(inst, full_hook_name)
                 try:
                     fun(self)
-                except Exception as exp:
+                except Exception as exp:  # pylint: disable=W0703
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
                     self.modules_manager.set_to_restart(inst)
         statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
 
-    def get_retention_data(self):
+    def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,
         Maybe be overridden by subclasses to implement real get
 

@@ -198,13 +198,10 @@ class Timeperiod(Item):
         """
         return getattr(self, 'timeperiod_name', 'unknown_timeperiod')
 
-    def get_unresolved_properties_by_inheritance(self, items):
+    def get_unresolved_properties_by_inheritance(self):
         """
         Fill full properties with template if needed for the
         unresolved values (example: sunday ETCETC)
-
-        :param items: The Timeperiods object.
-        :type items: object
         :return: None
         """
         # Ok, I do not have prop, Maybe my templates do?
@@ -605,7 +602,7 @@ class Timeperiod(Item):
 
         return string
 
-    def resolve_daterange(self, dateranges, entry):  # pylint: disable=R0911
+    def resolve_daterange(self, dateranges, entry):  # pylint: disable=R0911,R0915,R0912
         """
         Try to solve dateranges (special cases)
 
@@ -992,7 +989,7 @@ class Timeperiods(Items):
         # And now apply inheritance for unresolved properties
         # like the dateranges in fact
         for timeperiod in self:
-            timeperiod.get_unresolved_properties_by_inheritance(self.items)
+            timeperiod.get_unresolved_properties_by_inheritance()
 
     def is_correct(self):
         """

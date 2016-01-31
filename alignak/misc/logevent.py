@@ -123,7 +123,7 @@ EVENT_TYPES = {
 }
 
 
-class LogEvent:
+class LogEvent:  # pylint: disable=R0903
     """Class for parsing event logs
     Populates self.data with the log type's properties
     """

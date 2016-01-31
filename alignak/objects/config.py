@@ -127,7 +127,7 @@ NO_LONGER_USED = ('This parameter is not longer take from the main file, but mus
 NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
 
 
-class Config(Item):
+class Config(Item):  # pylint: disable=R0904,R0902
     """Config is the class to read, load and manipulate the user
  configuration. It read a main cfg (alignak.cfg) and get all information
  from it. It create objects, make link between them, clean them, and cut
@@ -886,7 +886,8 @@ class Config(Item):
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
 
-    def _cut_line(self, line):
+    @staticmethod
+    def _cut_line(line):
         """Split the line on whitespaces and remove empty chunks
 
         :param line: the line to split
@@ -899,7 +900,7 @@ class Config(Item):
         res = [elt for elt in tmp if elt != '']
         return res
 
-    def read_config(self, files):
+    def read_config(self, files):  # pylint: disable=R0912
         """Read and parse main configuration files
         (specified with -c option to the Arbiter)
         and put them into a StringIO object
@@ -1012,9 +1013,7 @@ class Config(Item):
         res.close()
         return config
 
-#        self.read_config_buf(res)
-
-    def read_config_buf(self, buf):
+    def read_config_buf(self, buf):  # pylint: disable=R0912
         """The config buffer (previously returned by Config.read_config())
 
         :param buf: buffer containing all data from config files
@@ -1138,7 +1137,8 @@ class Config(Item):
 
         return objects
 
-    def add_ghost_objects(self, raw_objects):
+    @staticmethod
+    def add_ghost_objects(raw_objects):
         """Add fake command objects for internal processing ; bp_rule, _internal_host_up, _echo
 
         :param raw_objects: Raw config objects dict
@@ -1309,8 +1309,7 @@ class Config(Item):
 
         # print "Contacts"
         # link contacts with timeperiods and commands
-        self.contacts.linkify(self.timeperiods, self.commands,
-                              self.notificationways)
+        self.contacts.linkify(self.notificationways)
 
         # print "Timeperiods"
         # link timeperiods with timeperiods (exclude part)
@@ -2014,7 +2013,7 @@ class Config(Item):
         #      r &= False
         return valid
 
-    def is_correct(self):
+    def is_correct(self):  # pylint: disable=R0912
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2177,12 +2176,13 @@ class Config(Item):
         for err in self.configuration_errors:
             logger.error(err)
 
-    def create_packs(self, nb_packs):
+    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
         services are link to the host. Dependencies are managed
-        REF: doc/pack-creation.pn
+        REF: doc/pack-creation.png
+        TODO : Check why np_packs is not used.
 
         :param nb_packs: the number of packs to create (number of scheduler basically)
         :type nb_packs: int
@@ -2246,19 +2246,17 @@ class Config(Item):
             graph.add_edge(dep, host)
             graph.add_edge(host, dep)
 
-        # Access_list from a node il all nodes that are connected
-        # with it: it's a list of ours mini_packs
-        tmp_packs = graph.get_accessibility_packs()
-
         # Now We find the default realm
         default_realm = None
         for realm in self.realms:
             if hasattr(realm, 'default') and realm.default:
                 default_realm = realm
 
+        # Access_list from a node il all nodes that are connected
+        # with it: it's a list of ours mini_packs
         # Now we look if all elements of all packs have the
         # same realm. If not, not good!
-        for pack in tmp_packs:
+        for pack in graph.get_accessibility_packs():
             tmp_realms = set()
             for elt in pack:
                 if elt.realm is not None:
@@ -2268,12 +2266,10 @@ class Config(Item):
                                "because there a more than one realm in one pack (host relations):")
                 for host in pack:
                     if host.realm is None:
-                        err = '   the host %s do not have a realm' % host.get_name()
-                        self.add_error(err)
+                        self.add_error('   the host %s do not have a realm' % host.get_name())
                     else:
-                        err = '   the host %s is in the realm %s' % (host.get_name(),
-                                                                     host.realm.get_name())
-                        self.add_error(err)
+                        self.add_error('   the host %s is in the realm %s' %
+                                       (host.get_name(), host.realm.get_name()))
             if len(tmp_realms) == 1:  # Ok, good
                 realm = tmp_realms.pop()  # There is just one element
                 realm.packs.append(pack)
@@ -2281,12 +2277,10 @@ class Config(Item):
                 if default_realm is not None:
                     default_realm.packs.append(pack)
                 else:
-                    err = ("Error: some hosts do not have a realm and you do not "
-                           "defined a default realm!")
-                    self.add_error(err)
+                    self.add_error("Error: some hosts do not have a realm and you do not "
+                                   "defined a default realm!")
                     for host in pack:
-                        err = '    Impacted host: %s ' % host.get_name()
-                        self.add_error(err)
+                        self.add_error('    Impacted host: %s ' % host.get_name())
 
         # The load balancing is for a loop, so all
         # hosts of a realm (in a pack) will be dispatch
@@ -2365,7 +2359,6 @@ class Config(Item):
                         # print 'Outch found a change sorry', old_i, old_pack
                         valid_value = False
                 # print 'Is valid?', elt.get_name(), valid_value, old_pack
-                i = None
                 # If it's a valid sub pack and the pack id really exist, use it!
                 if valid_value and old_pack in packindices:
                     # print 'Use a old id for pack', old_pack, [h.get_name() for h in pack]
@@ -2394,7 +2387,7 @@ class Config(Item):
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):
+    def cut_into_parts(self):  # pylint: disable=R0912
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
         have no dependencies between them
@@ -2466,8 +2459,7 @@ class Config(Item):
         offset = 0
         for realm in self.realms:
             for i in realm.packs:
-                pack = realm.packs[i]
-                for host in pack:
+                for host in realm.packs[i]:
                     host.pack_id = i
                     self.confs[i + offset].hosts.append(host)
                     for serv in host.services:
@@ -2490,9 +2482,8 @@ class Config(Item):
             # Fill host groups
             for ori_hg in self.hostgroups:
                 hostgroup = cfg.hostgroups.find_by_name(ori_hg.get_name())
-                mbrs = ori_hg.members
                 mbrs_id = []
-                for host in mbrs:
+                for host in ori_hg.members:
                     if host is not None:
                         mbrs_id.append(host._id)
                 for host in cfg.hosts:

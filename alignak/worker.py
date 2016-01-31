@@ -79,9 +79,9 @@ class Worker(object):
     _timeout = None
     _control_q = None
 
-    def __init__(self, _id, slave_q, returns_queue, processes_by_worker, mortal=True, timeout=300,
-                 max_plugins_output_length=8192, target=None, loaded_into='unknown',
-                 http_daemon=None):
+    def __init__(self, _id, slave_q, returns_queue, processes_by_worker,  # pylint: disable=W0613
+                 mortal=True, timeout=300, max_plugins_output_length=8192, target=None,
+                 loaded_into='unknown', http_daemon=None):
         self._id = self.__class__._id
         self.__class__._id += 1
 
@@ -106,7 +106,8 @@ class Worker(object):
         else:  # windows forker do not like pickle http/lock
             self.http_daemon = None
 
-    def _prework(self, real_work, *args):
+    @staticmethod
+    def _prework(real_work, *args):
         """Simply drop the BrokHandler before doing the real_work"""
         for handler in list(logger.handlers):
             if isinstance(handler, BrokHandler):
@@ -382,7 +383,7 @@ class Worker(object):
                 if cmsg.get_type() == 'Die':
                     logger.debug("[%d] Dad say we are dying...", self._id)
                     break
-            except Exception:
+            except Exception:  # pylint: disable=W0703
                 pass
 
             # Look if we are dying, and if we finish all current checks

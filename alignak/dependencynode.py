@@ -85,7 +85,8 @@ class DependencyNode(object):
                                                             ','.join([str(s) for s in self.sons]),
                                                             self.not_value)
 
-    def get_reverse_state(self, state):
+    @staticmethod
+    def get_reverse_state(state):
         """Do a symmetry around 1 of the state ::
 
         * 0 -> 2
@@ -399,7 +400,8 @@ class DependencyNodeFactory(object):
         else:
             return self.eval_complex_cor_pattern(pattern, hosts, services, running)
 
-    def eval_xof_pattern(self, node, pattern):
+    @staticmethod
+    def eval_xof_pattern(node, pattern):
         """Parse a X of pattern
         * Set is_of_mul attribute
         * Set of_values attribute

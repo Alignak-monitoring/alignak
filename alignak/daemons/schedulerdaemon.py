@@ -83,7 +83,7 @@ class Alignak(BaseSatellite):
         'local_log': PathProp(default='schedulerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile=''):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
 
         BaseSatellite.__init__(self, 'scheduler', config_file, is_daemon, do_replace, debug,
                                debug_file)
@@ -226,22 +226,14 @@ class Alignak(BaseSatellite):
             modules = new_c['modules']
             satellites = new_c['satellites']
             instance_name = new_c['instance_name']
-            push_flavor = new_c['push_flavor']
-            skip_initial_broks = new_c['skip_initial_broks']
-            accept_passive_unknown_chk_res = new_c['accept_passive_unknown_check_results']
-            api_key = new_c['api_key']
-            secret = new_c['secret']
-            http_proxy = new_c['http_proxy']
-            statsd_host = new_c['statsd_host']
-            statsd_port = new_c['statsd_port']
-            statsd_prefix = new_c['statsd_prefix']
-            statsd_enabled = new_c['statsd_enabled']
 
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(self.sched, instance_name, 'scheduler',
-                              api_key=api_key, secret=secret, http_proxy=http_proxy,
-                              statsd_host=statsd_host, statsd_port=statsd_port,
-                              statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
+                              api_key=new_c['api_key'], secret=new_c['secret'],
+                              http_proxy=new_c['http_proxy'],
+                              statsd_host=new_c['statsd_host'], statsd_port=new_c['statsd_port'],
+                              statsd_prefix=new_c['statsd_prefix'],
+                              statsd_enabled=new_c['statsd_enabled'])
 
             t00 = time.time()
             conf = cPickle.loads(conf_raw)
@@ -250,10 +242,11 @@ class Alignak(BaseSatellite):
 
             # Tag the conf with our data
             self.conf = conf
-            self.conf.push_flavor = push_flavor
+            self.conf.push_flavor = new_c['push_flavor']
             self.conf.instance_name = instance_name
-            self.conf.skip_initial_broks = skip_initial_broks
-            self.conf.accept_passive_unknown_check_results = accept_passive_unknown_chk_res
+            self.conf.skip_initial_broks = new_c['skip_initial_broks']
+            self.conf.accept_passive_unknown_check_results = \
+                new_c['accept_passive_unknown_check_results']
 
             self.cur_conf = conf
             self.override_conf = override_conf

@@ -152,7 +152,7 @@ class ComplexExpressionFactory(object):
         self.grps = grps
         self.all_elements = all_elements
 
-    def eval_cor_pattern(self, pattern):
+    def eval_cor_pattern(self, pattern):  # pylint:disable=R0912
         """Parse and build recursively a tree of ComplexExpressionNode from pattern
 
         :param pattern: pattern to parse

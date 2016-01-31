@@ -106,7 +106,7 @@ class SatelliteLink(Item):
         if hasattr(self, 'port'):
             try:
                 self.arb_satmap['port'] = int(self.port)
-            except Exception:
+            except ValueError:
                 pass
 
     def get_name(self):

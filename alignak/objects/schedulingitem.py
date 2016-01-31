@@ -61,6 +61,7 @@ will find all scheduling related functions, like the schedule
 or the consume_check. It's a very important class!
 """
 # pylint: disable=C0302
+# pylint: disable=R0904
 import re
 import random
 import time
@@ -81,7 +82,7 @@ from alignak.comment import Comment
 from alignak.log import logger
 
 
-class SchedulingItem(Item):
+class SchedulingItem(Item):  # pylint: disable=R0902
     """SchedulingItem class provide method for Scheduler to handle Service or Host objects
 
     """
@@ -1275,7 +1276,7 @@ class SchedulingItem(Item):
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
 
-    def consume_result(self, chk):
+    def consume_result(self, chk):  # pylint: disable=R0915,R0912
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
@@ -2243,7 +2244,7 @@ class SchedulingItem(Item):
                 self.create_business_rules(hosts, services, running=True)
                 state = self.business_rule.get_state()
                 check.output = self.get_business_rule_output()
-            except Exception, err:
+            except Exception, err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",
@@ -2304,7 +2305,7 @@ class SchedulingItem(Item):
         for trigger in self.triggers:
             try:
                 trigger.eval(self)
-            except Exception:
+            except Exception:  # pylint: disable=W0703
                 logger.error(
                     "We got an exception from a trigger on %s for %s",
                     self.get_full_name().decode('utf8', 'ignore'), str(traceback.format_exc())
@@ -2417,7 +2418,7 @@ class SchedulingItem(Item):
         :return: True
         :rtype: bool
         """
-        return True
+        pass
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
         """Raise freshness alert entry (warning level)
@@ -2491,7 +2492,7 @@ class SchedulingItem(Item):
         :return: list containing the service and the linked host
         :rtype: list
         """
-        return []
+        pass
 
     def get_data_for_event_handler(self):
         """Get data for an event handler
@@ -2499,7 +2500,7 @@ class SchedulingItem(Item):
         :return: list containing a single item (this one)
         :rtype: list
         """
-        return []
+        pass
 
     def get_data_for_notifications(self, contact, notif):
         """Get data for a notification
@@ -2511,7 +2512,7 @@ class SchedulingItem(Item):
         :return: list
         :rtype: list
         """
-        return []
+        pass
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable
@@ -2537,7 +2538,7 @@ class SchedulingItem(Item):
         :return: return 0
         :rtype: int
         """
-        return 0
+        pass
 
     def set_unreachable(self):
         """
@@ -2582,7 +2583,7 @@ class SchedulingItem(Item):
         :return: True if ONE of the above condition was met, otherwise False
         :rtype: bool
         """
-        return False
+        pass
 
     def notification_is_blocked_by_contact(self, notif, contact):
         """Check if the notification is blocked by this contact.
@@ -2594,7 +2595,7 @@ class SchedulingItem(Item):
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return False
+        pass
 
     def is_correct(self):
 

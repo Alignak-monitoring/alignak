@@ -17,7 +17,7 @@ class Finder(object):
           https://docs.python.org/2/library/sys.html#sys.meta_path
     """
 
-    def find_module(self, fullname, path=None):
+    def find_module(self, fullname, path=None):  # pylint: disable=W0613
         """Find module based on the fullname and path given
 
         :param fullname: module full name
@@ -31,7 +31,8 @@ class Finder(object):
         if fullname in hookable_names or fullname.startswith('shinken.'):
             return self
 
-    def load_module(self, name):
+    @staticmethod
+    def load_module(name):
         """Load module
 
         :param name: module to load

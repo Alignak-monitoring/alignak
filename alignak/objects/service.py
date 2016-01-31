@@ -66,6 +66,7 @@
 """ This Class is the service one, s it manage all service specific thing.
 If you look at the scheduling part, look at the scheduling item class"""
 # pylint: disable=C0302
+# pylint: disable=R0904
 import time
 import re
 
@@ -1281,7 +1282,7 @@ class Services(Items):
         key = (host_name, sdescr)
         return self.name_to_item.get(key, None)
 
-    def linkify(self, hosts, commands, timeperiods, contacts,
+    def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
                 resultmodulations, businessimpactmodulations, escalations,
                 servicegroups, triggers, checkmodulations, macromodulations):
         """Create link between objects::
@@ -1618,7 +1619,8 @@ class Services(Items):
             # Adds concrete instance
             self.add_item(new_s)
 
-    def register_service_into_servicegroups(self, service, servicegroups):
+    @staticmethod
+    def register_service_into_servicegroups(service, servicegroups):
         """
         Registers a service into the service groups declared in its
         `servicegroups` attribute.
@@ -1641,7 +1643,8 @@ class Services(Items):
                 for servicegroup in sgs:
                     servicegroups.add_member([shname, sname], servicegroup.strip())
 
-    def register_service_dependencies(self, service, servicedependencies):
+    @staticmethod
+    def register_service_dependencies(service, servicedependencies):
         """
         Registers a service dependencies.
 

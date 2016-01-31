@@ -55,7 +55,7 @@ from alignak.property import BoolProp, IntegerProp, ListProp
 from alignak.property import StringProp
 
 
-class Check(Action):
+class Check(Action):  # pylint: disable=R0902
     """Check class implements monitoring concepts of checks :(status, state, output)
     Check instance are used to store monitoring plugins data (exit status, output)
     and used by schedule to raise alert, reschedule check etc.
@@ -84,8 +84,8 @@ class Check(Action):
         'from_trigger':     BoolProp(default=False),
     })
 
-    def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
-                 timeout=10, poller_tag='None', reactionner_tag='None',
+    def __init__(self, status, command, ref, t_to_go, dep_check=None,  # pylint: disable=R0913
+                 _id=None, timeout=10, poller_tag='None', reactionner_tag='None',
                  env=None, module_type='fork', from_trigger=False, dependency_check=False):
 
         self.is_a = 'check'

@@ -154,7 +154,7 @@ class BaseSatellite(Daemon):
         raise NotImplementedError()
 
 
-class Satellite(BaseSatellite):
+class Satellite(BaseSatellite):  # pylint: disable=R0902
     """Satellite class.
     Subclassed by Receiver, Reactionner and Poller
 
@@ -839,7 +839,7 @@ class Satellite(BaseSatellite):
         import socket
         socket.setdefaulttimeout(None)
 
-    def setup_new_conf(self):
+    def setup_new_conf(self):  # pylint: disable=R0915,R0912
         """Setup new conf received from Arbiter
 
         :return: None

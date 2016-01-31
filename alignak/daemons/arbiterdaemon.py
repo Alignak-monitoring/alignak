@@ -80,13 +80,13 @@ from alignak.property import BoolProp
 from alignak.http.arbiter_interface import ArbiterInterface
 
 
-class Arbiter(Daemon):
+class Arbiter(Daemon):  # pylint: disable=R0902
     """Arbiter class. Referenced as "app" in most Interface
 
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, profile=None, analyse=None, migrate=None, arb_name=''):
+                 debug_file, analyse=None, migrate=None, arb_name=''):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)
@@ -197,7 +197,8 @@ class Arbiter(Daemon):
         self.external_command = ecm
         self.fifo = ecm.open()
 
-    def get_daemon_links(self, daemon_type):
+    @staticmethod
+    def get_daemon_links(daemon_type):
         """Get the name of arbiter link (here arbiters)
 
         :param daemon_type: daemon type
@@ -208,7 +209,7 @@ class Arbiter(Daemon):
         # the attribute name to get these differs for schedulers and arbiters
         return daemon_type + 's'
 
-    def load_config_file(self):
+    def load_config_file(self):  # pylint: disable=R0915
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
@@ -451,7 +452,7 @@ class Arbiter(Daemon):
             _t0 = time.time()
             try:
                 objs = inst.get_objects()
-            except Exception, exp:
+            except Exception, exp:  # pylint: disable=W0703
                 logger.error("Instance %s raised an exception %s. Log and continue to run",
                              inst.get_name(), str(exp))
                 output = cStringIO.StringIO()
