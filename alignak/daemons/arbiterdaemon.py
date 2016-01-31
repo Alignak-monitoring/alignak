@@ -197,7 +197,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.external_command = ecm
         self.fifo = ecm.open()
 
-    def get_daemon_links(self, daemon_type):
+    @staticmethod
+    def get_daemon_links(daemon_type):
         """Get the name of arbiter link (here arbiters)
 
         :param daemon_type: daemon type
@@ -451,7 +452,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             _t0 = time.time()
             try:
                 objs = inst.get_objects()
-            except Exception, exp:
+            except Exception, exp:  # pylint: disable=W0703
                 logger.error("Instance %s raised an exception %s. Log and continue to run",
                              inst.get_name(), str(exp))
                 output = cStringIO.StringIO()
