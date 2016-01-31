@@ -99,6 +99,7 @@ class Acknowledge:  # pylint: disable=R0903
         self.end_time = end_time
         self.author = author
         self.comment = comment
+        self.persistent = persistent
 
     def __getstate__(self):
         """Call by pickle for dataify the acknowledge
