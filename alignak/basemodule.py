@@ -191,7 +191,7 @@ class BaseModule(object):
             logger.error('[%s] %s', self.name, traceback.format_exc())
             raise exp
 
-    def start(self, http_daemon=None):
+    def start(self, http_daemon=None):  # pylint: disable=W0613
         """Actually restart the process if the module is external
         Try first to stop the process and create a new Process instance
         with target start_module.
@@ -283,7 +283,7 @@ class BaseModule(object):
             DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
-    def want_brok(self, b):
+    def want_brok(self, b):  # pylint: disable=W0613,R0201
         """Generic function to check if the module need a specific brok
         In this case it is always True
 
@@ -309,7 +309,7 @@ class BaseModule(object):
             brok.prepare()
             return manage(brok)
 
-    def manage_signal(self, sig, frame):
+    def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Generic function to handle signals
         Set interrupted attribute to True and return
 
