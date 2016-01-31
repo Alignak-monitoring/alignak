@@ -115,8 +115,8 @@ class Notification(Action):  #pylint: disable=R0902
         'SERVICENOTIFICATIONID':    '_id'
     }
 
-    def __init__(self, _type='PROBLEM', status='scheduled', command='UNSET',
-                 command_call=None, ref=None, contact=None, t_to_go=0.0,
+    def __init__(self, _type='PROBLEM', status='scheduled',  # pylint: disable=R0913
+                 command='UNSET', command_call=None, ref=None, contact=None, t_to_go=0.0,
                  contact_name='', host_name='', service_description='',
                  reason_type=1, state=0, ack_author='', ack_data='',
                  escalated=False, contacts_notified=0,

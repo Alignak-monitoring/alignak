@@ -86,7 +86,7 @@ class Arbiter(Daemon):  #pylint: disable=R0902
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, profile=None, analyse=None, migrate=None, arb_name=''):
+                 debug_file, analyse=None, migrate=None, arb_name=''):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)

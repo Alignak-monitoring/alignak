@@ -83,7 +83,7 @@ class Property(object):
 
     """
 
-    def __init__(self, default=NONE_OBJECT, class_inherit=None,
+    def __init__(self, default=NONE_OBJECT, class_inherit=None,  # pylint: disable=R0913
                  unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, conf_send_preparation=None,
                  brok_transformation=None, retention=False,

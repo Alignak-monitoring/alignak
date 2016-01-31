@@ -576,7 +576,7 @@ class Daterange(AbstractDaterange):
     rev_weekdays = dict((v, k) for k, v in weekdays.items())
     rev_months = dict((v, k) for k, v in months.items())
 
-    def __init__(self, syear, smon, smday, swday, swday_offset,
+    def __init__(self, syear, smon, smday, swday, swday_offset,  # pylint: disable=R0913
                  eyear, emon, emday, ewday, ewday_offset, skip_interval, other):
         """
 

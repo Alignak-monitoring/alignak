@@ -1214,9 +1214,10 @@ class Hosts(Items):
     name_property = "host_name"  # use for the search by name
     inner_class = Host  # use for know what is in items
 
-    def linkify(self, timeperiods=None, commands=None, contacts=None, realms=None,
-                resultmodulations=None, businessimpactmodulations=None, escalations=None,
-                hostgroups=None, triggers=None, checkmodulations=None, macromodulations=None):
+    def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
+                realms=None, resultmodulations=None, businessimpactmodulations=None,
+                escalations=None, hostgroups=None, triggers=None,
+                checkmodulations=None, macromodulations=None):
         """Create link between objects::
 
          * hosts -> timeperiods

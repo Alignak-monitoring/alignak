@@ -84,8 +84,8 @@ class Check(Action):  #pylint: disable=R0902
         'from_trigger':     BoolProp(default=False),
     })
 
-    def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
-                 timeout=10, poller_tag='None', reactionner_tag='None',
+    def __init__(self, status, command, ref, t_to_go, dep_check=None,  # pylint: disable=R0913
+                 _id=None, timeout=10, poller_tag='None', reactionner_tag='None',
                  env=None, module_type='fork', from_trigger=False, dependency_check=False):
 
         self.is_a = 'check'

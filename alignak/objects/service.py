@@ -1282,7 +1282,7 @@ class Services(Items):
         key = (host_name, sdescr)
         return self.name_to_item.get(key, None)
 
-    def linkify(self, hosts, commands, timeperiods, contacts,
+    def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
                 resultmodulations, businessimpactmodulations, escalations,
                 servicegroups, triggers, checkmodulations, macromodulations):
         """Create link between objects::
