@@ -2387,7 +2387,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):  #pylint: disable=R0912
+    def cut_into_parts(self):  # pylint: disable=R0912
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
         have no dependencies between them

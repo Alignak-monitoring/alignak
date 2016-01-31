@@ -154,7 +154,7 @@ class BaseSatellite(Daemon):
         raise NotImplementedError()
 
 
-class Satellite(BaseSatellite):  #pylint: disable=R0902
+class Satellite(BaseSatellite):  # pylint: disable=R0902
     """Satellite class.
     Subclassed by Receiver, Reactionner and Poller
 

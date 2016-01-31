@@ -80,7 +80,7 @@ from alignak.property import BoolProp
 from alignak.http.arbiter_interface import ArbiterInterface
 
 
-class Arbiter(Daemon):  #pylint: disable=R0902
+class Arbiter(Daemon):  # pylint: disable=R0902
     """Arbiter class. Referenced as "app" in most Interface
 
     """

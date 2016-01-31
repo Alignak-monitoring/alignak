@@ -82,7 +82,7 @@ from alignak.comment import Comment
 from alignak.log import logger
 
 
-class SchedulingItem(Item):  #pylint: disable=R0902
+class SchedulingItem(Item):  # pylint: disable=R0902
     """SchedulingItem class provide method for Scheduler to handle Service or Host objects
 
     """

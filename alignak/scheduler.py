@@ -93,7 +93,7 @@ from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 
 
-class Scheduler(object):  #pylint: disable=R0902
+class Scheduler(object):  # pylint: disable=R0902
     """Scheduler class. Mostly handle scheduling items (host service) to schedule check
     raise alert, enter downtime etc."""
 

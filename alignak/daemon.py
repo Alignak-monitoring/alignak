@@ -152,7 +152,7 @@ DEFAULT_WORK_DIR = '/var/run/alignak/'
 DEFAULT_LIB_DIR = '/var/lib/alignak/'
 
 
-class Daemon(object):  #pylint: disable=R0902
+class Daemon(object):  # pylint: disable=R0902
     """Class providing daemon level call for Alignak
         TODO: Consider clean this code and use standard libs
     """

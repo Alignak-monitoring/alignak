@@ -59,7 +59,7 @@ from alignak.property import BoolProp, IntegerProp, StringProp, FloatProp
 from alignak.autoslots import AutoSlots
 
 
-class Notification(Action):  #pylint: disable=R0902
+class Notification(Action):  # pylint: disable=R0902
     """Notification class, inherits from action class. Used to notify contacts
      and execute notification command defined in configuration
 
