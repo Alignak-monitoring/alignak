@@ -177,7 +177,7 @@ class ArbiterInterface(GenericInterface):
                         try:
                             json.dumps(val)
                             env[prop] = val
-                        except Exception, exp:
+                        except TypeError, exp:
                             logger.debug('%s', exp)
                 lst.append(env)
         return res
