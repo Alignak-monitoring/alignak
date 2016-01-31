@@ -52,7 +52,7 @@ class BrokerInterface(GenericInterface):
         for inst in insts:
             try:
                 res.append({'module_alias': inst.get_name(), 'queue_size': inst.to_q.qsize()})
-            except Exception:
+            except Exception:  # pylint: disable=W0703
                 res.append({'module_alias': inst.get_name(), 'queue_size': 0})
 
         return res
