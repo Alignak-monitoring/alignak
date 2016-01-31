@@ -68,7 +68,7 @@ from alignak.version import VERSION
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except Exception, exp:
+except AttributeError, exp:
     logger.error('Encoding detection error= %s', exp)
     SAFE_STDOUT = False
 
@@ -179,7 +179,7 @@ def jsonify_r(obj):
         try:
             json.dumps(obj)
             return obj
-        except Exception:
+        except TypeError:
             return None
     properties = cls.properties.keys()
     if hasattr(cls, 'running_properties'):
@@ -196,7 +196,7 @@ def jsonify_r(obj):
                 val = sorted(val)
             json.dumps(val)
             res[prop] = val
-        except Exception:
+        except TypeError:
             if isinstance(val, list):
                 lst = []
                 for subval in val:
@@ -204,7 +204,7 @@ def jsonify_r(obj):
                     if o_type == 'CommandCall':
                         try:
                             lst.append(subval.call)
-                        except Exception:
+                        except AttributeError:
                             pass
                         continue
                     if o_type and hasattr(subval, o_type + '_name'):
@@ -218,7 +218,7 @@ def jsonify_r(obj):
                 if o_type == 'CommandCall':
                     try:
                         res[prop] = val.call
-                    except Exception:
+                    except AttributeError:
                         pass
                     continue
                 if o_type and hasattr(val, o_type + '_name'):
@@ -539,7 +539,7 @@ def from_float_to_int(val):
 # ref is the item like a service, and value
 # if the value to preprocess
 
-def to_list_string_of_names(ref, tab):
+def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
@@ -552,7 +552,7 @@ def to_list_string_of_names(ref, tab):
     return ",".join([e.get_name() for e in tab])
 
 
-def to_list_of_names(ref, tab):
+def to_list_of_names(ref, tab):  # pylint: disable=W0613
     """Convert list into a list of element name
 
     :param ref: Not used
@@ -565,7 +565,7 @@ def to_list_of_names(ref, tab):
     return [e.get_name() for e in tab]
 
 
-def to_name_if_possible(ref, value):
+def to_name_if_possible(ref, value):  # pylint: disable=W0613
     """Try to get value name (call get_name method)
 
     :param ref: Not used
@@ -580,7 +580,7 @@ def to_name_if_possible(ref, value):
     return ''
 
 
-def to_hostnames_list(ref, tab):
+def to_hostnames_list(ref, tab):  # pylint: disable=W0613
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
@@ -597,7 +597,7 @@ def to_hostnames_list(ref, tab):
     return res
 
 
-def to_svc_hst_distinct_lists(ref, tab):
+def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=W0613
     """create a dict with 2 lists::
 
     * services: all services of the tab
@@ -650,7 +650,7 @@ def get_obj_name(obj):
     return obj.get_name()
 
 
-def get_obj_name_two_args_and_void(obj, value):
+def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
     """Get value name (call get_name) if not a string
 
     :param obj: Not used
@@ -676,7 +676,7 @@ def get_obj_full_name(obj):
     """
     try:
         return obj.get_full_name()
-    except Exception:
+    except AttributeError:
         return obj.get_name()
 
 
@@ -957,7 +957,7 @@ def expect_file_dirs(root, path):
         if not os.path.exists(path):
             try:
                 os.mkdir(path)
-            except Exception:
+            except OSError:
                 return False
         tmp_dir = path
     return True
@@ -968,7 +968,7 @@ def expect_file_dirs(root, path):
 # Return callback functions which are passed host or service instances, and
 # should return a boolean value that indicates if the instance matched the
 # filter
-def filter_any(name):
+def filter_any(name):  # pylint: disable=W0613
     """Filter for host
     Filter nothing
 
@@ -978,14 +978,14 @@ def filter_any(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(host):  # pylint: disable=W0613
         """Inner filter for host. Accept all"""
         return True
 
     return inner_filter
 
 
-def filter_none(name):
+def filter_none(name):  # pylint: disable=W0613
     """Filter for host
     Filter all
 
@@ -995,7 +995,7 @@ def filter_none(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(host):  # pylint: disable=W0613
         """Inner filter for host. Accept nothing"""
         return False
 
