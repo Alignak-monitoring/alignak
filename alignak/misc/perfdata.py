@@ -74,7 +74,7 @@ def guess_int_or_float(val):
     """
     try:
         return to_best_int_float(val)
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 
