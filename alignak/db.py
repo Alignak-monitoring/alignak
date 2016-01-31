@@ -55,7 +55,8 @@ class DB(object):
     def __init__(self, table_prefix=''):
         self.table_prefix = table_prefix
 
-    def stringify(self, val):
+    @staticmethod
+    def stringify(val):
         """Get a unicode from a value
 
         :param val: value to 'unicode'
