@@ -159,7 +159,7 @@ class Property(object):
         self.keep_empty = keep_empty
         self.special = special
 
-    def pythonize(self, val):
+    def pythonize(self, val):  # pylint: disable=R0201
         """Generic pythonize method
 
         :param val: value to python
