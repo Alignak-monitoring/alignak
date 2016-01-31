@@ -145,11 +145,11 @@ class Notification(Action):  # pylint: disable=R0902
         # Set host_name and description from the ref
         try:
             self.host_name = self.ref.host_name
-        except Exception:
+        except AttributeError:
             self.host_name = host_name
         try:
             self.service_description = self.ref.service_description
-        except Exception:
+        except AttributeError:
             self.service_description = service_description
 
         if env is not None:
