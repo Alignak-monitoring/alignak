@@ -1309,8 +1309,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # print "Contacts"
         # link contacts with timeperiods and commands
-        self.contacts.linkify(self.timeperiods, self.commands,
-                              self.notificationways)
+        self.contacts.linkify(self.notificationways)
 
         # print "Timeperiods"
         # link timeperiods with timeperiods (exclude part)

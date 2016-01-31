@@ -318,26 +318,16 @@ class Contacts(Items):
     name_property = "contact_name"
     inner_class = Contact
 
-    def linkify(self, timeperiods, commands, notificationways):
+    def linkify(self, notificationways):
         """Create link between objects::
 
-         * contacts -> timeperiods
-         * contacts -> commands
          * contacts -> notificationways
 
-        :param timeperiods: timeperiods to link
-        :type timeperiods: alignak.objects.timeperiod.Timeperiods
-        :param commands: commands to link
-        :type commands: alignak.objects.command.Commands
         :param notificationways: notificationways to link
         :type notificationways: alignak.objects.notificationway.Notificationways
         :return: None
         TODO: Clean this function
         """
-        # self.linkify_with_timeperiods(timeperiods, 'service_notification_period')
-        # self.linkify_with_timeperiods(timeperiods, 'host_notification_period')
-        # self.linkify_command_list_with_commands(commands, 'service_notification_commands')
-        # self.linkify_command_list_with_commands(commands, 'host_notification_commands')
         self.linkify_with_notificationways(notificationways)
 
     def linkify_with_notificationways(self, notificationways):
