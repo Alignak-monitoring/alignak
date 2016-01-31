@@ -839,7 +839,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         import socket
         socket.setdefaulttimeout(None)
 
-    def setup_new_conf(self):  # pylint: disable=R0915
+    def setup_new_conf(self):  # pylint: disable=R0915,R0912
         """Setup new conf received from Arbiter
 
         :return: None
