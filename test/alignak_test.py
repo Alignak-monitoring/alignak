@@ -214,7 +214,7 @@ class AlignakTest(unittest.TestCase):
         self.conf.show_errors()
         self.dispatcher = Dispatcher(self.conf, self.me)
 
-        scheddaemon = Alignak(None, False, False, False, None, None)
+        scheddaemon = Alignak(None, False, False, False, None)
         self.scheddaemon = scheddaemon
         self.sched = scheddaemon.sched
         scheddaemon.load_modules_manager()

@@ -71,7 +71,7 @@ class testSchedulerInit(AlignakTest):
 
     def create_daemon(self):
         cls = Alignak
-        return cls(daemons_config[cls], False, True, False, None, '')
+        return cls(daemons_config[cls], False, True, False, None)
 
     def _get_subproc_data(self, proc):
         try:
