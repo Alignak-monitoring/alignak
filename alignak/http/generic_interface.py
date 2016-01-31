@@ -55,7 +55,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def ping(self):
+    def ping(self):  # pylint: disable=R0201
         """Test the connection to the daemon. Returns: pong
 
         :return: string 'pong'
@@ -96,7 +96,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash=None):
+    def have_conf(self, magic_hash=None):  # pylint: disable=W0613
         """Get the daemon cur_conf state
 
         :return: boolean indicating if the daemon has a conf
@@ -106,7 +106,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def set_log_level(self, loglevel):
+    def set_log_level(self, loglevel):  # pylint: disable=R0201
         """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
         :param loglevel: a value in one of the above
@@ -117,7 +117,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_log_level(self):
+    def get_log_level(self):  # pylint: disable=R0201
         """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
         :return: current log level
@@ -258,7 +258,7 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_broks(self, bname):
+    def get_broks(self, bname):  # pylint: disable=W0613
         """Get broks from the daemon
 
         :return: Brok list serialized and b64encoded
