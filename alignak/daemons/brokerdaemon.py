@@ -90,7 +90,7 @@ class Broker(BaseSatellite):
         'local_log': PathProp(default='brokerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile=''):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
 
         super(Broker, self).__init__('broker', config_file, is_daemon, do_replace, debug,
                                      debug_file)
@@ -194,7 +194,8 @@ class Broker(BaseSatellite):
             return s_type[d_type]
         return None
 
-    def is_connection_try_too_close(self, elt):
+    @staticmethod
+    def is_connection_try_too_close(elt):
         """Check if last_connection has been made very recently
 
         :param elt: list with last_connection property
@@ -322,7 +323,7 @@ class Broker(BaseSatellite):
         for mod in self.modules_manager.get_internal_instances():
             try:
                 mod.manage_brok(brok)
-            except Exception, exp:
+            except Exception, exp:  # pylint: disable=W0703
                 logger.debug(str(exp.__dict__))
                 logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
                                mod.get_name(), str(exp))
@@ -413,7 +414,7 @@ class Broker(BaseSatellite):
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
-            except Exception, err:
+            except Exception, err:  # pylint: disable=W0703
                 logger.error(str(err))
                 logger.error(traceback.format_exc())
                 sys.exit(1)
@@ -446,7 +447,7 @@ class Broker(BaseSatellite):
             child.join(1)
         super(Broker, self).do_stop()
 
-    def setup_new_conf(self):  # pylint: disable=R0915
+    def setup_new_conf(self):  # pylint: disable=R0915,R0912
         """Parse new configuration and initialize all required
 
         :return: None
@@ -734,7 +735,7 @@ class Broker(BaseSatellite):
         for inst in insts:
             try:
                 logger.debug("External Queue len (%s): %s", inst.get_name(), inst.to_q.qsize())
-            except Exception, exp:
+            except Exception, exp:  # pylint: disable=W0703
                 logger.debug("External Queue len (%s): Exception! %s", inst.get_name(), exp)
 
         # Begin to clean modules
@@ -792,7 +793,7 @@ class Broker(BaseSatellite):
         for mod in ext_modules:
             try:
                 mod.to_q.put(to_send)
-            except Exception, exp:
+            except Exception, exp:  # pylint: disable=W0703
                 # first we must find the modules
                 logger.debug(str(exp.__dict__))
                 logger.warning("The mod %s queue raise an exception: %s, "
