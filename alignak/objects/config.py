@@ -886,7 +886,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
 
-    def _cut_line(self, line):
+    @staticmethod
+    def _cut_line(line):
         """Split the line on whitespaces and remove empty chunks
 
         :param line: the line to split
@@ -899,7 +900,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res = [elt for elt in tmp if elt != '']
         return res
 
-    def read_config(self, files):
+    def read_config(self, files):  # pylint: disable=R0912
         """Read and parse main configuration files
         (specified with -c option to the Arbiter)
         and put them into a StringIO object
@@ -1012,9 +1013,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res.close()
         return config
 
-#        self.read_config_buf(res)
-
-    def read_config_buf(self, buf):
+    def read_config_buf(self, buf):  # pylint: disable=R0912
         """The config buffer (previously returned by Config.read_config())
 
         :param buf: buffer containing all data from config files
@@ -1138,7 +1137,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         return objects
 
-    def add_ghost_objects(self, raw_objects):
+    @staticmethod
+    def add_ghost_objects(raw_objects):
         """Add fake command objects for internal processing ; bp_rule, _internal_host_up, _echo
 
         :param raw_objects: Raw config objects dict
@@ -2014,7 +2014,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         #      r &= False
         return valid
 
-    def is_correct(self):
+    def is_correct(self):  # pylint: disable=R0912
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2177,12 +2177,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for err in self.configuration_errors:
             logger.error(err)
 
-    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912
+    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
         services are link to the host. Dependencies are managed
-        REF: doc/pack-creation.pn
+        REF: doc/pack-creation.png
+        TODO : Check why np_packs is not used.
 
         :param nb_packs: the number of packs to create (number of scheduler basically)
         :type nb_packs: int
