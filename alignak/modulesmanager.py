@@ -166,7 +166,7 @@ class ModulesManager(object):
                 inst.create_queues(self.manager)
 
             inst.init()
-        except Exception, err:
+        except Exception, err:  # pylint: disable=W0703
             logger.error("The instance %s raised an exception %s, I remove it!",
                          inst.get_name(), str(err))
             output = cStringIO.StringIO()
@@ -215,7 +215,7 @@ class ModulesManager(object):
                 if not isinstance(inst, BaseModule):
                     raise TypeError('Returned instance is not of type BaseModule (%s) !'
                                     % type(inst))
-            except Exception as err:
+            except Exception as err:  # pylint: disable=W0703
                 logger.error("The module %s raised an exception %s, I remove it! traceback=%s",
                              mod_conf.get_name(), err, traceback.format_exc())
             else:
@@ -298,7 +298,7 @@ class ModulesManager(object):
                 queue_size = 0
                 try:
                     queue_size = inst.to_q.qsize()
-                except Exception:
+                except Exception:  # pylint: disable=W0703
                     pass
                 if queue_size > self.max_queue_size:
                     logger.error("The external module %s got a too high brok queue size (%s > %s)!",
