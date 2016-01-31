@@ -2177,7 +2177,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for err in self.configuration_errors:
             logger.error(err)
 
-    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914
+    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
@@ -2387,7 +2387,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):
+    def cut_into_parts(self):  #pylint: disable=R0912
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
         have no dependencies between them
