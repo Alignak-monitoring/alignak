@@ -115,7 +115,7 @@ class Trigger(Item):
         del env["ctx"]
         try:
             exec code in env  # pylint: disable=W0122
-        except Exception as err:
+        except Exception as err:  # pylint: disable=W0703
             set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
                          '%s', ctx.host_name, self.trigger_name, err, traceback.format_exc())
@@ -186,7 +186,8 @@ class Triggers(Items):
         for i in self:
             i.compile()
 
-    def load_objects(self, conf):
+    @staticmethod
+    def load_objects(conf):
         """Set hosts and services from conf as global var
 
         :param conf: alignak configuration
