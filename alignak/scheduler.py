@@ -319,7 +319,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 string = 'BROK: %s:%s\n' % (brok._id, brok.type)
                 file_h.write(string)
             file_h.close()
-        except Exception, exp:
+        except OSError, exp:
             logger.error("Error in writing the dump file %s : %s", path, str(exp))
 
     def dump_config(self):
@@ -335,7 +335,7 @@ class Scheduler(object):  # pylint: disable=R0902
             file_h.write('Scheduler config DUMP at %d\n' % time.time())
             self.conf.dump(file_h)
             file_h.close()
-        except Exception, exp:
+        except (OSError, IndexError), exp:
             logger.error("Error in writing the dump file %s : %s", path, str(exp))
 
     def load_external_command(self, ecm):
@@ -523,7 +523,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 fun = getattr(inst, full_hook_name)
                 try:
                     fun(self)
-                except Exception, exp:
+                except Exception, exp:  # pylint: disable=W0703
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
                                  inst.get_name(), str(exp))
@@ -946,7 +946,8 @@ class Scheduler(object):  # pylint: disable=R0902
             return t_dict[s_type]
         return None
 
-    def is_connection_try_too_close(self, elt):
+    @staticmethod
+    def is_connection_try_too_close(elt):
         """Check if last connection was too early for element
 
         :param elt: element to check
@@ -1106,7 +1107,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     # now go the cpickle pass, and catch possible errors from it
                     try:
                         results = cPickle.loads(results)
-                    except Exception, exp:
+                    except Exception, exp:  # pylint: disable=W0703
                         logger.error('Cannot load passive results from satellite %s : %s',
                                      poll['name'], str(exp))
                         continue
@@ -1303,7 +1304,7 @@ class Scheduler(object):  # pylint: disable=R0902
             all_data['services'][(serv.host.host_name, serv.service_description)] = s_dict
         return all_data
 
-    def restore_retention_data(self, data):
+    def restore_retention_data(self, data):  # pylint: disable=R0912
         """Restore retention data
 
         Data coming from retention will override data coming from configuration
