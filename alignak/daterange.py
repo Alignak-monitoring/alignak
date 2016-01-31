@@ -92,7 +92,7 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
             if nb_found == offset:
                 return cal[i][weekday]
         return None
-    except Exception:
+    except KeyError:
         return None
 
 
@@ -258,7 +258,7 @@ class AbstractDaterange(object):
         """
         return Daterange.rev_weekdays[weekday_id]
 
-    def get_start_and_end_time(self, ref=None):
+    def get_start_and_end_time(self, ref=None):  # pylint: disable=W0613,R0201
         """Generic function to get start time and end time
 
         :param ref: time in seconds
