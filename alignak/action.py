@@ -97,7 +97,7 @@ def no_block_read(output):
     fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
     try:
         return output.read()
-    except Exception:
+    except Exception:  # pylint: disable=W0703
         return ''
 
 
@@ -421,7 +421,7 @@ if os.name != 'nt':
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:
+                except Exception, exp:  # pylint: disable=W0703
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
@@ -469,7 +469,7 @@ if os.name != 'nt':
             for file_d in [self.process.stdout, self.process.stderr]:
                 try:
                     file_d.close()
-                except Exception:
+                except Exception:  # pylint: disable=W0703
                     pass
 
 
@@ -496,7 +496,7 @@ else:
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:
+                except Exception, exp:  # pylint: disable=W0703
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
