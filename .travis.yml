@@ -18,7 +18,7 @@ script:
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
   - unset PYTHONWARNINGS
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && pylint --rcfile=.pylintrc --disable=all --enable=C0111 --enable=W0403 --enable=W0106 --enable=W1401 --enable=W0614 --enable=W0107 --enable=C0204 --enable=W0109  --enable=W0223  --enable=W0311  --enable=W0404  --enable=W0623  --enable=W0633 --enable=W0640  --enable=W0105 --enable=W0141 --enable=C0325 --enable=W1201 --enable=W0231 --enable=W0611 --enable=C0326 --enable=W0122 --enable=E0102 --enable=W0401 --enable=W0622 --enable=C0103 --enable=E1101 --enable=R0801 --enable=W0612 --enable=C0411 --enable=R0101 --enable=W0631 --enable=E0401 --enable=W0221 --enable=R0204 --enable=C0412 --enable=W0621 --enable=E0602 --enable=C0301 --enable=C0113 --enable=W0104 --enable=R0202 --enable=E0213 --enable=C0122 --enable=W0102 --enable=W0102 --enable=E0611 --enable=W0603 --enable=C0413 --enable=R0102 --enable=R0911 --enable=C0302 -r no alignak; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && pylint --rcfile=.pylintrc -r no alignak; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
   - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..
