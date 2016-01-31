@@ -90,7 +90,7 @@ class CommandCall(DummyCommandCall):
     }
 
     def __init__(self, commands, call, poller_tag='None',
-                 reactionner_tag='None', enable_environment_macros=0):
+                 reactionner_tag='None', enable_environment_macros=False):
         self._id = self.__class__._id
         self.__class__._id += 1
         self.call = call
@@ -100,6 +100,7 @@ class CommandCall(DummyCommandCall):
         self.command = commands.find_by_name(self.command.strip())
         self.late_relink_done = False  # To do not relink again and again the same commandcall
         self.valid = self.command is not None
+        self.enable_environment_macros = enable_environment_macros
         if self.valid:
             # If the host/service do not give an override poller_tag, take
             # the one of the command
