@@ -135,7 +135,8 @@ class ServicesExtInfo(Items):
                     # Fusion
                     self.merge_extinfo(serv, extinfo)
 
-    def merge_extinfo(self, service, extinfo):
+    @staticmethod
+    def merge_extinfo(service, extinfo):
         """Merge extended host information into a service
 
         :param service: the service to edit
