@@ -77,7 +77,7 @@ class ArbiterLink(SatelliteLink):
         """
         return self.con.get('get_config')
 
-    def is_me(self, lookup_name):
+    def is_me(self):
         """
         Check if parameter name if same than name of this object
 
@@ -88,10 +88,7 @@ class ArbiterLink(SatelliteLink):
         """
         logger.info("And arbiter is launched with the hostname:%s "
                     "from an arbiter point of view of addr:%s", self.host_name, socket.getfqdn())
-        if lookup_name:
-            return lookup_name == self.get_name()
-        else:
-            return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
+        return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
 
     def give_satellite_cfg(self):
         """

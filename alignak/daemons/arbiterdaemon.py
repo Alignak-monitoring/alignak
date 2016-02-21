@@ -86,7 +86,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, analyse=None, arb_name=''):
+                 debug_file, analyse=None):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)
@@ -94,7 +94,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.config_files = config_files
         self.verify_only = verify_only
         self.analyse = analyse
-        self.arb_name = arb_name
 
         self.broks = {}
         self.is_master = False
@@ -240,7 +239,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Search which Arbiterlink I am
         for arb in self.conf.arbiters:
-            if arb.is_me(self.arb_name):
+            if arb.is_me():
                 arb.need_conf = False
                 self.myself = arb
                 self.is_master = not self.myself.spare
@@ -662,7 +661,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
-            if arb.is_me(self.arb_name):
+            if arb.is_me():
                 self.myself = arb
 
         if self.conf.human_timestamp_log:
