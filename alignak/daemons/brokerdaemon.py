@@ -182,7 +182,7 @@ class Broker(BaseSatellite):
         :param d_type: name of object
         :type d_type: str
         :return: return the object linked
-        :rtype: object
+        :rtype: alignak.objects.satellitelink.SatelliteLinks
         """
         s_type = {'scheduler': self.schedulers,
                   'arbiter': self.arbiters,
