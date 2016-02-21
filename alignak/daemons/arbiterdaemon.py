@@ -86,7 +86,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, analyse=None, migrate=None, arb_name=''):
+                 debug_file, analyse=None, arb_name=''):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)
@@ -94,7 +94,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.config_files = config_files
         self.verify_only = verify_only
         self.analyse = analyse
-        self.migrate = migrate
         self.arb_name = arb_name
 
         self.broks = {}
@@ -301,11 +300,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Manage all post-conf modules
         self.hook_point('early_configuration')
 
-        # Ok here maybe we should stop because we are in a pure migration run
-        if self.migrate:
-            logger.info("Migration MODE. Early exiting from configuration relinking phase")
-            return
-
         # Load all file triggers
         self.conf.load_triggers()
 
@@ -505,49 +499,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         file_d.write(state)
         file_d.close()
 
-    def go_migrate(self):
-        """Migrate configuration
-
-        :return: None
-        TODO: Remove it
-        """
-        print "***********" * 5
-        print "WARNING : this feature is NOT supported in this version!"
-        print "***********" * 5
-
-        migration_module_name = self.migrate.strip()
-        mig_mod = self.conf.modules.find_by_name(migration_module_name)
-        if not mig_mod:
-            print "Cannot find the migration module %s. Please configure it" % migration_module_name
-            sys.exit(2)
-
-        print self.modules_manager.instances
-        # Ok now all we need is the import module
-        self.do_load_modules([mig_mod])
-        print self.modules_manager.instances
-        if len(self.modules_manager.instances) == 0:
-            print "Error during the initialization of the import module. Bailing out"
-            sys.exit(2)
-        print "Configuration migrating in progress..."
-        mod = self.modules_manager.instances[0]
-        fun = getattr(mod, 'import_objects', None)
-        if not fun or not callable(fun):
-            print "Import module is missing the import_objects function. Bailing out"
-            sys.exit(2)
-
-        objs = {}
-        types = ['hosts', 'services', 'commands', 'timeperiods', 'contacts']
-        for o_type in types:
-            print "New type", o_type
-            objs[o_type] = []
-            for items in getattr(self.conf, o_type):
-                dct = items.get_raw_import_values()
-                if dct:
-                    objs[o_type].append(dct)
-            fun(objs)
-        # Ok we can exit now
-        sys.exit(0)
-
     def main(self):
         """Main arbiter function::
 
@@ -573,9 +524,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             self.load_config_file()
             logger.setLevel(self.log_level)
-            # Maybe we are in a migration phase. If so, we will bailout here
-            if self.migrate:
-                self.go_migrate()
 
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
