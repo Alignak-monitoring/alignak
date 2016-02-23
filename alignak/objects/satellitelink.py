@@ -145,7 +145,7 @@ class SatelliteLink(Item):
         self.con = HTTPClient(address=self.arb_satmap['address'], port=self.arb_satmap['port'],
                               timeout=self.timeout, data_timeout=self.data_timeout,
                               use_ssl=self.use_ssl,
-                              strong_ssl=self.hard_ssl_name_check
+                              strong_ssl=self.hard_ssl_name_check, name='Arbiter'
                               )
         self.uri = self.con.uri
 

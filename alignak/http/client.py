@@ -73,13 +73,14 @@ class HTTPClient(object):
 
     """
     def __init__(self, address='', port=0, use_ssl=False, timeout=3,
-                 data_timeout=120, uri='', strong_ssl=False, proxy=''):
+                 data_timeout=120, uri='', strong_ssl=False, proxy='', name=''):
         self.address = address
         self.port = port
         self.timeout = timeout
         self.data_timeout = data_timeout
         self.use_ssl = use_ssl
         self.strong_ssl = strong_ssl
+        self.name = name
         if not uri:
             protocol = "https" if use_ssl else "http"
             uri = "%s://%s:%s/" % (protocol, self.address, self.port)
@@ -158,7 +159,12 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
-            rsp = self._requests_con.get(uri, params=args, timeout=timeout, verify=self.strong_ssl)
+            headers = {
+                'content-type': 'application/zlib',
+                'User-Agent': requests.utils.default_user_agent() + ' [' + self.name + ']'
+            }
+            rsp = self._requests_con.get(uri, params=args, timeout=timeout, verify=self.strong_ssl,
+                                         headers=headers)
             if rsp.status_code != 200:
                 raise Exception('HTTP GET not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
             return rsp.json()
@@ -182,7 +188,10 @@ class HTTPClient(object):
         for (key, value) in args.iteritems():
             args[key] = cPickle.dumps(value)
         try:
-            headers = {'content-type': 'application/zlib'}
+            headers = {
+                'content-type': 'application/zlib',
+                'User-Agent': requests.utils.default_user_agent() + ' [' + self.name + ']'
+            }
             args = zlib.compress(json.dumps(args, ensure_ascii=False), 2)
             rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl,
                                           headers=headers)
@@ -209,7 +218,11 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
-            rsp = self._requests_con.put(uri, data, timeout=timeout, verify=self.strong_ssl)
+            headers = {
+                'User-Agent': requests.utils.default_user_agent() + ' [' + self.name + ']'
+            }
+            rsp = self._requests_con.put(uri, data, timeout=timeout, verify=self.strong_ssl,
+                                         headers=headers)
             if rsp.status_code != 200:
                 raise Exception('HTTP PUT not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
         except Exception as err:

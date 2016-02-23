@@ -268,7 +268,8 @@ class Broker(BaseSatellite):
         try:
             con = links[s_id]['con'] = HTTPClient(uri=uri,
                                                   strong_ssl=links[s_id]['hard_ssl_name_check'],
-                                                  timeout=timeout, data_timeout=data_timeout)
+                                                  timeout=timeout, data_timeout=data_timeout,
+                                                  name=i_type)
         except HTTPEXCEPTIONS, exp:
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
