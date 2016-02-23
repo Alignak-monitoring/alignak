@@ -87,7 +87,17 @@ class TestTimeout(AlignakTest):
         # We prepare a notification in the to_queue
         c = Contact()
         c.contact_name = "mr.schinken"
-        n = Notification('PROBLEM', 'scheduled', 'libexec/sleep_command.sh 7', '', svc, '', '', _id=1)
+        data = {
+            '_id': 1,
+            'type': 'PROBLEM',
+            'status': 'scheduled',
+            'command': 'libexec/sleep_command.sh 7',
+            'command_call': '',
+            'ref': svc.id,
+            'contact': '',
+            't_to_go': 0.0
+        }
+        n = Notification(data)
         n.status = "queue"
         #n.command = "libexec/sleep_command.sh 7"
         n.t_to_go = time.time()

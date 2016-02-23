@@ -76,7 +76,7 @@ class TestService(AlignakTest):
         # We get the state
         state = svc.__getstate__()
         # Check it's the good length
-        self.assertEqual(len(cls.properties) + len(cls.running_properties) + 1, len(state))
+        self.assertEqual(len(cls.properties) + len(cls.running_properties), len(state))
         # we copy the service
         svc_copy = copy.copy(svc)
         # reset the state in the original service

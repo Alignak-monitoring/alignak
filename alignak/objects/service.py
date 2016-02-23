@@ -740,7 +740,7 @@ class Service(SchedulingItem):
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)
         Format is : "SERVICE NOTIFICATION: *contact.get_name()*;*host.get_name()*;*self.get_name()*
                     ;*state*;*command.get_name()*;*output*"
@@ -750,7 +750,6 @@ class Service(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = notif.contact
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
                           'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
@@ -761,7 +760,7 @@ class Service(SchedulingItem):
         if self.__class__.log_notifications:
             naglog_result('critical', "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s"
                                       % (contact.get_name(),
-                                         self.host.get_name(), self.get_name(), state,
+                                         host_ref.get_name(), self.get_name(), state,
                                          command.get_name(), self.output))
 
     def raise_event_handler_log_entry(self, command):
@@ -1120,7 +1119,7 @@ class Service(SchedulingItem):
         macroresolver = MacroResolver()
         data = self.get_data_for_event_handler()
         cmd = macroresolver.resolve_command(cls.ocsp_command, data)
-        event_h = EventHandler(cmd, timeout=cls.ocsp_timeout)
+        event_h = EventHandler({'command': cmd, 'timeout': cls.ocsp_timeout})
 
         # ok we can put it in our temp action queue
         self.actions.append(event_h)

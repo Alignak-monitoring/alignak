@@ -419,7 +419,8 @@ class Scheduler(object):  # pylint: disable=R0902
         self.checks[check._id] = check
         # A new check means the host/service changes its next_check
         # need to be refreshed
-        brok = check.ref.get_next_schedule_brok()
+        # TODO swich to uuid. Not working for simple id are we 1,2,3.. in host and services
+        brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
         self.add(brok)
 
     def add_eventhandler(self, action):
@@ -598,7 +599,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Remember to delete reference of notification in service/host
                 act = self.actions[c_id]
                 if act.is_a == 'notification':
-                    act.ref.remove_in_progress_notification(act)
+                    self.find_item_by_id(act.ref).remove_in_progress_notification(act)
                 del self.actions[c_id]
         else:
             nb_actions_drops = 0
@@ -725,14 +726,16 @@ class Scheduler(object):  # pylint: disable=R0902
                     # It wont sent itself because it has no contact.
                     # We use it to create "child" notifications (for the contacts and
                     # notification_commands) which are executed in the reactionner.
-                    item = act.ref
-                    childnotifications = []
+                    item = self.find_item_by_id(act.ref)
+                    childnotifs = []
                     if not item.notification_is_blocked_by_item(act.type, now):
                         # If it is possible to send notifications
                         # of this type at the current time, then create
                         # a single notification for each contact of this item.
-                        childnotifications = item.scatter_notification(act)
-                        for notif in childnotifications:
+                        childnotifs = item.scatter_notification(
+                            act, self.contacts, self.find_item_by_id(getattr(item, "host", None))
+                        )
+                        for notif in childnotifs:
                             notif.status = 'scheduled'
                             self.add(notif)  # this will send a brok
 
@@ -740,7 +743,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     # the next notification (problems only)
                     if act.type == 'PROBLEM':
                         # Update the ref notif number after raise the one of the notification
-                        if len(childnotifications) != 0:
+                        if len(childnotifs) != 0:
                             # notif_nb of the master notification
                             # was already current_notification_number+1.
                             # If notifications were sent,
@@ -870,7 +873,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     action.output = action.output.decode('utf8', 'ignore')
 
                 self.actions[action._id].get_return_from(action)
-                item = self.actions[action._id].ref
+                item = self.find_item_by_id(self.actions[action._id].ref)
                 item.remove_in_progress_notification(action)
                 self.actions[action._id].status = 'zombie'
                 item.last_notification = action.check_time
@@ -880,10 +883,12 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 # If we' ve got a problem with the notification, raise a Warning log
                 if timeout:
+                    contact = self.find_item_by_id(self.actions[action._id].contact)
+                    item = self.find_item_by_id(self.actions[action._id].ref)
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %d seconds",
-                                   self.actions[action._id].contact.contact_name,
-                                   self.actions[action._id].ref.__class__.my_type,
+                                   contact.contact_name,
+                                   item.__class__.my_type,
                                    self.actions[action._id].command,
                                    int(execution_time))
                 elif action.exit_status != 0:
@@ -899,8 +904,9 @@ class Scheduler(object):  # pylint: disable=R0902
         elif action.is_a == 'check':
             try:
                 if action.status == 'timeout':
+                    ref = self.find_item_by_id(self.checks[action._id].ref)
                     action.output = "(%s Check Timed Out)" %\
-                                    self.checks[action._id].ref.__class__.my_type.capitalize()
+                                    ref.__class__.my_type.capitalize()  # pylint: disable=E1101
                     action.long_output = action.output
                     action.exit_status = self.conf.timeout_exit_status
                 self.checks[action._id].get_return_from(action)
@@ -918,8 +924,9 @@ class Scheduler(object):  # pylint: disable=R0902
                 _type = 'event handler'
                 if action.is_snapshot:
                     _type = 'snapshot'
+                ref = self.find_item_by_id(self.checks[action._id].ref)
                 logger.warning("%s %s command '%s ' timed out after %d seconds",
-                               self.actions[action._id].ref.__class__.my_type.capitalize(),
+                               ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
                                _type,
                                self.actions[action._id].command,
                                int(action.execution_time))
@@ -927,7 +934,8 @@ class Scheduler(object):  # pylint: disable=R0902
             # If it's a snapshot we should get the output an export it
             if action.is_snapshot:
                 old_action.get_return_from(action)
-                brok = old_action.ref.get_snapshot_brok(old_action.output, old_action.exit_status)
+                s_item = self.find_item_by_id(old_action.ref)
+                brok = s_item.get_snapshot_brok(old_action.output, old_action.exit_status)
                 self.add(brok)
         else:
             logger.error("The received result type in unknown! %s", str(action.is_a))
@@ -1172,7 +1180,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             # must be ok to launch, and not an internal one (business rules based)
             if chk.internal and chk.status == 'scheduled' and chk.is_launchable(now):
-                chk.ref.manage_internal_check(self.hosts, self.services, chk)
+                self.find_item_by_id(chk.ref).manage_internal_check(self.hosts, self.services, chk)
                 # it manage it, now just ask to consume it
                 # like for all checks
                 chk.status = 'waitconsume'
@@ -1341,28 +1349,28 @@ class Scheduler(object):  # pylint: disable=R0902
                             setattr(host, prop, h_dict[prop])
                 # Now manage all linked objects load from previous run
                 for notif in host.notifications_in_progress.values():
-                    notif.ref = host
+                    notif.ref = host.id
                     self.add(notif)
                     # Also raises the action id, so do not overlap ids
                     notif.assume_at_least_id(notif._id)
                 host.update_in_checking()
                 # And also add downtimes and comments
                 for downtime in host.downtimes:
-                    downtime.ref = host
+                    downtime.ref = host.id
                     if hasattr(downtime, 'extra_comment'):
-                        downtime.extra_comment.ref = host
+                        downtime.extra_comment.ref = host.id
                     else:
                         downtime.extra_comment = None
                     # raises the downtime id to do not overlap
                     Downtime._id = max(Downtime._id, downtime._id + 1)
                     self.add(downtime)
                 for comm in host.comments:
-                    comm.ref = host
+                    comm.ref = host.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
                     Comment._id = max(Comment._id, comm._id + 1)
                 if host.acknowledgement is not None:
-                    host.acknowledgement.ref = host
+                    host.acknowledgement.ref = host.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
                     Acknowledge._id = max(Acknowledge._id, host.acknowledgement._id + 1)
@@ -1404,28 +1412,28 @@ class Scheduler(object):  # pylint: disable=R0902
                             setattr(serv, prop, s_dict[prop])
                 # Ok now manage all linked objects
                 for notif in serv.notifications_in_progress.values():
-                    notif.ref = serv
+                    notif.ref = serv.id
                     self.add(notif)
                     # Also raises the action id, so do not overlap id
                     notif.assume_at_least_id(notif._id)
                 serv.update_in_checking()
                 # And also add downtimes and comments
                 for downtime in serv.downtimes:
-                    downtime.ref = serv
+                    downtime.ref = serv.id
                     if hasattr(downtime, 'extra_comment'):
-                        downtime.extra_comment.ref = serv
+                        downtime.extra_comment.ref = serv.id
                     else:
                         downtime.extra_comment = None
                     # raises the downtime id to do not overlap
                     Downtime._id = max(Downtime._id, downtime._id + 1)
                     self.add(downtime)
                 for comm in serv.comments:
-                    comm.ref = serv
+                    comm.ref = serv.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
                     Comment._id = max(Comment._id, comm._id + 1)
                 if serv.acknowledgement is not None:
-                    serv.acknowledgement.ref = serv
+                    serv.acknowledgement.ref = serv.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
                     Acknowledge._id = max(Acknowledge._id, serv.acknowledgement._id + 1)
@@ -1569,7 +1577,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # print "**********Consume*********"
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
-                item = chk.ref
+                item = self.find_item_by_id(chk.ref)
                 item.consume_result(chk)
 
         # All 'finished' checks (no more dep) raise checks they depends on
@@ -1584,7 +1592,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # Now, reinteger dep checks
         for chk in self.checks.values():
             if chk.status == 'waitdep' and len(chk.depend_on) == 0:
-                item = chk.ref
+                item = self.find_item_by_id(chk.ref)
                 item.consume_result(chk)
 
     def delete_zombie_checks(self):
@@ -1665,14 +1673,14 @@ class Scheduler(object):  # pylint: disable=R0902
         # which were marked for deletion (mostly by dt.exit())
         for downtime in self.downtimes.values():
             if downtime.can_be_deleted is True:
-                ref = downtime.ref
+                ref = self.find_item_by_id(downtime.ref)
                 self.del_downtime(downtime._id)
                 broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
         for downtime in self.contact_downtimes.values():
             if downtime.can_be_deleted is True:
-                ref = downtime.ref
+                ref = self.find_item_by_id(downtime.ref)
                 self.del_contact_downtime(downtime._id)
                 broks.append(ref.get_update_status_brok())
 
@@ -1680,7 +1688,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # An exiting downtime also invalidates it's comment.
         for comm in self.comments.values():
             if comm.can_be_deleted is True:
-                ref = comm.ref
+                ref = self.find_item_by_id(comm.ref)
                 self.del_comment(comm._id)
                 broks.append(ref.get_update_status_brok())
 
@@ -1692,7 +1700,7 @@ class Scheduler(object):  # pylint: disable=R0902
             elif now >= downtime.start_time and downtime.fixed and not downtime.is_in_effect:
                 # this one has to start now
                 broks.extend(downtime.enter())  # returns downtimestart notifications
-                broks.append(downtime.ref.get_update_status_brok())
+                broks.append(self.find_item_by_id(downtime.ref).get_update_status_brok())
 
         for brok in broks:
             self.add(brok)
@@ -1757,7 +1765,7 @@ class Scheduler(object):  # pylint: disable=R0902
         worker_names = {}
         now = int(time.time())
         for chk in self.checks.values():
-            time_to_orphanage = chk.ref.get_time_to_orphanage()
+            time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
             if time_to_orphanage:
                 if chk.status == 'inpoller' and chk.t_to_go < now - time_to_orphanage:
                     chk.status = 'scheduled'
@@ -1766,7 +1774,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         continue
                     worker_names[chk.worker] += 1
         for act in self.actions.values():
-            time_to_orphanage = act.ref.get_time_to_orphanage()
+            time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
             if time_to_orphanage:
                 if act.status == 'inpoller' and act.t_to_go < now - time_to_orphanage:
                     act.status = 'scheduled'
@@ -1828,6 +1836,30 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in checks.itervalues():
             res[chk.status] += 1
         return res
+
+    def find_item_by_id(self, o_id):
+        """Get item based on its id or uuid
+
+        :param o_id:
+        :type o_id: int | str
+        :return:
+        :rtype: alignak.objects.item.Item | None
+        """
+        # TODO: Use uuid instead of id, because all obj have the same id (1,2,3)
+        # TODO: Ensure minimal list of objects in chain.
+        if not o_id:
+            return None
+
+        # Temporary fix. To remove when all obj have uuids
+        if not isinstance(o_id, int) and not isinstance(o_id, basestring):
+            return o_id
+
+        for items in [self.hosts, self.services, self.actions, self.checks, self.comments,
+                      self.hostgroups, self.servicegroups, self.contacts, self.contactgroups]:
+            if o_id in items:
+                return items[o_id]
+
+        raise Exception("Item with id %s not found" % o_id)
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon

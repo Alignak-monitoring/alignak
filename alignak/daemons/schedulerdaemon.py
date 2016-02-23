@@ -129,7 +129,7 @@ class Alignak(BaseSatellite):
             # Already launch checks should not be touch
             if chk.status == 'scheduled' and chk.t_to_go is not None:
                 t_to_go = chk.t_to_go
-                ref = chk.ref
+                ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
                 if ref.check_period is not None:
                     # But it's no so simple, we must match the timeperiod

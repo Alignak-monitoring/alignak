@@ -239,7 +239,7 @@ class Item(object):
         cls = self.__class__
         i = cls({})  # Dummy item but with it's own running properties
         for prop in cls.properties:
-            if hasattr(self, prop):
+            if hasattr(self, prop) and prop != '_id':  # TODO: Fix it
                 val = getattr(self, prop)
                 setattr(i, prop, val)
         # Also copy the customs tab

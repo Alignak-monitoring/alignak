@@ -493,7 +493,7 @@ class TestHost(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'host_name', 'alias', 'address',
+        '_id', 'host_name', 'alias', 'address',
         'check_period', 'notification_period']
 
     properties = dict([
@@ -570,8 +570,8 @@ class TestHost(PropertiesTester, AlignakTest):
         ('snapshot_enabled', False),
         ('snapshot_period', ''),
         ('snapshot_criteria', ['d','u']),
-        ('business_rule_host_notification_options', ['']),
-        ('business_rule_service_notification_options', ['']),
+        ('business_rule_host_notification_options', []),
+        ('business_rule_service_notification_options', []),
         ])
 
     def setUp(self):
@@ -800,7 +800,7 @@ class TestService(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'host_name', 'service_description',
+        '_id', 'host_name', 'service_description',
         'check_command', 'check_period', 'notification_period']
 
     properties = dict([
@@ -875,8 +875,8 @@ class TestService(PropertiesTester, AlignakTest):
         ('snapshot_enabled', False),
         ('snapshot_period', ''),
         ('snapshot_criteria', ['w','c','u']),
-        ('business_rule_host_notification_options', ['']),
-        ('business_rule_service_notification_options', ['']),
+        ('business_rule_host_notification_options', []),
+        ('business_rule_service_notification_options', []),
         ('host_dependency_enabled', True),
         ])
 

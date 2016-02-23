@@ -62,7 +62,15 @@ class TestConfig(AlignakTest):
         host.act_depend_of = []  # ignore the router
         cmd = "/error/pl"
         # Create a dummy notif
-        n = Notification('PROBLEM', 'scheduled', 'BADCOMMAND', cmd, host, None, 0)
+        data = {
+                   'type': 'PROBLEM',
+                   'status': 'scheduled',
+                   'command': 'BADCOMMAND',
+                   'command_call': cmd,
+                   'ref': host.id,
+                   'contact': None,
+                   't_to_go': 0}
+        n = Notification(data)
         n.execute()
         time.sleep(0.2)
         if n.status is not 'done':

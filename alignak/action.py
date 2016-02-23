@@ -72,6 +72,7 @@ except ImportError:
 from alignak.log import logger
 from alignak.property import BoolProp, IntegerProp, FloatProp
 from alignak.property import StringProp, DictProp
+from alignak.objects.item import Item
 
 __all__ = ('Action', )
 
@@ -101,7 +102,7 @@ def no_block_read(output):
         return ''
 
 
-class ActionBase(object):
+class ActionBase(Item):
     """
     This abstract class is used just for having a common id for both
     actions and checks.
@@ -113,19 +114,28 @@ class ActionBase(object):
         'is_a':             StringProp(default=''),
         'type':             StringProp(default=''),
         '_in_timeout':      BoolProp(default=False),
-        'status':           StringProp(default=''),
+        'status':           StringProp(default='scheduled'),
         'exit_status':      IntegerProp(default=3),
-        'output':           StringProp(default=''),
-        't_to_go':          FloatProp(default=0),
+        'output':           StringProp(default='', fill_brok=['full_status']),
+        't_to_go':          FloatProp(default=0.0),
         'check_time':       IntegerProp(default=0),
         'execution_time':   FloatProp(default=0.0),
         'u_time':           FloatProp(default=0.0),
         's_time':           FloatProp(default=0.0),
         'reactionner_tag':  StringProp(default='None'),
         'env':              DictProp(default={}),
-        'module_type':      StringProp(default='fork'),
-        'worker':           StringProp(default='none')
+        'module_type':      StringProp(default='fork', fill_brok=['full_status']),
+        'worker':           StringProp(default='none'),
+        'command':          StringProp(),
+        'timeout':          IntegerProp(default=10),
+        'ref':              StringProp(default=''),
     }
+
+    def __init__(self, params=None):
+        super(ActionBase, self).__init__(params)
+        self._id = Action._id
+        Action._id += 1
+        self.fill_default()
 
     @staticmethod
     def assume_at_least_id(_id):
@@ -136,6 +146,15 @@ class ActionBase(object):
         :return: None
         """
         Action._id = max(Action._id, _id)
+
+    def get_id(self):
+        """Getter to id attribute
+
+        :return: action id
+        :rtype: int
+        TODO: Remove Item has already property id
+        """
+        return self._id
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""

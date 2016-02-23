@@ -66,6 +66,7 @@ import re
 import random
 import time
 import traceback
+import uuid
 
 from alignak.objects.item import Item
 
@@ -93,6 +94,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
+        '_id':
+            StringProp(),
         'display_name':
             StringProp(default='', fill_brok=['full_status']),
         'initial_state':
@@ -195,9 +198,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, fill_brok=['full_status']),
         # Enforces child nodes notification options
         'business_rule_host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
         'business_rule_service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
         # Business_Impact value
         'business_impact':
             IntegerProp(default=2, fill_brok=['full_status']),
@@ -441,6 +444,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     }
 
     special_properties = []
+
+    def __init__(self, params=None):
+        super(SchedulingItem, self).__init__(params)
+        self._id = uuid.uuid4().hex
 
     def __getstate__(self):
         """Call by pickle to data-ify the host
@@ -1160,14 +1167,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         data = self.get_data_for_event_handler()
         cmd = macroresolver.resolve_command(event_handler, data)
         reac_tag = event_handler.reactionner_tag
-        event_h = EventHandler(cmd, timeout=cls.event_handler_timeout,
-                               ref=self, reactionner_tag=reac_tag)
+        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
+                               'ref': self._id, 'reactionner_tag': reac_tag})
         # print "DBG: Event handler call created"
         # print "DBG: ",e.__dict__
         self.raise_event_handler_log_entry(event_handler)
 
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
+        print "ACTION %s APP IN %s" % (self.get_name(), event_h)
 
     def get_snapshot(self):
         """
@@ -1210,8 +1218,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         data = self.get_data_for_event_handler()
         cmd = macroresolver.resolve_command(self.snapshot_command, data)
         reac_tag = self.snapshot_command.reactionner_tag
-        event_h = EventHandler(cmd, timeout=cls.event_handler_timeout,
-                               ref=self, reactionner_tag=reac_tag, is_snapshot=True)
+        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
+                               'ref': self._id, 'reactionner_tag': reac_tag, 'is_snapshot': True})
         self.raise_snapshot_log_entry(self.snapshot_command)
 
         # we save the time we launch the snap
@@ -1656,7 +1664,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.last_problem_id = self.current_problem_id
                 self.current_problem_id = SchedulingItem.current_problem_id
 
-    def prepare_notification_for_sending(self, notif):
+    def prepare_notification_for_sending(self, notif, contact, host_ref):
         """Used by scheduler when a notification is ok to be sent (to reactionner).
         Here we update the command with status of now, and we add the contact to set of
         contact we notified. And we raise the log entry
@@ -1666,11 +1674,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         if notif.status == 'inpoller':
-            self.update_notification_command(notif)
-            self.notified_contacts.add(notif.contact)
-            self.raise_notification_log_entry(notif)
+            self.update_notification_command(notif, contact, host_ref)
+            self.notified_contacts.add(contact._id)
+            self.raise_notification_log_entry(notif, contact, host_ref)
 
-    def update_notification_command(self, notif):
+    def update_notification_command(self, notif, contact, host_ref=None):
         """Update the notification command by resolving Macros
         And because we are just launching the notification, we can say
         that this contact has been notified
@@ -1681,7 +1689,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         macrosolver = MacroResolver()
-        data = self.get_data_for_notifications(notif.contact, notif)
+        data = [self, contact, notif]
+        if host_ref:
+            data.append(host_ref)
         notif.command = macrosolver.resolve_command(notif.command_call, data)
         if cls.enable_environment_macros or notif.enable_environment_macros:
             notif.env = macrosolver.get_env_macros(data)
@@ -1840,16 +1850,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # downtime/flap/etc do not change the notification number
             next_notif_nb = self.current_notification_number
 
-        notif = Notification(n_type, 'scheduled', 'VOID', None, self, None, new_t,
-                             timeout=cls.notification_timeout,
-                             notif_nb=next_notif_nb)
+        data = {
+            'type': n_type,
+            'command': 'VOID',
+            'ref': self._id,
+            't_to_go': new_t,
+            'timeout': cls.notification_timeout,
+            'notif_nb': next_notif_nb,
+            'host_name': getattr(self, 'host_name', ''),
+            'service_description': getattr(self, 'service_description', ''),
+
+        }
+        notif = Notification(data)
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif._id] = notif
         # and put it in the temp queue for scheduler
         self.actions.append(notif)
 
-    def scatter_notification(self, notif):
+    def scatter_notification(self, notif, contacts, host_ref=None):
         """In create_notifications we created a notification "template". When it's
         time to hand it over to the reactionner, this master notification needs
         to be split in several child notifications, one for each contact
@@ -1871,29 +1890,30 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.first_notification_delay != 0 and len(self.notified_contacts) == 0:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
-                contacts = []
+                notif_contacts = []
             else:
                 # The old way. Only send recover notifications to those contacts
                 # who also got problem notifications
-                contacts = list(self.notified_contacts)
+                notif_contacts = [contacts[c_id] for c_id in self.notified_contacts]
             self.notified_contacts.clear()
         else:
             # Check is an escalation match. If yes, get all contacts from escalations
             if self.is_escalable(notif):
-                contacts = self.get_escalable_contacts(notif)
+                notif_contacts = self.get_escalable_contacts(notif)
                 escalated = True
             # else take normal contacts
             else:
-                contacts = self.contacts
+                # notif_contacts = [contacts[c_id] for c_id in self.contacts]
+                notif_contacts = self.contacts
 
-        for contact in contacts:
+        for contact in notif_contacts:
             # We do not want to notify again a contact with
             # notification interval == 0 that has been already
             # notified. Can happen when a service exit a downtime
             # and still in critical/warning (and not acknowledge)
             if notif.type == "PROBLEM" and \
                     self.notification_interval == 0 \
-                    and contact in self.notified_contacts:
+                    and contact._id in self.notified_contacts:
                 continue
             # Get the property name for notification commands, like
             # service_notification_commands for service
@@ -1901,25 +1921,37 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             for cmd in notif_commands:
                 reac_tag = cmd.reactionner_tag
-                child_n = Notification(notif.type, 'scheduled', 'VOID', cmd, self,
-                                       contact, notif.t_to_go, escalated=escalated,
-                                       timeout=cls.notification_timeout,
-                                       notif_nb=notif.notif_nb, reactionner_tag=reac_tag,
-                                       module_type=cmd.module_type,
-                                       enable_environment_macros=cmd.enable_environment_macros)
+                data = {
+                    'type': notif.type,
+                    'command': 'VOID',
+                    'command_call': cmd,
+                    'ref': self._id,
+                    'contact': contact._id,
+                    'contact_name': contact.contact_name,
+                    't_to_go': notif.t_to_go,
+                    'escalated': escalated,
+                    'timeout': cls.notification_timeout,
+                    'notif_nb': notif.notif_nb,
+                    'reactionner_tag': reac_tag,
+                    'enable_environment_macros': cmd.enable_environment_macros,
+                    'host_name': getattr(self, 'host_name', ''),
+                    'service_description': getattr(self, 'service_description', ''),
+
+                }
+                child_n = Notification(data)
                 if not self.notification_is_blocked_by_contact(child_n, contact):
                     # Update the notification with fresh status information
                     # of the item. Example: during the notification_delay
                     # the status of a service may have changed from WARNING to CRITICAL
-                    self.update_notification_command(child_n)
-                    self.raise_notification_log_entry(child_n)
+                    self.update_notification_command(child_n, contact, host_ref)
+                    self.raise_notification_log_entry(child_n, contact, host_ref)
                     self.notifications_in_progress[child_n._id] = child_n
                     childnotifications.append(child_n)
 
                     if notif.type == 'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
-                        self.notified_contacts.add(contact)
+                        self.notified_contacts.add(contact._id)
 
         return childnotifications
 
@@ -1962,18 +1994,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
             # we need another c._id
-            command_line = c_in_progress.command
-            timeout = c_in_progress.timeout
-            poller_tag = c_in_progress.poller_tag
-            env = c_in_progress.env
-            module_type = c_in_progress.module_type
-
-            chk = Check('scheduled', command_line, self, timestamp, ref_check,
-                        timeout=timeout,
-                        poller_tag=poller_tag,
-                        env=env,
-                        module_type=module_type,
-                        dependency_check=True)
+            data = {
+                'command': c_in_progress.command,
+                'timeout': c_in_progress.timeout,
+                'poller_tag': c_in_progress.poller_tag,
+                'env': c_in_progress.env,
+                'module_type': c_in_progress.module_type,
+                't_to_go': timestamp,
+                'depend_on_me': [ref_check],
+                'ref': self._id,
+                'dependency_check': True,
+                'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
+            }
+            chk = Check(data)
 
             self.actions.append(chk)
             # print "Creating new check with new id : %d, old id : %d" % (c._id, c_in_progress._id)
@@ -2021,9 +2054,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Make the Check object and put the service in checking
             # Make the check inherit poller_tag from the command
             # And reactionner_tag too
-            chk = Check('scheduled', command_line, self, timestamp, ref_check,
-                        timeout=timeout, poller_tag=check_command.poller_tag,
-                        env=env, module_type=check_command.module_type)
+            data = {
+                'command': command_line,
+                'timeout': timeout,
+                'poller_tag': check_command.poller_tag,
+                'env': env,
+                'module_type': check_command.module_type,
+                't_to_go': timestamp,
+                'depend_on_me': [ref_check] if ref_check else [],
+                'ref': self._id,
+                'internal': self.got_business_rule or command_line.startswith('_internal')
+            }
+            chk = Check(data)
 
             # We keep a trace of all checks in progress
             # to know if we are in checking_or not
@@ -2069,8 +2111,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             data = self.get_data_for_event_handler()
             cmd = macroresolver.resolve_command(cls.perfdata_command, data)
             reactionner_tag = cls.perfdata_command.reactionner_tag
-            event_h = EventHandler(cmd, timeout=cls.perfdata_timeout,
-                                   ref=self, reactionner_tag=reactionner_tag)
+            event_h = EventHandler({'command': cmd, 'timeout': cls.perfdata_timeout,
+                                   'ref': self._id, 'reactionner_tag': reactionner_tag})
 
             # ok we can put it in our temp action queue
             self.actions.append(event_h)
@@ -2295,7 +2337,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         for objs in self.comments, self.downtimes:
             for obj in objs:
-                obj.ref = self
+                obj.ref = self._id
 
     def eval_triggers(self):
         """Launch triggers
@@ -2478,7 +2520,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise NOTIFICATION entry (critical level)
         :param notif: notification object created by service alert
         :type notif: alignak.objects.notification.Notification

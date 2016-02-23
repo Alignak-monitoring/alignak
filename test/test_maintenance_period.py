@@ -65,10 +65,10 @@ class TestMaintPeriod(AlignakTest):
         a_24_7 = self.sched.timeperiods.find_by_name("24x7")
         print "Get the hosts and services"
         test_router_0 = self.sched.hosts.find_by_name("test_router_0")
-        test_host_0 = self.sched.hosts.find_by_name("test_host_0")
+        test_host_0 = self.sched.hosts.find_by_name("test_host_01")
         test_nobody = self.sched.hosts.find_by_name("test_nobody")
 
-        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_01", "test_ok_0")
         svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_ok_0")
         svc3 = self.sched.services.find_srv_by_name_and_hostname("test_nobody", "test_ok_0")
 
@@ -90,7 +90,7 @@ class TestMaintPeriod(AlignakTest):
         test_host_0 = self.sched.hosts.find_by_name("test_host_0")
         test_nobody = self.sched.hosts.find_by_name("test_nobody")
 
-        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_01", "test_ok_0")
         svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_ok_0")
         svc3 = self.sched.services.find_srv_by_name_and_hostname("test_nobody", "test_ok_0")
         # we want to focus on only one maintenance

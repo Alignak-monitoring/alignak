@@ -183,7 +183,7 @@ class TestEndParsingType(unittest.TestCase):
             self.check_objects_from(objects)
 
         print "== test Check() =="
-        check = Check('OK', 'check_ping', 0, 10.0)
+        check = Check({'status': 'OK', 'command': 'check_ping', 'ref': 0, 't_to_go': 10.0})
         for prop in check.properties:
             if hasattr(check, prop):
                 value = getattr(check, prop)

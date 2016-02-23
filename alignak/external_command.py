@@ -2835,7 +2835,7 @@ class ExternalCommandManager:
         logger.warning("RESTART command : %s", restart_cmd_line)
 
         # Ok get an event handler command that will run in 15min max
-        e_handler = EventHandler(restart_cmd_line, timeout=900)
+        e_handler = EventHandler({'command': restart_cmd_line, 'timeout': 900})
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish
@@ -2866,7 +2866,7 @@ class ExternalCommandManager:
         logger.warning("RELOAD command : %s", reload_cmd_line)
 
         # Ok get an event handler command that will run in 15min max
-        e_handler = EventHandler(reload_cmd_line, timeout=900)
+        e_handler = EventHandler({'command': reload_cmd_line, 'timeout': 900})
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish

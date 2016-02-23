@@ -80,25 +80,22 @@ class Notification(Action):  # pylint: disable=R0902
         'contact_name':        StringProp(default='', fill_brok=['full_status']),
         'host_name':           StringProp(default='', fill_brok=['full_status']),
         'service_description': StringProp(default='', fill_brok=['full_status']),
-        'reason_type':         IntegerProp(default=0, fill_brok=['full_status']),
+        'reason_type':         IntegerProp(default=1, fill_brok=['full_status']),
         'state':               IntegerProp(default=0, fill_brok=['full_status']),
-        'output':              StringProp(default='', fill_brok=['full_status']),
         'ack_author':          StringProp(default='', fill_brok=['full_status']),
         'ack_data':            StringProp(default='', fill_brok=['full_status']),
         'escalated':           BoolProp(default=False, fill_brok=['full_status']),
-        'contacts_notified':   IntegerProp(default=0, fill_brok=['full_status']),
         'command_call':        StringProp(default=None),
         'contact':             StringProp(default=None),
-        'notif_nb':            IntegerProp(default=0),
-        'status':              StringProp(default='scheduled'),
-        'command':             StringProp(default=''),
+        'notif_nb':            IntegerProp(default=1),
+        'command':             StringProp(default='UNSET'),
         'sched_id':            IntegerProp(default=0),
-        'timeout':             IntegerProp(default=10),
-        'module_type':         StringProp(default='fork', fill_brok=['full_status']),
-        'creation_time':       FloatProp(default=0),
+        'creation_time':       FloatProp(default=0.0),
         'enable_environment_macros': BoolProp(default=False),
         # Keep a list of currently active escalations
         'already_start_escalations':  StringProp(default=set()),
+        'type':               StringProp(default='PROBLEM'),
+
     })
 
     macros = {
@@ -115,69 +112,12 @@ class Notification(Action):  # pylint: disable=R0902
         'SERVICENOTIFICATIONID':    '_id'
     }
 
-    def __init__(self, _type='PROBLEM', status='scheduled',  # pylint: disable=R0913
-                 command='UNSET', command_call=None, ref=None, contact=None, t_to_go=0.0,
-                 contact_name='', host_name='', service_description='',
-                 reason_type=1, state=0, ack_author='', ack_data='',
-                 escalated=False, contacts_notified=0,
-                 start_time=0, end_time=0, notification_type=0, _id=None,
-                 notif_nb=1, timeout=10, env=None, module_type='fork',
-                 reactionner_tag='None', enable_environment_macros=False):
-
-        self.is_a = 'notification'
-        self.type = _type
-        if _id is None:  # _id != None is for copy call only
-            self._id = Action._id
-            Action._id += 1
-        self._in_timeout = False
-        self.timeout = timeout
-        self.status = status
-        self.exit_status = 3
-        self.command = command
-        self.command_call = command_call
-        self.output = None
-        self.execution_time = 0.0
-        self.u_time = 0.0  # user execution time
-        self.s_time = 0.0  # system execution time
-
-        self.ref = ref
-
-        # Set host_name and description from the ref
-        try:
-            self.host_name = self.ref.host_name
-        except AttributeError:
-            self.host_name = host_name
-        try:
-            self.service_description = self.ref.service_description
-        except AttributeError:
-            self.service_description = service_description
-
-        if env is not None:
-            self.env = env
-        else:
-            self.env = {}
-        self.module_type = module_type
-        self.t_to_go = t_to_go
-        self.notif_nb = notif_nb
-        self.contact = contact
-
-        # For brok part
-        self.contact_name = contact_name
-        self.reason_type = reason_type
-        self.state = state
-        self.ack_author = ack_author
-        self.ack_data = ack_data
-        self.escalated = escalated
-        self.contacts_notified = contacts_notified
-        self.start_time = start_time
-        self.end_time = end_time
-        self.notification_type = notification_type
-
+    # TODO: check if id is taken by inheritance
+    # Output None by default not ''
+    # Contact is None, usually a obj like ref. Check access in code
+    def __init__(self, params=None):
+        super(Notification, self).__init__(params)
         self.creation_time = time.time()
-        self.worker = 'none'
-        self.reactionner_tag = reactionner_tag
-        self.already_start_escalations = set()
-        self.enable_environment_macros = enable_environment_macros
 
     def copy_shell(self):
         """Get a copy o this notification with minimal values (default + id)
@@ -186,7 +126,7 @@ class Notification(Action):  # pylint: disable=R0902
         :rtype: alignak.notification.Notification
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Notification('', '', '', '', '', '', '', _id=self._id))
+        return self.copy_shell__(Notification({'_id': self._id}))
 
     def is_launchable(self, timestamp):
         """Check if this notification can be launched base on time
@@ -213,14 +153,6 @@ class Notification(Action):  # pylint: disable=R0902
         return "Notification %d status:%s command:%s ref:%s t_to_go:%s" % \
                (self._id, self.status, self.command, getattr(self, 'ref', 'unknown'),
                 time.asctime(time.localtime(self.t_to_go)))
-
-    def get_id(self):
-        """Getter to id attribute
-
-        :return: notification id
-        :rtype: int
-        """
-        return self._id
 
     def get_return_from(self, notif):
         """Setter of exit_status and execution_time attributes

@@ -729,7 +729,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
         Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;
                      *command.get_name()*;*output*"
@@ -739,7 +739,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = notif.contact
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
                           'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
@@ -1105,7 +1104,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         macroresolver = MacroResolver()
         data = self.get_data_for_event_handler()
         cmd = macroresolver.resolve_command(cls.ochp_command, data)
-        e_handler = EventHandler(cmd, timeout=cls.ochp_timeout)
+        e_handler = EventHandler({'command': cmd, 'timeout': cls.ochp_timeout})
 
         # ok we can put it in our temp action queue
         self.actions.append(e_handler)

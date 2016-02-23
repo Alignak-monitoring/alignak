@@ -233,14 +233,14 @@ class TestConfig(AlignakTest):
         test_host_0.state = 'OK'
 
         # Create a fake check already done for service
-        cs = Check('waitconsume', 'foo', test_host_0_test_ok_0, now)
+        cs = Check({'status': 'waitconsume', 'command': 'foo', 'ref': test_host_0_test_ok_0.id, 't_to_go': now})
         cs.exit_status = 2
         cs.output = 'BAD'
         cs.check_time = now
         cs.execution_time = now
 
         # Create a fake check for the host (so that it is in checking)
-        ch = Check('scheduled', 'foo', test_host_0, now)
+        ch = Check({'status': 'scheduled', 'command': 'foo', 'ref': test_host_0.id, 't_to_go': now})
         test_host_0.checks_in_progress.append(ch)
 
 

@@ -328,11 +328,13 @@ class ListProp(Property):
         :rtype: list
         """
         if isinstance(val, list):
-            return [s.strip() for s in list_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
+            return [s.strip() if hasattr(s, "strip") else s
+                    for s in list_split(val, self.split_on_coma)
+                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
         else:
-            return [s.strip() for s in to_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
+            return [s.strip() if hasattr(s, "strip") else s
+                    for s in to_split(val, self.split_on_coma)
+                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
 
 class LogLevelProp(StringProp):
@@ -369,6 +371,8 @@ class DictProp(Property):
         if elts_prop is not None and not issubclass(elts_prop, Property):
             raise TypeError("DictProp constructor only accept Property"
                             "sub-classes as elts_prop parameter")
+        self.elts_prop = None
+
         if elts_prop is not None:
             self.elts_prop = elts_prop()
 

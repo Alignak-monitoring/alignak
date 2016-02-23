@@ -341,10 +341,12 @@ class AlignakTest(unittest.TestCase):
             actions = self.actions
         for a in sorted(actions.values(), lambda x, y: x._id - y._id):
             if a.is_a == 'notification':
-                if a.ref.my_type == "host":
-                    ref = "host: %s" % a.ref.get_name()
+                item = self.sched.find_item_by_id(a.ref)
+                if item.my_type == "host":
+                    ref = "host: %s" % item.get_name()
                 else:
-                    ref = "host: %s svc: %s" % (a.ref.host.get_name(), a.ref.get_name())
+                    hst = self.sched.find_item_by_id(item.host)
+                    ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
                 print "NOTIFICATION %d %s %s %s %s" % (a._id, ref, a.type, time.asctime(time.localtime(a.t_to_go)), a.status)
             elif a.is_a == 'eventhandler':
                 print "EVENTHANDLER:", a
