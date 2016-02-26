@@ -53,6 +53,7 @@ import time
 import calendar
 import logging
 import re
+from datetime import datetime, timedelta
 
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
 from alignak.alignakobject import AlignakObject
@@ -303,9 +304,7 @@ class AbstractDaterange(AlignakObject):
         :return: True if one of the timerange is valid for t, False otherwise
         :rtype: bool
         """
-        # print "****Look for time valid for", time.asctime(time.localtime(t))
         if self.is_time_day_valid(timestamp):
-            # print "is time day valid"
             for timerange in self.timeranges:
                 # print tr, "is valid?", tr.is_time_valid(t)
                 if timerange.is_time_valid(timestamp):
@@ -349,7 +348,7 @@ class AbstractDaterange(AlignakObject):
         return t_day_epoch + tr_mins
 
     def is_time_day_valid(self, timestamp):
-        """Check if t is within start time and end time of the DateRange
+        """Check if it is within start time and end time of the DateRange
 
         :param timestamp: time to check
         :type timestamp: int
@@ -382,7 +381,6 @@ class AbstractDaterange(AlignakObject):
         :return: next time when a timerange is valid
         :rtype: None | int
         """
-        # print "Look for get_next_future_timerange_valid for t", t, time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(timestamp)
         starts = []
         for timerange in self.timeranges:
@@ -401,24 +399,16 @@ class AbstractDaterange(AlignakObject):
         :type timestamp: int
         :return: next time when a timerange is not valid
         :rtype: None | int
-        TODO: Looks like this function is buggy, start time should not be
-        included in returned values
         """
-        # print 'Call for get_next_future_timerange_invalid from ', time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(timestamp)
-        # print 'sec from morning', sec_from_morning
         ends = []
         for timerange in self.timeranges:
-            tr_start = timerange.hstart * 3600 + timerange.mstart * 60
-            if tr_start >= sec_from_morning:
-                ends.append(tr_start)
             tr_end = timerange.hend * 3600 + timerange.mend * 60
             if tr_end >= sec_from_morning:
+                # Remove the last second of the day for 00->24h"
+                if tr_end == 86400:
+                    tr_end = 86399
                 ends.append(tr_end)
-        # print "Ends:", ends
-        # Remove the last second of the day for 00->24h"
-        if 86400 in ends:
-            ends.remove(86400)
         if ends != []:
             return min(ends)
         else:
@@ -453,24 +443,18 @@ class AbstractDaterange(AlignakObject):
         :return: timestamp of the next valid time (LOCAL TIME)
         :rtype: int | None
         """
-        # print "\tDR Get next valid from:", time.asctime(time.localtime(t))
-        # print "DR Get next valid from:", t
         if self.is_time_valid(timestamp):
             return timestamp
 
-        # print "DR Get next valid from:", time.asctime(time.localtime(t))
-        # First we search fot the day of t
+        # First we search for the day of t
         t_day = self.get_next_valid_day(timestamp)
-
-        # print "DR: T next valid day", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
         if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_valid(t_day)
-        else:  # t is in this day, so look from t (can be in the evening or so)
+        else:  # it is in this day, so look from t (can be in the evening or so)
             sec_from_morning = self.get_next_future_timerange_valid(timestamp)
-        # print "DR: sec from morning", sec_from_morning
 
         if sec_from_morning is not None:
             if t_day is not None and sec_from_morning is not None:
@@ -495,43 +479,31 @@ class AbstractDaterange(AlignakObject):
         :return: timestamp of the next invalid day (midnight) in LOCAL time.
         :rtype: int | None
         """
-        # print "Look in", self.__dict__
-        # print 'DR: get_next_invalid_day for', time.asctime(time.localtime(t))
         if self.is_time_day_invalid(timestamp):
-            # print "EARLY RETURN"
             return timestamp
 
         next_future_timerange_invalid = self.get_next_future_timerange_invalid(timestamp)
-        # print "next_future_timerange_invalid:", next_future_timerange_invalid
 
         # If today there is no more unavailable timerange, search the next day
         if next_future_timerange_invalid is None:
-            # print 'DR: get_next_future_timerange_invalid is None'
             # this day is finish, we check for next period
             (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp))
         else:
-            # print 'DR: get_next_future_timerange_invalid is',
-            # print time.asctime(time.localtime(next_future_timerange_invalid))
             (start_time, end_time) = self.get_start_and_end_time(timestamp)
 
         # (start_time, end_time) = self.get_start_and_end_time(t)
 
-        # print "START", time.asctime(time.localtime(start_time)),
-        # print "END", time.asctime(time.localtime(end_time))
         # The next invalid day can be t day if there a possible
         # invalid time range (timerange is not 00->24
         if next_future_timerange_invalid is not None:
             if start_time <= timestamp <= end_time:
-                # print "Early Return next invalid day:", time.asctime(time.localtime(get_day(t)))
                 return get_day(timestamp)
             if start_time >= timestamp:
-                # print "start_time >= t:", time.asctime(time.localtime(get_day(start_time)))
                 return get_day(start_time)
         else:
             # Else, there is no possibility than in our start_time<->end_time we got
             # any invalid time (full period out). So it's end_time+1 sec (tomorrow of end_time)
             return get_day(end_time + 1)
-
         return None
 
     def get_next_invalid_time_from_t(self, timestamp):
@@ -545,17 +517,15 @@ class AbstractDaterange(AlignakObject):
         if not self.is_time_valid(timestamp):
             return timestamp
 
-        # First we search fot the day of t
+        # First we search for the day of time range
         t_day = self.get_next_invalid_day(timestamp)
-        # print "FUCK NEXT DAY", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
         if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_invalid(t_day)
-        else:  # t is in this day, so look from t (can be in the evening or so)
+        else:  # it is in this day, so look from t (can be in the evening or so)
             sec_from_morning = self.get_next_future_timerange_invalid(timestamp)
-        # print "DR: sec from morning", sec_from_morning
 
         # tr can't be valid, or it will be return at the beginning
         # sec_from_morning = self.get_next_future_timerange_invalid(t)
@@ -754,14 +724,14 @@ class StandardDaterange(AbstractDaterange):
         now = time.localtime(ref)
         self.syear = now.tm_year
         self.month = now.tm_mon
-        # month_start_id = now.tm_mon
-        # month_start = Daterange.get_month_by_id(month_start_id)
         self.wday = now.tm_wday
         day_id = Daterange.get_weekday_id(self.day)
         today_morning = get_start_of_day(now.tm_year, now.tm_mon, now.tm_mday)
         tonight = get_end_of_day(now.tm_year, now.tm_mon, now.tm_mday)
         day_diff = (day_id - now.tm_wday) % 7
-        return (today_morning + day_diff * 86400, tonight + day_diff * 86400)
+        morning = datetime.fromtimestamp(today_morning) + timedelta(days=day_diff)
+        night = datetime.fromtimestamp(tonight) + timedelta(days=day_diff)
+        return (float(morning.strftime("%s")), float(night.strftime("%s")))
 
 
 class MonthWeekDayDaterange(Daterange):
