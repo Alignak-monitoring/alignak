@@ -308,15 +308,16 @@ class Scheduler(object):  # pylint: disable=R0902
             file_h.write('Scheduler DUMP at %d\n' % time.time())
             for chk in self.checks.values():
                 string = 'CHECK: %s:%s:%s:%s:%s:%s\n' % \
-                         (chk._id, chk.status, chk.t_to_go, chk.poller_tag, chk.command, chk.worker)
+                         (chk.uuid, chk.status, chk.t_to_go,
+                          chk.poller_tag, chk.command, chk.worker)
                 file_h.write(string)
             for act in self.actions.values():
                 string = '%s: %s:%s:%s:%s:%s:%s\n' % \
-                    (act.__class__.my_type.upper(), act._id, act.status,
+                    (act.__class__.my_type.upper(), act.uuid, act.status,
                      act.t_to_go, act.reactionner_tag, act.command, act.worker)
                 file_h.write(string)
             for brok in self.broks.values():
-                string = 'BROK: %s:%s\n' % (brok._id, brok.type)
+                string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
             file_h.close()
         except OSError, exp:
@@ -383,18 +384,18 @@ class Scheduler(object):  # pylint: disable=R0902
         # Maybe it's just for one broker
         if bname:
             broks = self.brokers[bname]['broks']
-            broks[brok._id] = brok
+            broks[brok.uuid] = brok
         else:
             # If there are known brokers, give it to them
             if len(self.brokers) > 0:
                 # Or maybe it's for all
                 for bname in self.brokers:
                     broks = self.brokers[bname]['broks']
-                    broks[brok._id] = brok
+                    broks[brok.uuid] = brok
             else:  # no brokers? maybe at startup for logs
                 # we will put in global queue, that the first broker
                 # connection will get all
-                self.broks[brok._id] = brok
+                self.broks[brok.uuid] = brok
 
     def add_notification(self, notif):
         """Add a notification into actions list
@@ -403,7 +404,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type notif: alignak.notification.Notification
         :return: None
         """
-        self.actions[notif._id] = notif
+        self.actions[notif.uuid] = notif
         # A notification ask for a brok
         if notif.contact is not None:
             brok = notif.get_initial_status_brok()
@@ -416,7 +417,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type check: alignak.check.Check
         :return: None
         """
-        self.checks[check._id] = check
+        self.checks[check.uuid] = check
         # A new check means the host/service changes its next_check
         # need to be refreshed
         # TODO swich to uuid. Not working for simple id are we 1,2,3.. in host and services
@@ -430,8 +431,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :type action: alignak.eventhandler.EventHandler
         :return: None
         """
-        # print "Add an event Handler", elt._id
-        self.actions[action._id] = action
+        # print "Add an event Handler", elt.uuid
+        self.actions[action.uuid] = action
 
     def add_downtime(self, downtime):
         """Add a downtime into downtimes list
@@ -440,7 +441,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type downtime: alignak.downtime.Downtime
         :return: None
         """
-        self.downtimes[downtime._id] = downtime
+        self.downtimes[downtime.uuid] = downtime
         if downtime.extra_comment:
             self.add_comment(downtime.extra_comment)
 
@@ -451,7 +452,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type contact_dt: alignak.contactdowntime.ContactDowntime
         :return: None
         """
-        self.contact_downtimes[contact_dt._id] = contact_dt
+        self.contact_downtimes[contact_dt.uuid] = contact_dt
 
     def add_comment(self, comment):
         """Add a comment into comments list
@@ -460,7 +461,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type comment: alignak.comment.Comment
         :return: None
         """
-        self.comments[comment._id] = comment
+        self.comments[comment.uuid] = comment
         brok = comment.ref.get_update_status_brok()
         self.add(brok)
 
@@ -556,20 +557,21 @@ class Scheduler(object):  # pylint: disable=R0902
         # We want id of lower than max_id - 2*max_checks
         if len(self.checks) > max_checks:
             # keys does not ensure sorted keys. Max is slow but we have no other way.
-            id_max = max(self.checks.keys())
-            to_del_checks = [c for c in self.checks.values() if c._id < id_max - max_checks]
+            to_del_checks = [c for c in self.checks.values()]
+            to_del_checks.sort(key=lambda x: x.creation_time)
+            to_del_checks = to_del_checks[:-max_checks]
             nb_checks_drops = len(to_del_checks)
             if nb_checks_drops > 0:
                 logger.info("I have to del some checks (%d)..., sorry", nb_checks_drops)
             for chk in to_del_checks:
-                c_id = chk._id
+                c_id = chk.uuid
                 elt = chk.ref
                 # First remove the link in host/service
                 elt.remove_in_progress_check(chk)
                 # Then in dependent checks (I depend on, or check
                 # depend on me)
                 for dependent_checks in chk.depend_on_me:
-                    dependent_checks.depend_on.remove(chk._id)
+                    dependent_checks.depend_on.remove(chk.uuid)
                 for c_temp in chk.depend_on:
                     c_temp.depen_on_me.remove(chk)
                 del self.checks[c_id]  # Final Bye bye ...
@@ -583,24 +585,24 @@ class Scheduler(object):  # pylint: disable=R0902
             b_lists.append(elem['broks'])
         for broks in b_lists:
             if len(broks) > max_broks:
-                id_max = max(broks.keys())
-                id_to_del_broks = [c_id for c_id in broks if c_id < id_max - max_broks]
-                nb_broks_drops = len(id_to_del_broks)
-                for c_id in id_to_del_broks:
-                    del broks[c_id]
+                to_del_broks = [c for c in broks.values()]
+                to_del_broks.sort(key=lambda x: x.creation_time)
+                to_del_broks = to_del_broks[:-max_broks]
+                nb_broks_drops = len(to_del_broks)
+                for brok in to_del_broks:
+                    del broks[brok.uuid]
             else:
                 nb_broks_drops = 0
 
         if len(self.actions) > max_actions:
-            id_max = max(self.actions.keys())
-            id_to_del_actions = [c_id for c_id in self.actions if c_id < id_max - max_actions]
-            nb_actions_drops = len(id_to_del_actions)
-            for c_id in id_to_del_actions:
-                # Remember to delete reference of notification in service/host
-                act = self.actions[c_id]
+            to_del_actions = [c for c in self.actions.values()]
+            to_del_actions.sort(key=lambda x: x.creation_time)
+            to_del_actions = to_del_actions[:-max_actions]
+            nb_actions_drops = len(to_del_actions)
+            for act in to_del_actions:
                 if act.is_a == 'notification':
                     self.find_item_by_id(act.ref).remove_in_progress_notification(act)
-                del self.actions[c_id]
+                del self.actions[act.uuid]
         else:
             nb_actions_drops = 0
 
@@ -765,13 +767,13 @@ class Scheduler(object):  # pylint: disable=R0902
                         else:
                             # Wipe out this master notification. One problem notification is enough.
                             item.remove_in_progress_notification(act)
-                            self.actions[act._id].status = 'zombie'
+                            self.actions[act.uuid].status = 'zombie'
 
                     else:
                         # Wipe out this master notification.
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(act)
-                        self.actions[act._id].status = 'zombie'
+                        self.actions[act.uuid].status = 'zombie'
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
@@ -872,10 +874,10 @@ class Scheduler(object):  # pylint: disable=R0902
                 if isinstance(action.output, str):
                     action.output = action.output.decode('utf8', 'ignore')
 
-                self.actions[action._id].get_return_from(action)
-                item = self.find_item_by_id(self.actions[action._id].ref)
+                self.actions[action.uuid].get_return_from(action)
+                item = self.find_item_by_id(self.actions[action.uuid].ref)
                 item.remove_in_progress_notification(action)
-                self.actions[action._id].status = 'zombie'
+                self.actions[action.uuid].status = 'zombie'
                 item.last_notification = action.check_time
 
                 # And we ask the item to update it's state
@@ -883,13 +885,13 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 # If we' ve got a problem with the notification, raise a Warning log
                 if timeout:
-                    contact = self.find_item_by_id(self.actions[action._id].contact)
-                    item = self.find_item_by_id(self.actions[action._id].ref)
+                    contact = self.find_item_by_id(self.actions[action.uuid].contact)
+                    item = self.find_item_by_id(self.actions[action.uuid].ref)
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %d seconds",
                                    contact.contact_name,
                                    item.__class__.my_type,
-                                   self.actions[action._id].command,
+                                   self.actions[action.uuid].command,
                                    int(execution_time))
                 elif action.exit_status != 0:
                     logger.warning("The notification command '%s' raised an error "
@@ -904,19 +906,19 @@ class Scheduler(object):  # pylint: disable=R0902
         elif action.is_a == 'check':
             try:
                 if action.status == 'timeout':
-                    ref = self.find_item_by_id(self.checks[action._id].ref)
+                    ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     action.output = "(%s Check Timed Out)" %\
                                     ref.__class__.my_type.capitalize()  # pylint: disable=E1101
                     action.long_output = action.output
                     action.exit_status = self.conf.timeout_exit_status
-                self.checks[action._id].get_return_from(action)
-                self.checks[action._id].status = 'waitconsume'
+                self.checks[action.uuid].get_return_from(action)
+                self.checks[action.uuid].status = 'waitconsume'
             except KeyError, exp:
                 pass
 
         elif action.is_a == 'eventhandler':
             try:
-                old_action = self.actions[action._id]
+                old_action = self.actions[action.uuid]
                 old_action.status = 'zombie'
             except KeyError:  # cannot find old action
                 return
@@ -924,11 +926,11 @@ class Scheduler(object):  # pylint: disable=R0902
                 _type = 'event handler'
                 if action.is_snapshot:
                     _type = 'snapshot'
-                ref = self.find_item_by_id(self.checks[action._id].ref)
+                ref = self.find_item_by_id(self.checks[action.uuid].ref)
                 logger.warning("%s %s command '%s ' timed out after %d seconds",
                                ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
                                _type,
-                               self.actions[action._id].command,
+                               self.actions[action.uuid].command,
                                int(action.execution_time))
 
             # If it's a snapshot we should get the output an export it
@@ -1351,8 +1353,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 for notif in host.notifications_in_progress.values():
                     notif.ref = host.id
                     self.add(notif)
-                    # Also raises the action id, so do not overlap ids
-                    notif.assume_at_least_id(notif._id)
                 host.update_in_checking()
                 # And also add downtimes and comments
                 for downtime in host.downtimes:
@@ -1362,18 +1362,18 @@ class Scheduler(object):  # pylint: disable=R0902
                     else:
                         downtime.extra_comment = None
                     # raises the downtime id to do not overlap
-                    Downtime._id = max(Downtime._id, downtime._id + 1)
+                    Downtime.uuid = max(Downtime.uuid, downtime.uuid + 1)
                     self.add(downtime)
                 for comm in host.comments:
                     comm.ref = host.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
-                    Comment._id = max(Comment._id, comm._id + 1)
+                    Comment.uuid = max(Comment.uuid, comm.uuid + 1)
                 if host.acknowledgement is not None:
                     host.acknowledgement.ref = host.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge._id = max(Acknowledge._id, host.acknowledgement._id + 1)
+                    Acknowledge.uuid = max(Acknowledge.uuid, host.acknowledgement.uuid + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1414,8 +1414,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 for notif in serv.notifications_in_progress.values():
                     notif.ref = serv.id
                     self.add(notif)
-                    # Also raises the action id, so do not overlap id
-                    notif.assume_at_least_id(notif._id)
                 serv.update_in_checking()
                 # And also add downtimes and comments
                 for downtime in serv.downtimes:
@@ -1425,18 +1423,18 @@ class Scheduler(object):  # pylint: disable=R0902
                     else:
                         downtime.extra_comment = None
                     # raises the downtime id to do not overlap
-                    Downtime._id = max(Downtime._id, downtime._id + 1)
+                    Downtime.uuid = max(Downtime.uuid, downtime.uuid + 1)
                     self.add(downtime)
                 for comm in serv.comments:
                     comm.ref = serv.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
-                    Comment._id = max(Comment._id, comm._id + 1)
+                    Comment.uuid = max(Comment.uuid, comm.uuid + 1)
                 if serv.acknowledgement is not None:
                     serv.acknowledgement.ref = serv.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge._id = max(Acknowledge._id, serv.acknowledgement._id + 1)
+                    Acknowledge.uuid = max(Acknowledge.uuid, serv.acknowledgement.uuid + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1585,7 +1583,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if chk.status == 'havetoresolvedep':
                 for dependent_checks in chk.depend_on_me:
                     # Ok, now dependent will no more wait c
-                    dependent_checks.depend_on.remove(chk._id)
+                    dependent_checks.depend_on.remove(chk.uuid)
                 # REMOVE OLD DEP CHECK -> zombie
                 chk.status = 'zombie'
 
@@ -1604,7 +1602,7 @@ class Scheduler(object):  # pylint: disable=R0902
         id_to_del = []
         for chk in self.checks.values():
             if chk.status == 'zombie':
-                id_to_del.append(chk._id)
+                id_to_del.append(chk.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
         for c_id in id_to_del:
@@ -1619,7 +1617,7 @@ class Scheduler(object):  # pylint: disable=R0902
         id_to_del = []
         for act in self.actions.values():
             if act.status == 'zombie':
-                id_to_del.append(act._id)
+                id_to_del.append(act.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
         for a_id in id_to_del:
@@ -1639,30 +1637,30 @@ class Scheduler(object):  # pylint: disable=R0902
         # Look for in objects comments, and look if we already got them
         for elt in self.iter_hosts_and_services():
             for comm in elt.comments:
-                if comm._id not in self.comments:
-                    self.comments[comm._id] = comm
+                if comm.uuid not in self.comments:
+                    self.comments[comm.uuid] = comm
 
         # Check maintenance periods
         for elt in self.iter_hosts_and_services():
             if elt.maintenance_period is None:
                 continue
 
-            if elt.in_maintenance is None:
+            if elt.in_maintenance == -1:
                 if elt.maintenance_period.is_time_valid(now):
                     start_dt = elt.maintenance_period.get_next_valid_time_from_t(now)
                     end_dt = elt.maintenance_period.get_next_invalid_time_from_t(start_dt + 1) - 1
-                    downtime = Downtime(elt, start_dt, end_dt, 1, 0, 0,
+                    downtime = Downtime(elt, start_dt, end_dt, 1, '', 0,
                                         "system",
                                         "this downtime was automatically scheduled"
                                         "through a maintenance_period")
                     elt.add_downtime(downtime)
                     self.add(downtime)
                     self.get_and_register_status_brok(elt)
-                    elt.in_maintenance = downtime._id
+                    elt.in_maintenance = downtime.uuid
             else:
                 if elt.in_maintenance not in self.downtimes:
                     # the main downtimes has expired or was manually deleted
-                    elt.in_maintenance = None
+                    elt.in_maintenance = -1
 
         #  Check the validity of contact downtimes
         for elt in self.contacts:
@@ -1674,14 +1672,14 @@ class Scheduler(object):  # pylint: disable=R0902
         for downtime in self.downtimes.values():
             if downtime.can_be_deleted is True:
                 ref = self.find_item_by_id(downtime.ref)
-                self.del_downtime(downtime._id)
+                self.del_downtime(downtime.uuid)
                 broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
         for downtime in self.contact_downtimes.values():
             if downtime.can_be_deleted is True:
                 ref = self.find_item_by_id(downtime.ref)
-                self.del_contact_downtime(downtime._id)
+                self.del_contact_downtime(downtime.uuid)
                 broks.append(ref.get_update_status_brok())
 
         # Downtimes are usually accompanied by a comment.
@@ -1689,7 +1687,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for comm in self.comments.values():
             if comm.can_be_deleted is True:
                 ref = self.find_item_by_id(comm.ref)
-                self.del_comment(comm._id)
+                self.del_comment(comm.uuid)
                 broks.append(ref.get_update_status_brok())
 
         # Check start and stop times

@@ -52,6 +52,7 @@
 implements way of sending notifications. Basically used for parsing.
 
 """
+import uuid
 from alignak.objects.item import Item, Items
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
@@ -62,7 +63,6 @@ class NotificationWay(Item):
     """NotificationWay class is used to implement way of sending notifications (command, periods..)
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'notificationway'
 
     properties = Item.properties.copy()
@@ -352,7 +352,7 @@ class NotificationWays(Items):
         :return: None
         """
         if name is None:
-            name = NotificationWay._id
+            name = 'Generated_notificationway_%s' % uuid.uuid4().hex
         if params is None:
             params = {}
         params['notificationway_name'] = name

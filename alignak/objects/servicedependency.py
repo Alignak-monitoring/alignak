@@ -65,7 +65,6 @@ class Servicedependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    _id = 0
     my_type = "servicedependency"
 
     # F is dep of D

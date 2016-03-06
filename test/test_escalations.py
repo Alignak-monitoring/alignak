@@ -59,10 +59,10 @@ class TestEscalations(AlignakTest):
 
     def test_wildcard_in_service_descrption(self):
         self.print_header()
-        sid = int(Serviceescalation._id) - 1
-        generated = self.sched.conf.escalations.find_by_name('Generated-Serviceescalation-%d' % sid)
+        generated = [e for e in self.sched.conf.escalations
+                      if e.escalation_name.startswith('Generated-Serviceescalation-')]
         for svc in self.sched.services.find_srvs_by_hostname("test_host_0_esc"):
-            self.assertIn(generated, svc.escalations)
+            self.assertIn(generated[0], svc.escalations)
 
     def test_simple_escalation(self):
         self.print_header()

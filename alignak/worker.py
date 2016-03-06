@@ -56,6 +56,7 @@ import time
 import sys
 import signal
 import traceback
+import uuid
 import cStringIO
 
 
@@ -72,7 +73,7 @@ class Worker(object):
 
     """
 
-    _id = 0  # None
+    uuid = ''  # None
     _process = None
     _mortal = None
     _idletime = None
@@ -82,8 +83,7 @@ class Worker(object):
     def __init__(self, _id, slave_q, returns_queue, processes_by_worker,  # pylint: disable=W0613
                  mortal=True, timeout=300, max_plugins_output_length=8192, target=None,
                  loaded_into='unknown', http_daemon=None):
-        self._id = self.__class__._id
-        self.__class__._id += 1
+        self.uuid = uuid.uuid4().hex
 
         self._mortal = mortal
         self._idletime = 0
@@ -227,11 +227,11 @@ class Worker(object):
         """
         try:
             while len(self.checks) < self.processes_by_worker:
-                # print "I", self._id, "wait for a message"
+                # print "I", self.uuid, "wait for a message"
                 msg = self.slave_q.get(block=False)
                 if msg is not None:
                     self.checks.append(msg.get_data())
-                # print "I", self._id, "I've got a message!"
+                # print "I", self.uuid, "I've got a message!"
         except Empty:
             if len(self.checks) == 0:
                 self._idletime += 1
@@ -257,7 +257,7 @@ class Worker(object):
                 # action launching
                 if res == 'toomanyopenfiles':
                     # We should die as soon as we return all checks
-                    logger.error("[%d] I am dying Too many open files %s ... ", self._id, chk)
+                    logger.error("[%d] I am dying Too many open files %s ... ", self.uuid, chk)
                     self.i_am_dying = True
 
     def manage_finished_checks(self):
@@ -279,11 +279,11 @@ class Worker(object):
             if action.status in ('done', 'timeout'):
                 to_del.append(action)
                 # We answer to the master
-                # msg = Message(_id=self._id, _type='Result', data=action)
+                # msg = Message(_id=self.uuid, _type='Result', data=action)
                 try:
                     self.returns_queue.put(action)
                 except IOError, exp:
-                    logger.error("[%d] Exiting: %s", self._id, exp)
+                    logger.error("[%d] Exiting: %s", self.uuid, exp)
                     sys.exit(2)
 
         # Little sleep
@@ -334,7 +334,7 @@ class Worker(object):
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("Worker '%d' exit with an unmanaged exception : %slave_q",
-                         self._id, output.getvalue())
+                         self.uuid, output.getvalue())
             output.close()
             # Ok I die now
             raise
@@ -381,7 +381,7 @@ class Worker(object):
             try:
                 cmsg = control_q.get(block=False)
                 if cmsg.get_type() == 'Die':
-                    logger.debug("[%d] Dad say we are dying...", self._id)
+                    logger.debug("[%d] Dad say we are dying...", self.uuid)
                     break
             except Exception:  # pylint: disable=W0703
                 pass
@@ -391,7 +391,7 @@ class Worker(object):
             # worker because we were too weak to manage our job :(
             if len(self.checks) == 0 and self.i_am_dying:
                 logger.warning("[%d] I DIE because I cannot do my job as I should"
-                               "(too many open files?)... forgot me please.", self._id)
+                               "(too many open files?)... forgot me please.", self.uuid)
                 break
 
             # Manage a possible time change (our avant will be change with the diff)

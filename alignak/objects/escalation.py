@@ -64,7 +64,6 @@ class Escalation(Item):
     """Escalation class is used to implement notification escalation
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'escalation'
 
     properties = Item.properties.copy()

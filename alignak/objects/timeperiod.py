@@ -121,6 +121,7 @@ action or not if we are in right period
 
 import time
 import re
+import uuid
 import warnings
 
 from alignak.objects.item import Item, Items
@@ -139,7 +140,6 @@ class Timeperiod(Item):
     A timeperiod is defined with range time (hours) of week to do action
     and add day exceptions (like non working days)
     """
-    _id = 1
     my_type = 'timeperiod'
 
     properties = Item.properties.copy()
@@ -157,8 +157,7 @@ class Timeperiod(Item):
     running_properties = Item.running_properties.copy()
 
     def __init__(self, params=None):
-        self._id = Timeperiod._id
-        Timeperiod._id += 1
+        self.uuid = uuid.uuid4().hex
         self.unresolved = []
         self.dateranges = []
         self.exclude = []

@@ -126,7 +126,7 @@ class TestEndParsingType(unittest.TestCase):
 
     def add(self, b):
         if isinstance(b, Brok):
-            self.broks[b._id] = b
+            self.broks[b.uuid] = b
             return
         if isinstance(b, ExternalCommand):
             self.sched.run_external_command(b.cmd_line)

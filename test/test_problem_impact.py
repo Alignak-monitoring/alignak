@@ -158,7 +158,7 @@ class TestProblemImpact(AlignakTest):
                 self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
-                self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
+                self.assertSetEqual(set(['test_router_0', 'test_router_1']), set(brk_svc.data['source_problems']['hosts']))
             for h in all_routers:
                 self.assertIn(h, s.source_problems)
                 brk_hst = s.get_update_status_brok()
@@ -326,7 +326,7 @@ class TestProblemImpact(AlignakTest):
                 self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
-                self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
+                self.assertSetEqual(set(['test_router_0', 'test_router_1']), set(brk_svc.data['source_problems']['hosts']))
             for h in all_routers:
                 self.assertIn(h, s.source_problems)
                 brk_hst = s.get_update_status_brok()

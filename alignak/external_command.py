@@ -170,15 +170,15 @@ class ExternalCommandManager:
         'del_all_svc_downtimes':
             {'global': False, 'args': ['service']},
         'del_contact_downtime':
-            {'global': True, 'args': ['to_int']},
+            {'global': True, 'args': [None]},
         'del_host_comment':
-            {'global': True, 'args': ['to_int']},
+            {'global': True, 'args': [None]},
         'del_host_downtime':
-            {'global': True, 'args': ['to_int']},
+            {'global': True, 'args': [None]},
         'del_svc_comment':
-            {'global': True, 'args': ['to_int']},
+            {'global': True, 'args': [None]},
         'del_svc_downtime':
-            {'global': True, 'args': ['to_int']},
+            {'global': True, 'args': [None]},
         'disable_all_notifications_beyond_host':
             {'global': False, 'args': ['host']},
         'disable_contactgroup_host_notifications':
@@ -367,30 +367,30 @@ class ExternalCommandManager:
             {'global': False, 'args': ['service', 'to_int']},
         'schedule_hostgroup_host_downtime':
             {'global': True, 'args': ['host_group', 'to_int', 'to_int',
-                                      'to_bool', 'to_int', 'to_int', 'author', None]},
+                                      'to_bool', None, 'to_int', 'author', None]},
         'schedule_hostgroup_svc_downtime':
             {'global': True, 'args': ['host_group', 'to_int', 'to_int', 'to_bool',
-                                      'to_int', 'to_int', 'author', None]},
+                                      None, 'to_int', 'author', None]},
         'schedule_host_check':
             {'global': False, 'args': ['host', 'to_int']},
         'schedule_host_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
-                                       'to_int', 'to_int', 'author', None]},
+                                       None, 'to_int', 'author', None]},
         'schedule_host_svc_checks':
             {'global': False, 'args': ['host', 'to_int']},
         'schedule_host_svc_downtime':
             {'global': False, 'args': ['host', 'to_int', 'to_int', 'to_bool',
-                                       'to_int', 'to_int', 'author', None]},
+                                       None, 'to_int', 'author', None]},
         'schedule_servicegroup_host_downtime':
             {'global': True, 'args': ['service_group', 'to_int', 'to_int', 'to_bool',
-                                      'to_int', 'to_int', 'author', None]},
+                                      None, 'to_int', 'author', None]},
         'schedule_servicegroup_svc_downtime':
             {'global': True, 'args': ['service_group', 'to_int', 'to_int', 'to_bool',
-                                      'to_int', 'to_int', 'author', None]},
+                                      None, 'to_int', 'author', None]},
         'schedule_svc_check':
             {'global': False, 'args': ['service', 'to_int']},
         'schedule_svc_downtime': {'global': False, 'args': ['service', 'to_int', 'to_int',
-                                                            'to_bool', 'to_int', 'to_int',
+                                                            'to_bool', None, 'to_int',
                                                             'author', None]},
         'send_custom_host_notification':
             {'global': False, 'args': ['host', 'to_int', 'author', None]},
@@ -1479,7 +1479,7 @@ class ExternalCommandManager:
         :return: None
         """
         for comm in host.comments:
-            self.del_host_comment(comm._id)
+            self.del_host_comment(comm.uuid)
 
     def del_all_host_downtimes(self, host):
         """Delete all host downtimes
@@ -1492,7 +1492,7 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in host.downtimes:
-            self.del_host_downtime(downtime._id)
+            self.del_host_downtime(downtime.uuid)
 
     def del_all_svc_comments(self, service):
         """Delete all service comments
@@ -1505,7 +1505,7 @@ class ExternalCommandManager:
         :return: None
         """
         for comm in service.comments:
-            self.del_svc_comment(comm._id)
+            self.del_svc_comment(comm.uuid)
 
     def del_all_svc_downtimes(self, service):
         """Delete all service downtime
@@ -1518,7 +1518,7 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in service.downtimes:
-            self.del_svc_downtime(downtime._id)
+            self.del_svc_downtime(downtime.uuid)
 
     def del_contact_downtime(self, downtime_id):
         """Delete a contact downtime
@@ -3000,7 +3000,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed:
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3030,7 +3030,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed:
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3076,7 +3076,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed: bool
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3090,7 +3090,7 @@ class ExternalCommandManager:
         host.add_downtime(downtime)
         self.sched.add(downtime)
         self.sched.get_and_register_status_brok(host)
-        if trigger_id != 0 and trigger_id in self.sched.downtimes:
+        if trigger_id != '' and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(downtime)
 
     def schedule_host_svc_checks(self, host, check_time):
@@ -3126,7 +3126,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed: bool
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3156,7 +3156,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed: bool
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3186,7 +3186,7 @@ class ExternalCommandManager:
         :param fixed: is downtime fixed
         :type fixed: bool
         :param trigger_id: downtime id that triggered this one
-        :type trigger_id: int
+        :type trigger_id: str
         :param duration: downtime duration
         :type duration: int
         :param author: downtime author
@@ -3245,7 +3245,7 @@ class ExternalCommandManager:
         service.add_downtime(downtime)
         self.sched.add(downtime)
         self.sched.get_and_register_status_brok(service)
-        if trigger_id != 0 and trigger_id in self.sched.downtimes:
+        if trigger_id not in ['', '0'] and trigger_id in self.sched.downtimes:
             self.sched.downtimes[trigger_id].trigger_me(downtime)
 
     def send_custom_host_notification(self, host, options, author, comment):
@@ -3658,7 +3658,7 @@ class ExternalCommandManager:
         poll.prepare_for_conf()
         parameters = {'max_plugins_output_length': self.conf.max_plugins_output_length}
         poll.add_global_conf_parameters(parameters)
-        self.arbiter.conf.pollers[poll._id] = poll
+        self.arbiter.conf.pollers[poll.uuid] = poll
         self.arbiter.dispatcher.elements.append(poll)
         self.arbiter.dispatcher.satellites.append(poll)
         realm.pollers.append(poll)

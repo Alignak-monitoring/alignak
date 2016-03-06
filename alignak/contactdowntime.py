@@ -47,6 +47,7 @@
 
 """
 import time
+import uuid
 from alignak.log import logger
 
 
@@ -55,8 +56,6 @@ class ContactDowntime:
     the contact won't get notifications
 
     """
-    _id = 1
-
     # Just to list the properties we will send as pickle
     # so to others daemons, so all but NOT REF
     properties = {
@@ -79,8 +78,7 @@ class ContactDowntime:
     # one because we got a beginning, and an end. That's all for running.
     # got also an author and a comment for logging purpose.
     def __init__(self, ref, start_time, end_time, author, comment):
-        self._id = self.__class__._id
-        self.__class__._id += 1
+        self.uuid = uuid.uuid4().hex
         self.ref = ref  # pointer to srv or host we are apply
         self.start_time = start_time
         self.end_time = end_time
@@ -153,7 +151,7 @@ class ContactDowntime:
         # print "Asking a getstate for a downtime on", self.ref.get_full_name()
         cls = self.__class__
         # id is not in *_properties
-        res = [self._id]
+        res = [self.uuid]
         for prop in cls.properties:
             res.append(getattr(self, prop))
         # We reverse because we want to recreate
@@ -169,9 +167,9 @@ class ContactDowntime:
         :return: None
         """
         cls = self.__class__
-        self._id = state.pop()
+        self.uuid = state.pop()
         for prop in cls.properties:
             val = state.pop()
             setattr(self, prop, val)
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        if self.uuid >= cls.uuid:
+            cls.uuid = self.uuid + 1

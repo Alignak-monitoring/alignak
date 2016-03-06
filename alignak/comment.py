@@ -46,6 +46,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
+import uuid
 import warnings
 from alignak.log import logger
 
@@ -54,7 +55,6 @@ class Comment:
     """Comment class implements comments for monitoring purpose.
     It contains data like author, type, expire_time, persistent etc..
     """
-    _id = 1
 
     properties = {
         'entry_time':   None,
@@ -115,8 +115,7 @@ class Comment:
         :type expire_time: int
         :return: None
         """
-        self._id = self.__class__._id
-        self.__class__._id += 1
+        self.uuid = uuid.uuid4().hex
         self.ref = ref  # pointer to srv or host we are apply
         self.entry_time = int(time.time())
         self.persistent = persistent
@@ -134,17 +133,17 @@ class Comment:
         self.can_be_deleted = False
 
     def __str__(self):
-        return "Comment id=%d %s" % (self._id, self.comment)
+        return "Comment id=%d %s" % (self.uuid, self.comment)
 
     @property
     def id(self):  # pylint: disable=C0103
         """Getter for id, raise deprecation warning
 
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
     def id(self, value):  # pylint: disable=C0103
@@ -155,7 +154,7 @@ class Comment:
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def __getstate__(self):
         """Call by pickle to dataify the comment
@@ -166,7 +165,7 @@ class Comment:
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -187,14 +186,14 @@ class Comment:
             self.__setstate_deprecated__(state)
             return
 
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
 
         # to prevent from duplicating id in comments:
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        if self.uuid >= cls.uuid:
+            cls.uuid = self.uuid + 1
 
     def __setstate_deprecated__(self, state):
         """In 1.0 we move to a dict save.
@@ -206,14 +205,14 @@ class Comment:
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!
-        # -1 because of the '_id' prop
+        # -1 because of the 'uuid' prop
         if len(cls.properties) != (len(state) - 1):
             logger.debug("Passing comment")
             return
 
-        self._id = state.pop()
+        self.uuid = state.pop()
         for prop in cls.properties:
             val = state.pop()
             setattr(self, prop, val)
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        if self.uuid >= cls.uuid:
+            cls.uuid = self.uuid + 1

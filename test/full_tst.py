@@ -86,12 +86,17 @@ class fullTest(unittest.TestCase):
 
         print("Testing sat list")
         data = urllib.urlopen("http://127.0.0.1:%s/get_satellite_list" % satellite_map['arbiter']).read()
-        self.assertEqual(data, '{"reactionner": ["reactionner-master"], '
-                               '"broker": ["broker-master"], '
-                               '"arbiter": ["arbiter-master"], '
-                               '"scheduler": ["scheduler-master"], '
-                               '"receiver": ["receiver-1"], '
-                               '"poller": ["poller-fail", "poller-master"]}')
+        expected_data ={"reactionner": ["reactionner-master"],
+                               "broker": ["broker-master"],
+                               "arbiter": ["arbiter-master"],
+                               "scheduler": ["scheduler-master"],
+                               "receiver": ["receiver-1"],
+                               "poller": ["poller-fail", "poller-master"]}
+
+        json_data = json.loads(data)
+
+        for k, v in expected_data.iteritems():
+            self.assertEqual(set(json_data[k]), set(v))
 
         print("Testing have_conf")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:

@@ -126,7 +126,7 @@ class TestMaintPeriod(AlignakTest):
         print "planned stop ", time.asctime(time.localtime(t_next))
         svc3.maintenance_period = t
 
-        self.assertFalse(svc3.in_maintenance)
+        self.assertIs(-1, svc3.in_maintenance)
         #
         # now let the scheduler run and wait until the maintenance period begins
         # it is now 10 seconds before the full minute. run for 30 seconds
@@ -152,7 +152,7 @@ class TestMaintPeriod(AlignakTest):
         self.assertTrue(svc3.downtimes[0].fixed)
         self.assertTrue(svc3.downtimes[0].is_in_effect)
         self.assertFalse(svc3.downtimes[0].can_be_deleted)
-        self.assertEqual(svc3.downtimes[0]._id, svc3.in_maintenance)
+        self.assertEqual(svc3.downtimes[0].uuid, svc3.in_maintenance)
 
         #
         # now the downtime should expire...
@@ -164,7 +164,7 @@ class TestMaintPeriod(AlignakTest):
         self.assertEqual(0, len(self.sched.downtimes))
         self.assertEqual(0, len(svc3.downtimes))
         self.assertFalse(svc3.in_scheduled_downtime)
-        self.assertIs(None, svc3.in_maintenance)
+        self.assertIs(-1, svc3.in_maintenance)
 
 
 

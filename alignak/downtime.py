@@ -50,8 +50,8 @@
 See detailed concepts below
 
 """
-import datetime
 import time
+import uuid
 import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp
@@ -72,7 +72,6 @@ class Downtime:
     specified service should not be triggered by another downtime entry.
 
     """
-    _id = 1
 
     # Just to list the properties we will send as pickle
     # so to others daemons, so all but NOT REF
@@ -82,7 +81,7 @@ class Downtime:
         'fixed': BoolProp(default=True, fill_brok=['full_status']),
         'start_time': IntegerProp(default=0, fill_brok=['full_status']),
         'duration': IntegerProp(default=0, fill_brok=['full_status']),
-        'trigger_id': IntegerProp(default=0),
+        'trigger_id': StringProp(default=''),
         'end_time': IntegerProp(default=0, fill_brok=['full_status']),
         'real_end_time': IntegerProp(default=0),
         'author': StringProp(default='', fill_brok=['full_status']),
@@ -98,9 +97,7 @@ class Downtime:
     }
 
     def __init__(self, ref, start_time, end_time, fixed, trigger_id, duration, author, comment):
-        now = datetime.datetime.now()
-        self._id = int(time.mktime(now.timetuple()) * 1e6 + now.microsecond)
-        self.__class__._id = self._id + 1
+        self.uuid = uuid.uuid4().hex
         self.ref = ref  # pointer to srv or host we are apply
         self.activate_me = []  # The other downtimes i need to activate
         self.entry_time = int(time.time())
@@ -108,7 +105,7 @@ class Downtime:
         self.start_time = start_time
         self.duration = duration
         self.trigger_id = trigger_id
-        if self.trigger_id != 0:  # triggered plus fixed makes no sense
+        if self.trigger_id not in ['', '0']:  # triggered plus fixed makes no sense
             self.fixed = False
         self.end_time = end_time
         if fixed:
@@ -140,18 +137,18 @@ class Downtime:
             d_type = "fixed"
         else:
             d_type = "flexible"
-        return "%s %s Downtime id=%d %s - %s" % (
-            active, d_type, self._id, time.ctime(self.start_time), time.ctime(self.end_time))
+        return "%s %s Downtime id=%s %s - %s" % (
+            active, d_type, self.uuid, time.ctime(self.start_time), time.ctime(self.end_time))
 
     @property
     def id(self):  # pylint: disable=C0103
         """Getter for id, raise deprecation warning
 
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
     def id(self, value):  # pylint: disable=C0103
@@ -162,7 +159,7 @@ class Downtime:
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def trigger_me(self, other_downtime):
         """Wrapper to activate_me.append function
@@ -285,7 +282,7 @@ class Downtime:
         else:
             comment_type = 2
         comm = Comment(self.ref, False, "(Alignak)", text, comment_type, 2, 0, False, 0)
-        self.comment_id = comm._id
+        self.comment_id = comm.uuid
         self.extra_comment = comm
         self.ref.add_comment(comm)
 
@@ -325,7 +322,7 @@ class Downtime:
         :rtype: alignak.brok.Brok
         TODO: Duplicate from Notification.fill_data_brok_from
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
 
         self.fill_data_brok_from(data, 'full_status')
         brok = Brok('downtime_raise', data)
@@ -341,7 +338,7 @@ class Downtime:
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -363,13 +360,13 @@ class Downtime:
             self.__setstate_deprecated__(state)
             return
 
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
 
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        if self.uuid >= cls.uuid:
+            cls.uuid = self.uuid + 1
 
     def __setstate_deprecated__(self, state):
         """In 1.0 we move to a dict save.
@@ -381,14 +378,14 @@ class Downtime:
         cls = self.__class__
         # Check if the len of this state is like the previous,
         # if not, we will do errors!
-        # -1 because of the '_id' prop
+        # -1 because of the 'uuid' prop
         if len(cls.properties) != (len(state) - 1):
             logger.info("Passing downtime")
             return
 
-        self._id = state.pop()
+        self.uuid = state.pop()
         for prop in cls.properties:
             val = state.pop()
             setattr(self, prop, val)
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        if self.uuid >= cls.uuid:
+            cls.uuid = self.uuid + 1

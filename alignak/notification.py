@@ -55,7 +55,7 @@ import time
 
 from alignak.action import Action
 from alignak.brok import Brok
-from alignak.property import BoolProp, IntegerProp, StringProp, FloatProp
+from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.autoslots import AutoSlots
 
 
@@ -90,7 +90,6 @@ class Notification(Action):  # pylint: disable=R0902
         'notif_nb':            IntegerProp(default=1),
         'command':             StringProp(default='UNSET'),
         'sched_id':            IntegerProp(default=0),
-        'creation_time':       FloatProp(default=0.0),
         'enable_environment_macros': BoolProp(default=False),
         # Keep a list of currently active escalations
         'already_start_escalations':  StringProp(default=set()),
@@ -107,17 +106,10 @@ class Notification(Action):  # pylint: disable=R0902
         'NOTIFICATIONAUTHORALIAS':  'author_alias',
         'NOTIFICATIONCOMMENT':      'comment',
         'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       '_id',
+        'HOSTNOTIFICATIONID':       'uuid',
         'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    '_id'
+        'SERVICENOTIFICATIONID':    'uuid'
     }
-
-    # TODO: check if id is taken by inheritance
-    # Output None by default not ''
-    # Contact is None, usually a obj like ref. Check access in code
-    def __init__(self, params=None):
-        super(Notification, self).__init__(params)
-        self.creation_time = time.time()
 
     def copy_shell(self):
         """Get a copy o this notification with minimal values (default + id)
@@ -126,7 +118,7 @@ class Notification(Action):  # pylint: disable=R0902
         :rtype: alignak.notification.Notification
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Notification({'_id': self._id}))
+        return self.copy_shell__(Notification({'uuid': self.uuid}))
 
     def is_launchable(self, timestamp):
         """Check if this notification can be launched base on time
@@ -150,8 +142,8 @@ class Notification(Action):  # pylint: disable=R0902
             return True
 
     def __str__(self):
-        return "Notification %d status:%s command:%s ref:%s t_to_go:%s" % \
-               (self._id, self.status, self.command, getattr(self, 'ref', 'unknown'),
+        return "Notification %s status:%s command:%s ref:%s t_to_go:%s" % \
+               (self.uuid, self.status, self.command, getattr(self, 'ref', 'unknown'),
                 time.asctime(time.localtime(self.t_to_go)))
 
     def get_return_from(self, notif):
@@ -187,7 +179,7 @@ class Notification(Action):  # pylint: disable=R0902
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
 
         self.fill_data_brok_from(data, 'full_status')
         brok = Brok('notification_raise', data)

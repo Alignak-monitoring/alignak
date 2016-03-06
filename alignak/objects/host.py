@@ -87,7 +87,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # running_properties names
     __metaclass__ = AutoSlots
 
-    _id = 1  # zero is reserved for host (primary node for parents)
     ok_up = 'UP'
     my_type = 'host'
 
@@ -354,7 +353,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         groupname = ''
         for hostgroup in self.hostgroups:
-            # naglog_result('info', 'get_groupname : %s %s %s' % (hg._id, hg.alias, hg.get_name()))
+            # naglog_result('info', 'get_groupname : %s %s %s' % (hg.uuid, hg.alias, hg.get_name()))
             # groupname = "%s [%s]" % (hg.alias, hg.get_name())
             groupname = "%s" % (hostgroup.alias)
         return groupname

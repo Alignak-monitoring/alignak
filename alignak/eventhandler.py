@@ -75,8 +75,6 @@ class EventHandler(Action):
         'is_snapshot':    BoolProp(default=False),
     })
 
-    # _id = 0  #Is common to Actions
-    # TODO: check if id is taken by inheritance
     def __init__(self, params=None):
         super(EventHandler, self).__init__(params)
         self.t_to_go = time.time()
@@ -89,7 +87,7 @@ class EventHandler(Action):
         """
         # We create a dummy check with nothing in it, just defaults values
         return self.copy_shell__(EventHandler({'command': '',
-                                               '_id': self._id,
+                                               'uuid': self.uuid,
                                                'is_snapshot': self.is_snapshot}))
 
     def get_return_from(self, e_handler):
@@ -133,4 +131,4 @@ class EventHandler(Action):
         return timestamp >= self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s" % (self._id, self.status, self.command)
+        return "Check %s status:%s command:%s" % (self.uuid, self.status, self.command)

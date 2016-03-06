@@ -96,9 +96,6 @@ class Service(SchedulingItem):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    # Every service have a unique ID, and 0 is always special in
-    # database and co...
-    _id = 1
     # The host and service do not have the same 0 value, now yes :)
     ok_up = 'OK'
     # used by item class for format specific value like for Broks
@@ -1184,7 +1181,7 @@ class Services(Items):
             if item.is_tpl():
                 self.add_template(item)
             else:
-                self.items[item._id] = item
+                self.items[item.uuid] = item
 
     def add_template(self, tpl):
         """
@@ -1206,7 +1203,7 @@ class Services(Items):
             tpl.configuration_errors.append(mesg)
         elif name:
             tpl = self.index_template(tpl)
-        self.templates[tpl._id] = tpl
+        self.templates[tpl.uuid] = tpl
 
     def add_item(self, item, index=True):
         """
@@ -1239,7 +1236,7 @@ class Services(Items):
 
         if index is True:
             item = self.index_item(item)
-        self.items[item._id] = item
+        self.items[item.uuid] = item
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1486,7 +1483,7 @@ class Services(Items):
         to_del = []
         for serv in self:
             if not serv.host:
-                to_del.append(serv._id)
+                to_del.append(serv.uuid)
         for sid in to_del:
             del self.items[sid]
 
@@ -1730,7 +1727,7 @@ class Services(Items):
             self.explode_services_from_templates(hosts, template)
 
         # Explode services that have a duplicate_foreach clause
-        duplicates = [serv._id for serv in self if getattr(serv, 'duplicate_foreach', '')]
+        duplicates = [serv.uuid for serv in self if getattr(serv, 'duplicate_foreach', '')]
         for s_id in duplicates:
             serv = self.items[s_id]
             self.explode_services_duplicates(hosts, serv)

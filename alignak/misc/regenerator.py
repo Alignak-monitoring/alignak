@@ -631,7 +631,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         # Clean hosts from hosts and hostgroups
         for host in to_del_h:
             safe_print("Deleting", host.get_name())
-            del self.hosts[host._id]
+            del self.hosts[host.uuid]
 
         # Now clean all hostgroups too
         for hostgroup in self.hostgroups:
@@ -642,7 +642,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         for serv in to_del_srv:
             safe_print("Deleting", serv.get_full_name())
-            del self.services[serv._id]
+            del self.services[serv.uuid]
 
         # Now clean service groups
         for servicegroup in self.servicegroups:
@@ -674,7 +674,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
             dtc.ref = host
 
         # Ok, put in in the in progress hosts
-        inp_hosts[host._id] = host
+        inp_hosts[host.uuid] = host
 
     def manage_initial_hostgroup_status_brok(self, brok):
         """
@@ -705,7 +705,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_hostgroups[hostgroup._id] = hostgroup
+        inp_hostgroups[hostgroup.uuid] = hostgroup
 
     def manage_initial_service_status_brok(self, brok):
         """
@@ -733,7 +733,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
             dtc.ref = serv
 
         # Ok, put in in the in progress hosts
-        inp_services[serv._id] = serv
+        inp_services[serv.uuid] = serv
 
     def manage_initial_servicegroup_status_brok(self, brok):
         """
@@ -764,7 +764,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_servicegroups[servicegroup._id] = servicegroup
+        inp_servicegroups[servicegroup.uuid] = servicegroup
 
     def manage_initial_contact_status_brok(self, brok):
         """
@@ -851,7 +851,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link contacts into contactgroups later
         # so now only save it
-        inp_contactgroups[contactgroup._id] = contactgroup
+        inp_contactgroups[contactgroup.uuid] = contactgroup
 
     def manage_initial_timeperiod_status_brok(self, brok):
         """

@@ -57,7 +57,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
-from alignak.property import StringProp, IntegerProp
+from alignak.property import StringProp
 from alignak.log import logger
 
 
@@ -66,12 +66,11 @@ class Hostgroup(Itemgroup):
     Class to manage a group of host
     A Hostgroup is used to manage a group of hosts
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'hostgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':             IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':           StringProp(default='', fill_brok=['full_status']),
         'hostgroup_name': StringProp(fill_brok=['full_status']),
         'alias':          StringProp(fill_brok=['full_status']),
         'notes':          StringProp(default='', fill_brok=['full_status']),

@@ -92,7 +92,7 @@ class Check(Action):  # pylint: disable=R0902
         :rtype: object
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Check({'_id': self._id}))
+        return self.copy_shell__(Check({'uuid': self.uuid}))
 
     def get_return_from(self, check):
         """Update check data from action (notification for instance)
@@ -116,8 +116,8 @@ class Check(Action):  # pylint: disable=R0902
         return timestamp > self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s ref:%s" % \
-               (self._id, self.status, self.command, self.ref)
+        return "Check %s status:%s command:%s ref:%s" % \
+               (self.uuid, self.status, self.command, self.ref)
 
     def set_type_active(self):
         """Set check_type attribute to 0

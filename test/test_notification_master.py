@@ -86,7 +86,7 @@ class TestMasterNotif(AlignakTest):
         self.assertNotEqual(0, len(_new_notifs),
                             "A Notification should have been created !")
         guessed_notif = _new_notifs[0] # and we hope that it's the good one..
-        self.assertIs(guessed_notif, self.sched.actions.get(guessed_notif._id, None),
+        self.assertIs(guessed_notif, self.sched.actions.get(guessed_notif.uuid, None),
                       "Our guessed notification does not match what's in scheduler actions dict !\n"
                       "guessed_notif=[%s] sched.actions=%r" % (guessed_notif, self.sched.actions))
 

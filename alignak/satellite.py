@@ -195,7 +195,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         return res
 
     def do_pynag_con_init(self, s_id):
-        """Initialize a connection with scheduler having '_id'
+        """Initialize a connection with scheduler having 'uuid'
         Return the new connection to the scheduler if it succeeded,
             else: any error OR sched is inactive: return None.
         NB: if sched is inactive then None is directly returned.
@@ -426,11 +426,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         target=target, loaded_into=cls_name, http_daemon=self.http_daemon)
         worker.module_name = module_name
         # save this worker
-        self.workers[worker._id] = worker
+        self.workers[worker.uuid] = worker
 
         # And save the Queue of this worker, with key = worker id
-        self.q_by_mod[module_name][worker._id] = queue
-        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, worker._id)
+        self.q_by_mod[module_name][worker.uuid] = queue
+        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, worker.uuid)
 
         # Ok, all is good. Start it!
         worker.start()
@@ -462,7 +462,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
-            self.broks[elt._id] = elt
+            self.broks[elt.uuid] = elt
             return
         elif cls_type == 'externalcommand':
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -494,11 +494,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # good: we can think that we have a worker and it's not True
             # So we del it
             if not worker.is_alive():
-                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, worker._id)
+                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, worker.uuid)
                 # Terminate immediately
                 worker.terminate()
                 worker.join(timeout=1)
-                w_to_del.append(worker._id)
+                w_to_del.append(worker.uuid)
 
         # OK, now really del workers from queues
         # And requeue the actions it was managed
@@ -506,7 +506,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             worker = self.workers[w_id]
 
             # Del the queue of the module queue
-            del self.q_by_mod[worker.module_name][worker._id]
+            del self.q_by_mod[worker.module_name][worker.uuid]
 
             for sched_id in self.schedulers:
                 sched = self.schedulers[sched_id]
@@ -567,7 +567,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # if not get action round robin index to get action queue based
         # on the action id
-        rr_idx = action._id % len(queues)
+        rr_idx = action.uuid % len(queues)
         (index, queue) = queues[rr_idx]
 
         # return the id of the worker (i), and its queue
@@ -585,7 +585,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         for act in lst:
             # First we look if we do not already have it, if so
             # do nothing, we are already working!
-            if act._id in self.schedulers[sched_id]['actions']:
+            if act.uuid in self.schedulers[sched_id]['actions']:
                 continue
             act.sched_id = sched_id
             act.status = 'queue'

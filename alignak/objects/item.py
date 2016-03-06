@@ -62,6 +62,7 @@ elements like service, hosts or contacts.
 # pylint: disable=R0904
 import time
 import itertools
+import uuid
 import warnings
 
 from copy import copy
@@ -107,12 +108,8 @@ class Item(object):
     ok_up = ''
 
     def __init__(self, params=None):
-        # We have our own id of My Class type :)
-        # use set attr for going into the slots
-        # instead of __dict__ :)
         cls = self.__class__
-        self._id = cls._id
-        cls._id += 1
+        self.uuid = uuid.uuid4().hex
 
         self.customs = {}  # for custom variables
         self.plus = {}  # for value with a +
@@ -194,11 +191,11 @@ class Item(object):
     def id(self):  # pylint: disable=C0103
         """Getter for id, raise deprecation warning
 
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
     def id(self, value):  # pylint: disable=C0103
@@ -209,7 +206,7 @@ class Item(object):
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def init_running_properties(self):
         """
@@ -239,7 +236,7 @@ class Item(object):
         cls = self.__class__
         i = cls({})  # Dummy item but with it's own running properties
         for prop in cls.properties:
-            if hasattr(self, prop) and prop != '_id':  # TODO: Fix it
+            if hasattr(self, prop) and prop != 'uuid':  # TODO: Fix it
                 val = getattr(self, prop)
                 setattr(i, prop, val)
         # Also copy the customs tab
@@ -589,7 +586,7 @@ class Item(object):
         """
         d_to_del = None
         for downtime in self.downtimes:
-            if downtime._id == downtime_id:
+            if downtime.uuid == downtime_id:
                 d_to_del = downtime
                 downtime.can_be_deleted = True
         if d_to_del is not None:
@@ -615,7 +612,7 @@ class Item(object):
         """
         c_to_del = None
         for comm in self.comments:
-            if comm._id == comment_id:
+            if comm.uuid == comment_id:
                 c_to_del = comm
                 comm.can_be_deleted = True
         if c_to_del is not None:
@@ -703,7 +700,7 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('initial_' + self.my_type + '_status', data)
 
@@ -714,7 +711,7 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
         return Brok('update_' + self.my_type + '_status', data)
 
@@ -798,7 +795,7 @@ class Item(object):
             src = src.replace(r'\n', '\n').replace(r'\t', '\t')
             triger = triggers.create_trigger(
                 src,
-                'inner-trigger-' + self.__class__.my_type + str(self._id))
+                'inner-trigger-' + self.__class__.my_type + str(self.uuid))
             if triger:
                 # Maybe the trigger factory give me a already existing trigger,
                 # so my name can be dropped
@@ -985,7 +982,7 @@ class Items(object):
         :return: None
         """
         tpl = self.index_template(tpl)
-        self.templates[tpl._id] = tpl
+        self.templates[tpl.uuid] = tpl
 
     def index_template(self, tpl):
         """
@@ -1015,7 +1012,7 @@ class Items(object):
         :return: None
         """
         try:
-            del self.templates[tpl._id]
+            del self.templates[tpl.uuid]
         except KeyError:
             pass
         self.unindex_template(tpl)
@@ -1047,7 +1044,7 @@ class Items(object):
         name_property = getattr(self.__class__, "name_property", None)
         if index is True and name_property:
             item = self.index_item(item)
-        self.items[item._id] = item
+        self.items[item.uuid] = item
 
     def remove_item(self, item):
         """
@@ -1058,7 +1055,7 @@ class Items(object):
         :return: None
         """
         self.unindex_item(item)
-        self.items.pop(item._id, None)
+        self.items.pop(item.uuid, None)
 
     def index_item(self, item):
         """

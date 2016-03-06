@@ -56,7 +56,7 @@ This module provide Contactgroup and Contactgroups class used to manage contact 
 """
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import IntegerProp, StringProp
+from alignak.property import StringProp
 from alignak.log import logger
 
 
@@ -64,12 +64,11 @@ class Contactgroup(Itemgroup):
     """Class to manage a group of contacts
     A Contactgroup is used to manage a group of contacts
     """
-    _id = 1
     my_type = 'contactgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':                   IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'contactgroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
     })

@@ -86,7 +86,7 @@ class TestDowntime(AlignakTest):
         self.assertEqual(1, len(self.sched.comments))
         self.assertEqual(1, len(svc.comments))
         self.assertIn(svc.comments[0], self.sched.comments.values())
-        self.assertEqual(svc.comments[0]._id, svc.downtimes[0].comment_id)
+        self.assertEqual(svc.comments[0].uuid, svc.downtimes[0].comment_id)
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
 
@@ -124,7 +124,7 @@ class TestDowntime(AlignakTest):
         self.assertFalse(svc.downtimes[0].can_be_deleted)
 
         scheduled_downtime_depth = svc.scheduled_downtime_depth
-        cmd = "[%lu] DEL_SVC_DOWNTIME;%d" % (now, svc.downtimes[0]._id)
+        cmd = "[%lu] DEL_SVC_DOWNTIME;%s" % (now, svc.downtimes[0].uuid)
         self.sched.run_external_command(cmd)
         self.assertEqual(1, len(self.sched.downtimes))
         self.assertEqual(1, len(svc.downtimes))
@@ -170,7 +170,7 @@ class TestDowntime(AlignakTest):
         self.assertEqual(1, len(self.sched.comments))
         self.assertEqual(1, len(svc.comments))
         self.assertIn(svc.comments[0], self.sched.comments.values())
-        self.assertEqual(svc.comments[0]._id, svc.downtimes[0].comment_id)
+        self.assertEqual(svc.comments[0].uuid, svc.downtimes[0].comment_id)
         #----------------------------------------------------------------
         # run the service and return an OK status
         # check if the downtime is still inactive
@@ -214,7 +214,7 @@ class TestDowntime(AlignakTest):
         # check if the downtime is inactive now and can be deleted
         #----------------------------------------------------------------
         scheduled_downtime_depth = svc.scheduled_downtime_depth
-        cmd = "[%lu] DEL_SVC_DOWNTIME;%d" % (now, svc.downtimes[0]._id)
+        cmd = "[%lu] DEL_SVC_DOWNTIME;%s" % (now, svc.downtimes[0].uuid)
         self.sched.run_external_command(cmd)
         self.assertEqual(1, len(self.sched.downtimes))
         self.assertEqual(1, len(svc.downtimes))
@@ -265,7 +265,7 @@ class TestDowntime(AlignakTest):
         duration = 600
         now = time.time()
         # fixed downtime valid for the next 10 minutes
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
 
         self.sched.run_external_command(cmd)
         self.sched.update_downtimes_and_comments()
@@ -289,7 +289,7 @@ class TestDowntime(AlignakTest):
         self.assertEqual(1, len(self.sched.comments))
         self.assertEqual(1, len(host.comments))
         self.assertIn(host.comments[0], self.sched.comments.values())
-        self.assertEqual(host.comments[0]._id, host.downtimes[0].comment_id)
+        self.assertEqual(host.comments[0].uuid, host.downtimes[0].comment_id)
         self.show_logs()
         self.show_actions()
         print "*****************************************************************************************************************************************************************Log matching:", self.get_log_match("STARTED*")
@@ -373,7 +373,7 @@ class TestDowntime(AlignakTest):
         #----------------------------------------------------------------
         duration = 600
         now = time.time()
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
         self.sched.run_external_command(cmd)
         self.sched.update_downtimes_and_comments()
         self.scheduler_loop(1, [], do_sleep=False)  # push the downtime notification
@@ -393,7 +393,7 @@ class TestDowntime(AlignakTest):
         self.assertEqual(1, len(self.sched.comments))
         self.assertEqual(1, len(host.comments))
         self.assertIn(host.comments[0], self.sched.comments.values())
-        self.assertEqual(host.comments[0]._id, host.downtimes[0].comment_id)
+        self.assertEqual(host.comments[0].uuid, host.downtimes[0].comment_id)
         self.scheduler_loop(4, [[host, 2, 'DOWN']], do_sleep=True)
         self.show_logs()
         self.show_actions()

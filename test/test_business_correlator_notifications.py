@@ -135,7 +135,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
         duration = 600
         now = time.time()
         # fixed downtime valid for the next 10 minutes
-        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_02;srv2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_02;srv2;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
         self.sched.run_external_command(cmd)
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
@@ -175,7 +175,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
         duration = 600
         now = time.time()
         # fixed downtime valid for the next 10 minutes
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_02;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_02;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
         self.sched.run_external_command(cmd)
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)

@@ -89,7 +89,7 @@ class testSchedulerInit(AlignakTest):
 
          # Test receivers are init like pollers
         assert sched.reactionners != {}  # Previously this was {} for ever
-        assert sched.reactionners[1]['uri'] == 'http://localhost:7779/' # Test dummy value
+        assert sched.reactionners.values()[0]['uri'] == 'http://localhost:7779/' # Test dummy value
 
         # I want a simple init
         sched.must_run = False

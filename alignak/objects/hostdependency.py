@@ -65,7 +65,6 @@ class Hostdependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    _id = 0
     my_type = 'hostdependency'
 
     # F is dep of D

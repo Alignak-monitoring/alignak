@@ -68,7 +68,6 @@ class Itemgroup(Item):
     Class to manage a group of items
     An itemgroup is used to regroup items (group)
     """
-    _id = 0
 
     properties = Item.properties.copy()
     properties.update({
@@ -87,10 +86,8 @@ class Itemgroup(Item):
         :return: None
         """
         cls = self.__class__
-        old_id = cls._id
         new_i = cls()  # create a new group
-        new_i._id = self._id  # with the same id
-        cls._id = old_id  # Reset the Class counter
+        new_i.uuid = self.uuid  # with the same id
 
         # Copy all properties
         for prop in cls.properties:
@@ -218,7 +215,7 @@ class Itemgroup(Item):
         data['members'] = []
         for i in self.members:
             # it look like lisp! ((( ..))), sorry....
-            data['members'].append((i._id, i.get_name()))
+            data['members'].append((i.uuid, i.get_name()))
         brok = Brok('initial_' + cls.my_type + '_status', data)
         return brok
 

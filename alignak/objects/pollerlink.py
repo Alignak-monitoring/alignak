@@ -53,7 +53,6 @@ class PollerLink(SatelliteLink):
     Class to manage the link between Arbiter and Poller. With it, arbiter
     can see if a poller is alive, and can send it new configuration
     """
-    _id = 0
     my_type = 'poller'
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()

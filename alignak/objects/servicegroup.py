@@ -51,7 +51,7 @@
 This module provide Servicegroup and Servicegroups classes used to group services
 """
 
-from alignak.property import StringProp, IntegerProp
+from alignak.property import StringProp
 from alignak.log import logger
 
 from .itemgroup import Itemgroup, Itemgroups
@@ -62,12 +62,11 @@ class Servicegroup(Itemgroup):
     Class to manage a servicegroup
     A servicegroup is used to group services
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'servicegroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':                IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':              StringProp(default='', fill_brok=['full_status']),
         'servicegroup_name': StringProp(fill_brok=['full_status']),
         'alias':             StringProp(fill_brok=['full_status']),
         'notes':             StringProp(default='', fill_brok=['full_status']),

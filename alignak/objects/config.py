@@ -137,7 +137,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
     """
     cache_path = "objects.cache"
     my_type = "config"
-    _id = 1
 
     # Properties:
     # *required: if True, there is not default, and the config must put them
@@ -2319,10 +2318,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             packindex = 0
             packindices = {}
             for serv in no_spare_schedulers:
-                packindices[serv._id] = packindex
+                packindices[serv.uuid] = packindex
                 packindex += 1
                 for i in xrange(0, serv.weight):
-                    weight_list.append(serv._id)
+                    weight_list.append(serv.uuid)
 
             round_robin = itertools.cycle(weight_list)
 
@@ -2420,7 +2419,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # we need a deepcopy because each conf
             # will have new hostgroups
-            cur_conf._id = i
+            cur_conf.uuid = i
             cur_conf.commands = self.commands
             cur_conf.timeperiods = self.timeperiods
             # Create hostgroups with just the name and same id, but no members
@@ -2485,9 +2484,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 mbrs_id = []
                 for host in ori_hg.members:
                     if host is not None:
-                        mbrs_id.append(host._id)
+                        mbrs_id.append(host.uuid)
                 for host in cfg.hosts:
-                    if host._id in mbrs_id:
+                    if host.uuid in mbrs_id:
                         hostgroup.members.append(host)
 
             # And also relink the hosts with the valid hostgroups
@@ -2506,9 +2505,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 mbrs_id = []
                 for serv in mbrs:
                     if serv is not None:
-                        mbrs_id.append(serv._id)
+                        mbrs_id.append(serv.uuid)
                 for serv in cfg.services:
-                    if serv._id in mbrs_id:
+                    if serv.uuid in mbrs_id:
                         servicegroup.members.append(serv)
 
             # And also relink the services with the valid servicegroups

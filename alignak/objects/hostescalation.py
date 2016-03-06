@@ -61,7 +61,6 @@ class Hostescalation(Item):
     TODO: Why this class does not inherit from alignak.objects.Escalation.
           Maybe we can merge it
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'hostescalation'
 
     properties = Item.properties.copy()
@@ -107,7 +106,8 @@ class Hostescalations(Items):
         for esca in self:
             properties = esca.__class__.properties
             name = getattr(esca, 'host_name', getattr(esca, 'hostgroup_name', ''))
-            creation_dict = {'escalation_name': 'Generated-Hostescalation-%d-%s' % (esca._id, name)}
+            creation_dict = {'escalation_name':
+                             'Generated-Hostescalation-%d-%s' % (esca.uuid, name)}
             for prop in properties:
                 if hasattr(esca, prop):
                     creation_dict[prop] = getattr(esca, prop)

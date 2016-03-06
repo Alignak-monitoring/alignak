@@ -47,6 +47,8 @@
 This module provide CheckModulation and CheckModulations classes used to describe
 the modulation of a check command. Modulation occurs on a check period (Timeperiod)
 """
+import uuid
+
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
@@ -58,7 +60,6 @@ class CheckModulation(Item):
     during a check_period.
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'checkmodulation'
 
     properties = Item.properties.copy()
@@ -174,7 +175,7 @@ class CheckModulations(Items):
         TODO: Remove this default mutable argument. Usually result in unexpected behavior
         """
         if name is None:
-            name = CheckModulation._id
+            name = 'Generated_checkmodulation_%s' % uuid.uuid4()
 
         if params is None:
             params = {}

@@ -307,7 +307,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('_id', 0),
+        ('uuid', ''),
         ])
 
     def setUp(self):
@@ -476,7 +476,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('_id', 0),
+        ('uuid', ''),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
@@ -493,7 +493,7 @@ class TestHost(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        '_id', 'host_name', 'alias', 'address',
+        'uuid', 'host_name', 'alias', 'address',
         'check_period', 'notification_period']
 
     properties = dict([
@@ -659,7 +659,7 @@ class TestRealm(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('_id', 0),
+        ('uuid', ''),
         ('realm_members', []),
         ('higher_realms', []),
         ('default', False),
@@ -783,7 +783,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', None),
-        ('_id', 0),
+        ('uuid', ''),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
@@ -800,7 +800,7 @@ class TestService(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        '_id', 'host_name', 'service_description',
+        'uuid', 'host_name', 'service_description',
         'check_command', 'check_period', 'notification_period']
 
     properties = dict([

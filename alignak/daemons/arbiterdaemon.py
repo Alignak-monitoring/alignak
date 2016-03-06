@@ -121,7 +121,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         if isinstance(b, Brok):
-            self.broks[b._id] = b
+            self.broks[b.uuid] = b
         elif isinstance(b, ExternalCommand):
             self.external_commands.append(b)
         else:

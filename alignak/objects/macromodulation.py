@@ -61,7 +61,6 @@ class MacroModulation(Item):
     A MacroModulation is defined to change critical and warning level in some periods (like the
     night)
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'macromodulation'
 
     properties = Item.properties.copy()

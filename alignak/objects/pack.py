@@ -67,7 +67,6 @@ class Pack(Item):
     Class to manage a Pack
     A Pack contain multiple configuration files (like all checks for os 'FreeBSD')
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'pack'
 
     properties = Item.properties.copy()
@@ -152,6 +151,6 @@ class Packs(Items):
             if not pack.path.endswith('/'):
                 pack.path += '/'
             # Ok, add it
-            self[pack._id] = pack
+            self[pack.uuid] = pack
         except ValueError, exp:
             logger.error("[Pack] error in loading pack file '%s': '%s'", name, exp)

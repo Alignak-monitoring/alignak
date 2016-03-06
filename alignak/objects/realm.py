@@ -57,7 +57,7 @@ import copy
 
 from alignak.objects.item import Item
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
-from alignak.property import BoolProp, IntegerProp, StringProp, DictProp, ListProp
+from alignak.property import BoolProp, StringProp, DictProp, ListProp
 from alignak.log import logger
 
 # It change from hostgroup Class because there is no members
@@ -69,12 +69,11 @@ class Realm(Itemgroup):
     assigned to a specific set of Scheduler/Poller (other daemon are optional)
 
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'realm'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':            IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':          StringProp(default='', fill_brok=['full_status']),
         'realm_name':    StringProp(fill_brok=['full_status']),
         # No status_broker_name because it put hosts, not host_name
         'realm_members': ListProp(default=[], split_on_coma=True),
@@ -395,32 +394,32 @@ class Realm(Itemgroup):
         # First our own level
         for poller in self.pollers:
             cfg = poller.give_satellite_cfg()
-            broker.cfg['pollers'][poller._id] = cfg
+            broker.cfg['pollers'][poller.uuid] = cfg
 
         for reactionner in self.reactionners:
             cfg = reactionner.give_satellite_cfg()
-            broker.cfg['reactionners'][reactionner._id] = cfg
+            broker.cfg['reactionners'][reactionner.uuid] = cfg
 
         for receiver in self.receivers:
             cfg = receiver.give_satellite_cfg()
-            broker.cfg['receivers'][receiver._id] = cfg
+            broker.cfg['receivers'][receiver.uuid] = cfg
 
         # Then sub if we must to it
         if broker.manage_sub_realms:
             # Now pollers
             for poller in self.get_all_subs_satellites_by_type('pollers'):
                 cfg = poller.give_satellite_cfg()
-                broker.cfg['pollers'][poller._id] = cfg
+                broker.cfg['pollers'][poller.uuid] = cfg
 
             # Now reactionners
             for reactionner in self.get_all_subs_satellites_by_type('reactionners'):
                 cfg = reactionner.give_satellite_cfg()
-                broker.cfg['reactionners'][reactionner._id] = cfg
+                broker.cfg['reactionners'][reactionner.uuid] = cfg
 
             # Now receivers
             for receiver in self.get_all_subs_satellites_by_type('receivers'):
                 cfg = receiver.give_satellite_cfg()
-                broker.cfg['receivers'][receiver._id] = cfg
+                broker.cfg['receivers'][receiver.uuid] = cfg
 
     def get_satellites_links_for_scheduler(self):
         """Get a configuration dict with pollers and reactionners data
@@ -438,11 +437,11 @@ class Realm(Itemgroup):
         # First our own level
         for poller in self.pollers:
             config = poller.give_satellite_cfg()
-            cfg['pollers'][poller._id] = config
+            cfg['pollers'][poller.uuid] = config
 
         for reactionner in self.reactionners:
             config = reactionner.give_satellite_cfg()
-            cfg['reactionners'][reactionner._id] = config
+            cfg['reactionners'][reactionner.uuid] = config
 
         # print "***** Preparing a satellites conf for a scheduler", cfg
         return cfg

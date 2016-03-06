@@ -66,7 +66,6 @@ import re
 import random
 import time
 import traceback
-import uuid
 
 from alignak.objects.item import Item
 
@@ -94,7 +93,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
-        '_id':
+        'uuid':
             StringProp(),
         'display_name':
             StringProp(default='', fill_brok=['full_status']),
@@ -249,7 +248,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'in_checking':
             BoolProp(default=False, fill_brok=['full_status', 'check_result', 'next_schedule']),
         'in_maintenance':
-            IntegerProp(default=None, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=-1, fill_brok=['full_status'], retention=True),
         'latency':
             FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'attempt':
@@ -445,10 +444,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     special_properties = []
 
-    def __init__(self, params=None):
-        super(SchedulingItem, self).__init__(params)
-        self._id = uuid.uuid4().hex
-
     def __getstate__(self):
         """Call by pickle to data-ify the host
         we do a dict because list are too dangerous for
@@ -460,7 +455,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -471,7 +466,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def __setstate__(self, state):
         cls = self.__class__
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
@@ -1120,9 +1115,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type notif:
         :return: None
         """
-        if notif._id in self.notifications_in_progress:
+        if notif.uuid in self.notifications_in_progress:
             notif.status = 'zombie'
-            del self.notifications_in_progress[notif._id]
+            del self.notifications_in_progress[notif.uuid]
 
     def remove_in_progress_notifications(self):
         """Remove all notifications from notifications_in_progress
@@ -1168,7 +1163,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cmd = macroresolver.resolve_command(event_handler, data)
         reac_tag = event_handler.reactionner_tag
         event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
-                               'ref': self._id, 'reactionner_tag': reac_tag})
+                               'ref': self.uuid, 'reactionner_tag': reac_tag})
         # print "DBG: Event handler call created"
         # print "DBG: ",e.__dict__
         self.raise_event_handler_log_entry(event_handler)
@@ -1219,7 +1214,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cmd = macroresolver.resolve_command(self.snapshot_command, data)
         reac_tag = self.snapshot_command.reactionner_tag
         event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
-                               'ref': self._id, 'reactionner_tag': reac_tag, 'is_snapshot': True})
+                               'ref': self.uuid, 'reactionner_tag': reac_tag, 'is_snapshot': True})
         self.raise_snapshot_log_entry(self.snapshot_command)
 
         # we save the time we launch the snap
@@ -1239,7 +1234,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # activate flexible downtimes (do not activate triggered downtimes)
             if downtime.fixed is False and downtime.is_in_effect is False and \
                     downtime.start_time <= self.last_chk and \
-                    self.state_id != 0 and downtime.trigger_id == 0:
+                    self.state_id != 0 and downtime.trigger_id in ['', '0']:
                 notif = downtime.enter()  # returns downtimestart notifications
                 if notif is not None:
                     self.actions.append(notif)
@@ -1382,7 +1377,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             deps_checks = self.raise_dependencies_check(chk)
             for check in deps_checks:
                 # Get checks_id of dep
-                chk.depend_on.append(check._id)
+                chk.depend_on.append(check.uuid)
             # Ok, no more need because checks are not
             # take by host/service, and not returned
 
@@ -1675,7 +1670,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         if notif.status == 'inpoller':
             self.update_notification_command(notif, contact, host_ref)
-            self.notified_contacts.add(contact._id)
+            self.notified_contacts.add(contact.uuid)
             self.raise_notification_log_entry(notif, contact, host_ref)
 
     def update_notification_command(self, notif, contact, host_ref=None):
@@ -1853,7 +1848,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         data = {
             'type': n_type,
             'command': 'VOID',
-            'ref': self._id,
+            'ref': self.uuid,
             't_to_go': new_t,
             'timeout': cls.notification_timeout,
             'notif_nb': next_notif_nb,
@@ -1864,7 +1859,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         notif = Notification(data)
 
         # Keep a trace in our notifications queue
-        self.notifications_in_progress[notif._id] = notif
+        self.notifications_in_progress[notif.uuid] = notif
         # and put it in the temp queue for scheduler
         self.actions.append(notif)
 
@@ -1913,7 +1908,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # and still in critical/warning (and not acknowledge)
             if notif.type == "PROBLEM" and \
                     self.notification_interval == 0 \
-                    and contact._id in self.notified_contacts:
+                    and contact.uuid in self.notified_contacts:
                 continue
             # Get the property name for notification commands, like
             # service_notification_commands for service
@@ -1925,8 +1920,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     'type': notif.type,
                     'command': 'VOID',
                     'command_call': cmd,
-                    'ref': self._id,
-                    'contact': contact._id,
+                    'ref': self.uuid,
+                    'contact': contact.uuid,
                     'contact_name': contact.contact_name,
                     't_to_go': notif.t_to_go,
                     'escalated': escalated,
@@ -1945,13 +1940,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # the status of a service may have changed from WARNING to CRITICAL
                     self.update_notification_command(child_n, contact, host_ref)
                     self.raise_notification_log_entry(child_n, contact, host_ref)
-                    self.notifications_in_progress[child_n._id] = child_n
+                    self.notifications_in_progress[child_n.uuid] = child_n
                     childnotifications.append(child_n)
 
                     if notif.type == 'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
-                        self.notified_contacts.add(contact._id)
+                        self.notified_contacts.add(contact.uuid)
 
         return childnotifications
 
@@ -1993,7 +1988,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             c_in_progress = self.checks_in_progress[0]  # 0 is OK because in_checking is True
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
-            # we need another c._id
+            # we need another c.uuid
             data = {
                 'command': c_in_progress.command,
                 'timeout': c_in_progress.timeout,
@@ -2002,14 +1997,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 'module_type': c_in_progress.module_type,
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check],
-                'ref': self._id,
+                'ref': self.uuid,
                 'dependency_check': True,
                 'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
             }
             chk = Check(data)
 
             self.actions.append(chk)
-            # print "Creating new check with new id : %d, old id : %d" % (c._id, c_in_progress._id)
             return chk
 
         if force or (not self.is_no_check_dependent()):
@@ -2062,7 +2056,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 'module_type': check_command.module_type,
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check] if ref_check else [],
-                'ref': self._id,
+                'ref': self.uuid,
                 'internal': self.got_business_rule or command_line.startswith('_internal')
             }
             chk = Check(data)
@@ -2112,7 +2106,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             cmd = macroresolver.resolve_command(cls.perfdata_command, data)
             reactionner_tag = cls.perfdata_command.reactionner_tag
             event_h = EventHandler({'command': cmd, 'timeout': cls.perfdata_timeout,
-                                   'ref': self._id, 'reactionner_tag': reactionner_tag})
+                                   'ref': self.uuid, 'reactionner_tag': reactionner_tag})
 
             # ok we can put it in our temp action queue
             self.actions.append(event_h)
@@ -2337,7 +2331,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         for objs in self.comments, self.downtimes:
             for obj in objs:
-                obj.ref = self._id
+                obj.ref = self.uuid
 
     def eval_triggers(self):
         """Launch triggers
@@ -2431,7 +2425,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # find comments of non-persistent ack-comments and delete them too
             for comm in self.comments:
                 if comm.entry_type == 4 and not comm.persistent:
-                    self.del_comment(comm._id)
+                    self.del_comment(comm.uuid)
             self.broks.append(self.get_update_status_brok())
 
     def unacknowledge_problem_if_not_sticky(self):

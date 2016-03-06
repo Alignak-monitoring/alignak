@@ -62,7 +62,6 @@ class Contact(Item):
     """Host class implements monitoring concepts for contact.
     For example it defines host_notification_period, service_notification_period etc.
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'contact'
 
     properties = Item.properties.copy()

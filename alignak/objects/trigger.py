@@ -64,7 +64,6 @@ class Trigger(Item):
     """Trigger class provides a simple set of method to compile and execute a python file
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'trigger'
 
     properties = Item.properties.copy()
@@ -175,7 +174,7 @@ class Triggers(Items):
         trigger = Trigger({'trigger_name': name, 'code_src': src})
         trigger.compile()
         # Ok, add it
-        self[trigger._id] = trigger
+        self[trigger.uuid] = trigger
         return trigger
 
     def compile(self):

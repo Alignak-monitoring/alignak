@@ -49,6 +49,7 @@
 (resolve macro, parse commands etc)
 
 """
+import uuid
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp, BoolProp, IntegerProp
 
@@ -71,9 +72,8 @@ class CommandCall(DummyCommandCall):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    # __slots__ = ('_id', 'call', 'command', 'valid', 'args', 'poller_tag',
+    # __slots__ = ('uuid', 'call', 'command', 'valid', 'args', 'poller_tag',
     #              'reactionner_tag', 'module_type', '__dict__')
-    _id = 0
     my_type = 'CommandCall'
 
     properties = {
@@ -91,8 +91,7 @@ class CommandCall(DummyCommandCall):
 
     def __init__(self, commands, call, poller_tag='None',
                  reactionner_tag='None', enable_environment_macros=False):
-        self._id = self.__class__._id
-        self.__class__._id += 1
+        self.uuid = uuid.uuid4().hex
         self.call = call
         self.timeout = -1
         # Now split by ! and get command and args
@@ -160,7 +159,7 @@ class CommandCall(DummyCommandCall):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
 
         for prop in cls.properties:
             if hasattr(self, prop):
@@ -180,7 +179,7 @@ class CommandCall(DummyCommandCall):
             self.__setstate_pre_1_0__(state)
             return
 
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
@@ -188,7 +187,7 @@ class CommandCall(DummyCommandCall):
     def __setstate_pre_1_0__(self, state):
         """In 1.0 we move to a dict save. Before, it was
         a tuple save, like
-        ({'_id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
+        ({'uuid': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
         'command_line': u'/usr/local/nagios/bin/rss-multiuser',
         'module_type': 'fork', 'command_name': u'notify-by-rss'})
 

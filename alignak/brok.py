@@ -49,6 +49,8 @@ Brok are filled depending on their type (check_result, initial_state ...)
 
 """
 import cPickle
+import time
+import uuid
 import warnings
 try:
     import ujson
@@ -61,21 +63,20 @@ class Brok:  # pylint: disable=E1001
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
     """
-    __slots__ = ('__dict__', '_id', 'type', 'data', 'prepared', 'instance_id')
-    _id = 0
+    __slots__ = ('__dict__', 'uuid', 'type', 'data', 'prepared', 'instance_id')
     my_type = 'brok'
 
     def __init__(self, _type, data):
         self.type = _type
-        self._id = self.__class__._id
+        self.uuid = uuid.uuid4().hex
         self.instance_id = None
-        self.__class__._id += 1
         if self.use_ujson():
             # pylint: disable=E1101
             self.data = ujson.dumps(data)
         else:
             self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
         self.prepared = False
+        self.creation_time = time.time()
 
     def __str__(self):
         return str(self.__dict__) + '\n'
@@ -83,11 +84,11 @@ class Brok:  # pylint: disable=E1001
     @property
     def id(self):  # pylint: disable=C0103
         """Getter for id, raise deprecation warning
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
     def id(self, value):  # pylint: disable=C0103
@@ -97,7 +98,7 @@ class Brok:  # pylint: disable=E1001
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def prepare(self):
         """Unpickle data from data attribute and add instance_id key if necessary

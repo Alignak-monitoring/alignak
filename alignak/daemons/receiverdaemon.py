@@ -123,7 +123,7 @@ class Receiver(Satellite):
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
-            self.broks[elt._id] = elt
+            self.broks[elt.uuid] = elt
             return
         elif cls_type == 'externalcommand':
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))

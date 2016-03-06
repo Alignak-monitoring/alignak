@@ -74,7 +74,6 @@ class Command(Item):
     """
     __metaclass__ = AutoSlots
 
-    _id = 0
     my_type = "command"
 
     properties = Item.properties.copy()
@@ -155,7 +154,7 @@ class Command(Item):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -176,7 +175,7 @@ class Command(Item):
         if isinstance(state, tuple):
             self.__setstate_pre_1_0__(state)
             return
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
@@ -185,7 +184,7 @@ class Command(Item):
         """
         In 1.0 we move to a dict save. Before, it was
         a tuple save, like
-        ({'_id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
+        ({'uuid': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
         'command_line': u'/usr/local/nagios/bin/rss-multiuser',
         'module_type': 'fork', 'command_name': u'notify-by-rss'})
 

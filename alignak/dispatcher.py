@@ -407,7 +407,7 @@ class Dispatcher:
                 # Now we do the real job
                 # every_one_need_conf = False
                 for conf in conf_to_dispatch:
-                    logger.info('[%s] Dispatching configuration %s', realm.get_name(), conf._id)
+                    logger.info('[%s] Dispatching configuration %s', realm.get_name(), conf.uuid)
 
                     # If there is no alive schedulers, not good...
                     if len(scheds) == 0:
@@ -422,7 +422,7 @@ class Dispatcher:
                         except IndexError:  # No more schedulers.. not good, no loop
                             # need_loop = False
                             # The conf does not need to be dispatch
-                            cfg_id = conf._id
+                            cfg_id = conf.uuid
                             for kind in ('reactionner', 'poller', 'broker', 'receiver'):
                                 realm.to_satellites[kind][cfg_id] = None
                                 realm.to_satellites_need_dispatch[kind][cfg_id] = False
@@ -430,7 +430,7 @@ class Dispatcher:
                             break
 
                         logger.info('[%s] Trying to send conf %d to scheduler %s',
-                                    realm.get_name(), conf._id, sched.get_name())
+                                    realm.get_name(), conf.uuid, sched.get_name())
                         if not sched.need_conf:
                             logger.info('[%s] The scheduler %s do not need conf, sorry',
                                         realm.get_name(), sched.get_name())
@@ -442,7 +442,7 @@ class Dispatcher:
                         # REF: doc/alignak-scheduler-lost.png (2)
                         # Prepare the conf before sending it
                         conf_package = {
-                            'conf': realm.serialized_confs[conf._id],
+                            'conf': realm.serialized_confs[conf.uuid],
                             'override_conf': sched.get_override_configuration(),
                             'modules': sched.modules,
                             'satellites': realm.get_satellites_links_for_scheduler(),
@@ -481,10 +481,10 @@ class Dispatcher:
                         conf.assigned_to = sched
 
                         # We update all data for this scheduler
-                        sched.managed_confs = {conf._id: conf.push_flavor}
+                        sched.managed_confs = {conf.uuid: conf.push_flavor}
 
                         # Now we generate the conf for satellites:
-                        cfg_id = conf._id
+                        cfg_id = conf.uuid
                         for kind in ('reactionner', 'poller', 'broker', 'receiver'):
                             realm.to_satellites[kind][cfg_id] = sched.give_satellite_cfg()
                             realm.to_satellites_need_dispatch[kind][cfg_id] = True
@@ -514,12 +514,12 @@ class Dispatcher:
 
             arbiters_cfg = {}
             for arb in self.arbiters:
-                arbiters_cfg[arb._id] = arb.give_satellite_cfg()
+                arbiters_cfg[arb.uuid] = arb.give_satellite_cfg()
 
             # We put the satellites conf with the "new" way so they see only what we want
             for realm in self.realms:
                 for cfg in realm.confs.values():
-                    cfg_id = cfg._id
+                    cfg_id = cfg.uuid
                     # flavor if the push number of this configuration send to a scheduler
                     flavor = cfg.push_flavor
                     for kind in ('reactionner', 'poller', 'broker', 'receiver'):

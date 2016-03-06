@@ -78,7 +78,7 @@ __all__ = ('Action', )
 
 VALID_EXIT_STATUS = (0, 1, 2, 3)
 
-ONLY_COPY_PROP = ('_id', 'status', 'command', 't_to_go', 'timeout',
+ONLY_COPY_PROP = ('uuid', 'status', 'command', 't_to_go', 'timeout',
                   'env', 'module_type', 'execution_time', 'u_time', 's_time')
 
 SHELLCHARS = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
@@ -107,12 +107,12 @@ class ActionBase(Item):
     This abstract class is used just for having a common id for both
     actions and checks.
     """
-    _id = 0
     process = None
 
     properties = {
         'is_a':             StringProp(default=''),
         'type':             StringProp(default=''),
+        'creation_time':       FloatProp(default=0.0),
         '_in_timeout':      BoolProp(default=False),
         'status':           StringProp(default='scheduled'),
         'exit_status':      IntegerProp(default=3),
@@ -133,19 +133,8 @@ class ActionBase(Item):
 
     def __init__(self, params=None):
         super(ActionBase, self).__init__(params)
-        self._id = Action._id
-        Action._id += 1
+        self.creation_time = time.time()
         self.fill_default()
-
-    @staticmethod
-    def assume_at_least_id(_id):
-        """Set Action._id to the maximum of itself and _id
-
-        :param _id: action id to compare (from a previous run usually)
-        :type _id: int
-        :return: None
-        """
-        Action._id = max(Action._id, _id)
 
     def get_id(self):
         """Getter to id attribute
@@ -154,7 +143,7 @@ class ActionBase(Item):
         :rtype: int
         TODO: Remove Item has already property id
         """
-        return self._id
+        return self.uuid
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
@@ -385,7 +374,7 @@ class ActionBase(Item):
         """
         cls = self.__class__
         # id is not in *_properties
-        res = {'_id': self._id}
+        res = {'uuid': self.uuid}
         for prop in cls.properties:
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
@@ -400,7 +389,7 @@ class ActionBase(Item):
         :return: None
         """
         cls = self.__class__
-        self._id = state['_id']
+        self.uuid = state['uuid']
         for prop in cls.properties:
             if prop in state:
                 setattr(self, prop, state[prop])
