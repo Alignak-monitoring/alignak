@@ -89,6 +89,7 @@ class Realm(Itemgroup):
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'serialized_confs': DictProp(default={}),
+        'unknown_higher_realms': ListProp(default=[])
     })
 
     macros = {
@@ -128,6 +129,19 @@ class Realm(Itemgroup):
         TODO : Clean this self.members != self.realm_members?
         """
         self.realm_members.append(member)
+
+    def add_string_unknown_higher(self, member):
+        """
+        Add new entry(member) to unknown higher realms list
+
+        :param member: member name
+        :type member: str
+        :return: None
+        """
+        add_fun = list.extend if isinstance(member, list) else list.append
+        if not self.unknown_higher_realms:
+            self.unknown_higher_realms = []
+        add_fun(self.unknown_higher_realms, member)
 
     def get_realm_members(self):
         """
@@ -201,14 +215,15 @@ class Realm(Itemgroup):
                 res.append(mem)
         return res
 
-    def count_reactionners(self):
+    def count_reactionners(self, reactionners):
         """ Set the number of reactionners in this realm.
 
         :return: None
         TODO: Make this generic
         """
         self.nb_reactionners = 0
-        for reactionner in self.reactionners:
+        for reactionner_id in self.reactionners:
+            reactionner = reactionners[reactionner_id]
             if not reactionner.spare:
                 self.nb_reactionners += 1
         for realm in self.higher_realms:
@@ -216,13 +231,14 @@ class Realm(Itemgroup):
                 if not reactionner.spare and reactionner.manage_sub_realms:
                     self.nb_reactionners += 1
 
-    def count_pollers(self):
+    def count_pollers(self, pollers):
         """ Set the number of pollers in this realm.
 
         :return: None
         """
         self.nb_pollers = 0
-        for poller in self.pollers:
+        for poller_id in self.pollers:
+            poller = pollers[poller_id]
             if not poller.spare:
                 self.nb_pollers += 1
         for realm in self.higher_realms:
@@ -230,14 +246,15 @@ class Realm(Itemgroup):
                 if not poller.spare and poller.manage_sub_realms:
                     self.nb_pollers += 1
 
-    def count_brokers(self):
+    def count_brokers(self, brokers):
         """ Set the number of brokers in this realm.
 
         :return: None
         TODO: Make this generic
         """
         self.nb_brokers = 0
-        for broker in self.brokers:
+        for broker_id in self.brokers:
+            broker = brokers[broker_id]
             if not broker.spare:
                 self.nb_brokers += 1
         for realm in self.higher_realms:
@@ -245,14 +262,15 @@ class Realm(Itemgroup):
                 if not broker.spare and broker.manage_sub_realms:
                     self.nb_brokers += 1
 
-    def count_receivers(self):
+    def count_receivers(self, receivers):
         """ Set the number of receivers in this realm.
 
         :return: None
         TODO: Make this generic
         """
         self.nb_receivers = 0
-        for receiver in self.receivers:
+        for receiver_id in self.receivers:
+            receiver = receivers[receiver_id]
             if not receiver.spare:
                 self.nb_receivers += 1
         for realm in self.higher_realms:
@@ -275,21 +293,6 @@ class Realm(Itemgroup):
         else:
             logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return []
-
-    def fill_potential_satellites_by_type(self, sat_type):
-        """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
-
-        :param sat_type: satellite type wanted
-        :type sat_type: str
-        :return: None
-        """
-        setattr(self, 'potential_%s' % sat_type, [])
-        for satellite in getattr(self, sat_type):
-            getattr(self, 'potential_%s' % sat_type).append(satellite)
-        for realm in self.higher_realms:
-            for satellite in getattr(realm, sat_type):
-                if satellite.manage_sub_realms:
-                    getattr(self, 'potential_%s' % sat_type).append(satellite)
 
     def get_potential_satellites_by_type(self, s_type):
         """Generic function to access one of the potential satellite attribute
@@ -321,62 +324,7 @@ class Realm(Itemgroup):
             logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return 0
 
-    # Fill dict of realms for managing the satellites confs
-    def prepare_for_satellites_conf(self):
-        """Init the following attributes::
-
-        * to_satellites (with *satellite type* keys)
-        * to_satellites_need_dispatch (with *satellite type* keys)
-        * to_satellites_managed_by (with *satellite type* keys)
-        * nb_*satellite type*s
-        * self.potential_*satellite type*s
-
-        (satellite type are reactionner, poller, broker and receiver)
-
-        :return: None
-        """
-        self.to_satellites = {
-            'reactionner': {},
-            'poller': {},
-            'broker': {},
-            'receiver': {}
-        }
-
-        self.to_satellites_need_dispatch = {
-            'reactionner': {},
-            'poller': {},
-            'broker': {},
-            'receiver': {}
-        }
-
-        self.to_satellites_managed_by = {
-            'reactionner': {},
-            'poller': {},
-            'broker': {},
-            'receiver': {}
-        }
-
-        self.count_reactionners()
-        self.fill_potential_satellites_by_type('reactionners')
-        self.count_pollers()
-        self.fill_potential_satellites_by_type('pollers')
-        self.count_brokers()
-        self.fill_potential_satellites_by_type('brokers')
-        self.count_receivers()
-        self.fill_potential_satellites_by_type('receivers')
-
-        line = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d)" \
-               " (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
-            (self.get_name(),
-             len(self.schedulers),
-             self.nb_pollers, len(self.potential_pollers),
-             self.nb_reactionners, len(self.potential_reactionners),
-             self.nb_brokers, len(self.potential_brokers),
-             self.nb_receivers, len(self.potential_receivers)
-             )
-        logger.info(line)
-
-    def fill_broker_with_poller_reactionner_links(self, broker):
+    def fill_broker_with_poller_reactionner_links(self, broker, pollers, reactionners, receivers):
         """Fill brokerlink object with satellite data
 
         :param broker: broker link we want to fill
@@ -392,36 +340,42 @@ class Realm(Itemgroup):
         broker.cfg['receivers'] = {}
 
         # First our own level
-        for poller in self.pollers:
+        for poller_id in self.pollers:
+            poller = pollers[poller_id]
             cfg = poller.give_satellite_cfg()
             broker.cfg['pollers'][poller.uuid] = cfg
 
-        for reactionner in self.reactionners:
+        for reactionner_id in self.reactionners:
+            reactionner = reactionners[reactionner_id]
             cfg = reactionner.give_satellite_cfg()
             broker.cfg['reactionners'][reactionner.uuid] = cfg
 
-        for receiver in self.receivers:
+        for receiver_id in self.receivers:
+            receiver = receivers[receiver_id]
             cfg = receiver.give_satellite_cfg()
             broker.cfg['receivers'][receiver.uuid] = cfg
 
         # Then sub if we must to it
         if broker.manage_sub_realms:
             # Now pollers
-            for poller in self.get_all_subs_satellites_by_type('pollers'):
+            for poller_id in self.get_all_subs_satellites_by_type('pollers'):
+                poller = pollers[poller_id]
                 cfg = poller.give_satellite_cfg()
                 broker.cfg['pollers'][poller.uuid] = cfg
 
             # Now reactionners
-            for reactionner in self.get_all_subs_satellites_by_type('reactionners'):
+            for reactionner_id in self.get_all_subs_satellites_by_type('reactionners'):
+                reactionner = reactionners[reactionner_id]
                 cfg = reactionner.give_satellite_cfg()
                 broker.cfg['reactionners'][reactionner.uuid] = cfg
 
             # Now receivers
-            for receiver in self.get_all_subs_satellites_by_type('receivers'):
+            for receiver_id in self.get_all_subs_satellites_by_type('receivers'):
+                receiver = receivers[receiver_id]
                 cfg = receiver.give_satellite_cfg()
                 broker.cfg['receivers'][receiver.uuid] = cfg
 
-    def get_satellites_links_for_scheduler(self):
+    def get_satellites_links_for_scheduler(self, pollers, reactionners):
         """Get a configuration dict with pollers and reactionners data
 
         :return: dict containing pollers and reactionners config (key is satellite id)
@@ -435,11 +389,13 @@ class Realm(Itemgroup):
         }
 
         # First our own level
-        for poller in self.pollers:
+        for poller_id in self.pollers:
+            poller = pollers[poller_id]
             config = poller.give_satellite_cfg()
             cfg['pollers'][poller.uuid] = config
 
-        for reactionner in self.reactionners:
+        for reactionner_id in self.reactionners:
+            reactionner = reactionners[reactionner_id]
             config = reactionner.give_satellite_cfg()
             cfg['reactionners'][reactionner.uuid] = config
 
@@ -496,7 +452,13 @@ class Realms(Itemgroups):
 
     def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
-        and add new realm_members
+        Realm are links with two properties : realm_members and higher_realms
+        Each of them can be manually specified by the user.
+        For each entry in one of this two, a parent/son realm has to be edited also
+
+        Example : A realm foo with realm_members == [bar].
+        foo will be added into bar.higher_realms.
+
 
         :return: None
         """
@@ -505,35 +467,45 @@ class Realms(Itemgroups):
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
+                if mbr in self:
+                    # We have a uuid here not a name
+                    new_mbrs.append(mbr)
+                    continue
                 new_mbr = self.find_by_name(mbr)
                 if new_mbr is not None:
-                    new_mbrs.append(new_mbr)
+                    new_mbrs.append(new_mbr.uuid)
+                    # We need to recreate the list, otherwise we will append
+                    # to a global list. Default value and mutable are not a good mix
+                    if new_mbr.higher_realms == []:
+                        new_mbr.higher_realms = []
+                    new_mbr.higher_realms.append(realm.uuid)
                 else:
                     realm.add_string_unknown_member(mbr)
-            # We find the id, we replace the names
+            # Add son ids into parent
             realm.realm_members = new_mbrs
 
-        # Now put higher realm in sub realms
-        # So after they can
-        for realm in self.items.values():
-            realm.higher_realms = []
+            # Now linkify the higher member, this variable is populated
+            # by user or during the previous loop (from another realm)
+            new_highers = []
+            for higher in realm.higher_realms:
+                if higher in self:
+                    # We have a uuid here not a name
+                    new_highers.append(higher)
+                    continue
+                new_higher = self.find_by_name(higher)
+                if new_higher is not None:
+                    new_highers.append(new_higher.uuid)
+                    # We need to recreate the list, otherwise we will append
+                    # to a global list. Default value and mutable are not a good mix
+                    if new_higher.realm_members == []:
+                        new_higher.realm_members = []
+                    # Higher realm can also be specifiec manually so we
+                    # need to add the son realm into members of the higher one
+                    new_higher.realm_members.append(realm.uuid)
+                else:
+                    realm.add_string_unknown_higher(higher)
 
-        for realm in self.items.values():
-            self.recur_higer_realms(realm, realm.realm_members)
-
-    def recur_higer_realms(self, parent_r, sons):
-        """Add sub-realms (parent / son)
-
-        :param parent_r: parent realm
-        :type parent_r: alignak.objects.realm.Realm
-        :param sons: sons realm
-        :type sons: list[alignak.objects.realm.Realm]
-        :return: None
-        """
-        for sub_p in sons:
-            sub_p.higher_realms.append(parent_r)
-            # and call for our sons too
-            self.recur_higer_realms(parent_r, sub_p.realm_members)
+            realm.higher_realms = new_highers
 
     def explode(self):
         """Explode realms with each realm_members
@@ -569,10 +541,119 @@ class Realms(Itemgroups):
                 return realm
         return None
 
-    def prepare_for_satellites_conf(self):
-        """Wrapper to loop over each reach and call Realm.prepare_for_satellites_conf()
+    def prepare_for_satellites_conf(self, satellites):
+        """Init the following attributes for each realm::
 
+        * to_satellites (with *satellite type* keys)
+        * to_satellites_need_dispatch (with *satellite type* keys)
+        * to_satellites_managed_by (with *satellite type* keys)
+        * nb_*satellite type*s
+        * self.potential_*satellite type*s
+
+        (satellite type are reactionner, poller, broker and receiver)
+
+        :param satellites: saletellites objects (broker, reactionner, poller, receiver)
+        :type satellites: tuple
         :return: None
         """
         for realm in self:
-            realm.prepare_for_satellites_conf()
+            realm.to_satellites = {
+                'reactionner': {},
+                'poller': {},
+                'broker': {},
+                'receiver': {}
+            }
+
+            realm.to_satellites_need_dispatch = {
+                'reactionner': {},
+                'poller': {},
+                'broker': {},
+                'receiver': {}
+            }
+
+            realm.to_satellites_managed_by = {
+                'reactionner': {},
+                'poller': {},
+                'broker': {},
+                'receiver': {}
+            }
+
+            # Generic loop to fil nb_* (counting) and fill potential_* attribute.
+            # Counting is not that difficult but as it's generic, getattr and setattr are required
+            for i, sat in enumerate(["reactionner", "poller", "broker", "receiver"]):
+                setattr(realm, "nb_%ss" % sat, 0)  # Init nb_TYPE at 0
+                setattr(realm, 'potential_%ss' % sat, [])  # Init potential_TYPE at []
+                # We get potential TYPE at realm level first
+                for elem_id in getattr(realm, "%ss" % sat):  # For elem in realm.TYPEs
+                    elem = satellites[i][elem_id]  # Get the realm TYPE object
+                    if not elem.spare:
+                        # Generic increment : realm.nb_TYPE += 1
+                        setattr(realm, "nb_%ss" % sat, getattr(realm, "nb_%ss" % sat) + 1)
+                    # Append elem to realm.potential_TYPE
+                    getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
+
+
+                # Now we look for potential_TYPE in higher realm
+                # if the TYPE manage sub realm then it's a potential TYPE
+                # We also need to count TYPE
+                # TODO: Change higher realm type because we are falsely looping on all higher realms
+                # higher_realms is usually of len 1 (no sense to have 2 higher realms)
+                high_realm = realm
+                above_realm = None
+                while getattr(high_realm, "higher_realms", []):
+                    for r_id in high_realm.higher_realms:
+                        above_realm = self[r_id]
+                        for elem_id in getattr(above_realm, "%ss" % sat):
+                            elem = satellites[i][elem_id]
+                            if not elem.spare and elem.manage_sub_realms:
+                                setattr(realm, "nb_%ss" % sat, getattr(realm, "nb_%ss" % sat) + 1)
+                            if elem.manage_sub_realms:
+                                getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
+
+                    high_realm = above_realm
+
+            line = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d)" \
+                   " (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
+                (realm.get_name(),
+                 len(realm.schedulers),
+                 realm.nb_pollers, len(realm.potential_pollers),
+                 realm.nb_reactionners, len(realm.potential_reactionners),
+                 realm.nb_brokers, len(realm.potential_brokers),
+                 realm.nb_receivers, len(realm.potential_receivers)
+                 )
+            logger.info(line)
+
+    def fill_potential_satellites_by_type(self, sat_type, realm, satellites):
+        """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
+
+        :param sat_type: satellite type wanted
+        :type sat_type: str
+        :param realm: the realm we want to fill potential attribute
+        :type realm: alignak.objects.realm.Realm
+        :param satellites: items corresponding to the wanted type
+        :type satellites: alignak.objects.item.Items
+        :return: None
+        """
+        setattr(realm, 'potential_%s' % sat_type, [])
+        for elem_id in getattr(realm, sat_type):
+            elem = satellites[elem_id]
+            getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
+
+        # Now we look for potential_TYPE in higher realm
+        # if the TYPE manage sub realm then it's a potential TYPE
+        # We also need to count TYPE
+        # TODO: Change higher realm type because we are falsely looping on all higher realms
+        # higher_realms is usually of len 1 (no sense to have 2 higher realms)
+        high_realm = realm
+        above_realm = None
+        while getattr(high_realm, "higher_realms", []):
+            for r_id in high_realm.higher_realms:
+                above_realm = self[r_id]
+                for elem_id in getattr(above_realm, "%s" % sat_type):
+                    elem = satellites[elem_id]
+                    if not elem.spare and elem.manage_sub_realms:
+                        setattr(realm, "nb_%s" % sat_type, getattr(realm, "nb_%s" % sat_type) + 1)
+                    if elem.manage_sub_realms:
+                        getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
+
+            high_realm = above_realm

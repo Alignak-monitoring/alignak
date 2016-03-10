@@ -70,7 +70,7 @@ class TestDisableActiveChecks(AlignakTest):
         host = self.sched.hosts.find_by_name("test_host_0")
 
         print "Checks in progress", host.checks_in_progress
-        c = host.checks_in_progress.pop()
+        c = self.sched.checks[host.checks_in_progress.pop()]
         print c.__dict__
         print c.status
 
@@ -79,10 +79,12 @@ class TestDisableActiveChecks(AlignakTest):
         self.assertEqual('HARD', host.state_type)
         last_output = host.output
 
-        host.schedule()
+        chk = host.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
+        self.sched.add(chk)
         self.sched.external_command.disable_host_check(host)
 
-        c = host.checks_in_progress.pop()
+        c = self.sched.checks[host.checks_in_progress.pop()]
         print c.__dict__
         print c.status
         self.assertEqual('waitconsume', c.status)

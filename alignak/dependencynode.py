@@ -370,7 +370,7 @@ class DependencyNodeFactory(object):
     def __init__(self, bound_item):
         self.bound_item = bound_item
 
-    def eval_cor_pattern(self, pattern, hosts, services, running=False):
+    def eval_cor_pattern(self, pattern, hosts, services, hostgroups, servicegroups, running=False):
         """Parse and build recursively a tree of DependencyNode from pattern
 
         :param pattern: pattern to parse
@@ -396,9 +396,11 @@ class DependencyNodeFactory(object):
 
         # If it's a simple node, evaluate it directly
         if complex_node is False:
-            return self.eval_simple_cor_pattern(pattern, hosts, services, running)
+            return self.eval_simple_cor_pattern(pattern, hosts, services,
+                                                hostgroups, servicegroups, running)
         else:
-            return self.eval_complex_cor_pattern(pattern, hosts, services, running)
+            return self.eval_complex_cor_pattern(pattern, hosts, services,
+                                                 hostgroups, servicegroups, running)
 
     @staticmethod
     def eval_xof_pattern(node, pattern):
@@ -431,7 +433,8 @@ class DependencyNodeFactory(object):
             pattern = matches.groups()[3]
         return pattern
 
-    def eval_complex_cor_pattern(self, pattern, hosts, services, running=False):
+    def eval_complex_cor_pattern(self, pattern, hosts, services,
+                                 hostgroups, servicegroups, running=False):
         """Parse and build recursively a tree of DependencyNode from a complex pattern
 
         :param pattern: pattern to parse
@@ -483,7 +486,8 @@ class DependencyNodeFactory(object):
                 if stacked_par == 0:
                     # print "THIS is closing a sub compress expression", tmp
                     tmp = tmp.strip()
-                    son = self.eval_cor_pattern(tmp, hosts, services, running)
+                    son = self.eval_cor_pattern(tmp, hosts, services,
+                                                hostgroups, servicegroups, running)
                     # Maybe our son was notted
                     if son_is_not:
                         son.not_value = True
@@ -529,7 +533,8 @@ class DependencyNodeFactory(object):
                     node.operand = char
                 if tmp != '':
                     # print "Will analyse the current str", tmp
-                    son = self.eval_cor_pattern(tmp, hosts, services, running)
+                    son = self.eval_cor_pattern(tmp, hosts, services,
+                                                hostgroups, servicegroups, running)
                     # Maybe our son was notted
                     if son_is_not:
                         son.not_value = True
@@ -545,7 +550,8 @@ class DependencyNodeFactory(object):
         tmp = tmp.strip()
         if tmp != '':
             # print "Managing trainling part", tmp
-            son = self.eval_cor_pattern(tmp, hosts, services, running)
+            son = self.eval_cor_pattern(tmp, hosts, services,
+                                        hostgroups, servicegroups, running)
             # Maybe our son was notted
             if son_is_not:
                 son.not_value = True
@@ -559,7 +565,8 @@ class DependencyNodeFactory(object):
 
         return node
 
-    def eval_simple_cor_pattern(self, pattern, hosts, services, running=False):
+    def eval_simple_cor_pattern(self, pattern, hosts, services,
+                                hostgroups, servicegroups, running=False):
         """Parse and build recursively a tree of DependencyNode from a simple pattern
 
         :param pattern: pattern to parse
@@ -586,7 +593,8 @@ class DependencyNodeFactory(object):
         if re.search(r"^([%s]+|\*):" % self.host_flags, pattern) or \
                 re.search(r",\s*([%s]+:.*|\*)$" % self.service_flags, pattern):
             # o is just extracted its attributes, then trashed.
-            son = self.expand_expression(pattern, hosts, services, running)
+            son = self.expand_expression(pattern, hosts, services,
+                                         hostgroups, servicegroups, running)
             if node.operand != 'of:':
                 node.operand = '&'
             node.sons.extend(son.sons)
@@ -649,7 +657,7 @@ class DependencyNodeFactory(object):
                 error = "Business rule uses unknown host %s" % (host_name,)
         return obj, error
 
-    def expand_expression(self, pattern, hosts, services, running=False):
+    def expand_expression(self, pattern, hosts, services, hostgroups, servicegroups, running=False):
         """Expand a host or service expression into a dependency node tree
         using (host|service)group membership, regex, or labels as item selector.
 
@@ -674,17 +682,21 @@ class DependencyNodeFactory(object):
         filters = []
         # Looks for hosts/services using appropriate filters
         try:
+            all_items = {"hosts": hosts,
+                         "hostgroups": hostgroups,
+                         "servicegroups": servicegroups
+                         }
             if len(elts) > 1:
                 # We got a service expression
                 host_expr, service_expr = elts
                 filters.extend(self.get_srv_host_filters(host_expr))
                 filters.extend(self.get_srv_service_filters(service_expr))
-                items = services.find_by_filter(filters)
+                items = services.find_by_filter(filters, all_items)
             else:
                 # We got a host expression
                 host_expr = elts[0]
                 filters.extend(self.get_host_filters(host_expr))
-                items = hosts.find_by_filter(filters)
+                items = hosts.find_by_filter(filters, all_items)
         except re.error, regerr:
             error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:

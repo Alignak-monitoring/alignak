@@ -218,7 +218,7 @@ class Contactgroups(Itemgroups):
                 member = contacts.find_by_name(mbr)
                 # Maybe the contact is missing, if so, must be put in unknown_members
                 if member is not None:
-                    new_mbrs.append(member)
+                    new_mbrs.append(member.uuid)
                 else:
                     contactgroup.add_string_unknown_member(mbr)
 

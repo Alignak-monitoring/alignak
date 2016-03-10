@@ -103,7 +103,7 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.brokers = {}
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference, timeperiods):
         """Compensate a system time change of difference for all hosts/services/checks/notifs
 
         :param difference: difference in seconds
@@ -131,9 +131,10 @@ class Alignak(BaseSatellite):
                 t_to_go = chk.t_to_go
                 ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
-                if ref.check_period is not None:
+                timeperiod = timeperiods[ref.check_period]
+                if timeperiod is not None:
                     # But it's no so simple, we must match the timeperiod
-                    new_t = ref.check_period.get_next_valid_time_from_t(new_t)
+                    new_t = timeperiod.get_next_valid_time_from_t(new_t)
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:

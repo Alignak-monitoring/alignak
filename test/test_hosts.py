@@ -184,8 +184,8 @@ class TestHost(AlignakTest):
         hg = self.conf.hostgroups.find_by_name("hostgroup_01")
         self.assertIsNot(hg, None)
         h = self.conf.hosts.find_by_name('test_host_0')
-        self.assertIn(h, hg.members)
-        self.assertIn(hg.get_name(), [hg.get_name() for hg in h.hostgroups])
+        self.assertIn(h.uuid, hg.members)
+        self.assertIn(hg.uuid, h.hostgroups)
 
 
     def test_childs(self):
@@ -193,16 +193,16 @@ class TestHost(AlignakTest):
         r = self.sched.hosts.find_by_name('test_router_0')
 
         # Search if h is in r.childs
-        self.assertIn(h, r.childs)
+        self.assertIn(h.uuid, [a[0] for a in r.act_depend_of_me])
         # and the reverse
-        self.assertIn(r, h.parents)
-        print "r.childs", r.childs
-        print "h.childs", h.childs
+        self.assertIn(r.uuid, h.parents)
+        print "r.childs", [a[0] for a in r.act_depend_of_me]
+        print "h.childs", [a[0] for a in h.act_depend_of_me]
 
         # And also in the parent/childs dep list
-        self.assertIn(h, r.child_dependencies)
+        self.assertIn(h.uuid, r.child_dependencies)
         # and the reverse
-        self.assertIn(r, h.parent_dependencies)
+        self.assertIn(r.uuid, h.parent_dependencies)
 
 
 if __name__ == '__main__':

@@ -89,10 +89,10 @@ class TestContactDowntime(AlignakTest):
         print "downtime was scheduled. check its activity and the comment\n"*5
         self.assertEqual(1, len(self.sched.contact_downtimes))
         self.assertEqual(1, len(test_contact.downtimes))
-        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes.values())
+        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes)
 
-        self.assertTrue(test_contact.downtimes[0].is_in_effect)
-        self.assertFalse(test_contact.downtimes[0].can_be_deleted)
+        self.assertTrue(self.sched.contact_downtimes[test_contact.downtimes[0]].is_in_effect)
+        self.assertFalse(self.sched.contact_downtimes[test_contact.downtimes[0]].can_be_deleted)
 
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
@@ -103,7 +103,7 @@ class TestContactDowntime(AlignakTest):
         self.show_and_clear_logs()
 
         # Now we short the downtime a lot so it will be stop at now + 1 sec.
-        test_contact.downtimes[0].end_time = time.time() + 1
+        self.sched.contact_downtimes[test_contact.downtimes[0]].end_time = time.time() + 1
 
         time.sleep(2)
 
@@ -170,10 +170,10 @@ class TestContactDowntime(AlignakTest):
         print "downtime was scheduled. check its activity and the comment"
         self.assertEqual(1, len(self.sched.contact_downtimes))
         self.assertEqual(1, len(test_contact.downtimes))
-        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes.values())
+        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes)
 
-        self.assertTrue(test_contact.downtimes[0].is_in_effect)
-        self.assertFalse(test_contact.downtimes[0].can_be_deleted)
+        self.assertTrue(self.sched.contact_downtimes[test_contact.downtimes[0]].is_in_effect)
+        self.assertFalse(self.sched.contact_downtimes[test_contact.downtimes[0]].can_be_deleted)
 
         time.sleep(1)
         # Ok, we define the downtime like we should, now look at if it does the job: do not
@@ -184,13 +184,13 @@ class TestContactDowntime(AlignakTest):
         self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL')
         self.show_and_clear_logs()
 
-        downtime_id = test_contact.downtimes[0].uuid
+        downtime_id = test_contact.downtimes[0]
         # OK, Now we cancel this downtime, we do not need it anymore
         cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
         self.sched.run_external_command(cmd)
 
         # We check if the downtime is tag as to remove
-        self.assertTrue(test_contact.downtimes[0].can_be_deleted)
+        self.assertTrue(self.sched.contact_downtimes[downtime_id].can_be_deleted)
 
         # We really delete it
         self.scheduler_loop(1, [])

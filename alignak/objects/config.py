@@ -1343,7 +1343,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Ok, now update all realms with backlinks of
         # satellites
-        self.realms.prepare_for_satellites_conf()
+        self.realms.prepare_for_satellites_conf((self.reactionners, self.pollers,
+                                                 self.brokers, self.receivers))
 
     def clean(self):
         """Wrapper for calling the clean method of services attribute
@@ -1584,7 +1585,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         self.hosts.apply_dependencies()
-        self.services.apply_dependencies()
+        self.services.apply_dependencies(self.hosts)
 
     def apply_inheritance(self):
         """Apply inheritance over templates
@@ -1801,16 +1802,37 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        self.hosts.create_business_rules(self.hosts, self.services)
-        self.services.create_business_rules(self.hosts, self.services)
+        self.hosts.create_business_rules(self.hosts, self.services,
+                                         self.hostgroups, self.servicegroups,
+                                         self.macromodulations, self.timeperiods)
+        self.services.create_business_rules(self.hosts, self.services,
+                                            self.hostgroups, self.servicegroups,
+                                            self.macromodulations, self.timeperiods)
 
     def create_business_rules_dependencies(self):
         """Create business rules dependencies for hosts and services
 
         :return: None
         """
-        self.hosts.create_business_rules_dependencies()
-        self.services.create_business_rules_dependencies()
+
+        for item in itertools.chain(self.hosts, self.services):
+            if not item.got_business_rule:
+                continue
+
+            bp_items = item.business_rule.list_all_elements()
+            for bp_item in bp_items:
+                if bp_item.uuid in self.hosts and item.business_rule_host_notification_options:
+                    bp_item.notification_options = item.business_rule_host_notification_options
+                elif bp_item.uuid in self.services and \
+                        item.business_rule_service_notification_options:
+                    bp_item.notification_options = item.business_rule_service_notification_options
+
+                bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w'],
+                                                 'business_dep', '', True))
+
+                # TODO: Is it necessary? We already have this info in act_depend_* attributes
+                item.parent_dependencies.add(bp_item.uuid)
+                bp_item.child_dependencies.add(item.uuid)
 
     def hack_old_nagios_parameters(self):
         """ Create some 'modules' from all nagios parameters if they are set and
@@ -2042,11 +2064,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
-        # Hosts got a special check for loops
-        if not self.hosts.no_loop_in_parents("self", "parents"):
-            valid = False
-            logger.error("Hosts: detected loop in parents ; conf incorrect")
-
         for obj in ('servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
                     'reactionners', 'pollers', 'brokers', 'receivers', 'resultmodulations',
                     'businessimpactmodulations'):
@@ -2065,8 +2082,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Look that all scheduler got a broker that will take brok.
         # If there are no, raise an Error
         for scheduler in self.schedulers:
-            rea = scheduler.realm
-            if rea:
+            rea_id = scheduler.realm
+            if rea_id:
+                rea = self.realms[rea_id]
                 if len(rea.potential_brokers) == 0:
                     logger.error("The scheduler %s got no broker in its realm or upper",
                                  scheduler.get_name())
@@ -2103,17 +2121,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for lst in [self.services, self.hosts]:
             for item in lst:
                 if item.got_business_rule:
-                    e_ro = item.get_realm()
+                    e_ro_id = item.realm
+                    e_ro = self.realms[e_ro_id]
                     # Something was wrong in the conf, will be raised elsewhere
                     if not e_ro:
                         continue
                     e_r = e_ro.realm_name
                     for elt in item.business_rule.list_all_elements():
-                        r_o = elt.get_realm()
+                        r_o_id = elt.realm
+                        r_o = self.realms[r_o_id]
                         # Something was wrong in the conf, will be raised elsewhere
                         if not r_o:
                             continue
-                        elt_r = elt.get_realm().realm_name
+                        elt_r = r_o.realm_name
                         if elt_r != e_r:
                             logger.error("Business_rule '%s' got hosts from another realm: %s",
                                          item.get_full_name(), elt_r)
@@ -2189,7 +2209,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         # We create a graph with host in nodes
         graph = Graph()
-        graph.add_nodes(self.hosts)
+        graph.add_nodes(self.hosts.items.keys())
 
         # links will be used for relations between hosts
         links = set()
@@ -2198,46 +2218,54 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for host in self.hosts:
             # Add parent relations
             for parent in host.parents:
-                if parent is not None:
-                    links.add((parent, host))
+                if parent:
+                    links.add((parent, host.uuid))
             # Add the others dependencies
             for (dep, _, _, _, _) in host.act_depend_of:
-                links.add((dep, host))
+                links.add((dep, host.uuid))
             for (dep, _, _, _, _) in host.chk_depend_of:
-                links.add((dep, host))
+                links.add((dep, host.uuid))
 
         # For services: they are link with their own host but we need
         # To have the hosts of service dep in the same pack too
         for serv in self.services:
-            for (dep, _, _, _, _) in serv.act_depend_of:
+            for (dep_id, _, _, _, _) in serv.act_depend_of:
+                if dep_id in self.services:
+                    dep = self.services[dep_id]
+                else:
+                    dep = self.hosts[dep_id]
                 # I don't care about dep host: they are just the host
                 # of the service...
                 if hasattr(dep, 'host'):
                     links.add((dep.host, serv.host))
             # The other type of dep
-            for (dep, _, _, _, _) in serv.chk_depend_of:
+            for (dep_id, _, _, _, _) in serv.chk_depend_of:
+                if dep_id in self.services:
+                    dep = self.services[dep_id]
+                else:
+                    dep = self.hosts[dep_id]
                 links.add((dep.host, serv.host))
 
         # For host/service that are business based, we need to
         # link them too
         for serv in [srv for srv in self.services if srv.got_business_rule]:
             for elem in serv.business_rule.list_all_elements():
-                if hasattr(elem, 'host'):  # if it's a service
+                if elem.uuid in self.services:
                     if elem.host != serv.host:  # do not a host with itself
                         links.add((elem.host, serv.host))
                 else:  # it's already a host
-                    if elem != serv.host:
-                        links.add((elem, serv.host))
+                    if elem.uuid != serv.host:
+                        links.add((elem.uuid, serv.host))
 
         # Same for hosts of course
         for host in [hst for hst in self.hosts if hst.got_business_rule]:
             for elem in host.business_rule.list_all_elements():
-                if hasattr(elem, 'host'):  # if it's a service
-                    if elem.host != host:
-                        links.add((elem.host, host))
+                if elem.uuid in self.services:  # if it's a service
+                    if elem.host != host.uuid:
+                        links.add((elem.host, host.uuid))
                 else:  # e is a host
                     if elem != host:
-                        links.add((elem, host))
+                        links.add((elem.uuid, host.uuid))
 
         # Now we create links in the graph. With links (set)
         # We are sure to call the less add_edge
@@ -2257,8 +2285,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # same realm. If not, not good!
         for pack in graph.get_accessibility_packs():
             tmp_realms = set()
-            for elt in pack:
-                if elt.realm is not None:
+            for elt_id in pack:
+                elt = self.hosts[elt_id]
+                if elt.realm:
                     tmp_realms.add(elt.realm)
             if len(tmp_realms) > 1:
                 self.add_error("Error: the realm configuration of yours hosts is not good "
@@ -2270,7 +2299,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         self.add_error('   the host %s is in the realm %s' %
                                        (host.get_name(), host.realm.get_name()))
             if len(tmp_realms) == 1:  # Ok, good
-                realm = tmp_realms.pop()  # There is just one element
+                realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)
             elif len(tmp_realms) == 0:  # Hum.. no realm value? So default Realm
                 if default_realm is not None:
@@ -2296,7 +2325,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # but add a entry in the round-robin tourniquet for
             # every weight point schedulers (so Weight round robin)
             weight_list = []
-            no_spare_schedulers = [serv for serv in realm.schedulers if not serv.spare]
+            no_spare_schedulers = [s_id for s_id in realm.schedulers
+                                   if not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
 
             # Maybe there is no scheduler in the realm, it's can be a
@@ -2317,11 +2347,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             packindex = 0
             packindices = {}
-            for serv in no_spare_schedulers:
-                packindices[serv.uuid] = packindex
+            for s_id in no_spare_schedulers:
+                sched = self.schedulers[s_id]
+                packindices[s_id] = packindex
                 packindex += 1
-                for i in xrange(0, serv.weight):
-                    weight_list.append(serv.uuid)
+                for i in xrange(0, sched.weight):
+                    weight_list.append(s_id)
 
             round_robin = itertools.cycle(weight_list)
 
@@ -2338,7 +2369,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for pack in realm.packs:
                 valid_value = False
                 old_pack = -1
-                for elt in pack:
+                for elt_id in pack:
+                    elt = self.hosts[elt_id]
                     # print 'Look for host', elt.get_name(), 'in assoc'
                     old_i = assoc.get(elt.get_name(), -1)
                     # print 'Founded in ASSOC: ', elt.get_name(),old_i
@@ -2366,9 +2398,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     # print 'take a new id for pack', [h.get_name() for h in pack]
                     i = round_robin.next()
 
-                for elt in pack:
-                    # print 'We got the element', elt.get_full_name(), ' in pack', i, packindices
-                    packs[packindices[i]].append(elt)
+                for elt_id in pack:
+                    elt = self.hosts[elt_id]
+                    packs[packindices[i]].append(elt_id)
                     assoc[elt.get_name()] = i
 
             # Now in packs we have the number of packs [h1, h2, etc]
@@ -2386,7 +2418,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):  # pylint: disable=R0912
+    def cut_into_parts(self):  # pylint: disable=R0912,R0914
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
         have no dependencies between them
@@ -2430,9 +2462,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             cur_conf.notificationways = self.notificationways
             cur_conf.checkmodulations = self.checkmodulations
             cur_conf.macromodulations = self.macromodulations
+            cur_conf.businessimpactmodulations = self.businessimpactmodulations
+            cur_conf.resultmodulations = self.resultmodulations
             cur_conf.contactgroups = self.contactgroups
             cur_conf.contacts = self.contacts
             cur_conf.triggers = self.triggers
+            cur_conf.escalations = self.escalations
             # Create hostgroups with just the name and same id, but no members
             new_servicegroups = []
             for servicegroup in self.servicegroups:
@@ -2458,10 +2493,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         offset = 0
         for realm in self.realms:
             for i in realm.packs:
-                for host in realm.packs[i]:
+                for host_id in realm.packs[i]:
+                    host = self.hosts[host_id]
                     host.pack_id = i
                     self.confs[i + offset].hosts.append(host)
-                    for serv in host.services:
+                    for serv_id in host.services:
+                        serv = self.services[serv_id]
                         self.confs[i + offset].services.append(serv)
                 # Now the conf can be link in the realm
                 realm.confs[i + offset] = self.confs[i + offset]
@@ -2483,19 +2520,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 hostgroup = cfg.hostgroups.find_by_name(ori_hg.get_name())
                 mbrs_id = []
                 for host in ori_hg.members:
-                    if host is not None:
-                        mbrs_id.append(host.uuid)
+                    if host != '':
+                        mbrs_id.append(host)
                 for host in cfg.hosts:
                     if host.uuid in mbrs_id:
-                        hostgroup.members.append(host)
+                        hostgroup.members.append(host.uuid)
 
             # And also relink the hosts with the valid hostgroups
             for host in cfg.hosts:
                 orig_hgs = host.hostgroups
                 nhgs = []
-                for ohg in orig_hgs:
+                for ohg_id in orig_hgs:
+                    ohg = self.hostgroups[ohg_id]
                     nhg = cfg.hostgroups.find_by_name(ohg.get_name())
-                    nhgs.append(nhg)
+                    nhgs.append(nhg.uuid)
                 host.hostgroups = nhgs
 
             # Fill servicegroup
@@ -2504,19 +2542,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 mbrs = ori_sg.members
                 mbrs_id = []
                 for serv in mbrs:
-                    if serv is not None:
-                        mbrs_id.append(serv.uuid)
+                    if serv != '':
+                        mbrs_id.append(serv)
                 for serv in cfg.services:
                     if serv.uuid in mbrs_id:
-                        servicegroup.members.append(serv)
+                        servicegroup.members.append(serv.uuid)
 
             # And also relink the services with the valid servicegroups
             for host in cfg.services:
                 orig_hgs = host.servicegroups
                 nhgs = []
-                for ohg in orig_hgs:
+                for ohg_id in orig_hgs:
+                    ohg = self.servicegroups[ohg_id]
                     nhg = cfg.servicegroups.find_by_name(ohg.get_name())
-                    nhgs.append(nhg)
+                    nhgs.append(nhg.uuid)
                 host.servicegroups = nhgs
 
         # Now we fill other_elements by host (service are with their host

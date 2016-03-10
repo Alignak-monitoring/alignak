@@ -111,7 +111,8 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timeperiods,
+                                  timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -148,7 +149,8 @@ class NotificationWay(Item):
         if business_impact < self.min_business_impact:
             return False
 
-        valid = self.service_notification_period.is_time_valid(timestamp)
+        notif_period = timeperiods[self.service_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.service_notification_options:
             return False
         timestamp = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
@@ -170,7 +172,8 @@ class NotificationWay(Item):
 
         return False
 
-    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, timperiods, timestamp,
+                               state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -207,7 +210,8 @@ class NotificationWay(Item):
         if cmd and cmd not in self.host_notification_commands:
             return False
 
-        valid = self.host_notification_period.is_time_valid(timestamp)
+        notif_period = timperiods[self.host_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.host_notification_options:
             return False
         timestamp = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',

@@ -61,44 +61,44 @@ class TestConfig(AlignakTest):
     def test_service_dependencies(self):
         self.print_header()
         now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_0")
-        test_host_1 = self.sched.hosts.find_by_name("test_host_1")
+        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
+        test_host_1 = self.sched.hosts.find_by_name("test_host_11")
         test_host_0.checks_in_progress = []
         test_host_1.checks_in_progress = []
         test_host_0.act_depend_of = []  # ignore the router
         test_host_1.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        router = self.sched.hosts.find_by_name("test_router_00")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore other routers
-        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        test_host_0_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_1")
-        test_host_1_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_1", "test_ok_0")
-        test_host_1_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_1", "test_ok_1")
+        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
+        test_host_0_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_1")
+        test_host_1_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_ok_0")
+        test_host_1_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_ok_1")
         # the most important: test_ok_0 is in the chk_depend_of-list of test_ok_1
-        self.assertIn(test_host_0_test_ok_0, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
-        self.assertIn(test_host_1_test_ok_0, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
+        self.assertIn(test_host_0_test_ok_0.uuid, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
+        self.assertIn(test_host_1_test_ok_0.uuid, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
 
         # and not vice versa
-        self.assertNotIn(test_host_0_test_ok_1, [x[0] for x in test_host_0_test_ok_0.chk_depend_of])
-        self.assertNotIn(test_host_1_test_ok_1, [x[0] for x in test_host_1_test_ok_0.chk_depend_of])
+        self.assertNotIn(test_host_0_test_ok_1.uuid, [x[0] for x in test_host_0_test_ok_0.chk_depend_of])
+        self.assertNotIn(test_host_1_test_ok_1.uuid, [x[0] for x in test_host_1_test_ok_0.chk_depend_of])
 
         # test_ok_0 is also in the act_depend_of-list of test_ok_1
-        self.assertIn(test_host_0_test_ok_0, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
-        self.assertIn(test_host_1_test_ok_0, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
+        self.assertIn(test_host_0_test_ok_0.uuid, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
+        self.assertIn(test_host_1_test_ok_0.uuid, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
 
         # check the criteria
         # execution_failure_criteria      u,c
         # notification_failure_criteria   u,c,w
-        self.assertEqual([x[1] for x in test_host_0_test_ok_1.chk_depend_of if x[0] is test_host_0_test_ok_0], [['u', 'c']] )
-        self.assertEqual([x[1] for x in test_host_1_test_ok_1.chk_depend_of if x[0] is test_host_1_test_ok_0], [['u', 'c']] )
-        self.assertEqual([x[1] for x in test_host_0_test_ok_1.act_depend_of if x[0] is test_host_0_test_ok_0], [['u', 'c', 'w']] )
-        self.assertEqual([x[1] for x in test_host_1_test_ok_1.act_depend_of if x[0] is test_host_1_test_ok_0], [['u', 'c', 'w']] )
+        self.assertEqual([x[1] for x in test_host_0_test_ok_1.chk_depend_of if x[0] == test_host_0_test_ok_0.uuid], [['u', 'c']] )
+        self.assertEqual([x[1] for x in test_host_1_test_ok_1.chk_depend_of if x[0] == test_host_1_test_ok_0.uuid], [['u', 'c']] )
+        self.assertEqual([x[1] for x in test_host_0_test_ok_1.act_depend_of if x[0] == test_host_0_test_ok_0.uuid], [['u', 'c', 'w']] )
+        self.assertEqual([x[1] for x in test_host_1_test_ok_1.act_depend_of if x[0] == test_host_1_test_ok_0.uuid], [['u', 'c', 'w']] )
 
         # and every service has the host in it's act_depend_of-list
-        self.assertIn(test_host_0, [x[0] for x in test_host_0_test_ok_0.act_depend_of])
-        self.assertIn(test_host_0, [x[0] for x in test_host_0_test_ok_1.act_depend_of])
-        self.assertIn(test_host_1, [x[0] for x in test_host_1_test_ok_0.act_depend_of])
-        self.assertIn(test_host_1, [x[0] for x in test_host_1_test_ok_1.act_depend_of])
+        self.assertIn(test_host_0.uuid, [x[0] for x in test_host_0_test_ok_0.act_depend_of])
+        self.assertIn(test_host_0.uuid, [x[0] for x in test_host_0_test_ok_1.act_depend_of])
+        self.assertIn(test_host_1.uuid, [x[0] for x in test_host_1_test_ok_0.act_depend_of])
+        self.assertIn(test_host_1.uuid, [x[0] for x in test_host_1_test_ok_1.act_depend_of])
 
         # and final count the masters
         self.assertEqual(0, len(test_host_0_test_ok_0.chk_depend_of))
@@ -128,30 +128,30 @@ class TestConfig(AlignakTest):
         print host_C.act_depend_of
         print host_C.chk_depend_of
         print host_C.chk_depend_of_me
-        self.assertIn(host_B, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_A, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_A, [x[0] for x in host_B.act_depend_of])
+        self.assertIn(host_B.uuid, [x[0] for x in host_C.act_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_C.act_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_B.act_depend_of])
         self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_B, [x[0] for x in host_C.chk_depend_of])
-        self.assertIn(host_A, [x[0] for x in host_C.chk_depend_of])
-        self.assertIn(host_A, [x[0] for x in host_B.chk_depend_of])
+        self.assertIn(host_B.uuid, [x[0] for x in host_C.chk_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_C.chk_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_B.chk_depend_of])
         self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_B, [x[0] for x in host_A.act_depend_of_me])
-        self.assertIn(host_C, [x[0] for x in host_A.act_depend_of_me])
-        self.assertIn(host_C, [x[0] for x in host_B.act_depend_of_me])
+        self.assertIn(host_B.uuid, [x[0] for x in host_A.act_depend_of_me])
+        self.assertIn(host_C.uuid, [x[0] for x in host_A.act_depend_of_me])
+        self.assertIn(host_C.uuid, [x[0] for x in host_B.act_depend_of_me])
         #self.assertEqual([], host_C.act_depend_of_me) # D in here
-        self.assertIn(host_B, [x[0] for x in host_A.chk_depend_of_me])
-        self.assertIn(host_C, [x[0] for x in host_A.chk_depend_of_me])
-        self.assertIn(host_C, [x[0] for x in host_B.chk_depend_of_me])
-        self.assertIn(host_D, [x[0] for x in host_C.chk_depend_of_me])
+        self.assertIn(host_B.uuid, [x[0] for x in host_A.chk_depend_of_me])
+        self.assertIn(host_C.uuid, [x[0] for x in host_A.chk_depend_of_me])
+        self.assertIn(host_C.uuid, [x[0] for x in host_B.chk_depend_of_me])
+        self.assertIn(host_D.uuid, [x[0] for x in host_C.chk_depend_of_me])
 
         # check the notification/execution criteria
-        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] is host_B])
-        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] is host_B])
-        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] is host_A])
-        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] is host_A])
-        self.assertEqual([['d', 'u']], [x[1] for x in host_B.act_depend_of if x[0] is host_A])
-        self.assertEqual([['n']],       [x[1] for x in host_B.chk_depend_of if x[0] is host_A])
+        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] == host_B.uuid])
+        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] == host_B.uuid])
+        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] == host_A.uuid])
+        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] == host_A.uuid])
+        self.assertEqual([['d', 'u']], [x[1] for x in host_B.act_depend_of if x[0] == host_A.uuid])
+        self.assertEqual([['n']],       [x[1] for x in host_B.chk_depend_of if x[0] == host_A.uuid])
 
     def test_host_inherits_dependencies(self):
         self.print_header()
@@ -166,16 +166,16 @@ class TestConfig(AlignakTest):
         host_C = self.sched.hosts.find_by_name("test_host_C")
         host_D = self.sched.hosts.find_by_name("test_host_D")
 
-        print "A depends on", ",".join([x[0].get_name() for x in host_A.chk_depend_of])
-        print "B depends on", ",".join([x[0].get_name() for x in host_B.chk_depend_of])
-        print "C depends on", ",".join([x[0].get_name() for x in host_C.chk_depend_of])
-        print "D depends on", ",".join([x[0].get_name() for x in host_D.chk_depend_of])
+        print "A depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_A.chk_depend_of])
+        print "B depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_B.chk_depend_of])
+        print "C depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_C.chk_depend_of])
+        print "D depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_D.chk_depend_of])
 
         self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_A, [x[0] for x in host_B.act_depend_of])
-        self.assertIn(host_A, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_B, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_C, [x[0] for x in host_D.act_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_B.act_depend_of])
+        self.assertIn(host_A.uuid, [x[0] for x in host_C.act_depend_of])
+        self.assertIn(host_B.uuid, [x[0] for x in host_C.act_depend_of])
+        self.assertIn(host_C.uuid, [x[0] for x in host_D.act_depend_of])
 
         # and through inherits_parent....
         #self.assertTrue(host_A in [x[0] for x in host_D.act_depend_of])
@@ -184,14 +184,14 @@ class TestConfig(AlignakTest):
 
     # Now test a in service service_dep definition. More easierto use than create a full new object
     def test_in_servicedef_dep(self):
-        svc_parent = self.sched.services.find_srv_by_name_and_hostname("test_host_1", "test_parent_svc")
-        svc_son = self.sched.services.find_srv_by_name_and_hostname("test_host_1", "test_son_svc")
+        svc_parent = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_parent_svc")
+        svc_son = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_son_svc")
 
         print "DumP", self.conf.servicedependencies
 
         # the most important: test_parent is in the chk_depend_of-list of test_son
         print "Dep: ", svc_son.act_depend_of
-        self.assertEqual([x[1] for x in svc_son.act_depend_of if x[0] is svc_parent], [['u', 'c', 'w']] )
+        self.assertEqual([x[1] for x in svc_son.act_depend_of if x[0] == svc_parent.uuid], [['u', 'c', 'w']] )
 
     def test_host_non_inherits_dependencies(self):
         #
@@ -205,30 +205,33 @@ class TestConfig(AlignakTest):
         host_D = self.sched.hosts.find_by_name("test_host_D")
         host_E = self.sched.hosts.find_by_name("test_host_E")
 
-        print "A depends on", ",".join([x[0].get_name() for x in host_A.chk_depend_of])
-        print "B depends on", ",".join([x[0].get_name() for x in host_B.chk_depend_of])
-        print "C depends on", ",".join([x[0].get_name() for x in host_C.chk_depend_of])
-        print "D depends on", ",".join([x[0].get_name() for x in host_D.chk_depend_of])
-        print "E depends on", ",".join([x[0].get_name() for x in host_E.chk_depend_of])
+        print "A depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_A.chk_depend_of])
+        print "B depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_B.chk_depend_of])
+        print "C depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_C.chk_depend_of])
+        print "D depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_D.chk_depend_of])
+        print "E depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_E.chk_depend_of])
 
         host_C.state = 'DOWN'
         print "D state", host_D.state
         print "E dep", host_E.chk_depend_of
-        print "I raise?", host_D.do_i_raise_dependency('d', inherit_parents=False)
+        print "I raise?", host_D.do_i_raise_dependency('d', False, self.sched.hosts,
+                                                       self.sched.services, self.sched.timeperiods)
         # If I ask D for dep, he should raise Nothing if we do not want parents.
-        self.assertFalse(host_D.do_i_raise_dependency('d', inherit_parents=False) )
+        self.assertFalse(host_D.do_i_raise_dependency('d', False, self.sched.hosts,
+                                                      self.sched.services, self.sched.timeperiods))
         # But he should raise a problem (C here) of we ask for its parents
-        self.assertTrue(host_D.do_i_raise_dependency('d', inherit_parents=True) )
+        self.assertTrue(host_D.do_i_raise_dependency('d', True, self.sched.hosts,
+                                                     self.sched.services, self.sched.timeperiods) )
 
 
     def test_check_dependencies(self):
         self.print_header()
         now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_0")
+        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
         test_host_0.checks_in_progress = []
         test_host_0.act_depend_of = []  # ignore the router
 
-        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
         # The pending state is always different. Let assume it OK
         test_host_0.state = 'OK'
 
@@ -241,7 +244,7 @@ class TestConfig(AlignakTest):
 
         # Create a fake check for the host (so that it is in checking)
         ch = Check({'status': 'scheduled', 'command': 'foo', 'ref': test_host_0.id, 't_to_go': now})
-        test_host_0.checks_in_progress.append(ch)
+        test_host_0.checks_in_progress.append(ch.uuid)
 
 
         # This service should have his host dep
@@ -278,10 +281,10 @@ class TestConfig(AlignakTest):
     def test_disabled_host_service_dependencies(self):
         self.print_header()
         now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_0")
+        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
         test_host_0.checks_in_progress = []
         test_host_0.act_depend_of = []  # ignore the router
-        test_host_0_test_ok_0_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_disbld_hst_dep")
+        test_host_0_test_ok_0_d = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0_disbld_hst_dep")
         self.assertEqual(0, len(test_host_0_test_ok_0_d.act_depend_of))
         self.assertNotIn(test_host_0_test_ok_0_d, [x[0] for x in test_host_0.act_depend_of_me])
 

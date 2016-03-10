@@ -321,11 +321,13 @@ class TestContact(PropertiesTester, AlignakTest):
 
     without_default = [
         'contact_name',
-        'host_notification_period', 'service_notification_period',
-        'host_notification_commands', 'service_notification_commands'
         ]
 
     properties = dict([
+        ('host_notification_commands', []),
+        ('service_notification_commands', []),
+        ('host_notification_period', ''),
+        ('service_notification_period', ''),
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
         ('imported_from', 'unknown'),
@@ -542,7 +544,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('2d_coords', ''),
         ('3d_coords', ''),
         ('failure_prediction_enabled', False),
-        ('realm', None),
+        ('realm', ''),
         ('poller_tag', 'None'),
         ('reactionner_tag', 'None'),
         ('resultmodulations', []),
@@ -863,7 +865,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('checkmodulations', []),
         ('macromodulations', []),
         ('aggregation', ''),
-        ('service_dependencies', None),
+        ('service_dependencies', []),
         ('custom_views', []),
         ('merge_host_contacts', False),
         ('business_rule_output_template', ''),
@@ -878,6 +880,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('business_rule_host_notification_options', []),
         ('business_rule_service_notification_options', []),
         ('host_dependency_enabled', True),
+        ('realm', ''),
         ])
 
     def setUp(self):
@@ -901,6 +904,8 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
         ('dateranges', []),
         ('exclude', []),
         ('is_active', False),
+        ('unresolved', []),
+        ('invalid_entries', [])
         ])
 
     def setUp(self):

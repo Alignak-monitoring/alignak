@@ -68,7 +68,7 @@ class TestConfig(AlignakTest):
 
         grp = self.sched.servicegroups.find_by_name("Crashed")
         self.assertIsNot(grp, None)
-        self.assertIn(svc, grp.members)
+        self.assertIn(svc.uuid, grp.members)
 
 if __name__ == '__main__':
     unittest.main()

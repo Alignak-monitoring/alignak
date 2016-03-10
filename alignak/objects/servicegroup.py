@@ -206,7 +206,7 @@ class Servicegroups(Itemgroups):
                     service_desc = mbr.strip()
                     find = services.find_srv_by_name_and_hostname(host_name, service_desc)
                     if find is not None:
-                        new_mbrs.append(find)
+                        new_mbrs.append(find.uuid)
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
@@ -224,8 +224,9 @@ class Servicegroups(Itemgroups):
 
             # We find the id, we replace the names
             servicegroup.replace_members(new_mbrs)
-            for serv in servicegroup.members:
-                serv.servicegroups.append(servicegroup)
+            for srv_id in servicegroup.members:
+                serv = services[srv_id]
+                serv.servicegroups.append(servicegroup.uuid)
                 # and make this uniq
                 serv.servicegroups = list(set(serv.servicegroups))
 

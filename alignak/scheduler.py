@@ -84,7 +84,6 @@ from alignak.brok import Brok
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
-from alignak.acknowledge import Acknowledge
 from alignak.log import logger
 from alignak.util import average_percentile
 from alignak.load import Load
@@ -231,6 +230,8 @@ class Scheduler(object):  # pylint: disable=R0902
         self.notificationways = conf.notificationways
         self.checkmodulations = conf.checkmodulations
         self.macromodulations = conf.macromodulations
+        self.businessimpactmodulations = conf.businessimpactmodulations
+        self.resultmodulations = conf.resultmodulations
         self.contacts = conf.contacts
         self.contactgroups = conf.contactgroups
         self.servicegroups = conf.servicegroups
@@ -239,6 +240,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.triggers = conf.triggers
         self.triggers.compile()
         self.triggers.load_objects(self)
+        self.escalations = conf.escalations
 
         # self.status_file = StatusFile(self)
         #  External status file
@@ -417,6 +419,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :type check: alignak.check.Check
         :return: None
         """
+        if check is None:
+            return
         self.checks[check.uuid] = check
         # A new check means the host/service changes its next_check
         # need to be refreshed
@@ -441,9 +445,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :type downtime: alignak.downtime.Downtime
         :return: None
         """
+        # TODO: ADD downtime brok for regenerator
         self.downtimes[downtime.uuid] = downtime
-        if downtime.extra_comment:
-            self.add_comment(downtime.extra_comment)
 
     def add_contactdowntime(self, contact_dt):
         """Add a contact downtime into contact_downtimes list
@@ -452,6 +455,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type contact_dt: alignak.contactdowntime.ContactDowntime
         :return: None
         """
+        # TODO: ADD contactdowntime brok for regenerator
         self.contact_downtimes[contact_dt.uuid] = contact_dt
 
     def add_comment(self, comment):
@@ -461,8 +465,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :type comment: alignak.comment.Comment
         :return: None
         """
+        # TODO: ADD comment brok for regenerator
         self.comments[comment.uuid] = comment
-        brok = comment.ref.get_update_status_brok()
+        item = self.find_item_by_id(comment.ref)
+        brok = item.get_update_status_brok()
         self.add(brok)
 
     def add_externalcommand(self, ext_cmd):
@@ -487,6 +493,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :type elt:
         :return: None
         """
+        if elt is None:
+            return
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
             # print("found action for %s: %s" % (elt.__class__.__name__, f.__name__))
@@ -646,7 +654,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         if dt_id in self.downtimes:
-            self.downtimes[dt_id].ref.del_downtime(dt_id)
+            downtime = self.downtimes[dt_id]
+            self.find_item_by_id(downtime.ref).del_downtime(dt_id, self.downtimes)
             del self.downtimes[dt_id]
 
     def del_contact_downtime(self, dt_id):
@@ -657,7 +666,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         if dt_id in self.contact_downtimes:
-            self.contact_downtimes[dt_id].ref.del_downtime(dt_id)
+            contact = self.contact_downtimes[dt_id]
+            self.find_item_by_id(contact.ref).del_downtime(dt_id, self.contact_downtimes)
             del self.contact_downtimes[dt_id]
 
     def del_comment(self, c_id):
@@ -668,7 +678,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         if c_id in self.comments:
-            self.comments[c_id].ref.del_comment(c_id)
+            comment = self.comments[c_id]
+            self.find_item_by_id(comment.ref).del_comment(c_id, self.comments)
             del self.comments[c_id]
 
     def check_for_expire_acknowledge(self):
@@ -677,7 +688,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         for elt in self.iter_hosts_and_services():
-            elt.check_for_expire_acknowledge()
+            elt.check_for_expire_acknowledge(self.comments)
 
     def update_business_values(self):
         """Iter over host and service and update business_impact
@@ -687,7 +698,8 @@ class Scheduler(object):  # pylint: disable=R0902
         for elt in self.iter_hosts_and_services():
             if not elt.is_problem:
                 was = elt.business_impact
-                elt.update_business_impact_value()
+                elt.update_business_impact_value(self.hosts, self.services,
+                                                 self.timeperiods, self.businessimpactmodulations)
                 new = elt.business_impact
                 # Ok, the business_impact change, we can update the broks
                 if new != was:
@@ -701,7 +713,8 @@ class Scheduler(object):  # pylint: disable=R0902
             # We first update impacts and classic elements
             if elt.is_problem:
                 was = elt.business_impact
-                elt.update_business_impact_value()
+                elt.update_business_impact_value(self.hosts, self.services,
+                                                 self.timeperiods, self.businessimpactmodulations)
                 new = elt.business_impact
                 # Maybe one of the impacts change it's business_impact to a high value
                 # and so ask for the problem to raise too
@@ -730,12 +743,17 @@ class Scheduler(object):  # pylint: disable=R0902
                     # notification_commands) which are executed in the reactionner.
                     item = self.find_item_by_id(act.ref)
                     childnotifs = []
-                    if not item.notification_is_blocked_by_item(act.type, now):
+                    notif_period = self.timeperiods.items.get(item.notification_period, None)
+                    if not item.notification_is_blocked_by_item(notif_period, self.hosts,
+                                                                self.services, act.type,
+                                                                t_wished=now):
                         # If it is possible to send notifications
                         # of this type at the current time, then create
                         # a single notification for each contact of this item.
                         childnotifs = item.scatter_notification(
-                            act, self.contacts, self.find_item_by_id(getattr(item, "host", None))
+                            act, self.contacts, self.notificationways, self.timeperiods,
+                            self.macromodulations, self.escalations, self.contact_downtimes,
+                            self.find_item_by_id(getattr(item, "host", None))
                         )
                         for notif in childnotifs:
                             notif.status = 'scheduled'
@@ -760,7 +778,8 @@ class Scheduler(object):  # pylint: disable=R0902
                             # a.t_to_go + item.notification_interval*item.__class__.interval_length
                             # or maybe before because we have an
                             # escalation that need to raise up before
-                            act.t_to_go = item.get_next_notification_time(act)
+                            act.t_to_go = item.get_next_notification_time(act, self.escalations,
+                                                                          self.timeperiods)
 
                             act.notif_nb = item.current_notification_number + 1
                             act.status = 'scheduled'
@@ -1182,7 +1201,10 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             # must be ok to launch, and not an internal one (business rules based)
             if chk.internal and chk.status == 'scheduled' and chk.is_launchable(now):
-                self.find_item_by_id(chk.ref).manage_internal_check(self.hosts, self.services, chk)
+                item = self.find_item_by_id(chk.ref)
+                item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
+                                           self.servicegroups, self.macromodulations,
+                                           self.timeperiods)
                 # it manage it, now just ask to consume it
                 # like for all checks
                 chk.status = 'waitconsume'
@@ -1361,19 +1383,15 @@ class Scheduler(object):  # pylint: disable=R0902
                         downtime.extra_comment.ref = host.id
                     else:
                         downtime.extra_comment = None
-                    # raises the downtime id to do not overlap
-                    Downtime.uuid = max(Downtime.uuid, downtime.uuid + 1)
                     self.add(downtime)
                 for comm in host.comments:
                     comm.ref = host.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
-                    Comment.uuid = max(Comment.uuid, comm.uuid + 1)
                 if host.acknowledgement is not None:
                     host.acknowledgement.ref = host.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge.uuid = max(Acknowledge.uuid, host.acknowledgement.uuid + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1423,18 +1441,15 @@ class Scheduler(object):  # pylint: disable=R0902
                     else:
                         downtime.extra_comment = None
                     # raises the downtime id to do not overlap
-                    Downtime.uuid = max(Downtime.uuid, downtime.uuid + 1)
                     self.add(downtime)
                 for comm in serv.comments:
                     comm.ref = serv.id
                     self.add(comm)
                     # raises comment id to do not overlap ids
-                    Comment.uuid = max(Comment.uuid, comm.uuid + 1)
                 if serv.acknowledgement is not None:
                     serv.acknowledgement.ref = serv.id
                     # Raises the id of future ack so we don't overwrite
                     # these one
-                    Acknowledge.uuid = max(Acknowledge.uuid, serv.acknowledgement.uuid + 1)
                 # Relink the notified_contacts as a set() of true contacts objects
                 # it it was load from the retention, it's now a list of contacts
                 # names
@@ -1477,7 +1492,11 @@ class Scheduler(object):  # pylint: disable=R0902
         if not self.conf.skip_initial_broks:
             for tab in initial_status_types:
                 for item in tab:
-                    brok = item.get_initial_status_brok()
+                    if hasattr(item, 'members'):
+                        member_items = getattr(self, item.my_type.replace("group", "s"))
+                        brok = item.get_initial_status_brok(member_items)
+                    else:
+                        brok = item.get_initial_status_brok()
                     self.add_brok(brok, bname)
 
         # Only raises the all logs at the scheduler startup
@@ -1576,7 +1595,14 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
                 item = self.find_item_by_id(chk.ref)
-                item.consume_result(chk)
+                notif_period = self.timeperiods.items.get(item.notification_period, None)
+                depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
+                                              self.timeperiods, self.macromodulations,
+                                              self.checkmodulations, self.businessimpactmodulations,
+                                              self.resultmodulations, self.triggers, self.checks,
+                                              self.downtimes, self.comments)
+                for dep in depchks:
+                    self.add(dep)
 
         # All 'finished' checks (no more dep) raise checks they depends on
         for chk in self.checks.values():
@@ -1591,7 +1617,14 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             if chk.status == 'waitdep' and len(chk.depend_on) == 0:
                 item = self.find_item_by_id(chk.ref)
-                item.consume_result(chk)
+                notif_period = self.timeperiods.items.get(item.notification_period, None)
+                depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
+                                              self.timeperiods, self.macromodulations,
+                                              self.checkmodulations, self.businessimpactmodulations,
+                                              self.resultmodulations, self.triggers, self.checks,
+                                              self.downtimes, self.comments)
+                for dep in depchks:
+                    self.add(dep)
 
     def delete_zombie_checks(self):
         """Remove checks that have a zombie status (usually timeouts)
@@ -1634,26 +1667,23 @@ class Scheduler(object):  # pylint: disable=R0902
         broks = []
         now = time.time()
 
-        # Look for in objects comments, and look if we already got them
-        for elt in self.iter_hosts_and_services():
-            for comm in elt.comments:
-                if comm.uuid not in self.comments:
-                    self.comments[comm.uuid] = comm
-
         # Check maintenance periods
         for elt in self.iter_hosts_and_services():
-            if elt.maintenance_period is None:
+            if elt.maintenance_period == '':
                 continue
 
             if elt.in_maintenance == -1:
                 if elt.maintenance_period.is_time_valid(now):
                     start_dt = elt.maintenance_period.get_next_valid_time_from_t(now)
                     end_dt = elt.maintenance_period.get_next_invalid_time_from_t(start_dt + 1) - 1
-                    downtime = Downtime(elt, start_dt, end_dt, 1, '', 0,
-                                        "system",
-                                        "this downtime was automatically scheduled"
-                                        "through a maintenance_period")
-                    elt.add_downtime(downtime)
+                    data = {'ref': elt.uuid, 'ref_type': elt.my_type, 'start_time': start_dt,
+                            'end_time': end_dt, 'fixed': 1, 'trigger_id': '',
+                            'duration': 0, 'author': "system",
+                            'comment': "this downtime was automatically scheduled "
+                                       "through a maintenance_period"}
+                    downtime = Downtime(data)
+                    self.add(downtime.add_automatic_comment(elt))
+                    elt.add_downtime(downtime.uuid)
                     self.add(downtime)
                     self.get_and_register_status_brok(elt)
                     elt.in_maintenance = downtime.uuid
@@ -1664,8 +1694,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         #  Check the validity of contact downtimes
         for elt in self.contacts:
-            for downtime in elt.downtimes:
-                downtime.check_activation()
+            for downtime_id in elt.downtimes:
+                downtime = self.contact_downtimes[downtime_id]
+                downtime.check_activation(self.contacts)
 
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
@@ -1694,24 +1725,30 @@ class Scheduler(object):  # pylint: disable=R0902
         for downtime in self.downtimes.values():
             if downtime.real_end_time < now:
                 # this one has expired
-                broks.extend(downtime.exit())  # returns downtimestop notifications
+                broks.extend(downtime.exit(self.timeperiods, self.hosts, self.services,
+                                           self.comments))
             elif now >= downtime.start_time and downtime.fixed and not downtime.is_in_effect:
                 # this one has to start now
-                broks.extend(downtime.enter())  # returns downtimestart notifications
+                broks.extend(downtime.enter(self.timeperiods, self.hosts, self.services,
+                                            self.downtimes))
                 broks.append(self.find_item_by_id(downtime.ref).get_update_status_brok())
 
         for brok in broks:
             self.add(brok)
 
-    def schedule(self):
+    def schedule(self, elems=None):
         """Iter over all hosts and services and call schedule method
         (schedule next check)
 
         :return: None
         """
+        if not elems:
+            elems = self.iter_hosts_and_services()
+
         # ask for service and hosts their next check
-        for elt in self.iter_hosts_and_services():
-            elt.schedule()
+        for elt in elems:
+            self.add_check(elt.schedule(self.hosts, self.services, self.timeperiods,
+                                        self.macromodulations, self.checkmodulations, self.checks))
 
     def get_new_actions(self):
         """Call 'get_new_actions' hook point
@@ -1747,7 +1784,8 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # print "********** Check freshness******"
         for elt in self.iter_hosts_and_services():
-            chk = elt.do_check_freshness()
+            chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
+                                         self.macromodulations, self.checkmodulations, self.checks)
             if chk is not None:
                 self.add(chk)
 

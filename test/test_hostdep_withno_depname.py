@@ -70,7 +70,7 @@ class TestHostDepWithNodepname(AlignakTest):
         self.assertGreater(len(h2.act_depend_of), 0)
         l = h2.act_depend_of[0]
         h = l[0]  # the host that h2 depend on
-        self.assertIs(host, h)
+        self.assertIs(host.uuid, h)
 
 if __name__ == '__main__':
     unittest.main()

@@ -114,4 +114,4 @@ class Businessimpactmodulations(Items):
                        "modulation_period '%s'" % (resultmod.get_name(), mtp_name))
                 resultmod.configuration_errors.append(err)
 
-            resultmod.modulation_period = mtp
+            resultmod.modulation_period = mtp.uuid

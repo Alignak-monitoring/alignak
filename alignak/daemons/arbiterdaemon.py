@@ -661,6 +661,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
+            print "ARR3:", arb
             if arb.is_me():
                 self.myself = arb
 

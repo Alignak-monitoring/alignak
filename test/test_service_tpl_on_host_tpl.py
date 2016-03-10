@@ -61,7 +61,7 @@ class TestSrvTplOnHostTpl(AlignakTest):
         host = self.sched.hosts.find_by_name("test_host_0_thp")
         print "All the test_host_0 services"
         for s in host.services:
-            print s.get_full_name()
+            print self.sched.services[s].get_full_name()
 
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_thp", "Service_Template_Description")
         self.assertIsNot(svc, None)
@@ -73,7 +73,7 @@ class TestSrvTplOnHostTpl(AlignakTest):
         host = self.sched.hosts.find_by_name("host_multi_layers")
         print "All the test_host_0 services"
         for s in host.services:
-            print s.get_full_name()
+            print self.sched.services[s].get_full_name()
 
         svc = self.sched.services.find_srv_by_name_and_hostname("host_multi_layers", "srv_multi_layer")
         self.assertIsNot(svc, None)
@@ -84,7 +84,7 @@ class TestSrvTplOnHostTpl(AlignakTest):
         h_linux = self.sched.hosts.find_by_name("host_linux_http")
         print "All the host_linux_http services"
         for s in h_linux.services:
-            print s.get_full_name()
+            print self.sched.services[s].get_full_name()
 
         # The services named "linux" and "http" should exist on the host named "linux"
         svc = self.sched.services.find_srv_by_name_and_hostname("host_linux_http", "http_AND_linux")
@@ -94,7 +94,7 @@ class TestSrvTplOnHostTpl(AlignakTest):
         h_windows = self.sched.hosts.find_by_name("host_windows_http")
         print "All the host_windows_http services"
         for s in h_windows.services:
-            print s.get_full_name()
+            print self.sched.services[s].get_full_name()
 
         svc = self.sched.services.find_srv_by_name_and_hostname("host_windows_http", "http_AND_linux")
         self.assertIs(None, svc)

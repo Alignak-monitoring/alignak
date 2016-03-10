@@ -241,7 +241,8 @@ class MacroResolver(Borg):
 
         return env
 
-    def resolve_simple_macros_in_string(self, c_line, data, args=None):
+    def resolve_simple_macros_in_string(self, c_line, data, macromodulations, timeperiods,
+                                        args=None):
         """Replace macro in the command line with the real value
 
         :param c_line: command line to modify
@@ -312,10 +313,12 @@ class MacroResolver(Borg):
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
                         mms = getattr(elt, 'macromodulations', [])
-                        for macromod in mms[::-1]:
+                        for macromod_id in mms[::-1]:
+                            macromod = macromodulations[macromod_id]
                             # Look if the modulation got the value,
                             # but also if it's currently active
-                            if '_' + macro_name in macromod.customs and macromod.is_active():
+                            if '_' + macro_name in macromod.customs and \
+                                    macromod.is_active(timeperiods):
                                 macros[macro]['val'] = macromod.customs['_' + macro_name]
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
@@ -337,7 +340,7 @@ class MacroResolver(Borg):
         # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
-    def resolve_command(self, com, data):
+    def resolve_command(self, com, data, macromodulations, timeperiods):
         """Resolve command macros with data
 
         :param com: check / event handler or command call object
@@ -348,7 +351,8 @@ class MacroResolver(Borg):
         :rtype: str
         """
         c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
+        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
+                                                    args=com.args)
 
     @staticmethod
     def _get_type_of_macro(macros, clss):

@@ -58,8 +58,13 @@ from alignak.misc.perfdata import PerfDatas
 from alignak.log import logger
 from alignak.objects.host import Hosts
 from alignak.objects.service import Services
+from alignak.objects.timeperiod import Timeperiods
+from alignak.objects.macromodulation import MacroModulations
+from alignak.objects.checkmodulation import CheckModulations
 
-OBJS = {'hosts': Hosts({}), 'services': Services({})}
+OBJS = {'hosts': Hosts({}), 'services': Services({}), 'timeperiods': Timeperiods({}),
+        'macromodulations': MacroModulations({}), 'checkmodulations': CheckModulations({}),
+        'checks': {}}
 TRIGGER_FUNCTIONS = {}
 
 
@@ -187,7 +192,9 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
 
     now = time.time()
 
-    chk = obj.launch_check(now, force=True)
+    chk = obj.launch_check(now, OBJS['hosts'], OBJS['services'], OBJS['timeperiods'],
+                           OBJS['macromodulations'], OBJS['checkmodulations'],
+                           OBJS['checks'], force=True)
     if chk is None:
         logger.debug("[trigger] %s > none check launched", obj.get_full_name())
     else:
@@ -357,13 +364,14 @@ def get_objects(ref):
 
     for host in hosts:
         if '*' not in sdesc:
-            serv = host.find_service_by_name(sdesc)
+            serv = OBJS['services'].find_by_name(sdesc)
             if serv:
                 services.append(serv)
         else:
             sdesc = sdesc.replace('*', '.*')
             regex = re.compile(sdesc)
-            for serv in host.services:
+            for serv_id in host.services:
+                serv = OBJS['services'][serv_id]
                 logger.debug("[trigger] Compare %s with %s", serv.service_description, sdesc)
                 if regex.search(serv.service_description):
                     services.append(serv)

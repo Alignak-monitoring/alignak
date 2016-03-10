@@ -394,7 +394,8 @@ class TestNotif(AlignakTest):
 
         # We want the contact to do not have a mail, so we remove tyhe 'u'
         test_contact = self.sched.contacts.find_by_name('test_contact')
-        for nw in test_contact.notificationways:
+        for nw_id in test_contact.notificationways:
+            nw = self.sched.notificationways[nw_id]
             nw.service_notification_options.remove('u')
 
         #--------------------------------------------------------------

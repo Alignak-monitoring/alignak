@@ -196,3 +196,7 @@ class Triggers(Items):
         """
         OBJS['hosts'] = conf.hosts
         OBJS['services'] = conf.services
+        OBJS['timeperiods'] = conf.timeperiods
+        OBJS['macromodulations'] = conf.macromodulations
+        OBJS['checkmodulations'] = conf.checkmodulations
+        OBJS['checks'] = conf.checks

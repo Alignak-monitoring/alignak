@@ -243,12 +243,15 @@ class AlignakTest(unittest.TestCase):
     def fake_check(self, ref, exit_status, output="OK"):
         #print "fake", ref
         now = time.time()
-        ref.schedule(force=True)
+        check = ref.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                     self.sched.macromodulations, self.sched.checkmodulations,
+                     self.sched.checks, force=True)
         # now checks are schedule and we get them in
         # the action queue
         #check = ref.actions.pop()
-        check = ref.checks_in_progress[0]
         self.sched.add(check)  # check is now in sched.checks[]
+        #check = self.sched.checks[ref.checks_in_progress[0]]
+
 
         # Allows to force check scheduling without setting its status nor
         # output. Useful for manual business rules rescheduling, for instance.
@@ -271,7 +274,8 @@ class AlignakTest(unittest.TestCase):
         self.sched.waiting_results.append(check)
 
 
-    def scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True):
+    def scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
+                       nointernal=False):
         for ref in reflist:
             (obj, exit_status, output) = ref
             obj.checks_in_progress = []
@@ -282,7 +286,8 @@ class AlignakTest(unittest.TestCase):
                 (obj, exit_status, output) = ref
                 obj.update_in_checking()
                 self.fake_check(obj, exit_status, output)
-            self.sched.manage_internal_checks()
+            if not nointernal:
+                self.sched.manage_internal_checks()
 
             self.sched.consume_results()
             self.sched.get_new_actions()
@@ -292,6 +297,7 @@ class AlignakTest(unittest.TestCase):
             for ref in reflist:
                 (obj, exit_status, output) = ref
                 obj.checks_in_progress = []
+                obj.update_in_checking()
             self.sched.update_downtimes_and_comments()
             #time.sleep(ref.retry_interval * 60 + 1)
             if do_sleep:

@@ -323,7 +323,7 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
-        :type val:
+        :type val: basestring
         :return: list corresponding to value
         :rtype: list
         """
@@ -335,6 +335,22 @@ class ListProp(Property):
             return [s.strip() if hasattr(s, "strip") else s
                     for s in to_split(val, self.split_on_coma)
                     if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
+
+
+class SetProp(ListProp):
+    """ Set property
+    """
+    def pythonize(self, val):
+        """Convert value into a set
+
+        * Simply convert to a set the value return by pythonize from ListProp
+
+        :param val: value to convert
+        :type val: basestring
+        :return: set corresponding to the value
+        :rtype: set
+        """
+        return set(super(SetProp, self).__init__(val))
 
 
 class LogLevelProp(StringProp):

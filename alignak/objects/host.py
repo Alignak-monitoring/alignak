@@ -67,15 +67,11 @@ scheduling/consume check smart things :)
 
 import time
 
-from alignak.objects.item import Items
-from alignak.objects.schedulingitem import SchedulingItem
+from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
-from alignak.util import (format_t_into_dhms_format, to_hostnames_list, get_obj_name,
-                          to_list_string_of_names)
+from alignak.util import format_t_into_dhms_format
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.macroresolver import MacroResolver
-from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result
 
 
@@ -118,10 +114,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'address':
             StringProp(fill_brok=['full_status']),
         'parents':
-            ListProp(brok_transformation=to_hostnames_list, default=[],
+            ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'hostgroups':
-            ListProp(brok_transformation=to_list_string_of_names, default=[],
+            ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
@@ -147,8 +143,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # New to alignak
         # 'fill_brok' is ok because in scheduler it's already
         # a string from conf_send_preparation
-        'realm':
-            StringProp(default=None, fill_brok=['full_status'], conf_send_preparation=get_obj_name),
         'service_overrides':
             ListProp(default=[], merging='duplicate', split_on_coma=False),
         'service_excludes':
@@ -178,13 +172,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'got_default_realm':
             BoolProp(default=False),
 
-        # For knowing with which elements we are in relation
-        # of dep.
-        # children are the hosts that have US as parent, so
-        # only a network dep
-        'childs':
-            StringProp(brok_transformation=to_hostnames_list, default=[],
-                       fill_brok=['full_status']),
         'state_before_hard_unknown_reach_phase':
             StringProp(default='UP', retention=True),
 
@@ -305,19 +292,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         return state
 
-    def find_service_by_name(self, service_description):
-        """Get a service object from this host
-
-        :param service_description: service_description of the service we want
-        :type service_description:
-        :return: service with service.service_description == service_description
-        :rtype: alignak.objects.service.Services | None
-        """
-        for serv in self.services:
-            if getattr(serv, 'service_description', '__UNNAMED_SERVICE__') == service_description:
-                return serv
-        return None
-
     def get_services(self):
         """Get all services for this host
 
@@ -381,14 +355,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.host_name
 
-    def get_realm(self):
-        """Accessor to realm attribute
-
-        :return: realm object of host
-        :rtype: alignak.objects.realm.Realm
-        """
-        return self.realm
-
     def get_hostgroups(self):
         """Accessor to hostgroups attribute
 
@@ -405,6 +371,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.tags
 
+    def get_realm(self):
+        """Accessor to realm attribute
+        :return: realm object of host
+        :rtype: alignak.objects.realm.Realm
+        """
+        return self.realm_name
+
     def is_linked_with_host(self, other):
         """Check if other is in act_depend_of host attribute
 
@@ -417,108 +390,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             if host == other:
                 return True
         return False
-
-    def del_host_act_dependency(self, other):
-        """Remove act_dependency between two hosts.
-
-        :param other: other host we want to remove the dependency
-        :type other: alignak.objects.host.Host
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj.del_* on both obj.
-             This is 'Java' style
-        """
-        to_del = []
-        # First we remove in my list
-        for (host, status, n_type, timeperiod, inherits_parent) in self.act_depend_of:
-            if host == other:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
-        for tup in to_del:
-            self.act_depend_of.remove(tup)
-
-        # And now in the father part
-        to_del = []
-        for (host, status, n_type, timeperiod, inherits_parent) in other.act_depend_of_me:
-            if host == self:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
-        for tup in to_del:
-            other.act_depend_of_me.remove(tup)
-
-        # Remove in child/parents dependencies too
-        # Me in father list
-        other.child_dependencies.remove(self)
-        # and father list in mine
-        self.parent_dependencies.remove(other)
-
-    def add_host_act_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add logical act_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj.add_* on both obj.
-             This is 'Java' style
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # I add him in MY list
-        self.act_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
-        # And I add me in it's list
-        host.act_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        host.register_son_in_parent_child_dependencies(self)
-
-    def add_business_rule_act_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add business act_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # first I add the other the I depend on in MY list
-        # I only register so he know that I WILL be a impact
-        self.act_depend_of_me.append((host, status, 'business_dep',
-                                      timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        self.register_son_in_parent_child_dependencies(host)
-
-    def add_host_chk_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add logic chk_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # I add him in MY list
-        self.chk_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
-        # And I add me in it's list
-        host.chk_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
-
-        # And we fill parent/children dep for brok purpose
-        # Here self depend on host
-        host.register_son_in_parent_child_dependencies(self)
 
     def add_service_link(self, service):
         """Add a service to the service list of this host
@@ -606,7 +477,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = 'UNREACHABLE'  # exit code UNDETERMINED
             self.state_id = 2
 
-    def set_state_from_exit_status(self, status):
+    def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, DOWN, or UNDETERMINED
         with the status of a check. Also update last_state
 
@@ -648,6 +519,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             state_code = 'd'
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
+            # Now we add a value, we update the is_flapping prop
+            self.update_flapping(notif_period, hosts, services)
         if self.state != self.last_state:
             self.last_state_change = self.last_state_update
         self.duration_sec = now - self.last_state_change
@@ -904,39 +777,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
 
-    def fill_parents_dependency(self):
-        """Add network act_dependency for each parent of this host.
-        This dependency is always effective (No timeperiod and all states) and inherits from parent
-
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj._fun_ on both obj.
-             This is 'Java' style
-        """
-        for parent in self.parents:
-            if parent is not None:
-                # I add my parent in my list
-                self.act_depend_of.append((parent, ['d', 'u', 's', 'f'], 'network_dep', None, True))
-
-                # And I register myself in my parent list too
-                parent.register_child(self)
-
-                # And add the parent/child dep filling too, for broking
-                parent.register_son_in_parent_child_dependencies(self)
-
-    def register_child(self, child):
-        """Add a child to child list
-
-        :param child: host to add
-        :type child: alignak.objects.host.Host
-        :return: None
-        """
-        # We've got 2 list: a list for our child
-        # where we just put the pointer, it's just for broking
-        # and another with all data, useful for 'running' part
-        self.childs.append(child)
-        self.act_depend_of_me.append((child, ['d', 'u', 's', 'f'], 'network_dep', None, True))
-
     def get_data_for_checks(self):
         """Get data for a check
 
@@ -965,7 +805,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return [self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
+                                           notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -975,7 +816,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return not contact.want_host_notification(self.last_chk, self.state, notif.type,
+        return not contact.want_host_notification(notifways, timeperiods,
+                                                  self.last_chk, self.state, notif.type,
                                                   self.business_impact, notif.command_call)
 
     def get_duration_sec(self):
@@ -999,7 +841,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         hours, mins = divmod(mins, 60)
         return "%02dh %02dm %02ds" % (hours, mins, secs)
 
-    def notification_is_blocked_by_item(self, n_type, t_wished=None):
+    def notification_is_blocked_by_item(self, notification_period, hosts, services,
+                                        n_type, t_wished=None):
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -1040,8 +883,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
                 'n' in self.notification_options or \
-                (self.notification_period is not None and
-                 not self.notification_period.is_time_valid(t_wished)):
+                (notification_period is not None and
+                 not notification_period.is_time_valid(t_wished)):
             return True
 
         if n_type in ('PROBLEM', 'RECOVERY') and (
@@ -1086,27 +929,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # children have been acknowledged or are under downtime.
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
-                and self.business_rule_notification_is_blocked() is True \
+                and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
             return True
 
         return False
-
-    def get_obsessive_compulsive_processor_command(self):
-        """Create action for obsessive compulsive commands if such option is enabled
-
-        :return: None
-        """
-        cls = self.__class__
-        if not cls.obsess_over or not self.obsess_over_host:
-            return
-        macroresolver = MacroResolver()
-        data = self.get_data_for_event_handler()
-        cmd = macroresolver.resolve_command(cls.ochp_command, data)
-        e_handler = EventHandler({'command': cmd, 'timeout': cls.ochp_timeout})
-
-        # ok we can put it in our temp action queue
-        self.actions.append(e_handler)
 
     def get_total_services(self):
         """Get the number of services for this host
@@ -1205,7 +1032,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return str(self.scheduled_downtime_depth)
 
 
-class Hosts(Items):
+class Hosts(SchedulingItems):
     """Class for the hosts lists. It's mainly for configuration
 
     """
@@ -1291,7 +1118,7 @@ class Hosts(Items):
                 parent = parent.strip()
                 o_parent = self.find_by_name(parent)
                 if o_parent is not None:
-                    new_parents.append(o_parent)
+                    new_parents.append(o_parent.uuid)
                 else:
                     err = "the parent '%s' on host '%s' is unknown!" % (parent, host.get_name())
                     self.configuration_warnings.append(err)
@@ -1313,16 +1140,19 @@ class Hosts(Items):
         # if default_realm is None:
         #    print "Error: there is no default realm defined!"
         for host in self:
-            if host.realm is not None:
+            if host.realm != '':
                 realm = realms.find_by_name(host.realm.strip())
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
                     host.configuration_errors.append(err)
-                host.realm = realm
+                else:
+                    host.realm = realm.uuid
+                    host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
             else:
                 # print("Notice: applying default realm %s to host %s"
                 #       % (default_realm.get_name(), h.get_name()))
-                host.realm = default_realm
+                host.realm = default_realm.uuid if default_realm else ''
+                host.realm_name = default_realm.get_name() if default_realm else ''
                 host.got_default_realm = True
 
     def linkify_h_by_hg(self, hostgroups):
@@ -1341,7 +1171,7 @@ class Hosts(Items):
                     # TODO: should an unknown hostgroup raise an error ?
                     hostgroup = hostgroups.find_by_name(hg_name)
                     if hostgroup is not None:
-                        new_hostgroups.append(hostgroup)
+                        new_hostgroups.append(hostgroup.uuid)
                     else:
                         err = ("the hostgroup '%s' of the host '%s' is "
                                "unknown" % (hg_name, host.host_name))
@@ -1384,12 +1214,28 @@ class Hosts(Items):
                     hostgroups.add_member(hname, hostgroup.strip())
 
     def apply_dependencies(self):
-        """Loop on hosts and call Host.fill_parents_dependency()
+        """Loop on hosts and register dependency between parent and son
+
+        call Host.fill_parents_dependency()
 
         :return: None
         """
         for host in self:
-            host.fill_parents_dependency()
+            for parent_id in host.parents:
+                if parent_id is None:
+                    continue
+                parent = self[parent_id]
+                # Add parent in the list
+                host.act_depend_of.append((parent_id, ['d', 'u', 's', 'f'],
+                                           'network_dep', '', True))
+
+                # Add child in the parent
+                parent.act_depend_of_me.append((host.uuid, ['d', 'u', 's', 'f'],
+                                                'network_dep', '', True))
+
+                # And add the parent/child dep filling too, for broking
+                parent.child_dependencies.add(host.uuid)
+                host.parent_dependencies.add(parent_id)
 
     def find_hosts_that_use_template(self, tpl_name):
         """Find hosts that use the template defined in argument tpl_name
@@ -1401,23 +1247,27 @@ class Hosts(Items):
         """
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
-    def create_business_rules(self, hosts, services):
-        """
-        Loop on hosts and call Host.create_business_rules(hosts, services)
+    def is_correct(self):
+        """Check if this host configuration is correct ::
 
-        :param hosts: hosts to link to
-        :type hosts: alignak.objects.host.Hosts
-        :param services: services to link to
-        :type services: alignak.objects.service.Services
-        :return: None
-        """
-        for host in self:
-            host.create_business_rules(hosts, services)
+        * All required parameter are specified
+        * Go through all configuration warnings and errors that could have been raised earlier
 
-    def create_business_rules_dependencies(self):
-        """Loop on hosts and call Host.create_business_rules_dependencies()
-
-        :return: None
+        :return: True if the configuration is correct, False otherwise
+        :rtype: bool
         """
-        for host in self:
-            host.create_business_rules_dependencies()
+        valid = super(Hosts, self).is_correct()
+        loop = self.no_loop_in_parents("self", "parents")
+        if len(loop) > 0:
+            logger.error("Loop detected while checking hosts ")
+            for uuid, item in self.items.iteritems():
+                for elem in loop:
+                    if elem == uuid:
+                        logger.error("Host %s is parent in dependency defined in %s",
+                                     item.get_name(), item.imported_from)
+                    elif elem in item.parents:
+                        logger.error("Host %s is child in dependency defined in %s",
+                                     self[elem].get_name(), self[elem].imported_from)
+            return False
+
+        return valid

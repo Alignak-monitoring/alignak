@@ -111,7 +111,7 @@ class DBMysql(DB):
             logger.debug("[MysqlDB]I run query %s", query)
         try:
             self.db_cursor.execute(query)
-            self.db.commit()
+            self.db.commit()  # pylint: disable=E1101
             return True
         except IntegrityError, exp:
             logger.warning("[MysqlDB] A query raised an integrity error: %s, %s", query, exp)

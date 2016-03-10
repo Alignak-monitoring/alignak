@@ -74,18 +74,10 @@ class TestServiceDepAndGroups(AlignakTest):
         svc_snmp2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "SNMP")
         self.assertIsNot(svc_snmp2, None)
 
-        svc_postfix_fathers = [c[0].get_full_name() for c in svc_postfix.act_depend_of]
-        print svc_postfix_fathers
-        # Should be [u'test_router_0/SNMP', u'test_host_0/SNMP', u'test_host_0']
-        self.assertIn('test_router_0/SNMP', svc_postfix_fathers)
-        self.assertIn('test_host_0/SNMP', svc_postfix_fathers)
-
-        # Now look for the routers services
-        svc_cpu_fathers = [c[0].get_full_name() for c in svc_cpu.act_depend_of]
-        print svc_cpu_fathers
-        # Should be [u'test_router_0/SNMP', u'test_host_0/SNMP', u'test_host_0']
-        self.assertIn('test_router_0/SNMP', svc_cpu_fathers)
-        self.assertIn('test_host_0/SNMP', svc_cpu_fathers)
+        self.assertIn(svc_snmp2.uuid, [c[0] for c in svc_postfix.act_depend_of])
+        self.assertIn(svc_snmp.uuid, [c[0] for c in svc_postfix.act_depend_of])
+        self.assertIn(svc_snmp2.uuid, [c[0] for c in svc_cpu.act_depend_of])
+        self.assertIn(svc_snmp.uuid, [c[0] for c in svc_cpu.act_depend_of])
 
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -105,16 +97,8 @@ class TestServiceDepAndGroups(AlignakTest):
         svc_cpu = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "CPU_BYSSH")
         self.assertIsNot(svc_cpu, None)
 
-        svc_postfix_fathers = [c[0].get_full_name() for c in svc_postfix.act_depend_of]
-        print svc_postfix_fathers
-        # Should be [u'test_router_0/SNMP', u'test_host_0/SNMP', u'test_host_0']
-        self.assertIn('test_host_0/SSH', svc_postfix_fathers)
-
-        # Now look for the routers services
-        svc_cpu_fathers = [c[0].get_full_name() for c in svc_cpu.act_depend_of]
-        print svc_cpu_fathers
-        # Should be [u'test_router_0/SNMP', u'test_host_0/SNMP', u'test_host_0']
-        self.assertIn('test_host_0/SSH', svc_cpu_fathers)
+        self.assertIn(svc_ssh.uuid, [c[0] for c in svc_postfix.act_depend_of])
+        self.assertIn(svc_ssh.uuid, [c[0] for c in svc_cpu.act_depend_of])
 
 
 

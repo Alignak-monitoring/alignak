@@ -162,7 +162,8 @@ class TestTimeout(AlignakTest):
         print svc.checks_in_progress
         cs = svc.checks_in_progress
         self.assertEqual(1, len(cs))
-        c = cs.pop()
+        c_id = cs.pop()
+        c = self.sched.checks[c_id]
         print c
         print c.timeout
         self.assertEqual(5, c.timeout)

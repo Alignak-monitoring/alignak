@@ -66,7 +66,7 @@ class Graph:
         :type node: object
         :return: None
         """
-        self.nodes[node] = []
+        self.nodes[node] = {"dfs_loop_status": "", "sons": []}
 
     def add_nodes(self, nodes):
         """Add several nodes into the nodes dict
@@ -93,10 +93,10 @@ class Graph:
             self.add_node(to_node)
 
         try:
-            self.nodes[from_node].append(to_node)
+            self.nodes[from_node]["sons"].append(to_node)
         # If from_node does not exist, add it with its son
         except KeyError:
-            self.nodes[from_node] = [to_node]
+            self.nodes[from_node] = {"dfs_loop_status": "", "sons": [to_node]}
 
     def loop_check(self):
         """Check if we have a loop in the graph
@@ -106,21 +106,21 @@ class Graph:
         """
         in_loop = []
         # Add the tag for dfs check
-        for node in self.nodes:
-            node.dfs_loop_status = 'DFS_UNCHECKED'
+        for node in self.nodes.values():
+            node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
         # Now do the job
-        for node in self.nodes:
+        for node_id, node in self.nodes.iteritems():
             # Run the dfs only if the node has not been already done */
-            if node.dfs_loop_status == 'DFS_UNCHECKED':
-                self.dfs_loop_search(node)
+            if node['dfs_loop_status'] == 'DFS_UNCHECKED':
+                self.dfs_loop_search(node_id)
             # If LOOP_INSIDE, must be returned
-            if node.dfs_loop_status == 'DFS_LOOP_INSIDE':
-                in_loop.append(node)
+            if node['dfs_loop_status'] == 'DFS_LOOP_INSIDE':
+                in_loop.append(node_id)
 
         # Remove the tag
-        for node in self.nodes:
-            del node.dfs_loop_status
+        for node in self.nodes.values():
+            del node['dfs_loop_status']
 
         return in_loop
 
@@ -139,35 +139,35 @@ class Graph:
         :return: None
         """
         # Make the root temporary checked
-        root.dfs_loop_status = 'DFS_TEMPORARY_CHECKED'
+        self.nodes[root]['dfs_loop_status'] = 'DFS_TEMPORARY_CHECKED'
 
         # We are scanning the sons
-        for child in self.nodes[root]:
-            child_status = child.dfs_loop_status
+        for child in self.nodes[root]["sons"]:
+            child_status = self.nodes[child]['dfs_loop_status']
             # If a child is not checked, check it
             if child_status == 'DFS_UNCHECKED':
                 self.dfs_loop_search(child)
-                child_status = child.dfs_loop_status
+                child_status = self.nodes[child]['dfs_loop_status']
 
             # If a child has already been temporary checked, it's a problem,
             # loop inside, and its a checked status
             if child_status == 'DFS_TEMPORARY_CHECKED':
-                child.dfs_loop_status = 'DFS_LOOP_INSIDE'
-                root.dfs_loop_status = 'DFS_LOOP_INSIDE'
+                self.nodes[child]['dfs_loop_status'] = 'DFS_LOOP_INSIDE'
+                self.nodes[root]['dfs_loop_status'] = 'DFS_LOOP_INSIDE'
 
             # If a child has already been temporary checked, it's a problem, loop inside
             if child_status in ('DFS_NEAR_LOOP', 'DFS_LOOP_INSIDE'):
                 # if a node is known to be part of a loop, do not let it be less
-                if root.dfs_loop_status != 'DFS_LOOP_INSIDE':
-                    root.dfs_loop_status = 'DFS_NEAR_LOOP'
+                if self.nodes[root]['dfs_loop_status'] != 'DFS_LOOP_INSIDE':
+                    self.nodes[root]['dfs_loop_status'] = 'DFS_NEAR_LOOP'
                 # We've already seen this child, it's a problem
-                child.dfs_loop_status = 'DFS_LOOP_INSIDE'
+                self.nodes[child]['dfs_loop_status'] = 'DFS_LOOP_INSIDE'
 
         # If root have been modified, do not set it OK
         # A node is OK if and only if all of its children are OK
         # if it does not have a child, goes ok
-        if root.dfs_loop_status == 'DFS_TEMPORARY_CHECKED':
-            root.dfs_loop_status = 'DFS_OK'
+        if self.nodes[root]['dfs_loop_status'] == 'DFS_TEMPORARY_CHECKED':
+            self.nodes[root]['dfs_loop_status'] = 'DFS_OK'
 
     def get_accessibility_packs(self):
         """Get accessibility packs of the graph:
@@ -180,17 +180,17 @@ class Graph:
         """
         packs = []
         # Add the tag for dfs check
-        for node in self.nodes:
-            node.dfs_loop_status = 'DFS_UNCHECKED'
+        for node in self.nodes.values():
+            node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
-        for node in self.nodes:
+        for node_id, node in self.nodes.iteritems():
             # Run the dfs only if the node is not already done */
-            if node.dfs_loop_status == 'DFS_UNCHECKED':
-                packs.append(self.dfs_get_all_childs(node))
+            if node['dfs_loop_status'] == 'DFS_UNCHECKED':
+                packs.append(self.dfs_get_all_childs(node_id))
 
         # Remove the tag
-        for node in self.nodes:
-            del node.dfs_loop_status
+        for node in self.nodes.values():
+            del node['dfs_loop_status']
 
         return packs
 
@@ -202,17 +202,17 @@ class Graph:
         :return: sons
         :rtype: list
         """
-        root.dfs_loop_status = 'DFS_CHECKED'
+        self.nodes[root]['dfs_loop_status'] = 'DFS_CHECKED'
 
         ret = set()
         # Me
         ret.add(root)
         # And my sons
-        ret.update(self.nodes[root])
+        ret.update(self.nodes[root]['sons'])
 
-        for child in self.nodes[root]:
+        for child in self.nodes[root]['sons']:
             # I just don't care about already checked children
-            if child.dfs_loop_status == 'DFS_UNCHECKED':
+            if self.nodes[child]['dfs_loop_status'] == 'DFS_UNCHECKED':
                 ret.update(self.dfs_get_all_childs(child))
 
         return list(ret)

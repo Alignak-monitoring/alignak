@@ -67,7 +67,8 @@ class TestConfig(AlignakTest):
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_port_2")
         ## for a in host.actions:
         ##     a.t_to_go = 0
-        svc.schedule()
+        svc.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                     self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
         for a in svc.actions:
             a.t_to_go = 0
         # the scheduler need to get this new checks in its own queues

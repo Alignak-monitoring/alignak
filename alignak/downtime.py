@@ -56,10 +56,10 @@ import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.brok import Brok
-from alignak.log import logger
+from alignak.alignakobject import AlignakObject
 
 
-class Downtime:
+class Downtime(AlignakObject):
     """ Schedules downtime for a specified service. If the "fixed" argument is set
     to one (1), downtime will start and end at the times specified by the
     "start" and "end" arguments.
@@ -89,44 +89,48 @@ class Downtime:
         'is_in_effect': BoolProp(default=False),
         'has_been_triggered': BoolProp(default=False),
         'can_be_deleted': BoolProp(default=False),
-
-        # TODO: find a very good way to handle the downtime "ref".
-        # ref must effectively not be in properties because it points
-        # onto a real object.
-        # 'ref': None
+        'ref': StringProp(default=''),
+        'ref_type': StringProp(default=''),
+        'comment_id': StringProp(default=''),
+        'extra_comment': StringProp(default=''),
     }
 
-    def __init__(self, ref, start_time, end_time, fixed, trigger_id, duration, author, comment):
-        self.uuid = uuid.uuid4().hex
-        self.ref = ref  # pointer to srv or host we are apply
-        self.activate_me = []  # The other downtimes i need to activate
-        self.entry_time = int(time.time())
-        self.fixed = fixed
-        self.start_time = start_time
-        self.duration = duration
-        self.trigger_id = trigger_id
-        if self.trigger_id not in ['', '0']:  # triggered plus fixed makes no sense
-            self.fixed = False
-        self.end_time = end_time
-        if fixed:
-            self.duration = end_time - start_time
-        # This is important for flexible downtimes. Here start_time and
-        # end_time mean: in this time interval it is possible to trigger
-        # the beginning of the downtime which lasts for duration.
-        # Later, when a non-ok event happens, real_end_time will be
-        # recalculated from now+duration
-        # end_time will be displayed in the web interface, but real_end_time
-        # is used internally
-        self.real_end_time = end_time
-        self.author = author
-        self.comment = comment
-        self.is_in_effect = False
-        # fixed: start_time has been reached,
-        # flexible: non-ok checkresult
+    def __init__(self, params):
 
-        self.has_been_triggered = False  # another downtime has triggered me
-        self.can_be_deleted = False
-        self.add_automatic_comment()
+        # TODO: Fix this if (un-serializing)
+        if 'uuid' not in params:
+            self.uuid = uuid.uuid4().hex
+            self.ref = params['ref']  # pointer to srv or host we are apply
+            self.ref_type = params['ref_type']
+            self.activate_me = []  # The other downtimes i need to activate
+            self.entry_time = int(time.time())
+            self.fixed = params['fixed']
+            self.start_time = params['start_time']
+            self.duration = params['duration']
+            self.trigger_id = params['trigger_id']
+            if self.trigger_id not in ['', '0']:  # triggered plus fixed makes no sense
+                self.fixed = False
+            self.end_time = params['end_time']
+            if params['fixed']:
+                self.duration = params['end_time'] - params['start_time']
+            # This is important for flexible downtimes. Here start_time and
+            # end_time mean: in this time interval it is possible to trigger
+            # the beginning of the downtime which lasts for duration.
+            # Later, when a non-ok event happens, real_end_time will be
+            # recalculated from now+duration
+            # end_time will be displayed in the web interface, but real_end_time
+            # is used internally
+            self.real_end_time = params['end_time']
+            self.author = params['author']
+            self.comment = params['comment']
+            self.is_in_effect = False
+            # fixed: start_time has been reached,
+            # flexible: non-ok checkresult
+
+            self.has_been_triggered = False  # another downtime has triggered me
+            self.can_be_deleted = False
+        else:
+            super(Downtime, self).__init__(params)
 
     def __str__(self):
         if self.is_in_effect is True:
@@ -179,80 +183,95 @@ class Downtime:
         """
         return self.is_in_effect
 
-    def enter(self):
+    def enter(self, timeperiods, hosts, services, downtimes):
         """Set ref in scheduled downtime and raise downtime log entry (start)
 
         :return: [], always
         :rtype: list
         TODO: res is useless
         """
+        if self.ref in hosts:
+            item = hosts[self.ref]
+        else:
+            item = services[self.ref]
         res = []
         self.is_in_effect = True
         if self.fixed is False:
             now = time.time()
             self.real_end_time = now + self.duration
-        if self.ref.scheduled_downtime_depth == 0:
-            self.ref.raise_enter_downtime_log_entry()
-            self.ref.create_notifications('DOWNTIMESTART')
-        self.ref.scheduled_downtime_depth += 1
-        self.ref.in_scheduled_downtime = True
-        for downtime in self.activate_me:
-            res.extend(downtime.enter())
+        if item.scheduled_downtime_depth == 0:
+            item.raise_enter_downtime_log_entry()
+            notif_period = timeperiods[item.notification_period]
+            item.create_notifications('DOWNTIMESTART', notif_period, hosts, services)
+        item.scheduled_downtime_depth += 1
+        item.in_scheduled_downtime = True
+        for downtime_id in self.activate_me:
+            downtime = downtimes[downtime_id]
+            res.extend(downtime.enter(timeperiods, hosts, services, downtimes))
         return res
 
-    def exit(self):
+    def exit(self, timeperiods, hosts, services, comments):
         """Remove ref in scheduled downtime and raise downtime log entry (exit)
 
         :return: [], always | None
         :rtype: list
         TODO: res is useless
         """
+        if self.ref in hosts:
+            item = hosts[self.ref]
+        else:
+            item = services[self.ref]
         res = []
         if self.is_in_effect is True:
             # This was a fixed or a flexible+triggered downtime
             self.is_in_effect = False
-            self.ref.scheduled_downtime_depth -= 1
-            if self.ref.scheduled_downtime_depth == 0:
-                self.ref.raise_exit_downtime_log_entry()
-                self.ref.create_notifications('DOWNTIMEEND')
-                self.ref.in_scheduled_downtime = False
+            item.scheduled_downtime_depth -= 1
+            if item.scheduled_downtime_depth == 0:
+                item.raise_exit_downtime_log_entry()
+                notif_period = timeperiods[item.notification_period]
+                item.create_notifications('DOWNTIMEEND', notif_period, hosts, services)
+                item.in_scheduled_downtime = False
         else:
             # This was probably a flexible downtime which was not triggered
             # In this case it silently disappears
             pass
-        self.del_automatic_comment()
+        self.del_automatic_comment(comments)
         self.can_be_deleted = True
         # when a downtime ends and the service was critical
         # a notification is sent with the next critical check
         # So we should set a flag here which signals consume_result
         # to send a notification
-        self.ref.in_scheduled_downtime_during_last_check = True
+        item.in_scheduled_downtime_during_last_check = True
         return res
 
-    def cancel(self):
+    def cancel(self, timeperiods, hosts, services, comments):
         """Remove ref in scheduled downtime and raise downtime log entry (cancel)
 
         :return: [], always
         :rtype: list
         TODO: res is useless
         """
+        if self.ref in hosts:
+            item = hosts[self.ref]
+        else:
+            item = services[self.ref]
         res = []
         self.is_in_effect = False
-        self.ref.scheduled_downtime_depth -= 1
-        if self.ref.scheduled_downtime_depth == 0:
-            self.ref.raise_cancel_downtime_log_entry()
-            self.ref.in_scheduled_downtime = False
-        self.del_automatic_comment()
+        item.scheduled_downtime_depth -= 1
+        if item.scheduled_downtime_depth == 0:
+            item.raise_cancel_downtime_log_entry()
+            item.in_scheduled_downtime = False
+        self.del_automatic_comment(comments)
         self.can_be_deleted = True
-        self.ref.in_scheduled_downtime_during_last_check = True
+        item.in_scheduled_downtime_during_last_check = True
         # Nagios does not notify on canceled downtimes
         # res.extend(self.ref.create_notifications('DOWNTIMECANCELLED'))
         # Also cancel other downtimes triggered by me
         for downtime in self.activate_me:
-            res.extend(downtime.cancel())
+            res.extend(downtime.cancel(timeperiods, hosts, services))
         return res
 
-    def add_automatic_comment(self):
+    def add_automatic_comment(self, ref):
         """Add comment on ref for downtime
 
         :return: None
@@ -261,10 +280,10 @@ class Downtime:
             text = (
                 "This %s has been scheduled for fixed downtime from %s to %s. "
                 "Notifications for the %s will not be sent out during that time period." % (
-                    self.ref.my_type,
+                    ref.my_type,
                     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
                     time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
-                    self.ref.my_type)
+                    ref.my_type)
             )
         else:
             hours, remainder = divmod(self.duration, 3600)
@@ -272,12 +291,12 @@ class Downtime:
             text = ("This %s has been scheduled for flexible downtime starting between %s and %s "
                     "and lasting for a period of %d hours and %d minutes. "
                     "Notifications for the %s will not be sent out during that time period." % (
-                        self.ref.my_type,
+                        ref.my_type,
                         time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
                         time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
-                        hours, minutes, self.ref.my_type)
+                        hours, minutes, ref.my_type)
                     )
-        if self.ref.my_type == 'host':
+        if ref.my_type == 'host':
             comment_type = 1
         else:
             comment_type = 2
@@ -287,10 +306,11 @@ class Downtime:
         }
         comm = Comment(data)
         self.comment_id = comm.uuid
-        self.extra_comment = comm
-        self.ref.add_comment(comm)
+        self.extra_comment = comm.comment
+        ref.add_comment(comm.uuid)
+        return comm
 
-    def del_automatic_comment(self):
+    def del_automatic_comment(self, comments):
         """Remove automatic comment on ref previously created
 
         :return: None
@@ -298,7 +318,7 @@ class Downtime:
         # Extra comment can be None if we load it from a old version of Alignak
         # TODO: remove it in a future version when every one got upgrade
         if self.extra_comment is not None:
-            self.extra_comment.can_be_deleted = True
+            comments[self.comment_id].can_be_deleted = True
         # self.ref.del_comment(self.comment_id)
 
     def fill_data_brok_from(self, data, brok_type):
@@ -331,65 +351,3 @@ class Downtime:
         self.fill_data_brok_from(data, 'full_status')
         brok = Brok('downtime_raise', data)
         return brok
-
-    def __getstate__(self):
-        """Call by pickle for dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dict containing notification data
-        :rtype: dict
-        TODO: REMOVE THIS
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """Inverted function of getstate
-
-        :param state: state to restore
-        :type state: dict
-        :return: None
-        TODO: REMOVE THIS
-        """
-        cls = self.__class__
-
-        # Maybe it's not a dict but a list like in the old 0.4 format
-        # so we should call the 0.4 function for it
-        if isinstance(state, list):
-            self.__setstate_deprecated__(state)
-            return
-
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-        if self.uuid >= cls.uuid:
-            cls.uuid = self.uuid + 1
-
-    def __setstate_deprecated__(self, state):
-        """In 1.0 we move to a dict save.
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        TODO: REMOVE THIS"""
-        cls = self.__class__
-        # Check if the len of this state is like the previous,
-        # if not, we will do errors!
-        # -1 because of the 'uuid' prop
-        if len(cls.properties) != (len(state) - 1):
-            logger.info("Passing downtime")
-            return
-
-        self.uuid = state.pop()
-        for prop in cls.properties:
-            val = state.pop()
-            setattr(self, prop, val)
-        if self.uuid >= cls.uuid:
-            cls.uuid = self.uuid + 1

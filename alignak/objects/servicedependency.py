@@ -299,7 +299,7 @@ class Servicedependencies(Items):
         """
         self.linkify_sd_by_s(hosts, services)
         self.linkify_sd_by_tp(timeperiods)
-        self.linkify_s_by_sd()
+        self.linkify_s_by_sd(services)
 
     def linkify_sd_by_s(self, hosts, services):
         """Replace dependent_service_description and service_description
@@ -331,7 +331,7 @@ class Servicedependencies(Items):
                                      % (s_name, hst_name))
                     to_del.append(servicedep)
                     continue
-                servicedep.dependent_service_description = serv
+                servicedep.dependent_service_description = serv.uuid
 
                 s_name = servicedep.service_description
                 hst_name = servicedep.host_name
@@ -348,7 +348,7 @@ class Servicedependencies(Items):
                                      % (s_name, hst_name))
                     to_del.append(servicedep)
                     continue
-                servicedep.service_description = serv
+                servicedep.service_description = serv.uuid
 
             except AttributeError as err:
                 logger.error("[servicedependency] fail to linkify by service %s: %s",
@@ -369,24 +369,41 @@ class Servicedependencies(Items):
             try:
                 tp_name = servicedep.dependency_period
                 timeperiod = timeperiods.find_by_name(tp_name)
-                servicedep.dependency_period = timeperiod
+                if timeperiod:
+                    servicedep.dependency_period = timeperiod.uuid
+                else:
+                    servicedep.dependency_period = ''
             except AttributeError, exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
-    def linkify_s_by_sd(self):
+    def linkify_s_by_sd(self, services):
         """Add dependency in service objects
 
         :return: None
         """
         for servicedep in self:
-            dsc = servicedep.dependent_service_description
-            sdval = servicedep.service_description
-            if dsc is not None and sdval is not None:
-                dep_period = getattr(servicedep, 'dependency_period', None)
-                dsc.add_service_act_dependency(sdval, servicedep.notification_failure_criteria,
-                                               dep_period, servicedep.inherits_parent)
-                dsc.add_service_chk_dependency(sdval, servicedep.execution_failure_criteria,
-                                               dep_period, servicedep.inherits_parent)
+
+            if getattr(servicedep, 'service_description', None) is None or\
+                    getattr(servicedep, 'dependent_service_description', None) is None:
+                continue
+
+            services.add_act_dependency(servicedep.dependent_service_description,
+                                        servicedep.service_description,
+                                        servicedep.notification_failure_criteria,
+                                        getattr(servicedep, 'dependency_period', ''),
+                                        servicedep.inherits_parent)
+
+            services.add_chk_dependency(servicedep.dependent_service_description,
+                                        servicedep.service_description,
+                                        servicedep.execution_failure_criteria,
+                                        getattr(servicedep, 'dependency_period', ''),
+                                        servicedep.inherits_parent)
+
+            # Only used for debugging purpose when loops are detected
+            setattr(servicedep, "service_description_string",
+                    services[servicedep.service_description].get_name())
+            setattr(servicedep, "dependent_service_description_string",
+                    services[servicedep.dependent_service_description].get_name())
 
     def is_correct(self):
         """Check if this host configuration is correct ::
@@ -398,5 +415,19 @@ class Servicedependencies(Items):
         :rtype: bool
         """
         valid = super(Servicedependencies, self).is_correct()
-        return valid and self.no_loop_in_parents("service_description",
-                                                 "dependent_service_description")
+        loop = self.no_loop_in_parents("service_description", "dependent_service_description")
+        if len(loop) > 0:
+            logger.error("Loop detected while checking service dependencies")
+            for item in self:
+                for elem in loop:
+                    if elem == item.service_description:
+                        logger.error("Service %s is parent service_description in dependency "
+                                     "defined in %s", item.service_description_string,
+                                     item.imported_from)
+                    elif elem == item.dependent_service_description:
+                        logger.error("Service %s is child service_description in dependency"
+                                     " defined in %s", item.dependent_service_description_string,
+                                     item.imported_from)
+            return False
+
+        return valid

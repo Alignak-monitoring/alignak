@@ -146,7 +146,7 @@ class Timeperiod(Item):
     properties.update({
         'timeperiod_name':  StringProp(fill_brok=['full_status']),
         'alias':            StringProp(default='', fill_brok=['full_status']),
-        'use':              StringProp(default=None),
+        'use':              ListProp(default=[]),
         'register':         IntegerProp(default=1),
 
         # These are needed if a broker module calls methods on timeperiod objects
@@ -196,17 +196,6 @@ class Timeperiod(Item):
         :rtype: str
         """
         return getattr(self, 'timeperiod_name', 'unknown_timeperiod')
-
-    def get_unresolved_properties_by_inheritance(self):
-        """
-        Fill full properties with template if needed for the
-        unresolved values (example: sunday ETCETC)
-        :return: None
-        """
-        # Ok, I do not have prop, Maybe my templates do?
-        # Same story for plus
-        for i in self.templates:
-            self.unresolved.extend(i.unresolved)
 
     def get_raw_import_values(self):
         """
@@ -903,7 +892,7 @@ class Timeperiod(Item):
             for tp_name in excluded_tps:
                 timepriod = timeperiods.find_by_name(tp_name.strip())
                 if timepriod is not None:
-                    new_exclude.append(timepriod)
+                    new_exclude.append(timepriod.uuid)
                 else:
                     logger.error("[timeentry::%s] unknown %s timeperiod", self.get_name(), tp_name)
         self.exclude = new_exclude
@@ -975,6 +964,18 @@ class Timeperiods(Items):
             timeperiod = self.items[t_id]
             timeperiod.linkify(self)
 
+    def get_unresolved_properties_by_inheritance(self, timeperiod):
+        """
+        Fill full properties with template if needed for the
+        unresolved values (example: sunday ETCETC)
+        :return: None
+        """
+        # Ok, I do not have prop, Maybe my templates do?
+        # Same story for plus
+        for i in timeperiod.templates:
+            template = self.templates[i]
+            timeperiod.unresolved.extend(template.unresolved)
+
     def apply_inheritance(self):
         """
         The only interesting property to inherit is exclude
@@ -983,12 +984,12 @@ class Timeperiods(Items):
         """
         self.apply_partial_inheritance('exclude')
         for i in self:
-            i.get_customs_properties_by_inheritance()
+            self.get_customs_properties_by_inheritance(i)
 
         # And now apply inheritance for unresolved properties
         # like the dateranges in fact
         for timeperiod in self:
-            timeperiod.get_unresolved_properties_by_inheritance()
+            self.get_unresolved_properties_by_inheritance(timeperiod)
 
     def is_correct(self):
         """

@@ -61,7 +61,7 @@ class TestTriggers(AlignakTest):
         svc.output = 'I am OK'
         svc.perf_data = 'cpu=95%'
         # Go launch it!
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         self.scheduler_loop(2, [])
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
@@ -79,7 +79,7 @@ class TestTriggers(AlignakTest):
             s.perf_data = 'time=%dms' % i
 
         # Go launch it!
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         self.scheduler_loop(4, [])
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
@@ -92,7 +92,7 @@ class TestTriggers(AlignakTest):
         svc.output = 'Nb users?'
         svc.perf_data = 'users=6'
         # Go launch it!
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         self.scheduler_loop(4, [])
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
@@ -103,7 +103,7 @@ class TestTriggers(AlignakTest):
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "i_got_trigger")
         print 'will run', svc.trigger
         # Go!
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
         self.assertEqual("New output", svc.output)
@@ -115,7 +115,7 @@ class TestTriggers(AlignakTest):
         svc.output = 'I am OK'
         svc.perf_data = 'cpu=95%'
         # Go launch it!
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
         self.assertEqual("not good!", svc.output)
@@ -126,7 +126,7 @@ class TestTriggers(AlignakTest):
         host.output = 'I am OK'
         host.perf_data = 'cpu=95%'
         # Go launch it!
-        host.eval_triggers()
+        host.eval_triggers(self.sched.triggers)
         self.scheduler_loop(2, [])
         print "Output", host.output
         print "Perf_Data", host.perf_data
@@ -153,10 +153,10 @@ class TestTriggers(AlignakTest):
     def test_trig_file_loading(self):
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "cpu_too_high_ter")
         t = self.conf.triggers.find_by_name('simple_cpu')
-        self.assertIn(t, svc.triggers)
+        self.assertIn(t.uuid, svc.triggers)
         svc.output = 'I am OK'
         svc.perf_data = 'cpu=95%'
-        svc.eval_triggers()
+        svc.eval_triggers(self.sched.triggers)
         self.scheduler_loop(2, [])
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
@@ -166,10 +166,10 @@ class TestTriggers(AlignakTest):
         # same for host
         host = self.sched.hosts.find_by_name('test_host_trigger2')
         t = self.conf.triggers.find_by_name('simple_cpu')
-        self.assertIn(t, host.triggers)
+        self.assertIn(t.uuid, host.triggers)
         host.output = 'I am OK'
         host.perf_data = 'cpu=95%'
-        host.eval_triggers()
+        host.eval_triggers(self.sched.triggers)
         self.scheduler_loop(2, [])
         print "Output", host.output
         print "Perf_Data", host.perf_data

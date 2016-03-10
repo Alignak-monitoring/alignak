@@ -62,7 +62,6 @@ import argparse
 
 import numpy as np
 
-from alignak.macroresolver import MacroResolver
 from alignak.log import logger
 from alignak.version import VERSION
 
@@ -621,20 +620,6 @@ def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=W0613
     return res
 
 
-def expand_with_macros(ref, value):
-    """Expand the value with macros from the
-       host/service ref before brok it
-
-    :param ref: host or service
-    :type ref:
-    :param value: value to expand macro
-    :type value:
-    :return: value with macro replaced
-    :rtype:
-    """
-    return MacroResolver().resolve_simple_macros_in_string(value, ref.get_data_for_checks())
-
-
 def get_obj_name(obj):
     """Get object name (call get_name) if not a string
 
@@ -978,7 +963,7 @@ def filter_any(name):  # pylint: disable=W0613
     :rtype: bool
     """
 
-    def inner_filter(host):  # pylint: disable=W0613
+    def inner_filter(items):  # pylint: disable=W0613
         """Inner filter for host. Accept all"""
         return True
 
@@ -995,7 +980,7 @@ def filter_none(name):  # pylint: disable=W0613
     :rtype: bool
     """
 
-    def inner_filter(host):  # pylint: disable=W0613
+    def inner_filter(items):  # pylint: disable=W0613
         """Inner filter for host. Accept nothing"""
         return False
 
@@ -1012,8 +997,9 @@ def filter_host_by_name(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if host_name == name"""
+        host = items["host"]
         if host is None:
             return False
         return host.host_name == name
@@ -1032,8 +1018,9 @@ def filter_host_by_regex(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if regex match host_name"""
+        host = items["host"]
         if host is None:
             return False
         return host_re.match(host.host_name) is not None
@@ -1051,11 +1038,12 @@ def filter_host_by_group(group):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if group in host.hostgroups"""
+        host = items["host"]
         if host is None:
             return False
-        return group in [g.hostgroup_name for g in host.hostgroups]
+        return group in [items["hostgroups"][g].hostgroup_name for g in host.hostgroups]
 
     return inner_filter
 
@@ -1070,8 +1058,9 @@ def filter_host_by_tag(tpl):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if tag in host.tags"""
+        host = items["host"]
         if host is None:
             return False
         return tpl in [t.strip() for t in host.tags]
@@ -1089,8 +1078,9 @@ def filter_service_by_name(name):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if service_description == name"""
+        service = items["service"]
         if service is None:
             return False
         return service.service_description == name
@@ -1109,8 +1099,9 @@ def filter_service_by_regex_name(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if regex match service_description"""
+        service = items["service"]
         if service is None:
             return False
         return host_re.match(service.service_description) is not None
@@ -1128,11 +1119,13 @@ def filter_service_by_host_name(host_name):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if service.host.host_name == host_name"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return service.host.host_name == host_name
+        return host.host_name == host_name
 
     return inner_filter
 
@@ -1148,11 +1141,13 @@ def filter_service_by_regex_host_name(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if regex match service.host.host_name"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return host_re.match(service.host.host_name) is not None
+        return host_re.match(host.host_name) is not None
 
     return inner_filter
 
@@ -1167,11 +1162,13 @@ def filter_service_by_hostgroup_name(group):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if hostgroup in service.host.hostgroups"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return group in [g.hostgroup_name for g in service.host.hostgroups]
+        return group in [items["hostgroups"][g].hostgroup_name for g in host.hostgroups]
 
     return inner_filter
 
@@ -1186,11 +1183,13 @@ def filter_service_by_host_tag_name(tpl):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if tpl in service.host.tags"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return tpl in [t.strip() for t in service.host.tags]
+        return tpl in [t.strip() for t in host.tags]
 
     return inner_filter
 
@@ -1205,11 +1204,12 @@ def filter_service_by_servicegroup_name(group):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if group in service.servicegroups"""
+        service = items["service"]
         if service is None:
             return False
-        return group in [g.servicegroup_name for g in service.servicegroups]
+        return group in [items["servicegroups"][g].servicegroup_name for g in service.servicegroups]
 
     return inner_filter
 
@@ -1224,8 +1224,9 @@ def filter_host_by_bp_rule_label(label):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if label in host.labels"""
+        host = items["host"]
         if host is None:
             return False
         return label in host.labels
@@ -1243,11 +1244,13 @@ def filter_service_by_host_bp_rule_label(label):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if label in service.host.labels"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return label in service.host.labels
+        return label in host.labels
 
     return inner_filter
 
@@ -1261,8 +1264,9 @@ def filter_service_by_bp_rule_label(label):
     :return: Filter
     :rtype: bool
     """
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if label in service.labels"""
+        service = items["service"]
         if service is None:
             return False
         return label in service.labels

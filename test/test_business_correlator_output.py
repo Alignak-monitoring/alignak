@@ -62,7 +62,9 @@ class TestBusinesscorrelOutput(AlignakTest):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "empty_bp_rule_output")
         self.assertIs(True, svc_cor.got_business_rule)
         self.assertIsNot(svc_cor.business_rule, None)
-        self.assertEqual("", svc_cor.get_business_rule_output())
+        self.assertEqual("", svc_cor.get_business_rule_output(self.sched.hosts,
+                                                              self.sched.macromodulations,
+                                                              self.sched.timeperiods))
 
     def test_bprule_expand_template_macros(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "formatted_bp_rule_output")
@@ -88,20 +90,24 @@ class TestBusinesscorrelOutput(AlignakTest):
         # Performs checks
         m = MacroResolver()
         template = "$STATUS$,$SHORTSTATUS$,$HOSTNAME$,$SERVICEDESC$,$FULLNAME$"
-        data = svc1.get_data_for_checks()
-        output = m.resolve_simple_macros_in_string(template, data)
+        host = self.sched.hosts[svc1.host]
+        data = [host, svc1]
+        output = m.resolve_simple_macros_in_string(template, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual("OK,O,test_host_01,srv1,test_host_01/srv1", output)
-        data = svc2.get_data_for_checks()
-        output = m.resolve_simple_macros_in_string(template, data)
+        host = self.sched.hosts[svc2.host]
+        data = [host, svc2]
+        output = m.resolve_simple_macros_in_string(template, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual("WARNING,W,test_host_02,srv2,test_host_02/srv2", output)
-        data = svc3.get_data_for_checks()
-        output = m.resolve_simple_macros_in_string(template, data)
+        host = self.sched.hosts[svc3.host]
+        data = [host, svc3]
+        output = m.resolve_simple_macros_in_string(template, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual("CRITICAL,C,test_host_03,srv3,test_host_03/srv3", output)
-        data = hst4.get_data_for_checks()
-        output = m.resolve_simple_macros_in_string(template, data)
+        data = [hst4]
+        output = m.resolve_simple_macros_in_string(template, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual("DOWN,D,test_host_04,,test_host_04", output)
-        data = svc_cor.get_data_for_checks()
-        output = m.resolve_simple_macros_in_string(template, data)
+        host = self.sched.hosts[svc_cor.host]
+        data = [host, svc_cor]
+        output = m.resolve_simple_macros_in_string(template, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual("CRITICAL,C,dummy,formatted_bp_rule_output,dummy/formatted_bp_rule_output", output)
 
     def test_bprule_output(self):

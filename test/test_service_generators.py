@@ -67,7 +67,7 @@ class TestConfig(AlignakTest):
 
         print "All service of", "test_host_0_gen"
         for s in host.services:
-            print s.get_name()
+            print self.sched.services[s].get_name()
         # We ask for 4 services with our disks :)
         svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service C")
         svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service D")
@@ -96,9 +96,9 @@ class TestConfig(AlignakTest):
         svc_c_dep = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service C Dependant")
         self.assertIsNot(svc_c_dep, None)
         # Dep version should a child of svc
-        self.assertIn(svc_c_dep, svc_c.child_dependencies)
+        self.assertIn(svc_c_dep.uuid, svc_c.child_dependencies)
         # But not on other of course
-        self.assertNotIn(svc_c_dep, svc_d.child_dependencies)
+        self.assertNotIn(svc_c_dep.uuid, svc_d.child_dependencies)
 
         
 
@@ -113,7 +113,7 @@ class TestConfig(AlignakTest):
 
         print "All service of", "test_host_0_gen"
         for s in host.services:
-            print s.get_name()
+            print self.sched.services[s].get_name()
         # We ask for 4 services with our disks :)
         svc_c = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT C")
         svc_d = self.sched.services.find_srv_by_name_and_hostname("test_host_0_gen", "Generated Service NOT D")
@@ -135,7 +135,7 @@ class TestConfig(AlignakTest):
 
         print "All service of", "sw_0"
         for s in host.services:
-            print s.get_name()
+            print self.sched.services[s].get_name()
 
         # We ask for our 6*46 + 6 services with our ports :)
         # _ports  Unit [1-6] Port [0-46]$(80%!90%)$,Unit [1-6] Port 47$(80%!90%)$
@@ -160,7 +160,7 @@ class TestConfig(AlignakTest):
 
         print "All service of", "sw_1"
         for s in host.services:
-            print s.get_name()
+            print self.sched.services[s].get_name()
 
         svc = self.sched.services.find_srv_by_name_and_hostname("sw_1", 'Generated Service Gigabit0/1')
         self.assertIsNot(svc, None)

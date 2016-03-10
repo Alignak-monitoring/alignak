@@ -51,8 +51,8 @@
 """
 import uuid
 from alignak.autoslots import AutoSlots
-from alignak.property import StringProp, BoolProp, IntegerProp
-
+from alignak.property import StringProp, BoolProp, IntegerProp, ListProp
+from alignak.objects.command import Command
 
 class DummyCommandCall(object):  # pylint: disable=R0903
     """Ok, slots are fun: you cannot set the __autoslots__
@@ -91,30 +91,52 @@ class CommandCall(DummyCommandCall):
 
     def __init__(self, commands, call, poller_tag='None',
                  reactionner_tag='None', enable_environment_macros=False):
-        self.uuid = uuid.uuid4().hex
-        self.call = call
-        self.timeout = -1
-        # Now split by ! and get command and args
-        self.get_command_and_args()
-        self.command = commands.find_by_name(self.command.strip())
-        self.late_relink_done = False  # To do not relink again and again the same commandcall
-        self.valid = self.command is not None
-        self.enable_environment_macros = enable_environment_macros
-        if self.valid:
-            # If the host/service do not give an override poller_tag, take
-            # the one of the command
-            self.poller_tag = poller_tag  # from host/service
+
+        if commands is not None:
+            self.uuid = uuidmod.uuid4().hex
+            self.timeout = -1
+            self.get_command_and_args()
+            self.command = commands.find_by_name(self.command.strip())
+            self.late_relink_done = False  # To do not relink again and again the same commandcall
+            self.valid = self.command is not None
+            if self.valid:
+                # If the host/service do not give an override poller_tag, take
+                # the one of the command
+                self.poller_tag = poller_tag  # from host/service
+                self.reactionner_tag = reactionner_tag
+                self.module_type = self.command.module_type
+                self.enable_environment_macros = self.command.enable_environment_macros
+                self.timeout = int(self.command.timeout)
+                if self.valid and poller_tag is 'None':
+                    # from command if not set
+                    self.poller_tag = self.command.poller_tag
+                # Same for reactionner tag
+                if self.valid and reactionner_tag is 'None':
+                    # from command if not set
+                    self.reactionner_tag = self.command.reactionner_tag
+        else:
+            self.uuid = uuid
+            self.timeout = timeout
+            self.module_type = module_type
+            self.args = args
+            self.command = Command(command)
+            self.late_relink_done = late_relink_done
+            self.valid = valid
+            self.poller_tag = poller_tag
             self.reactionner_tag = reactionner_tag
-            self.module_type = self.command.module_type
-            self.enable_environment_macros = self.command.enable_environment_macros
-            self.timeout = int(self.command.timeout)
-            if self.valid and poller_tag is 'None':
-                # from command if not set
-                self.poller_tag = self.command.poller_tag
-            # Same for reactionner tag
-            if self.valid and reactionner_tag is 'None':
-                # from command if not set
-                self.reactionner_tag = self.command.reactionner_tag
+
+    def serialize(self):
+        # TODO: Make it generic by inerthing from a higher class
+        cls = self.__class__
+        # id is not in *_properties
+        res = {'uuid': self.uuid}
+        for prop in cls.properties:
+            if hasattr(self, prop):
+                res[prop] = getattr(self, prop)
+
+        res['command'] = self.command.serialize()
+        return res
+
 
     def get_command_and_args(self):
         r"""We want to get the command and the args with ! splitting.

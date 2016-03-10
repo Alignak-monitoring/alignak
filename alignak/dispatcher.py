@@ -276,7 +276,8 @@ class Dispatcher:
         # Look for receivers. If they got conf, it's ok, if not, need a simple
         # conf
         for realm in self.realms:
-            for rec in realm.receivers:
+            for rec_id in realm.receivers:
+                rec = self.receivers[rec_id]
                 # If the receiver does not have a conf, must got one :)
                 if rec.reachable and not rec.have_conf():
                     self.dispatch_ok = False  # so we will redispatch all
@@ -340,8 +341,7 @@ class Dispatcher:
                                 r_id, satellite.get_name())
                     satellite.remove_from_conf(id)
 
-    @staticmethod
-    def get_scheduler_ordered_list(realm):
+    def get_scheduler_ordered_list(self, realm):
         """Get sorted scheduler list for a specific realm
 
         :param realm: realm we want scheduler from
@@ -351,15 +351,17 @@ class Dispatcher:
         """
         # get scheds, alive and no spare first
         scheds = []
-        for sched in realm.schedulers:
-            scheds.append(sched)
+        for sched_id in realm.schedulers:
+            scheds.append(self.schedulers[sched_id])
 
         # now the spare scheds of higher realms
         # they are after the sched of realm, so
         # they will be used after the spare of
         # the realm
-        for higher_r in realm.higher_realms:
-            for sched in higher_r.schedulers:
+        for higher_r_id in realm.higher_realms:
+            higher_r = self.realms[higher_r_id]
+            for sched_id in higher_r.schedulers:
+                sched = self.schedulers[sched_id]
                 if sched.spare:
                     scheds.append(sched)
 
@@ -441,11 +443,13 @@ class Dispatcher:
                         # REF: doc/alignak-conf-dispatching.png (3)
                         # REF: doc/alignak-scheduler-lost.png (2)
                         # Prepare the conf before sending it
+                        satellites = realm.get_satellites_links_for_scheduler(self.pollers,
+                                                                              self.reactionners)
                         conf_package = {
                             'conf': realm.serialized_confs[conf.uuid],
                             'override_conf': sched.get_override_configuration(),
                             'modules': sched.modules,
-                            'satellites': realm.get_satellites_links_for_scheduler(),
+                            'satellites': satellites,
                             'instance_name': sched.scheduler_name, 'push_flavor': conf.push_flavor,
                             'skip_initial_broks': sched.skip_initial_broks,
                             'accept_passive_unknown_check_results':
@@ -529,7 +533,8 @@ class Dispatcher:
 
                         # make copies of potential_react list for sort
                         satellites = []
-                        for sat in realm.get_potential_satellites_by_type(kind):
+                        for sat_id in realm.get_potential_satellites_by_type(kind):
+                            sat = getattr(self, "%ss" % kind)[sat_id]
                             satellites.append(sat)
                         satellites.sort(alive_then_spare_then_deads)
 
@@ -573,7 +578,9 @@ class Dispatcher:
 
                             # Brokers should have poller/reactionners links too
                             if kind == "broker":
-                                realm.fill_broker_with_poller_reactionner_links(sat)
+                                realm.fill_broker_with_poller_reactionner_links(sat, self.pollers,
+                                                                                self.reactionners,
+                                                                                self.receivers)
 
                             is_sent = False
                             # Maybe this satellite already got this configuration,
@@ -624,7 +631,8 @@ class Dispatcher:
             # And now we dispatch receivers. It's easier, they need ONE conf
             # in all their life :)
             for realm in self.realms:
-                for rec in realm.receivers:
+                for rec_id in realm.receivers:
+                    rec = self.receivers[rec_id]
                     if rec.need_conf:
                         logger.info('[%s] Trying to send configuration to receiver %s',
                                     realm.get_name(), rec.get_name())

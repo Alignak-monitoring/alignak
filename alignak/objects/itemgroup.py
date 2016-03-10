@@ -195,14 +195,15 @@ class Itemgroup(Item):
             DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
         """
         Get a brok with hostgroup info (like id, name)
         Members contain list of (id, host_name)
 
+        :param items: monitoring items, used to recover members
+        :type items: alignak.objects.item.Items
         :return:Brok object
         :rtype: object
-        :return: None
         """
         cls = self.__class__
         data = {}
@@ -213,9 +214,10 @@ class Itemgroup(Item):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place
         data['members'] = []
-        for i in self.members:
+        for m_id in self.members:
+            member = items[m_id]
             # it look like lisp! ((( ..))), sorry....
-            data['members'].append((i.uuid, i.get_name()))
+            data['members'].append((member.uuid, member.get_name()))
         brok = Brok('initial_' + cls.my_type + '_status', data)
         return brok
 

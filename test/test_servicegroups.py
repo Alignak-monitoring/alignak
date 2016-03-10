@@ -65,15 +65,15 @@ class TestServicegroup(AlignakTest):
 
         svc3 = self.sched.services.find_srv_by_name_and_hostname("fake host", "fake svc3")
         svc4 = self.sched.services.find_srv_by_name_and_hostname("fake host", "fake svc4")
-        self.assertIn(svc3, sgs[0].members)
-        self.assertIn(svc3, sgs[1].members)
-        self.assertIn(svc4, sgs[2].members)
-        self.assertIn(svc4, sgs[3].members)
+        self.assertIn(svc3.uuid, sgs[0].members)
+        self.assertIn(svc3.uuid, sgs[1].members)
+        self.assertIn(svc4.uuid, sgs[2].members)
+        self.assertIn(svc4.uuid, sgs[3].members)
 
-        self.assertIn(sgs[0].get_name(), [sg.get_name() for sg in svc3.servicegroups])
-        self.assertIn(sgs[1].get_name(), [sg.get_name() for sg in svc3.servicegroups])
-        self.assertIn(sgs[2].get_name(), [sg.get_name() for sg in svc4.servicegroups])
-        self.assertIn(sgs[3].get_name(), [sg.get_name() for sg in svc4.servicegroups])
+        self.assertIn(sgs[0].uuid, svc3.servicegroups)
+        self.assertIn(sgs[1].uuid, svc3.servicegroups)
+        self.assertIn(sgs[2].uuid, svc4.servicegroups)
+        self.assertIn(sgs[3].uuid, svc4.servicegroups)
 
 
 if __name__ == '__main__':

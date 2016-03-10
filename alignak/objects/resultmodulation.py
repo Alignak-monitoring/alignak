@@ -82,7 +82,7 @@ class Resultmodulation(Item):
         """
         return self.resultmodulation_name
 
-    def module_return(self, return_code):
+    def module_return(self, return_code, timeperiods):
         """Module the exit code if necessary ::
 
         * modulation_period is legit
@@ -95,7 +95,8 @@ class Resultmodulation(Item):
         :rtype: int
         """
         # Only if in modulation_period of modulation_period == None
-        if self.modulation_period is None or self.modulation_period.is_time_valid(time.time()):
+        modulation_period = timeperiods[self.modulation_period]
+        if modulation_period is None or modulation_period.is_time_valid(time.time()):
             # Try to change the exit code only if a new one is defined
             if self.exit_code_modulation is not None:
                 # First with the exit_code_match
@@ -140,4 +141,4 @@ class Resultmodulations(Items):
                       (resultmod.get_name(), mtp_name)
                 resultmod.configuration_errors.append(err)
 
-            resultmod.modulation_period = mtp
+            resultmod.modulation_period = mtp.uuid

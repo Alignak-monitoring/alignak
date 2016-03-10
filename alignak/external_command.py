@@ -163,7 +163,7 @@ class ExternalCommandManager:
             {'global': False, 'args': ['service', 'to_int']},
         'del_all_host_comments':
             {'global': False, 'args': ['host']},
-        'del_all_host_downtimes':
+        'del_all_host_unacknowledge_problem':
             {'global': False, 'args': ['host']},
         'del_all_svc_comments':
             {'global': False, 'args': ['service']},
@@ -473,7 +473,7 @@ class ExternalCommandManager:
         """Setter for scheduler attribute
 
         :param scheduler: scheduler to set
-        :type scheduler: object
+        :type scheduler: alignak.scheduler.Scheduler
         :return: None
         """
         self.sched = scheduler
@@ -940,7 +940,7 @@ class ExternalCommandManager:
             'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  service.uuid
         }
         comm = Comment(data)
-        service.add_comment(comm)
+        service.add_comment(comm.uuid)
         self.sched.add(comm)
 
     def add_host_comment(self, host, persistent, author, comment):
@@ -964,11 +964,10 @@ class ExternalCommandManager:
             'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  host.uuid
         }
         comm = Comment(data)
-        host.add_comment(comm)
+        host.add_comment(comm.uuid)
         self.sched.add(comm)
 
-    @staticmethod
-    def acknowledge_svc_problem(service, sticky, notify, persistent, author, comment):
+    def acknowledge_svc_problem(self, service, sticky, notify, persistent, author, comment):
         """Acknowledge a service problem
         Format of the line that triggers function call::
 
@@ -989,10 +988,11 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        service.acknowledge_problem(sticky, notify, persistent, author, comment)
+        notif_period = self.sched.timeperiods[service.notification_period]
+        self.sched.add(service.acknowledge_problem(notif_period, self.hosts, self.services, sticky,
+                                                   notify, persistent, author, comment))
 
-    @staticmethod
-    def acknowledge_host_problem(host, sticky, notify, persistent, author, comment):
+    def acknowledge_host_problem(self, host, sticky, notify, persistent, author, comment):
         """Acknowledge a host problem
         Format of the line that triggers function call::
 
@@ -1013,10 +1013,11 @@ class ExternalCommandManager:
         :return: None
         TODO: add a better ACK management
         """
-        host.acknowledge_problem(sticky, notify, persistent, author, comment)
+        notif_period = self.sched.timeperiods[host.notification_period]
+        self.sched.add(host.acknowledge_problem(notif_period, self.hosts, self.services, sticky,
+                                                notify, persistent, author, comment))
 
-    @staticmethod
-    def acknowledge_svc_problem_expire(service, sticky, notify,
+    def acknowledge_svc_problem_expire(self, service, sticky, notify,
                                        persistent, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1040,10 +1041,12 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        service.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
+        notif_period = self.sched.timeperiods[service.notification_period]
+        self.sched.add(service.acknowledge_problem(notif_period, self.hosts, self.services, sticky,
+                                                   notify, persistent, author, comment,
+                                                   end_time=end_time))
 
-    @staticmethod
-    def acknowledge_host_problem_expire(host, sticky, notify,
+    def acknowledge_host_problem_expire(self, host, sticky, notify,
                                         persistent, end_time, author, comment):
         """Acknowledge a host problem with expire time for this acknowledgement
         Format of the line that triggers function call::
@@ -1068,7 +1071,9 @@ class ExternalCommandManager:
         :return: None
         TODO: add a better ACK management
         """
-        host.acknowledge_problem(sticky, notify, persistent, author, comment, end_time=end_time)
+        notif_period = self.sched.timeperiods[host.notification_period]
+        self.sched.add(host.acknowledge_problem(notif_period, None, sticky, notify,
+                                                persistent, author, comment, end_time=end_time))
 
     def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value
@@ -1500,7 +1505,7 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in host.downtimes:
-            self.del_host_downtime(downtime.uuid)
+            self.del_host_downtime(downtime)
 
     def del_all_svc_comments(self, service):
         """Delete all service comments
@@ -1526,7 +1531,7 @@ class ExternalCommandManager:
         :return: None
         """
         for downtime in service.downtimes:
-            self.del_svc_downtime(downtime.uuid)
+            self.del_svc_downtime(downtime)
 
     def del_contact_downtime(self, downtime_id):
         """Delete a contact downtime
@@ -1539,7 +1544,7 @@ class ExternalCommandManager:
         :return: None
         """
         if downtime_id in self.sched.contact_downtimes:
-            self.sched.contact_downtimes[downtime_id].cancel()
+            self.sched.contact_downtimes[downtime_id].cancel(self.sched.contacts)
 
     def del_host_comment(self, comment_id):
         """Delete a host comment
@@ -1565,7 +1570,8 @@ class ExternalCommandManager:
         :return: None
         """
         if downtime_id in self.sched.downtimes:
-            self.sched.downtimes[downtime_id].cancel()
+            self.sched.downtimes[downtime_id].cancel(self.sched.timeperiods, self.sched.hosts,
+                                                     self.sched.services)
 
     def del_svc_comment(self, comment_id):
         """Delete a service comment
@@ -1591,7 +1597,8 @@ class ExternalCommandManager:
         :return: None
         """
         if downtime_id in self.sched.downtimes:
-            self.sched.downtimes[downtime_id].cancel()
+            self.sched.downtimes[downtime_id].cancel(self.sched.timeperiods, self.sched.hosts,
+                                                     self.sched.services, self.sched.comments)
 
     def disable_all_notifications_beyond_host(self, host):
         """DOES NOTHING (should disable notification beyond a host)
@@ -1821,7 +1828,7 @@ class ExternalCommandManager:
         """
         if host.active_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            host.disable_active_checks()
+            host.disable_active_checks(self.sched.checks)
             self.sched.get_and_register_status_brok(host)
 
     def disable_host_event_handler(self, host):
@@ -2094,7 +2101,7 @@ class ExternalCommandManager:
         :return: None
         """
         if service.active_checks_enabled:
-            service.disable_active_checks()
+            service.disable_active_checks(self.sched.checks)
             service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.sched.get_and_register_status_brok(service)
 
@@ -2700,7 +2707,9 @@ class ExternalCommandManager:
             if self.current_timestamp < host.last_chk:
                 return
 
-            chk = host.launch_check(now, force=True)
+            chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
+                                    self.sched.macromodulations, self.sched.checkmodulations,
+                                    self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
             if not chk:
                 logger.error('%s > Passive host check failed. None check launched !?',
@@ -2715,6 +2724,7 @@ class ExternalCommandManager:
             # Set the corresponding host's check_type to passive=1
             chk.set_type_passive()
             self.sched.nb_check_received += 1
+            self.sched.add(chk)
             # Ok now this result will be read by scheduler the next loop
 
     def process_host_output(self, host, plugin_output):
@@ -2748,7 +2758,7 @@ class ExternalCommandManager:
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
             naglog_result('info', 'PASSIVE SERVICE CHECK: %s;%s;%d;%s'
-                          % (service.host.get_name().decode('utf8', 'ignore'),
+                          % (self.hosts[service.host].get_name().decode('utf8', 'ignore'),
                              service.get_name().decode('utf8', 'ignore'),
                              return_code, plugin_output.decode('utf8', 'ignore')))
         now = time.time()
@@ -2759,7 +2769,9 @@ class ExternalCommandManager:
             if self.current_timestamp < service.last_chk:
                 return
 
-            chk = service.launch_check(now, force=True)
+            chk = service.launch_check(now, self.hosts, self.services, self.timeperiods,
+                                       self.sched.macromodulations, self.sched.checkmodulations,
+                                       self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
             if not chk:
                 logger.error('%s > Passive service check failed. None check launched !?',
@@ -2774,6 +2786,7 @@ class ExternalCommandManager:
             # Set the corresponding service's check_type to passive=1
             chk.set_type_passive()
             self.sched.nb_check_received += 1
+            self.sched.add(chk)
             # Ok now this result will be reap by scheduler the next loop
 
     def process_service_output(self, service, plugin_output):
@@ -2800,8 +2813,7 @@ class ExternalCommandManager:
         """
         pass
 
-    @staticmethod
-    def remove_host_acknowledgement(host):
+    def remove_host_acknowledgement(self, host):
         """Remove an acknowledgment on a host
         Format of the line that triggers function call::
 
@@ -2811,10 +2823,9 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        host.unacknowledge_problem()
+        host.unacknowledge_problem(self.sched.comments)
 
-    @staticmethod
-    def remove_svc_acknowledgement(service):
+    def remove_svc_acknowledgement(self, service):
         """Remove an acknowledgment on a service
         Format of the line that triggers function call::
 
@@ -2824,7 +2835,7 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        service.unacknowledge_problem()
+        service.unacknowledge_problem(self.sched.comments)
 
     def restart_program(self):
         """Restart Alignak
@@ -2940,8 +2951,10 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        cdt = ContactDowntime(contact, start_time, end_time, author, comment)
-        contact.add_downtime(cdt)
+        data = {'ref': contact.uuid, 'start_time': start_time,
+                'end_time': end_time, 'author': author, 'comment': comment}
+        cdt = ContactDowntime(data)
+        contact.add_downtime(cdt.uuid)
         self.sched.add(cdt)
         self.sched.get_and_register_status_brok(contact)
 
@@ -3093,13 +3106,16 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        downtime = Downtime(host, start_time, end_time, fixed, trigger_id, duration, author,
-                            comment)
-        host.add_downtime(downtime)
+        data = {'ref': host.uuid, 'ref_type': host.my_type, 'start_time': start_time,
+                'end_time': end_time, 'fixed': fixed, 'trigger_id': trigger_id,
+                'duration': duration, 'author': author, 'comment': comment}
+        downtime = Downtime(data)
+        self.sched.add(downtime.add_automatic_comment(host))
+        host.add_downtime(downtime.uuid)
         self.sched.add(downtime)
         self.sched.get_and_register_status_brok(host)
         if trigger_id != '' and trigger_id in self.sched.downtimes:
-            self.sched.downtimes[trigger_id].trigger_me(downtime)
+            self.sched.downtimes[trigger_id].trigger_me(downtime.uuid)
 
     def schedule_host_svc_checks(self, host, check_time):
         """Schedule a check on all services of a host
@@ -3248,13 +3264,16 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        downtime = Downtime(service, start_time, end_time, fixed, trigger_id, duration, author,
-                            comment)
-        service.add_downtime(downtime)
+        data = {'ref': service.uuid, 'ref_type': service.my_type, 'start_time': start_time,
+                'end_time': end_time, 'fixed': fixed, 'trigger_id': trigger_id,
+                'duration': duration, 'author': author, 'comment': comment}
+        downtime = Downtime(data)
+        self.sched.add(downtime.add_automatic_comment(service))
+        service.add_downtime(downtime.uuid)
         self.sched.add(downtime)
         self.sched.get_and_register_status_brok(service)
         if trigger_id not in ['', '0'] and trigger_id in self.sched.downtimes:
-            self.sched.downtimes[trigger_id].trigger_me(downtime)
+            self.sched.downtimes[trigger_id].trigger_me(downtime.uuid)
 
     def send_custom_host_notification(self, host, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
@@ -3558,8 +3577,7 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.sched.get_and_register_update_program_status_brok()
 
-    @staticmethod
-    def launch_svc_event_handler(service):
+    def launch_svc_event_handler(self, service):
         """Launch event handler for a service
         Format of the line that triggers function call::
 
@@ -3569,10 +3587,10 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        service.get_event_handlers(externalcmd=True)
+        service.get_event_handlers(self.hosts, self.sched.macromodulations, self.sched.timeperiods,
+                                   externalcmd=True)
 
-    @staticmethod
-    def launch_host_event_handler(host):
+    def launch_host_event_handler(self, host):
         """Launch event handler for a service
         Format of the line that triggers function call::
 
@@ -3582,7 +3600,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        host.get_event_handlers(externalcmd=True)
+        host.get_event_handlers(self.hosts, self.sched.macromodulations, self.sched.timeperiods,
+                                externalcmd=True)
 
     def add_simple_host_dependency(self, son, father):
         """Add a host dependency between son and father
@@ -3596,7 +3615,7 @@ class ExternalCommandManager:
         :type father: alignak.objects.host.Host
         :return: None
         """
-        if not son.is_linked_with_host(father):
+        if not son.is_linked_with_host(father.uuid):
             logger.debug("Doing simple link between %s and %s", son.get_name(), father.get_name())
             # Flag them so the modules will know that a topology change
             # happened
@@ -3604,7 +3623,7 @@ class ExternalCommandManager:
             father.topology_change = True
             # Now do the work
             # Add a dep link between the son and the father
-            son.add_host_act_dependency(father, ['w', 'u', 'd'], None, True)
+            self.sched.hosts.add_act_dependency(son.uuid, father.uuid, ['w', 'u', 'd'], None, True)
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
@@ -3620,7 +3639,7 @@ class ExternalCommandManager:
         :type father: alignak.objects.host.Host
         :return: None
         """
-        if son.is_linked_with_host(father):
+        if son.is_linked_with_host(father.uuid):
             logger.debug("Removing simple link between %s and %s",
                          son.get_name(), father.get_name())
             # Flag them so the modules will know that a topology change
@@ -3628,7 +3647,7 @@ class ExternalCommandManager:
             son.topology_change = True
             father.topology_change = True
             # Now do the work
-            son.del_host_act_dependency(father)
+            self.sched.hosts.del_act_dependency(son.uuid, father.uuid)
             self.sched.get_and_register_status_brok(son)
             self.sched.get_and_register_status_brok(father)
 
@@ -3669,8 +3688,9 @@ class ExternalCommandManager:
         self.arbiter.conf.pollers[poll.uuid] = poll
         self.arbiter.dispatcher.elements.append(poll)
         self.arbiter.dispatcher.satellites.append(poll)
-        realm.pollers.append(poll)
-        realm.count_pollers()
-        realm.fill_potential_satellites_by_type('pollers')
+        realm.pollers.append(poll.uuid)
+        realm.count_pollers(self.arbiter.conf.pollers)
+        self.arbiter.conf.realms.fill_potential_satellites_by_type('pollers', realm,
+                                                                   self.arbiter.conf.pollers)
         logger.debug("Poller %s added", poller_name)
         logger.debug("Potential %s", str(realm.get_potential_satellites_by_type('poller')))

@@ -631,13 +631,12 @@ class SatelliteLinks(Items):
             # If no realm name, take the default one
             if r_name == '':
                 realm = realms.get_default()
-                satlink.realm = realm
             else:  # find the realm one
                 realm = realms.find_by_name(r_name)
-                satlink.realm = realm
             # Check if what we get is OK or not
             if realm is not None:
-                satlink.register_to_my_realm()
+                satlink.realm = realm.uuid
+                getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
             else:
                 err = "The %s %s got a unknown realm '%s'" % \
                       (satlink.__class__.my_type, satlink.get_name(), r_name)

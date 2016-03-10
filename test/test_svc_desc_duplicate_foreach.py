@@ -24,7 +24,7 @@ class ServiceDescriptionDuplicateForEach(AlignakTest):
 
     def test_all_duplicate_ok(self):
         host = self.sched.hosts.find_by_name("my_host")
-        services_desc = set(s.service_description for s in host.services)
+        services_desc = set(self.sched.services[s].service_description for s in host.services)
         expected = set(map(lambda i: 'Generated Service %s' % i, range(1, 4)))
         self.assertEqual(expected, services_desc)
 

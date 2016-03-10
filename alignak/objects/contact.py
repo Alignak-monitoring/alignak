@@ -71,8 +71,8 @@ class Contact(Item):
         'contactgroups':    ListProp(default=[], fill_brok=['full_status']),
         'host_notifications_enabled': BoolProp(default=True, fill_brok=['full_status']),
         'service_notifications_enabled': BoolProp(default=True, fill_brok=['full_status']),
-        'host_notification_period': StringProp(fill_brok=['full_status']),
-        'service_notification_period': StringProp(fill_brok=['full_status']),
+        'host_notification_period': StringProp(default='', fill_brok=['full_status']),
+        'service_notification_period': StringProp(default='', fill_brok=['full_status']),
         'host_notification_options': ListProp(default=[''], fill_brok=['full_status'],
                                               split_on_coma=True),
         'service_notification_options': ListProp(default=[''], fill_brok=['full_status'],
@@ -150,7 +150,8 @@ class Contact(Item):
         except AttributeError:
             return 'UnnamedContact'
 
-    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, notifways, timeperiods, downtimes,
+                                  timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
 
         :param timestamp: time we want to notify the contact (usually now)
@@ -170,14 +171,16 @@ class Contact(Item):
             return False
 
         # If we are in downtime, we do nto want notification
-        for downtime in self.downtimes:
+        for downtime_id in self.downtimes:
+            downtime = downtimes[downtime_id]
             if downtime.is_in_effect:
                 return False
 
         # Now the rest is for sub notificationways. If one is OK, we are ok
         # We will filter in another phase
-        for notifway in self.notificationways:
-            nw_b = notifway.want_service_notification(timestamp,
+        for notifway_id in self.notificationways:
+            notifway = notifways[notifway_id]
+            nw_b = notifway.want_service_notification(timeperiods, timestamp,
                                                       state, n_type, business_impact, cmd)
             if nw_b:
                 return True
@@ -185,7 +188,8 @@ class Contact(Item):
         # Oh... no one is ok for it? so no, sorry
         return False
 
-    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, notifways, timeperiods, timestamp, state, n_type,
+                               business_impact, cmd=None):
         """Check if notification options match the state of the host
 
         :param timestamp: time we want to notify the contact (usually now)
@@ -211,15 +215,17 @@ class Contact(Item):
 
         # Now it's all for sub notificationways. If one is OK, we are OK
         # We will filter in another phase
-        for notifway in self.notificationways:
-            nw_b = notifway.want_host_notification(timestamp, state, n_type, business_impact, cmd)
+        for notifway_id in self.notificationways:
+            notifway = notifways[notifway_id]
+            nw_b = notifway.want_host_notification(timeperiods, timestamp,
+                                                   state, n_type, business_impact, cmd)
             if nw_b:
                 return True
 
         # Oh, nobody..so NO :)
         return False
 
-    def get_notification_commands(self, n_type):
+    def get_notification_commands(self, notifways, n_type):
         """Get notification commands for object type
 
         :param n_type: object type (host or service)
@@ -230,7 +236,8 @@ class Contact(Item):
         res = []
         # service_notification_commands for service
         notif_commands_prop = n_type + '_notification_commands'
-        for notifway in self.notificationways:
+        for notifway_id in self.notificationways:
+            notifway = notifways[notifway_id]
             res.extend(getattr(notifway, notif_commands_prop))
         return res
 
@@ -343,7 +350,7 @@ class Contacts(Items):
             for nw_name in strip_and_uniq(i.notificationways):
                 notifway = notificationways.find_by_name(nw_name)
                 if notifway is not None:
-                    new_notificationways.append(notifway)
+                    new_notificationways.append(notifway.uuid)
                 else:
                     err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
                           (i.__class__.my_type, i.get_name(), nw_name)

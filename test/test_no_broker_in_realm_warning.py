@@ -60,7 +60,7 @@ class TestWarnAboutNoBrokerInRealm(AlignakTest):
         self.assertIsNot(dist, None)
         sched = self.conf.schedulers.find_by_name("Scheduler-distant")
         self.assertIsNot(sched, None)
-        self.assertEqual(0, len(sched.realm.potential_brokers))
+        self.assertEqual(0, len(self.conf.realms[sched.realm].potential_brokers))
 
 
 if __name__ == '__main__':

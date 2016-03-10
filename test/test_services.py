@@ -188,8 +188,8 @@ class TestService(AlignakTest):
         sg = self.sched.servicegroups.find_by_name("servicegroup_01")
         self.assertIsNot(sg, None)
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        self.assertIn(svc, sg.members)
-        self.assertIn(sg.get_name(), [sg.get_name() for sg in svc.servicegroups])
+        self.assertIn(svc.uuid, sg.members)
+        self.assertIn(sg.uuid, svc.servicegroups)
 
     # Look at the good of the last_hard_state_change
     def test_service_last_hard_state(self):
@@ -242,7 +242,7 @@ class TestService(AlignakTest):
         # Look if our host is a parent
         self.assertIn(svc.host, svc.parent_dependencies)
         # and if we are a child of it
-        self.assertIn(svc, svc.host.child_dependencies)
+        self.assertIn(svc.uuid, self.sched.hosts[svc.host].child_dependencies)
 
 
 if __name__ == '__main__':
