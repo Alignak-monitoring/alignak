@@ -57,6 +57,7 @@ from alignak.objects.commandcallitem import CommandCallItems
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger, naglog_result
+from alignak.commandcall import CommandCall
 
 
 class Contact(Item):
@@ -79,8 +80,8 @@ class Contact(Item):
         'service_notification_options': ListProp(default=[''], fill_brok=['full_status'],
                                                  split_on_coma=True),
         # To be consistent with notificationway object attributes
-        'host_notification_commands': ListProp(fill_brok=['full_status']),
-        'service_notification_commands': ListProp(fill_brok=['full_status']),
+        'host_notification_commands': ListProp(fill_brok=['full_status'], default=[]),
+        'service_notification_commands': ListProp(fill_brok=['full_status'], default=[]),
         'min_business_impact':    IntegerProp(default=0, fill_brok=['full_status']),
         'email':            StringProp(default='none', fill_brok=['full_status']),
         'pager':            StringProp(default='none', fill_brok=['full_status']),
@@ -139,6 +140,33 @@ class Contact(Item):
         'service_notification_commands', 'host_notification_commands',
         'min_business_impact'
     )
+
+    def __init__(self, params=None):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
+                    and isinstance(params[prop][0], dict):
+                new_list = [CommandCall(**elem) for elem in params[prop]]
+                # We recreate the object
+                setattr(self, prop, new_list)
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        super(Contact, self).__init__(params)
+
+    def serialize(self):
+        res = super(Contact, self).serialize()
+
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
+
+        return res
 
     def get_name(self):
         """Get contact name
@@ -395,7 +423,7 @@ class Contacts(CommandCallItems):
                 if hasattr(contact, param):
                     need_notificationway = True
                     params[param] = getattr(contact, param)
-                else:  # put a default text value
+                elif contact.properties[param].has_default:  # put a default text value
                     # Remove the value and put a default value
                     setattr(contact, param, contact.properties[param].default)
 

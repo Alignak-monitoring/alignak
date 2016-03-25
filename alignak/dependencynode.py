@@ -71,19 +71,41 @@ class DependencyNode(object):
     """
     DependencyNode is a node class for business_rule expression(s)
     """
-    def __init__(self):
-        self.operand = None
-        self.sons = []
-        # Of: values are a triple OK,WARN,CRIT
-        self.of_values = ('0', '0', '0')
-        self.is_of_mul = False
-        self.configuration_errors = []
-        self.not_value = False
+    def __init__(self, params=None):
+
+        if params is None:
+            self.operand = None
+            self.sons = []
+            # Of: values are a triple OK,WARN,CRIT
+            self.of_values = ('0', '0', '0')
+            self.is_of_mul = False
+            self.configuration_errors = []
+            self.not_value = False
+        else:
+            self.operand = params['operand']
+            self.sons = [DependencyNode(elem) for elem in params['sons']]
+            # Of: values are a triple OK,WARN,CRIT
+            self.of_values = params['of_values']
+            self.is_of_mul = params['is_of_mul']
+            self.not_value = params['not_value']
 
     def __str__(self):
         return "Op:'%s' Val:'%s' Sons:'[%s]' IsNot:'%s'" % (self.operand, self.of_values,
                                                             ','.join([str(s) for s in self.sons]),
                                                             self.not_value)
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a DependencyNode
+        :rtype: dict
+        """
+        return {'operand': self.operand, 'sons': [elem.serialize() for elem in self.sons],
+                'of_values': self.of_values, 'is_of_mul': self.is_of_mul,
+                'not_value': self.not_value}
 
     @staticmethod
     def get_reverse_state(state):

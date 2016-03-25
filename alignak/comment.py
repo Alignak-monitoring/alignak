@@ -46,7 +46,6 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
-from alignak.log import logger
 from alignak.objects.item import Item
 from alignak.property import StringProp, BoolProp, IntegerProp
 
@@ -116,64 +115,3 @@ class Comment(Item):
 
     def __str__(self):
         return "Comment id=%d %s" % (self.uuid, self.comment)
-
-    def __getstate__(self):
-        """Call by pickle to dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dictionary of properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """Inverted function of getstate
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-
-        # Maybe it's not a dict but a list like in the old 0.4 format
-        # so we should call the 0.4 function for it
-        if isinstance(state, list):
-            self.__setstate_deprecated__(state)
-            return
-
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-        # to prevent from duplicating id in comments:
-        if self.uuid >= cls.uuid:
-            cls.uuid = self.uuid + 1
-
-    def __setstate_deprecated__(self, state):
-        """In 1.0 we move to a dict save.
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-        # Check if the len of this state is like the previous,
-        # if not, we will do errors!
-        # -1 because of the 'uuid' prop
-        if len(cls.properties) != (len(state) - 1):
-            logger.debug("Passing comment")
-            return
-
-        self.uuid = state.pop()
-        for prop in cls.properties:
-            val = state.pop()
-            setattr(self, prop, val)
-        if self.uuid >= cls.uuid:
-            cls.uuid = self.uuid + 1

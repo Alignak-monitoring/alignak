@@ -19,7 +19,6 @@
 """This module provide a specific HTTP interface for a Scheduler."""
 
 import base64
-import cPickle
 import zlib
 
 import cherrypy
@@ -27,6 +26,7 @@ import cherrypy
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import average_percentile
+from alignak.misc.serialization import serialize
 
 
 class SchedulerInterface(GenericInterface):
@@ -68,7 +68,7 @@ class SchedulerInterface(GenericInterface):
         # print "Sending %d checks" % len(res)
         self.app.sched.nb_checks_send += len(res)
 
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+        return base64.b64encode(zlib.compress(serialize(res), 2))
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -114,7 +114,7 @@ class SchedulerInterface(GenericInterface):
         self.app.sched.nb_broks_send += len(res)
         # we do not more have a full broks in queue
         self.app.sched.brokers[bname]['has_full_broks'] = False
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+        return base64.b64encode(zlib.compress(serialize(res), 2))
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

@@ -68,26 +68,6 @@ class TestService(AlignakTest):
         self.assertEqual('test_host_0/test_ok_0', svc.get_full_name())
 
 
-    # getstate should be with all properties in dict class + id
-    # check also the setstate
-    def test___getstate__(self):
-        svc = self.get_svc()
-        cls = svc.__class__
-        # We get the state
-        state = svc.__getstate__()
-        # Check it's the good length
-        self.assertEqual(len(cls.properties) + len(cls.running_properties), len(state))
-        # we copy the service
-        svc_copy = copy.copy(svc)
-        # reset the state in the original service
-        svc.__setstate__(state)
-        # And it should be the same:then before :)
-        for p in cls.properties:
-            ## print getattr(svc_copy, p)
-            ## print getattr(svc, p)
-            self.assertEqual(getattr(svc, p), getattr(svc_copy, p) )
-
-
     # Look if it can detect all incorrect cases
     def test_is_correct(self):
         svc = self.get_svc()

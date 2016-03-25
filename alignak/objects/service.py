@@ -134,8 +134,8 @@ class Service(SchedulingItem):
             BoolProp(default=True, fill_brok=['full_status']),
 
         # Easy Service dep definition
-        'service_dependencies':  # TODO: find a way to brok it?
-            ListProp(default=None, merging='join', split_on_coma=True, keep_empty=True),
+        'service_dependencies':
+            ListProp(default=[], merging='join', split_on_coma=True, keep_empty=True),
 
         # service generator
         'duplicate_foreach':

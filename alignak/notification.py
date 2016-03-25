@@ -55,7 +55,7 @@ import time
 
 from alignak.action import Action
 from alignak.brok import Brok
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import BoolProp, IntegerProp, StringProp, SetProp
 from alignak.autoslots import AutoSlots
 
 
@@ -92,7 +92,7 @@ class Notification(Action):  # pylint: disable=R0902
         'sched_id':            IntegerProp(default=0),
         'enable_environment_macros': BoolProp(default=False),
         # Keep a list of currently active escalations
-        'already_start_escalations':  StringProp(default=set()),
+        'already_start_escalations':  SetProp(default=set()),
         'type':               StringProp(default='PROBLEM'),
 
     })
@@ -182,5 +182,5 @@ class Notification(Action):  # pylint: disable=R0902
         data = {'uuid': self.uuid}
 
         self.fill_data_brok_from(data, 'full_status')
-        brok = Brok('notification_raise', data)
+        brok = Brok({'type': 'notification_raise', 'data': data})
         return brok

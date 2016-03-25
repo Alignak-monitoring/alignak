@@ -68,7 +68,6 @@ from multiprocessing import active_children, cpu_count
 import os
 import copy
 import time
-import cPickle
 import traceback
 import zlib
 import base64
@@ -76,6 +75,8 @@ import threading
 
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.generic_interface import GenericInterface
+
+from alignak.misc.serialization import unserialize
 
 from alignak.message import Message
 from alignak.worker import Worker
@@ -233,7 +234,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         try:
             new_run_id = sch_con.get('get_running_id')
             new_run_id = float(new_run_id)
-        except (HTTPEXCEPTIONS, cPickle.PicklingError, KeyError), exp:
+        except (HTTPEXCEPTIONS, KeyError), exp:
             logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
                            self.name, sname, str(exp))
             sched['con'] = None
@@ -657,7 +658,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     # Explicit pickle load
                     tmp = base64.b64decode(tmp)
                     tmp = zlib.decompress(tmp)
-                    tmp = cPickle.loads(str(tmp))
+                    tmp = unserialize(str(tmp))
                     logger.debug("Ask actions to %d, got %d", sched_id, len(tmp))
                     # We 'tag' them with sched_id and put into queue for workers
                     # REF: doc/alignak-action-queues.png (2)

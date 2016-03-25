@@ -46,7 +46,6 @@
 """This module provides HTTPClient class. Used by daemon to connect to HTTP servers (other daemons)
 
 """
-import cPickle
 import json
 import warnings
 import zlib
@@ -55,6 +54,7 @@ import requests
 
 
 from alignak.log import logger
+from alignak.misc.serialization import serialize
 
 
 class HTTPException(Exception):
@@ -180,7 +180,7 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         for (key, value) in args.iteritems():
-            args[key] = cPickle.dumps(value)
+            args[key] = serialize(value)
         try:
             headers = {'content-type': 'application/zlib'}
             args = zlib.compress(json.dumps(args, ensure_ascii=False), 2)

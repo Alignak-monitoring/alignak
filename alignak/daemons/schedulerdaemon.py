@@ -56,10 +56,10 @@ import os
 import signal
 import time
 import traceback
-import cPickle
 from multiprocessing import process
 
 
+from alignak.misc.serialization import unserialize
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
@@ -237,7 +237,7 @@ class Alignak(BaseSatellite):
                               statsd_enabled=new_c['statsd_enabled'])
 
             t00 = time.time()
-            conf = cPickle.loads(conf_raw)
+            conf = unserialize(conf_raw)
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
@@ -298,7 +298,7 @@ class Alignak(BaseSatellite):
             self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")
-            self.conf.explode_global_conf()
+            self.conf.explode_global_conf()  # pylint: disable=E1101
 
             # we give sched it's conf
             self.sched.reset()

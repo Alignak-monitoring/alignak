@@ -74,12 +74,14 @@ import socket
 import itertools
 import time
 import random
-import cPickle
 import tempfile
 from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
 
+from alignak.misc.serialization import serialize
+
+from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
 from alignak.objects.timeperiod import Timeperiod, Timeperiods
 from alignak.objects.service import Service, Services
@@ -790,8 +792,34 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
                            'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
-    def __init__(self):
-        super(Config, self).__init__()
+    def __init__(self, params=None):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['ocsp_command', 'ochp_command',
+                     'host_perfdata_command', 'service_perfdata_command',
+                     'global_host_event_handler', 'global_service_event_handler']:
+            if prop in params and isinstance(params[prop], dict):
+                # We recreate the object
+                setattr(self, prop, CommandCall(**params[prop]))
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+
+        for _, clss, strclss, _ in self.types_creations.values():
+            if strclss in params and isinstance(params[strclss], dict):
+                setattr(self, strclss, clss(params[strclss]))
+                del params[strclss]
+
+        for clss, prop in [(Triggers, 'triggers'), (Packs, 'packs')]:
+            if prop in params and isinstance(params[prop], dict):
+                setattr(self, prop, clss(params[prop]))
+                del params[prop]
+            else:
+                setattr(self, prop, clss({}))
+
+        super(Config, self).__init__(params)
         self.params = {}
         self.resource_macros_names = []
         # By default the conf is correct
@@ -802,11 +830,26 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.magic_hash = random.randint(1, 100000)
         self.configuration_errors = []
         self.triggers_dirs = []
-        self.triggers = Triggers({})
         self.packs_dirs = []
-        self.packs = Packs({})
-        self.hosts = Hosts({})
-        self.services = Services({})
+
+    def serialize(self):
+        res = super(Config, self).serialize()
+        if hasattr(self, 'instance_id'):
+            res['instance_id'] = self.instance_id
+        # The following are not in properties so not in the dict
+        for prop in ['triggers', 'packs', 'hosts',
+                     'services', 'hostgroups', 'notificationways',
+                     'checkmodulations', 'macromodulations', 'businessimpactmodulations',
+                     'resultmodulations', 'contacts', 'contactgroups',
+                     'servicegroups', 'timeperiods', 'commands',
+                     'escalations', 'ocsp_command', 'ochp_command',
+                     'host_perfdata_command', 'service_perfdata_command',
+                     'global_host_event_handler', 'global_service_event_handler']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = getattr(self, prop).serialize()
+        return res
 
     def get_name(self):
         """Get config name
@@ -1406,14 +1449,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     conf.hostgroups.prepare_for_sending()
                     logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
                     t00 = time.time()
-                    realm.serialized_confs[i] = cPickle.dumps(conf, 0)  # cPickle.HIGHEST_PROTOCOL)
+                    realm.serialized_confs[i] = serialize(conf)
                     logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                  realm.get_name(), i, time.time() - t00,
                                  len(realm.serialized_confs[i]))
                     logger.debug("PICKLE LEN : %d", len(realm.serialized_confs[i]))
             # Now pickle the whole conf, for easy and quick spare send
             t00 = time.time()
-            whole_conf_pack = cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL)
+            whole_conf_pack = serialize(self)
             logger.debug("[config] time to serialize the global conf : %s (size:%s)",
                          time.time() - t00, len(whole_conf_pack))
             self.whole_conf_pack = whole_conf_pack
@@ -1443,7 +1486,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         conf.hostgroups.prepare_for_sending()
                         logger.debug('[%s] Serializing the configuration %d', rname, cid)
                         t00 = time.time()
-                        res = cPickle.dumps(conf, cPickle.HIGHEST_PROTOCOL)
+                        res = serialize(conf)
                         logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                      rname, cid, time.time() - t00, len(res))
                         comm_q.append((cid, res))
@@ -1488,7 +1531,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 """The function that just compute the whole conf pickle string, but n a children
                 """
                 logger.debug("[config] sub processing the whole configuration pack creation")
-                whole_queue.append(cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL))
+                whole_queue.append(serialize(self))
                 logger.debug("[config] sub processing the whole configuration pack creation "
                              "finished")
             # Go for it
@@ -2124,8 +2167,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         pollers_tag = set()
         for host in self.hosts:
             hosts_tag.add(host.poller_tag)
-        for scheduler in self.services:
-            services_tag.add(scheduler.poller_tag)
+        for service in self.services:
+            services_tag.add(service.poller_tag)
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
@@ -2498,8 +2541,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for servicegroup in self.servicegroups:
                 new_servicegroups.append(servicegroup.copy_shell())
             cur_conf.servicegroups = Servicegroups(new_servicegroups)
-            cur_conf.hosts = []  # will be fill after
-            cur_conf.services = []  # will be fill after
+            # Create ours classes
+            cur_conf.hosts = Hosts([])
+            cur_conf.services = Services([])
+
             # The elements of the others conf will be tag here
             cur_conf.other_elements = {}
             # if a scheduler have accepted the conf
@@ -2521,10 +2566,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 for host_id in realm.packs[i]:
                     host = self.hosts[host_id]
                     host.pack_id = i
-                    self.confs[i + offset].hosts.append(host)
+                    self.confs[i + offset].hosts.add_item(host)
                     for serv_id in host.services:
                         serv = self.services[serv_id]
-                        self.confs[i + offset].services.append(serv)
+                        self.confs[i + offset].services.add_item(serv)
                 # Now the conf can be link in the realm
                 realm.confs[i + offset] = self.confs[i + offset]
             offset += len(realm.packs)
@@ -2537,9 +2582,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # print "Finishing pack Nb:", i
             cfg = self.confs[i]
 
-            # Create ours classes
-            cfg.hosts = Hosts(cfg.hosts)
-            cfg.services = Services(cfg.services)
             # Fill host groups
             for ori_hg in self.hostgroups:
                 hostgroup = cfg.hostgroups.find_by_name(ori_hg.get_name())
@@ -2657,7 +2699,7 @@ def lazy():
     TODO: Should be removed
     """
     # let's compute the "USER" properties and macros..
-    for i in xrange(1, 256):
+    for i in xrange(1, 15):
         i = str(i)
         Config.properties['$USER' + str(i) + '$'] = StringProp(default='')
         Config.macros['USER' + str(i)] = '$USER' + i + '$'

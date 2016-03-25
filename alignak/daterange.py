@@ -123,7 +123,7 @@ class Timerange(object):
 
     """
 
-    def __init__(self, entry):
+    def __init__(self, entry=None, params=None):
         """Entry is like 00:00-24:00
 
         :param entry: time range entry
@@ -647,17 +647,20 @@ class Daterange(AbstractDaterange):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
     def serialize(self):
-        res = super(Daterange, self).serialize()
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
 
-        res['content'] = {'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
-                          'swday': self.swday, 'swday_offset': self.swday_offset,
-                          'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
-                          'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
-                          'skip_interval': self.skip_interval, 'other': self.other,
-                          'timeranges': [t.serialize() for t in self.timeranges]}
+        Here we directly return all attributes
 
-        for timeinterval in other.split(','):
-            self.timeranges.append(Timerange(timeinterval.strip()))
+        :return: json representation of a Daterange
+        :rtype: dict
+        """
+        return {'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
+                'swday': self.swday, 'swday_offset': self.swday_offset,
+                'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
+                'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
+                'skip_interval': self.skip_interval, 'other': self.other,
+                'timeranges': [t.serialize() for t in self.timeranges]}
 
 
 class CalendarDaterange(Daterange):
@@ -701,6 +704,18 @@ class StandardDaterange(AbstractDaterange):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
         self.day = params['day']
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Daterange
+        :rtype: dict
+        """
+        return {'day': self.day, 'other': self.other,
+                'timeranges': [t.serialize() for t in self.timeranges]}
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid

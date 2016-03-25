@@ -65,9 +65,9 @@ import time
 import traceback
 import socket
 import cStringIO
-import cPickle
 import json
 
+from alignak.misc.serialization import unserialize
 from alignak.objects.config import Config
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
@@ -554,7 +554,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             conf = self.new_conf
             if not conf:
                 return
-            conf = cPickle.loads(conf)
+            conf = unserialize(conf)
             self.new_conf = None
             self.cur_conf = conf
             self.conf = conf

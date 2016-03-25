@@ -72,7 +72,6 @@ import os
 import cStringIO
 import tempfile
 import traceback
-import cPickle
 import threading
 from collections import defaultdict
 
@@ -90,6 +89,7 @@ from alignak.load import Load
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
+from alignak.misc.serialization import unserialize
 
 
 class Scheduler(object):  # pylint: disable=R0902
@@ -1133,9 +1133,8 @@ class Scheduler(object):  # pylint: disable=R0902
                         results = results.encode("utf8", 'ignore')
                         # and data will be invalid, socatch by the pickle.
 
-                    # now go the cpickle pass, and catch possible errors from it
                     try:
-                        results = cPickle.loads(results)
+                        results = unserialize(results)
                     except Exception, exp:  # pylint: disable=W0703
                         logger.error('Cannot load passive results from satellite %s : %s',
                                      poll['name'], str(exp))
@@ -1171,7 +1170,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     # Before ask a call that can be long, do a simple ping to be sure it is alive
                     con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
-                    results = cPickle.loads(str(results))
+                    results = unserialize(str(results))
                     nb_received = len(results)
                     self.nb_check_received += nb_received
                     logger.debug("Received %d passive results", nb_received)
@@ -1473,7 +1472,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         # First a Brok for delete all from my instance_id
-        brok = Brok('clean_all_my_instance_id', {'instance_id': self.instance_id})
+        brok = Brok({'type': 'clean_all_my_instance_id', 'data': {'instance_id': self.instance_id}})
         self.add_brok(brok, bname)
 
         # first the program status
@@ -1508,7 +1507,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 item.raise_initial_state()
 
         # Add a brok to say that we finished all initial_pass
-        brok = Brok('initial_broks_done', {'instance_id': self.instance_id})
+        brok = Brok({'type': 'initial_broks_done', 'data': {'instance_id': self.instance_id}})
         self.add_brok(brok, bname)
 
         # We now have all full broks
@@ -1572,7 +1571,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 'check_host_freshness': self.conf.check_host_freshness,
                 'command_file': self.conf.command_file
                 }
-        brok = Brok('program_status', data)
+        brok = Brok({'type': 'program_status', 'data': data})
         return brok
 
     def consume_results(self):

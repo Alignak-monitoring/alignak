@@ -136,58 +136,6 @@ class Command(Item):
                 # elif 'default' in entry[prop]:
                 #    data[prop] = entry.default
 
-    def __getstate__(self):
-        """
-        Call by pickle to dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dictionary with properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-
-        return res
-
-    def __setstate__(self, state):
-        """
-        Inversed function of getstate
-
-        :param state:
-        :type state:
-        :return: None
-        """
-        cls = self.__class__
-        # We move during 1.0 to a dict state
-        # but retention file from 0.8 was tuple
-        if isinstance(state, tuple):
-            self.__setstate_pre_1_0__(state)
-            return
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-    def __setstate_pre_1_0__(self, state):
-        """
-        In 1.0 we move to a dict save. Before, it was
-        a tuple save, like
-        ({'uuid': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
-        'command_line': u'/usr/local/nagios/bin/rss-multiuser',
-        'module_type': 'fork', 'command_name': u'notify-by-rss'})
-
-        :param state: state dictionary
-        :type state: dict
-        :return: None
-        """
-        for state_d in state:
-            for key, val in state_d.items():
-                setattr(self, key, val)
-
 
 class Commands(Items):
     """

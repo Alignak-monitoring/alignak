@@ -439,6 +439,10 @@ def list_split(val, split_on_coma=True):
         return val
     new_val = []
     for subval in val:
+        # This happens when re-seriliazing
+        # TODO: Do not pythonize on re-serialization
+        if isinstance(subval, list):
+            continue
         new_val.extend(subval.split(','))
     return new_val
 

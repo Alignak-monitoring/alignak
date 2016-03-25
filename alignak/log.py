@@ -64,9 +64,6 @@ from logging.handlers import TimedRotatingFileHandler  # pylint: disable=C0412
 from termcolor import cprint
 
 
-from alignak.brok import Brok
-
-
 # obj = None
 # name = None
 HUMAN_TIMESTAMP_LOG = False
@@ -96,7 +93,9 @@ class BrokHandler(Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            brok = Brok('log', {'log': msg + '\n'})
+            # Needed otherwise import loop (log -> brok -> serialization)
+            from alignak.brok import Brok
+            brok = Brok({'type': 'log', 'data': {'log': msg + '\n'}})
             self._broker.add(brok)
         except TypeError:
             self.handleError(record)

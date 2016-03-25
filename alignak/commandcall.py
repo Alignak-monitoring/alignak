@@ -49,19 +49,10 @@
 (resolve macro, parse commands etc)
 
 """
-import uuid
+import uuid as uuidmod
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp, BoolProp, IntegerProp, ListProp
 from alignak.objects.command import Command
-
-class DummyCommandCall(object):  # pylint: disable=R0903
-    """Ok, slots are fun: you cannot set the __autoslots__
-     on the same class you use, fun isn't it? So we define*
-     a dummy useless class to get such :)
-
-    TODO: Remove this class and use __slots__ properly
-    """
-    pass
 
 
 class CommandCall(DummyCommandCall):
@@ -83,20 +74,19 @@ class CommandCall(DummyCommandCall):
         'reactionner_tag': StringProp(default='None'),
         'module_type':     StringProp(default='fork'),
         'valid':           BoolProp(default=False),
-        'args':            StringProp(default=[]),
+        'args':            ListProp(default=[]),
         'timeout':         IntegerProp(default=-1),
         'late_relink_done': BoolProp(default=False),
         'enable_environment_macros': BoolProp(default=False),
     }
 
-    def __init__(self, commands, call, poller_tag='None',
-                 reactionner_tag='None', enable_environment_macros=False):
+    def __init__(self, params):
 
         if commands is not None:
             self.uuid = uuidmod.uuid4().hex
             self.timeout = -1
-            self.get_command_and_args()
-            self.command = commands.find_by_name(self.command.strip())
+            command, self.args = self.get_command_and_args()
+            self.command = commands.find_by_name(command)
             self.late_relink_done = False  # To do not relink again and again the same commandcall
             self.valid = self.command is not None
             if self.valid:
@@ -115,18 +105,10 @@ class CommandCall(DummyCommandCall):
                     # from command if not set
                     self.reactionner_tag = self.command.reactionner_tag
         else:
-            self.uuid = uuid
-            self.timeout = timeout
-            self.module_type = module_type
-            self.args = args
-            self.command = Command(command)
-            self.late_relink_done = late_relink_done
-            self.valid = valid
-            self.poller_tag = poller_tag
-            self.reactionner_tag = reactionner_tag
+            super(CommandCall, self).__init__(params)
+            self.command = Command(params['command'])
 
     def serialize(self):
-        # TODO: Make it generic by inerthing from a higher class
         cls = self.__class__
         # id is not in *_properties
         res = {'uuid': self.uuid}
@@ -148,10 +130,7 @@ class CommandCall(DummyCommandCall):
         # First protect
         p_call = self.call.replace(r'\!', '___PROTECT_EXCLAMATION___')
         tab = p_call.split('!')
-        self.command = tab[0]
-        # Reverse the protection
-        self.args = [s.replace('___PROTECT_EXCLAMATION___', '!')
-                     for s in tab[1:]]
+        return tab[0].strip(), [s.replace('___PROTECT_EXCLAMATION___', '!') for s in tab[1:]]
 
     def is_valid(self):
         """Getter for valid attribute
@@ -171,53 +150,3 @@ class CommandCall(DummyCommandCall):
         :rtype: str
         """
         return self.call
-
-    def __getstate__(self):
-        """Call by pickle to dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dictionary with properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-
-        return res
-
-    def __setstate__(self, state):
-        """Inverted function of getstate
-
-        :return: None
-        """
-        cls = self.__class__
-        # We move during 1.0 to a dict state
-        # but retention file from 0.8 was tuple
-        if isinstance(state, tuple):
-            self.__setstate_pre_1_0__(state)
-            return
-
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-    def __setstate_pre_1_0__(self, state):
-        """In 1.0 we move to a dict save. Before, it was
-        a tuple save, like
-        ({'uuid': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
-        'command_line': u'/usr/local/nagios/bin/rss-multiuser',
-        'module_type': 'fork', 'command_name': u'notify-by-rss'})
-
-        :param state: state dictionary
-        :type state: dict
-        :return: None
-        TODO: Clean this
-        """
-        for d_state in state:
-            for key, val in d_state.items():
-                setattr(self, key, val)

@@ -349,5 +349,5 @@ class Downtime(AlignakObject):
         data = {'uuid': self.uuid}
 
         self.fill_data_brok_from(data, 'full_status')
-        brok = Brok('downtime_raise', data)
+        brok = Brok({'type': 'downtime_raise', 'data': data})
         return brok

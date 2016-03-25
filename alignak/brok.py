@@ -48,35 +48,43 @@
 Brok are filled depending on their type (check_result, initial_state ...)
 
 """
-import cPickle
 import time
 import uuid
 import warnings
-try:
-    import ujson
-    UJSON_INSTALLED = True
-except ImportError:
-    UJSON_INSTALLED = False
+
+from alignak.misc.serialization import serialize, unserialize
 
 
-class Brok:  # pylint: disable=E1001
+class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
     """
     __slots__ = ('__dict__', 'uuid', 'type', 'data', 'prepared', 'instance_id')
     my_type = 'brok'
 
-    def __init__(self, _type, data):
-        self.type = _type
-        self.uuid = uuid.uuid4().hex
-        self.instance_id = None
-        if self.use_ujson():
-            # pylint: disable=E1101
-            self.data = ujson.dumps(data)
+    def __init__(self, params):
+        self.uuid = params.get('uuid', uuid.uuid4().hex)
+        self.type = params['type']
+        self.instance_id = params.get('instance_id', None)
+        # Again need to behave diffrently when un-serializing
+        if 'uuid' in params:
+            self.data = params['data']
         else:
-            self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
-        self.prepared = False
-        self.creation_time = time.time()
+            self.data = serialize(params['data'])
+        self.prepared = params.get('prepared', False)
+        self.creation_time = params.get('creation_time', time.time())
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Brok
+        :rtype: dict
+        """
+        return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
+                "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
 
     def __str__(self):
         return str(self.__dict__) + '\n'
@@ -108,26 +116,7 @@ class Brok:  # pylint: disable=E1001
         # Maybe the brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            if self.use_ujson():
-                # pylint: disable=E1101
-                self.data = ujson.loads(self.data)
-            else:
-                self.data = cPickle.loads(self.data)
+            self.data = unserialize(self.data)
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
-
-    def use_ujson(self):
-        """
-        Check if we use ujson or cPickle
-
-        :return: True if type in list allowed, otherwise False
-        :rtype: bool
-        """
-        if not UJSON_INSTALLED:
-            return False
-        types_allowed = ['unknown_host_check_result', 'unknown_service_check_result', 'log',
-                         'notification_raise', 'clean_all_my_instance_id', 'initial_broks_done',
-                         'host_next_schedule', 'service_next_schedule', 'host_snapshot',
-                         'service_snapshot', 'host_check_result', 'service_check_result']
-        return self.type in types_allowed

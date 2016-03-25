@@ -277,7 +277,7 @@ class TestCommand(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -302,11 +302,11 @@ class TestContactgroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('members', None),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', None),
+        ('unknown_members', []),
         ('uuid', ''),
         ])
 
@@ -331,7 +331,7 @@ class TestContact(PropertiesTester, AlignakTest):
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -371,7 +371,7 @@ class TestEscalation(PropertiesTester, AlignakTest):
         ('contact_groups', []),
         ('contacts', []),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -393,7 +393,7 @@ class TestHostdependency(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -423,7 +423,7 @@ class TestHostescalation(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -445,7 +445,7 @@ class TestHostextinfo(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -473,11 +473,11 @@ class TestHostgroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('members', None),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', None),
+        ('unknown_members', []),
         ('uuid', ''),
         ('notes', ''),
         ('notes_url', ''),
@@ -500,7 +500,7 @@ class TestHost(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -589,7 +589,7 @@ class TestModule(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -614,7 +614,7 @@ class TestNotificationway(PropertiesTester, AlignakTest):
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -636,7 +636,7 @@ class TestPack(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -656,11 +656,11 @@ class TestRealm(PropertiesTester, AlignakTest):
     properties = dict([
         ('members', None),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', None),
+        ('unknown_members', []),
         ('uuid', ''),
         ('realm_members', []),
         ('higher_realms', []),
@@ -681,7 +681,7 @@ class TestResultmodulation(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -703,7 +703,7 @@ class TestServicedependency(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -734,7 +734,7 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -756,7 +756,7 @@ class TestServiceextinfo(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -780,11 +780,11 @@ class TestServicegroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('members', None),
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', None),
+        ('unknown_members', []),
         ('uuid', ''),
         ('notes', ''),
         ('notes_url', ''),
@@ -807,7 +807,7 @@ class TestService(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
@@ -896,7 +896,7 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('definition_order', 100),
         ('name', ''),
         ('alias', ''),
@@ -921,7 +921,7 @@ class TestTrigger(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('imported_from', 'unknown'),
-        ('use', None),
+        ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),

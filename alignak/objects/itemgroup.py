@@ -73,7 +73,7 @@ class Itemgroup(Item):
     properties.update({
         'members': ListProp(fill_brok=['full_status'], default=None, split_on_coma=True),
         # Alignak specific
-        'unknown_members': ListProp(default=None),
+        'unknown_members': ListProp(default=[]),
     })
 
     def copy_shell(self):
@@ -218,7 +218,7 @@ class Itemgroup(Item):
             member = items[m_id]
             # it look like lisp! ((( ..))), sorry....
             data['members'].append((member.uuid, member.get_name()))
-        brok = Brok('initial_' + cls.my_type + '_status', data)
+        brok = Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
         return brok
 
 

@@ -121,7 +121,6 @@ action or not if we are in right period
 
 import time
 import re
-import uuid
 import warnings
 
 from alignak.objects.item import Item, Items
@@ -132,6 +131,7 @@ from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
 from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
 from alignak.log import logger, naglog_result
+from alignak.misc.serialization import get_alignak_class
 
 
 class Timeperiod(Item):
@@ -152,21 +152,13 @@ class Timeperiod(Item):
         # These are needed if a broker module calls methods on timeperiod objects
         'dateranges':       ListProp(fill_brok=['full_status'], default=[]),
         'exclude':          ListProp(fill_brok=['full_status'], default=[]),
+        'unresolved':          ListProp(fill_brok=['full_status'], default=[]),
+        'invalid_entries':          ListProp(fill_brok=['full_status'], default=[]),
         'is_active':        BoolProp(default=False)
     })
     running_properties = Item.running_properties.copy()
 
     def __init__(self, params=None):
-        self.uuid = uuid.uuid4().hex
-        self.unresolved = []
-        self.dateranges = []
-        self.exclude = []
-
-        self.invalid_entries = []
-        self.cache = {}  # For tuning purpose only
-        self.invalid_cache = {}  # same but for invalid search
-        self.is_active = None
-        self.tags = set()
 
         if params is None:
             params = {}
@@ -192,14 +184,47 @@ class Timeperiod(Item):
             del standard_params['dateranges']
         # Handle standard params
         super(Timeperiod, self).__init__(params=standard_params)
-        # Handle timeperiod params
-        for key, value in timeperiod_params.items():
-            if isinstance(value, list):
-                if value:
-                    value = value[-1]
-                else:
-                    value = ''
-            self.unresolved.append(key + ' ' + value)
+        self.cache = {}  # For tuning purpose only
+        self.invalid_cache = {}  # same but for invalid search
+
+        # We use the uuid presence to assume we are reserializing
+        if 'uuid' in params:
+            self.uuid = params['uuid']
+        else:
+            # Initial creation here, uuid already created in super
+            self.unresolved = []
+            self.dateranges = []
+            self.exclude = []
+            self.invalid_entries = []
+            self.is_active = False
+
+            # Handle timeperiod params
+            for key, value in timeperiod_params.items():
+                if isinstance(value, list):
+                    if value:
+                        value = value[-1]
+                    else:
+                        value = ''
+                self.unresolved.append(key + ' ' + value)
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Timeperiod
+        :rtype: dict
+        """
+        res = super(Timeperiod, self).serialize()
+
+        res['dateranges'] = []
+        for elem in self.dateranges:
+            res['dateranges'].append({'__sys_python_module__': "%s.%s" % (elem.__module__,
+                                                                          elem.__class__.__name__),
+                                      'content': elem.serialize()})
+
+        return res
 
     def get_name(self):
         """

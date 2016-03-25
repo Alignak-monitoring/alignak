@@ -61,12 +61,12 @@ import os
 import sys
 import time
 import traceback
-import cPickle
 import base64
 import zlib
 import threading
 from multiprocessing import active_children
 
+from alignak.misc.serialization import unserialize
 from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
@@ -385,8 +385,8 @@ class Broker(BaseSatellite):
                     con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
-                        tmp_broks = cPickle.loads(zlib.decompress(base64.b64decode(tmp_broks)))
-                    except (TypeError, zlib.error, cPickle.PickleError), exp:
+                        tmp_broks = unserialize(zlib.decompress(base64.b64decode(tmp_broks)))
+                    except (TypeError, zlib.error), exp:
                         logger.error('Cannot load broks data from %s : %s',
                                      links[sched_id]['name'], exp)
                         links[sched_id]['con'] = None

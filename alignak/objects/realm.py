@@ -592,7 +592,6 @@ class Realms(Itemgroups):
                     # Append elem to realm.potential_TYPE
                     getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
 
-
                 # Now we look for potential_TYPE in higher realm
                 # if the TYPE manage sub realm then it's a potential TYPE
                 # We also need to count TYPE

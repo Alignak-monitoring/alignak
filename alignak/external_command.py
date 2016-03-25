@@ -64,12 +64,12 @@ import time
 import re
 
 from alignak.util import to_int, to_bool, split_semicolon
+from alignak.objects.pollerlink import PollerLink
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.commandcall import CommandCall
 from alignak.log import logger, naglog_result
-from alignak.objects.pollerlink import PollerLink
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
@@ -668,7 +668,7 @@ class ExternalCommandManager:
             data['output'] = match.group(5)
             data['perf_data'] = match.group(6)
 
-        brok = Brok('unknown_%s_check_result' % match.group(2).lower(), data)
+        brok = Brok({'type': 'unknown_%s_check_result' % match.group(2).lower(), 'data': data})
 
         return brok
 

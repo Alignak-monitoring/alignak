@@ -350,7 +350,7 @@ class SetProp(ListProp):
         :return: set corresponding to the value
         :rtype: set
         """
-        return set(super(SetProp, self).__init__(val))
+        return set(super(SetProp, self).pythonize(val))
 
 
 class LogLevelProp(StringProp):

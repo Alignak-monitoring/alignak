@@ -67,7 +67,7 @@ import warnings
 
 from copy import copy
 
-from alignak.property import (StringProp, ListProp, BoolProp,
+from alignak.property import (StringProp, ListProp, BoolProp, SetProp,
                               IntegerProp, ToGuessProp, PythonizeError)
 from alignak.brok import Brok
 from alignak.util import strip_and_uniq, is_complex_expr
@@ -84,7 +84,7 @@ class Item(object):
     """
     properties = {
         'imported_from':            StringProp(default='unknown'),
-        'use':                      ListProp(default=None, split_on_coma=True),
+        'use':                      ListProp(default=[], split_on_coma=True),
         'name':                     StringProp(default=''),
         'definition_order':         IntegerProp(default=100),
         # TODO: find why we can't uncomment this line below.
@@ -97,7 +97,7 @@ class Item(object):
         'configuration_warnings':   ListProp(default=[]),
         'configuration_errors':     ListProp(default=[]),
         # We save all template we asked us to load from
-        'tags': ListProp(default=set(), fill_brok=['full_status']),
+        'tags': SetProp(default=set(), fill_brok=['full_status']),
     }
 
     macros = {
@@ -146,7 +146,7 @@ class Item(object):
                     else:
                         val = ''
                 else:
-                    warning = "Guessing the property %s type because" \
+                    warning = "Guessing the property %s type because " \
                               "it is not in %s object properties" % \
                               (key, cls.__name__)
                     self.configuration_warnings.append(warning)
@@ -294,6 +294,35 @@ class Item(object):
         for prop, entry in cls.properties.items():
             if not hasattr(self, prop) and entry.has_default:
                 setattr(self, prop, entry.default)
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here is the generic function that simply export attributes declared in the
+        properties dictionary and the running_properties of the object.
+
+        :return: Dictionary containing key and value from properties and running_properties
+        :rtype: dict
+        """
+        cls = self.__class__
+        # id is not in *_properties
+        res = {'uuid': self.uuid}
+        for prop in cls.properties:
+            if hasattr(self, prop):
+                if isinstance(cls.properties[prop], SetProp):
+                    res[prop] = list(getattr(self, prop))
+                else:
+                    res[prop] = getattr(self, prop)
+
+        for prop in cls.running_properties:
+            if hasattr(self, prop):
+                if isinstance(cls.running_properties[prop], SetProp):
+                    res[prop] = list(getattr(self, prop))
+                else:
+                    res[prop] = getattr(self, prop)
+
+        return res
 
     @classmethod
     def load_global_conf(cls, conf):
@@ -571,7 +600,7 @@ class Item(object):
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
-        return Brok('initial_' + self.my_type + '_status', data)
+        return Brok({'type': 'initial_' + self.my_type + '_status', 'data': data})
 
     def get_update_status_brok(self):
         """
@@ -582,7 +611,7 @@ class Item(object):
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
-        return Brok('update_' + self.my_type + '_status', data)
+        return Brok({'type': 'update_' + self.my_type + '_status', 'data': data})
 
     def get_check_result_brok(self):
         """
@@ -593,7 +622,7 @@ class Item(object):
         """
         data = {}
         self.fill_data_brok_from(data, 'check_result')
-        return Brok(self.my_type + '_check_result', data)
+        return Brok({'type': self.my_type + '_check_result', 'data': data})
 
     def get_next_schedule_brok(self):
         """
@@ -604,7 +633,7 @@ class Item(object):
         """
         data = {}
         self.fill_data_brok_from(data, 'next_schedule')
-        return Brok(self.my_type + '_next_schedule', data)
+        return Brok({'type': self.my_type + '_next_schedule', 'data': data})
 
     def get_snapshot_brok(self, snap_output, exit_status):
         """
@@ -623,7 +652,7 @@ class Item(object):
             'snapshot_exit_status': exit_status,
         }
         self.fill_data_brok_from(data, 'check_result')
-        return Brok(self.my_type + '_snapshot', data)
+        return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
     def explode_trigger_string_into_triggers(self, triggers):
         """
@@ -701,7 +730,13 @@ class Items(object):
         self.name_to_template = {}
         self.configuration_warnings = []
         self.configuration_errors = []
-        self.add_items(items, index_items)
+
+        # We are un-serializing
+        if isinstance(items, dict):
+            for item in items.values():
+                self.add_item(self.inner_class(item))
+        else:
+            self.add_items(items, index_items)
 
     @staticmethod
     def get_source(item):
@@ -1137,6 +1172,20 @@ class Items(object):
             self.__class__.__name__, len(self), len(self.name_to_template))
 
     __repr__ = __str__
+
+    def serialize(self):
+        """This function serialize items into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here is the generic function that simply serialize each item of the items object
+
+        :return: Dictionary containing item's uuid as key and item as value
+        :rtype: dict
+        """
+        res = {}
+        for key, item in self.items.iteritems():
+            res[key] = item.serialize()
+        return res
 
     def apply_partial_inheritance(self, prop):
         """

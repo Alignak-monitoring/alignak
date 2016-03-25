@@ -69,6 +69,7 @@ import traceback
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
+from alignak.dependencynode import DependencyNode
 
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
@@ -81,6 +82,7 @@ from alignak.dependencynode import DependencyNodeFactory
 from alignak.acknowledge import Acknowledge
 from alignak.comment import Comment
 from alignak.log import logger
+from alignak.commandcall import CommandCall
 
 
 class SchedulingItem(Item):  # pylint: disable=R0902
@@ -373,9 +375,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # we save only the names of the contacts, and we should RELINK
         # them when we load it.
         # use for having all contacts we have notified
-        'notified_contacts':  ListProp(default=set(),
-                                       retention=True,
-                                       retention_preparation=to_list_of_names),
+        'notified_contacts':  SetProp(default=set(),
+                                      retention=True,
+                                      retention_preparation=to_list_of_names),
         'in_scheduled_downtime': BoolProp(
             default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
@@ -445,35 +447,62 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     special_properties = []
 
-    def __getstate__(self):
-        """Call by pickle to data-ify the host
-        we do a dict because list are too dangerous for
-        retention save and co :( even if it's more
-        extensive
+    def __init__(self, params=None):
+        if params is None:
+            params = {}
 
-        :return: dictionary with attributes
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        for prop in cls.running_properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['check_command', 'event_handler', 'snapshot_command']:
+            if prop in params and isinstance(params[prop], dict):
+                # We recreate the object
+                setattr(self, prop, CommandCall(**params[prop]))
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        if 'business_rule' in params and isinstance(params['business_rule'], dict):
+            self.business_rule = DependencyNode(params['business_rule'])
+            del params['business_rule']
+        if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
+            self.acknowledgement = Acknowledge(**params['acknowledgement'])
+        super(SchedulingItem, self).__init__(params)
+
+    def serialize(self):
+        res = super(SchedulingItem, self).serialize()
+
+        for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
+                     'acknowledgement']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = getattr(self, prop).serialize()
+
         return res
 
-    def __setstate__(self, state):
-        cls = self.__class__
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        for prop in cls.running_properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
+    def linkify_with_triggers(self, triggers):
+        """
+        Link with triggers
+
+        :param triggers: Triggers object
+        :type triggers: alignak.objects.trigger.Triggers
+        :return: None
+        """
+        # Get our trigger string and trigger names in the same list
+        self.triggers.extend([self.trigger_name])
+        # print "I am linking my triggers", self.get_full_name(), self.triggers
+        new_triggers = []
+        for tname in self.triggers:
+            if tname == '':
+                continue
+            trigger = triggers.find_by_name(tname)
+            if trigger:
+                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
+                new_triggers.append(trigger.uuid)
+            else:
+                self.configuration_errors.append('the %s %s does have a unknown trigger_name '
+                                                 '"%s"' % (self.__class__.my_type,
+                                                           self.get_full_name(),
+                                                           tname))
+        self.triggers = new_triggers
 
     def register_son_in_parent_child_dependencies(self, son):
         """Register a child dependency in this object
@@ -2152,11 +2181,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             }
             chk = Check(data)
 
-            # We keep a trace of all checks in progress
-            # to know if we are in checking_or not
-            #if self.checks_in_progress == []:
-            #    self.checks_in_progress = [chk.uuid]
-            #else:
             self.checks_in_progress.append(chk.uuid)
 
         self.update_in_checking()
@@ -2484,9 +2508,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             else:
                 comment_type = 2
             data = {
-            'persistent': persistent, 'author': author, 'comment': comment,
-            'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
-            'expire_time': 0, 'ref': self.uuid
+                'persistent': persistent, 'author': author, 'comment': comment,
+                'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
+                'expire_time': 0, 'ref': self.uuid
             }
             comm = Comment(data)
             self.add_comment(comm.uuid)

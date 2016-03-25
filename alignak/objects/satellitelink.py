@@ -45,9 +45,9 @@ This module provides an abstraction layer for communications between Alignak dae
 Used by the Arbiter
 """
 import time
-import cPickle
 
 from alignak.util import get_obj_name_two_args_and_void
+from alignak.misc.serialization import unserialize
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
 from alignak.log import logger
@@ -480,7 +480,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('ping')
             tab = self.con.get('get_external_commands', wait='long')
-            tab = cPickle.loads(str(tab))
+            tab = unserialize(str(tab))
             # Protect against bad return
             if not isinstance(tab, list):
                 self.con = None
@@ -555,49 +555,6 @@ class SatelliteLink(Item):
                 'api_key': self.__class__.api_key,
                 'secret':  self.__class__.secret,
                 }
-
-    def __getstate__(self):
-        """Used by pickle to serialize
-        Only dump attribute in properties and running_properties
-        except realm and con. Also add id attribute
-
-        :return: Dict with object properties and running_properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if prop != 'realm':
-                if hasattr(self, prop):
-                    res[prop] = getattr(self, prop)
-        for prop in cls.running_properties:
-            if prop != 'con':
-                if hasattr(self, prop):
-                    res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """Used by pickle to unserialize
-        Opposite of __getstate__
-        Update object with state keys
-        Reset con attribute
-
-        :param state: new satellite state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-
-        self.uuid = state['uuid']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        for prop in cls.running_properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        # con needs to be explicitly set:
-        self.con = None
 
 
 class SatelliteLinks(Items):

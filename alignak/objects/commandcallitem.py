@@ -99,4 +99,4 @@ class CommandCallItems(Items):
         elif hasattr(prop, 'reactionner_tag'):
             comandcall['reactionner_tag'] = prop.reactionner_tag
 
-        return CommandCall(**comandcall)
+        return CommandCall(comandcall)

@@ -21,12 +21,13 @@ in order to parse specific HTTP content type
 See http://cherrypy.readthedocs.org/en/latest/pkg/cherrypy.html#module-cherrypy._cpreqbody
 for details about custom processors in Cherrypy
 """
-import cPickle
 import json
 import zlib
 
 import cherrypy
 from cherrypy._cpcompat import ntou
+
+from alignak.misc.serialization import unserialize
 
 
 def zlib_processor(entity):
@@ -52,7 +53,7 @@ def zlib_processor(entity):
     try:
         params = {}
         for key, value in raw_params.iteritems():
-            params[key] = cPickle.loads(value.encode("utf8"))
+            params[key] = unserialize(value.encode("utf8"))
     except TypeError:
         raise cherrypy.HTTPError(400, 'Invalid Pickle data in JSON document')
 

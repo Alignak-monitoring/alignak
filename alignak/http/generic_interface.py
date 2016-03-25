@@ -21,7 +21,6 @@ Any Alignak satellite have at least those functions exposed over network
 See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTTP apps.
 """
 import base64
-import cPickle
 import inspect
 import logging
 import random
@@ -31,6 +30,7 @@ import zlib
 import cherrypy
 
 from alignak.log import logger
+from alignak.misc.serialization import serialize
 
 
 class GenericInterface(object):
@@ -165,9 +165,9 @@ class GenericInterface(object):
             full_api[fun][u"args"] = a_dict
 
         full_api[u"side_note"] = u"When posting data you have to zlib the whole content" \
-                                 u"and cPickle value. Example : " \
+                                 u"and serialize value. Example : " \
                                  u"POST /set_log_level " \
-                                 u"zlib.compress({'loglevel' : cPickle.dumps('INFO')})"
+                                 u"zlib.compress({'loglevel' : serialize('INFO')})"
 
         return full_api
 
@@ -222,7 +222,7 @@ class GenericInterface(object):
         """
         with self.app.external_commands_lock:
             cmds = self.app.get_external_commands()
-            raw = cPickle.dumps(cmds)
+            raw = serialize(cmds)
         return raw
 
     @cherrypy.expose
@@ -254,7 +254,7 @@ class GenericInterface(object):
             # print "A scheduler ask me the returns", sched_id
             ret = self.app.get_return_for_passive(int(sched_id))
             # print "Send mack", len(ret), "returns"
-            return cPickle.dumps(ret)
+            return serialize(ret)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -266,7 +266,7 @@ class GenericInterface(object):
         """
         with self.app.lock:
             res = self.app.get_broks()
-            return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+            return base64.b64encode(zlib.compress(serialize(res), 2))
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

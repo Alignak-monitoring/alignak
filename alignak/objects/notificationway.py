@@ -58,6 +58,7 @@ from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger
+from alignak.commandcall import CommandCall
 
 
 class NotificationWay(Item):
@@ -103,6 +104,33 @@ class NotificationWay(Item):
 
     special_properties = ('service_notification_commands', 'host_notification_commands',
                           'service_notification_period', 'host_notification_period')
+
+    def __init__(self, params=None):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
+                    and isinstance(params[prop][0], dict):
+                new_list = [CommandCall(**elem) for elem in params[prop]]
+                # We recreate the object
+                setattr(self, prop, new_list)
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        super(NotificationWay, self).__init__(params)
+
+    def serialize(self):
+        res = super(NotificationWay, self).serialize()
+
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
+
+        return res
 
     def get_name(self):
         """Accessor to notificationway_name attribute

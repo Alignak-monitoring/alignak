@@ -26,15 +26,16 @@ import urllib
 
 import base64
 import zlib
-import cPickle
 from alignak_test import unittest
 
+from alignak.misc.serialization import unserialize
 from alignak.http.generic_interface import GenericInterface
 from alignak.http.receiver_interface import ReceiverInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
 from alignak.check import Check
+
 
 class fullTest(unittest.TestCase):
     def _get_subproc_data(self, name):
@@ -74,7 +75,7 @@ class fullTest(unittest.TestCase):
         args = ["../alignak/bin/alignak_arbiter.py", "-c", "etc/full_test/alignak.cfg"]
         self.procs['arbiter'] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        sleep(3)
+        sleep(8)
 
         print("Testing start")
         for name, proc in self.procs.items():
@@ -124,7 +125,7 @@ class fullTest(unittest.TestCase):
         # We need to sleep 10s to be sure the first check can be launched now (check_interval = 5)
         sleep(4)
         raw_data = urllib.urlopen("http://127.0.0.1:%s/get_checks?do_checks=True&poller_tags=['TestPollerTag']" % satellite_map['scheduler']).read()
-        data = cPickle.loads(zlib.decompress(base64.b64decode(raw_data)))
+        data = unserialize(zlib.decompress(base64.b64decode(raw_data)))
         self.assertIsInstance(data, list, "Data is not a list!")
         self.assertNotEqual(len(data), 0, "List is empty!")
         for elem in data:

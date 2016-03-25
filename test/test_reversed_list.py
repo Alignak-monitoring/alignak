@@ -40,7 +40,7 @@ class TestReversedList(AlignakTest):
 
         reg = Regenerator()
         data = {"instance_id": 0}
-        b = Brok('program_status', data)
+        b = Brok({'type': 'program_status', 'data': data})
         b.prepare()
         reg.manage_program_status_brok(b)
         reg.all_done_linking(0)
