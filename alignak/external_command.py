@@ -935,7 +935,11 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        comm = Comment(service, persistent, author, comment, 2, 1, 1, False, 0)
+        data = {
+            'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 2,
+            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  service.uuid
+        }
+        comm = Comment(data)
         service.add_comment(comm)
         self.sched.add(comm)
 
@@ -955,7 +959,11 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        comm = Comment(host, persistent, author, comment, 1, 1, 1, False, 0)
+        data = {
+            'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 1,
+            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  host.uuid
+        }
+        comm = Comment(data)
         host.add_comment(comm)
         self.sched.add(comm)
 

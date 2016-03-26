@@ -281,7 +281,11 @@ class Downtime:
             comment_type = 1
         else:
             comment_type = 2
-        comm = Comment(self.ref, False, "(Alignak)", text, comment_type, 2, 0, False, 0)
+        data = {
+            'persistent': False, 'comment': text, 'comment_type': comment_type, 'entry_type': 2,
+            'source': 0, 'expires': False, 'expire_time': 0, 'ref': ref.uuid
+        }
+        comm = Comment(data)
         self.comment_id = comm.uuid
         self.extra_comment = comm
         self.ref.add_comment(comm)

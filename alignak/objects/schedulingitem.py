@@ -2391,8 +2391,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 comment_type = 1
             else:
                 comment_type = 2
-            comm = Comment(self, persistent, author, comment,
-                           comment_type, 4, 0, False, 0)
+            data = {
+            'persistent': persistent, 'author': author, 'comment': comment,
+            'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
+            'expire_time': 0, 'ref': self.uuid
+            }
+            comm = Comment(data)
             self.add_comment(comm)
             self.broks.append(self.get_update_status_brok())
 
