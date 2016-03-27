@@ -1243,6 +1243,31 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for path in self.packs_dirs:
             self.packs.load_file(path)
 
+    def linkify_one_command_with_commands(self, commands, prop):
+        """
+        Link a command
+
+        :param commands: object commands
+        :type commands: object
+        :param prop: property name
+        :type prop: str
+        :return: None
+        """
+        if hasattr(self, prop):
+            command = getattr(self, prop).strip()
+            if command != '':
+                if hasattr(self, 'poller_tag'):
+                    cmdcall = CommandCall(commands, command,
+                                          poller_tag=self.poller_tag)
+                elif hasattr(self, 'reactionner_tag'):
+                    cmdcall = CommandCall(commands, command,
+                                          reactionner_tag=self.reactionner_tag)
+                else:
+                    cmdcall = CommandCall(commands, command)
+                setattr(self, prop, cmdcall)
+            else:
+                setattr(self, prop, None)
+
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
         with all it's services in it
@@ -1308,7 +1333,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # print "Contacts"
         # link contacts with timeperiods and commands
-        self.contacts.linkify(self.notificationways)
+        self.contacts.linkify(self.commands, self.notificationways)
 
         # print "Timeperiods"
         # link timeperiods with timeperiods (exclude part)

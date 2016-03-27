@@ -51,7 +51,8 @@
 """ This module provide Contact and Contacts classes that
 implements contact for notification. Basically used for parsing.
 """
-from alignak.objects.item import Item, Items
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
@@ -129,7 +130,7 @@ class Contact(Item):
         'service_notification_commands', 'host_notification_commands',
         'service_notification_period', 'host_notification_period',
         'service_notification_options', 'host_notification_options',
-        'host_notification_commands', 'contact_name'
+        'contact_name'
     )
 
     simple_way_parameters = (
@@ -317,14 +318,14 @@ class Contact(Item):
                       "downtime for contact has been cancelled." % self.get_name())
 
 
-class Contacts(Items):
+class Contacts(CommandCallItems):
     """Contacts manage a list of Contacts objects, used for parsing configuration
 
     """
     name_property = "contact_name"
     inner_class = Contact
 
-    def linkify(self, notificationways):
+    def linkify(self, commands, notificationways):
         """Create link between objects::
 
          * contacts -> notificationways
@@ -335,6 +336,8 @@ class Contacts(Items):
         TODO: Clean this function
         """
         self.linkify_with_notificationways(notificationways)
+        self.linkify_command_list_with_commands(commands, 'service_notification_commands')
+        self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
     def linkify_with_notificationways(self, notificationways):
         """Link hosts with realms

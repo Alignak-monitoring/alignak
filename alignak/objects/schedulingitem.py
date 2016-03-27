@@ -67,7 +67,8 @@ import random
 import time
 import traceback
 
-from alignak.objects.item import Item, Items
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
@@ -2817,7 +2818,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return state
 
 
-class SchedulingItems(Items):
+class SchedulingItems(CommandCallItems):
     """Class to handle schedulingitems. It's mainly for configuration
 
     """

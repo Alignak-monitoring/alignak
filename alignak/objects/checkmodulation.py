@@ -49,8 +49,8 @@ the modulation of a check command. Modulation occurs on a check period (Timeperi
 """
 import uuid
 
-from alignak.objects.item import Item, Items
 from alignak.commandcall import CommandCall
+from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
@@ -165,7 +165,7 @@ class CheckModulation(Item):
         return state
 
 
-class CheckModulations(Items):
+class CheckModulations(CommandCallItems):
     """CheckModulations class allowed to handle easily several CheckModulation objects
 
     """

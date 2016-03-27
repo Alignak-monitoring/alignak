@@ -53,7 +53,8 @@ implements way of sending notifications. Basically used for parsing.
 
 """
 import uuid
-from alignak.objects.item import Item, Items
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger
@@ -321,7 +322,7 @@ class NotificationWay(Item):
         return state
 
 
-class NotificationWays(Items):
+class NotificationWays(CommandCallItems):
     """NotificationWays manage a list of NotificationWay objects, used for parsing configuration
 
     """

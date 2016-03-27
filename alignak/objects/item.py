@@ -67,7 +67,6 @@ import warnings
 
 from copy import copy
 
-from alignak.commandcall import CommandCall
 from alignak.property import (StringProp, ListProp, BoolProp,
                               IntegerProp, ToGuessProp, PythonizeError)
 from alignak.brok import Brok
@@ -625,31 +624,6 @@ class Item(object):
         }
         self.fill_data_brok_from(data, 'check_result')
         return Brok(self.my_type + '_snapshot', data)
-
-    def linkify_one_command_with_commands(self, commands, prop):
-        """
-        Link a command
-
-        :param commands: object commands
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        if hasattr(self, prop):
-            command = getattr(self, prop).strip()
-            if command != '':
-                if hasattr(self, 'poller_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          poller_tag=self.poller_tag)
-                elif hasattr(self, 'reactionner_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          reactionner_tag=self.reactionner_tag)
-                else:
-                    cmdcall = CommandCall(commands, command)
-                setattr(self, prop, cmdcall)
-            else:
-                setattr(self, prop, None)
 
     def explode_trigger_string_into_triggers(self, triggers):
         """
@@ -1353,6 +1327,17 @@ class Items(object):
                     continue
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod.uuid)
+
+    def linkify_with_triggers(self, triggers):
+        """
+        Link triggers
+
+        :param triggers: triggers object
+        :type triggers: object
+        :return: None
+        """
+        for i in self:
+            i.linkify_with_triggers(triggers)
 
     def linkify_with_checkmodulations(self, checkmodulations):
         """
