@@ -90,7 +90,7 @@ class TestMacroResolver(AlignakTest):
         data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$TOTALHOSTSUP$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing 2', com)
@@ -104,7 +104,7 @@ class TestMacroResolver(AlignakTest):
         data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$HOSTREALM$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing Default', com)
@@ -123,7 +123,7 @@ class TestMacroResolver(AlignakTest):
 
         for c in illegal_macro_output_chars:
             hst.output = 'monculcestdupoulet' + c
-            cc = CommandCall(self.conf.commands, dummy_call)
+            cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
             com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
             print com
             self.assertEqual('plugins/nothing monculcestdupoulet', com)
@@ -149,12 +149,12 @@ class TestMacroResolver(AlignakTest):
         (svc, hst) = self.get_hst_svc()
         data = [hst, svc]
         dummy_call = "special_macro!$USER1$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual('plugins/nothing plugins', com)
 
         dummy_call = "special_macro!$INTERESTINGVARIABLE$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print "CUCU", com
         self.assertEqual('plugins/nothing interestingvalue', com)
@@ -162,7 +162,7 @@ class TestMacroResolver(AlignakTest):
         # Look for multiple = in lines, should split the first
         # and keep others in the macro value
         dummy_call = "special_macro!$ANOTHERVALUE$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print "CUCU", com
         self.assertEqual('plugins/nothing blabla=toto', com)
@@ -179,7 +179,7 @@ class TestMacroResolver(AlignakTest):
 
         # Ok sample host call
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
@@ -187,7 +187,7 @@ class TestMacroResolver(AlignakTest):
         # Call with a void host name, means : myhost
         data = [hst]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
@@ -195,7 +195,7 @@ class TestMacroResolver(AlignakTest):
         # Now with a service, for our implicit host state
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
@@ -204,7 +204,7 @@ class TestMacroResolver(AlignakTest):
         # Now with a service, for our implicit host state
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
@@ -216,7 +216,7 @@ class TestMacroResolver(AlignakTest):
         # Now call this data from our previous service
         data = [hst, svc]
         dummy_call = "special_macro!$SERVICEOUTPUT:test_host_0:test_another_service$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing you should not pass', com)
@@ -224,7 +224,7 @@ class TestMacroResolver(AlignakTest):
         # Ok now with a host implicit way
         data = [hst, svc]
         dummy_call = "special_macro!$SERVICEOUTPUT::test_another_service$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing you should not pass', com)
@@ -239,7 +239,7 @@ class TestMacroResolver(AlignakTest):
 
         # Ok sample host call
         dummy_call = "special_macro!$HOSTADDRESS6$"
-        cc = CommandCall(self.conf.commands, dummy_call)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing ::1', com)

@@ -88,7 +88,7 @@ class CheckModulation(Item):
         # TODO: Separate parsing instance from recreated ones
         if 'check_command' in params and isinstance(params['check_command'], dict):
             # We recreate the object
-            self.check_command = CommandCall(**params['check_command'])
+            self.check_command = CommandCall(params['check_command'])
             # And remove prop, to prevent from being overridden
             del params['check_command']
 

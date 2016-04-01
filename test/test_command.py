@@ -70,7 +70,7 @@ class TestCommand(AlignakTest):
         # now create a commands packs
         cs = Commands([c])
         dummy_call = "check_command_test!titi!toto"
-        cc = CommandCall(cs, dummy_call)
+        cc = CommandCall({"commands": cs, "call": dummy_call})
         self.assertEqual(True, cc.is_valid())
         self.assertEqual(c, cc.command)
         self.assertEqual('DMZ', cc.poller_tag)

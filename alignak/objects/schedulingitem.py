@@ -456,7 +456,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         for prop in ['check_command', 'event_handler', 'snapshot_command']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
-                setattr(self, prop, CommandCall(**params[prop]))
+                setattr(self, prop, CommandCall(params[prop]))
                 # And remove prop, to prevent from being overridden
                 del params[prop]
         if 'business_rule' in params and isinstance(params['business_rule'], dict):

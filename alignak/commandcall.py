@@ -50,12 +50,14 @@
 
 """
 import uuid as uuidmod
+
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp, BoolProp, IntegerProp, ListProp
+from alignak.alignakobject import AlignakObject
 from alignak.objects.command import Command
 
 
-class CommandCall(DummyCommandCall):
+class CommandCall(AlignakObject):
     """This class is use when a service, contact or host define
     a command with args.
     """
@@ -82,7 +84,10 @@ class CommandCall(DummyCommandCall):
 
     def __init__(self, params):
 
-        if commands is not None:
+        if 'commands' in params:
+            commands = params['commands']
+            self.call = params['call']
+            self.enable_environment_macros = params.get('enable_environment_macros', False)
             self.uuid = uuidmod.uuid4().hex
             self.timeout = -1
             command, self.args = self.get_command_and_args()
@@ -92,16 +97,16 @@ class CommandCall(DummyCommandCall):
             if self.valid:
                 # If the host/service do not give an override poller_tag, take
                 # the one of the command
-                self.poller_tag = poller_tag  # from host/service
-                self.reactionner_tag = reactionner_tag
+                self.poller_tag = params.get('poller_tag', 'None')  # from host/service
+                self.reactionner_tag = params.get('reactionner_tag', 'None')
                 self.module_type = self.command.module_type
                 self.enable_environment_macros = self.command.enable_environment_macros
                 self.timeout = int(self.command.timeout)
-                if self.valid and poller_tag is 'None':
+                if self.valid and params.get('poller_tag', 'None') == 'None':
                     # from command if not set
                     self.poller_tag = self.command.poller_tag
                 # Same for reactionner tag
-                if self.valid and reactionner_tag is 'None':
+                if self.valid and params.get('reactionner_tag', 'None') == 'None':
                     # from command if not set
                     self.reactionner_tag = self.command.reactionner_tag
         else:
@@ -118,7 +123,6 @@ class CommandCall(DummyCommandCall):
 
         res['command'] = self.command.serialize()
         return res
-
 
     def get_command_and_args(self):
         r"""We want to get the command and the args with ! splitting.

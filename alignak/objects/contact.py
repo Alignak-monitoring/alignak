@@ -150,7 +150,7 @@ class Contact(Item):
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
                     and isinstance(params[prop][0], dict):
-                new_list = [CommandCall(**elem) for elem in params[prop]]
+                new_list = [CommandCall(elem) for elem in params[prop]]
                 # We recreate the object
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden

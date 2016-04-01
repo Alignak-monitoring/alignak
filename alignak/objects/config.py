@@ -803,7 +803,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      'global_host_event_handler', 'global_service_event_handler']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
-                setattr(self, prop, CommandCall(**params[prop]))
+                setattr(self, prop, CommandCall(params[prop]))
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
@@ -1300,13 +1300,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
             command = getattr(self, prop).strip()
             if command != '':
                 if hasattr(self, 'poller_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          poller_tag=self.poller_tag)
+                    data = {"commands": commands, "call": command, "poller_tag": self.poller_tag}
+                    cmdcall = CommandCall(data)
                 elif hasattr(self, 'reactionner_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          reactionner_tag=self.reactionner_tag)
+                    data = {"commands": commands, "call": command,
+                            "reactionner_tag": self.reactionner_tag}
+                    cmdcall = CommandCall(data)
                 else:
-                    cmdcall = CommandCall(commands, command)
+                    cmdcall = CommandCall({"commands": commands, "call": command})
                 setattr(self, prop, cmdcall)
             else:
                 setattr(self, prop, None)

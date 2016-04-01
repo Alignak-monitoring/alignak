@@ -1185,7 +1185,8 @@ class ExternalCommandManager:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
-        host.check_command = CommandCall(self.commands, check_command, poller_tag=host.poller_tag)
+        data = {"commands": self.commands, "call": check_command, "poller_tag": host.poller_tag}
+        host.check_command = CommandCall(data)
         self.sched.get_and_register_status_brok(host)
 
     def change_host_check_timeperiod(self, host, timeperiod):
@@ -1217,7 +1218,8 @@ class ExternalCommandManager:
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        host.event_handler = CommandCall(self.commands, event_handler_command)
+        data = {"commands": self.commands, "call": event_handler_command}
+        host.event_handler = CommandCall(data)
         self.sched.get_and_register_status_brok(host)
 
     @staticmethod
@@ -1358,8 +1360,8 @@ class ExternalCommandManager:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
-        service.check_command = CommandCall(self.commands, check_command,
-                                            poller_tag=service.poller_tag)
+        data = {"commands": self.commands, "call": check_command, "poller_tag": service.poller_tag}
+        service.check_command = CommandCall(data)
         self.sched.get_and_register_status_brok(service)
 
     def change_svc_check_timeperiod(self, service, check_timeperiod):
@@ -1391,7 +1393,8 @@ class ExternalCommandManager:
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        service.event_handler = CommandCall(self.commands, event_handler_command)
+        data = {"commands": self.commands, "call": event_handler_command}
+        service.event_handler = CommandCall(data)
         self.sched.get_and_register_status_brok(service)
 
     def change_svc_modattr(self, service, value):
