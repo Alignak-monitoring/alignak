@@ -169,8 +169,7 @@ class MacroResolver(Borg):
             del macros['']
         return macros
 
-    @staticmethod
-    def _get_value_from_element(elt, prop):
+    def _get_value_from_element(self, elt, prop):
         """Get value from a element's property
         the property may be a function to call.
 
@@ -182,9 +181,16 @@ class MacroResolver(Borg):
         :rtype: str
         """
         try:
+            arg = None
+            # We have args to provide to the function
+            if isinstance(prop, tuple):
+                prop, arg = prop
             value = getattr(elt, prop)
             if callable(value):
-                return unicode(value())
+                if arg:
+                    return unicode(value(getattr(self, arg, None)))
+                else:
+                    return unicode(value())
             else:
                 return unicode(value)
         except AttributeError:

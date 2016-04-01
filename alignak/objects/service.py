@@ -195,8 +195,8 @@ class Service(SchedulingItem):
         'SERVICEDURATIONSEC':     'get_duration_sec',
         'SERVICEDOWNTIME':        'get_downtime',
         'SERVICEPERCENTCHANGE':   'percent_state_change',
-        'SERVICEGROUPNAME':       'get_groupname',
-        'SERVICEGROUPNAMES':      'get_groupnames',
+        'SERVICEGROUPNAME':       ('get_groupname', 'servicegroups'),
+        'SERVICEGROUPNAMES':      ('get_groupnames', 'servicegroups'),
         'LASTSERVICECHECK':       'last_chk',
         'LASTSERVICESTATECHANGE': 'last_state_change',
         'LASTSERVICEOK':          'last_time_ok',
@@ -301,13 +301,13 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
-    def get_groupnames(self):
+    def get_groupnames(self, sgs):
         """Get servicegroups list
 
         :return: comma separated list of servicegroups
         :rtype: str
         """
-        return ','.join([sg.get_name() for sg in self.servicegroups])
+        return ','.join([sgs[sg].get_name() for sg in self.servicegroups])
 
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
@@ -319,21 +319,21 @@ class Service(SchedulingItem):
             return "%s/%s" % (self.host_name, self.service_description)
         return 'UNKNOWN-SERVICE'
 
-    def get_hostgroups(self):
+    def get_hostgroups(self, hosts):
         """Wrapper to access hostgroups attribute of host attribute
 
         :return: service hostgroups (host one)
         :rtype: alignak.objects.hostgroup.Hostgroups
         """
-        return self.host.hostgroups
+        return hosts[self.host].hostgroups
 
-    def get_host_tags(self):
+    def get_host_tags(self, hosts):
         """Wrapper to access tags attribute of host attribute
 
         :return: service tags (host one)
         :rtype: alignak.objects.tag.Tags
         """
-        return self.host.tags
+        return hosts[self.host].tags
 
     def get_service_tags(self):
         """Accessor to tags attribute

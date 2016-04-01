@@ -205,8 +205,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTDURATIONSEC':   'get_duration_sec',
         'HOSTDOWNTIME':      'get_downtime',
         'HOSTPERCENTCHANGE': 'percent_state_change',
-        'HOSTGROUPNAME':     'get_groupname',
-        'HOSTGROUPNAMES':    'get_groupnames',
+        'HOSTGROUPNAME':     ('get_groupname', 'hostgroups'),
+        'HOSTGROUPNAMES':    ('get_groupnames', 'hostgroups'),
         'LASTHOSTCHECK':     'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
         'LASTHOSTUP':        'last_time_up',
@@ -226,13 +226,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTNOTES':         'notes',
         'HOSTREALM':         'get_realm',
         'TOTALHOSTSERVICES': 'get_total_services',
-        'TOTALHOSTSERVICESOK': 'get_total_services_ok',
-        'TOTALHOSTSERVICESWARNING': 'get_total_services_warning',
-        'TOTALHOSTSERVICESUNKNOWN': 'get_total_services_unknown',
-        'TOTALHOSTSERVICESCRITICAL': 'get_total_services_critical',
+        'TOTALHOSTSERVICESOK': ('get_total_services_ok', 'services'),
+        'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', 'services'),
+        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', 'services'),
+        'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', 'services'),
         'HOSTBUSINESSIMPACT':  'business_impact',
     })
-
     # Manage ADDRESSX macros by adding them dynamically
     for i in range(32):
         macros['HOSTADDRESS%d' % i] = 'address%d' % i
@@ -318,7 +317,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
 
-    def get_groupname(self):
+    def get_groupname(self, hostgroups):
         """Get alias of the host's hostgroup
 
         :return: host group name
@@ -326,20 +325,22 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         TODO: Clean this. It returns the last hostgroup encountered
         """
         groupname = ''
-        for hostgroup in self.hostgroups:
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
             # naglog_result('info', 'get_groupname : %s %s %s' % (hg.uuid, hg.alias, hg.get_name()))
             # groupname = "%s [%s]" % (hg.alias, hg.get_name())
             groupname = "%s" % (hostgroup.alias)
         return groupname
 
-    def get_groupnames(self):
+    def get_groupnames(self, hostgroups):
         """Get aliases of the host's hostgroups
 
         :return: comma separated aliases of hostgroups
         :rtype: str
         """
         groupnames = ''
-        for hostgroup in self.hostgroups:
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
             # naglog_result('info', 'get_groupnames : %s' % (hg.get_name()))
             if groupnames == '':
                 groupnames = hostgroup.get_name()
@@ -943,7 +944,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return str(len(self.services))
 
-    def _tot_services_by_state(self, state):
+    def _tot_services_by_state(self, services, state):
         """Get the number of service in the specified state
 
         :param state: state to filter service
@@ -952,12 +953,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: int
         """
         return str(sum(1 for s in self.services
-                       if s.state_id == state))
+                       if services[s].state_id == state))
 
-    get_total_services_ok = lambda s: s._tot_services_by_state(0)
-    get_total_services_warning = lambda s: s._tot_services_by_state(1)
-    get_total_services_critical = lambda s: s._tot_services_by_state(2)
-    get_total_services_unknown = lambda s: s._tot_services_by_state(3)
+    get_total_services_ok = lambda s, i: s._tot_services_by_state(i, 0)
+    get_total_services_warning = lambda s, i: s._tot_services_by_state(i, 1)
+    get_total_services_critical = lambda s, i: s._tot_services_by_state(i, 2)
+    get_total_services_unknown = lambda s, i: s._tot_services_by_state(i, 3)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement
