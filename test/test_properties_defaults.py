@@ -904,6 +904,7 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
         ('dateranges', []),
         ('exclude', []),
         ('is_active', False),
+        ('activated_once', False),
         ('unresolved', []),
         ('invalid_entries', [])
         ])

@@ -154,7 +154,8 @@ class Timeperiod(Item):
         'exclude':          ListProp(fill_brok=['full_status'], default=[]),
         'unresolved':          ListProp(fill_brok=['full_status'], default=[]),
         'invalid_entries':          ListProp(fill_brok=['full_status'], default=[]),
-        'is_active':        BoolProp(default=False)
+        'is_active':        BoolProp(default=False),
+        'activated_once':   BoolProp(default=False),
     })
     running_properties = Item.running_properties.copy()
 
@@ -197,6 +198,7 @@ class Timeperiod(Item):
             self.exclude = []
             self.invalid_entries = []
             self.is_active = False
+            self.activated_once = False
 
             # Handle timeperiod params
             for key, value in timeperiod_params.items():
@@ -348,8 +350,9 @@ class Timeperiod(Item):
             _from = 0
             _to = 0
             # If it's the start, get a special value for was
-            if was_active is None:
+            if not self.activated_once:
                 _from = -1
+                self.activated_once = True
             if was_active:
                 _from = 1
             if self.is_active:
