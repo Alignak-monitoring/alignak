@@ -130,11 +130,32 @@ class Timerange(object):
         :return: Timerange instance
         :rtype: object
         """
-        pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
-        matches = re.match(pattern, entry)
-        self.is_valid = matches is not None
-        if self.is_valid:
-            self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
+        if entry is not None:
+            pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
+            matches = re.match(pattern, entry)
+            self.is_valid = matches is not None
+            if self.is_valid:
+                self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
+
+        else:
+            self.hstart = params["hstart"]
+            self.mstart = params["mstart"]
+            self.hend = params["hend"]
+            self.mend = params["mend"]
+            self.is_valid = params["is_valid"]
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Timerange
+        :rtype: dict
+        """
+        return {"hstart": self.hstart, "mstart": self.mstart,
+                "hend": self.hend, "mend": self.mend,
+                "is_valid": self.is_valid}
 
     def __str__(self):
         return str(self.__dict__)
@@ -576,8 +597,7 @@ class Daterange(AbstractDaterange):
     rev_weekdays = dict((v, k) for k, v in weekdays.items())
     rev_months = dict((v, k) for k, v in months.items())
 
-    def __init__(self, syear, smon, smday, swday, swday_offset,  # pylint: disable=R0913
-                 eyear, emon, emday, ewday, ewday_offset, skip_interval, other):
+    def __init__(self, params):
         """
 
         :param syear: start year
@@ -607,19 +627,34 @@ class Daterange(AbstractDaterange):
         :return: None
         """
         super(Daterange, self).__init__()
-        self.syear = int(syear)
-        self.smon = int(smon)
-        self.smday = int(smday)
-        self.swday = int(swday)
-        self.swday_offset = int(swday_offset)
-        self.eyear = int(eyear)
-        self.emon = int(emon)
-        self.emday = int(emday)
-        self.ewday = int(ewday)
-        self.ewday_offset = int(ewday_offset)
-        self.skip_interval = int(skip_interval)
-        self.other = other
-        self.timeranges = []
+        self.syear = int(params['syear'])
+        self.smon = int(params['smon'])
+        self.smday = int(params['smday'])
+        self.swday = int(params['swday'])
+        self.swday_offset = int(params['swday_offset'])
+        self.eyear = int(params['eyear'])
+        self.emon = int(params['emon'])
+        self.emday = int(params['emday'])
+        self.ewday = int(params['ewday'])
+        self.ewday_offset = int(params['ewday_offset'])
+        self.skip_interval = int(params['skip_interval'])
+        self.other = params['other']
+        if 'timeranges' in params:
+            self.timeranges = [Timerange(params=t) for t in params['timeranges']]
+        else:
+            self.timeranges = []
+            for timeinterval in params['other'].split(','):
+                self.timeranges.append(Timerange(timeinterval.strip()))
+
+    def serialize(self):
+        res = super(Daterange, self).serialize()
+
+        res['content'] = {'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
+                          'swday': self.swday, 'swday_offset': self.swday_offset,
+                          'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
+                          'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
+                          'skip_interval': self.skip_interval, 'other': self.other,
+                          'timeranges': [t.serialize() for t in self.timeranges]}
 
         for timeinterval in other.split(','):
             self.timeranges.append(Timerange(timeinterval.strip()))
@@ -646,7 +681,7 @@ class StandardDaterange(AbstractDaterange):
     """StandardDaterange is for standard entry (weekday - weekday)
 
     """
-    def __init__(self, day, other):
+    def __init__(self, params):
         """
         Init of StandardDaterange
 
@@ -656,12 +691,16 @@ class StandardDaterange(AbstractDaterange):
         :type other: str
         :return: None
         """
-        self.other = other
-        self.timeranges = []
+        self.other = params['other']
 
-        for timeinterval in other.split(','):
-            self.timeranges.append(Timerange(timeinterval.strip()))
-        self.day = day
+        if 'timeranges' in params:
+            self.timeranges = [Timerange(params=t) for t in params['timeranges']]
+        else:
+            self.timeranges = []
+            for timeinterval in params['other'].split(','):
+                self.timeranges.append(Timerange(timeinterval.strip()))
+
+        self.day = params['day']
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid

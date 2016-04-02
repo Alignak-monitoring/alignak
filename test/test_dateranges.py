@@ -88,8 +88,11 @@ class TestDataranges(AlignakTest):
                 'end': 1471737599 + local_offset
             },
         }
-
-        caldate = CalendarDaterange(2015, 7, 26, 0, 0, 2016, 8, 20, 0, 0, 3, '')
+        params = {'syear': 2015, 'smon': 7, 'smday': 26, 'swday': 0,
+                    'swday_offset': 0, 'eyear': 2016, 'emon': 8, 'emday': 20,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': 3,
+                    'other': ''}
+        caldate = CalendarDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -122,7 +125,7 @@ class TestDataranges(AlignakTest):
             }
 
         # Time from next wednesday morning to next wednesday night
-        caldate = StandardDaterange('friday', '00:00-24:00')
+        caldate = StandardDaterange({'day': 'friday', 'other': '00:00-24:00'})
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -159,8 +162,10 @@ class TestDataranges(AlignakTest):
         # 3rd friday of August 2015 => 21
         # next : 2nd tuesday of July 2016 => 12
         # next  3rd friday of August 2016 => 19
-        caldate = MonthWeekDayDaterange(2015, 7, 0, 1, 2,
-                                        2015, 8, 0, 4, 3, 0, '')
+        params = {'syear': 2015, 'smon': 7, 'smday': 0, 'swday': 1, 'swday_offset': 2,
+                  'eyear': 2015, 'emon': 8, 'emday': 0, 'ewday': 4, 'ewday_offset': 3,
+                  'skip_interval': 0, 'other': ''}
+        caldate = MonthWeekDayDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -193,8 +198,10 @@ class TestDataranges(AlignakTest):
                 'end': 1471737599 + local_offset
             },
         }
-        caldate = MonthDateDaterange(0, 7, 26, 0, 0,
-                                     0, 8, 20, 0, 0, 0, '')
+        params = {'syear': 0, 'smon': 7, 'smday': 26, 'swday': 0,'swday_offset': 0,
+                'eyear': 0, 'emon': 8, 'emday': 20, 'ewday': 0, 'ewday_offset': 0,
+                'skip_interval': 0, 'other': ''}
+        caldate = MonthDateDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -228,8 +235,10 @@ class TestDataranges(AlignakTest):
             },
         }
         # second monday - third tuesday
-        caldate = WeekDayDaterange(0, 0, 0, 0, 2,
-                                   0, 0, 0, 1, 3, 0, '')
+        params = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': 0,'swday_offset': 2,
+                  'eyear': 0, 'emon': 0, 'emday': 0, 'ewday': 1, 'ewday_offset': 3,
+                  'skip_interval': 0, 'other': ''}
+        caldate = WeekDayDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -264,8 +273,10 @@ class TestDataranges(AlignakTest):
         }
 
         # day -1 - 5 00:00-10:00
-        caldate = MonthDayDaterange(0, 0, 1, 0, 0,
-                                    0, 0, 5, 0, 0, 0, '')
+        params = {'syear': 0, 'smon': 0, 'smday': 1, 'swday': 0,'swday_offset': 0,
+                  'eyear': 0, 'emon': 0, 'emday': 5, 'ewday': 0, 'ewday_offset': 0,
+                  'skip_interval': 0, 'other': ''}
+        caldate = MonthDayDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -304,8 +315,10 @@ class TestDataranges(AlignakTest):
         }
 
         # day -1 - 5 00:00-10:00
-        caldate = MonthDayDaterange(0, 0, -1, 0, 0,
-                                    0, 0, 5, 0, 0, 0, '')
+        params = {'syear': 0, 'smon': 0, 'smday': -1, 'swday': 0, 'swday_offset': 0,
+                  'eyear': 0, 'emon': 0, 'emday': 5, 'ewday': 0, 'ewday_offset': 0,
+                  'skip_interval': 0, 'other': ''}
+        caldate = MonthDayDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
@@ -315,13 +328,15 @@ class TestDataranges(AlignakTest):
 
     def test_standarddaterange_is_correct(self):
         # Time from next wednesday morning to next wednesday night
-        caldate = StandardDaterange('wednesday', '00:00-24:00')
+        caldate = StandardDaterange({'day': 'wednesday', 'other': '00:00-24:00'})
         self.assertTrue(caldate.is_correct())
 
     def test_monthweekdaydaterange_is_correct(self):
         # Time from next wednesday morning to next wednesday night
-        caldate = MonthWeekDayDaterange(2015, 7, 0, 1, 2,
-                                        2015, 8, 0, 4, 3, 0, '')
+        params = {'syear': 2015, 'smon': 7, 'smday': 0, 'swday': 1,'swday_offset': 2,
+                  'eyear': 2015, 'emon': 8, 'emday': 0, 'ewday': 4, 'ewday_offset': 3,
+                  'skip_interval': 0, 'other': ''}
+        caldate = MonthWeekDayDaterange(params)
         self.assertTrue(caldate.is_correct())
 
     def test_resolve_daterange_case1(self):

@@ -177,6 +177,19 @@ class Timeperiod(Item):
         # Get timeperiod params (monday, tuesday, ...)
         timeperiod_params = dict([(k, v) for k, v in params.items()
                                   if k not in self.__class__.properties])
+
+        if 'dateranges' in standard_params and isinstance(standard_params['dateranges'], list) \
+                and len(standard_params['dateranges']) > 0 \
+                and isinstance(standard_params['dateranges'][0], dict):
+            new_list = []
+            for elem in standard_params['dateranges']:
+                cls = get_alignak_class(elem['__sys_python_module__'])
+                if cls:
+                    new_list.append(cls(elem['content']))
+            # We recreate the object
+            self.dateranges = new_list
+            # And remove prop, to prevent from being overridden
+            del standard_params['dateranges']
         # Handle standard params
         super(Timeperiod, self).__init__(params=standard_params)
         # Handle timeperiod params
@@ -606,12 +619,11 @@ class Timeperiod(Item):
         if res is not None:
             # print "Good catch 1"
             (syear, smon, smday, eyear, emon, emday, skip_interval, other) = res.groups()
-            dateranges.append(
-                CalendarDaterange(
-                    syear, smon, smday, 0, 0, eyear, emon,
-                    emday, 0, 0, skip_interval, other
-                )
-            )
+            data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
+                    'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': skip_interval,
+                    'other': other}
+            dateranges.append(CalendarDaterange(data))
             return
 
         res = re.search(r'(\d{4})-(\d{2})-(\d{2}) / (\d+)[\s\t]*([0-9:, -]+)', entry)
@@ -621,10 +633,11 @@ class Timeperiod(Item):
             eyear = syear
             emon = smon
             emday = smday
-            dateranges.append(
-                CalendarDaterange(syear, smon, smday, 0, 0, eyear,
-                                  emon, emday, 0, 0, skip_interval, other)
-            )
+            data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
+                    'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': skip_interval,
+                    'other': other}
+            dateranges.append(CalendarDaterange(data))
             return
 
         res = re.search(
@@ -633,9 +646,11 @@ class Timeperiod(Item):
         if res is not None:
             # print "Good catch 3"
             (syear, smon, smday, eyear, emon, emday, other) = res.groups()
-            dateranges.append(
-                CalendarDaterange(syear, smon, smday, 0, 0, eyear, emon, emday, 0, 0, 0, other)
-            )
+            data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
+                    'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                    'other': other}
+            dateranges.append(CalendarDaterange(data))
             return
 
         res = re.search(r'(\d{4})-(\d{2})-(\d{2})[\s\t]*([0-9:, -]+)', entry)
@@ -645,9 +660,11 @@ class Timeperiod(Item):
             eyear = syear
             emon = smon
             emday = smday
-            dateranges.append(
-                CalendarDaterange(syear, smon, smday, 0, 0, eyear, emon, emday, 0, 0, 0, other)
-            )
+            data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
+                    'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                    'other': other}
+            dateranges.append(CalendarDaterange(data))
             return
 
         res = re.search(
@@ -662,10 +679,11 @@ class Timeperiod(Item):
             emon_id = Daterange.get_month_id(emon)
             swday_id = Daterange.get_weekday_id(swday)
             ewday_id = Daterange.get_weekday_id(ewday)
-            dateranges.append(
-                MonthWeekDayDaterange(0, smon_id, 0, swday_id, swday_offset, 0,
-                                      emon_id, 0, ewday_id, ewday_offset, skip_interval, other)
-            )
+            data = {'syear': 0, 'smon': smon_id, 'smday': 0, 'swday': swday_id,
+                    'swday_offset': swday_offset, 'eyear': 0, 'emon': emon_id, 'emday': 0,
+                    'ewday': ewday_id, 'ewday_offset': ewday_offset, 'skip_interval': skip_interval,
+                    'other': other}
+            dateranges.append(MonthWeekDayDaterange(data))
             return
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
@@ -677,24 +695,25 @@ class Timeperiod(Item):
                 ewday = Daterange.get_weekday_id(t01)
                 swday_offset = smday
                 ewday_offset = emday
-                dateranges.append(
-                    WeekDayDaterange(0, 0, 0, swday, swday_offset,
-                                     0, 0, 0, ewday, ewday_offset, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': swday,
+                        'swday_offset': swday_offset, 'eyear': 0, 'emon': 0, 'emday': 0,
+                        'ewday': ewday, 'ewday_offset': ewday_offset,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(WeekDayDaterange(data))
                 return
             elif t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
-                dateranges.append(
-                    MonthDateDaterange(0, smon, smday, 0, 0, 0,
-                                       emon, emday, 0, 0, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
+                        'eyear': 0, 'emon': emon, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(MonthDateDaterange(data))
                 return
             elif t00 == 'day' and t01 == 'day':
-                dateranges.append(
-                    MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
-                                      emday, 0, 0, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
+                        'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(MonthDayDaterange(data))
                 return
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
@@ -706,24 +725,25 @@ class Timeperiod(Item):
                 swday_offset = smday
                 ewday = swday
                 ewday_offset = emday
-                dateranges.append(
-                    WeekDayDaterange(0, 0, 0, swday, swday_offset,
-                                     0, 0, 0, ewday, ewday_offset, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': swday,
+                        'swday_offset': swday_offset, 'eyear': 0, 'emon': 0, 'emday': 0,
+                        'ewday': ewday, 'ewday_offset': ewday_offset,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(WeekDayDaterange(data))
                 return
             elif t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
-                dateranges.append(
-                    MonthDateDaterange(0, smon, smday, 0, 0, 0, emon,
-                                       emday, 0, 0, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
+                        'eyear': 0, 'emon': emon, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(MonthDateDaterange(data))
                 return
             elif t00 == 'day':
-                dateranges.append(
-                    MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
-                                      emday, 0, 0, skip_interval, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
+                        'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
+                        'skip_interval': skip_interval, 'other': other}
+                dateranges.append(MonthDayDaterange(data))
                 return
 
         res = re.search(
@@ -736,10 +756,11 @@ class Timeperiod(Item):
             emon_id = Daterange.get_month_id(emon)
             swday_id = Daterange.get_weekday_id(swday)
             ewday_id = Daterange.get_weekday_id(ewday)
-            dateranges.append(
-                MonthWeekDayDaterange(0, smon_id, 0, swday_id, swday_offset,
-                                      0, emon_id, 0, ewday_id, ewday_offset, 0, other)
-            )
+            data = {'syear': 0, 'smon': smon_id, 'smday': 0, 'swday': swday_id,
+                    'swday_offset': swday_offset, 'eyear': 0, 'emon': emon_id, 'emday': 0,
+                    'ewday': ewday_id, 'ewday_offset': ewday_offset, 'skip_interval': 0,
+                    'other': other}
+            dateranges.append(MonthWeekDayDaterange(data))
             return
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
@@ -751,25 +772,27 @@ class Timeperiod(Item):
                 swday_offset = smday
                 ewday = swday
                 ewday_offset = emday
-                dateranges.append(
-                    WeekDayDaterange(
-                        0, 0, 0, swday, swday_offset, 0, 0, 0,
-                        ewday, ewday_offset, 0, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': swday,
+                        'swday_offset': swday_offset, 'eyear': 0, 'emon': 0, 'emday': 0,
+                        'ewday': ewday, 'ewday_offset': ewday_offset, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(WeekDayDaterange(data))
                 return
             elif t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
-                dateranges.append(
-                    MonthDateDaterange(0, smon, smday, 0, 0, 0,
-                                       emon, emday, 0, 0, 0, other)
-                )
+                data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
+                        'swday_offset': 0, 'eyear': 0, 'emon': emon, 'emday': emday,
+                        'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(MonthDateDaterange(data))
                 return
             elif t00 == 'day':
-                dateranges.append(
-                    MonthDayDaterange(0, 0, smday, 0, 0, 0, 0,
-                                      emday, 0, 0, 0, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
+                        'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
+                        'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(MonthDayDaterange(data))
                 return
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
@@ -781,24 +804,27 @@ class Timeperiod(Item):
                 ewday = Daterange.get_weekday_id(t01)
                 swday_offset = smday
                 ewday_offset = emday
-                dateranges.append(
-                    WeekDayDaterange(0, 0, 0, swday, swday_offset, 0,
-                                     0, 0, ewday, ewday_offset, 0, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': swday,
+                        'swday_offset': swday_offset, 'eyear': 0, 'emon': 0, 'emday': 0,
+                        'ewday': ewday, 'ewday_offset': ewday_offset, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(WeekDayDaterange(data))
                 return
             elif t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
-                dateranges.append(
-                    MonthDateDaterange(0, smon, smday, 0, 0,
-                                       0, emon, emday, 0, 0, 0, other)
-                )
+                data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
+                        'swday_offset': 0, 'eyear': 0, 'emon': emon, 'emday': emday,
+                        'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(MonthDateDaterange(data))
                 return
             elif t00 == 'day' and t01 == 'day':
-                dateranges.append(
-                    MonthDayDaterange(0, 0, smday, 0, 0, 0,
-                                      0, emday, 0, 0, 0, other)
-                )
+                data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
+                        'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
+                        'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(MonthDayDaterange(data))
                 return
 
         res = re.search(r'([a-z]*) ([\d-]+) ([a-z]*)[\s\t]*([0-9:, -]+)', entry)
@@ -811,10 +837,11 @@ class Timeperiod(Item):
                 emon = smon
                 ewday = swday
                 ewday_offset = t02
-                dateranges.append(
-                    MonthWeekDayDaterange(0, smon, 0, swday, t02, 0, emon,
-                                          0, ewday, ewday_offset, 0, other)
-                )
+                data = {'syear': 0, 'smon': smon, 'smday': 0, 'swday': swday,
+                        'swday_offset': t02, 'eyear': 0, 'emon': emon, 'emday': 0,
+                        'ewday': ewday, 'ewday_offset': ewday_offset, 'skip_interval': 0,
+                        'other': other}
+                dateranges.append(MonthWeekDayDaterange(data))
                 return
             if not t01:
                 # print "Good catch 12"
@@ -823,26 +850,29 @@ class Timeperiod(Item):
                     swday_offset = t02
                     ewday = swday
                     ewday_offset = swday_offset
-                    dateranges.append(
-                        WeekDayDaterange(0, 0, 0, swday, swday_offset, 0,
-                                         0, 0, ewday, ewday_offset, 0, other)
-                    )
+                    data = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': swday,
+                            'swday_offset': swday_offset, 'eyear': 0, 'emon': 0, 'emday': 0,
+                            'ewday': ewday, 'ewday_offset': ewday_offset, 'skip_interval': 0,
+                            'other': other}
+                    dateranges.append(WeekDayDaterange(data))
                     return
                 if t00 in Daterange.months:
                     smon = Daterange.get_month_id(t00)
                     emon = smon
                     emday = t02
-                    dateranges.append(
-                        MonthDateDaterange(
-                            0, smon, t02, 0, 0, 0, emon, emday, 0, 0, 0, other)
-                    )
+                    data = {'syear': 0, 'smon': smon, 'smday': t02, 'swday': 0,
+                            'swday_offset': 0, 'eyear': 0, 'emon': emon, 'emday': emday,
+                            'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                            'other': other}
+                    dateranges.append(MonthDateDaterange(data))
                     return
                 if t00 == 'day':
                     emday = t02
-                    dateranges.append(
-                        MonthDayDaterange(0, 0, t02, 0, 0, 0,
-                                          0, emday, 0, 0, 0, other)
-                    )
+                    data = {'syear': 0, 'smon': 0, 'smday': t02, 'swday': 0,
+                            'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
+                            'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
+                            'other': other}
+                    dateranges.append(MonthDayDaterange(data))
                     return
 
         res = re.search(r'([a-z]*)[\s\t]+([0-9:, -]+)', entry)
@@ -851,7 +881,8 @@ class Timeperiod(Item):
             (t00, other) = res.groups()
             if t00 in Daterange.weekdays:
                 day = t00
-                dateranges.append(StandardDaterange(day, other))
+                data = {'day': day, 'other': other}
+                dateranges.append(StandardDaterange(data))
                 return
         logger.info("[timeentry::%s] no match for %s", self.get_name(), entry)
         self.invalid_entries.append(entry)
