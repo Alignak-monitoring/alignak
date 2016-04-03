@@ -2961,3 +2961,14 @@ class SchedulingItems(Items):
         for item in self:
             item.create_business_rules(hosts, services, hostgroups,
                                        servicegroups, macromodulations, timeperiods)
+
+    def linkify_with_triggers(self, triggers):
+        """
+        Link triggers
+
+        :param triggers: triggers object
+        :type triggers: alignak.objects.trigger.Triggers
+        :return: None
+        """
+        for i in self:
+            i.linkify_with_triggers(triggers)

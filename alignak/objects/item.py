@@ -671,32 +671,6 @@ class Item(object):
                 # so my name can be dropped
                 self.triggers.append(triger.get_name())
 
-    def linkify_with_triggers(self, triggers):
-        """
-        Link with triggers
-
-        :param triggers: Triggers object
-        :type triggers: object
-        :return: None
-        """
-        # Get our trigger string and trigger names in the same list
-        self.triggers.extend([self.trigger_name])
-        # print "I am linking my triggers", self.get_full_name(), self.triggers
-        new_triggers = []
-        for tname in self.triggers:
-            if tname == '':
-                continue
-            trigger = triggers.find_by_name(tname)
-            if trigger:
-                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
-                new_triggers.append(trigger.uuid)
-            else:
-                self.configuration_errors.append('the %s %s does have a unknown trigger_name '
-                                                 '"%s"' % (self.__class__.my_type,
-                                                           self.get_full_name(),
-                                                           tname))
-        self.triggers = new_triggers
-
     def dump(self, dfile=None):  # pylint: disable=W0613
         """
         Dump properties
@@ -1379,86 +1353,6 @@ class Items(object):
                     continue
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod.uuid)
-
-    @staticmethod
-    def create_commandcall(prop, commands, command):
-        """
-        Create commandCall object with command
-
-        :param prop: property
-        :type prop: str
-        :param commands: all commands
-        :type commands: object
-        :param command: a command object
-        :type command: object
-        :return: a commandCall object
-        :rtype: object
-        """
-        comandcall = dict(commands=commands, call=command)
-        if hasattr(prop, 'enable_environment_macros'):
-            comandcall['enable_environment_macros'] = prop.enable_environment_macros
-
-        if hasattr(prop, 'poller_tag'):
-            comandcall['poller_tag'] = prop.poller_tag
-        elif hasattr(prop, 'reactionner_tag'):
-            comandcall['reactionner_tag'] = prop.reactionner_tag
-
-        return CommandCall(**comandcall)
-
-    def linkify_one_command_with_commands(self, commands, prop):
-        """
-        Link a command to a property
-
-        :param commands: commands object
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        for i in self:
-            if hasattr(i, prop):
-                command = getattr(i, prop).strip()
-                if command != '':
-                    cmdcall = self.create_commandcall(i, commands, command)
-
-                    # TODO: catch None?
-                    setattr(i, prop, cmdcall)
-                else:
-                    setattr(i, prop, None)
-
-    def linkify_command_list_with_commands(self, commands, prop):
-        """
-        Link a command list (commands with , between) in real CommandCalls
-
-        :param commands: commands object
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        for i in self:
-            if hasattr(i, prop):
-                coms = strip_and_uniq(getattr(i, prop))
-                com_list = []
-                for com in coms:
-                    if com != '':
-                        cmdcall = self.create_commandcall(i, commands, com)
-                        # TODO: catch None?
-                        com_list.append(cmdcall)
-                    else:  # TODO: catch?
-                        pass
-                setattr(i, prop, com_list)
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link triggers
-
-        :param triggers: triggers object
-        :type triggers: object
-        :return: None
-        """
-        for i in self:
-            i.linkify_with_triggers(triggers)
 
     def linkify_with_checkmodulations(self, checkmodulations):
         """
