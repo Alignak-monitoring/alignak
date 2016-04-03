@@ -59,7 +59,7 @@ import traceback
 from multiprocessing import process
 
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
@@ -237,7 +237,10 @@ class Alignak(BaseSatellite):
                               statsd_enabled=new_c['statsd_enabled'])
 
             t00 = time.time()
-            conf = unserialize(conf_raw)
+            try:
+                conf = unserialize(conf_raw)
+            except AlignakClassLookupException as exp:
+                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 

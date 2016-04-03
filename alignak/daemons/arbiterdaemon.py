@@ -67,7 +67,7 @@ import socket
 import cStringIO
 import json
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
@@ -554,7 +554,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             conf = self.new_conf
             if not conf:
                 return
-            conf = unserialize(conf)
+            try:
+                conf = unserialize(conf)
+            except AlignakClassLookupException as exp:
+                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
             self.new_conf = None
             self.cur_conf = conf
             self.conf = conf

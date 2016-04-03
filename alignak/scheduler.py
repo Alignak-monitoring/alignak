@@ -89,7 +89,7 @@ from alignak.load import Load
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 
 
 class Scheduler(object):  # pylint: disable=R0902
@@ -1135,6 +1135,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
                     try:
                         results = unserialize(results)
+                    except AlignakClassLookupException as exp:
+                        logger.error('Cannot un-serialize passive results from satellite %s : %s',
+                                     poll['name'], exp)
+                        continue
                     except Exception, exp:  # pylint: disable=W0703
                         logger.error('Cannot load passive results from satellite %s : %s',
                                      poll['name'], str(exp))

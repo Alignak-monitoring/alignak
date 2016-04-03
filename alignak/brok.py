@@ -52,7 +52,7 @@ import time
 import uuid
 import warnings
 
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
 
 
 class Brok(object):
@@ -116,7 +116,10 @@ class Brok(object):
         # Maybe the brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            self.data = unserialize(self.data)
+            try:
+                self.data = unserialize(self.data)
+            except AlignakClassLookupException:
+                raise
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True

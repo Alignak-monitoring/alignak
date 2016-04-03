@@ -76,7 +76,7 @@ import threading
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.generic_interface import GenericInterface
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 
 from alignak.message import Message
 from alignak.worker import Worker
@@ -674,6 +674,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # or scheduler must not have checks
             except AttributeError, exp:
                 logger.debug('get_new_actions exception:: %s,%s ', type(exp), str(exp))
+            # Bad data received
+            except AlignakClassLookupException as exp:
+                logger.error('Cannot un-serialize actions received: %s', exp)
             # What the F**k? We do not know what happened,
             # log the error message if possible.
             except Exception, exp:

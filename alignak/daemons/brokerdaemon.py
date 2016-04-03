@@ -66,7 +66,7 @@ import zlib
 import threading
 from multiprocessing import active_children
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
@@ -390,6 +390,10 @@ class Broker(BaseSatellite):
                         logger.error('Cannot load broks data from %s : %s',
                                      links[sched_id]['name'], exp)
                         links[sched_id]['con'] = None
+                        continue
+                    except AlignakClassLookupException as exp:
+                        logger.error('Cannot un-serialize data received from "get_broks" call: %s',
+                                     exp)
                         continue
                     logger.debug("%s Broks get in %s", len(tmp_broks), time.time() - t00)
                     for brok in tmp_broks.values():

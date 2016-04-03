@@ -26,8 +26,6 @@ try:
 except ImportError:
     import json
 
-from alignak.log import logger
-
 
 def serialize(obj, no_dump=False):
     """
@@ -71,6 +69,7 @@ def unserialize(j_obj, no_load=False):
 
     :param j_obj: json object, dict
     :type j_obj: str (before loads)
+    :return: un-serialized object
     """
 
     if no_load:
@@ -108,29 +107,36 @@ def get_alignak_class(python_path):
 
     :param python_path:
     :type python_path: str
-    :return:
+    :return: alignak class
+    :raise AlignakClassLookupException
     """
     module, a_class = python_path.rsplit('.', 1)
 
     if not module.startswith('alignak'):
-        logger.warning("Can't recreate object in module: %s. Not an Alignak module", module)
-        return None
+        raise AlignakClassLookupException("Can't recreate object in module: %s. "
+                                          "Not an Alignak module" % module)
 
     if module not in sys.modules:
-        logger.warning("Can't recreate object in unknown module: %s. No such Alignak module. "
-                       "Alignak versions may mismatch", module)
-        return None
+        raise AlignakClassLookupException("Can't recreate object in unknown module: %s. "
+                                          "No such Alignak module. Alignak versions may mismatch" %
+                                          module)
 
     pymodule = sys.modules[module]
 
     if not hasattr(pymodule, a_class):
-        logger.warning("Can't recreate object %s in %s module. Module does not have this attribute."
-                       " Alignak versions may mismatch", a_class, module)
-        return None
+        raise AlignakClassLookupException("Can't recreate object %s in %s module. "
+                                          "Module does not have this attribute. "
+                                          "Alignak versions may mismatch" % (a_class, module))
 
     if not isinstance(getattr(pymodule, a_class), type):
-        logger.warning("Can't recreate object %s in %s module. This type is not a class",
-                       a_class, module)
-        return None
+        raise AlignakClassLookupException("Can't recreate object %s in %s module. "
+                                          "This type is not a class" % (a_class, module))
 
     return getattr(pymodule, a_class)
+
+
+class AlignakClassLookupException(Exception):
+    """Class for exceptions occurring in get_alignak_class from alignak.misc.serialization
+
+    """
+    pass

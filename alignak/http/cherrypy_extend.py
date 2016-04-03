@@ -27,7 +27,7 @@ import zlib
 import cherrypy
 from cherrypy._cpcompat import ntou
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 
 
 def zlib_processor(entity):
@@ -56,6 +56,8 @@ def zlib_processor(entity):
             params[key] = unserialize(value.encode("utf8"))
     except TypeError:
         raise cherrypy.HTTPError(400, 'Invalid Pickle data in JSON document')
+    except AlignakClassLookupException as exp:
+        cherrypy.HTTPError(400, 'Cannot un-serialize data received: %s' % exp)
 
     # Now that all values have been successfully parsed and decoded,
     # apply them to the entity.params dict.
