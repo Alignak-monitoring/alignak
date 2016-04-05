@@ -504,23 +504,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                                            tname))
         self.triggers = new_triggers
 
-    def register_son_in_parent_child_dependencies(self, son):
-        """Register a child dependency in this object
-        and a parent one in the son parameter
-
-        :param son: son to register dependency
-        :type son: alignak.objects.schedulingitem.SchedulingItem
-        :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
-        """
-        # So we register it in our list
-        self.child_dependencies.add(son)
-
-        # and us to its parents
-        son.parent_dependencies.add(self)
-
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
 
@@ -547,7 +530,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """Compute the sample list (self.flapping_changes) and determine
         whether the host/service is flapping or not
 
+        :param notif_period: notification period object for this host/service
+        :type notif_period: alignak.object.timeperiod.Timeperiod
+        :param hosts: Hosts objects, used to create notification if necessary
+        :type hosts: alignak.objects.host.Hosts
+        :param services: Services objects, used to create notification if necessary
+        :type services: alignak.objects.service.Services
         :return: None
+        :rtype: Nonetype
         """
         flap_history = self.__class__.flap_history
         # We compute the flapping change in %
@@ -622,6 +612,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                            checks):
         """Check freshness and schedule a check now if necessary.
 
+        :param hosts: hosts objects, used to launch checks
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used launch checks
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get check_period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :return: A check or None
         :rtype: None | object
         """
@@ -662,6 +664,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         hosts/services that depend_on_me. So they are now my
         impacts
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get act_depend_of_me timeperiod
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulations objects
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         """
         now = time.time()
@@ -706,6 +716,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         business_impact if we do not have do it before
         If we do not have impacts, we revert our value
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get modulation_period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulations objects
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         TODO: SchedulingItem object should not handle other schedulingitem obj.
               We should call obj.register* on both obj.
@@ -747,6 +765,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def no_more_a_problem(self, hosts, services, timeperiods, bi_modulations):
         """Remove this objects as an impact for other schedulingitem.
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for update_business_impact_value
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         TODO: SchedulingItem object should not handle other schedulingitem obj.
               We should call obj.register* on both obj.
@@ -785,6 +811,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param prob: problem to register
         :type prob: alignak.objects.schedulingitem.SchedulingItem
+        :param hosts: hosts objects, used to get object in act_depend_of_me
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get object in act_depend_of_me
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: list of host/service that are impacts
         :rtype: list[alignak.objects.schedulingitem.SchedulingItem]
         TODO: SchedulingItem object should not handle other schedulingitem obj.
@@ -872,6 +906,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         This basically means that a dependency is in a bad state and
         it can explain this object state.
 
+        :param hosts: hosts objects, used to get object in act_depend_of
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects,  used to get object in act_depend_of
+        :type services: alignak.objects.service.Services
         :return: True if one of the logical dep matches the status or
                  all network dep match the status. False otherwise
         :rtype: bool
@@ -911,6 +949,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """Check if all network dependencies are down and set this object
         as unreachable if so.
 
+        :param hosts: hosts objects, used to get object in act_depend_of
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects,  used to get object in act_depend_of
+        :type services: alignak.objects.service.Services
         :return: None
         TODO: factorize with previous check?
         """
@@ -944,6 +986,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type status: list
         :param inherit_parents: recurse over parents
         :type inherit_parents: bool
+        :param hosts: hosts objects, used to raise dependency check
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to raise dependency check
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if one state matched the status list, otherwise False
         :rtype: bool
         """
@@ -975,6 +1023,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """Check if there is some host/service that this object depend on
         has a state in the status list .
 
+        :param hosts: hosts objects, used to raise dependency check
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to raise dependency check
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if this object has a check dependency, otherwise False
         :rtype: bool
         """
@@ -999,6 +1053,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param ref_check: Check we want to get dependency from
         :type ref_check:
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :return: Checks that depend on ref_check
         :rtype: list[alignak.objects.check.Check]
         """
@@ -1040,6 +1106,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         The first scheduling is evenly distributed, so all checks
         are not launched at the same time.
 
+
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :param force: tell if we forced this object to schedule a check
         :type force: bool
         :param force_time: time we would like the check to be scheduled
@@ -1154,6 +1233,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """Disable active checks for this host/service
         Update check in progress with current object information
 
+        :param checks: Checks object, to change all checks in progress
+        :type checks: alignak.objects.check.Checks
         :return: None
         """
         self.active_checks_enabled = False
@@ -1212,6 +1293,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * externalcmd is False and object is in scheduled dowtime and no event handlers in downtime
         * self.event_handler and cls.global_event_handler are None
 
+        :param hosts: hosts objects, used to get data for macros
+        :type hosts: alignak.objects.host.Hosts
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used for macros evaluation
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :param externalcmd: tells if this function was called when handling an external_command.
         :type externalcmd: bool
         :return: None
@@ -1264,6 +1351,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * last_snapshot > now - snapshot_interval * interval_length (previous snapshot too early)
         * snapshot_period is not valid
 
+        :param hosts: hosts objects, used to get data for macros
+        :type hosts: alignak.objects.host.Hosts
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used for snapshot period and macros evaluation
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+
         :return: None
         """
         # We should have a snapshot_command, to be enabled and of course
@@ -1314,6 +1408,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """Enter in a dowtime if necessary and raise start notification
         When a non Ok state occurs we try to raise a flexible downtime.
 
+        :param timeperiods: Timeperiods objects, used for downtime period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param hosts: hosts objects, used to enter downtime
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to enter downtime
+        :type services: alignak.objects.service.Services
         :return: None
         """
         status_updated = False
@@ -1385,7 +1485,32 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param chk: check to handle
         :type chk: alignak.objects.check.Check
-        :return: None
+        :param notif_period: notification period for this host/service
+        :type notif_period: alignak.objects.timeperiod.Timeperiod
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
+        :param res_modulations: result modulation are used to change the ouput of a check
+        :type res_modulations: alignak.object.resultmodulation.Resultmodulations
+        :param triggers: triggers objects, also used to change the output/status of a check, or more
+        :type triggers: alignak.objects.trigger.Triggers
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
+        :param downtimes: downtimes objects, used to find downtime for this host / service
+        :type downtimes:  dict
+        :param comments: comments objects, used to find comments for this host / service
+        :type comments: dict
+        :return: Dependent checks
+        :rtype list[alignak.check.Check]
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
 
@@ -1762,6 +1887,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: notification to send
         :type notif: alignak.objects.notification.Notification
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used to get modulation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
         :return: None
         """
         if notif.status == 'inpoller':
@@ -1778,6 +1909,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: notification to send
         :type notif: alignak.objects.notification.Notification
+        :param contact: contact for this host/service
+        :type contact: alignak.object.contact.Contact
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used to get modulation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
         :return: None
         """
         cls = self.__class__
@@ -1796,6 +1935,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: notification we would like to escalate
         :type notif: alignak.objects.notification.Notification
+        :param escalations: Esclations objects, used to get escalation objects (period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if notification can be escalated, otherwise False
         :rtype: bool
         """
@@ -1822,6 +1965,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: Notification we need time
         :type notif: alignak.objects.notification.Notification
+        :param escalations: Esclations objects, used to get escalation objects (interval, period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: Timestamp of next notification
         :rtype: int
         """
@@ -1877,8 +2024,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: Notification to get data from (notif number...)
         :type notif: alignak.objects.notification.Notification
-        :return: Contact list that can be notified for escalation
-        :rtype: list[alignak.objects.contact.Contact]
+        :param escalations: Esclations objects, used to get escalation objects (contact, period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+
+        :return: Contact uuid list that can be notified for escalation
+        :rtype: list
         """
         cls = self.__class__
 
@@ -1905,6 +2057,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param n_type: notification type ("PROBLEM", "RECOVERY" ...)
         :type n_type: str
+        :param notification_period: notification period for this host/service
+        :type notification_period: alignak.objects.timeperiod.Timeperiod
+        :param hosts: hosts objects, used to check if a notif is blocked
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to check if a notif is blocked
+        :type services: alignak.objects.service.Service
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None
@@ -1982,6 +2140,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: Notification to scatter
         :type notif: alignak.objects.notification.Notification
+        :param contacts: Contacts objects, used to retreive contact for this object
+        :type contacts: alignak.objects.contact.Contacts
+        :param notifways: Notificationway objects, used to get notific commands
+        :type notifways: alignak.object.notificationway.Notificationways
+        :param timeperiods: Timeperiods objects, used to check if notif are allowed at this time
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param escalations: Esclations objects, used to get escalated contacts
+        :type escalations: alignak.objects.escalation.Escalations
+        :param cdowntimes: Contact downtime objects, used to check if a notification is legit
+        :type cdowntimes: dict
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
+
         :return: child notifications
         :rtype: list[alignak.objects.notification.Notification]
         """
@@ -2070,6 +2243,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param timestamp:
         :type timestamp: int
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param ref_check:
         :type ref_check:
         :param force:
@@ -2213,6 +2388,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def get_perfdata_command(self, hosts, macromodulations, timeperiods):
         """Add event_handler to process performance data if necessary (not disabled)
 
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :return: None
         """
         cls = self.__class__
@@ -2450,6 +2627,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def eval_triggers(self, triggers):
         """Launch triggers
 
+        :param triggers: triggers objects, also used to change the output/status of a check, or more
+        :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
         for trigger_id in self.triggers:
@@ -2720,6 +2899,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param status: integer between 0 and 3
         :type status: int
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
         :return: None
         """
         pass
@@ -2727,6 +2910,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def get_obsessive_compulsive_processor_command(self, hosts, macromodulations, timeperiods):
         """Create action for obsessive compulsive commands if such option is enabled
 
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :return: None
         """
         cls = self.__class__
