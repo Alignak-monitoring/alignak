@@ -186,6 +186,12 @@ class Downtime(AlignakObject):
     def enter(self, timeperiods, hosts, services, downtimes):
         """Set ref in scheduled downtime and raise downtime log entry (start)
 
+        :param hosts: hosts objects to get item ref
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects to get item ref
+        :type services: alignak.objects.service.Services
+        :param comments: comments objects to edit the wanted comment
+        :type comments: dict
         :return: [], always
         :rtype: list
         TODO: res is useless
@@ -213,6 +219,12 @@ class Downtime(AlignakObject):
     def exit(self, timeperiods, hosts, services, comments):
         """Remove ref in scheduled downtime and raise downtime log entry (exit)
 
+        :param hosts: hosts objects to get item ref
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects to get item ref
+        :type services: alignak.objects.service.Services
+        :param comments: comments objects to edit the wanted comment
+        :type comments: dict
         :return: [], always | None
         :rtype: list
         TODO: res is useless
@@ -247,6 +259,12 @@ class Downtime(AlignakObject):
     def cancel(self, timeperiods, hosts, services, comments):
         """Remove ref in scheduled downtime and raise downtime log entry (cancel)
 
+        :param hosts: hosts objects to get item ref
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects to get item ref
+        :type services: alignak.objects.service.Services
+        :param comments: comments objects to edit the wanted comment
+        :type comments: dict
         :return: [], always
         :rtype: list
         TODO: res is useless
@@ -273,6 +291,9 @@ class Downtime(AlignakObject):
 
     def add_automatic_comment(self, ref):
         """Add comment on ref for downtime
+
+        :param ref: the host/service we want to link a comment to
+        :type ref: alignak.objects.schedulingitem.SchedulingItem
 
         :return: None
         """
@@ -313,6 +334,9 @@ class Downtime(AlignakObject):
     def del_automatic_comment(self, comments):
         """Remove automatic comment on ref previously created
 
+
+        :param comments: comments objects to edit the wanted comment
+        :type comments: dict
         :return: None
         """
         # Extra comment can be None if we load it from a old version of Alignak
