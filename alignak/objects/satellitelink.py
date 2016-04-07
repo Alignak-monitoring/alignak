@@ -403,7 +403,7 @@ class SatelliteLink(Item):
             tab_cleaned = {}
             for (key, val) in tab.iteritems():
                 try:
-                    tab_cleaned[int(key)] = val
+                    tab_cleaned[key] = val
                 except ValueError:
                     print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
                           self.get_name(), tab

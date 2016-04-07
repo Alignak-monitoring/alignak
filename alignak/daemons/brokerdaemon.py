@@ -489,21 +489,15 @@ class Broker(BaseSatellite):
             # self.schedulers.clear()
             for sched_id in conf['schedulers']:
                 # Must look if we already have it to do not overdie our broks
-                already_got = False
 
-                # We can already got this conf id, but with another address
-                if sched_id in self.schedulers:
-                    new_addr = conf['schedulers'][sched_id]['address']
-                    old_addr = self.schedulers[sched_id]['address']
-                    new_port = conf['schedulers'][sched_id]['port']
-                    old_port = self.schedulers[sched_id]['port']
-                    # Should got all the same to be ok :)
-                    if new_addr == old_addr and new_port == old_port:
-                        already_got = True
+                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
-                if already_got:
-                    broks = self.schedulers[sched_id]['broks']
-                    running_id = self.schedulers[sched_id]['running_id']
+                if old_sched_id:
+                    logger.info("[%s] We already got the conf %s (%s)",
+                                self.name, old_sched_id, name)
+                    broks = self.schedulers[old_sched_id]['broks']
+                    running_id = self.schedulers[old_sched_id]['running_id']
+                    del self.schedulers[old_sched_id]
                 else:
                     broks = {}
                     running_id = 0

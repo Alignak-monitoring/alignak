@@ -384,11 +384,13 @@ class NotificationWays(CommandCallItems):
         :type params: dict
         :return: None
         """
+        new_uuid = uuid.uuid4().hex
         if name is None:
-            name = 'Generated_notificationway_%s' % uuid.uuid4().hex
+            name = 'Generated_notificationway_%s' % new_uuid
         if params is None:
             params = {}
         params['notificationway_name'] = name
+        params['uuid'] = new_uuid
         # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
         notificationway = NotificationWay(params)
         self.add_item(notificationway)

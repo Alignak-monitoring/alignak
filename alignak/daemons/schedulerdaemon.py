@@ -334,7 +334,7 @@ class Alignak(BaseSatellite):
 
             # We clear our schedulers managed (it's us :) )
             # and set ourselves in it
-            self.schedulers = {self.conf.instance_id: self.sched}
+            self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
 
     def what_i_managed(self):
         """Get my managed dict (instance id and push_flavor)
@@ -343,7 +343,7 @@ class Alignak(BaseSatellite):
         :rtype: dict
         """
         if hasattr(self, 'conf'):
-            return {self.conf.instance_id: self.conf.push_flavor}
+            return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
         else:
             return {}
 

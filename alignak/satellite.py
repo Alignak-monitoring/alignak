@@ -154,6 +154,36 @@ class BaseSatellite(Daemon):
         """
         raise NotImplementedError()
 
+    def get_previous_sched_id(self, conf, sched_id):
+        """Check if we received a conf from this sched before.
+        Base on the scheduler id and the name/host/port tuple
+
+        :param conf: configuration to check
+        :type conf: dict
+        :param sched_id: scheduler id of the conf received
+        :type sched_id: str
+        :return: previous sched_id if we already received a conf from this scheduler
+        :rtype: str
+        """
+        old_sched_id = ''
+        name = conf['name']
+        address = conf['address']
+        port = conf['port']
+        # We can already got this conf id, but with another address
+
+        if sched_id in self.schedulers and address == self.schedulers[sched_id]['address'] and \
+                port == self.schedulers[sched_id]['port']:
+            old_sched_id = sched_id
+
+        # Check if it not a arbiter reload
+        similar_ids = [k for k, s in self.schedulers.iteritems()
+                       if (s['name'], s['address'], s['port']) == (name, address, port)]
+
+        if similar_ids:
+            old_sched_id = similar_ids[0]  # Only one match actually
+
+        return old_sched_id
+
 
 class Satellite(BaseSatellite):  # pylint: disable=R0902
     """Satellite class.
@@ -181,6 +211,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         self.returns_queue = None
         self.q_by_mod = {}
+
+        # round robin queue ic
+        self.rr_qid = 0
 
     def pynag_con_init(self, _id):
         """Wrapped function for do_pynag_con_init
@@ -568,8 +601,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # if not get action round robin index to get action queue based
         # on the action id
-        rr_idx = action.uuid % len(queues)
-        (index, queue) = queues[rr_idx]
+        self.rr_qid = (self.rr_qid + 1) % len(queues)
+        (index, queue) = queues[self.rr_qid]
 
         # return the id of the worker (i), and its queue
         return (index, queue)
@@ -659,7 +692,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     tmp = base64.b64decode(tmp)
                     tmp = zlib.decompress(tmp)
                     tmp = unserialize(str(tmp))
-                    logger.debug("Ask actions to %d, got %d", sched_id, len(tmp))
+                    logger.debug("Ask actions to %s, got %d", sched_id, len(tmp))
                     # We 'tag' them with sched_id and put into queue for workers
                     # REF: doc/alignak-action-queues.png (2)
                     self.add_actions(tmp, sched_id)
@@ -768,7 +801,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             for mod in self.q_by_mod:
                 # In workers we've got actions send to queue - queue size
                 for (index, queue) in self.q_by_mod[mod].items():
-                    logger.debug("[%d][%s][%s] Stats: Workers:%d (Queued:%d TotalReturnWait:%d)",
+                    logger.debug("[%s][%s][%s] Stats: Workers:%s (Queued:%d TotalReturnWait:%d)",
                                  sched_id, sched['name'], mod,
                                  index, queue.qsize(), self.get_returns_queue_len())
                     # also update the stats module
@@ -895,24 +928,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # If we've got something in the schedulers, we do not want it anymore
             for sched_id in conf['schedulers']:
 
-                already_got = False
+                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
-                # We can already got this conf id, but with another address
-                if sched_id in self.schedulers:
-                    new_addr = conf['schedulers'][sched_id]['address']
-                    old_addr = self.schedulers[sched_id]['address']
-                    new_port = conf['schedulers'][sched_id]['port']
-                    old_port = self.schedulers[sched_id]['port']
-
-                    # Should got all the same to be ok :)
-                    if new_addr == old_addr and new_port == old_port:
-                        already_got = True
-
-                if already_got:
-                    logger.info("[%s] We already got the conf %d (%s)",
-                                self.name, sched_id, conf['schedulers'][sched_id]['name'])
-                    wait_homerun = self.schedulers[sched_id]['wait_homerun']
-                    actions = self.schedulers[sched_id]['actions']
+                if old_sched_id:
+                    logger.info("[%s] We already got the conf %s (%s)",
+                                self.name, old_sched_id, name)
+                    wait_homerun = self.schedulers[old_sched_id]['wait_homerun']
+                    actions = self.schedulers[old_sched_id]['actions']
+                    del self.schedulers[old_sched_id]
 
                 sched = conf['schedulers'][sched_id]
                 self.schedulers[sched_id] = sched
@@ -925,7 +948,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
 
                 self.schedulers[sched_id]['uri'] = uri
-                if already_got:
+                if old_sched_id:
                     self.schedulers[sched_id]['wait_homerun'] = wait_homerun
                     self.schedulers[sched_id]['actions'] = actions
                 else:
@@ -937,7 +960,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
                 # Do not connect if we are a passive satellite
-                if not self.passive and not already_got:
+                if not self.passive and not old_sched_id:
                     # And then we connect to it :)
                     self.pynag_con_init(sched_id)
 

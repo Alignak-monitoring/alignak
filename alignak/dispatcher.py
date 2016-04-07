@@ -193,17 +193,18 @@ class Dispatcher:
         # and if dispatch on a failed node, remove the association, and need a new dispatch
         for realm in self.realms:
             for cfg_id in realm.confs:
+                conf_id = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
                 sched = realm.confs[cfg_id].assigned_to
                 if sched is None:
                     if self.first_dispatch_done:
-                        logger.info("Scheduler configuration %d is unmanaged!!", cfg_id)
+                        logger.info("Scheduler configuration %s is unmanaged!!", conf_id)
                     self.dispatch_ok = False
                 else:
                     if not sched.alive:
                         self.dispatch_ok = False  # so we ask a new dispatching
-                        logger.warning("Scheduler %s had the configuration %d but is dead, "
-                                       "I am not happy.", sched.get_name(), cfg_id)
+                        logger.warning("Scheduler %s had the configuration %s but is dead, "
+                                       "I am not happy.", sched.get_name(), conf_id)
                         sched.conf.assigned_to = None
                         sched.conf.is_assigned = False
                         sched.conf.push_flavor = 0
@@ -212,10 +213,10 @@ class Dispatcher:
                     # Maybe the scheduler restarts, so is alive but without
                     # the conf we think it was managing so ask it what it is
                     # really managing, and if not, put the conf unassigned
-                    if not sched.do_i_manage(cfg_id, push_flavor):
+                    if not sched.do_i_manage(conf_id, push_flavor):
                         self.dispatch_ok = False  # so we ask a new dispatching
-                        logger.warning("Scheduler %s did not managed its configuration %d, "
-                                       "I am not happy.", sched.get_name(), cfg_id)
+                        logger.warning("Scheduler %s did not managed its configuration %s, "
+                                       "I am not happy.", sched.get_name(), conf_id)
                         if sched.conf:
                             sched.conf.assigned_to = None
                             sched.conf.is_assigned = False
@@ -230,6 +231,7 @@ class Dispatcher:
         # the cfg_id I think is not correctly dispatched.
         for realm in self.realms:
             for cfg_id in realm.confs:
+                conf_id = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
                 try:
                     for kind in ('reactionner', 'poller', 'broker', 'receiver'):
@@ -237,8 +239,8 @@ class Dispatcher:
                         # So we are sure to raise a dispatch every loop a satellite is missing
                         if (len(realm.to_satellites_managed_by[kind][cfg_id])
                                 < realm.get_nb_of_must_have_satellites(kind)):
-                            logger.warning("Missing satellite %s for configuration %d:",
-                                           kind, cfg_id)
+                            logger.warning("Missing satellite %s for configuration %s:",
+                                           kind, conf_id)
 
                             # TODO: less violent! Must only resent to who need?
                             # must be caught by satellite who sees that
@@ -260,7 +262,7 @@ class Dispatcher:
                                 continue
 
                             if satellite.alive and (not satellite.reachable or
-                                                    satellite.do_i_manage(cfg_id, push_flavor)):
+                                                    satellite.do_i_manage(conf_id, push_flavor)):
                                 continue
 
                             logger.warning('[%s] The %s %s seems to be down, '
@@ -431,7 +433,7 @@ class Dispatcher:
                                 realm.to_satellites_managed_by[kind][cfg_id] = []
                             break
 
-                        logger.info('[%s] Trying to send conf %d to scheduler %s',
+                        logger.info('[%s] Trying to send conf %s to scheduler %s',
                                     realm.get_name(), conf.uuid, sched.get_name())
                         if not sched.need_conf:
                             logger.info('[%s] The scheduler %s do not need conf, sorry',
@@ -522,7 +524,7 @@ class Dispatcher:
 
             # We put the satellites conf with the "new" way so they see only what we want
             for realm in self.realms:
-                for cfg in realm.confs.values():
+                for i, cfg in realm.confs.iteritems():
                     cfg_id = cfg.uuid
                     # flavor if the push number of this configuration send to a scheduler
                     flavor = cfg.push_flavor
@@ -549,7 +551,7 @@ class Dispatcher:
                             nospare = [s for s in satellites if not s.spare]
                             # Should look over the list, not over
                             if len(nospare) != 0:
-                                idx = cfg_id % len(nospare)
+                                idx = i % len(nospare)
                                 spares = [s for s in satellites if s.spare]
                                 new_satellites = nospare[idx:]
                                 new_satellites.extend([sat for sat in nospare[: -idx + 1]

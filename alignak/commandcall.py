@@ -102,11 +102,11 @@ class CommandCall(AlignakObject):
                 self.module_type = self.command.module_type
                 self.enable_environment_macros = self.command.enable_environment_macros
                 self.timeout = int(self.command.timeout)
-                if self.valid and params.get('poller_tag', 'None') == 'None':
+                if self.valid and self.poller_tag == 'None':
                     # from command if not set
                     self.poller_tag = self.command.poller_tag
                 # Same for reactionner tag
-                if self.valid and params.get('reactionner_tag', 'None') == 'None':
+                if self.valid and self.reactionner_tag == 'None':
                     # from command if not set
                     self.reactionner_tag = self.command.reactionner_tag
         else:

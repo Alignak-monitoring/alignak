@@ -229,25 +229,16 @@ class Receiver(Satellite):
             # If we've got something in the schedulers, we do not want it anymore
             for sched_id in conf['schedulers']:
 
-                already_got = False
+                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
-                # We can already got this conf id, but with another address
-                if sched_id in self.schedulers:
-                    new_addr = conf['schedulers'][sched_id]['address']
-                    old_addr = self.schedulers[sched_id]['address']
-                    new_port = conf['schedulers'][sched_id]['port']
-                    old_port = self.schedulers[sched_id]['port']
-                    # Should got all the same to be ok :)
-                    if new_addr == old_addr and new_port == old_port:
-                        already_got = True
-
-                if already_got:
-                    logger.info("[%s] We already got the conf %d (%s)",
-                                self.name, sched_id, conf['schedulers'][sched_id]['name'])
-                    wait_homerun = self.schedulers[sched_id]['wait_homerun']
-                    actions = self.schedulers[sched_id]['actions']
-                    external_commands = self.schedulers[sched_id]['external_commands']
-                    con = self.schedulers[sched_id]['con']
+                if old_sched_id:
+                    logger.info("[%s] We already got the conf %s (%s)",
+                                self.name, old_sched_id, name)
+                    wait_homerun = self.schedulers[old_sched_id]['wait_homerun']
+                    actions = self.schedulers[old_sched_id]['actions']
+                    external_commands = self.schedulers[old_sched_id]['external_commands']
+                    con = self.schedulers[old_sched_id]['con']
+                    del self.schedulers[old_sched_id]
 
                 sched = conf['schedulers'][sched_id]
                 self.schedulers[sched_id] = sched
@@ -261,7 +252,7 @@ class Receiver(Satellite):
                 uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
 
                 self.schedulers[sched_id]['uri'] = uri
-                if already_got:
+                if old_sched_id:
                     self.schedulers[sched_id]['wait_homerun'] = wait_homerun
                     self.schedulers[sched_id]['actions'] = actions
                     self.schedulers[sched_id]['external_commands'] = external_commands
@@ -277,7 +268,7 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
                 # Do not connect if we are a passive satellite
-                if self.direct_routing and not already_got:
+                if self.direct_routing and not old_sched_id:
                     # And then we connect to it :)
                     self.pynag_con_init(sched_id)
 

@@ -75,6 +75,7 @@ import itertools
 import time
 import random
 import tempfile
+import uuid
 from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
@@ -1450,11 +1451,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     conf.hostgroups.prepare_for_sending()
                     logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
                     t00 = time.time()
-                    realm.serialized_confs[i] = serialize(conf)
+                    conf_id = conf.uuid
+                    realm.serialized_confs[conf_id] = serialize(conf)
                     logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                  realm.get_name(), i, time.time() - t00,
-                                 len(realm.serialized_confs[i]))
-                    logger.debug("SERIALIZE LEN : %d", len(realm.serialized_confs[i]))
+                                 len(realm.serialized_confs[conf_id]))
+                    logger.debug("SERIALIZE LEN : %d", len(realm.serialized_confs[conf_id]))
             # Now serialize the whole conf, for easy and quick spare send
             t00 = time.time()
             whole_conf_pack = serialize(self)
@@ -1522,7 +1524,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     sys.exit(2)
                 # Now get the serialized configuration and saved them into self
                 for (i, cfg) in child_q:
-                    realm.serialized_confs[i] = cfg
+                    realm.serialized_confs[cfg.uuid] = cfg
 
             # Now serialize the whole configuration into one big serialized object,
             # for the arbiter spares
@@ -2521,7 +2523,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # we need a deepcopy because each conf
             # will have new hostgroups
-            cur_conf.uuid = i
+            cur_conf.uuid = uuid.uuid4().hex
             cur_conf.commands = self.commands
             cur_conf.timeperiods = self.timeperiods
             # Create hostgroups with just the name and same id, but no members

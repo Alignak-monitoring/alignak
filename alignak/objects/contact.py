@@ -80,8 +80,8 @@ class Contact(Item):
         'service_notification_options': ListProp(default=[''], fill_brok=['full_status'],
                                                  split_on_coma=True),
         # To be consistent with notificationway object attributes
-        'host_notification_commands': ListProp(fill_brok=['full_status'], default=[]),
-        'service_notification_commands': ListProp(fill_brok=['full_status'], default=[]),
+        'host_notification_commands': ListProp(default=[], fill_brok=['full_status']),
+        'service_notification_commands': ListProp(default=[], fill_brok=['full_status']),
         'min_business_impact':    IntegerProp(default=0, fill_brok=['full_status']),
         'email':            StringProp(default='none', fill_brok=['full_status']),
         'pager':            StringProp(default='none', fill_brok=['full_status']),
