@@ -281,7 +281,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # And we remove it from the actions queue of the scheduler too
         try:
-            del self.schedulers[sched_id]['actions'][action.get_id()]
+            del self.schedulers[sched_id]['actions'][action.uuid]
         except KeyError:
             pass
         # We tag it as "return wanted", and move it in the wait return queue
@@ -289,7 +289,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # in the scheduler
         # action.status = 'waitforhomerun'
         try:
-            self.schedulers[sched_id]['wait_homerun'][action.get_id()] = action
+            self.schedulers[sched_id]['wait_homerun'][action.uuid] = action
         except KeyError:
             pass
 

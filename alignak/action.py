@@ -136,15 +136,6 @@ class ActionBase(Item):
         self.creation_time = time.time()
         self.fill_default()
 
-    def get_id(self):
-        """Getter to id attribute
-
-        :return: action id
-        :rtype: int
-        TODO: Remove Item has already property id
-        """
-        return self.uuid
-
     def set_type_active(self):
         """Dummy function, only useful for checks"""
         pass
