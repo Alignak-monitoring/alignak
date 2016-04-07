@@ -66,7 +66,7 @@ class Brok(object):
         self.uuid = params.get('uuid', uuid.uuid4().hex)
         self.type = params['type']
         self.instance_id = params.get('instance_id', None)
-        # Again need to behave diffrently when un-serializing
+        # Again need to behave differently when un-serializing
         if 'uuid' in params:
             self.data = params['data']
         else:
@@ -109,7 +109,7 @@ class Brok(object):
         self.uuid = value
 
     def prepare(self):
-        """Unpickle data from data attribute and add instance_id key if necessary
+        """Un-serialize data from data attribute and add instance_id key if necessary
 
         :return: None
         """

@@ -465,7 +465,7 @@ class SatelliteLink(Item):
         """Send a HTTP request to the satellite (GET /ping)
         and THEN send a HTTP request to the satellite (GET /get_external_commands)
         Get external commands from satellite.
-        Unpickle data received.
+        Un-serialize data received.
 
         :return: External Command list on success, [] on failure
         :rtype: list

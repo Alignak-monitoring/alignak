@@ -60,8 +60,6 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
     servicestate) are disabled.
     """
 
-    # Just to list the properties we will send as pickle
-    # so to others daemons, all but NOT REF
     properties = {
         'uuid': None,
         'sticky': None,

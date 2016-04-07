@@ -52,24 +52,7 @@ to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
 
-import os
 import sys
-
-
-# We try to raise up recursion limit on
-# but we don't have resource module on windows
-if os.name != 'nt':
-    import resource
-    # All the pickle will ask for a lot of recursion, so we must make
-    # sure to set it at a high value. The maximum recursion depth depends
-    # on the Python version and the process limit "stack size".
-    # The factors used were acquired by testing a broad range of installations
-    STACKSIZE_SOFT, _ = resource.getrlimit(3)
-    if sys.version_info < (3,):
-        sys.setrecursionlimit(int(STACKSIZE_SOFT * 1.9 + 3200))
-    else:
-        sys.setrecursionlimit(int(STACKSIZE_SOFT * 2.4 + 3200))
-
 
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args

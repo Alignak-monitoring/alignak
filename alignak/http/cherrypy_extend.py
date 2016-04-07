@@ -55,7 +55,7 @@ def zlib_processor(entity):
         for key, value in raw_params.iteritems():
             params[key] = unserialize(value.encode("utf8"))
     except TypeError:
-        raise cherrypy.HTTPError(400, 'Invalid Pickle data in JSON document')
+        raise cherrypy.HTTPError(400, 'Invalid serialized data in JSON document')
     except AlignakClassLookupException as exp:
         cherrypy.HTTPError(400, 'Cannot un-serialize data received: %s' % exp)
 

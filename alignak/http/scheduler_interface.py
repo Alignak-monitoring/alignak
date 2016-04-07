@@ -51,7 +51,7 @@ class SchedulerInterface(GenericInterface):
         :type worker_name: str
         :param module_types: Module type to filter actions/checks
         :type module_types: list
-        :return: base64 zlib compress pickled check/action list
+        :return: base64 zlib compress serialized check/action list
         :rtype: str
         """
         # print "We ask us checks"
@@ -100,7 +100,7 @@ class SchedulerInterface(GenericInterface):
 
         :param bname: broker name, used to filter broks
         :type bname: str
-        :return: 64 zlib compress pickled brok list
+        :return: 64 zlib compress serialized brok list
         :rtype: str
         """
         # Maybe it was not registered as it should, if so,

@@ -655,7 +655,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         'module_types': self.q_by_mod.keys()
                     },
                         wait='long')
-                    # Explicit pickle load
+                    # Explicit serialization
                     tmp = base64.b64decode(tmp)
                     tmp = zlib.decompress(tmp)
                     tmp = unserialize(str(tmp))

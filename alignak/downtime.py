@@ -73,8 +73,6 @@ class Downtime(AlignakObject):
 
     """
 
-    # Just to list the properties we will send as pickle
-    # so to others daemons, so all but NOT REF
     properties = {
         'activate_me': StringProp(default=[]),
         'entry_time': IntegerProp(default=0, fill_brok=['full_status']),

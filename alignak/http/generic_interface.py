@@ -217,7 +217,7 @@ class GenericInterface(object):
         """Get the external commands from the daemon (internal)
         Use a lock for this call (not a global one, just for this method)
 
-        :return: Pickled external command list
+        :return: serialized external command list
         :rtype: str
         """
         with self.app.external_commands_lock:

@@ -51,7 +51,7 @@ class ArbiterInterface(GenericInterface):
     def put_conf(self, conf):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 
-        :param conf: pickled the new configuration
+        :param conf: serialized new configuration
         :type conf:
         :return: None
         """

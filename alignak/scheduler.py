@@ -1131,7 +1131,6 @@ class Scheduler(object):  # pylint: disable=R0902
                     except UnicodeEncodeError:  # ascii not working, switch to utf8 so
                         # if not eally utf8 will be a real problem
                         results = results.encode("utf8", 'ignore')
-                        # and data will be invalid, socatch by the pickle.
 
                     try:
                         results = unserialize(results)

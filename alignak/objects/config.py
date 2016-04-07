@@ -1454,8 +1454,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                  realm.get_name(), i, time.time() - t00,
                                  len(realm.serialized_confs[i]))
-                    logger.debug("PICKLE LEN : %d", len(realm.serialized_confs[i]))
-            # Now pickle the whole conf, for easy and quick spare send
+                    logger.debug("SERIALIZE LEN : %d", len(realm.serialized_confs[i]))
+            # Now serialize the whole conf, for easy and quick spare send
             t00 = time.time()
             whole_conf_pack = serialize(self)
             logger.debug("[config] time to serialize the global conf : %s (size:%s)",
@@ -1475,7 +1475,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 processes = []
                 for (i, conf) in realm.confs.iteritems():
                     def serialize_config(comm_q, rname, cid, conf):
-                        """Pickle the config. Used in subprocesses to pickle all config faster
+                        """Serialized config. Used in subprocesses to serialize all config faster
 
                         :param comm_q: Queue to communicate
                         :param rname: realm name
@@ -1492,7 +1492,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                      rname, cid, time.time() - t00, len(res))
                         comm_q.append((cid, res))
 
-                    # Prepare a sub-process that will manage the pickle computation
+                    # Prepare a sub-process that will manage the serialize computation
                     proc = Process(target=serialize_config,
                                    name="serializer-%s-%d" % (realm.get_name(), i),
                                    args=(child_q, realm.get_name(), i, conf))
@@ -1524,12 +1524,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 for (i, cfg) in child_q:
                     realm.serialized_confs[i] = cfg
 
-            # Now pickle the whole configuration into one big pickle object, for the arbiter spares
+            # Now serialize the whole configuration into one big serialized object,
+            # for the arbiter spares
             whole_queue = manager.list()
             t00 = time.time()
 
             def create_whole_conf_pack(whole_queue, self):
-                """The function that just compute the whole conf pickle string, but n a children
+                """The function that just compute the whole conf serialize string, but n a children
                 """
                 logger.debug("[config] sub processing the whole configuration pack creation")
                 whole_queue.append(serialize(self))
