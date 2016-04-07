@@ -50,10 +50,10 @@ implements acknowledgment for notification. Basically used for parsing.
 
 """
 
-import uuid as moduuid
+from alignak.alignakobject import AlignakObject
 
 
-class Acknowledge:  # pylint: disable=R0903
+class Acknowledge(AlignakObject):  # pylint: disable=R0903
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
@@ -84,20 +84,6 @@ class Acknowledge:  # pylint: disable=R0903
     # associated with the acknowledgement will survive across restarts
     # of the Alignak process. If not, the comment will be deleted the
     # next time Alignak restarts.
-
-    def __init__(self, ref, sticky, notify, persistent,
-                 author, comment, end_time=0, uuid=None):
-        if uuid is None:
-            self.uuid = moduuid.uuid4().hex
-        else:
-            self.uuid = uuid
-        self.ref = ref  # pointer to srv or host we are applied
-        self.sticky = sticky
-        self.notify = notify
-        self.end_time = end_time
-        self.author = author
-        self.comment = comment
-        self.persistent = persistent
 
     def serialize(self):
         """This function serialize into a simple dict object.

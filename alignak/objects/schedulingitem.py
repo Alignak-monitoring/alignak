@@ -463,7 +463,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.business_rule = DependencyNode(params['business_rule'])
             del params['business_rule']
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
-            self.acknowledgement = Acknowledge(**params['acknowledgement'])
+            self.acknowledgement = Acknowledge(params['acknowledgement'])
         super(SchedulingItem, self).__init__(params)
 
     def serialize(self):
@@ -2680,7 +2680,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.create_notifications('ACKNOWLEDGEMENT', notification_period, hosts, services)
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
-            ack = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
+
+            data = {'ref': self.uuid, 'sticky': sticky, 'persistent': persistent, 'author': author,
+                    'comment': comment, 'end_time': end_time}
+            ack = Acknowledge(data)
             self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
