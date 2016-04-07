@@ -209,7 +209,7 @@ class TestEndParsingType(unittest.TestCase):
                         print("Skipping %s " % prop)
 
         print "== test EventHandler() =="
-        eventhandler = EventHandler('')
+        eventhandler = EventHandler({})
         for prop in eventhandler.properties:
             if hasattr(eventhandler, prop):
                 value = getattr(eventhandler, prop)

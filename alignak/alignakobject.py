@@ -63,3 +63,15 @@ class AlignakObject(object):
                     res[prop] = getattr(self, prop)
 
         return res
+
+    def fill_default(self):
+        """
+        Define properties with default value when not defined
+
+        :return: None
+        """
+        cls = self.__class__
+
+        for prop, entry in cls.properties.items():
+            if not hasattr(self, prop) and entry.has_default:
+                setattr(self, prop, entry.default)

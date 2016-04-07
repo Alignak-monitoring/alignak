@@ -84,6 +84,7 @@ from alignak.load import Load
 from alignak.daemon import Daemon
 from alignak.log import logger
 from alignak.stats import statsmgr
+from alignak.check import Check  # pylint: disable=W0611
 
 
 class NotWorkerMod(Exception):

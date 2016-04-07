@@ -72,7 +72,7 @@ except ImportError:
 from alignak.log import logger
 from alignak.property import BoolProp, IntegerProp, FloatProp
 from alignak.property import StringProp, DictProp
-from alignak.objects.item import Item
+from alignak.alignakobject import AlignakObject
 
 __all__ = ('Action', )
 
@@ -102,7 +102,7 @@ def no_block_read(output):
         return ''
 
 
-class ActionBase(Item):
+class ActionBase(AlignakObject):
     """
     This abstract class is used just for having a common id for both
     actions and checks.
