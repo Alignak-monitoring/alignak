@@ -131,8 +131,8 @@ class ActionBase(AlignakObject):
         'ref':              StringProp(default=''),
     }
 
-    def __init__(self, params=None):
-        super(ActionBase, self).__init__(params)
+    def __init__(self, params=None, parsing=True):
+        super(ActionBase, self).__init__(params, parsing=parsing)
         self.creation_time = time.time()
         self.fill_default()
 

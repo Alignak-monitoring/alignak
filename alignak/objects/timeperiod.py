@@ -159,7 +159,7 @@ class Timeperiod(Item):
     })
     running_properties = Item.running_properties.copy()
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
 
         if params is None:
             params = {}
@@ -184,7 +184,7 @@ class Timeperiod(Item):
             # And remove prop, to prevent from being overridden
             del standard_params['dateranges']
         # Handle standard params
-        super(Timeperiod, self).__init__(params=standard_params)
+        super(Timeperiod, self).__init__(params=standard_params, parsing=parsing)
         self.cache = {}  # For tuning purpose only
         self.invalid_cache = {}  # same but for invalid search
 

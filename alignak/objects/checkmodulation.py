@@ -80,7 +80,7 @@ class CheckModulation(Item):
 
     macros = {}
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
@@ -92,7 +92,7 @@ class CheckModulation(Item):
             # And remove prop, to prevent from being overridden
             del params['check_command']
 
-        super(CheckModulation, self).__init__(params)
+        super(CheckModulation, self).__init__(params, parsing=parsing)
 
     def serialize(self):
         res = super(CheckModulation, self).serialize()

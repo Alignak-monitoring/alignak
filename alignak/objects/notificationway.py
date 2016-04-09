@@ -105,7 +105,7 @@ class NotificationWay(Item):
     special_properties = ('service_notification_commands', 'host_notification_commands',
                           'service_notification_period', 'host_notification_period')
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
@@ -114,12 +114,12 @@ class NotificationWay(Item):
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
                     and isinstance(params[prop][0], dict):
-                new_list = [CommandCall(elem) for elem in params[prop]]
+                new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
                 # We recreate the object
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden
                 del params[prop]
-        super(NotificationWay, self).__init__(params)
+        super(NotificationWay, self).__init__(params, parsing=parsing)
 
     def serialize(self):
         res = super(NotificationWay, self).serialize()

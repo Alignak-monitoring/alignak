@@ -33,7 +33,7 @@ class AlignakObject(object):
 
     properties = {'uuid': StringProp(default='')}
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):  # pylint: disable=W0613
 
         if params is None:
             return

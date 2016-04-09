@@ -76,11 +76,11 @@ class Trigger(Item):
                                'trigger_broker_raise_enabled': BoolProp(default=False)
                                })
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
-        super(Trigger, self).__init__(params)
+        super(Trigger, self).__init__(params, parsing=parsing)
         if 'code_src' in params:
             self.compile()
 

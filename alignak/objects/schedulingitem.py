@@ -447,7 +447,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     special_properties = []
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
@@ -456,7 +456,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         for prop in ['check_command', 'event_handler', 'snapshot_command']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
-                setattr(self, prop, CommandCall(params[prop]))
+                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
                 # And remove prop, to prevent from being overridden
                 del params[prop]
         if 'business_rule' in params and isinstance(params['business_rule'], dict):
@@ -464,7 +464,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             del params['business_rule']
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
             self.acknowledgement = Acknowledge(params['acknowledgement'])
-        super(SchedulingItem, self).__init__(params)
+        super(SchedulingItem, self).__init__(params, parsing=parsing)
 
     def serialize(self):
         res = super(SchedulingItem, self).serialize()

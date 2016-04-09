@@ -82,7 +82,7 @@ class CommandCall(AlignakObject):
         'enable_environment_macros': BoolProp(default=False),
     }
 
-    def __init__(self, params):
+    def __init__(self, params, parsing=True):
 
         if 'commands' in params:
             commands = params['commands']
@@ -110,8 +110,8 @@ class CommandCall(AlignakObject):
                     # from command if not set
                     self.reactionner_tag = self.command.reactionner_tag
         else:
-            super(CommandCall, self).__init__(params)
-            self.command = Command(params['command'])
+            super(CommandCall, self).__init__(params, parsing=parsing)
+            self.command = Command(params['command'], parsing=parsing)
 
     def serialize(self):
         cls = self.__class__

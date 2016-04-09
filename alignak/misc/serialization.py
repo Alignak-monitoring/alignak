@@ -82,7 +82,7 @@ def unserialize(j_obj, no_load=False):
             cls = get_alignak_class(data['__sys_python_module__'])
             if cls is None:
                 return {}
-            return cls(data['content'])
+            return cls(data['content'], parsing=False)
 
         else:
             data_dict = {}

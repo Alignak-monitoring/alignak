@@ -793,7 +793,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
                            'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
@@ -804,23 +804,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      'global_host_event_handler', 'global_service_event_handler']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
-                setattr(self, prop, CommandCall(params[prop]))
+                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
         for _, clss, strclss, _ in self.types_creations.values():
             if strclss in params and isinstance(params[strclss], dict):
-                setattr(self, strclss, clss(params[strclss]))
+                setattr(self, strclss, clss(params[strclss], parsing=parsing))
                 del params[strclss]
 
         for clss, prop in [(Triggers, 'triggers'), (Packs, 'packs')]:
             if prop in params and isinstance(params[prop], dict):
-                setattr(self, prop, clss(params[prop]))
+                setattr(self, prop, clss(params[prop], parsing=parsing))
                 del params[prop]
             else:
                 setattr(self, prop, clss({}))
 
-        super(Config, self).__init__(params)
+        super(Config, self).__init__(params, parsing=parsing)
         self.params = {}
         self.resource_macros_names = []
         # By default the conf is correct

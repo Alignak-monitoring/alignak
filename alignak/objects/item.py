@@ -69,6 +69,8 @@ from copy import copy
 
 from alignak.property import (StringProp, ListProp, BoolProp, SetProp,
                               IntegerProp, ToGuessProp, PythonizeError)
+
+from alignak.alignakobject import AlignakObject
 from alignak.brok import Brok
 from alignak.util import strip_and_uniq, is_complex_expr
 from alignak.log import logger
@@ -76,7 +78,7 @@ from alignak.complexexpression import ComplexExpressionFactory
 from alignak.graph import Graph
 
 
-class Item(object):
+class Item(AlignakObject):
     """
     Class to manage an item
     An Item is the base of many objects of Alignak. So it define common properties,
@@ -106,7 +108,10 @@ class Item(object):
     my_type = ''
     ok_up = ''
 
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=True):
+        if not parsing:
+            super(Item, self).__init__(params, parsing)
+            return
         cls = self.__class__
         self.uuid = uuid.uuid4().hex
 
@@ -723,7 +728,7 @@ class Items(object):
 
     inner_class = Item
 
-    def __init__(self, items, index_items=True):
+    def __init__(self, items, index_items=True, parsing=True):
         self.items = {}
         self.name_to_item = {}
         self.templates = {}
@@ -734,7 +739,7 @@ class Items(object):
         # We are un-serializing
         if isinstance(items, dict):
             for item in items.values():
-                self.add_item(self.inner_class(item))
+                self.add_item(self.inner_class(item, parsing=parsing))
         else:
             self.add_items(items, index_items)
 
