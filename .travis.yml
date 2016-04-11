@@ -18,7 +18,7 @@ script:
   - coverage combine
   - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
   - unset PYTHONWARNINGS
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && pylint --rcfile=.pylintrc -r no alignak; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && travis_wait pylint --rcfile=.pylintrc -r no alignak; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
   - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..

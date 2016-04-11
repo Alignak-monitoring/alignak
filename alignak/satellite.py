@@ -69,8 +69,6 @@ import os
 import copy
 import time
 import traceback
-import zlib
-import base64
 import threading
 
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
@@ -371,7 +369,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 if con is None:  # None = not initialized
                     con = self.pynag_con_init(sched_id)
                 if con:
-                    con.post('put_results', {'results': results.values()})
+                    con.post('put_results',
+                             {'results': results.values()})
                     send_ok = True
             except HTTPEXCEPTIONS as err:
                 logger.error('Could not send results to scheduler %s : %s',
@@ -690,9 +689,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     },
                         wait='long')
                     # Explicit serialization
-                    tmp = base64.b64decode(tmp)
-                    tmp = zlib.decompress(tmp)
-                    tmp = unserialize(str(tmp))
+                    tmp = unserialize(tmp, True)
                     logger.debug("Ask actions to %s, got %d", sched_id, len(tmp))
                     # We 'tag' them with sched_id and put into queue for workers
                     # REF: doc/alignak-action-queues.png (2)

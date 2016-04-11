@@ -564,9 +564,32 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.state == state)
 
-    _get_total_hosts_up = lambda s: s._tot_hosts_by_state('UP')
-    _get_total_hosts_down = lambda s: s._tot_hosts_by_state('DOWN')
-    _get_total_hosts_unreachable = lambda s: s._tot_hosts_by_state('UNREACHABLE')
+    def _get_total_hosts_up(self):
+        """
+        Get the number of hosts up
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UP')
+
+    def _get_total_hosts_down(self):
+        """
+        Get the number of hosts down
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('DOWN')
+
+    def _get_total_hosts_unreachable(self):
+        """
+        Get the number of hosts unreachable
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UNREACHABLE')
 
     @staticmethod
     def _get_total_hosts_unreachable_unhandled():
@@ -607,13 +630,41 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.state == state)
 
-    _get_total_service_ok = lambda s: s._tot_services_by_state('OK')
+    def _get_total_service_ok(self):
+        """
+        Get the number of services ok
 
-    _get_total_service_warning = lambda s: s._tot_services_by_state('WARNING')
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('OK')
 
-    _get_total_service_critical = lambda s: s._tot_services_by_state('CRITICAL')
+    def _get_total_service_warning(self):
+        """
+        Get the number of services warning
 
-    _get_total_service_unknown = lambda s: s._tot_services_by_state('UNKNOWN')
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('WARNING')
+
+    def _get_total_service_critical(self):
+        """
+        Get the number of services critical
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('CRITICAL')
+
+    def _get_total_service_unknown(self):
+        """
+        Get the number of services unknown
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('UNKNOWN')
 
     @staticmethod
     def _get_total_services_warning_unhandled():

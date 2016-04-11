@@ -1222,7 +1222,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :param raw_objects: Raw object we need to instantiate objects
         :type raw_objects: dict
         :param o_type: the object type we want to create
-        :type type: object
+        :type o_type: object
         :return: None
         """
         types_creations = self.__class__.types_creations

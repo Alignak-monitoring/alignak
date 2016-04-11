@@ -18,15 +18,12 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Scheduler."""
 
-import base64
-import zlib
-
 import cherrypy
 
 from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import average_percentile
-from alignak.misc.serialization import serialize
+from alignak.misc.serialization import serialize, unserialize
 
 
 class SchedulerInterface(GenericInterface):
@@ -51,7 +48,7 @@ class SchedulerInterface(GenericInterface):
         :type worker_name: str
         :param module_types: Module type to filter actions/checks
         :type module_types: list
-        :return: base64 zlib compress serialized check/action list
+        :return: serialized check/action list
         :rtype: str
         """
         # print "We ask us checks"
@@ -68,26 +65,28 @@ class SchedulerInterface(GenericInterface):
         # print "Sending %d checks" % len(res)
         self.app.sched.nb_checks_send += len(res)
 
-        return base64.b64encode(zlib.compress(serialize(res), 2))
+        return serialize(res, True)
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def put_results(self, results):
+    def put_results(self):
         """Put results to scheduler, used by poller and reactionners
 
-        :param results: results to handle
-        :type results:
         :return: True or ?? (if lock acquire fails)
         :rtype: bool
         """
+        res = cherrypy.request.json
+        results = res['results']
         nb_received = len(results)
         self.app.sched.nb_check_received += nb_received
         if nb_received != 0:
             logger.debug("Received %d results", nb_received)
-        for result in results:
-            result.set_type_active()
         with self.app.sched.waiting_results_lock:
-            self.app.sched.waiting_results.extend(results)
+            for result in results:
+                resultobj = unserialize(result, True)
+                resultobj.set_type_active()  # pylint: disable=E1101
+                self.app.sched.waiting_results.append(resultobj)
 
         # for c in results:
         # self.sched.put_results(c)
@@ -100,8 +99,8 @@ class SchedulerInterface(GenericInterface):
 
         :param bname: broker name, used to filter broks
         :type bname: str
-        :return: 64 zlib compress serialized brok list
-        :rtype: str
+        :return: serialized brok list
+        :rtype: dict
         """
         # Maybe it was not registered as it should, if so,
         # do it for it
@@ -114,7 +113,7 @@ class SchedulerInterface(GenericInterface):
         self.app.sched.nb_broks_send += len(res)
         # we do not more have a full broks in queue
         self.app.sched.brokers[bname]['has_full_broks'] = False
-        return base64.b64encode(zlib.compress(serialize(res), 2))
+        return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -180,27 +179,29 @@ class SchedulerInterface(GenericInterface):
         return res
 
     @cherrypy.expose
-    def run_external_commands(self, cmds):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def run_external_commands(self):
         """Post external_commands to scheduler (from arbiter)
         Wrapper to to app.sched.run_external_commands method
 
-        :param cmds: external commands list ro run
-        :type cmds: list
         :return: None
         """
+        commands = cherrypy.request.json
         with self.app.lock:
-            self.app.sched.run_external_commands(cmds)
+            self.app.sched.run_external_commands(commands['cmds'])
 
     @cherrypy.expose
-    def put_conf(self, conf):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def put_conf(self, conf=None):
         """Post conf to scheduler (from arbiter)
 
-        :param conf: new configuration to load
-        :type conf: dict
         :return: None
         """
         self.app.sched.die()
-        super(SchedulerInterface, self).put_conf(conf)
+        conf = cherrypy.request.json
+        super(SchedulerInterface, self).put_conf(conf['conf'])
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

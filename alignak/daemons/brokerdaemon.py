@@ -61,8 +61,6 @@ import os
 import sys
 import time
 import traceback
-import base64
-import zlib
 import threading
 from multiprocessing import active_children
 
@@ -385,12 +383,7 @@ class Broker(BaseSatellite):
                     con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
-                        tmp_broks = unserialize(zlib.decompress(base64.b64decode(tmp_broks)))
-                    except (TypeError, zlib.error), exp:
-                        logger.error('Cannot load broks data from %s : %s',
-                                     links[sched_id]['name'], exp)
-                        links[sched_id]['con'] = None
-                        continue
+                        tmp_broks = unserialize(tmp_broks, True)
                     except AlignakClassLookupException as exp:
                         logger.error('Cannot un-serialize data received from "get_broks" call: %s',
                                      exp)
@@ -457,7 +450,7 @@ class Broker(BaseSatellite):
         :return: None
         """
         with self.conf_lock:
-            conf = self.new_conf
+            conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals

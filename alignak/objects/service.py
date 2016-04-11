@@ -943,8 +943,8 @@ class Service(SchedulingItem):
         # Does the notification period allow sending out this notification?
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
-                (notification_period is not None
-                    and not notification_period.is_time_valid(t_wished)) or \
+                (notification_period is not None and not
+                    notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
             return True
 
@@ -955,11 +955,11 @@ class Service(SchedulingItem):
             self.state == 'OK' and 'r' not in self.notification_options
         ):
             return True
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
-                and 'f' not in self.notification_options):
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                'f' not in self.notification_options):
             return True
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
-                and 's' not in self.notification_options):
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+                's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up

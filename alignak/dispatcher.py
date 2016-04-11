@@ -237,8 +237,8 @@ class Dispatcher:
                     for kind in ('reactionner', 'poller', 'broker', 'receiver'):
                         # We must have the good number of satellite or we are not happy
                         # So we are sure to raise a dispatch every loop a satellite is missing
-                        if (len(realm.to_satellites_managed_by[kind][cfg_id])
-                                < realm.get_nb_of_must_have_satellites(kind)):
+                        if (len(realm.to_satellites_managed_by[kind][cfg_id]) <
+                                realm.get_nb_of_must_have_satellites(kind)):
                             logger.warning("Missing satellite %s for configuration %s:",
                                            kind, conf_id)
 

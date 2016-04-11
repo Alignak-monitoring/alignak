@@ -285,9 +285,9 @@ class ActionBase(AlignakObject):
         del self.process
 
         if (  # check for bad syntax in command line:
-            'sh: -c: line 0: unexpected EOF while looking for matching' in self.stderrdata
-            or ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata)
-            or 'Syntax error: Unterminated quoted string' in self.stderrdata
+            'sh: -c: line 0: unexpected EOF while looking for matching' in self.stderrdata or
+            ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata) or
+            'Syntax error: Unterminated quoted string' in self.stderrdata
         ):
             # Very, very ugly. But subprocess._handle_exitstatus does
             # not see a difference between a regular "exit 1" and a
@@ -413,8 +413,8 @@ if os.name != 'nt':
                 logger.error("Fail launching command: %s %s %s",
                              self.command, exp, force_shell)
                 # Maybe it's just a shell we try to exec. So we must retry
-                if (not force_shell and exp.errno == 8
-                   and exp.strerror == 'Exec format error'):
+                if (not force_shell and exp.errno == 8 and
+                        exp.strerror == 'Exec format error'):
                     return self.execute__(True)
                 self.output = exp.__str__()
                 self.exit_status = 2

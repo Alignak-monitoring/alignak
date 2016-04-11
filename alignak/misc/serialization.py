@@ -33,11 +33,13 @@ def serialize(obj, no_dump=False):
 
     :param obj: the object to serialize
     :type obj: alignak.objects.item.Item | dict | list | str
-    :return: json dumps dict with the following structure ::
+    :param no_dump: if True return dict, otherwise return a json
+    :type no_dump: bool
+    :return: dict or json dumps dict with the following structure ::
 
        {'__sys_python_module__': "%s.%s" % (o_cls.__module__, o_cls.__name__)
        'content' : obj.serialize()}
-    :rtype: str
+    :rtype: dict | str
     """
     if hasattr(obj, "serialize") and callable(obj.serialize):
         o_cls = obj.__class__
@@ -69,6 +71,8 @@ def unserialize(j_obj, no_load=False):
 
     :param j_obj: json object, dict
     :type j_obj: str (before loads)
+    :param no_load: if True, j_obj is a dict, otherwize it's a json and need loads it
+    :type no_load: bool
     :return: un-serialized object
     """
 

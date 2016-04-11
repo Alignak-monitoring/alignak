@@ -155,6 +155,7 @@ class Item(AlignakObject):
                               "it is not in %s object properties" % \
                               (key, cls.__name__)
                     self.configuration_warnings.append(warning)
+                    self.properties[key] = ToGuessProp(default='')
                     val = ToGuessProp.pythonize(params[key])
             except (PythonizeError, ValueError) as expt:
                 err = "Error while pythonizing parameter '%s': %s" % (key, expt)

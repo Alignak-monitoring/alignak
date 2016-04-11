@@ -475,7 +475,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """Resolve external command
 
         :param ext_cmd: extermal command to run
-        :type excmd: alignak.external_command.ExternalCommand
+        :type ext_cmd: alignak.external_command.ExternalCommand
         :return: None
         """
         self.external_command.resolve_command(ext_cmd)
@@ -1260,8 +1260,6 @@ class Scheduler(object):  # pylint: disable=R0902
         """Call hook point 'load_retention'.
         Retention modules will read retention (from file, db etc)
 
-        :param forced: if update forced?
-        :type forced: bool
         :return: None
         """
         self.hook_point('load_retention')

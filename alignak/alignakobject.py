@@ -32,13 +32,26 @@ class AlignakObject(object):
     """
 
     properties = {'uuid': StringProp(default='')}
+    macros = {}
 
     def __init__(self, params=None, parsing=True):  # pylint: disable=W0613
 
         if params is None:
             return
+        hasmacro = False
+        if hasattr(self, 'macros'):
+            hasmacro = True
         for key, value in params.iteritems():
-            setattr(self, key, value)
+            if key in ['already_start_escalations', 'tags', 'notified_contacts',
+                       'parent_dependencies', 'child_dependencies']:
+                setattr(self, key, set(value))
+            else:
+                setattr(self, key, value)
+            # reconstruct macro list
+            if hasmacro:
+                if key[0] == '$' and key[:1] == '$' and key not in self.macros:
+                    self.macros[key.strip('$')] = key
+
         if not hasattr(self, 'uuid'):
             self.uuid = uuid.uuid4().hex
 

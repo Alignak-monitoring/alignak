@@ -54,6 +54,7 @@ import calendar
 import re
 
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
+from alignak.alignakobject import AlignakObject
 from alignak.log import logger
 
 
@@ -118,18 +119,21 @@ def find_day_by_offset(year, month, offset):
         return max(1, days_in_month + offset + 1)
 
 
-class Timerange(object):
+class Timerange(AlignakObject):
     """Timerange class provides parsing facilities for time range declaration
 
     """
 
-    def __init__(self, entry=None, params=None):
+    def __init__(self, entry=None, params=None, parsing=True):
         """Entry is like 00:00-24:00
 
         :param entry: time range entry
         :return: Timerange instance
         :rtype: object
         """
+        if not parsing:
+            super(Timerange, self).__init__(params, parsing=parsing)
+            return
         if entry is not None:
             pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
             matches = re.match(pattern, entry)
@@ -202,7 +206,7 @@ class Timerange(object):
         return self.is_valid
 
 
-class AbstractDaterange(object):
+class AbstractDaterange(AlignakObject):
     """AbstractDaterange class provides functions to deal with a range of dates
     It is subclassed for more granularity (weekday, month ...)
     """
@@ -597,7 +601,7 @@ class Daterange(AbstractDaterange):
     rev_weekdays = dict((v, k) for k, v in weekdays.items())
     rev_months = dict((v, k) for k, v in months.items())
 
-    def __init__(self, params):
+    def __init__(self, params, parsing=True):
         """
 
         :param syear: start year
@@ -626,6 +630,9 @@ class Daterange(AbstractDaterange):
         :type other:
         :return: None
         """
+        if not parsing:
+            super(Daterange, self).__init__(params, parsing=parsing)
+            return
         super(Daterange, self).__init__()
         self.syear = int(params['syear'])
         self.smon = int(params['smon'])
@@ -684,7 +691,7 @@ class StandardDaterange(AbstractDaterange):
     """StandardDaterange is for standard entry (weekday - weekday)
 
     """
-    def __init__(self, params):
+    def __init__(self, params, parsing=True):
         """
         Init of StandardDaterange
 
@@ -694,6 +701,10 @@ class StandardDaterange(AbstractDaterange):
         :type other: str
         :return: None
         """
+        if not parsing:
+            super(StandardDaterange, self).__init__(params, parsing)
+            return
+
         self.other = params['other']
 
         if 'timeranges' in params:

@@ -893,10 +893,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 self.state == 'UP' and 'r' not in self.notification_options or
                 self.state == 'UNREACHABLE' and 'u' not in self.notification_options):
             return True
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
-                and 'f' not in self.notification_options) or \
-            (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
-                and 's' not in self.notification_options):
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                'f' not in self.notification_options) or \
+            (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+                's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
@@ -955,10 +955,49 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return str(sum(1 for s in self.services
                        if services[s].state_id == state))
 
-    get_total_services_ok = lambda s, i: s._tot_services_by_state(i, 0)
-    get_total_services_warning = lambda s, i: s._tot_services_by_state(i, 1)
-    get_total_services_critical = lambda s, i: s._tot_services_by_state(i, 2)
-    get_total_services_unknown = lambda s, i: s._tot_services_by_state(i, 3)
+    def get_total_services_ok(self, services):
+        """
+        Get number of services ok
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 0)
+
+    def get_total_services_warning(self, services):
+        """
+        Get number of services warning
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 1)
+
+    def get_total_services_critical(self, services):
+        """
+        Get number of services critical
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 2)
+
+    def get_total_services_unknown(self, services):
+        """
+        Get number of services unknown
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 3)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement

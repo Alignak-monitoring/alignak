@@ -208,7 +208,6 @@ class BoolProp(Property):
     Boolean values are currently case insensitively defined as 0,
     false, no, off for False, and 1, true, yes, on for True).
     """
-
     @staticmethod
     def pythonize(val):
         """Convert value into a boolean

@@ -59,10 +59,21 @@ class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
     """
-    __slots__ = ('__dict__', 'uuid', 'type', 'data', 'prepared', 'instance_id')
     my_type = 'brok'
 
-    def __init__(self, params):
+    def __init__(self, params, parsing=True):
+        if not parsing:
+            if params is None:
+                return
+            for key, value in params.iteritems():
+                if key in ['already_start_escalations', 'tags', 'notified_contacts',
+                           'parent_dependencies', 'child_dependencies']:
+                    setattr(self, key, set(value))
+                else:
+                    setattr(self, key, value)
+            if not hasattr(self, 'uuid'):
+                self.uuid = uuid.uuid4().hex
+            return
         self.uuid = params.get('uuid', uuid.uuid4().hex)
         self.type = params['type']
         self.instance_id = params.get('instance_id', None)

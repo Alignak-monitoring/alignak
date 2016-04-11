@@ -111,8 +111,8 @@ def split_semicolon(line, maxsplit=None):
 
     :param line: line to split
     :type line: str
-    :param maxsplit: maximum of split to dot
-    :type maxsplitL int
+    :param maxsplit: maximal number of split (if None, no limit)
+    :type maxsplit: None | int
     :return: split line
     :rtype: list
 
@@ -824,8 +824,8 @@ KEY_VALUES_REGEX = re.compile(
     # r"\s*"
     r'(?P<key>[^$]+?)'   # key, composed of anything but a $, optionally followed by some spaces
     r'\s*'
-    r'(?P<values>'       # optional values, composed of a bare '$(something)$' zero or more times
-    + (
+    r'(?P<values>' +     # optional values, composed of a bare '$(something)$' zero or more times
+    (
         r'(?:\$\([^)]+?\)\$\s*)*'
     ) +
     r')\s*'   # followed by optional values, which are composed of ..

@@ -46,9 +46,7 @@
 """This module provides HTTPClient class. Used by daemon to connect to HTTP servers (other daemons)
 
 """
-import json
 import warnings
-import zlib
 
 import requests
 
@@ -180,12 +178,9 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         for (key, value) in args.iteritems():
-            args[key] = serialize(value)
+            args[key] = serialize(value, True)
         try:
-            headers = {'content-type': 'application/zlib'}
-            args = zlib.compress(json.dumps(args, ensure_ascii=False), 2)
-            rsp = self._requests_con.post(uri, data=args, timeout=timeout, verify=self.strong_ssl,
-                                          headers=headers)
+            rsp = self._requests_con.post(uri, json=args, timeout=timeout, verify=self.strong_ssl)
             if rsp.status_code != 200:
                 raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
         except Exception as err:
@@ -199,8 +194,6 @@ class HTTPClient(object):
         :type path: str
         :param data: data to send in the request
         :type data:
-        :param args: args to add in the request
-        :type args:
         :param wait: timeout policy (short / long)
         :type wait: int
         :return: Content of the HTTP response if server returned 200

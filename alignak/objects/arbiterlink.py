@@ -67,21 +67,10 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-    def get_config(self):
-        """
-        Get the config of the arbiter
-
-        :return: the config
-        :rtype: object
-        """
-        return self.con.get('get_config')
-
     def is_me(self):
         """
         Check if parameter name if same than name of this object
 
-        :param lookup_name: name of arbiter to check
-        :type lookup_name: str
         :return: true if parameter name if same than this name
         :rtype: bool
         """

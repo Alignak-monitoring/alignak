@@ -1850,8 +1850,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
-        if (self.state != self.last_state and self.last_state != 'PENDING'
-                or self.state != ok_up and self.last_state == 'PENDING'):
+        if (self.state != self.last_state and self.last_state != 'PENDING' or
+                self.state != ok_up and self.last_state == 'PENDING'):
             SchedulingItem.current_event_id += 1
             self.last_event_id = self.current_event_id
             self.current_event_id = SchedulingItem.current_event_id

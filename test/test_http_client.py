@@ -30,8 +30,10 @@ class Interface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def post_method(self, a, b=3):
-        return a, b
+    @cherrypy.tools.json_in()
+    def post_method(self):
+        broks = cherrypy.request.json
+        return broks['a'], broks['b']
 
 
 class Test_Alignak_Http_Client(unittest.TestCase):

@@ -188,8 +188,6 @@ class Downtime(AlignakObject):
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects to get item ref
         :type services: alignak.objects.service.Services
-        :param comments: comments objects to edit the wanted comment
-        :type comments: dict
         :return: [], always
         :rtype: list
         TODO: res is useless

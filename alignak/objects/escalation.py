@@ -332,9 +332,9 @@ class Escalations(Items):
         """
         for escal in self:
             # If no host, no hope of having a service
-            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == ''
-                    or (hasattr(escal, 'service_description')
-                        and escal.service_description.strip() != '')):
+            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == '' or
+                    (hasattr(escal, 'service_description') and
+                        escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
             for hname in strip_and_uniq(escal.host_name.split(',')):

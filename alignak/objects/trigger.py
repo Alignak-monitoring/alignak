@@ -110,8 +110,6 @@ class Trigger(Item):
     def eval(self, ctx):
         """Execute the trigger
 
-        :param myself: self object but self will be use after exec (locals)
-        :type myself: object
         :param ctx: host or service object
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None

@@ -927,8 +927,6 @@ class Timeperiod(Item):
         """
         Try to resolve all unresolved elements
 
-        :param timeperiods: Timeperiods object
-        :type timeperiods:
         :return: None
         """
         for entry in self.unresolved:

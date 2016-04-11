@@ -40,15 +40,14 @@ class ReceiverInterface(GenericInterface):
         return res
 
     @cherrypy.expose
-    def push_host_names(self, sched_id, hnames):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def push_host_names(self):
         """Push hostname/scheduler links
         Use by the receivers to got the host names managed by the schedulers
 
-        :param sched_id: scheduler_id that manages hnames
-        :type sched_id: int
-        :param hnames: host names list
-        :type hnames: list
         :return: None
         """
+        schedhosts = cherrypy.request.json
         with self.app.lock:
-            self.app.push_host_names(sched_id, hnames)  # To int that
+            self.app.push_host_names(schedhosts['sched_id'], schedhosts['hnames'])  # To int that

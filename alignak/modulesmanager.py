@@ -336,8 +336,8 @@ class ModulesManager(object):
         """
         return [inst
                 for inst in self.instances
-                if not inst.is_external and phase in inst.phases
-                and inst not in self.to_restart]
+                if not inst.is_external and phase in inst.phases and
+                inst not in self.to_restart]
 
     def get_external_instances(self, phase=None):
         """Get a list of external instances (in a specific phase)
@@ -349,8 +349,8 @@ class ModulesManager(object):
         """
         return [inst
                 for inst in self.instances
-                if inst.is_external and phase in inst.phases
-                and inst not in self.to_restart]
+                if inst.is_external and phase in inst.phases and
+                inst not in self.to_restart]
 
     def get_external_to_queues(self):
         """Get a list of queue to external instances

@@ -48,7 +48,7 @@ class ArbiterInterface(GenericInterface):
         return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
 
     @cherrypy.expose
-    def put_conf(self, conf):
+    def put_conf(self, conf=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 
         :param conf: serialized new configuration
@@ -59,16 +59,6 @@ class ArbiterInterface(GenericInterface):
             super(ArbiterInterface, self).put_conf(conf)
             self.app.must_run = False
     put_conf.method = 'POST'
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_config(self):
-        """Get the managed configuration (internal) (HTTP GET)
-
-        :return: Currently managed configuration
-        :rtype: object
-        """
-        return self.app.conf
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

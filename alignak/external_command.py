@@ -1372,8 +1372,8 @@ class ExternalCommandManager:
 
         :param service: service to modify check timeperiod
         :type service: alignak.objects.service.Service
-        :param timeperiod: timeperiod object
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
+        :param check_timeperiod: timeperiod object
+        :type check_timeperiod: alignak.objects.timeperiod.Timeperiod
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_TIMEPERIOD"].value
