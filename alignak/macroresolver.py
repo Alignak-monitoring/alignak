@@ -264,7 +264,6 @@ class MacroResolver(Borg):
         data.append(self)  # For getting global MACROS
         if hasattr(self, 'conf'):
             data.append(self.conf)  # For USERN macros
-        clss = [d.__class__ for d in data]
 
         # we should do some loops for nested macros
         # like $USER1$ hiding like a ninja in a $ARG2$ Macro. And if
@@ -283,7 +282,7 @@ class MacroResolver(Borg):
             # print "Still go macros:", still_got_macros
 
             # Put in the macros the type of macro for all macros
-            self._get_type_of_macro(macros, clss)
+            self._get_type_of_macro(macros, data)
             # Now we get values from elements
             for macro in macros:
                 # If type ARGN, look at ARGN cutting
@@ -291,12 +290,12 @@ class MacroResolver(Borg):
                     macros[macro]['val'] = self._resolve_argn(macro, args)
                     macros[macro]['type'] = 'resolved'
                 # If class, get value from properties
-                if macros[macro]['type'] == 'class':
-                    cls = macros[macro]['class']
+                if macros[macro]['type'] == 'object':
+                    obj = macros[macro]['object']
                     for elt in data:
-                        if elt is None or elt.__class__ != cls:
+                        if elt is None or elt != obj:
                             continue
-                        prop = cls.macros[macro]
+                        prop = obj.macros[macro]
                         macros[macro]['val'] = self._get_value_from_element(elt, prop)
                         # Now check if we do not have a 'output' macro. If so, we must
                         # delete all special characters that can be dangerous
@@ -361,7 +360,7 @@ class MacroResolver(Borg):
                                                     args=com.args)
 
     @staticmethod
-    def _get_type_of_macro(macros, clss):
+    def _get_type_of_macro(macros, objs):
         r"""Set macros types
 
         Example::
@@ -373,8 +372,8 @@ class MacroResolver(Borg):
 
         :param macros: macros list
         :type macros: list[str]
-        :param clss: classes list, used to tag class macros
-        :type clss:
+        :param objs: objects list, used to tag object macros
+        :type objs: list
         :return: None
         """
         for macro in macros:
@@ -403,10 +402,10 @@ class MacroResolver(Borg):
                 macros[macro]['type'] = 'ONDEMAND'
                 continue
             # OK, classical macro...
-            for cls in clss:
-                if macro in cls.macros:
-                    macros[macro]['type'] = 'class'
-                    macros[macro]['class'] = cls
+            for obj in objs:
+                if macro in obj.macros:
+                    macros[macro]['type'] = 'object'
+                    macros[macro]['object'] = obj
                     continue
 
     @staticmethod

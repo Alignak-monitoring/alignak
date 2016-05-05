@@ -850,6 +850,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 res[prop] = None
             else:
                 res[prop] = getattr(self, prop).serialize()
+        res['macros'] = self.macros
         return res
 
     def get_name(self):
