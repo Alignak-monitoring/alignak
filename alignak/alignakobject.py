@@ -38,9 +38,11 @@ class AlignakObject(object):
 
         if params is None:
             return
+        all_props = {}
+        all_props.update(getattr(self, "properties", {}))
+        all_props.update(getattr(self, "running_properties", {}))
         for key, value in params.iteritems():
-            if key in ['already_start_escalations', 'tags', 'notified_contacts',
-                       'parent_dependencies', 'child_dependencies']:
+            if key in all_props and isinstance(all_props[key], SetProp):
                 setattr(self, key, set(value))
             else:
                 setattr(self, key, value)

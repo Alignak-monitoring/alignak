@@ -66,11 +66,8 @@ class Brok(object):
             if params is None:
                 return
             for key, value in params.iteritems():
-                if key in ['already_start_escalations', 'tags', 'notified_contacts',
-                           'parent_dependencies', 'child_dependencies']:
-                    setattr(self, key, set(value))
-                else:
-                    setattr(self, key, value)
+                setattr(self, key, value)
+
             if not hasattr(self, 'uuid'):
                 self.uuid = uuid.uuid4().hex
             return
