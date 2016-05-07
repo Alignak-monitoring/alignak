@@ -389,11 +389,11 @@ class SatelliteLink(Item):
 
         try:
             tab = self.con.get('what_i_managed')
-            print "[%s]What i managed raw value is %s" % (self.get_name(), tab)
+            print "[%s] What I managed raw value is %s" % (self.get_name(), tab)
 
             # Protect against bad return
             if not isinstance(tab, dict):
-                print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
+                print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
                       self.get_name(), tab
                 self.con = None
                 self.managed_confs = {}
@@ -405,7 +405,7 @@ class SatelliteLink(Item):
                 try:
                     tab_cleaned[key] = val
                 except ValueError:
-                    print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
+                    print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
                           self.get_name(), tab
             # We can update our list now
             self.managed_confs = tab_cleaned
@@ -414,7 +414,7 @@ class SatelliteLink(Item):
             # A timeout is not a crime, put this case aside
             # TODO : fix the timeout part?
             self.con = None
-            print "[%s]What i managed: Got exception: %s %s %s" % \
+            print "[%s] What I managed: Got exception: %s %s %s" % \
                   (self.get_name(), exp, type(exp), exp.__dict__)
             self.managed_confs = {}
 
