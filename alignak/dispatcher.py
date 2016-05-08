@@ -193,18 +193,18 @@ class Dispatcher:
         # and if dispatch on a failed node, remove the association, and need a new dispatch
         for realm in self.realms:
             for cfg_id in realm.confs:
-                conf_id = realm.confs[cfg_id].uuid
+                conf_uuid = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
                 sched = realm.confs[cfg_id].assigned_to
                 if sched is None:
                     if self.first_dispatch_done:
-                        logger.info("Scheduler configuration %s is unmanaged!!", conf_id)
+                        logger.info("Scheduler configuration %s is unmanaged!!", conf_uuid)
                     self.dispatch_ok = False
                 else:
                     if not sched.alive:
                         self.dispatch_ok = False  # so we ask a new dispatching
                         logger.warning("Scheduler %s had the configuration %s but is dead, "
-                                       "I am not happy.", sched.get_name(), conf_id)
+                                       "I am not happy.", sched.get_name(), conf_uuid)
                         sched.conf.assigned_to = None
                         sched.conf.is_assigned = False
                         sched.conf.push_flavor = 0
@@ -213,10 +213,10 @@ class Dispatcher:
                     # Maybe the scheduler restarts, so is alive but without
                     # the conf we think it was managing so ask it what it is
                     # really managing, and if not, put the conf unassigned
-                    if not sched.do_i_manage(conf_id, push_flavor):
+                    if not sched.do_i_manage(conf_uuid, push_flavor):
                         self.dispatch_ok = False  # so we ask a new dispatching
                         logger.warning("Scheduler %s did not managed its configuration %s, "
-                                       "I am not happy.", sched.get_name(), conf_id)
+                                       "I am not happy.", sched.get_name(), conf_uuid)
                         if sched.conf:
                             sched.conf.assigned_to = None
                             sched.conf.is_assigned = False
@@ -231,24 +231,24 @@ class Dispatcher:
         # the cfg_id I think is not correctly dispatched.
         for realm in self.realms:
             for cfg_id in realm.confs:
-                conf_id = realm.confs[cfg_id].uuid
+                conf_uuid = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
                 try:
                     for kind in ('reactionner', 'poller', 'broker', 'receiver'):
                         # We must have the good number of satellite or we are not happy
                         # So we are sure to raise a dispatch every loop a satellite is missing
-                        if (len(realm.to_satellites_managed_by[kind][cfg_id]) <
+                        if (len(realm.to_satellites_managed_by[kind][conf_uuid]) <
                                 realm.get_nb_of_must_have_satellites(kind)):
                             logger.warning("Missing satellite %s for configuration %s:",
-                                           kind, conf_id)
+                                           kind, conf_uuid)
 
                             # TODO: less violent! Must only resent to who need?
                             # must be caught by satellite who sees that
                             # it already has the conf and do nothing
                             self.dispatch_ok = False  # so we will redispatch all
-                            realm.to_satellites_need_dispatch[kind][cfg_id] = True
-                            realm.to_satellites_managed_by[kind][cfg_id] = []
-                        for satellite in realm.to_satellites_managed_by[kind][cfg_id]:
+                            realm.to_satellites_need_dispatch[kind][conf_uuid] = True
+                            realm.to_satellites_managed_by[kind][conf_uuid] = []
+                        for satellite in realm.to_satellites_managed_by[kind][conf_uuid]:
                             # Maybe the sat was marked as not alive, but still in
                             # to_satellites_managed_by. That means that a new dispatch
                             # is needed
@@ -262,16 +262,16 @@ class Dispatcher:
                                 continue
 
                             if satellite.alive and (not satellite.reachable or
-                                                    satellite.do_i_manage(conf_id, push_flavor)):
+                                                    satellite.do_i_manage(conf_uuid, push_flavor)):
                                 continue
 
                             logger.warning('[%s] The %s %s seems to be down, '
                                            'I must re-dispatch its role to someone else.',
                                            realm.get_name(), kind, satellite.get_name())
                             self.dispatch_ok = False  # so we will redispatch all
-                            realm.to_satellites_need_dispatch[kind][cfg_id] = True
-                            realm.to_satellites_managed_by[kind][cfg_id] = []
-                # At the first pass, there is no cfg_id in to_satellites_managed_by
+                            realm.to_satellites_need_dispatch[kind][conf_uuid] = True
+                            realm.to_satellites_managed_by[kind][conf_uuid] = []
+                # At the first pass, there is no conf_id in to_satellites_managed_by
                 except KeyError:
                     pass
 
@@ -326,11 +326,12 @@ class Dispatcher:
                 # Ok, we search for realms that have the conf
                 for realm in self.realms:
                     if cfg_id in realm.confs:
+                        conf_uuid = realm.confs[cfg_id].uuid
                         # Ok we've got the realm, we check its to_satellites_managed_by
                         # to see if reactionner is in. If not, we remove he sched_id for it
-                        if satellite not in realm.to_satellites_managed_by[kind][cfg_id]:
+                        if satellite not in realm.to_satellites_managed_by[kind][conf_uuid]:
                             id_to_delete.append(cfg_id)
-            # Maybe we removed all cfg_id of this reactionner
+            # Maybe we removed all conf_id of this reactionner
             # We can put it idle, no active and wait_new_conf
             if len(id_to_delete) == len(cfg_ids):
                 satellite.active = False
@@ -525,13 +526,13 @@ class Dispatcher:
             # We put the satellites conf with the "new" way so they see only what we want
             for realm in self.realms:
                 for i, cfg in realm.confs.iteritems():
-                    cfg_id = cfg.uuid
+                    conf_uuid = cfg.uuid
                     # flavor if the push number of this configuration send to a scheduler
                     flavor = cfg.push_flavor
                     for kind in ('reactionner', 'poller', 'broker', 'receiver'):
-                        if not realm.to_satellites_need_dispatch[kind][cfg_id]:
+                        if not realm.to_satellites_need_dispatch[kind][conf_uuid]:
                             continue
-                        cfg_for_satellite_part = realm.to_satellites[kind][cfg_id]
+                        cfg_for_satellite_part = realm.to_satellites[kind][conf_uuid]
 
                         # make copies of potential_react list for sort
                         satellites = []
@@ -574,7 +575,7 @@ class Dispatcher:
                             if (nb_cfg_sent >= realm.get_nb_of_must_have_satellites(kind) or
                                     not sat.alive):
                                 continue
-                            sat.cfg['schedulers'][cfg_id] = cfg_for_satellite_part
+                            sat.cfg['schedulers'][conf_uuid] = cfg_for_satellite_part
                             if sat.manage_arbiters:
                                 sat.cfg['arbiters'] = arbiters_cfg
 
@@ -587,10 +588,10 @@ class Dispatcher:
                             is_sent = False
                             # Maybe this satellite already got this configuration,
                             # so skip it
-                            if sat.do_i_manage(cfg_id, flavor):
+                            if sat.do_i_manage(conf_uuid, flavor):
                                 logger.info('[%s] Skipping configuration %d send '
                                             'to the %s %s: it already got it',
-                                            realm.get_name(), cfg_id, kind,
+                                            realm.get_name(), conf_uuid, kind,
                                             sat.get_name())
                                 is_sent = True
                             else:  # ok, it really need it :)
@@ -601,13 +602,13 @@ class Dispatcher:
                             if is_sent:
                                 sat.active = True
                                 logger.info('[%s] Dispatch OK of configuration %s to %s %s',
-                                            realm.get_name(), cfg_id, kind,
+                                            realm.get_name(), conf_uuid, kind,
                                             sat.get_name())
                                 # We change the satellite configuration, update our data
-                                sat.known_conf_managed_push(cfg_id, flavor)
+                                sat.known_conf_managed_push(conf_uuid, flavor)
 
                                 nb_cfg_sent += 1
-                                realm.to_satellites_managed_by[kind][cfg_id].append(sat)
+                                realm.to_satellites_managed_by[kind][conf_uuid].append(sat)
 
                                 # If we got a broker, the conf_id must be sent to only ONE
                                 # broker in a classic realm.
@@ -623,12 +624,12 @@ class Dispatcher:
                                              "receiver %s",
                                              realm.get_name(), len(hnames),
                                              sat.get_name())
-                                sat.push_host_names(cfg_id, hnames)
+                                sat.push_host_names(conf_uuid, hnames)
                         # else:
                         #    #I've got enough satellite, the next ones are considered spares
                         if nb_cfg_sent == realm.get_nb_of_must_have_satellites(kind):
                             logger.info("[%s] OK, no more %s sent need", realm.get_name(), kind)
-                            realm.to_satellites_need_dispatch[kind][cfg_id] = False
+                            realm.to_satellites_need_dispatch[kind][conf_uuid] = False
 
             # And now we dispatch receivers. It's easier, they need ONE conf
             # in all their life :)
