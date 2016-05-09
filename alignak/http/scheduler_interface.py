@@ -82,11 +82,10 @@ class SchedulerInterface(GenericInterface):
         self.app.sched.nb_check_received += nb_received
         if nb_received != 0:
             logger.debug("Received %d results", nb_received)
-        with self.app.sched.waiting_results_lock:
-            for result in results:
-                resultobj = unserialize(result, True)
-                resultobj.set_type_active()  # pylint: disable=E1101
-                self.app.sched.waiting_results.append(resultobj)
+        for result in results:
+            resultobj = unserialize(result, True)
+            resultobj.set_type_active()  # pylint: disable=E1101
+            self.app.sched.waiting_results.put(resultobj)
 
         # for c in results:
         # self.sched.put_results(c)
