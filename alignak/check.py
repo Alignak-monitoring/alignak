@@ -74,59 +74,15 @@ class Check(Action):  # pylint: disable=R0902
         'is_a':             StringProp(default='check'),
         'state':            IntegerProp(default=0),
         'long_output':      StringProp(default=''),
-        'ref':              IntegerProp(default=-1),
         'depend_on':        ListProp(default=[]),
-        'dep_check':        ListProp(default=[]),
+        'depend_on_me':     ListProp(default=[], split_on_coma=False),
         'perf_data':        StringProp(default=''),
         'check_type':       IntegerProp(default=0),
         'poller_tag':       StringProp(default='None'),
         'internal':         BoolProp(default=False),
         'from_trigger':     BoolProp(default=False),
+        'dependency_check': BoolProp(default=False),
     })
-
-    def __init__(self, status, command, ref, t_to_go, dep_check=None,  # pylint: disable=R0913
-                 _id=None, timeout=10, poller_tag='None', reactionner_tag='None',
-                 env=None, module_type='fork', from_trigger=False, dependency_check=False):
-
-        self.is_a = 'check'
-        self.type = ''
-        if _id is None:  # id != None is for copy call only
-            self._id = Action._id
-            Action._id += 1
-        self._in_timeout = False
-        self.timeout = timeout
-        self.status = status
-        self.exit_status = 3
-        self.command = command
-        self.output = ''
-        self.long_output = ''
-        self.ref = ref
-        # self.ref_type = ref_type
-        self.t_to_go = t_to_go
-        self.depend_on = []
-        if dep_check is None:
-            self.depend_on_me = []
-        else:
-            self.depend_on_me = [dep_check]
-        self.check_time = 0
-        self.execution_time = 0.0
-        self.u_time = 0.0  # user executon time
-        self.s_time = 0.0  # system execution time
-        self.perf_data = ''
-        self.check_type = 0  # which kind of check result? 0=active 1=passive
-        self.poller_tag = poller_tag
-        self.reactionner_tag = reactionner_tag
-        self.module_type = module_type
-        if env is not None:
-            self.env = env
-        else:
-            self.env = {}
-        # we keep the reference of the poller that will take us
-        self.worker = 'none'
-        # If it's a business rule, manage it as a special check
-        self.internal = ref and ref.got_business_rule or command.startswith('_internal')
-        self.from_trigger = from_trigger
-        self.dependency_check = dependency_check
 
     def copy_shell(self):
         """return a copy of the check but just what is important for execution
@@ -136,7 +92,7 @@ class Check(Action):  # pylint: disable=R0902
         :rtype: object
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Check('', '', '', '', '', _id=self._id))
+        return self.copy_shell__(Check({'uuid': self.uuid}))
 
     def get_return_from(self, check):
         """Update check data from action (notification for instance)
@@ -145,14 +101,9 @@ class Check(Action):  # pylint: disable=R0902
         :type check: alignak.action.Action
         :return: None
         """
-        self.exit_status = check.exit_status
-        self.output = check.output
-        self.long_output = check.long_output
-        self.check_time = check.check_time
-        self.execution_time = check.execution_time
-        self.perf_data = check.perf_data
-        self.u_time = check.u_time
-        self.s_time = check.s_time
+        for prop in ['exit_status', 'output', 'long_output', 'check_time', 'execution_time',
+                     'perf_data', 'u_time', 's_time']:
+            setattr(self, prop, getattr(check, prop))
 
     def is_launchable(self, timestamp):
         """Check if the check can be launched
@@ -165,16 +116,8 @@ class Check(Action):  # pylint: disable=R0902
         return timestamp > self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s ref:%s" % \
-               (self._id, self.status, self.command, self.ref)
-
-    def get_id(self):
-        """Getter for id attribute
-
-        :return: id
-        :rtype: int
-        """
-        return self._id
+        return "Check %s status:%s command:%s ref:%s" % \
+               (self.uuid, self.status, self.command, self.ref)
 
     def set_type_active(self):
         """Set check_type attribute to 0

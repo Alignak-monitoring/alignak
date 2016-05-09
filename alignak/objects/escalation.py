@@ -64,7 +64,6 @@ class Escalation(Item):
     """Escalation class is used to implement notification escalation
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'escalation'
 
     properties = Item.properties.copy()
@@ -101,7 +100,7 @@ class Escalation(Item):
         """
         return self.escalation_name
 
-    def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval):
+    def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
         """Check if the escalation is eligible (notification is escalated or not)
 
         Escalation is NOT eligible in ONE of the following condition is fulfilled::
@@ -157,14 +156,13 @@ class Escalation(Item):
             return False
 
         # Maybe the time is not in our escalation_period
-        if self.escalation_period is not None and \
-                not self.escalation_period.is_time_valid(timestamp):
+        if escal_period is not None and not escal_period.is_time_valid(timestamp):
             return False
 
         # Ok, I do not see why not escalade. So it's True :)
         return True
 
-    def get_next_notif_time(self, t_wished, status, creation_time, interval):
+    def get_next_notif_time(self, t_wished, status, creation_time, interval, escal_period):
         """Get the next notification time for the escalation
         Only legit for time based escalation
 
@@ -199,7 +197,7 @@ class Escalation(Item):
             return None
 
         # Maybe the time we found is not a valid one....
-        if self.escalation_period is not None and not self.escalation_period.is_time_valid(start):
+        if escal_period is not None and not escal_period.is_time_valid(start):
             return None
 
         # Ok so I ask for my start as a possibility for the next notification time
@@ -314,14 +312,15 @@ class Escalations(Items):
                 if sdesc.strip() == '*':
                     slist = services.find_srvs_by_hostname(hname)
                     if slist is not None:
+                        slist = [services[serv] for serv in slist]
                         for serv in slist:
-                            serv.escalations.append(escal)
+                            serv.escalations.append(escal.uuid)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
                             # print "Linking service", s.get_name(), 'with me', es.get_name()
-                            serv.escalations.append(escal)
+                            serv.escalations.append(escal.uuid)
                             # print "Now service", s.get_name(), 'have', s.escalations
 
     def linkify_es_by_h(self, hosts):
@@ -333,16 +332,16 @@ class Escalations(Items):
         """
         for escal in self:
             # If no host, no hope of having a service
-            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == ''
-                    or (hasattr(escal, 'service_description')
-                        and escal.service_description.strip() != '')):
+            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == '' or
+                    (hasattr(escal, 'service_description') and
+                        escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
             for hname in strip_and_uniq(escal.host_name.split(',')):
                 host = hosts.find_by_name(hname)
                 if host is not None:
                     # print "Linking host", h.get_name(), 'with me', es.get_name()
-                    host.escalations.append(escal)
+                    host.escalations.append(escal.uuid)
                     # print "Now host", h.get_name(), 'have', h.escalations
 
     def explode(self, hosts, hostgroups, contactgroups):

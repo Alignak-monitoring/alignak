@@ -51,7 +51,7 @@
 This module provide Servicegroup and Servicegroups classes used to group services
 """
 
-from alignak.property import StringProp, IntegerProp
+from alignak.property import StringProp
 from alignak.log import logger
 
 from .itemgroup import Itemgroup, Itemgroups
@@ -62,12 +62,11 @@ class Servicegroup(Itemgroup):
     Class to manage a servicegroup
     A servicegroup is used to group services
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'servicegroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':                IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':              StringProp(default='', fill_brok=['full_status']),
         'servicegroup_name': StringProp(fill_brok=['full_status']),
         'alias':             StringProp(fill_brok=['full_status']),
         'notes':             StringProp(default='', fill_brok=['full_status']),
@@ -207,7 +206,7 @@ class Servicegroups(Itemgroups):
                     service_desc = mbr.strip()
                     find = services.find_srv_by_name_and_hostname(host_name, service_desc)
                     if find is not None:
-                        new_mbrs.append(find)
+                        new_mbrs.append(find.uuid)
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
@@ -225,8 +224,9 @@ class Servicegroups(Itemgroups):
 
             # We find the id, we replace the names
             servicegroup.replace_members(new_mbrs)
-            for serv in servicegroup.members:
-                serv.servicegroups.append(servicegroup)
+            for srv_id in servicegroup.members:
+                serv = services[srv_id]
+                serv.servicegroups.append(servicegroup.uuid)
                 # and make this uniq
                 serv.servicegroups = list(set(serv.servicegroups))
 

@@ -59,7 +59,6 @@ class ArbiterLink(SatelliteLink):
     Class to manage the link to Arbiter daemon.
     With it, arbiter can see if a Arbiter daemon is alive, and can send it new configuration
     """
-    _id = 0
     my_type = 'arbiter'
     properties = SatelliteLink.properties.copy()
     properties.update({
@@ -68,30 +67,16 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-    def get_config(self):
-        """
-        Get the config of the arbiter
-
-        :return: the config
-        :rtype: object
-        """
-        return self.con.get('get_config')
-
-    def is_me(self, lookup_name):
+    def is_me(self):
         """
         Check if parameter name if same than name of this object
 
-        :param lookup_name: name of arbiter to check
-        :type lookup_name: str
         :return: true if parameter name if same than this name
         :rtype: bool
         """
         logger.info("And arbiter is launched with the hostname:%s "
                     "from an arbiter point of view of addr:%s", self.host_name, socket.getfqdn())
-        if lookup_name:
-            return lookup_name == self.get_name()
-        else:
-            return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
+        return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
 
     def give_satellite_cfg(self):
         """

@@ -68,11 +68,13 @@ import time
 import traceback
 
 from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
+from alignak.dependencynode import DependencyNode
 
 from alignak.check import Check
-from alignak.property import (BoolProp, IntegerProp, FloatProp,
+from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import to_svc_hst_distinct_lists, to_list_of_names, to_name_if_possible
+from alignak.util import to_list_of_names, get_obj_name
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -80,6 +82,7 @@ from alignak.dependencynode import DependencyNodeFactory
 from alignak.acknowledge import Acknowledge
 from alignak.comment import Comment
 from alignak.log import logger
+from alignak.commandcall import CommandCall
 
 
 class SchedulingItem(Item):  # pylint: disable=R0902
@@ -93,6 +96,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
+        'uuid':
+            StringProp(),
         'display_name':
             StringProp(default='', fill_brok=['full_status']),
         'initial_state':
@@ -108,7 +113,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'passive_checks_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status'],
+            StringProp(fill_brok=['full_status'],
                        special=True),
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
@@ -131,7 +136,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'retain_nonstatus_information':
             BoolProp(default=True, fill_brok=['full_status']),
         'contacts':
-            ListProp(default=[], brok_transformation=to_list_of_names,
+            ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'contact_groups':
             ListProp(default=[], fill_brok=['full_status'],
@@ -141,7 +146,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'first_notification_delay':
             IntegerProp(default=0, fill_brok=['full_status']),
         'notification_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status'],
+            StringProp(fill_brok=['full_status'],
                        special=True),
         'notifications_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
@@ -174,7 +179,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'escalations':
             ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
         'maintenance_period':
-            StringProp(default='', brok_transformation=to_name_if_possible,
+            StringProp(default='',
                        fill_brok=['full_status']),
         'time_to_orphanage':
             IntegerProp(default=300, fill_brok=['full_status']),
@@ -195,9 +200,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, fill_brok=['full_status']),
         # Enforces child nodes notification options
         'business_rule_host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
         'business_rule_service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
         # Business_Impact value
         'business_impact':
             IntegerProp(default=2, fill_brok=['full_status']),
@@ -233,6 +238,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             StringProp(default=''),
         'snapshot_interval':
             IntegerProp(default=5),
+
+        'realm':
+            StringProp(default='', fill_brok=['full_status'], conf_send_preparation=get_obj_name),
     })
 
     running_properties = Item.running_properties.copy()
@@ -246,7 +254,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'in_checking':
             BoolProp(default=False, fill_brok=['full_status', 'check_result', 'next_schedule']),
         'in_maintenance':
-            IntegerProp(default=None, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=-1, fill_brok=['full_status'], retention=True),
         'latency':
             FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'attempt':
@@ -367,9 +375,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # we save only the names of the contacts, and we should RELINK
         # them when we load it.
         # use for having all contacts we have notified
-        'notified_contacts':  ListProp(default=set(),
-                                       retention=True,
-                                       retention_preparation=to_list_of_names),
+        'notified_contacts':  SetProp(default=set(),
+                                      retention=True,
+                                      retention_preparation=to_list_of_names),
         'in_scheduled_downtime': BoolProp(
             default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
@@ -384,11 +392,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # list of problems that make us an impact
         'source_problems':    ListProp(default=[],
                                        fill_brok=['full_status'],
-                                       brok_transformation=to_svc_hst_distinct_lists),
+                                       ),
         # list of the impact I'm the cause of
         'impacts':            ListProp(default=[],
                                        fill_brok=['full_status'],
-                                       brok_transformation=to_svc_hst_distinct_lists),
+                                       ),
         # keep a trace of the old state before being an impact
         'state_before_impact': StringProp(default='PENDING'),
         # keep a trace of the old state id before being an impact
@@ -406,13 +414,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # so our parents as network relation, or a host
         # we are depending in a hostdependency
         # or even if we are business based.
-        'parent_dependencies': StringProp(default=set(),
-                                          brok_transformation=to_svc_hst_distinct_lists,
-                                          fill_brok=['full_status']),
+        'parent_dependencies': SetProp(default=set(), fill_brok=['full_status']),
         # Here it's the guys that depend on us. So it's the total
         # opposite of the parent_dependencies
-        'child_dependencies': StringProp(brok_transformation=to_svc_hst_distinct_lists,
-                                         default=set(), fill_brok=['full_status']),
+        'child_dependencies': SetProp(default=set(), fill_brok=['full_status']),
         # Manage the unknown/unreachable during hard state
         'in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
         'was_in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
@@ -442,52 +447,62 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     special_properties = []
 
-    def __getstate__(self):
-        """Call by pickle to data-ify the host
-        we do a dict because list are too dangerous for
-        retention save and co :( even if it's more
-        extensive
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
 
-        :return: dictionary with attributes
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        for prop in cls.running_properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['check_command', 'event_handler', 'snapshot_command']:
+            if prop in params and isinstance(params[prop], dict):
+                # We recreate the object
+                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        if 'business_rule' in params and isinstance(params['business_rule'], dict):
+            self.business_rule = DependencyNode(params['business_rule'])
+            del params['business_rule']
+        if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
+            self.acknowledgement = Acknowledge(params['acknowledgement'])
+        super(SchedulingItem, self).__init__(params, parsing=parsing)
+
+    def serialize(self):
+        res = super(SchedulingItem, self).serialize()
+
+        for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
+                     'acknowledgement']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = getattr(self, prop).serialize()
+
         return res
 
-    def __setstate__(self, state):
-        cls = self.__class__
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        for prop in cls.running_properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-    def register_son_in_parent_child_dependencies(self, son):
-        """Register a child dependency in this object
-        and a parent one in the son parameter
-
-        :param son: son to register dependency
-        :type son: alignak.objects.schedulingitem.SchedulingItem
-        :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
+    def linkify_with_triggers(self, triggers):
         """
-        # So we register it in our list
-        self.child_dependencies.add(son)
+        Link with triggers
 
-        # and us to its parents
-        son.parent_dependencies.add(self)
+        :param triggers: Triggers object
+        :type triggers: alignak.objects.trigger.Triggers
+        :return: None
+        """
+        # Get our trigger string and trigger names in the same list
+        self.triggers.extend([self.trigger_name])
+        # print "I am linking my triggers", self.get_full_name(), self.triggers
+        new_triggers = []
+        for tname in self.triggers:
+            if tname == '':
+                continue
+            trigger = triggers.find_by_name(tname)
+            if trigger:
+                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
+                new_triggers.append(trigger.uuid)
+            else:
+                self.configuration_errors.append('the %s %s does have a unknown trigger_name '
+                                                 '"%s"' % (self.__class__.my_type,
+                                                           self.get_full_name(),
+                                                           tname))
+        self.triggers = new_triggers
 
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
@@ -511,14 +526,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if len(self.flapping_changes) > flap_history:
             self.flapping_changes.pop(0)
 
-        # Now we add a value, we update the is_flapping prop
-        self.update_flapping()
-
-    def update_flapping(self):
+    def update_flapping(self, notif_period, hosts, services):
         """Compute the sample list (self.flapping_changes) and determine
         whether the host/service is flapping or not
 
+        :param notif_period: notification period object for this host/service
+        :type notif_period: alignak.object.timeperiod.Timeperiod
+        :param hosts: Hosts objects, used to create notification if necessary
+        :type hosts: alignak.objects.host.Hosts
+        :param services: Services objects, used to create notification if necessary
+        :type services: alignak.objects.service.Services
         :return: None
+        :rtype: Nonetype
         """
         flap_history = self.__class__.flap_history
         # We compute the flapping change in %
@@ -557,7 +576,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.raise_flapping_stop_log_entry(res, low_flap_threshold)
             # and a notification
             self.remove_in_progress_notifications()
-            self.create_notifications('FLAPPINGSTOP')
+            self.create_notifications('FLAPPINGSTOP', notif_period, hosts, services)
             # And update our status for modules
             has_changed = self.get_update_status_brok()
             self.broks.append(has_changed)
@@ -568,7 +587,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.raise_flapping_start_log_entry(res, high_flap_threshold)
             # and a notification
             self.remove_in_progress_notifications()
-            self.create_notifications('FLAPPINGSTART')
+            self.create_notifications('FLAPPINGSTART', notif_period, hosts, services)
             # And update our status for modules
             has_changed = self.get_update_status_brok()
             self.broks.append(has_changed)
@@ -589,9 +608,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         return self.attempt >= self.max_check_attempts
 
-    def do_check_freshness(self):
+    def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
+                           checks):
         """Check freshness and schedule a check now if necessary.
 
+        :param hosts: hosts objects, used to launch checks
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used launch checks
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get check_period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :return: A check or None
         :rtype: None | object
         """
@@ -608,14 +640,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         # Fred: Do not raise a check for passive
                         # only checked hosts when not in check period ...
                         if self.passive_checks_enabled and not self.active_checks_enabled:
-                            if self.check_period is None or self.check_period.is_time_valid(now):
+                            timeperiod = timeperiods[self.check_period]
+                            if timeperiod is None or timeperiod.is_time_valid(now):
                                 # Raise a log
                                 self.raise_freshness_log_entry(
                                     int(now - self.last_state_update),
                                     int(now - self.freshness_threshold)
                                 )
                                 # And a new check
-                                return self.launch_check(now)
+                                return self.launch_check(now, hosts, services, timeperiods,
+                                                         macromodulations, checkmodulations, checks)
                             else:
                                 logger.debug(
                                     "Should have checked freshness for passive only"
@@ -624,12 +658,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                 )
         return None
 
-    def set_myself_as_problem(self):
+    def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
         """ Raise all impact from my error. I'm setting myself
         as a problem, and I register myself as this in all
         hosts/services that depend_on_me. So they are now my
         impacts
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get act_depend_of_me timeperiod
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulations objects
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         """
         now = time.time()
@@ -639,14 +681,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # and they should be cool to register them so I've got
         # my impacts list
         impacts = list(self.impacts)
-        for (impact, status, _, timeperiod, _) in self.act_depend_of_me:
+        for (impact_id, status, _, timeperiod_id, _) in self.act_depend_of_me:
             # Check if the status is ok for impact
+            if impact_id in hosts:
+                impact = hosts[impact_id]
+            else:
+                impact = services[impact_id]
+            timeperiod = timeperiods[timeperiod_id]
             for stat in status:
                 if self.is_state(stat):
                     # now check if we should bailout because of a
                     # not good timeperiod for dep
                     if timeperiod is None or timeperiod.is_time_valid(now):
-                        new_impacts = impact.register_a_problem(self)
+                        new_impacts = impact.register_a_problem(self, hosts, services, timeperiods,
+                                                                bi_modulations)
                         impacts.extend(new_impacts)
 
         # Only update impacts and create new brok if impacts changed.
@@ -656,18 +704,26 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.impacts = list(s_impacts)
 
         # We can update our business_impact value now
-        self.update_business_impact_value()
+        self.update_business_impact_value(hosts, services, timeperiods, bi_modulations)
 
         # And we register a new broks for update status
         brok = self.get_update_status_brok()
         self.broks.append(brok)
 
-    def update_business_impact_value(self):
+    def update_business_impact_value(self, hosts, services, timeperiods, bi_modulations):
         """We update our 'business_impact' value with the max of
         the impacts business_impact if we got impacts. And save our 'configuration'
         business_impact if we do not have do it before
         If we do not have impacts, we revert our value
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used to get modulation_period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulations objects
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         TODO: SchedulingItem object should not handle other schedulingitem obj.
               We should call obj.register* on both obj.
@@ -680,9 +736,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # We look at our crit modulations. If one apply, we take apply it
         # and it's done
         in_modulation = False
-        for impactmod in self.business_impact_modulations:
+        for impactmod_id in self.business_impact_modulations:
             now = time.time()
-            period = impactmod.modulation_period
+            impactmod = bi_modulations[impactmod_id]
+            period = timeperiods[impactmod.modulation_period]
             if period is None or period.is_time_valid(now):
                 # print "My self", self.get_name(), "go from crit",
                 # self.business_impact, "to crit", cm.business_impact
@@ -694,10 +751,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If we truly have impacts, we get the max business_impact
         # if it's huge than ourselves
         if len(self.impacts) != 0:
-            self.business_impact = max(
-                self.business_impact,
-                max(e.business_impact for e in self.impacts)
-            )
+            bp_impacts = [hosts[elem].business_impact for elem in self.impacts if elem in hosts]
+            bp_impacts.extend([services[elem].business_impact for elem in self.impacts
+                               if elem in services])
+            self.business_impact = max(self.business_impact, max(bp_impacts))
             return
 
         # If we are not a problem, we setup our own_crit if we are not in a
@@ -705,9 +762,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if self.my_own_business_impact != -1 and not in_modulation:
             self.business_impact = self.my_own_business_impact
 
-    def no_more_a_problem(self):
+    def no_more_a_problem(self, hosts, services, timeperiods, bi_modulations):
         """Remove this objects as an impact for other schedulingitem.
 
+        :param hosts: hosts objects, used to get impacts
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get impacts
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for update_business_impact_value
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
         TODO: SchedulingItem object should not handle other schedulingitem obj.
               We should call obj.register* on both obj.
@@ -718,14 +783,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.is_problem = False
 
             # we warn impacts that we are no more a problem
-            for impact in self.impacts:
+            for impact_id in self.impacts:
+                if impact_id in hosts:
+                    impact = hosts[impact_id]
+                else:
+                    impact = services[impact_id]
                 impact.deregister_a_problem(self)
 
             # we can just drop our impacts list
             self.impacts = []
 
         # We update our business_impact value, it's not a huge thing :)
-        self.update_business_impact_value()
+        self.update_business_impact_value(hosts, services, timeperiods, bi_modulations)
 
         # If we were a problem, we say to everyone
         # our new status, with good business_impact value
@@ -734,7 +803,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             brok = self.get_update_status_brok()
             self.broks.append(brok)
 
-    def register_a_problem(self, prob):
+    def register_a_problem(self, prob, hosts, services, timeperiods, bi_modulations):
         """Call recursively by potentials impacts so they
         update their source_problems list. But do not
         go below if the problem is not a real one for me
@@ -742,6 +811,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param prob: problem to register
         :type prob: alignak.objects.schedulingitem.SchedulingItem
+        :param hosts: hosts objects, used to get object in act_depend_of_me
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to get object in act_depend_of_me
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: list of host/service that are impacts
         :rtype: list[alignak.objects.schedulingitem.SchedulingItem]
         TODO: SchedulingItem object should not handle other schedulingitem obj.
@@ -749,7 +826,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
               This is 'Java' style
         """
         # Maybe we already have this problem? If so, bailout too
-        if prob in self.source_problems:
+        if prob.uuid in self.source_problems:
             return []
 
         now = time.time()
@@ -765,7 +842,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if self.is_impact:
             # Maybe I was a problem myself, now I can say: not my fault!
             if self.is_problem:
-                self.no_more_a_problem()
+                self.no_more_a_problem(hosts, services, timeperiods, bi_modulations)
 
             # Ok, we are now an impact, we should take the good state
             # but only when we just go in impact state
@@ -773,19 +850,26 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.set_impact_state()
 
             # Ok now we can be a simple impact
-            impacts.append(self)
-            if prob not in self.source_problems:
-                self.source_problems.append(prob)
+            impacts.append(self.uuid)
+            if prob.uuid not in self.source_problems:
+                self.source_problems.append(prob.uuid)
             # we should send this problem to all potential impact that
             # depend on us
-            for (impact, status, _, timeperiod, _) in self.act_depend_of_me:
+            for (impact_id, status, _, timeperiod_id, _) in self.act_depend_of_me:
                 # Check if the status is ok for impact
+                if impact_id in hosts:
+                    impact = hosts[impact_id]
+                else:
+                    impact = services[impact_id]
+                timeperiod = timeperiods[timeperiod_id]
                 for stat in status:
                     if self.is_state(stat):
                         # now check if we should bailout because of a
                         # not good timeperiod for dep
                         if timeperiod is None or timeperiod.is_time_valid(now):
-                            new_impacts = impact.register_a_problem(prob)
+                            new_impacts = impact.register_a_problem(prob, hosts,
+                                                                    services, timeperiods,
+                                                                    bi_modulations)
                             impacts.extend(new_impacts)
 
             # And we register a new broks for update status
@@ -803,7 +887,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type prob: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-        self.source_problems.remove(prob)
+        self.source_problems.remove(prob.uuid)
 
         # For know if we are still an impact, maybe our dependencies
         # are not aware of the remove of the impact state because it's not ordered
@@ -817,11 +901,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         brok = self.get_update_status_brok()
         self.broks.append(brok)
 
-    def is_no_action_dependent(self):
+    def is_no_action_dependent(self, hosts, services):
         """Check if dependencies states (logic or network) match dependencies statuses
         This basically means that a dependency is in a bad state and
         it can explain this object state.
 
+        :param hosts: hosts objects, used to get object in act_depend_of
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects,  used to get object in act_depend_of
+        :type services: alignak.objects.service.Services
         :return: True if one of the logical dep matches the status or
                  all network dep match the status. False otherwise
         :rtype: bool
@@ -832,8 +920,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # So if one logic is Raise, is dep
         # is one network is no ok, is not dep
         # at the end, raise no dep
-        for (dep, status, n_type, _, _) in self.act_depend_of:
+        for (dep_id, status, n_type, _, _) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
+            if dep_id in hosts:
+                dep = hosts[dep_id]
+            else:
+                dep = services[dep_id]
             if n_type == 'logic_dep':
                 for stat in status:
                     if dep.is_state(stat):
@@ -853,17 +945,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:  # every parents are dead, so... It's not my fault :)
             return True
 
-    def check_and_set_unreachability(self):
+    def check_and_set_unreachability(self, hosts, services):
         """Check if all network dependencies are down and set this object
         as unreachable if so.
 
+        :param hosts: hosts objects, used to get object in act_depend_of
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects,  used to get object in act_depend_of
+        :type services: alignak.objects.service.Services
         :return: None
         TODO: factorize with previous check?
         """
         parent_is_down = []
         # We must have all parents raised to be unreachable
-        for (dep, status, n_type, _, _) in self.act_depend_of:
+        for (dep_id, status, n_type, _, _) in self.act_depend_of:
             # For logic_dep, only one state raise put no action
+            if dep_id in hosts:
+                dep = hosts[dep_id]
+            else:
+                dep = services[dep_id]
             if n_type == 'network_dep':
                 p_is_down = False
                 dep_match = [dep.is_state(s) for s in status]
@@ -879,13 +979,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.set_unreachable()
             return
 
-    def do_i_raise_dependency(self, status, inherit_parents):
+    def do_i_raise_dependency(self, status, inherit_parents, hosts, services, timeperiods):
         """Check if this object or one of its dependency state (chk dependencies) match the status
 
         :param status: state list where dependency matters (notification failure criteria)
         :type status: list
         :param inherit_parents: recurse over parents
         :type inherit_parents: bool
+        :param hosts: hosts objects, used to raise dependency check
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to raise dependency check
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if one state matched the status list, otherwise False
         :rtype: bool
         """
@@ -900,29 +1006,46 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Ok, I do not raise dep, but my dep maybe raise me
         now = time.time()
-        for (dep, status, _, timeperiod, inh_parent) in self.chk_depend_of:
-            if dep.do_i_raise_dependency(status, inh_parent):
+        for (dep_id, status, _, timeperiod_id, inh_parent) in self.chk_depend_of:
+            if dep_id in hosts:
+                dep = hosts[dep_id]
+            else:
+                dep = services[dep_id]
+            timeperiod = timeperiods[timeperiod_id]
+            if dep.do_i_raise_dependency(status, inh_parent, hosts, services, timeperiods):
                 if timeperiod is None or timeperiod.is_time_valid(now):
                     return True
 
         # No, I really do not raise...
         return False
 
-    def is_no_check_dependent(self):
+    def is_no_check_dependent(self, hosts, services, timeperiods):
         """Check if there is some host/service that this object depend on
         has a state in the status list .
 
+        :param hosts: hosts objects, used to raise dependency check
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to raise dependency check
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if this object has a check dependency, otherwise False
         :rtype: bool
         """
         now = time.time()
-        for (dep, status, _, timeperiod, inh_parent) in self.chk_depend_of:
+        for (dep_id, status, _, timeperiod_id, inh_parent) in self.chk_depend_of:
+            timeperiod = timeperiods[timeperiod_id]
             if timeperiod is None or timeperiod.is_time_valid(now):
-                if dep.do_i_raise_dependency(status, inh_parent):
+                if dep_id in hosts:
+                    dep = hosts[dep_id]
+                else:
+                    dep = services[dep_id]
+                if dep.do_i_raise_dependency(status, inh_parent, hosts, services, timeperiods):
                     return True
         return False
 
-    def raise_dependencies_check(self, ref_check):
+    def raise_dependencies_check(self, ref_check, hosts, services, timeperiods, macromodulations,
+                                 checkmodulations, checks):
         """Get checks that we depend on if EVERY following conditions is met::
 
         * timeperiod is valid
@@ -930,13 +1053,30 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param ref_check: Check we want to get dependency from
         :type ref_check:
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :return: Checks that depend on ref_check
         :rtype: list[alignak.objects.check.Check]
         """
         now = time.time()
         cls = self.__class__
-        checks = []
-        for (dep, _, _, timeperiod, _) in self.act_depend_of:
+        new_checks = []
+        for (dep_id, _, _, timeperiod_id, _) in self.act_depend_of:
+            if dep_id in hosts:
+                dep = hosts[dep_id]
+            else:
+                dep = services[dep_id]
+            timeperiod = timeperiods[timeperiod_id]
             # If the dep timeperiod is not valid, do not raise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
@@ -944,16 +1084,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # cached_check_horizon = cached_service_check_horizon for service
                 if dep.last_state_update < now - cls.cached_check_horizon:
                     # Fred : passive only checked host dependency ...
-                    chk = dep.launch_check(now, ref_check, dependent=True)
+                    chk = dep.launch_check(now, hosts, services, timeperiods, macromodulations,
+                                           checkmodulations, checks, ref_check, dependent=True)
                     # i = dep.launch_check(now, ref_check)
                     if chk is not None:
-                        checks.append(chk)
+                        new_checks.append(chk)
                 # else:
                 # print "DBG: **************** The state is FRESH",
                 # dep.host_name, time.asctime(time.localtime(dep.last_state_update))
-        return checks
+        return new_checks
 
-    def schedule(self, force=False, force_time=None):
+    def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
+                 checks, force=False, force_time=None):
         """Main scheduling function
         If a check is in progress, or active check are disabled, do not schedule a check.
         The check interval change with HARD state::
@@ -964,6 +1106,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         The first scheduling is evenly distributed, so all checks
         are not launched at the same time.
 
+
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
         :param force: tell if we forced this object to schedule a check
         :type force: bool
         :param force_time: time we would like the check to be scheduled
@@ -1015,6 +1170,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If not force_time, try to schedule
         if force_time is None:
 
+            check_period = timeperiods[self.check_period]
+
             # Do not calculate next_chk based on current time, but
             # based on the last check execution time.
             # Important for consistency of data for trending.
@@ -1025,8 +1182,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # But if ==0, means was 0 in fact, schedule it too
             if self.next_chk <= now:
                 # maybe we do not have a check_period, if so, take always good (24x7)
-                if self.check_period:
-                    self.next_chk = self.check_period.get_next_valid_time_from_t(
+                if check_period:
+                    self.next_chk = check_period.get_next_valid_time_from_t(
                         self.next_chk + time_add
                     )
                 else:
@@ -1040,8 +1197,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 time_add = interval * random.uniform(0.0, 1.0)
 
                 # if we got a check period, use it, if now, use now
-                if self.check_period:
-                    self.next_chk = self.check_period.get_next_valid_time_from_t(now + time_add)
+                if check_period:
+                    self.next_chk = check_period.get_next_valid_time_from_t(now + time_add)
                 else:
                     self.next_chk = int(now + time_add)
             # else: keep the self.next_chk value in the future
@@ -1054,7 +1211,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return None
 
         # Get the command to launch, and put it in queue
-        self.launch_check(self.next_chk, force=force)
+        return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
+                                 checkmodulations, checks, force=force)
 
     def compensate_system_time_change(self, difference):
         """If a system time change occurs we have to update
@@ -1071,14 +1229,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             val = max(0, val + difference)  # diff may be negative
             setattr(self, prop, val)
 
-    def disable_active_checks(self):
+    def disable_active_checks(self, checks):
         """Disable active checks for this host/service
         Update check in progress with current object information
 
+        :param checks: Checks object, to change all checks in progress
+        :type checks: alignak.objects.check.Checks
         :return: None
         """
         self.active_checks_enabled = False
-        for chk in self.checks_in_progress:
+        for chk_id in self.checks_in_progress:
+            chk = checks[chk_id]
             chk.status = 'waitconsume'
             chk.exit_status = self.state_id
             chk.output = self.output
@@ -1113,9 +1274,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type notif:
         :return: None
         """
-        if notif._id in self.notifications_in_progress:
+        if notif.uuid in self.notifications_in_progress:
             notif.status = 'zombie'
-            del self.notifications_in_progress[notif._id]
+            del self.notifications_in_progress[notif.uuid]
 
     def remove_in_progress_notifications(self):
         """Remove all notifications from notifications_in_progress
@@ -1125,13 +1286,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         for notif in self.notifications_in_progress.values():
             self.remove_in_progress_notification(notif)
 
-    def get_event_handlers(self, externalcmd=False):
+    def get_event_handlers(self, hosts, macromodulations, timeperiods, externalcmd=False):
         """Raise event handlers if NONE of the following conditions is met::
 
         * externalcmd is False and event_handlers are disabled (globally or locally)
         * externalcmd is False and object is in scheduled dowtime and no event handlers in downtime
         * self.event_handler and cls.global_event_handler are None
 
+        :param hosts: hosts objects, used to get data for macros
+        :type hosts: alignak.objects.host.Hosts
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used for macros evaluation
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :param externalcmd: tells if this function was called when handling an external_command.
         :type externalcmd: bool
         :return: None
@@ -1157,19 +1324,24 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return
 
         macroresolver = MacroResolver()
-        data = self.get_data_for_event_handler()
-        cmd = macroresolver.resolve_command(event_handler, data)
+        if getattr(self, "host", None):
+            data = [hosts[self.host], self]
+        else:
+            data = [self]
+
+        cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
         reac_tag = event_handler.reactionner_tag
-        event_h = EventHandler(cmd, timeout=cls.event_handler_timeout,
-                               ref=self, reactionner_tag=reac_tag)
+        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
+                               'ref': self.uuid, 'reactionner_tag': reac_tag})
         # print "DBG: Event handler call created"
         # print "DBG: ",e.__dict__
         self.raise_event_handler_log_entry(event_handler)
 
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
+        print "ACTION %s APP IN %s" % (self.get_name(), event_h)
 
-    def get_snapshot(self):
+    def get_snapshot(self, hosts, macromodulations, timeperiods):
         """
         Raise snapshot event handlers if NONE of the following conditions is met::
 
@@ -1178,6 +1350,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * snapshot_criteria does not matches current state
         * last_snapshot > now - snapshot_interval * interval_length (previous snapshot too early)
         * snapshot_period is not valid
+
+        :param hosts: hosts objects, used to get data for macros
+        :type hosts: alignak.objects.host.Hosts
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used for snapshot period and macros evaluation
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
 
         :return: None
         """
@@ -1202,16 +1381,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return
 
         # no period means 24x7 :)
-        if self.snapshot_period is not None and not self.snapshot_period.is_time_valid(now):
+        timeperiod = timeperiods[self.snapshot_period]
+        if timeperiod is not None and not timeperiod.is_time_valid(now):
             return
 
         cls = self.__class__
         macroresolver = MacroResolver()
-        data = self.get_data_for_event_handler()
-        cmd = macroresolver.resolve_command(self.snapshot_command, data)
+        if getattr(self, "host", None):
+            data = [hosts[self.host], self]
+        else:
+            data = [self]
+        cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
+                                            timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
-        event_h = EventHandler(cmd, timeout=cls.event_handler_timeout,
-                               ref=self, reactionner_tag=reac_tag, is_snapshot=True)
+        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
+                               'ref': self.uuid, 'reactionner_tag': reac_tag, 'is_snapshot': True})
         self.raise_snapshot_log_entry(self.snapshot_command)
 
         # we save the time we launch the snap
@@ -1220,19 +1404,27 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
 
-    def check_for_flexible_downtime(self):
+    def check_for_flexible_downtime(self, timeperiods, downtimes, hosts, services):
         """Enter in a dowtime if necessary and raise start notification
         When a non Ok state occurs we try to raise a flexible downtime.
 
+        :param timeperiods: Timeperiods objects, used for downtime period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param hosts: hosts objects, used to enter downtime
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to enter downtime
+        :type services: alignak.objects.service.Services
         :return: None
         """
         status_updated = False
-        for downtime in self.downtimes:
+        for downtime_id in self.downtimes:
+            downtime = downtimes[downtime_id]
             # activate flexible downtimes (do not activate triggered downtimes)
             if downtime.fixed is False and downtime.is_in_effect is False and \
                     downtime.start_time <= self.last_chk and \
-                    self.state_id != 0 and downtime.trigger_id == 0:
-                notif = downtime.enter()  # returns downtimestart notifications
+                    self.state_id != 0 and downtime.trigger_id in ['', '0']:
+                # returns downtimestart notifications
+                notif = downtime.enter(timeperiods, hosts, services, downtimes)
                 if notif is not None:
                     self.actions.append(notif)
                 status_updated = True
@@ -1276,7 +1468,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
 
-    def consume_result(self, chk):  # pylint: disable=R0915,R0912
+    def consume_result(self, chk, notif_period, hosts,  # pylint: disable=R0915,R0912,R0913
+                       services, timeperiods, macromodulations, checkmodulations, bi_modulations,
+                       res_modulations, triggers, checks, downtimes, comments):
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
@@ -1291,7 +1485,32 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param chk: check to handle
         :type chk: alignak.objects.check.Check
-        :return: None
+        :param notif_period: notification period for this host/service
+        :type notif_period: alignak.objects.timeperiod.Timeperiod
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
+        :param timeperiods: Timeperiods objects, used for all kind of timeperiod (notif, check)
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
+        :param bi_modulations: business impact modulation are used when setting myself as problem
+        :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
+        :param res_modulations: result modulation are used to change the ouput of a check
+        :type res_modulations: alignak.object.resultmodulation.Resultmodulations
+        :param triggers: triggers objects, also used to change the output/status of a check, or more
+        :type triggers: alignak.objects.trigger.Triggers
+        :param checks: checks dict, used to get checks_in_progress for the object
+        :type checks: dict
+        :param downtimes: downtimes objects, used to find downtime for this host / service
+        :type downtimes:  dict
+        :param comments: comments objects, used to find comments for this host / service
+        :type comments: dict
+        :return: Dependent checks
+        :rtype list[alignak.check.Check]
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
 
@@ -1349,9 +1568,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.perf_data = chk.perf_data
 
         # Before setting state, modulate them
-        for resultmod in self.resultmodulations:
+        for resultmod_id in self.resultmodulations:
+            resultmod = res_modulations[resultmod_id]
             if resultmod is not None:
-                chk.exit_status = resultmod.module_return(chk.exit_status)
+                chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
         # By design modulation: if we got a host, we should look at the
         # use_aggressive_host_checking flag we should module 1 (warning return):
@@ -1367,21 +1587,23 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If we got a bad result on a normal check, and we have dep,
         # we raise dep checks
         # put the actual check in waitdep and we return all new checks
+        deps_checks = []
         if chk.exit_status != 0 and chk.status == 'waitconsume' and len(self.act_depend_of) != 0:
             chk.status = 'waitdep'
             # Make sure the check know about his dep
             # C is my check, and he wants dependencies
-            deps_checks = self.raise_dependencies_check(chk)
+            deps_checks = self.raise_dependencies_check(chk, hosts, services, timeperiods,
+                                                        macromodulations, checkmodulations, checks)
             for check in deps_checks:
                 # Get checks_id of dep
-                chk.depend_on.append(check._id)
+                chk.depend_on.append(check.uuid)
             # Ok, no more need because checks are not
             # take by host/service, and not returned
 
         # remember how we was before this check
         self.last_state_type = self.state_type
 
-        self.set_state_from_exit_status(chk.exit_status)
+        self.set_state_from_exit_status(chk.exit_status, notif_period, hosts, services)
 
         # Set return_code to exit_status to fill the value in broks
         self.return_code = chk.exit_status
@@ -1391,7 +1613,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.state_changed_since_impact = True
 
         # The check is consumed, update the in_checking properties
-        self.remove_in_progress_check(chk)
+        self.remove_in_progress_check(chk.uuid)
 
         # C is a check and someone wait for it
         if chk.status == 'waitconsume' and chk.depend_on_me != []:
@@ -1412,15 +1634,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             else:
                 chk.status = 'zombie'
             # Check deps
-            no_action = self.is_no_action_dependent()
+            no_action = self.is_no_action_dependent(hosts, services)
             # We recheck just for network_dep. Maybe we are just unreachable
             # and we need to override the state_id
-            self.check_and_set_unreachability()
+            self.check_and_set_unreachability(hosts, services)
         # OK following a previous OK. perfect if we were not in SOFT
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
             # print "Case 1 (OK following a previous OK):
             # code:%s last_state:%s" % (c.exit_status, self.last_state)
-            self.unacknowledge_problem()
+            self.unacknowledge_problem(comments)
             # action in return can be notification or other checks (dependencies)
             if (self.state_type == 'SOFT') and self.last_state != 'PENDING':
                 if self.is_max_attempts() and self.state_type == 'SOFT':
@@ -1433,7 +1655,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # OK following a NON-OK.
         elif chk.exit_status == 0 and self.last_state not in (ok_up, 'PENDING'):
-            self.unacknowledge_problem()
+            self.unacknowledge_problem(comments)
             # print "Case 2 (OK following a NON-OK):
             #  code:%s last_state:%s" % (c.exit_status, self.last_state)
             if self.state_type == 'SOFT':
@@ -1442,7 +1664,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     self.add_attempt()
                 self.raise_alert_log_entry()
                 # Eventhandler gets OK;SOFT;++attempt, no notification needed
-                self.get_event_handlers()
+                self.get_event_handlers(hosts, macromodulations, timeperiods)
                 # Internally it is a hard OK
                 self.state_type = 'HARD'
                 self.attempt = 1
@@ -1453,15 +1675,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # Ok, so current notifications are not needed, we 'zombie' them
                 self.remove_in_progress_notifications()
                 if not no_action:
-                    self.create_notifications('RECOVERY')
-                self.get_event_handlers()
+                    self.create_notifications('RECOVERY', notif_period, hosts, services)
+                self.get_event_handlers(hosts, macromodulations, timeperiods)
                 # Internally it is a hard OK
                 self.state_type = 'HARD'
                 self.attempt = 1
 
                 # self.update_hard_unknown_phase_state()
                 # I'm no more a problem if I was one
-                self.no_more_a_problem()
+                self.no_more_a_problem(hosts, services, timeperiods, bi_modulations)
 
         # Volatile part
         # Only for service
@@ -1474,18 +1696,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # status != 0 so add a log entry (before actions that can also raise log
             # it is smarter to log error before notification)
             self.raise_alert_log_entry()
-            self.check_for_flexible_downtime()
+            self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
             self.remove_in_progress_notifications()
             if not no_action:
-                self.create_notifications('PROBLEM')
+                self.create_notifications('PROBLEM', notif_period, hosts, services)
             # Ok, event handlers here too
-            self.get_event_handlers()
+            self.get_event_handlers(hosts, macromodulations, timeperiods)
 
             # PROBLEM/IMPACT
             # I'm a problem only if I'm the root problem,
             # so not no_action:
             if not no_action:
-                self.set_myself_as_problem()
+                self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
         # NON-OK follows OK. Everything was fine, but now trouble is ahead
         elif chk.exit_status != 0 and self.last_state in (ok_up, 'PENDING'):
@@ -1496,17 +1718,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.remove_in_progress_notifications()
-                self.check_for_flexible_downtime()
+                self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
                 if not no_action:
-                    self.create_notifications('PROBLEM')
+                    self.create_notifications('PROBLEM', notif_period, hosts, services)
                 # Oh? This is the typical go for a event handler :)
-                self.get_event_handlers()
+                self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                 # PROBLEM/IMPACT
                 # I'm a problem only if I'm the root problem,
                 # so not no_action:
                 if not no_action:
-                    self.set_myself_as_problem()
+                    self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
             else:
                 # This is the first NON-OK result. Initiate the SOFT-sequence
@@ -1514,7 +1736,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.attempt = 1
                 self.state_type = 'SOFT'
                 self.raise_alert_log_entry()
-                self.get_event_handlers()
+                self.get_event_handlers(hosts, macromodulations, timeperiods)
 
         # If no OK in a no OK: if hard, still hard, if soft,
         # check at self.max_check_attempts
@@ -1534,22 +1756,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # on soft states which does make sense. If this becomes
                     # the default behavior, just move the following line
                     # into the else-branch below.
-                    self.check_for_flexible_downtime()
+                    self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
                     if not no_action:
-                        self.create_notifications('PROBLEM')
+                        self.create_notifications('PROBLEM', notif_period, hosts, services)
                     # So event handlers here too
-                    self.get_event_handlers()
+                    self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                     # PROBLEM/IMPACT
                     # I'm a problem only if I'm the root problem,
                     # so not no_action:
                     if not no_action:
-                        self.set_myself_as_problem()
+                        self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
                 else:
                     self.raise_alert_log_entry()
                     # eventhandler is launched each time during the soft state
-                    self.get_event_handlers()
+                    self.get_event_handlers(hosts, macromodulations, timeperiods)
 
             else:
                 # Send notifications whenever the state has changed. (W -> C)
@@ -1560,11 +1782,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # print self.last_state, self.last_state_type, self.state_type, self.state
                     if not self.in_hard_unknown_reach_phase and not \
                             self.was_in_hard_unknown_reach_phase:
-                        self.unacknowledge_problem_if_not_sticky()
+                        self.unacknowledge_problem_if_not_sticky(comments)
                         self.raise_alert_log_entry()
                         self.remove_in_progress_notifications()
                         if not no_action:
-                            self.create_notifications('PROBLEM')
+                            self.create_notifications('PROBLEM', notif_period, hosts, services)
 
                 elif self.in_scheduled_downtime_during_last_check is True:
                     # during the last check i was in a downtime. but now
@@ -1572,7 +1794,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # are possible again. send an alert immediately
                     self.remove_in_progress_notifications()
                     if not no_action:
-                        self.create_notifications('PROBLEM')
+                        self.create_notifications('PROBLEM', notif_period, hosts, services)
 
                 # PROBLEM/IMPACT
                 # Forces problem/impact registration even if no state change
@@ -1581,7 +1803,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # I'm a problem only if I'm the root problem,
                 # so not no_action:
                 if not no_action:
-                    self.set_myself_as_problem()
+                    self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
         self.update_hard_unknown_phase_state()
         # Reset this flag. If it was true, actions were already taken
@@ -1609,16 +1831,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Now launch trigger if need. If it's from a trigger raised check,
         # do not raise a new one
         if not chk.from_trigger:
-            self.eval_triggers()
+            self.eval_triggers(triggers)
         if chk.from_trigger or not chk.from_trigger and \
                 sum(1 for t in self.triggers
-                    if t.trigger_broker_raise_enabled) == 0:
+                    if triggers[t].trigger_broker_raise_enabled) == 0:
             self.broks.append(self.get_check_result_brok())
 
-        self.get_obsessive_compulsive_processor_command()
-        self.get_perfdata_command()
+        self.get_obsessive_compulsive_processor_command(hosts, macromodulations, timeperiods)
+        self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
-        self.get_snapshot()
+        self.get_snapshot(hosts, macromodulations, timeperiods)
+        return deps_checks
 
     def update_event_and_problem_id(self):
         """Update current_event_id and current_problem_id
@@ -1627,8 +1850,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
-        if (self.state != self.last_state and self.last_state != 'PENDING'
-                or self.state != ok_up and self.last_state == 'PENDING'):
+        if (self.state != self.last_state and self.last_state != 'PENDING' or
+                self.state != ok_up and self.last_state == 'PENDING'):
             SchedulingItem.current_event_id += 1
             self.last_event_id = self.current_event_id
             self.current_event_id = SchedulingItem.current_event_id
@@ -1656,42 +1879,66 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.last_problem_id = self.current_problem_id
                 self.current_problem_id = SchedulingItem.current_problem_id
 
-    def prepare_notification_for_sending(self, notif):
+    def prepare_notification_for_sending(self, notif, contact, macromodulations, timeperiods,
+                                         host_ref):
         """Used by scheduler when a notification is ok to be sent (to reactionner).
         Here we update the command with status of now, and we add the contact to set of
         contact we notified. And we raise the log entry
 
         :param notif: notification to send
         :type notif: alignak.objects.notification.Notification
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used to get modulation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
         :return: None
         """
         if notif.status == 'inpoller':
-            self.update_notification_command(notif)
-            self.notified_contacts.add(notif.contact)
-            self.raise_notification_log_entry(notif)
+            self.update_notification_command(notif, contact, macromodulations, timeperiods,
+                                             host_ref)
+            self.notified_contacts.add(contact.uuid)
+            self.raise_notification_log_entry(notif, contact, host_ref)
 
-    def update_notification_command(self, notif):
+    def update_notification_command(self, notif, contact, macromodulations, timeperiods,
+                                    host_ref=None):
         """Update the notification command by resolving Macros
         And because we are just launching the notification, we can say
         that this contact has been notified
 
         :param notif: notification to send
         :type notif: alignak.objects.notification.Notification
+        :param contact: contact for this host/service
+        :type contact: alignak.object.contact.Contact
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods objects, used to get modulation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
         :return: None
         """
         cls = self.__class__
         macrosolver = MacroResolver()
-        data = self.get_data_for_notifications(notif.contact, notif)
-        notif.command = macrosolver.resolve_command(notif.command_call, data)
+        data = [self, contact, notif]
+        if host_ref:
+            data.append(host_ref)
+        notif.command = macrosolver.resolve_command(notif.command_call, data, macromodulations,
+                                                    timeperiods)
         if cls.enable_environment_macros or notif.enable_environment_macros:
             notif.env = macrosolver.get_env_macros(data)
 
-    def is_escalable(self, notif):
+    def is_escalable(self, notif, escalations, timeperiods):
         """Check if a notification can be escalated.
         Basically call is_eligible for each escalation
 
         :param notif: notification we would like to escalate
         :type notif: alignak.objects.notification.Notification
+        :param escalations: Esclations objects, used to get escalation objects (period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: True if notification can be escalated, otherwise False
         :rtype: bool
         """
@@ -1702,20 +1949,26 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         in_notif_time = time.time() - notif.creation_time
 
         # Check is an escalation match the current_notification_number
-        for escal in self.escalations:
+        for escal_id in self.escalations:
+            escal = escalations[escal_id]
+            escal_period = timeperiods[escal.escalation_period]
             if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length):
+                                 in_notif_time, cls.interval_length, escal_period):
                 return True
 
         return False
 
-    def get_next_notification_time(self, notif):
+    def get_next_notification_time(self, notif, escalations, timeperiods):
         """Get the next notification time for a notification
         Take the standard notification_interval or ask for our escalation
         if one of them need a smaller value to escalade
 
         :param notif: Notification we need time
         :type notif: alignak.objects.notification.Notification
+        :param escalations: Esclations objects, used to get escalation objects (interval, period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: Timestamp of next notification
         :rtype: int
         """
@@ -1728,9 +1981,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # and then look for currently active notifications, and take notification_interval
         # if filled and less than the self value
         in_notif_time = time.time() - notif.creation_time
-        for escal in self.escalations:
+        for escal_id in self.escalations:
+            escal = escalations[escal_id]
+            escal_period = timeperiods[escal.escalation_period]
             if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length):
+                                 in_notif_time, cls.interval_length, escal_period):
                 if escal.notification_interval != -1 and \
                         escal.notification_interval < notification_interval:
                     notification_interval = escal.notification_interval
@@ -1750,11 +2005,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         creation_time = notif.creation_time
         in_notif_time = now - notif.creation_time
 
-        for escal in self.escalations:
+        for escal_id in self.escalations:
+            escal = escalations[escal_id]
             # If the escalation was already raised, we do not look for a new "early start"
             if escal.get_name() not in notif.already_start_escalations:
+                escal_period = timeperiods[escal.escalation_period]
                 next_t = escal.get_next_notif_time(std_time, self.state,
-                                                   creation_time, cls.interval_length)
+                                                   creation_time, cls.interval_length, escal_period)
                 # If we got a real result (time base escalation), we add it
                 if next_t is not None and now < next_t < res:
                     res = next_t
@@ -1762,13 +2019,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # And we take the minimum of this result. Can be standard or escalation asked
         return res
 
-    def get_escalable_contacts(self, notif):
+    def get_escalable_contacts(self, notif, escalations, timeperiods):
         """Get all contacts (uniq) from eligible escalations
 
         :param notif: Notification to get data from (notif number...)
         :type notif: alignak.objects.notification.Notification
-        :return: Contact list that can be notified for escalation
-        :rtype: list[alignak.objects.contact.Contact]
+        :param escalations: Esclations objects, used to get escalation objects (contact, period)
+        :type escalations: alignak.objects.escalation.Escalations
+        :param timeperiods: Timeperiods objects, used to get escalation period
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+
+        :return: Contact uuid list that can be notified for escalation
+        :rtype: list
         """
         cls = self.__class__
 
@@ -1777,22 +2039,30 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         in_notif_time = time.time() - notif.creation_time
 
         contacts = set()
-        for escal in self.escalations:
+        for escal_id in self.escalations:
+            escal = escalations[escal_id]
+            escal_period = timeperiods[escal.escalation_period]
             if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length):
+                                 in_notif_time, cls.interval_length, escal_period):
                 contacts.update(escal.contacts)
                 # And we tag this escalations as started now
                 notif.already_start_escalations.add(escal.get_name())
 
         return list(contacts)
 
-    def create_notifications(self, n_type, t_wished=None):
+    def create_notifications(self, n_type, notification_period, hosts, services, t_wished=None):
         """Create a "master" notification here, which will later
         (immediately before the reactionner gets it) be split up
         in many "child" notifications, one for each contact.
 
         :param n_type: notification type ("PROBLEM", "RECOVERY" ...)
         :type n_type: str
+        :param notification_period: notification period for this host/service
+        :type notification_period: alignak.objects.timeperiod.Timeperiod
+        :param hosts: hosts objects, used to check if a notif is blocked
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used to check if a notif is blocked
+        :type services: alignak.objects.service.Service
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None
@@ -1812,15 +2082,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 else:
                     t_wished = last_time_non_ok_or_up + \
                         self.first_notification_delay * cls.interval_length
-            if self.notification_period is None:
+            if notification_period is None:
                 new_t = int(now)
             else:
-                new_t = self.notification_period.get_next_valid_time_from_t(t_wished)
+                new_t = notification_period.get_next_valid_time_from_t(t_wished)
         else:
             # We follow our order
             new_t = t_wished
 
-        if self.notification_is_blocked_by_item(n_type, t_wished) and \
+        if self.notification_is_blocked_by_item(notification_period, hosts, services,
+                                                n_type, t_wished=t_wished,
+                                                ) and \
                 self.first_notification_delay == 0 and self.notification_interval == 0:
             # If notifications are blocked on the host/service level somehow
             # and repeated notifications are not configured,
@@ -1840,16 +2112,26 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # downtime/flap/etc do not change the notification number
             next_notif_nb = self.current_notification_number
 
-        notif = Notification(n_type, 'scheduled', 'VOID', None, self, None, new_t,
-                             timeout=cls.notification_timeout,
-                             notif_nb=next_notif_nb)
+        data = {
+            'type': n_type,
+            'command': 'VOID',
+            'ref': self.uuid,
+            't_to_go': new_t,
+            'timeout': cls.notification_timeout,
+            'notif_nb': next_notif_nb,
+            'host_name': getattr(self, 'host_name', ''),
+            'service_description': getattr(self, 'service_description', ''),
+
+        }
+        notif = Notification(data)
 
         # Keep a trace in our notifications queue
-        self.notifications_in_progress[notif._id] = notif
+        self.notifications_in_progress[notif.uuid] = notif
         # and put it in the temp queue for scheduler
         self.actions.append(notif)
 
-    def scatter_notification(self, notif):
+    def scatter_notification(self, notif, contacts, notifways, timeperiods, macromodulations,
+                             escalations, cdowntimes, host_ref=None):
         """In create_notifications we created a notification "template". When it's
         time to hand it over to the reactionner, this master notification needs
         to be split in several child notifications, one for each contact
@@ -1858,6 +2140,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param notif: Notification to scatter
         :type notif: alignak.objects.notification.Notification
+        :param contacts: Contacts objects, used to retreive contact for this object
+        :type contacts: alignak.objects.contact.Contacts
+        :param notifways: Notificationway objects, used to get notific commands
+        :type notifways: alignak.object.notificationway.Notificationways
+        :param timeperiods: Timeperiods objects, used to check if notif are allowed at this time
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :param macromodulations: Macro modulations objects, used in the notification command
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param escalations: Esclations objects, used to get escalated contacts
+        :type escalations: alignak.objects.escalation.Escalations
+        :param cdowntimes: Contact downtime objects, used to check if a notification is legit
+        :type cdowntimes: dict
+        :param host_ref: reference host (used for a service)
+        :type host_ref: alignak.object.host.Host
+
         :return: child notifications
         :rtype: list[alignak.objects.notification.Notification]
         """
@@ -1871,63 +2168,83 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.first_notification_delay != 0 and len(self.notified_contacts) == 0:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
-                contacts = []
+                notif_contacts = []
             else:
                 # The old way. Only send recover notifications to those contacts
                 # who also got problem notifications
-                contacts = list(self.notified_contacts)
+                notif_contacts = [c_id for c_id in self.notified_contacts]
             self.notified_contacts.clear()
         else:
             # Check is an escalation match. If yes, get all contacts from escalations
-            if self.is_escalable(notif):
-                contacts = self.get_escalable_contacts(notif)
+            if self.is_escalable(notif, escalations, timeperiods):
+                notif_contacts = self.get_escalable_contacts(notif, escalations, timeperiods)
                 escalated = True
             # else take normal contacts
             else:
-                contacts = self.contacts
+                # notif_contacts = [contacts[c_id] for c_id in self.contacts]
+                notif_contacts = self.contacts
 
-        for contact in contacts:
+        for contact_id in notif_contacts:
+            contact = contacts[contact_id]
             # We do not want to notify again a contact with
             # notification interval == 0 that has been already
             # notified. Can happen when a service exit a downtime
             # and still in critical/warning (and not acknowledge)
             if notif.type == "PROBLEM" and \
                     self.notification_interval == 0 \
-                    and contact in self.notified_contacts:
+                    and contact.uuid in self.notified_contacts:
                 continue
             # Get the property name for notification commands, like
             # service_notification_commands for service
-            notif_commands = contact.get_notification_commands(cls.my_type)
+            notif_commands = contact.get_notification_commands(notifways, cls.my_type)
 
             for cmd in notif_commands:
                 reac_tag = cmd.reactionner_tag
-                child_n = Notification(notif.type, 'scheduled', 'VOID', cmd, self,
-                                       contact, notif.t_to_go, escalated=escalated,
-                                       timeout=cls.notification_timeout,
-                                       notif_nb=notif.notif_nb, reactionner_tag=reac_tag,
-                                       module_type=cmd.module_type,
-                                       enable_environment_macros=cmd.enable_environment_macros)
-                if not self.notification_is_blocked_by_contact(child_n, contact):
+                data = {
+                    'type': notif.type,
+                    'command': 'VOID',
+                    'command_call': cmd,
+                    'ref': self.uuid,
+                    'contact': contact.uuid,
+                    'contact_name': contact.contact_name,
+                    't_to_go': notif.t_to_go,
+                    'escalated': escalated,
+                    'timeout': cls.notification_timeout,
+                    'notif_nb': notif.notif_nb,
+                    'reactionner_tag': reac_tag,
+                    'enable_environment_macros': cmd.enable_environment_macros,
+                    'host_name': getattr(self, 'host_name', ''),
+                    'service_description': getattr(self, 'service_description', ''),
+
+                }
+                child_n = Notification(data)
+                if not self.notification_is_blocked_by_contact(notifways, timeperiods, cdowntimes,
+                                                               child_n, contact):
                     # Update the notification with fresh status information
                     # of the item. Example: during the notification_delay
                     # the status of a service may have changed from WARNING to CRITICAL
-                    self.update_notification_command(child_n)
-                    self.raise_notification_log_entry(child_n)
-                    self.notifications_in_progress[child_n._id] = child_n
+                    self.update_notification_command(child_n, contact, macromodulations,
+                                                     timeperiods, host_ref)
+                    self.raise_notification_log_entry(child_n, contact, host_ref)
+                    self.notifications_in_progress[child_n.uuid] = child_n
                     childnotifications.append(child_n)
 
                     if notif.type == 'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
-                        self.notified_contacts.add(contact)
+                        self.notified_contacts.add(contact.uuid)
 
         return childnotifications
 
-    def launch_check(self, timestamp, ref_check=None, force=False, dependent=False):
+    def launch_check(self, timestamp, hosts, services, timeperiods,  # pylint: disable=R0913
+                     macromodulations, checkmodulations, checks, ref_check=None, force=False,
+                     dependent=False):
         """Launch a check (command)
 
         :param timestamp:
         :type timestamp: int
+        :param checkmodulations: Checkmodulations objects, used to change check command if necessary
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param ref_check:
         :type ref_check:
         :param force:
@@ -1946,7 +2263,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # the check is being forced, so we just replace next_chk time by now
         if force and self.in_checking:
             now = time.time()
-            c_in_progress = self.checks_in_progress[0]
+            c_in_progress = checks[self.checks_in_progress[0]]
             c_in_progress.t_to_go = now
             return c_in_progress
 
@@ -1958,28 +2275,28 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Otherwise it will delay the next real check. this can lead to an infinite SOFT state.
         if not force and (self.in_checking and ref_check is not None):
 
-            c_in_progress = self.checks_in_progress[0]  # 0 is OK because in_checking is True
+            c_in_progress = checks[self.checks_in_progress[0]]
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
-            # we need another c._id
-            command_line = c_in_progress.command
-            timeout = c_in_progress.timeout
-            poller_tag = c_in_progress.poller_tag
-            env = c_in_progress.env
-            module_type = c_in_progress.module_type
-
-            chk = Check('scheduled', command_line, self, timestamp, ref_check,
-                        timeout=timeout,
-                        poller_tag=poller_tag,
-                        env=env,
-                        module_type=module_type,
-                        dependency_check=True)
+            # we need another c.uuid
+            data = {
+                'command': c_in_progress.command,
+                'timeout': c_in_progress.timeout,
+                'poller_tag': c_in_progress.poller_tag,
+                'env': c_in_progress.env,
+                'module_type': c_in_progress.module_type,
+                't_to_go': timestamp,
+                'depend_on_me': [ref_check],
+                'ref': self.uuid,
+                'dependency_check': True,
+                'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
+            }
+            chk = Check(data)
 
             self.actions.append(chk)
-            # print "Creating new check with new id : %d, old id : %d" % (c._id, c_in_progress._id)
             return chk
 
-        if force or (not self.is_no_check_dependent()):
+        if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
@@ -1991,16 +2308,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             check_command = self.check_command
             # But if a checkway is available, use this one instead.
             # Take the first available
-            for chkmod in self.checkmodulations:
-                c_cw = chkmod.get_check_command(timestamp)
+            for chkmod_id in self.checkmodulations:
+                chkmod = checkmodulations[chkmod_id]
+                c_cw = chkmod.get_check_command(timeperiods, timestamp)
                 if c_cw:
                     check_command = c_cw
                     break
 
             # Get the command to launch
             macroresolver = MacroResolver()
-            data = self.get_data_for_checks()
-            command_line = macroresolver.resolve_command(check_command, data)
+            if hasattr(self, 'host'):
+                macrodata = [hosts[self.host], self]
+            else:
+                macrodata = [self]
+            command_line = macroresolver.resolve_command(check_command, macrodata, macromodulations,
+                                                         timeperiods)
 
             # remember it, for pure debugging purpose
             self.last_check_command = command_line
@@ -2010,7 +2332,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             # And get all environment variables only if needed
             if cls.enable_environment_macros or check_command.enable_environment_macros:
-                env = macroresolver.get_env_macros(data)
+                env = macroresolver.get_env_macros(macrodata)
 
             # By default we take the global timeout, but we use the command one if it
             # define it (by default it's -1)
@@ -2021,13 +2343,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Make the Check object and put the service in checking
             # Make the check inherit poller_tag from the command
             # And reactionner_tag too
-            chk = Check('scheduled', command_line, self, timestamp, ref_check,
-                        timeout=timeout, poller_tag=check_command.poller_tag,
-                        env=env, module_type=check_command.module_type)
+            data = {
+                'command': command_line,
+                'timeout': timeout,
+                'poller_tag': check_command.poller_tag,
+                'env': env,
+                'module_type': check_command.module_type,
+                't_to_go': timestamp,
+                'depend_on_me': [ref_check] if ref_check else [],
+                'ref': self.uuid,
+                'internal': self.got_business_rule or command_line.startswith('_internal')
+            }
+            chk = Check(data)
 
-            # We keep a trace of all checks in progress
-            # to know if we are in checking_or not
-            self.checks_in_progress.append(chk)
+            self.checks_in_progress.append(chk.uuid)
+
         self.update_in_checking()
 
         # We need to put this new check in our actions queue
@@ -2055,9 +2385,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return 0
         return self.time_to_orphanage
 
-    def get_perfdata_command(self):
+    def get_perfdata_command(self, hosts, macromodulations, timeperiods):
         """Add event_handler to process performance data if necessary (not disabled)
 
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :return: None
         """
         cls = self.__class__
@@ -2066,16 +2398,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if cls.perfdata_command is not None:
             macroresolver = MacroResolver()
-            data = self.get_data_for_event_handler()
-            cmd = macroresolver.resolve_command(cls.perfdata_command, data)
+            if getattr(self, "host", None):
+                data = [hosts[self.host], self]
+            else:
+                data = [self]
+            cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
+                                                timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
-            event_h = EventHandler(cmd, timeout=cls.perfdata_timeout,
-                                   ref=self, reactionner_tag=reactionner_tag)
+            event_h = EventHandler({'command': cmd, 'timeout': cls.perfdata_timeout,
+                                   'ref': self.uuid, 'reactionner_tag': reactionner_tag})
 
             # ok we can put it in our temp action queue
             self.actions.append(event_h)
 
-    def create_business_rules(self, hosts, services, running=False):
+    def create_business_rules(self, hosts, services, hostgroups, servicegroups,
+                              macromodulations, timeperiods, running=False):
         """Create business rules if necessary (cmd contains bp_rule)
 
         :param hosts: Hosts object to look for objects
@@ -2108,9 +2445,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Only (re-)evaluate the business rule if it has never been
             # evaluated before, or it contains a macro.
             if re.match(r"\$[\w\d_-]+\$", rule) or self.business_rule is None:
-                data = self.get_data_for_checks()
+                if hasattr(self, 'host'):
+                    data = [hosts[self.host], self]
+                else:
+                    data = [self]
                 macroresolver = MacroResolver()
-                rule = macroresolver.resolve_simple_macros_in_string(rule, data)
+                rule = macroresolver.resolve_simple_macros_in_string(rule, data,
+                                                                     macromodulations,
+                                                                     timeperiods)
                 prev = getattr(self, "processed_business_rule", "")
 
                 if rule == prev:
@@ -2118,12 +2460,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     return
 
                 fact = DependencyNodeFactory(self)
-                node = fact.eval_cor_pattern(rule, hosts, services, running)
+                node = fact.eval_cor_pattern(rule, hosts, services,
+                                             hostgroups, servicegroups, running)
                 # print "got node", node
                 self.processed_business_rule = rule
                 self.business_rule = node
 
-    def get_business_rule_output(self):
+    def get_business_rule_output(self, hosts, macromodulations, timeperiods):
         """
         Returns a status string for business rules based items formatted
         using business_rule_output_template attribute as template.
@@ -2174,20 +2517,29 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if item.last_hard_state_id == 0:
                 ok_count += 1
                 continue
-            data = item.get_data_for_checks()
+            if hasattr(item, 'host'):
+                data = [hosts[item.host], item]
+            else:
+                data = [item]
             children_output += macroresolver.resolve_simple_macros_in_string(child_template_string,
-                                                                             data)
+                                                                             data,
+                                                                             macromodulations,
+                                                                             timeperiods)
 
         if ok_count == len(items):
             children_output = "all checks were successful."
 
         # Replaces children output string
         template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
-        data = self.get_data_for_checks()
-        output = macroresolver.resolve_simple_macros_in_string(template_string, data)
+        if hasattr(self, 'host'):
+            data = [hosts[self.host], self]
+        else:
+            data = [self]
+        output = macroresolver.resolve_simple_macros_in_string(template_string, data,
+                                                               macromodulations, timeperiods)
         return output.strip()
 
-    def business_rule_notification_is_blocked(self):
+    def business_rule_notification_is_blocked(self, hosts, services):
         """Process business rule notifications behaviour. If all problems have
         been acknowledged, no notifications should be sent if state is not OK.
         By default, downtimes are ignored, unless explicitly told to be treated
@@ -2199,7 +2551,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Walks through problems to check if all items in non ok are
         # acknowledged or in downtime period.
         acknowledged = 0
-        for src_prob in self.source_problems:
+        for src_prob_id in self.source_problems:
+            if src_prob_id in hosts:
+                src_prob = hosts[src_prob_id]
+            else:
+                src_prob = services[src_prob_id]
             if src_prob.last_hard_state_id != 0:
                 if src_prob.problem_has_been_acknowledged:
                     # Problem hast been acknowledged
@@ -2211,14 +2567,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         # Problem is under downtime, and downtimes should be
                         # treated as acknowledgements
                         acknowledged += 1
-                    elif hasattr(src_prob, "host") and src_prob.host.scheduled_downtime_depth > 0:
+                    elif hasattr(src_prob, "host") and \
+                            hosts[src_prob.host].scheduled_downtime_depth > 0:
                         # Host is under downtime, and downtimes should be
                         # treated as acknowledgements
                         acknowledged += 1
 
         return acknowledged == len(self.source_problems)
 
-    def manage_internal_check(self, hosts, services, check):
+    def manage_internal_check(self, hosts, services, check, hostgroups, servicegroups,
+                              macromodulations, timeperiods):
         """Manage internal commands such as ::
 
         * bp_rule
@@ -2241,9 +2599,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # Caution: We consider the that the macro modulation did not
                 # change business rule dependency tree. Only Xof: values should
                 # be modified by modulation.
-                self.create_business_rules(hosts, services, running=True)
+                self.create_business_rules(hosts, services, hostgroups, servicegroups,
+                                           macromodulations, timeperiods, running=True)
                 state = self.business_rule.get_state()
-                check.output = self.get_business_rule_output()
+                check.output = self.get_business_rule_output(hosts, macromodulations, timeperiods)
             except Exception, err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
@@ -2265,44 +2624,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         check.exit_status = state
         # print "DBG, setting state", state
 
-    def create_business_rules_dependencies(self):
-        """If I'm a business rule service/host, I register myself to the
-        elements I will depend on, so They will have ME as an impact
-
-        :return: None
-        """
-        if self.got_business_rule:
-            # print "DBG: ask me to register me in my dependencies", self.get_name()
-            elts = self.business_rule.list_all_elements()
-            # I will register myself in this
-            for elem in elts:
-                # print "I register to the element", e.get_name()
-                # all states, every timeperiod, and inherit parents
-                elem.add_business_rule_act_dependency(self, ['d', 'u', 's', 'f', 'c', 'w'],
-                                                      None, True)
-                # Enforces child hosts/services notification options if told to
-                # do so (business_rule_(host|service)_notification_options)
-                # set.
-                if elem.my_type == "host" and self.business_rule_host_notification_options:
-                    elem.notification_options = self.business_rule_host_notification_options
-                if elem.my_type == "service" and self.business_rule_service_notification_options:
-                    elem.notification_options = self.business_rule_service_notification_options
-
-    def rebuild_ref(self):
-        """ Rebuild the possible reference a schedulingitem can have
-
-        :return: None
-        """
-        for objs in self.comments, self.downtimes:
-            for obj in objs:
-                obj.ref = self
-
-    def eval_triggers(self):
+    def eval_triggers(self, triggers):
         """Launch triggers
 
+        :param triggers: triggers objects, also used to change the output/status of a check, or more
+        :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
-        for trigger in self.triggers:
+        for trigger_id in self.triggers:
+            trigger = triggers[trigger_id]
             try:
                 trigger.eval(self)
             except Exception:  # pylint: disable=W0703
@@ -2326,7 +2656,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if brok_type == 'check_result':
             data['command_name'] = self.check_command.command.command_name
 
-    def acknowledge_problem(self, sticky, notify, persistent, author, comment, end_time=0):
+    def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, persistent,
+                            author, comment, end_time=0):
         """
         Add an acknowledge
 
@@ -2342,25 +2673,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type comment: str
         :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
         :type end_time: int
-        :return: None
+        :return: None | alignak.comment.Comment
         """
         if self.state != self.ok_up:
             if notify:
-                self.create_notifications('ACKNOWLEDGEMENT')
+                self.create_notifications('ACKNOWLEDGEMENT', notification_period, hosts, services)
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
-            ack = Acknowledge(self, sticky, notify, persistent, author, comment, end_time=end_time)
+
+            data = {'ref': self.uuid, 'sticky': sticky, 'persistent': persistent, 'author': author,
+                    'comment': comment, 'end_time': end_time}
+            ack = Acknowledge(data)
             self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
             else:
                 comment_type = 2
-            comm = Comment(self, persistent, author, comment,
-                           comment_type, 4, 0, False, 0)
-            self.add_comment(comm)
+            data = {
+                'persistent': persistent, 'author': author, 'comment': comment,
+                'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
+                'expire_time': 0, 'ref': self.uuid
+            }
+            comm = Comment(data)
+            self.add_comment(comm.uuid)
             self.broks.append(self.get_update_status_brok())
+            return comm
 
-    def check_for_expire_acknowledge(self):
+    def check_for_expire_acknowledge(self, comments):
         """
         If have acknowledge and is expired, delete it
 
@@ -2369,9 +2708,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if (self.acknowledgement and
                 self.acknowledgement.end_time != 0 and
                 self.acknowledgement.end_time < time.time()):
-            self.unacknowledge_problem()
+            self.unacknowledge_problem(comments)
 
-    def unacknowledge_problem(self):
+    def unacknowledge_problem(self, comments):
         """
         Remove the acknowledge, reset the flag. The comment is deleted except if the acknowledge
         is defined to be persistent
@@ -2387,12 +2726,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.acknowledgement = None
             # del self.acknowledgement
             # find comments of non-persistent ack-comments and delete them too
-            for comm in self.comments:
+            for comm_id in self.comments:
+                comm = comments[comm_id]
                 if comm.entry_type == 4 and not comm.persistent:
-                    self.del_comment(comm._id)
+                    self.del_comment(comm.uuid, comments)
             self.broks.append(self.get_update_status_brok())
 
-    def unacknowledge_problem_if_not_sticky(self):
+    def unacknowledge_problem_if_not_sticky(self, comments):
         """
         Remove the acknowledge if it is not sticky
 
@@ -2400,7 +2740,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
-                self.unacknowledge_problem()
+                self.unacknowledge_problem(comments)
 
     def raise_alert_log_entry(self):
         """Raise ALERT entry (critical level)
@@ -2478,7 +2818,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise NOTIFICATION entry (critical level)
         :param notif: notification object created by service alert
         :type notif: alignak.objects.notification.Notification
@@ -2557,23 +2897,49 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def set_state_from_exit_status(self, status):
+    def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state with the status of a check. Also update last_state
 
         :param status: integer between 0 and 3
         :type status: int
+        :param hosts: hosts objects, used for almost every operation
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services objects, used for almost every operation
+        :type services: alignak.objects.service.Services
         :return: None
         """
         pass
 
-    def get_obsessive_compulsive_processor_command(self):
+    def get_obsessive_compulsive_processor_command(self, hosts, macromodulations, timeperiods):
         """Create action for obsessive compulsive commands if such option is enabled
 
+        :param macromodulations: Macro modulations objects, used in commands (notif, check)
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :return: None
         """
-        pass
+        cls = self.__class__
+        if not cls.obsess_over or not getattr(self, 'obsess_over_service', True)\
+                or not getattr(self, 'obsess_over_host', True):
+            return
 
-    def notification_is_blocked_by_item(self, n_type, t_wished=None):
+        macroresolver = MacroResolver()
+        if self.my_type == "service":
+            data = [hosts[self.host], self]
+            command = cls.ocsp_command
+            timeout = cls.ocsp_timeout
+        else:
+            data = [self]
+            command = cls.ochp_command
+            timeout = cls.ochp_timeout
+
+        cmd = macroresolver.resolve_command(command, data, macromodulations, timeperiods)
+        event_h = EventHandler({'command': cmd, 'timeout': timeout})
+
+        # ok we can put it in our temp action queue
+        self.actions.append(event_h)
+
+    def notification_is_blocked_by_item(self, notification_period, hosts, services, n_type,
+                                        t_wished=None):
         """Check if a notification is blocked by item
 
         :param n_type: notification type
@@ -2585,7 +2951,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def notification_is_blocked_by_contact(self, notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
+                                           notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -2661,3 +3028,160 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.check_period = None
 
         return state
+
+
+class SchedulingItems(CommandCallItems):
+    """Class to handle schedulingitems. It's mainly for configuration
+
+    """
+
+    def find_by_filter(self, filters, all_items):
+        """
+        Find items by filters
+
+        :param filters: list of filters
+        :type filters: list
+        :param all_items: monitoring items
+        :type: dict
+        :return: list of items
+        :rtype: list
+        """
+        items = []
+        for i in self:
+            failed = False
+            if hasattr(i, "host"):
+                all_items["service"] = i
+            else:
+                all_items["host"] = i
+            for filt in filters:
+                if not filt(all_items):
+                    failed = True
+                    break
+            if failed is False:
+                items.append(i)
+        return items
+
+    def add_act_dependency(self, son_id, parent_id, notif_failure_criteria, dep_period,
+                           inherits_parents):
+        """
+        Add a logical dependency for actions between two hosts or services.
+
+        :param son_id: uuid of son host
+        :type son_id: str
+        :param parent_id: uuid of parent host
+        :type parent_id: str
+        :param notif_failure_criteria: notification failure criteria,
+        notification for a dependent host may vary
+        :type notif_failure_criteria: list
+        :param dep_period: dependency period. Timeperiod for dependency may vary
+        :type dep_period: str | None
+        :param inherits_parents: if this dep will inherit from parents (timeperiod, status)
+        :type inherits_parents: bool
+        :return:
+        """
+        son = self[son_id]
+        parent = self[parent_id]
+        son.act_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
+                                  inherits_parents))
+        parent.act_depend_of_me.append((son_id, notif_failure_criteria, 'logic_dep', dep_period,
+                                        inherits_parents))
+
+        # TODO: Is it necessary? We already have this info in act_depend_* attributes
+        son.parent_dependencies.add(parent_id)
+        parent.child_dependencies.add(son_id)
+
+    def del_act_dependency(self, son_id, parent_id):
+        """Remove act_dependency between two hosts or services.
+
+        :param son_id: uuid of son host/service
+        :type son_id: str
+        :param parent_id: uuid of parent host/service
+        :type parent_id: str
+        :return: None
+        """
+        son = self[son_id]
+        parent = self[parent_id]
+        to_del = []
+        # First we remove in my list
+        for (host, status, n_type, timeperiod, inherits_parent) in son.act_depend_of:
+            if host == parent_id:
+                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+        for tup in to_del:
+            son.act_depend_of.remove(tup)
+
+        # And now in the father part
+        to_del = []
+        for (host, status, n_type, timeperiod, inherits_parent) in parent.act_depend_of_me:
+            if host == son_id:
+                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+        for tup in to_del:
+            parent.act_depend_of_me.remove(tup)
+
+        # Remove in child/parents dependencies too
+        # Me in father list
+        parent.child_dependencies.remove(son_id)
+        # and father list in mine
+        son.parent_dependencies.remove(parent_id)
+
+    def add_chk_dependency(self, son_id, parent_id, notif_failure_criteria, dep_period,
+                           inherits_parents):
+        """
+        Add a logical dependency for checks between two hosts or services.
+
+        :param son_id: uuid of son host/service
+        :type son_id: str
+        :param parent_id: uuid of parent host/service
+        :type parent_id: str
+        :param notif_failure_criteria: notification failure criteria,
+        notification for a dependent host may vary
+        :type notif_failure_criteria: list
+        :param dep_period: dependency period. Timeperiod for dependency may vary
+        :type dep_period: str
+        :param inherits_parents: if this dep will inherit from parents (timeperiod, status)
+        :type inherits_parents: bool
+        :return:
+        """
+        son = self[son_id]
+        parent = self[parent_id]
+        son.chk_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
+                                  inherits_parents))
+        parent.chk_depend_of_me.append((son_id, notif_failure_criteria, 'logic_dep', dep_period,
+                                        inherits_parents))
+
+        # TODO: Is it necessary? We already have this info in act_depend_* attributes
+        son.parent_dependencies.add(parent_id)
+        parent.child_dependencies.add(son_id)
+
+    def create_business_rules(self, hosts, services, hostgroups, servicegroups,
+                              macromodulations, timeperiods):
+        """
+        Loop on hosts or services and call SchedulingItem.create_business_rules
+
+        :param hosts: hosts to link to
+        :type hosts: alignak.objects.host.Hosts
+        :param services: services to link to
+        :type services: alignak.objects.service.Services
+        :param hostgroups: hostgroups to link to
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
+        :param servicegroups: servicegroups to link to
+        :type servicegroups: alignak.objects.servicegroup.Servicegroups
+        :param macromodulations: macromodulations to link to
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: timeperiods to link to
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
+        :return: None
+        """
+        for item in self:
+            item.create_business_rules(hosts, services, hostgroups,
+                                       servicegroups, macromodulations, timeperiods)
+
+    def linkify_with_triggers(self, triggers):
+        """
+        Link triggers
+
+        :param triggers: triggers object
+        :type triggers: alignak.objects.trigger.Triggers
+        :return: None
+        """
+        for i in self:
+            i.linkify_with_triggers(triggers)

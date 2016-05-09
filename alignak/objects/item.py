@@ -62,13 +62,15 @@ elements like service, hosts or contacts.
 # pylint: disable=R0904
 import time
 import itertools
+import uuid
 import warnings
 
 from copy import copy
 
-from alignak.commandcall import CommandCall
-from alignak.property import (StringProp, ListProp, BoolProp,
+from alignak.property import (StringProp, ListProp, BoolProp, SetProp,
                               IntegerProp, ToGuessProp, PythonizeError)
+
+from alignak.alignakobject import AlignakObject
 from alignak.brok import Brok
 from alignak.util import strip_and_uniq, is_complex_expr
 from alignak.log import logger
@@ -76,7 +78,7 @@ from alignak.complexexpression import ComplexExpressionFactory
 from alignak.graph import Graph
 
 
-class Item(object):
+class Item(AlignakObject):
     """
     Class to manage an item
     An Item is the base of many objects of Alignak. So it define common properties,
@@ -84,7 +86,7 @@ class Item(object):
     """
     properties = {
         'imported_from':            StringProp(default='unknown'),
-        'use':                      ListProp(default=None, split_on_coma=True),
+        'use':                      ListProp(default=[], split_on_coma=True),
         'name':                     StringProp(default=''),
         'definition_order':         IntegerProp(default=100),
         # TODO: find why we can't uncomment this line below.
@@ -97,7 +99,7 @@ class Item(object):
         'configuration_warnings':   ListProp(default=[]),
         'configuration_errors':     ListProp(default=[]),
         # We save all template we asked us to load from
-        'tags': ListProp(default=set(), fill_brok=['full_status']),
+        'tags': SetProp(default=set(), fill_brok=['full_status']),
     }
 
     macros = {
@@ -106,13 +108,12 @@ class Item(object):
     my_type = ''
     ok_up = ''
 
-    def __init__(self, params=None):
-        # We have our own id of My Class type :)
-        # use set attr for going into the slots
-        # instead of __dict__ :)
+    def __init__(self, params=None, parsing=True):
+        if not parsing:
+            super(Item, self).__init__(params, parsing)
+            return
         cls = self.__class__
-        self._id = cls._id
-        cls._id += 1
+        self.uuid = uuid.uuid4().hex
 
         self.customs = {}  # for custom variables
         self.plus = {}  # for value with a +
@@ -150,10 +151,11 @@ class Item(object):
                     else:
                         val = ''
                 else:
-                    warning = "Guessing the property %s type because" \
+                    warning = "Guessing the property %s type because " \
                               "it is not in %s object properties" % \
                               (key, cls.__name__)
                     self.configuration_warnings.append(warning)
+                    self.properties[key] = ToGuessProp(default='')
                     val = ToGuessProp.pythonize(params[key])
             except (PythonizeError, ValueError) as expt:
                 err = "Error while pythonizing parameter '%s': %s" % (key, expt)
@@ -194,11 +196,11 @@ class Item(object):
     def id(self):  # pylint: disable=C0103
         """Getter for id, raise deprecation warning
 
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
     def id(self, value):  # pylint: disable=C0103
@@ -209,7 +211,7 @@ class Item(object):
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def init_running_properties(self):
         """
@@ -239,7 +241,7 @@ class Item(object):
         cls = self.__class__
         i = cls({})  # Dummy item but with it's own running properties
         for prop in cls.properties:
-            if hasattr(self, prop):
+            if hasattr(self, prop) and prop != 'uuid':  # TODO: Fix it
                 val = getattr(self, prop)
                 setattr(i, prop, val)
         # Also copy the customs tab
@@ -299,6 +301,35 @@ class Item(object):
             if not hasattr(self, prop) and entry.has_default:
                 setattr(self, prop, entry.default)
 
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here is the generic function that simply export attributes declared in the
+        properties dictionary and the running_properties of the object.
+
+        :return: Dictionary containing key and value from properties and running_properties
+        :rtype: dict
+        """
+        cls = self.__class__
+        # id is not in *_properties
+        res = {'uuid': self.uuid}
+        for prop in cls.properties:
+            if hasattr(self, prop):
+                if isinstance(cls.properties[prop], SetProp):
+                    res[prop] = list(getattr(self, prop))
+                else:
+                    res[prop] = getattr(self, prop)
+
+        for prop in cls.running_properties:
+            if hasattr(self, prop):
+                if isinstance(cls.running_properties[prop], SetProp):
+                    res[prop] = list(getattr(self, prop))
+                else:
+                    res[prop] = getattr(self, prop)
+
+        return res
+
     @classmethod
     def load_global_conf(cls, conf):
         """
@@ -334,138 +365,6 @@ class Item(object):
             return [n.strip() for n in use if n.strip()]
         else:
             return [n.strip() for n in use.split(',') if n.strip()]
-
-    def get_property_by_inheritance(self, prop):
-        """
-        Get the property asked in parameter to this object or from defined templates of this
-        object
-
-        :param prop: name of property
-        :type prop: str
-        :return: Value of property of this object or of a template
-        :rtype: str or None
-        """
-        if prop == 'register':
-            return None  # We do not inherit from register
-
-        # If I have the prop, I take mine but I check if I must
-        # add a plus property
-        if hasattr(self, prop):
-            value = getattr(self, prop)
-            # Manage the additive inheritance for the property,
-            # if property is in plus, add or replace it
-            # Template should keep the '+' at the beginning of the chain
-            if self.has_plus(prop):
-                value.insert(0, self.get_plus_and_delete(prop))
-                if self.is_tpl():
-                    value = list(value)
-                    value.insert(0, '+')
-            return value
-        # Ok, I do not have prop, Maybe my templates do?
-        # Same story for plus
-        # We reverse list, so that when looking for properties by inheritance,
-        # the least defined template wins (if property is set).
-        for i in self.templates:
-            value = i.get_property_by_inheritance(prop)
-
-            if value is not None and value != []:
-                # If our template give us a '+' value, we should continue to loop
-                still_loop = False
-                if isinstance(value, list) and value[0] == '+':
-                    # Templates should keep their + inherited from their parents
-                    if not self.is_tpl():
-                        value = list(value)
-                        value = value[1:]
-                    still_loop = True
-
-                # Maybe in the previous loop, we set a value, use it too
-                if hasattr(self, prop):
-                    # If the current value is strong, it will simplify the problem
-                    if not isinstance(value, list) and value[0] == '+':
-                        # In this case we can remove the + from our current
-                        # tpl because our value will be final
-                        new_val = list(getattr(self, prop))
-                        new_val.extend(value[1:])
-                        value = new_val
-                    else:  # If not, se should keep the + sign of need
-                        new_val = list(getattr(self, prop))
-                        new_val.extend(value)
-                        value = new_val
-
-                # Ok, we can set it
-                setattr(self, prop, value)
-
-                # If we only got some '+' values, we must still loop
-                # for an end value without it
-                if not still_loop:
-                    # And set my own value in the end if need
-                    if self.has_plus(prop):
-                        value = list(value)
-                        value = list(getattr(self, prop))
-                        value.extend(self.get_plus_and_delete(prop))
-                        # Template should keep their '+'
-                        if self.is_tpl() and value[0] != '+':
-                            value.insert(0, '+')
-                        setattr(self, prop, value)
-                    return value
-
-        # Maybe templates only give us + values, so we didn't quit, but we already got a
-        # self.prop value after all
-        template_with_only_plus = hasattr(self, prop)
-
-        # I do not have endingprop, my templates too... Maybe a plus?
-        # warning: if all my templates gave me '+' values, do not forgot to
-        # add the already set self.prop value
-        if self.has_plus(prop):
-            if template_with_only_plus:
-                value = list(getattr(self, prop))
-                value.extend(self.get_plus_and_delete(prop))
-            else:
-                value = self.get_plus_and_delete(prop)
-            # Template should keep their '+' chain
-            # We must say it's a '+' value, so our son will now that it must
-            # still loop
-            if self.is_tpl() and value != [] and value[0] != '+':
-                value.insert(0, '+')
-
-            setattr(self, prop, value)
-            return value
-
-        # Ok so in the end, we give the value we got if we have one, or None
-        # Not even a plus... so None :)
-        return getattr(self, prop, None)
-
-    def get_customs_properties_by_inheritance(self):
-        """
-        Get custom properties from the templates defined in this object
-
-        :return: list of custom properties
-        :rtype: list
-        """
-        for i in self.templates:
-            tpl_cv = i.get_customs_properties_by_inheritance()
-            if tpl_cv is not {}:
-                for prop in tpl_cv:
-                    if prop not in self.customs:
-                        value = tpl_cv[prop]
-                    else:
-                        value = self.customs[prop]
-                    if self.has_plus(prop):
-                        value.insert(0, self.get_plus_and_delete(prop))
-                        # value = self.get_plus_and_delete(prop) + ',' + value
-                    self.customs[prop] = value
-        for prop in self.customs:
-            value = self.customs[prop]
-            if self.has_plus(prop):
-                value.insert(0, self.get_plus_and_delete(prop))
-                self.customs[prop] = value
-        # We can get custom properties in plus, we need to get all
-        # entires and put
-        # them into customs
-        cust_in_plus = self.get_all_plus_and_delete()
-        for prop in cust_in_plus:
-            self.customs[prop] = cust_in_plus[prop]
-        return self.customs
 
     def has_plus(self, prop):
         """
@@ -579,7 +478,7 @@ class Item(object):
         """
         self.downtimes.append(downtime)
 
-    def del_downtime(self, downtime_id):
+    def del_downtime(self, downtime_id, downtimes):
         """
         Delete a downtime in this object
 
@@ -588,9 +487,10 @@ class Item(object):
         :return: None
         """
         d_to_del = None
-        for downtime in self.downtimes:
-            if downtime._id == downtime_id:
-                d_to_del = downtime
+        for downtime_id in self.downtimes:
+            if downtime_id == downtime_id:
+                downtime = downtimes[downtime_id]
+                d_to_del = downtime_id
                 downtime.can_be_deleted = True
         if d_to_del is not None:
             self.downtimes.remove(d_to_del)
@@ -605,7 +505,7 @@ class Item(object):
         """
         self.comments.append(comment)
 
-    def del_comment(self, comment_id):
+    def del_comment(self, comment_id, comments):
         """
         Delete a comment in this object
 
@@ -614,9 +514,10 @@ class Item(object):
         :return: None
         """
         c_to_del = None
-        for comm in self.comments:
-            if comm._id == comment_id:
-                c_to_del = comm
+        for comm_id in self.comments:
+            if comm_id == comment_id:
+                comm = comments[comm_id]
+                c_to_del = comm_id
                 comm.can_be_deleted = True
         if c_to_del is not None:
             self.comments.remove(c_to_del)
@@ -703,9 +604,9 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
-        return Brok('initial_' + self.my_type + '_status', data)
+        return Brok({'type': 'initial_' + self.my_type + '_status', 'data': data})
 
     def get_update_status_brok(self):
         """
@@ -714,9 +615,9 @@ class Item(object):
         :return: Brok object
         :rtype: object
         """
-        data = {'_id': self._id}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
-        return Brok('update_' + self.my_type + '_status', data)
+        return Brok({'type': 'update_' + self.my_type + '_status', 'data': data})
 
     def get_check_result_brok(self):
         """
@@ -727,7 +628,7 @@ class Item(object):
         """
         data = {}
         self.fill_data_brok_from(data, 'check_result')
-        return Brok(self.my_type + '_check_result', data)
+        return Brok({'type': self.my_type + '_check_result', 'data': data})
 
     def get_next_schedule_brok(self):
         """
@@ -738,7 +639,7 @@ class Item(object):
         """
         data = {}
         self.fill_data_brok_from(data, 'next_schedule')
-        return Brok(self.my_type + '_next_schedule', data)
+        return Brok({'type': self.my_type + '_next_schedule', 'data': data})
 
     def get_snapshot_brok(self, snap_output, exit_status):
         """
@@ -757,32 +658,7 @@ class Item(object):
             'snapshot_exit_status': exit_status,
         }
         self.fill_data_brok_from(data, 'check_result')
-        return Brok(self.my_type + '_snapshot', data)
-
-    def linkify_one_command_with_commands(self, commands, prop):
-        """
-        Link a command
-
-        :param commands: object commands
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        if hasattr(self, prop):
-            command = getattr(self, prop).strip()
-            if command != '':
-                if hasattr(self, 'poller_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          poller_tag=self.poller_tag)
-                elif hasattr(self, 'reactionner_tag'):
-                    cmdcall = CommandCall(commands, command,
-                                          reactionner_tag=self.reactionner_tag)
-                else:
-                    cmdcall = CommandCall(commands, command)
-                setattr(self, prop, cmdcall)
-            else:
-                setattr(self, prop, None)
+        return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
     def explode_trigger_string_into_triggers(self, triggers):
         """
@@ -798,37 +674,11 @@ class Item(object):
             src = src.replace(r'\n', '\n').replace(r'\t', '\t')
             triger = triggers.create_trigger(
                 src,
-                'inner-trigger-' + self.__class__.my_type + str(self._id))
+                'inner-trigger-' + self.__class__.my_type + str(self.uuid))
             if triger:
                 # Maybe the trigger factory give me a already existing trigger,
                 # so my name can be dropped
                 self.triggers.append(triger.get_name())
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link with triggers
-
-        :param triggers: Triggers object
-        :type triggers: object
-        :return: None
-        """
-        # Get our trigger string and trigger names in the same list
-        self.triggers.extend([self.trigger_name])
-        # print "I am linking my triggers", self.get_full_name(), self.triggers
-        new_triggers = []
-        for tname in self.triggers:
-            if tname == '':
-                continue
-            trigger = triggers.find_by_name(tname)
-            if trigger:
-                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
-                new_triggers.append(trigger)
-            else:
-                self.configuration_errors.append('the %s %s does have a unknown trigger_name '
-                                                 '"%s"' % (self.__class__.my_type,
-                                                           self.get_full_name(),
-                                                           tname))
-        self.triggers = new_triggers
 
     def dump(self, dfile=None):  # pylint: disable=W0613
         """
@@ -879,14 +729,20 @@ class Items(object):
 
     inner_class = Item
 
-    def __init__(self, items, index_items=True):
+    def __init__(self, items, index_items=True, parsing=True):
         self.items = {}
         self.name_to_item = {}
         self.templates = {}
         self.name_to_template = {}
         self.configuration_warnings = []
         self.configuration_errors = []
-        self.add_items(items, index_items)
+
+        # We are un-serializing
+        if isinstance(items, dict):
+            for item in items.values():
+                self.add_item(self.inner_class(item, parsing=parsing))
+        else:
+            self.add_items(items, index_items)
 
     @staticmethod
     def get_source(item):
@@ -985,7 +841,7 @@ class Items(object):
         :return: None
         """
         tpl = self.index_template(tpl)
-        self.templates[tpl._id] = tpl
+        self.templates[tpl.uuid] = tpl
 
     def index_template(self, tpl):
         """
@@ -1015,7 +871,7 @@ class Items(object):
         :return: None
         """
         try:
-            del self.templates[tpl._id]
+            del self.templates[tpl.uuid]
         except KeyError:
             pass
         self.unindex_template(tpl)
@@ -1047,7 +903,7 @@ class Items(object):
         name_property = getattr(self.__class__, "name_property", None)
         if index is True and name_property:
             item = self.index_item(item)
-        self.items[item._id] = item
+        self.items[item.uuid] = item
 
     def remove_item(self, item):
         """
@@ -1058,7 +914,7 @@ class Items(object):
         :return: None
         """
         self.unindex_item(item)
-        self.items.pop(item._id, None)
+        self.items.pop(item.uuid, None)
 
     def index_item(self, item):
         """
@@ -1127,7 +983,15 @@ class Items(object):
             self.index_item(value)
 
     def __getitem__(self, key):
-        return self.items[key]
+        """Get a specific objects for Items dict.
+        Ie : a host in the Hosts dict, a service in the Service dict etc.
+
+        :param key: object uuid
+        :type key: str
+        :return: The wanted object
+        :rtype: alignak.object.item.Item
+        """
+        return self.items[key] if key else None
 
     def __contains__(self, key):
         return key in self.items
@@ -1142,26 +1006,6 @@ class Items(object):
         :rtype: alignak.objects.item.Item
         """
         return self.name_to_item.get(name, None)
-
-    def find_by_filter(self, filters):
-        """
-        Find items by filters
-
-        :param filters: list of filters
-        :type filters: list
-        :return: list of items
-        :rtype: list
-        """
-        items = []
-        for i in self:
-            failed = False
-            for filt in filters:
-                if not filt(i):
-                    failed = True
-                    break
-            if failed is False:
-                items.append(i)
-        return items
 
     def prepare_for_sending(self):
         """
@@ -1204,7 +1048,8 @@ class Items(object):
         """
         all_tags = item.get_templates()
 
-        for template in item.templates:
+        for template_id in item.templates:
+            template = self.templates[template_id]
             all_tags.append(template.name)
             all_tags.extend(self.get_all_tags(template))
         return list(set(all_tags))
@@ -1238,7 +1083,7 @@ class Items(object):
                                 item._get_name(),
                                 item.imported_from))
                 else:
-                    tpls.append(template)
+                    tpls.append(template.uuid)
         item.templates = tpls
 
     def linkify_templates(self):
@@ -1334,6 +1179,20 @@ class Items(object):
 
     __repr__ = __str__
 
+    def serialize(self):
+        """This function serialize items into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here is the generic function that simply serialize each item of the items object
+
+        :return: Dictionary containing item's uuid as key and item as value
+        :rtype: dict
+        """
+        res = {}
+        for key, item in self.items.iteritems():
+            res[key] = item.serialize()
+        return res
+
     def apply_partial_inheritance(self, prop):
         """
         Define property with inheritance value of the property
@@ -1344,7 +1203,7 @@ class Items(object):
         """
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
-            i.get_property_by_inheritance(prop)
+            self.get_property_by_inheritance(i, prop)
             # If a "null" attribute was inherited, delete it
             try:
                 if getattr(i, prop) == 'null':
@@ -1365,7 +1224,7 @@ class Items(object):
             self.apply_partial_inheritance(prop)
         for i in itertools.chain(self.items.itervalues(),
                                  self.templates.itervalues()):
-            i.get_customs_properties_by_inheritance()
+            self.get_customs_properties_by_inheritance(i)
 
     def linkify_with_contacts(self, contacts):
         """
@@ -1383,7 +1242,7 @@ class Items(object):
                     if c_name != '':
                         contact = contacts.find_by_name(c_name)
                         if contact is not None:
-                            new_contacts.append(contact)
+                            new_contacts.append(contact.uuid)
                         # Else: Add in the errors tab.
                         # will be raised at is_correct
                         else:
@@ -1408,7 +1267,7 @@ class Items(object):
                 for es_name in [e for e in escalations_tab if e != '']:
                     escal = escalations.find_by_name(es_name)
                     if escal is not None:
-                        new_escalations.append(escal)
+                        new_escalations.append(escal.uuid)
                     else:  # Escalation not find, not good!
                         err = "the escalation '%s' defined for '%s' is unknown" % (es_name,
                                                                                    i.get_name())
@@ -1430,7 +1289,7 @@ class Items(object):
                 for rm_name in resultmodulations_tab:
                     resultmod = resultmodulations.find_by_name(rm_name)
                     if resultmod is not None:
-                        new_resultmodulations.append(resultmod)
+                        new_resultmodulations.append(resultmod.uuid)
                     else:
                         err = ("the result modulation '%s' defined on the %s "
                                "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
@@ -1453,7 +1312,7 @@ class Items(object):
                 for rm_name in business_impact_modulations_tab:
                     resultmod = business_impact_modulations.find_by_name(rm_name)
                     if resultmod is not None:
-                        new_business_impact_modulations.append(resultmod)
+                        new_business_impact_modulations.append(resultmod.uuid)
                     else:
                         err = ("the business impact modulation '%s' defined on the %s "
                                "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
@@ -1510,7 +1369,7 @@ class Items(object):
                 tpname = getattr(i, prop).strip()
                 # some default values are '', so set None
                 if tpname == '':
-                    setattr(i, prop, None)
+                    setattr(i, prop, '')
                     continue
 
                 # Ok, get a real name, search for it
@@ -1522,76 +1381,7 @@ class Items(object):
                     i.configuration_errors.append(err)
                     continue
                 # Got a real one, just set it :)
-                setattr(i, prop, timeperiod)
-
-    @staticmethod
-    def create_commandcall(prop, commands, command):
-        """
-        Create commandCall object with command
-
-        :param prop: property
-        :type prop: str
-        :param commands: all commands
-        :type commands: object
-        :param command: a command object
-        :type command: object
-        :return: a commandCall object
-        :rtype: object
-        """
-        comandcall = dict(commands=commands, call=command)
-        if hasattr(prop, 'enable_environment_macros'):
-            comandcall['enable_environment_macros'] = prop.enable_environment_macros
-
-        if hasattr(prop, 'poller_tag'):
-            comandcall['poller_tag'] = prop.poller_tag
-        elif hasattr(prop, 'reactionner_tag'):
-            comandcall['reactionner_tag'] = prop.reactionner_tag
-
-        return CommandCall(**comandcall)
-
-    def linkify_one_command_with_commands(self, commands, prop):
-        """
-        Link a command to a property
-
-        :param commands: commands object
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        for i in self:
-            if hasattr(i, prop):
-                command = getattr(i, prop).strip()
-                if command != '':
-                    cmdcall = self.create_commandcall(i, commands, command)
-
-                    # TODO: catch None?
-                    setattr(i, prop, cmdcall)
-                else:
-                    setattr(i, prop, None)
-
-    def linkify_command_list_with_commands(self, commands, prop):
-        """
-        Link a command list (commands with , between) in real CommandCalls
-
-        :param commands: commands object
-        :type commands: object
-        :param prop: property name
-        :type prop: str
-        :return: None
-        """
-        for i in self:
-            if hasattr(i, prop):
-                coms = strip_and_uniq(getattr(i, prop))
-                com_list = []
-                for com in coms:
-                    if com != '':
-                        cmdcall = self.create_commandcall(i, commands, com)
-                        # TODO: catch None?
-                        com_list.append(cmdcall)
-                    else:  # TODO: catch?
-                        pass
-                setattr(i, prop, com_list)
+                setattr(i, prop, timeperiod.uuid)
 
     def linkify_with_triggers(self, triggers):
         """
@@ -1619,7 +1409,7 @@ class Items(object):
             for cw_name in i.checkmodulations:
                 chkmod = checkmodulations.find_by_name(cw_name)
                 if chkmod is not None:
-                    new_checkmodulations.append(chkmod)
+                    new_checkmodulations.append(chkmod.uuid)
                 else:
                     err = ("The checkmodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
@@ -1642,7 +1432,7 @@ class Items(object):
             for cw_name in i.macromodulations:
                 macromod = macromodulations.find_by_name(cw_name)
                 if macromod is not None:
-                    new_macromodulations.append(macromod)
+                    new_macromodulations.append(macromod.uuid)
                 else:
                     err = ("The macromodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
@@ -1816,7 +1606,7 @@ class Items(object):
         :rtype: bool
         """
         # Ok, we say "from now, no loop :) "
-        no_loop = True
+        # in_loop = []
 
         # Create parent graph
         parents = Graph()
@@ -1825,7 +1615,7 @@ class Items(object):
         for item in self:
             # Hack to get self here. Used when looping on host and host parent's
             if attr1 == "self":
-                obj = item          # obj is a host/service [list]
+                obj = item.uuid          # obj is a host/service [list]
             else:
                 obj = getattr(item, attr1, None)
             if obj is not None:
@@ -1838,7 +1628,7 @@ class Items(object):
         # And now fill edges
         for item in self:
             if attr1 == "self":
-                obj1 = item
+                obj1 = item.uuid
             else:
                 obj1 = getattr(item, attr1, None)
             obj2 = getattr(item, attr2, None)
@@ -1857,14 +1647,137 @@ class Items(object):
                     else:
                         parents.add_edge(obj1, obj2)
 
-        # Now get the list of all item in a loop
-        items_in_loops = parents.loop_check()
+        return parents.loop_check()
 
-        # and raise errors about it
-        for item in items_in_loops:
-            logger.error("The %s object '%s'  is part of a circular parent/child chain!",
-                         item.my_type,
-                         item.get_name())
-            no_loop = False
+    def get_property_by_inheritance(self, obj, prop):
+        """
+        Get the property asked in parameter to this object or from defined templates of this
+        object
 
-        return no_loop
+        :param prop: name of property
+        :type prop: str
+        :return: Value of property of this object or of a template
+        :rtype: str or None
+        """
+        if prop == 'register':
+            return None  # We do not inherit from register
+
+        # If I have the prop, I take mine but I check if I must
+        # add a plus property
+        if hasattr(obj, prop):
+            value = getattr(obj, prop)
+            # Manage the additive inheritance for the property,
+            # if property is in plus, add or replace it
+            # Template should keep the '+' at the beginning of the chain
+            if obj.has_plus(prop):
+                value.insert(0, obj.get_plus_and_delete(prop))
+                if obj.is_tpl():
+                    value = list(value)
+                    value.insert(0, '+')
+            return value
+        # Ok, I do not have prop, Maybe my templates do?
+        # Same story for plus
+        # We reverse list, so that when looking for properties by inheritance,
+        # the least defined template wins (if property is set).
+        for t_id in obj.templates:
+            template = self.templates[t_id]
+            value = self.get_property_by_inheritance(template, prop)
+
+            if value is not None and value != []:
+                # If our template give us a '+' value, we should continue to loop
+                still_loop = False
+                if isinstance(value, list) and value[0] == '+':
+                    # Templates should keep their + inherited from their parents
+                    if not obj.is_tpl():
+                        value = list(value)
+                        value = value[1:]
+                    still_loop = True
+
+                # Maybe in the previous loop, we set a value, use it too
+                if hasattr(obj, prop):
+                    # If the current value is strong, it will simplify the problem
+                    if not isinstance(value, list) and value[0] == '+':
+                        # In this case we can remove the + from our current
+                        # tpl because our value will be final
+                        new_val = list(getattr(obj, prop))
+                        new_val.extend(value[1:])
+                        value = new_val
+                    else:  # If not, se should keep the + sign of need
+                        new_val = list(getattr(obj, prop))
+                        new_val.extend(value)
+                        value = new_val
+
+                # Ok, we can set it
+                setattr(obj, prop, value)
+
+                # If we only got some '+' values, we must still loop
+                # for an end value without it
+                if not still_loop:
+                    # And set my own value in the end if need
+                    if obj.has_plus(prop):
+                        value = list(getattr(obj, prop))
+                        value.extend(obj.get_plus_and_delete(prop))
+                        # Template should keep their '+'
+                        if obj.is_tpl() and value[0] != '+':
+                            value.insert(0, '+')
+                        setattr(obj, prop, value)
+                    return value
+
+        # Maybe templates only give us + values, so we didn't quit, but we already got a
+        # self.prop value after all
+        template_with_only_plus = hasattr(obj, prop)
+
+        # I do not have endingprop, my templates too... Maybe a plus?
+        # warning: if all my templates gave me '+' values, do not forgot to
+        # add the already set self.prop value
+        if obj.has_plus(prop):
+            if template_with_only_plus:
+                value = list(getattr(obj, prop))
+                value.extend(obj.get_plus_and_delete(prop))
+            else:
+                value = obj.get_plus_and_delete(prop)
+            # Template should keep their '+' chain
+            # We must say it's a '+' value, so our son will now that it must
+            # still loop
+            if obj.is_tpl() and value != [] and value[0] != '+':
+                value.insert(0, '+')
+
+            setattr(obj, prop, value)
+            return value
+
+        # Ok so in the end, we give the value we got if we have one, or None
+        # Not even a plus... so None :)
+        return getattr(obj, prop, None)
+
+    def get_customs_properties_by_inheritance(self, obj):
+        """
+        Get custom properties from the templates defined in this object
+
+        :return: list of custom properties
+        :rtype: list
+        """
+        for t_id in obj.templates:
+            template = self.templates[t_id]
+            tpl_cv = self.get_customs_properties_by_inheritance(template)
+            if tpl_cv is not {}:
+                for prop in tpl_cv:
+                    if prop not in obj.customs:
+                        value = tpl_cv[prop]
+                    else:
+                        value = obj.customs[prop]
+                    if obj.has_plus(prop):
+                        value.insert(0, obj.get_plus_and_delete(prop))
+                        # value = self.get_plus_and_delete(prop) + ',' + value
+                    obj.customs[prop] = value
+        for prop in obj.customs:
+            value = obj.customs[prop]
+            if obj.has_plus(prop):
+                value.insert(0, obj.get_plus_and_delete(prop))
+                obj.customs[prop] = value
+        # We can get custom properties in plus, we need to get all
+        # entires and put
+        # them into customs
+        cust_in_plus = obj.get_all_plus_and_delete()
+        for prop in cust_in_plus:
+            obj.customs[prop] = cust_in_plus[prop]
+        return obj.customs

@@ -426,7 +426,7 @@ class TestAcks(AlignakTest):
         self.show_and_clear_logs()
         self.show_actions()
         self.assertEqual(1, len(svc.comments))
-        self.assertEqual('blablub', svc.comments[0].comment)
+        self.assertEqual('blablub', self.sched.comments[svc.comments[0]].comment)
 
         #--------------------------------------------------------------
         # recover
@@ -737,8 +737,8 @@ class TestAcks(AlignakTest):
         #self.worker_loop()
         self.assertFalse(svc.problem_has_been_acknowledged)
         self.assertEqual(2, len(svc.comments))
-        self.assertEqual('blablub1', svc.comments[0].comment)
-        self.assertEqual('blablub2', svc.comments[1].comment)
+        self.assertEqual('blablub1', self.sched.comments[svc.comments[0]].comment)
+        self.assertEqual('blablub2', self.sched.comments[svc.comments[1]].comment)
 
 
 # service is critical, notification is out

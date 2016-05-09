@@ -58,9 +58,9 @@ class TestNoContact(AlignakTest):
     # Seems that Nagios allow non contacts elements, just warning
     # and not error. Should do the same.
     def test_nocontact(self):
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_01")
         self.assertEqual([], host.contacts)
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_01", "test_ok_0")
         self.assertEqual([], svc.contacts)
         self.assertTrue(self.sched.conf.is_correct)
 

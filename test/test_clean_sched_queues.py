@@ -74,7 +74,7 @@ class TestSchedCleanQueues(AlignakTest):
         #host.__class__.obsess_over = True
         #host.obsess_over_host = True
         for i in xrange(1, 1001):
-            host.get_obsessive_compulsive_processor_command()
+            host.get_obsessive_compulsive_processor_command(self.sched.hosts, self.sched.macromodulations, self.sched.timeperiods)
         print "New len", len(host.actions)
         self.assertGreaterEqual(len(host.actions), 1000)
         self.sched.get_new_actions()
@@ -90,7 +90,8 @@ class TestSchedCleanQueues(AlignakTest):
 
         # Now for Notifications and co
         for i in xrange(1, 1001):
-            host.create_notifications('PROBLEM')
+            timeperiod = self.sched.timeperiods[host.notification_period]
+            host.create_notifications('PROBLEM', timeperiod, self.sched.hosts, self.sched.services)
         self.sched.get_new_actions()
         print len(self.sched.actions)
         # So get our 1000 notifications

@@ -74,7 +74,8 @@ class TestBadEscaOnGroups(AlignakTest):
         print svc.escalations
 
         self.assertGreater(len(svc.escalations), 0)
-        es = svc.escalations.pop()
+        es_id = svc.escalations.pop()
+        es = self.sched.escalations[es_id]
         self.assertTrue(es.is_correct())
 
 

@@ -60,6 +60,14 @@ alignak.misc.regenerator module
     :undoc-members:
     :show-inheritance:
 
+alignak.misc.serialization module
+---------------------------------
+
+.. automodule:: alignak.misc.serialization
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 alignak.misc.sorter module
 --------------------------
 

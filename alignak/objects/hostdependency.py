@@ -65,7 +65,6 @@ class Hostdependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    _id = 0
     my_type = 'hostdependency'
 
     # F is dep of D
@@ -201,7 +200,7 @@ class Hostdependencies(Items):
         """
         self.linkify_hd_by_h(hosts)
         self.linkify_hd_by_tp(timeperiods)
-        self.linkify_h_by_hd()
+        self.linkify_h_by_hd(hosts)
 
     def linkify_hd_by_h(self, hosts):
         """Replace dependent_host_name and host_name
@@ -224,8 +223,8 @@ class Hostdependencies(Items):
                     err = "Error: the host dependency got " \
                           "a bad dependent_host_name definition '%s'" % dh_name
                     hostdep.configuration_errors.append(err)
-                hostdep.host_name = host
-                hostdep.dependent_host_name = dephost
+                hostdep.host_name = host.uuid
+                hostdep.dependent_host_name = dephost.uuid
             except AttributeError, exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.configuration_errors.append(err)
@@ -241,12 +240,17 @@ class Hostdependencies(Items):
             try:
                 tp_name = hostdep.dependency_period
                 timeperiod = timeperiods.find_by_name(tp_name)
-                hostdep.dependency_period = timeperiod
+                if timeperiod:
+                    hostdep.dependency_period = timeperiod.uuid
+                else:
+                    hostdep.dependency_period = ''
             except AttributeError, exp:
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
-    def linkify_h_by_hd(self):
+    def linkify_h_by_hd(self, hosts):
         """Add dependency in host objects
+        :param hosts: hosts list
+        :type hosts: alignak.objects.host.Hosts
 
         :return: None
         """
@@ -255,17 +259,21 @@ class Hostdependencies(Items):
             if getattr(hostdep, 'host_name', None) is None or\
                     getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
-            # Ok, link!
-            depdt_hname = hostdep.dependent_host_name
-            dep_period = getattr(hostdep, 'dependency_period', None)
-            depdt_hname.add_host_act_dependency(
-                hostdep.host_name, hostdep.notification_failure_criteria,
-                dep_period, hostdep.inherits_parent
-            )
-            depdt_hname.add_host_chk_dependency(
-                hostdep.host_name, hostdep.execution_failure_criteria,
-                dep_period, hostdep.inherits_parent
-            )
+
+            hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                     hostdep.notification_failure_criteria,
+                                     getattr(hostdep, 'dependency_period', ''),
+                                     hostdep.inherits_parent)
+
+            hosts.add_chk_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                     hostdep.execution_failure_criteria,
+                                     getattr(hostdep, 'dependency_period', ''),
+                                     hostdep.inherits_parent)
+
+            # Only used for debugging purpose when loops are detected
+            setattr(hostdep, "host_name_string", hosts[hostdep.host_name].get_name())
+            setattr(hostdep, "dependent_host_name_string",
+                    hosts[hostdep.dependent_host_name].get_name())
 
     def is_correct(self):
         """Check if this host configuration is correct ::
@@ -277,4 +285,17 @@ class Hostdependencies(Items):
         :rtype: bool
         """
         valid = super(Hostdependencies, self).is_correct()
-        return valid and self.no_loop_in_parents("host_name", "dependent_host_name")
+        loop = self.no_loop_in_parents("host_name", "dependent_host_name")
+        if len(loop) > 0:
+            logger.error("Loop detected while checking host dependencies")
+            for item in self:
+                for elem in loop:
+                    if elem == item.host_name:
+                        logger.error("Host %s is parent host_name in dependency defined in %s",
+                                     item.host_name_string, item.imported_from)
+                    elif elem == item.dependent_host_name:
+                        logger.error("Host %s is child host_name in dependency defined in %s",
+                                     item.dependent_host_name_string, item.imported_from)
+            return False
+
+        return valid

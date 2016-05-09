@@ -70,26 +70,26 @@ class TestInheritanceAndPlus(AlignakTest):
         host2 = self.sched.hosts.find_by_name("test-server2")
         # HOST 1 is lin-servers,dmz, so should be in the hostsgroup named "linux" AND "DMZ"
         for hg in host1.hostgroups:
-            print hg.get_name()
-        self.assertIn(linux.get_name(), [hg.get_name() for hg in host1.hostgroups])
-        self.assertIn(dmz.get_name(), [hg.get_name() for hg in host1.hostgroups])
+            print self.sched.find_item_by_id(hg).get_name()
+        self.assertIn(linux.uuid, host1.hostgroups)
+        self.assertIn(dmz.uuid, host1.hostgroups)
 
         # HOST2 is in lin-servers,dmz and +mysql, so all three of them
         for hg in host2.hostgroups:
-            print hg.get_name()
-        self.assertIn(linux.get_name(), [hg.get_name() for hg in host2.hostgroups])
-        self.assertIn(dmz.get_name(), [hg.get_name() for hg in host2.hostgroups])
-        self.assertIn(mysql.get_name(), [hg.get_name() for hg in host2.hostgroups])
+            print self.sched.find_item_by_id(hg).get_name()
+        self.assertIn(linux.uuid, host2.hostgroups)
+        self.assertIn(dmz.uuid, host2.hostgroups)
+        self.assertIn(mysql.uuid, host2.hostgroups)
 
         service = self.sched.services.find_srv_by_name_and_hostname("pack-host", 'CHILDSERV')
-        sgs = [sg.get_name() for sg in service.servicegroups]
+        sgs = [self.sched.servicegroups[sg].get_name() for sg in service.servicegroups]
         self.assertIn("generic-sg", sgs)
         self.assertIn("another-sg", sgs)
 
     def test_pack_like_inheritance(self):
         # get our pack service
         host = self.sched.hosts.find_by_name('pack-host')
-        service = host.find_service_by_name('CHECK-123')
+        service = self.sched.services.find_srv_by_name_and_hostname('pack-host', 'CHECK-123')
 
         # it should exist
         self.assertIsNotNone(service)

@@ -54,9 +54,11 @@ class TestBadServiceDependencies(AlignakTest):
 
     def test_bad_conf(self):
         self.assertFalse(self.conf.conf_is_correct)
+        self.assert_any_log_match("hosts conf incorrect!!")
         self.assert_any_log_match("hostdependencies conf incorrect!!")
         self.assert_any_log_match("servicedependencies conf incorrect!!")
-        self.assert_any_log_match("The host object 'fake host'  is part of a circular parent/child chain!")
+        self.assert_any_log_match("Host fake host1 is parent host_name in dependency defined in")
+        self.assert_any_log_match("Host fake host is parent host_name in dependency defined in")
 
 if __name__ == '__main__':
     unittest.main()

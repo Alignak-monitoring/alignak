@@ -171,7 +171,7 @@ class Stats(object):
         :param key: key to edit
         :type key: str
         :param value: value to add
-        :type v: int
+        :type value: int
         :return: None
         """
         _min, _max, number, _sum = self.stats.get(key, (None, None, 0, 0))

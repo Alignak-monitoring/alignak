@@ -74,8 +74,8 @@ class TestConfig(AlignakTest):
         print hr1.hostgroups
         hg1 = None
         for hg in hr1.hostgroups:
-            if hg.get_name() == 'everyone':
-                hg1 = hg
+            if vcfg.hostgroups[hg].get_name() == 'everyone':
+                hg1 = vcfg.hostgroups[hg]
 
 
                 

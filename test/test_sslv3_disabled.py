@@ -74,7 +74,7 @@ class testSchedulerInit(AlignakTest):
 
     def create_daemon(self):
         cls = Alignak
-        return cls(daemons_config[cls], False, True, False, None, '')
+        return cls(daemons_config[cls], False, True, False, None)
     @unittest.skipIf(OpenSSL is None, "Test requires OpenSSL")
     def test_scheduler_init(self):
 

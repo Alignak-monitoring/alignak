@@ -81,7 +81,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
         self.assertEqual(2, svc_cor.business_rule.get_state())
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        timeperiod = self.sched.timeperiods[svc_cor.notification_period]
+        host = self.sched.hosts[svc_cor.host]
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts, self.sched.services, 'PROBLEM'))
 
     def test_bprule_smart_notifications_ack(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
@@ -100,7 +102,10 @@ class TestBusinesscorrelNotifications(AlignakTest):
             [svc2, 2, 'CRITICAL test_host_02/srv2']], do_sleep=True)
 
         self.assertEqual(2, svc_cor.business_rule.get_state())
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        timeperiod = self.sched.timeperiods[svc_cor.notification_period]
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
+
 
         now = time.time()
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_02;srv2;2;1;1;lausser;blablub" % (now)
@@ -110,7 +115,8 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
-        self.assertIs(True, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        self.assertIs(True, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
     def test_bprule_smart_notifications_svc_ack_downtime(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
@@ -130,26 +136,31 @@ class TestBusinesscorrelNotifications(AlignakTest):
             [svc2, 2, 'CRITICAL test_host_02/srv2']], do_sleep=True)
 
         self.assertEqual(2, svc_cor.business_rule.get_state())
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        timeperiod = self.sched.timeperiods[svc_cor.notification_period]
+        host = self.sched.hosts[svc_cor.host]
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
         duration = 600
         now = time.time()
         # fixed downtime valid for the next 10 minutes
-        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_02;srv2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_02;srv2;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
         self.sched.run_external_command(cmd)
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
         self.scheduler_loop(1, [[svc_cor, None, None]])
         self.assertGreater(svc2.scheduled_downtime_depth, 0)
 
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
         svc_cor.business_rule_downtime_as_ack = True
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
-        self.assertIs(True, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        self.assertIs(True, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
     def test_bprule_smart_notifications_hst_ack_downtime(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
@@ -170,26 +181,31 @@ class TestBusinesscorrelNotifications(AlignakTest):
             [svc2, 2, 'CRITICAL test_host_02/srv2']], do_sleep=True)
 
         self.assertEqual(2, svc_cor.business_rule.get_state())
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        timeperiod = self.sched.timeperiods[svc_cor.notification_period]
+        host = self.sched.hosts[svc_cor.host]
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
         duration = 600
         now = time.time()
         # fixed downtime valid for the next 10 minutes
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_02;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_02;%d;%d;1;;%d;lausser;blablub" % (now, now, now + duration, duration)
         self.sched.run_external_command(cmd)
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
         self.scheduler_loop(1, [[svc_cor, None, None]])
         self.assertGreater(hst2.scheduled_downtime_depth, 0)
 
-        self.assertIs(False, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        self.assertIs(False, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
         svc_cor.business_rule_downtime_as_ack = True
 
         self.scheduler_loop(1, [[svc_cor, None, None]], do_sleep=True)
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
-        self.assertIs(True, svc_cor.notification_is_blocked_by_item('PROBLEM'))
+        self.assertIs(True, svc_cor.notification_is_blocked_by_item(timeperiod, self.sched.hosts,
+                                                                     self.sched.services, 'PROBLEM'))
 
     def test_bprule_child_notification_options(self):
         svc_cor = self.sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_child_notif")

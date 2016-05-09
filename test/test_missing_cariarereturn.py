@@ -64,8 +64,8 @@ class TestConfig(AlignakTest):
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "TEST")
         self.assertIsNot(svc, None)
         self.assertGreaterEqual(len(svc.checks_in_progress), 1)
-        print svc.checks_in_progress[0].command
-        self.assertEqual('plugins/nothing BLABLA', svc.checks_in_progress[0].command)
+        print self.sched.checks[svc.checks_in_progress[0]].command
+        self.assertEqual('plugins/nothing BLABLA', self.sched.checks[svc.checks_in_progress[0]].command)
 
 
 if __name__ == '__main__':

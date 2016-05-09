@@ -20,17 +20,15 @@
 Any Alignak satellite have at least those functions exposed over network
 See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTTP apps.
 """
-import base64
-import cPickle
 import inspect
 import logging
 import random
 import time
-import zlib
 
 import cherrypy
 
 from alignak.log import logger
+from alignak.misc.serialization import serialize
 
 
 class GenericInterface(object):
@@ -84,12 +82,17 @@ class GenericInterface(object):
         return self.running_id
 
     @cherrypy.expose
-    def put_conf(self, conf):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def put_conf(self, conf=None):
         """Send a new configuration to the daemon (internal)
 
         :param conf: new conf to send
         :return: None
         """
+        if conf is None:
+            confs = cherrypy.request.json
+            conf = confs['conf']
         with self.app.conf_lock:
             self.app.new_conf = conf  # Safer to lock this one also
     put_conf.method = 'post'
@@ -164,10 +167,9 @@ class GenericInterface(object):
 
             full_api[fun][u"args"] = a_dict
 
-        full_api[u"side_note"] = u"When posting data you have to zlib the whole content" \
-                                 u"and cPickle value. Example : " \
+        full_api[u"side_note"] = u"When posting data you have to serialize value. Example : " \
                                  u"POST /set_log_level " \
-                                 u"zlib.compress({'loglevel' : cPickle.dumps('INFO')})"
+                                 u"{'loglevel' : serialize('INFO')}"
 
         return full_api
 
@@ -217,26 +219,28 @@ class GenericInterface(object):
         """Get the external commands from the daemon (internal)
         Use a lock for this call (not a global one, just for this method)
 
-        :return: Pickled external command list
+        :return: serialized external command list
         :rtype: str
         """
-        with self.app.external_commands_lock:
-            cmds = self.app.get_external_commands()
-            raw = cPickle.dumps(cmds)
+        if hasattr(self.app, 'external_commands_lock'):
+            with self.app.external_commands_lock:
+                cmds = self.app.get_external_commands()
+                raw = serialize(cmds, True)
+        else:
+            raw = []
         return raw
 
     @cherrypy.expose
-    def push_actions(self, actions, sched_id):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def push_actions(self):
         """Get new actions from scheduler(internal)
 
-        :param actions: list of action to add
-        :type actions: list
-        :param sched_id: id of the scheduler sending actions
-        :type sched_id: int
         :return:None
         """
+        results = cherrypy.request.json
         with self.app.lock:
-            self.app.add_actions(actions, int(sched_id))
+            self.app.add_actions(results['actions'], int(results['sched_id']))
     push_actions.method = 'post'
 
     @cherrypy.expose
@@ -254,19 +258,20 @@ class GenericInterface(object):
             # print "A scheduler ask me the returns", sched_id
             ret = self.app.get_return_for_passive(int(sched_id))
             # print "Send mack", len(ret), "returns"
-            return cPickle.dumps(ret)
+            return serialize(ret, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_broks(self, bname):  # pylint: disable=W0613
         """Get broks from the daemon
 
-        :return: Brok list serialized and b64encoded
-        :rtype: str
+        :return: Brok list serialized
+        :rtype: dict
         """
         with self.app.lock:
             res = self.app.get_broks()
-            return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+
+        return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -279,17 +284,18 @@ class GenericInterface(object):
         app = self.app
         res = {}
 
-        for sched_id in app.schedulers:
-            sched = app.schedulers[sched_id]
-            lst = []
-            res[sched_id] = lst
-            for mod in app.q_by_mod:
-                # In workers we've got actions send to queue - queue size
-                for (q_id, queue) in app.q_by_mod[mod].items():
-                    lst.append({
-                        'scheduler_name': sched['name'],
-                        'module': mod,
-                        'queue_number': q_id,
-                        'queue_size': queue.qsize(),
-                        'return_queue_len': app.get_returns_queue_len()})
+        if hasattr(app, 'schedulers'):
+            for sched_id in app.schedulers:
+                sched = app.schedulers[sched_id]
+                lst = []
+                res[sched_id] = lst
+                for mod in app.q_by_mod:
+                    # In workers we've got actions send to queue - queue size
+                    for (q_id, queue) in app.q_by_mod[mod].items():
+                        lst.append({
+                            'scheduler_name': sched['name'],
+                            'module': mod,
+                            'queue_number': q_id,
+                            'queue_size': queue.qsize(),
+                            'return_queue_len': app.get_returns_queue_len()})
         return res

@@ -68,10 +68,11 @@ class TestMacroModulations(AlignakTest):
         mod = self.sched.macromodulations.find_by_name("MODULATION")
         self.assertIsNot(mod, None)
 
-        self.assertIn(mod, host.macromodulations)
+        self.assertIn(mod.uuid, host.macromodulations)
 
         c = None
-        for c in host.checks_in_progress:
+        for c_id in host.checks_in_progress:
+            c = self.sched.checks[c_id]
             print c.command
             # THE hst got 2 modulations. The first with the value MODULATED
             # and the second with NOT_THE_GOOD. Both are currently active, but we want the firt one

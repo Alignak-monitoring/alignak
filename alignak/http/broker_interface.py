@@ -19,22 +19,25 @@
 """This module provide a specific HTTP interface for a Broker."""
 import cherrypy
 from alignak.http.generic_interface import GenericInterface
+from alignak.misc.serialization import unserialize
 
 
 class BrokerInterface(GenericInterface):
     """This class provides specific HTTP functions for Broker."""
 
     @cherrypy.expose
-    def push_broks(self, broks):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def push_broks(self):
         """Push broks objects to the daemon (internal)
         Only used on a Broker daemon by the Arbiter
 
-        :param broks: Brok list
-        :type broks: list
         :return: None
         """
+        broks = cherrypy.request.json
         with self.app.arbiter_broks_lock:
-            self.app.arbiter_broks.extend(broks.values())
+            self.app.arbiter_broks.extend([unserialize(elem, True) for
+                                           elem in broks['broks'].values()])
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

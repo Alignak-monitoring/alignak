@@ -68,12 +68,12 @@ class TestCheckModulations(AlignakTest):
         mod = self.sched.checkmodulations.find_by_name("MODULATION")
         self.assertIsNot(mod, None)
 
-        self.assertIn(mod, host.checkmodulations)
+        self.assertIn(mod.uuid, host.checkmodulations)
 
         c = None
         for c in host.checks_in_progress:
-            print c.command
-            self.assertEqual('plugins/nothing VALUE', c.command)
+            print self.sched.checks[c].command
+            self.assertEqual('plugins/nothing VALUE', self.sched.checks[c].command)
 
 
 if __name__ == '__main__':

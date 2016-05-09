@@ -59,10 +59,10 @@ class TestEscalations(AlignakTest):
 
     def test_wildcard_in_service_descrption(self):
         self.print_header()
-        sid = int(Serviceescalation._id) - 1
-        generated = self.sched.conf.escalations.find_by_name('Generated-Serviceescalation-%d' % sid)
+        generated = [e for e in self.sched.conf.escalations
+                      if e.escalation_name.startswith('Generated-Serviceescalation-')]
         for svc in self.sched.services.find_srvs_by_hostname("test_host_0_esc"):
-            self.assertIn(generated, svc.escalations)
+            self.assertIn(generated[0].uuid, self.sched.services[svc].escalations)
 
     def test_simple_escalation(self):
         self.print_header()
@@ -91,14 +91,14 @@ class TestEscalations(AlignakTest):
 
         tolevel2 = self.sched.conf.escalations.find_by_name('ToLevel2')
         self.assertIsNot(tolevel2, None)
-        self.assertIn(tolevel2, svc.escalations)
+        self.assertIn(tolevel2.uuid, svc.escalations)
         tolevel3 = self.sched.conf.escalations.find_by_name('ToLevel3')
         self.assertIsNot(tolevel3, None)
-        self.assertIn(tolevel3, svc.escalations)
+        self.assertIn(tolevel3.uuid, svc.escalations)
 
 
         for es in svc.escalations:
-            print es.__dict__
+            print self.sched.escalations[es].__dict__
 
         #--------------------------------------------------------------
         # service reaches soft;1
@@ -208,10 +208,10 @@ class TestEscalations(AlignakTest):
         # We check if we correclty linked our escalations
         tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-time')
         self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
+        self.assertIn(tolevel2_time.uuid, svc.escalations)
         tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
         self.assertIsNot(tolevel3_time, None)
-        self.assertIn(tolevel3_time, svc.escalations)
+        self.assertIn(tolevel3_time.uuid, svc.escalations)
 
         # Go for the running part!
 
@@ -343,10 +343,10 @@ class TestEscalations(AlignakTest):
         # We check that we really linked our escalations :)
         tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-time')
         self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
+        self.assertIn(tolevel2_time.uuid, svc.escalations)
         tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
         self.assertIsNot(tolevel3_time, None)
-        self.assertIn(tolevel3_time, svc.escalations)
+        self.assertIn(tolevel3_time.uuid, svc.escalations)
 
         #--------------------------------------------------------------
         # service reaches soft;1
@@ -389,7 +389,7 @@ class TestEscalations(AlignakTest):
         # first, we check if the next notification will really be near 1 hour because the escalation
         # to level2 is asking for it. If it don't, the standard was 1 day!
         for n in svc.notifications_in_progress.values():
-            next = svc.get_next_notification_time(n)
+            next = svc.get_next_notification_time(n, self.sched.escalations, self.sched.timeperiods)
             print abs(next - now)
             # Check if we find the next notification for the next hour,
             # and not for the next day like we ask before
@@ -499,7 +499,7 @@ class TestEscalations(AlignakTest):
         # We check if we correclty linked our escalations
         tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-shortinterval')
         self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
+        self.assertIn(tolevel2_time.uuid, svc.escalations)
         #tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
         #self.assertIsNot(tolevel3_time, None)
         #self.assertIn(tolevel3_time, svc.escalations)

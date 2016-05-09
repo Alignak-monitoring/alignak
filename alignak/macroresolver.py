@@ -169,8 +169,7 @@ class MacroResolver(Borg):
             del macros['']
         return macros
 
-    @staticmethod
-    def _get_value_from_element(elt, prop):
+    def _get_value_from_element(self, elt, prop):
         """Get value from a element's property
         the property may be a function to call.
 
@@ -182,9 +181,16 @@ class MacroResolver(Borg):
         :rtype: str
         """
         try:
+            arg = None
+            # We have args to provide to the function
+            if isinstance(prop, tuple):
+                prop, arg = prop
             value = getattr(elt, prop)
             if callable(value):
-                return unicode(value())
+                if arg:
+                    return unicode(value(getattr(self, arg, None)))
+                else:
+                    return unicode(value())
             else:
                 return unicode(value)
         except AttributeError:
@@ -241,7 +247,8 @@ class MacroResolver(Borg):
 
         return env
 
-    def resolve_simple_macros_in_string(self, c_line, data, args=None):
+    def resolve_simple_macros_in_string(self, c_line, data, macromodulations, timeperiods,
+                                        args=None):
         """Replace macro in the command line with the real value
 
         :param c_line: command line to modify
@@ -257,7 +264,6 @@ class MacroResolver(Borg):
         data.append(self)  # For getting global MACROS
         if hasattr(self, 'conf'):
             data.append(self.conf)  # For USERN macros
-        clss = [d.__class__ for d in data]
 
         # we should do some loops for nested macros
         # like $USER1$ hiding like a ninja in a $ARG2$ Macro. And if
@@ -276,7 +282,7 @@ class MacroResolver(Borg):
             # print "Still go macros:", still_got_macros
 
             # Put in the macros the type of macro for all macros
-            self._get_type_of_macro(macros, clss)
+            self._get_type_of_macro(macros, data)
             # Now we get values from elements
             for macro in macros:
                 # If type ARGN, look at ARGN cutting
@@ -284,12 +290,12 @@ class MacroResolver(Borg):
                     macros[macro]['val'] = self._resolve_argn(macro, args)
                     macros[macro]['type'] = 'resolved'
                 # If class, get value from properties
-                if macros[macro]['type'] == 'class':
-                    cls = macros[macro]['class']
+                if macros[macro]['type'] == 'object':
+                    obj = macros[macro]['object']
                     for elt in data:
-                        if elt is None or elt.__class__ != cls:
+                        if elt is None or elt != obj:
                             continue
-                        prop = cls.macros[macro]
+                        prop = obj.macros[macro]
                         macros[macro]['val'] = self._get_value_from_element(elt, prop)
                         # Now check if we do not have a 'output' macro. If so, we must
                         # delete all special characters that can be dangerous
@@ -312,10 +318,12 @@ class MacroResolver(Borg):
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
                         mms = getattr(elt, 'macromodulations', [])
-                        for macromod in mms[::-1]:
+                        for macromod_id in mms[::-1]:
+                            macromod = macromodulations[macromod_id]
                             # Look if the modulation got the value,
                             # but also if it's currently active
-                            if '_' + macro_name in macromod.customs and macromod.is_active():
+                            if '_' + macro_name in macromod.customs and \
+                                    macromod.is_active(timeperiods):
                                 macros[macro]['val'] = macromod.customs['_' + macro_name]
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
@@ -337,7 +345,7 @@ class MacroResolver(Borg):
         # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
-    def resolve_command(self, com, data):
+    def resolve_command(self, com, data, macromodulations, timeperiods):
         """Resolve command macros with data
 
         :param com: check / event handler or command call object
@@ -348,10 +356,11 @@ class MacroResolver(Borg):
         :rtype: str
         """
         c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
+        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
+                                                    args=com.args)
 
     @staticmethod
-    def _get_type_of_macro(macros, clss):
+    def _get_type_of_macro(macros, objs):
         r"""Set macros types
 
         Example::
@@ -363,8 +372,8 @@ class MacroResolver(Borg):
 
         :param macros: macros list
         :type macros: list[str]
-        :param clss: classes list, used to tag class macros
-        :type clss:
+        :param objs: objects list, used to tag object macros
+        :type objs: list
         :return: None
         """
         for macro in macros:
@@ -393,10 +402,10 @@ class MacroResolver(Borg):
                 macros[macro]['type'] = 'ONDEMAND'
                 continue
             # OK, classical macro...
-            for cls in clss:
-                if macro in cls.macros:
-                    macros[macro]['type'] = 'class'
-                    macros[macro]['class'] = cls
+            for obj in objs:
+                if macro in obj.macros:
+                    macros[macro]['type'] = 'object'
+                    macros[macro]['object'] = obj
                     continue
 
     @staticmethod
@@ -554,9 +563,32 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.state == state)
 
-    _get_total_hosts_up = lambda s: s._tot_hosts_by_state('UP')
-    _get_total_hosts_down = lambda s: s._tot_hosts_by_state('DOWN')
-    _get_total_hosts_unreachable = lambda s: s._tot_hosts_by_state('UNREACHABLE')
+    def _get_total_hosts_up(self):
+        """
+        Get the number of hosts up
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UP')
+
+    def _get_total_hosts_down(self):
+        """
+        Get the number of hosts down
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('DOWN')
+
+    def _get_total_hosts_unreachable(self):
+        """
+        Get the number of hosts unreachable
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UNREACHABLE')
 
     @staticmethod
     def _get_total_hosts_unreachable_unhandled():
@@ -597,13 +629,41 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.state == state)
 
-    _get_total_service_ok = lambda s: s._tot_services_by_state('OK')
+    def _get_total_service_ok(self):
+        """
+        Get the number of services ok
 
-    _get_total_service_warning = lambda s: s._tot_services_by_state('WARNING')
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('OK')
 
-    _get_total_service_critical = lambda s: s._tot_services_by_state('CRITICAL')
+    def _get_total_service_warning(self):
+        """
+        Get the number of services warning
 
-    _get_total_service_unknown = lambda s: s._tot_services_by_state('UNKNOWN')
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('WARNING')
+
+    def _get_total_service_critical(self):
+        """
+        Get the number of services critical
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('CRITICAL')
+
+    def _get_total_service_unknown(self):
+        """
+        Get the number of services unknown
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('UNKNOWN')
 
     @staticmethod
     def _get_total_services_warning_unhandled():

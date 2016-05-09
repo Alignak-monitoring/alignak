@@ -72,12 +72,12 @@ class TestConfig(AlignakTest):
             print "\t", nw.notificationway_name
 
         email_in_day = self.sched.notificationways.find_by_name('email_in_day')
-        self.assertIn(email_in_day, contact.notificationways)
+        self.assertIn(email_in_day.uuid, contact.notificationways)
         email_s_cmd = email_in_day.service_notification_commands.pop()
         email_h_cmd = email_in_day.host_notification_commands.pop()
 
         sms_the_night = self.sched.notificationways.find_by_name('sms_the_night')
-        self.assertIn(sms_the_night, contact.notificationways)
+        self.assertIn(sms_the_night.uuid, contact.notificationways)
         sms_s_cmd = sms_the_night.service_notification_commands.pop()
         sms_h_cmd = sms_the_night.host_notification_commands.pop()
 
@@ -86,7 +86,8 @@ class TestConfig(AlignakTest):
         self.assertEqual(5, sms_the_night.min_business_impact)
 
         print "Contact notification way(s):"
-        for nw in contact.notificationways:
+        for nw_id in contact.notificationways:
+            nw = self.sched.notificationways[nw_id]
             print "\t", nw.notificationway_name
             for c in nw.service_notification_commands:
                 print "\t\t", c.get_name()
@@ -95,40 +96,43 @@ class TestConfig(AlignakTest):
         # It's the created notifway for this simple contact
         test_contact_simple_inner_notificationway = self.sched.notificationways.find_by_name("test_contact_simple_inner_notificationway")
         print "Simple contact"
-        for nw in contact_simple.notificationways:
+        for nw_id in contact_simple.notificationways:
+            nw = self.sched.notificationways[nw_id]
             print "\t", nw.notificationway_name
             for c in nw.service_notification_commands:
                 print "\t\t", c.get_name()
-        self.assertIn(test_contact_simple_inner_notificationway, contact_simple.notificationways)
+        self.assertIn(test_contact_simple_inner_notificationway.uuid, contact_simple.notificationways)
 
         # we take as criticity a huge value from now
         huge_criticity = 5
 
         # Now all want* functions
         # First is ok with warning alerts
-        self.assertEqual(True, email_in_day.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(True, email_in_day.want_service_notification(self.sched.timeperiods, now, 'WARNING', 'PROBLEM', huge_criticity) )
 
         # But a SMS is now WAY for warning. When we sleep, we wake up for critical only guy!
-        self.assertEqual(False, sms_the_night.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(False, sms_the_night.want_service_notification(self.sched.timeperiods, now, 'WARNING', 'PROBLEM', huge_criticity) )
 
         # Same with contacts now
         # First is ok for warning in the email_in_day nw
-        self.assertEqual(True, contact.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(True, contact.want_service_notification(self.sched.notificationways, self.sched.timeperiods, self.sched.downtimes,
+                                                                 now, 'WARNING', 'PROBLEM', huge_criticity) )
         # Simple is not ok for it
-        self.assertEqual(False, contact_simple.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(False, contact_simple.want_service_notification(self.sched.notificationways, self.sched.timeperiods, self.sched.downtimes,
+                                                                         now, 'WARNING', 'PROBLEM', huge_criticity) )
 
         # Then for host notification
         # First is ok for warning in the email_in_day nw
-        self.assertEqual(True, contact.want_host_notification(now, 'FLAPPING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(True, contact.want_host_notification(self.sched.notificationways, self.sched.timeperiods, now, 'FLAPPING', 'PROBLEM', huge_criticity) )
         # Simple is not ok for it
-        self.assertEqual(False, contact_simple.want_host_notification(now, 'FLAPPING', 'PROBLEM', huge_criticity) )
+        self.assertEqual(False, contact_simple.want_host_notification(self.sched.notificationways, self.sched.timeperiods, now, 'FLAPPING', 'PROBLEM', huge_criticity) )
 
         # And now we check that we refuse SMS for a low level criticity
         # I do not want to be awaken by a dev server! When I sleep, I sleep!
         # (and my wife will kill me if I do...)
 
         # We take the EMAIL test because SMS got the night ony, so we take a very low value for criticity here
-        self.assertEqual(False, email_in_day.want_service_notification(now, 'WARNING', 'PROBLEM', -1) )
+        self.assertEqual(False, email_in_day.want_service_notification(self.sched.timeperiods, now, 'WARNING', 'PROBLEM', -1) )
 
 
 

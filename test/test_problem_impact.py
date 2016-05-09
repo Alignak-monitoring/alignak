@@ -135,9 +135,9 @@ class TestProblemImpact(AlignakTest):
             # business_impact value ofthe impacts, so here 5
             self.assertEqual(5, h.business_impact)
             for s in all_servers:
-                self.assertIn(s, h.impacts)
-                self.assertIn(s.get_full_name(), host_router_0_brok.data['impacts']['hosts'])
-                self.assertIn(s.get_full_name(), host_router_1_brok.data['impacts']['hosts'])
+                self.assertIn(s.uuid, h.impacts)
+                self.assertIn(s.uuid,  host_router_0_brok.data['impacts'])
+                self.assertIn(s.uuid,  host_router_1_brok.data['impacts'])
 
         # Should have host notification, but it's not so simple:
         # our contact say: not under 5, and our hosts are 2. But
@@ -151,19 +151,20 @@ class TestProblemImpact(AlignakTest):
             self.assertEqual(True, s.is_impact)
             self.assertEqual('UNREACHABLE', s.state)
             # And check the services are impacted too
-            for svc in s.services:
+            for svc_id in s.services:
+                svc = self.sched.services[svc_id]
                 print "Service state", svc.state
                 self.assertEqual('UNKNOWN', svc.state)
-                self.assertIn(svc.get_full_name(), host_router_0_brok.data['impacts']['services'])
-                self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
+                self.assertIn(svc.uuid,  host_router_0_brok.data['impacts'])
+                self.assertIn(svc.uuid,  host_router_1_brok.data['impacts'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
-                self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
+                self.assertSetEqual(set([host_router_0.uuid, host_router_1.uuid]), set(brk_svc.data['source_problems']))
             for h in all_routers:
-                self.assertIn(h, s.source_problems)
+                self.assertIn(h.uuid, s.source_problems)
                 brk_hst = s.get_update_status_brok()
                 brk_hst.prepare()
-                self.assertIn(h.get_full_name(), brk_hst.data['source_problems']['hosts'])
+                self.assertIn(h.uuid, brk_hst.data['source_problems'])
 
         #--------------------------------------------------------------
         # One router get UP now
@@ -185,7 +186,7 @@ class TestProblemImpact(AlignakTest):
         for s in all_servers:
             # Still impacted by the other server
             self.assertEqual(True, s.is_impact)
-            self.assertEqual([host_router_1], s.source_problems)
+            self.assertEqual([host_router_1.uuid], s.source_problems)
 
         #--------------------------------------------------------------
         # The other router get UP :)
@@ -252,7 +253,7 @@ class TestProblemImpact(AlignakTest):
         # We lie here, from now we do not want criticities
         for h in all_hosts:
             for s in h.services:
-                s.business_impact = 2
+                self.sched.services[s].business_impact = 2
 
         #--------------------------------------------------------------
         # initialize host states as UP
@@ -303,9 +304,9 @@ class TestProblemImpact(AlignakTest):
             # business_impact value ofthe impacts, so here 2 because we lower all critcity for our test
             self.assertEqual(2, h.business_impact)
             for s in all_servers:
-                self.assertIn(s, h.impacts)
-                self.assertIn(s.get_full_name(), host_router_0_brok.data['impacts']['hosts'])
-                self.assertIn(s.get_full_name(), host_router_1_brok.data['impacts']['hosts'])
+                self.assertIn(s.uuid, h.impacts)
+                self.assertIn(s.uuid, host_router_0_brok.data['impacts'])
+                self.assertIn(s.uuid, host_router_1_brok.data['impacts'])
 
         # Should have host notification, but it's not so simple:
         # our contact say: not under 5, and our hosts are 2. And here
@@ -319,24 +320,28 @@ class TestProblemImpact(AlignakTest):
             self.assertEqual(True, s.is_impact)
             self.assertEqual('UNREACHABLE', s.state)
             # And check the services are impacted too
-            for svc in s.services:
+            for svc_id in s.services:
+                svc = self.sched.services[svc_id]
                 print "Service state", svc.state
                 self.assertEqual('UNKNOWN', svc.state)
-                self.assertIn(svc.get_full_name(), host_router_0_brok.data['impacts']['services'])
-                self.assertIn(svc.get_full_name(), host_router_1_brok.data['impacts']['services'])
+                self.assertIn(svc.uuid, host_router_0_brok.data['impacts'])
+                self.assertIn(svc.uuid, host_router_1_brok.data['impacts'])
                 brk_svc = svc.get_update_status_brok()
                 brk_svc.prepare()
-                self.assertEqual(['test_router_0', 'test_router_1'], brk_svc.data['source_problems']['hosts'])
+                self.assertSetEqual(set([host_router_0.uuid, host_router_1.uuid]), set(brk_svc.data['source_problems']))
             for h in all_routers:
-                self.assertIn(h, s.source_problems)
+                self.assertIn(h.uuid, s.source_problems)
                 brk_hst = s.get_update_status_brok()
                 brk_hst.prepare()
-                self.assertIn(h.get_full_name(), brk_hst.data['source_problems']['hosts'])
+                self.assertIn(h.uuid, brk_hst.data['source_problems'])
 
 
         for h in all_hosts:
-            for s in h.services:
-                s.update_business_impact_value()
+            for s_id in h.services:
+                s = self.sched.services[s_id]
+                s.update_business_impact_value(self.sched.hosts, self.sched.services,
+                                               self.sched.timeperiods,
+                                               self.sched.businessimpactmodulations)
                 self.assertEqual(2, s.business_impact)
 
         # Now we play with modulation!
@@ -344,7 +349,7 @@ class TestProblemImpact(AlignakTest):
         critmod.modulation_period = None
 
         crit_srv = self.sched.services.find_srv_by_name_and_hostname("test_host_1", "test_ok_1")
-        self.assertIn(critmod, crit_srv.business_impact_modulations)
+        self.assertIn(critmod.uuid, crit_srv.business_impact_modulations)
 
         # Now we set the modulation period as always good, we check that the service
         # really update it's business_impact value
@@ -375,7 +380,7 @@ class TestProblemImpact(AlignakTest):
         for s in all_servers:
             # Still impacted by the other server
             self.assertEqual(True, s.is_impact)
-            self.assertEqual([host_router_1], s.source_problems)
+            self.assertEqual([host_router_1.uuid], s.source_problems)
 
         #--------------------------------------------------------------
         # The other router get UP :)

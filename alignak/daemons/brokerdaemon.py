@@ -61,12 +61,10 @@ import os
 import sys
 import time
 import traceback
-import cPickle
-import base64
-import zlib
 import threading
 from multiprocessing import active_children
 
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
@@ -182,7 +180,7 @@ class Broker(BaseSatellite):
         :param d_type: name of object
         :type d_type: str
         :return: return the object linked
-        :rtype: object
+        :rtype: alignak.objects.satellitelink.SatelliteLinks
         """
         s_type = {'scheduler': self.schedulers,
                   'arbiter': self.arbiters,
@@ -385,11 +383,10 @@ class Broker(BaseSatellite):
                     con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
-                        tmp_broks = cPickle.loads(zlib.decompress(base64.b64decode(tmp_broks)))
-                    except (TypeError, zlib.error, cPickle.PickleError), exp:
-                        logger.error('Cannot load broks data from %s : %s',
-                                     links[sched_id]['name'], exp)
-                        links[sched_id]['con'] = None
+                        tmp_broks = unserialize(tmp_broks, True)
+                    except AlignakClassLookupException as exp:
+                        logger.error('Cannot un-serialize data received from "get_broks" call: %s',
+                                     exp)
                         continue
                     logger.debug("%s Broks get in %s", len(tmp_broks), time.time() - t00)
                     for brok in tmp_broks.values():
@@ -453,7 +450,7 @@ class Broker(BaseSatellite):
         :return: None
         """
         with self.conf_lock:
-            conf = self.new_conf
+            conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals
@@ -485,21 +482,15 @@ class Broker(BaseSatellite):
             # self.schedulers.clear()
             for sched_id in conf['schedulers']:
                 # Must look if we already have it to do not overdie our broks
-                already_got = False
 
-                # We can already got this conf id, but with another address
-                if sched_id in self.schedulers:
-                    new_addr = conf['schedulers'][sched_id]['address']
-                    old_addr = self.schedulers[sched_id]['address']
-                    new_port = conf['schedulers'][sched_id]['port']
-                    old_port = self.schedulers[sched_id]['port']
-                    # Should got all the same to be ok :)
-                    if new_addr == old_addr and new_port == old_port:
-                        already_got = True
+                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
-                if already_got:
-                    broks = self.schedulers[sched_id]['broks']
-                    running_id = self.schedulers[sched_id]['running_id']
+                if old_sched_id:
+                    logger.info("[%s] We already got the conf %s (%s)",
+                                self.name, old_sched_id, name)
+                    broks = self.schedulers[old_sched_id]['broks']
+                    running_id = self.schedulers[old_sched_id]['running_id']
+                    del self.schedulers[old_sched_id]
                 else:
                     broks = {}
                     running_id = 0

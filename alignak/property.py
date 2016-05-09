@@ -208,7 +208,6 @@ class BoolProp(Property):
     Boolean values are currently case insensitively defined as 0,
     false, no, off for False, and 1, true, yes, on for True).
     """
-
     @staticmethod
     def pythonize(val):
         """Convert value into a boolean
@@ -323,16 +322,34 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
-        :type val:
+        :type val: basestring
         :return: list corresponding to value
         :rtype: list
         """
         if isinstance(val, list):
-            return [s.strip() for s in list_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
+            return [s.strip() if hasattr(s, "strip") else s
+                    for s in list_split(val, self.split_on_coma)
+                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
         else:
-            return [s.strip() for s in to_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
+            return [s.strip() if hasattr(s, "strip") else s
+                    for s in to_split(val, self.split_on_coma)
+                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
+
+
+class SetProp(ListProp):
+    """ Set property
+    """
+    def pythonize(self, val):
+        """Convert value into a set
+
+        * Simply convert to a set the value return by pythonize from ListProp
+
+        :param val: value to convert
+        :type val: basestring
+        :return: set corresponding to the value
+        :rtype: set
+        """
+        return set(super(SetProp, self).pythonize(val))
 
 
 class LogLevelProp(StringProp):
@@ -369,6 +386,8 @@ class DictProp(Property):
         if elts_prop is not None and not issubclass(elts_prop, Property):
             raise TypeError("DictProp constructor only accept Property"
                             "sub-classes as elts_prop parameter")
+        self.elts_prop = None
+
         if elts_prop is not None:
             self.elts_prop = elts_prop()
 

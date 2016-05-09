@@ -47,7 +47,14 @@ from collections import namedtuple
 try:
     from setproctitle import setproctitle  # pylint: disable=W0611
 except ImportError as err:
-    setproctitle = lambda s: None  # pylint: disable=C0103
+    def setproctitle(title):  # pylint: disable=W0613
+        """
+        Return name
+        :param title: name of process
+        :type title: str
+        :return: None
+        """
+        return None
 
 ModAttr = namedtuple('ModAttr', ['modattr', 'attribute', 'value'])
 

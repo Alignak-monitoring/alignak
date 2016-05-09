@@ -73,7 +73,8 @@ class TestOrphaned(AlignakTest):
         #self.assertEqual('UP', host.state)
         #self.assertEqual('HARD', host.state_type)
 
-        svc.schedule()
+        svc.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                     self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
         print svc.actions
         self.sched.get_new_actions()
         for c in self.sched.checks.values():

@@ -72,38 +72,12 @@ class EventHandler(Action):
         'long_output':    StringProp(default=''),
         'perf_data':      StringProp(default=''),
         'sched_id':       IntegerProp(default=0),
-        'timeout':        IntegerProp(default=10),
-        'command':        StringProp(default=''),
         'is_snapshot':    BoolProp(default=False),
     })
 
-    # _id = 0  #Is common to Actions
-    def __init__(self, command, _id=None, ref=None, timeout=10,
-                 module_type='fork', reactionner_tag='None', is_snapshot=False):
-        self.is_a = 'eventhandler'
-        self.type = ''
-        self.status = 'scheduled'
-        if _id is None:  # id != None is for copy call only
-            self._id = Action._id
-            Action._id += 1
-        self.ref = ref
-        self._in_timeout = False
-        self.timeout = timeout
-        self.exit_status = 3
-        self.command = command
-        self.output = ''
-        self.long_output = ''
+    def __init__(self, params=None):
+        super(EventHandler, self).__init__(params)
         self.t_to_go = time.time()
-        self.check_time = 0
-        self.execution_time = 0.0
-        self.u_time = 0.0
-        self.s_time = 0.0
-        self.perf_data = ''
-        self.env = {}
-        self.module_type = module_type
-        self.worker = 'none'
-        self.reactionner_tag = reactionner_tag
-        self.is_snapshot = is_snapshot
 
     def copy_shell(self):
         """Get a copy o this event handler with minimal values (default, id, is snapshot)
@@ -112,7 +86,9 @@ class EventHandler(Action):
         :rtype: alignak.eventhandler.EventHandler
         """
         # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(EventHandler('', _id=self._id, is_snapshot=self.is_snapshot))
+        return self.copy_shell__(EventHandler({'command': '',
+                                               'uuid': self.uuid,
+                                               'is_snapshot': self.is_snapshot}))
 
     def get_return_from(self, e_handler):
         """Setter of the following attributes::
@@ -128,12 +104,9 @@ class EventHandler(Action):
         :type e_handler: alignak.eventhandler.EventHandler
         :return: None
         """
-        self.exit_status = e_handler.exit_status
-        self.output = e_handler.output
-        self.long_output = getattr(e_handler, 'long_output', '')
-        self.check_time = e_handler.check_time
-        self.execution_time = getattr(e_handler, 'execution_time', 0.0)
-        self.perf_data = getattr(e_handler, 'perf_data', '')
+        for prop in ['exit_status', 'output', 'long_output', 'check_time', 'execution_time',
+                     'perf_data']:
+            setattr(self, prop, getattr(e_handler, prop))
 
     def get_outputs(self, out, max_plugins_output_length):
         """Setter of output attribute
@@ -158,13 +131,4 @@ class EventHandler(Action):
         return timestamp >= self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s" % (self._id, self.status, self.command)
-
-    def get_id(self):
-        """Getter to id attribute
-
-        :return: event handler id
-        :rtype: int
-        TODO: Duplicate from Notification.get_id
-        """
-        return self._id
+        return "Check %s status:%s command:%s" % (self.uuid, self.status, self.command)

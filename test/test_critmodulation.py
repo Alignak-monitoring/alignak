@@ -65,7 +65,7 @@ class TestCritMod(AlignakTest):
         self.assertIsNot(cm, None)
         svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         print svc.business_impact_modulations
-        self.assertIn(cm, svc.business_impact_modulations)
+        self.assertIn(cm.uuid, svc.business_impact_modulations)
 
 
 

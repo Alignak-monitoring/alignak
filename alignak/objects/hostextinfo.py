@@ -74,7 +74,6 @@ class HostExtInfo(GenericExtInfo):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    _id = 1  # zero is reserved for host (primary node for parents)
     my_type = 'hostextinfo'
 
     # properties defined by configuration
@@ -142,7 +141,7 @@ class HostsExtInfo(Items):
         """Merge extended host information into a host
 
         :param host: the host to edit
-        :type hosts: alignak.objects.host.Host
+        :type host: alignak.objects.host.Host
         :param extinfo: the external info we get data from
         :type extinfo: alignak.objects.hostextinfo.HostExtInfo
         :return: None

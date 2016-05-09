@@ -91,10 +91,10 @@ class TestBusinesscorrel(AlignakTest):
         # We check for good parent/childs links
         # So svc_cor should be a son of svc_bd1 and svc_bd2
         # and bd1 and bd2 should be parents of svc_cor
-        self.assertIn(svc_cor, svc_bd1.child_dependencies)
-        self.assertIn(svc_cor, svc_bd2.child_dependencies)
-        self.assertIn(svc_bd1, svc_cor.parent_dependencies)
-        self.assertIn(svc_bd2, svc_cor.parent_dependencies)
+        self.assertIn(svc_cor.uuid, svc_bd1.child_dependencies)
+        self.assertIn(svc_cor.uuid, svc_bd2.child_dependencies)
+        self.assertIn(svc_bd1.uuid, svc_cor.parent_dependencies)
+        self.assertIn(svc_bd2.uuid, svc_cor.parent_dependencies)
 
         sons = bp_rule.sons
         print "Sons,", sons
@@ -154,8 +154,6 @@ class TestBusinesscorrel(AlignakTest):
         # Must be WARNING (better no 0 value)
         state = bp_rule.get_state()
         self.assertEqual(1, state)
-
-
 
 
     # We will try a simple bd1 AND db2
@@ -497,7 +495,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -527,7 +526,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -557,7 +557,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -588,7 +589,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # And now we must be CRITICAL/SOFT!
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -609,7 +611,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # OK, re recheck again, GO HARD!
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -640,7 +643,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # And in a HARD
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -663,12 +667,12 @@ class TestBusinesscorrel(AlignakTest):
 
         print "IMPACT:", svc_bd2.impacts
         for i in svc_bd2.impacts:
-            print i.get_name()
+            print self.sched.find_item_by_id(i).get_name()
 
         # Assert that Simple_Or Is an impact of the problem bd2
-        self.assertIn(svc_cor, svc_bd2.impacts)
+        self.assertIn(svc_cor.uuid, svc_bd2.impacts)
         # and bd1 too
-        self.assertIn(svc_cor, svc_bd1.impacts)
+        self.assertIn(svc_cor.uuid, svc_bd1.impacts)
 
     def test_dep_node_list_elements(self):
         svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
@@ -754,7 +758,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -784,7 +789,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -814,7 +820,8 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(0, state)
 
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -845,7 +852,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # And now we must be CRITICAL/SOFT!
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -866,7 +874,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # OK, re recheck again, GO HARD!
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -897,7 +906,8 @@ class TestBusinesscorrel(AlignakTest):
 
         # And in a HARD
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -920,18 +930,19 @@ class TestBusinesscorrel(AlignakTest):
 
         print "IMPACT:", svc_bd2.impacts
         for i in svc_bd2.impacts:
-            print i.get_name()
+            print self.sched.find_item_by_id(i).get_name()
 
         # Assert that Simple_Or Is an impact of the problem bd2
-        self.assertIn(svc_cor, svc_bd2.impacts)
+        self.assertIn(svc_cor.uuid, svc_bd2.impacts)
         # and bd1 too
-        self.assertIn(svc_cor, svc_bd1.impacts)
+        self.assertIn(svc_cor.uuid, svc_bd1.impacts)
 
         # And now all is green :)
         self.scheduler_loop(2, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | value1=1 value2=2']])
 
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -960,7 +971,8 @@ class TestBusinesscorrel(AlignakTest):
         self.scheduler_loop(2, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2'], [svc_web1, 2, 'CRITICAL | value1=1 value2=2']])
 
         print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
+        self.sched.add(svc_cor.launch_check(now-1, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                             self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         c = svc_cor.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -1289,10 +1301,6 @@ class TestBusinesscorrel(AlignakTest):
         self.assertEqual(2, state)
 
 
-
-
-
-
     # We will try a simple bd1 OR db2
     def test_multi_layers(self):
         #
@@ -1332,12 +1340,12 @@ class TestBusinesscorrel(AlignakTest):
         # We check for good parent/childs links
         # So svc_cor should be a son of svc_bd1 and svc_bd2
         # and bd1 and bd2 should be parents of svc_cor
-        self.assertIn(svc_cor, svc_bd1.child_dependencies)
-        self.assertIn(svc_cor, svc_bd2.child_dependencies)
-        self.assertIn(svc_cor, router.child_dependencies)
-        self.assertIn(svc_bd1, svc_cor.parent_dependencies)
-        self.assertIn(svc_bd2, svc_cor.parent_dependencies)
-        self.assertIn(router, svc_cor.parent_dependencies)
+        self.assertIn(svc_cor.uuid, svc_bd1.child_dependencies)
+        self.assertIn(svc_cor.uuid, svc_bd2.child_dependencies)
+        self.assertIn(svc_cor.uuid, router.child_dependencies)
+        self.assertIn(svc_bd1.uuid, svc_cor.parent_dependencies)
+        self.assertIn(svc_bd2.uuid, svc_cor.parent_dependencies)
+        self.assertIn(router.uuid, svc_cor.parent_dependencies)
 
 
         sons = bp_rule.sons
@@ -1434,11 +1442,9 @@ class TestBusinesscorrel(AlignakTest):
         # We should got now svc_bd2 and svc_bd1 as root problems
         print "Root problems"
         for p in svc_cor.source_problems:
-            print p.get_full_name()
-        self.assertIn(svc_bd1, svc_cor.source_problems)
-        self.assertIn(svc_bd2, svc_cor.source_problems)
-
-
+            print self.sched.find_item_by_id(p).get_full_name()
+        self.assertIn(svc_bd1.uuid, svc_cor.source_problems)
+        self.assertIn(svc_bd2.uuid, svc_cor.source_problems)
 
         # What about now with the router in DOWN?
         self.scheduler_loop(5, [[router, 2, 'DOWN']])
@@ -1453,19 +1459,8 @@ class TestBusinesscorrel(AlignakTest):
         # Now our root problem is router
         print "Root problems"
         for p in svc_cor.source_problems:
-            print p.get_full_name()
-        self.assertIn(router, svc_cor.source_problems)
-
-
-
-
-
-
-
-
-
-
-
+            print self.sched.find_item_by_id(p).get_full_name()
+        self.assertIn(router.uuid, svc_cor.source_problems)
 
     # We will try a strange rule that ask UP&UP -> DOWN&DONW-> OK
     def test_darthelmet_rule(self):
@@ -1527,9 +1522,6 @@ class TestBusinesscorrel(AlignakTest):
         # And now the state of the rule must be 0 again! (strange rule isn't it?)
         state = bp_rule.get_state()
         self.assertEqual(0, state)
-
-
-
 
 
 class TestConfigBroken(AlignakTest):

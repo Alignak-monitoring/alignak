@@ -65,12 +65,14 @@ class TestPollerTagGetchecks(AlignakTest):
 
         # schedule the host so it will have a check :)
         # and for ce the execution now
-        host.schedule()
+        self.sched.add(host.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         self.assertEqual('mytestistrue', host.check_command.command.poller_tag)
         for a in host.actions:
             print "Tag", a.poller_tag
             a.t_to_go = 0
-        svc.schedule()
+        self.sched.add(svc.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         for a in svc.actions:
             print "Tag", a.poller_tag
             a.t_to_go = 0
@@ -101,12 +103,14 @@ class TestPollerTagGetchecks(AlignakTest):
 
         # schedule the host so it will have a check :)
         # and for ce the execution now
-        host.schedule()
+        self.sched.add(host.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         self.assertEqual('mytestistrue', host.check_command.command.poller_tag)
         for a in host.actions:
             print "Tag", a.poller_tag
             a.t_to_go = 0
-        svc.schedule()
+        self.sched.add(svc.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         for a in svc.actions:
             print "Tag", a.poller_tag
             a.t_to_go = 0

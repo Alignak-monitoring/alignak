@@ -109,10 +109,10 @@ class TestComplexHostgroups(AlignakTest):
         hg_file = self.find_hostgroup('file')
         print "HG Linux", hg_linux
         for h in hg_linux:
-            print "H", h.get_name()
+            print "H", self.sched.hosts[h].get_name()
 
-        self.assertIn(test_linux_web_prod_0, hg_linux.members)
-        self.assertNotIn(test_linux_web_prod_0, hg_file.members)
+        self.assertIn(test_linux_web_prod_0.uuid, hg_linux.members)
+        self.assertNotIn(test_linux_web_prod_0.uuid, hg_file.members)
 
         # First the service define for the host linux_0 only
         svc = self.find_service('test_linux_web_prod_0', 'linux_0')

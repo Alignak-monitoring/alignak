@@ -60,7 +60,7 @@ class TestHostDepWithMultipleNames(AlignakTest):
             val = globals()[n] = self.sched.hosts.find_by_name(n)
             self.assertIsNot(val, None)
         # We check that nas3 is a father of svn4, the simple case
-        self.assertIn(nas3, [e[0] for e in svn4.act_depend_of])
+        self.assertIn(nas3.uuid, [e[0] for e in svn4.act_depend_of])
 
         # Now the more complex one
         for son in [svn1, svn2, svn3]:
@@ -68,8 +68,8 @@ class TestHostDepWithMultipleNames(AlignakTest):
                 print 'Checking if', father.get_name(), 'is the father of', son.get_name()
                 print son.act_depend_of
                 for e in son.act_depend_of:
-                    print e[0].get_name()
-                self.assertIn(father, [e[0] for e in son.act_depend_of])
+                    print self.sched.find_item_by_id(e[0]).get_name()
+                self.assertIn(father.uuid, [e[0] for e in son.act_depend_of])
 
 if __name__ == '__main__':
     unittest.main()

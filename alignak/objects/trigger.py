@@ -64,7 +64,6 @@ class Trigger(Item):
     """Trigger class provides a simple set of method to compile and execute a python file
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'trigger'
 
     properties = Item.properties.copy()
@@ -76,6 +75,19 @@ class Trigger(Item):
     running_properties.update({'code_bin': StringProp(default=None),
                                'trigger_broker_raise_enabled': BoolProp(default=False)
                                })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        super(Trigger, self).__init__(params, parsing=parsing)
+        if 'code_src' in params:
+            self.compile()
+
+    def serialize(self):
+        res = super(Trigger, self).serialize()
+        del res['code_bin']
+        return res
 
     def get_name(self):
         """Accessor to trigger_name attribute
@@ -98,8 +110,6 @@ class Trigger(Item):
     def eval(self, ctx):
         """Execute the trigger
 
-        :param myself: self object but self will be use after exec (locals)
-        :type myself: object
         :param ctx: host or service object
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
@@ -119,16 +129,6 @@ class Trigger(Item):
             set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
                          '%s', ctx.host_name, self.trigger_name, err, traceback.format_exc())
-
-    def __getstate__(self):
-        return {'trigger_name': self.trigger_name,
-                'code_src': self.code_src,
-                'trigger_broker_raise_enabled': self.trigger_broker_raise_enabled}
-
-    def __setstate__(self, dic):
-        self.trigger_name = dic['trigger_name']
-        self.code_src = dic['code_src']
-        self.trigger_broker_raise_enabled = dic['trigger_broker_raise_enabled']
 
 
 class Triggers(Items):
@@ -175,7 +175,7 @@ class Triggers(Items):
         trigger = Trigger({'trigger_name': name, 'code_src': src})
         trigger.compile()
         # Ok, add it
-        self[trigger._id] = trigger
+        self[trigger.uuid] = trigger
         return trigger
 
     def compile(self):
@@ -197,3 +197,7 @@ class Triggers(Items):
         """
         OBJS['hosts'] = conf.hosts
         OBJS['services'] = conf.services
+        OBJS['timeperiods'] = conf.timeperiods
+        OBJS['macromodulations'] = conf.macromodulations
+        OBJS['checkmodulations'] = conf.checkmodulations
+        OBJS['checks'] = conf.checks

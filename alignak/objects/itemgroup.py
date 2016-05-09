@@ -68,13 +68,12 @@ class Itemgroup(Item):
     Class to manage a group of items
     An itemgroup is used to regroup items (group)
     """
-    _id = 0
 
     properties = Item.properties.copy()
     properties.update({
         'members': ListProp(fill_brok=['full_status'], default=None, split_on_coma=True),
         # Alignak specific
-        'unknown_members': ListProp(default=None),
+        'unknown_members': ListProp(default=[]),
     })
 
     def copy_shell(self):
@@ -87,10 +86,8 @@ class Itemgroup(Item):
         :return: None
         """
         cls = self.__class__
-        old_id = cls._id
         new_i = cls()  # create a new group
-        new_i._id = self._id  # with the same id
-        cls._id = old_id  # Reset the Class counter
+        new_i.uuid = self.uuid  # with the same id
 
         # Copy all properties
         for prop in cls.properties:
@@ -198,14 +195,15 @@ class Itemgroup(Item):
             DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
         """
         Get a brok with hostgroup info (like id, name)
         Members contain list of (id, host_name)
 
+        :param items: monitoring items, used to recover members
+        :type items: alignak.objects.item.Items
         :return:Brok object
         :rtype: object
-        :return: None
         """
         cls = self.__class__
         data = {}
@@ -216,10 +214,11 @@ class Itemgroup(Item):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place
         data['members'] = []
-        for i in self.members:
+        for m_id in self.members:
+            member = items[m_id]
             # it look like lisp! ((( ..))), sorry....
-            data['members'].append((i._id, i.get_name()))
-        brok = Brok('initial_' + cls.my_type + '_status', data)
+            data['members'].append((member.uuid, member.get_name()))
+        brok = Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
         return brok
 
 

@@ -51,6 +51,7 @@
 import time
 
 from alignak_test import AlignakTest, unittest
+from alignak.misc.serialization import serialize
 
 from alignak.objects import Service
 from alignak.misc.regenerator import Regenerator
@@ -82,7 +83,8 @@ class TestRegenerator(AlignakTest):
 
         print "Services:", self.rg.services.__dict__
         for s in self.rg.services:
-            orig_s = self.sched.services.find_srv_by_name_and_hostname(s.host.host_name, s.service_description)
+            host = self.sched.hosts[s.host]
+            orig_s = self.sched.services.find_srv_by_name_and_hostname(host.host_name, s.service_description)
             print s.state, orig_s.state
             self.assertEqual(orig_s.state, s.state)
             self.assertEqual(orig_s.state_type, s.state_type)
@@ -97,7 +99,7 @@ class TestRegenerator(AlignakTest):
                 same_pbs = i.get_name() in [j.get_name() for j in orig_s.source_problems]
                 self.assertTrue(same_pbs)
             # Look for same host
-            self.assertEqual(orig_s.host.get_name(), s.host.get_name())
+            self.assertEqual(orig_s.host, s.host)
 
     def test_regenerator(self):
         #
@@ -171,7 +173,6 @@ class TestRegenerator(AlignakTest):
 
         times = {}
         sizes = {}
-        import cPickle
         data = {}
         cls = svc.__class__
         start = time.time()
@@ -184,7 +185,7 @@ class TestRegenerator(AlignakTest):
                         times[prop] = 0
                         sizes[prop] = 0
                     t0 = time.time()
-                    tmp = cPickle.dumps(data[prop], 0)
+                    tmp = serialize(data[prop], 0)
                     sizes[prop] += len(tmp)
                     times[prop] += time.time() - t0
 

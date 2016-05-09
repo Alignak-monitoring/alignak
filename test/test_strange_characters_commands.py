@@ -83,11 +83,12 @@ class TestStrangeCaracterInCommands(AlignakTest):
         #self.assertEqual('HARD', host.state_type)
         print svc.check_command
         self.assertEqual(0, len(svc.checks_in_progress))
-        svc.launch_check(time.time())
+        self.sched.add(svc.launch_check(time.time(), self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                         self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks))
         print svc.checks_in_progress
         self.assertEqual(1, len(svc.checks_in_progress))
-        c = svc.checks_in_progress.pop()
-        #print c
+        c_id = svc.checks_in_progress.pop()
+        c = self.sched.checks[c_id]
         c.execute()
         time.sleep(0.5)
         c.check_finished(8000)
@@ -95,7 +96,12 @@ class TestStrangeCaracterInCommands(AlignakTest):
         self.assertEqual('done', c.status)
         self.assertEqual('£°é§', c.output)
         print "Done with good output, that's great"
-        svc.consume_result(c)
+        notif_period = self.sched.timeperiods.items.get(svc.notification_period, None)
+        svc.consume_result(c, notif_period, self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                           self.sched.macromodulations, self.sched.checkmodulations,
+                           self.sched.businessimpactmodulations, self.sched.resultmodulations,
+                           self.sched.triggers, self.sched.checks, self.sched.downtimes,
+                           self.sched.comments)
         self.assertEqual(unicode('£°é§'.decode('utf8')), svc.output)
 
 

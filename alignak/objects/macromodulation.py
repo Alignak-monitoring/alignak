@@ -61,7 +61,6 @@ class MacroModulation(Item):
     A MacroModulation is defined to change critical and warning level in some periods (like the
     night)
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'macromodulation'
 
     properties = Item.properties.copy()
@@ -86,7 +85,7 @@ class MacroModulation(Item):
         """
         return self.macromodulation_name
 
-    def is_active(self):
+    def is_active(self, timperiods):
         """
         Know if this macro is active for this correct period
 
@@ -94,7 +93,8 @@ class MacroModulation(Item):
         :rtype: bool
         """
         now = int(time.time())
-        if not self.modulation_period or self.modulation_period.is_time_valid(now):
+        timperiod = timperiods[self.modulation_period]
+        if not timperiod or timperiod.is_time_valid(now):
             return True
         return False
 

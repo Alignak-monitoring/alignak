@@ -74,12 +74,15 @@ import socket
 import itertools
 import time
 import random
-import cPickle
 import tempfile
+import uuid
 from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
 
+from alignak.misc.serialization import serialize
+
+from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
 from alignak.objects.timeperiod import Timeperiod, Timeperiods
 from alignak.objects.service import Service, Services
@@ -137,7 +140,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
     """
     cache_path = "objects.cache"
     my_type = "config"
-    _id = 1
 
     # Properties:
     # *required: if True, there is not default, and the config must put them
@@ -791,8 +793,34 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
                            'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
 
-    def __init__(self):
-        super(Config, self).__init__()
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['ocsp_command', 'ochp_command',
+                     'host_perfdata_command', 'service_perfdata_command',
+                     'global_host_event_handler', 'global_service_event_handler']:
+            if prop in params and isinstance(params[prop], dict):
+                # We recreate the object
+                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+
+        for _, clss, strclss, _ in self.types_creations.values():
+            if strclss in params and isinstance(params[strclss], dict):
+                setattr(self, strclss, clss(params[strclss], parsing=parsing))
+                del params[strclss]
+
+        for clss, prop in [(Triggers, 'triggers'), (Packs, 'packs')]:
+            if prop in params and isinstance(params[prop], dict):
+                setattr(self, prop, clss(params[prop], parsing=parsing))
+                del params[prop]
+            else:
+                setattr(self, prop, clss({}))
+
+        super(Config, self).__init__(params, parsing=parsing)
         self.params = {}
         self.resource_macros_names = []
         # By default the conf is correct
@@ -803,11 +831,27 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.magic_hash = random.randint(1, 100000)
         self.configuration_errors = []
         self.triggers_dirs = []
-        self.triggers = Triggers({})
         self.packs_dirs = []
-        self.packs = Packs({})
-        self.hosts = Hosts({})
-        self.services = Services({})
+
+    def serialize(self):
+        res = super(Config, self).serialize()
+        if hasattr(self, 'instance_id'):
+            res['instance_id'] = self.instance_id
+        # The following are not in properties so not in the dict
+        for prop in ['triggers', 'packs', 'hosts',
+                     'services', 'hostgroups', 'notificationways',
+                     'checkmodulations', 'macromodulations', 'businessimpactmodulations',
+                     'resultmodulations', 'contacts', 'contactgroups',
+                     'servicegroups', 'timeperiods', 'commands',
+                     'escalations', 'ocsp_command', 'ochp_command',
+                     'host_perfdata_command', 'service_perfdata_command',
+                     'global_host_event_handler', 'global_service_event_handler']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = getattr(self, prop).serialize()
+        res['macros'] = self.macros
+        return res
 
     def get_name(self):
         """Get config name
@@ -1179,7 +1223,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :param raw_objects: Raw object we need to instantiate objects
         :type raw_objects: dict
         :param o_type: the object type we want to create
-        :type type: object
+        :type o_type: object
         :return: None
         """
         types_creations = self.__class__.types_creations
@@ -1243,6 +1287,32 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         for path in self.packs_dirs:
             self.packs.load_file(path)
+
+    def linkify_one_command_with_commands(self, commands, prop):
+        """
+        Link a command
+
+        :param commands: object commands
+        :type commands: object
+        :param prop: property name
+        :type prop: str
+        :return: None
+        """
+        if hasattr(self, prop):
+            command = getattr(self, prop).strip()
+            if command != '':
+                if hasattr(self, 'poller_tag'):
+                    data = {"commands": commands, "call": command, "poller_tag": self.poller_tag}
+                    cmdcall = CommandCall(data)
+                elif hasattr(self, 'reactionner_tag'):
+                    data = {"commands": commands, "call": command,
+                            "reactionner_tag": self.reactionner_tag}
+                    cmdcall = CommandCall(data)
+                else:
+                    cmdcall = CommandCall({"commands": commands, "call": command})
+                setattr(self, prop, cmdcall)
+            else:
+                setattr(self, prop, None)
 
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
@@ -1309,7 +1379,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # print "Contacts"
         # link contacts with timeperiods and commands
-        self.contacts.linkify(self.notificationways)
+        self.contacts.linkify(self.commands, self.notificationways)
 
         # print "Timeperiods"
         # link timeperiods with timeperiods (exclude part)
@@ -1344,7 +1414,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Ok, now update all realms with backlinks of
         # satellites
-        self.realms.prepare_for_satellites_conf()
+        self.realms.prepare_for_satellites_conf((self.reactionners, self.pollers,
+                                                 self.brokers, self.receivers))
 
     def clean(self):
         """Wrapper for calling the clean method of services attribute
@@ -1381,14 +1452,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     conf.hostgroups.prepare_for_sending()
                     logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
                     t00 = time.time()
-                    realm.serialized_confs[i] = cPickle.dumps(conf, 0)  # cPickle.HIGHEST_PROTOCOL)
+                    conf_id = conf.uuid
+                    realm.serialized_confs[conf_id] = serialize(conf)
                     logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                  realm.get_name(), i, time.time() - t00,
-                                 len(realm.serialized_confs[i]))
-                    logger.debug("PICKLE LEN : %d", len(realm.serialized_confs[i]))
-            # Now pickle the whole conf, for easy and quick spare send
+                                 len(realm.serialized_confs[conf_id]))
+                    logger.debug("SERIALIZE LEN : %d", len(realm.serialized_confs[conf_id]))
+            # Now serialize the whole conf, for easy and quick spare send
             t00 = time.time()
-            whole_conf_pack = cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL)
+            whole_conf_pack = serialize(self)
             logger.debug("[config] time to serialize the global conf : %s (size:%s)",
                          time.time() - t00, len(whole_conf_pack))
             self.whole_conf_pack = whole_conf_pack
@@ -1406,7 +1478,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 processes = []
                 for (i, conf) in realm.confs.iteritems():
                     def serialize_config(comm_q, rname, cid, conf):
-                        """Pickle the config. Used in subprocesses to pickle all config faster
+                        """Serialized config. Used in subprocesses to serialize all config faster
 
                         :param comm_q: Queue to communicate
                         :param rname: realm name
@@ -1418,12 +1490,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         conf.hostgroups.prepare_for_sending()
                         logger.debug('[%s] Serializing the configuration %d', rname, cid)
                         t00 = time.time()
-                        res = cPickle.dumps(conf, cPickle.HIGHEST_PROTOCOL)
+                        res = serialize(conf)
                         logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
                                      rname, cid, time.time() - t00, len(res))
                         comm_q.append((cid, res))
 
-                    # Prepare a sub-process that will manage the pickle computation
+                    # Prepare a sub-process that will manage the serialize computation
                     proc = Process(target=serialize_config,
                                    name="serializer-%s-%d" % (realm.get_name(), i),
                                    args=(child_q, realm.get_name(), i, conf))
@@ -1453,17 +1525,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     sys.exit(2)
                 # Now get the serialized configuration and saved them into self
                 for (i, cfg) in child_q:
-                    realm.serialized_confs[i] = cfg
+                    realm.serialized_confs[cfg.uuid] = cfg
 
-            # Now pickle the whole configuration into one big pickle object, for the arbiter spares
+            # Now serialize the whole configuration into one big serialized object,
+            # for the arbiter spares
             whole_queue = manager.list()
             t00 = time.time()
 
             def create_whole_conf_pack(whole_queue, self):
-                """The function that just compute the whole conf pickle string, but n a children
+                """The function that just compute the whole conf serialize string, but n a children
                 """
                 logger.debug("[config] sub processing the whole configuration pack creation")
-                whole_queue.append(cPickle.dumps(self, cPickle.HIGHEST_PROTOCOL))
+                whole_queue.append(serialize(self))
                 logger.debug("[config] sub processing the whole configuration pack creation "
                              "finished")
             # Go for it
@@ -1585,7 +1658,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         self.hosts.apply_dependencies()
-        self.services.apply_dependencies()
+        self.services.apply_dependencies(self.hosts)
 
     def apply_inheritance(self):
         """Apply inheritance over templates
@@ -1802,16 +1875,37 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        self.hosts.create_business_rules(self.hosts, self.services)
-        self.services.create_business_rules(self.hosts, self.services)
+        self.hosts.create_business_rules(self.hosts, self.services,
+                                         self.hostgroups, self.servicegroups,
+                                         self.macromodulations, self.timeperiods)
+        self.services.create_business_rules(self.hosts, self.services,
+                                            self.hostgroups, self.servicegroups,
+                                            self.macromodulations, self.timeperiods)
 
     def create_business_rules_dependencies(self):
         """Create business rules dependencies for hosts and services
 
         :return: None
         """
-        self.hosts.create_business_rules_dependencies()
-        self.services.create_business_rules_dependencies()
+
+        for item in itertools.chain(self.hosts, self.services):
+            if not item.got_business_rule:
+                continue
+
+            bp_items = item.business_rule.list_all_elements()
+            for bp_item in bp_items:
+                if bp_item.uuid in self.hosts and item.business_rule_host_notification_options:
+                    bp_item.notification_options = item.business_rule_host_notification_options
+                elif bp_item.uuid in self.services and \
+                        item.business_rule_service_notification_options:
+                    bp_item.notification_options = item.business_rule_service_notification_options
+
+                bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w'],
+                                                 'business_dep', '', True))
+
+                # TODO: Is it necessary? We already have this info in act_depend_* attributes
+                item.parent_dependencies.add(bp_item.uuid)
+                bp_item.child_dependencies.add(item.uuid)
 
     def hack_old_nagios_parameters(self):
         """ Create some 'modules' from all nagios parameters if they are set and
@@ -2043,11 +2137,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
-        # Hosts got a special check for loops
-        if not self.hosts.no_loop_in_parents("self", "parents"):
-            valid = False
-            logger.error("Hosts: detected loop in parents ; conf incorrect")
-
         for obj in ('servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
                     'reactionners', 'pollers', 'brokers', 'receivers', 'resultmodulations',
                     'businessimpactmodulations'):
@@ -2066,8 +2155,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Look that all scheduler got a broker that will take brok.
         # If there are no, raise an Error
         for scheduler in self.schedulers:
-            rea = scheduler.realm
-            if rea:
+            rea_id = scheduler.realm
+            if rea_id:
+                rea = self.realms[rea_id]
                 if len(rea.potential_brokers) == 0:
                     logger.error("The scheduler %s got no broker in its realm or upper",
                                  scheduler.get_name())
@@ -2082,8 +2172,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         pollers_tag = set()
         for host in self.hosts:
             hosts_tag.add(host.poller_tag)
-        for scheduler in self.services:
-            services_tag.add(scheduler.poller_tag)
+        for service in self.services:
+            services_tag.add(service.poller_tag)
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
@@ -2104,17 +2194,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for lst in [self.services, self.hosts]:
             for item in lst:
                 if item.got_business_rule:
-                    e_ro = item.get_realm()
+                    e_ro_id = item.realm
+                    e_ro = self.realms[e_ro_id]
                     # Something was wrong in the conf, will be raised elsewhere
                     if not e_ro:
                         continue
                     e_r = e_ro.realm_name
                     for elt in item.business_rule.list_all_elements():
-                        r_o = elt.get_realm()
+                        r_o_id = elt.realm
+                        r_o = self.realms[r_o_id]
                         # Something was wrong in the conf, will be raised elsewhere
                         if not r_o:
                             continue
-                        elt_r = elt.get_realm().realm_name
+                        elt_r = r_o.realm_name
                         if elt_r != e_r:
                             logger.error("Business_rule '%s' got hosts from another realm: %s",
                                          item.get_full_name(), elt_r)
@@ -2190,7 +2282,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         # We create a graph with host in nodes
         graph = Graph()
-        graph.add_nodes(self.hosts)
+        graph.add_nodes(self.hosts.items.keys())
 
         # links will be used for relations between hosts
         links = set()
@@ -2199,46 +2291,54 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for host in self.hosts:
             # Add parent relations
             for parent in host.parents:
-                if parent is not None:
-                    links.add((parent, host))
+                if parent:
+                    links.add((parent, host.uuid))
             # Add the others dependencies
             for (dep, _, _, _, _) in host.act_depend_of:
-                links.add((dep, host))
+                links.add((dep, host.uuid))
             for (dep, _, _, _, _) in host.chk_depend_of:
-                links.add((dep, host))
+                links.add((dep, host.uuid))
 
         # For services: they are link with their own host but we need
         # To have the hosts of service dep in the same pack too
         for serv in self.services:
-            for (dep, _, _, _, _) in serv.act_depend_of:
+            for (dep_id, _, _, _, _) in serv.act_depend_of:
+                if dep_id in self.services:
+                    dep = self.services[dep_id]
+                else:
+                    dep = self.hosts[dep_id]
                 # I don't care about dep host: they are just the host
                 # of the service...
                 if hasattr(dep, 'host'):
                     links.add((dep.host, serv.host))
             # The other type of dep
-            for (dep, _, _, _, _) in serv.chk_depend_of:
+            for (dep_id, _, _, _, _) in serv.chk_depend_of:
+                if dep_id in self.services:
+                    dep = self.services[dep_id]
+                else:
+                    dep = self.hosts[dep_id]
                 links.add((dep.host, serv.host))
 
         # For host/service that are business based, we need to
         # link them too
         for serv in [srv for srv in self.services if srv.got_business_rule]:
             for elem in serv.business_rule.list_all_elements():
-                if hasattr(elem, 'host'):  # if it's a service
+                if elem.uuid in self.services:
                     if elem.host != serv.host:  # do not a host with itself
                         links.add((elem.host, serv.host))
                 else:  # it's already a host
-                    if elem != serv.host:
-                        links.add((elem, serv.host))
+                    if elem.uuid != serv.host:
+                        links.add((elem.uuid, serv.host))
 
         # Same for hosts of course
         for host in [hst for hst in self.hosts if hst.got_business_rule]:
             for elem in host.business_rule.list_all_elements():
-                if hasattr(elem, 'host'):  # if it's a service
-                    if elem.host != host:
-                        links.add((elem.host, host))
+                if elem.uuid in self.services:  # if it's a service
+                    if elem.host != host.uuid:
+                        links.add((elem.host, host.uuid))
                 else:  # e is a host
                     if elem != host:
-                        links.add((elem, host))
+                        links.add((elem.uuid, host.uuid))
 
         # Now we create links in the graph. With links (set)
         # We are sure to call the less add_edge
@@ -2258,8 +2358,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # same realm. If not, not good!
         for pack in graph.get_accessibility_packs():
             tmp_realms = set()
-            for elt in pack:
-                if elt.realm is not None:
+            for elt_id in pack:
+                elt = self.hosts[elt_id]
+                if elt.realm:
                     tmp_realms.add(elt.realm)
             if len(tmp_realms) > 1:
                 self.add_error("Error: the realm configuration of yours hosts is not good "
@@ -2271,7 +2372,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         self.add_error('   the host %s is in the realm %s' %
                                        (host.get_name(), host.realm.get_name()))
             if len(tmp_realms) == 1:  # Ok, good
-                realm = tmp_realms.pop()  # There is just one element
+                realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)
             elif len(tmp_realms) == 0:  # Hum.. no realm value? So default Realm
                 if default_realm is not None:
@@ -2297,7 +2398,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # but add a entry in the round-robin tourniquet for
             # every weight point schedulers (so Weight round robin)
             weight_list = []
-            no_spare_schedulers = [serv for serv in realm.schedulers if not serv.spare]
+            no_spare_schedulers = [s_id for s_id in realm.schedulers
+                                   if not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
 
             # Maybe there is no scheduler in the realm, it's can be a
@@ -2318,11 +2420,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             packindex = 0
             packindices = {}
-            for serv in no_spare_schedulers:
-                packindices[serv._id] = packindex
+            for s_id in no_spare_schedulers:
+                sched = self.schedulers[s_id]
+                packindices[s_id] = packindex
                 packindex += 1
-                for i in xrange(0, serv.weight):
-                    weight_list.append(serv._id)
+                for i in xrange(0, sched.weight):
+                    weight_list.append(s_id)
 
             round_robin = itertools.cycle(weight_list)
 
@@ -2339,7 +2442,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for pack in realm.packs:
                 valid_value = False
                 old_pack = -1
-                for elt in pack:
+                for elt_id in pack:
+                    elt = self.hosts[elt_id]
                     # print 'Look for host', elt.get_name(), 'in assoc'
                     old_i = assoc.get(elt.get_name(), -1)
                     # print 'Founded in ASSOC: ', elt.get_name(),old_i
@@ -2367,9 +2471,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     # print 'take a new id for pack', [h.get_name() for h in pack]
                     i = round_robin.next()
 
-                for elt in pack:
-                    # print 'We got the element', elt.get_full_name(), ' in pack', i, packindices
-                    packs[packindices[i]].append(elt)
+                for elt_id in pack:
+                    elt = self.hosts[elt_id]
+                    packs[packindices[i]].append(elt_id)
                     assoc[elt.get_name()] = i
 
             # Now in packs we have the number of packs [h1, h2, etc]
@@ -2387,7 +2491,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):  # pylint: disable=R0912
+    def cut_into_parts(self):  # pylint: disable=R0912,R0914
         """Cut conf into part for scheduler dispatch.
         Basically it provide a set of host/services for each scheduler that
         have no dependencies between them
@@ -2420,7 +2524,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # we need a deepcopy because each conf
             # will have new hostgroups
-            cur_conf._id = i
+            cur_conf.uuid = uuid.uuid4().hex
             cur_conf.commands = self.commands
             cur_conf.timeperiods = self.timeperiods
             # Create hostgroups with just the name and same id, but no members
@@ -2431,16 +2535,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
             cur_conf.notificationways = self.notificationways
             cur_conf.checkmodulations = self.checkmodulations
             cur_conf.macromodulations = self.macromodulations
+            cur_conf.businessimpactmodulations = self.businessimpactmodulations
+            cur_conf.resultmodulations = self.resultmodulations
             cur_conf.contactgroups = self.contactgroups
             cur_conf.contacts = self.contacts
             cur_conf.triggers = self.triggers
+            cur_conf.escalations = self.escalations
             # Create hostgroups with just the name and same id, but no members
             new_servicegroups = []
             for servicegroup in self.servicegroups:
                 new_servicegroups.append(servicegroup.copy_shell())
             cur_conf.servicegroups = Servicegroups(new_servicegroups)
-            cur_conf.hosts = []  # will be fill after
-            cur_conf.services = []  # will be fill after
+            # Create ours classes
+            cur_conf.hosts = Hosts([])
+            cur_conf.services = Services([])
+
             # The elements of the others conf will be tag here
             cur_conf.other_elements = {}
             # if a scheduler have accepted the conf
@@ -2459,11 +2568,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         offset = 0
         for realm in self.realms:
             for i in realm.packs:
-                for host in realm.packs[i]:
+                for host_id in realm.packs[i]:
+                    host = self.hosts[host_id]
                     host.pack_id = i
-                    self.confs[i + offset].hosts.append(host)
-                    for serv in host.services:
-                        self.confs[i + offset].services.append(serv)
+                    self.confs[i + offset].hosts.add_item(host)
+                    for serv_id in host.services:
+                        serv = self.services[serv_id]
+                        self.confs[i + offset].services.add_item(serv)
                 # Now the conf can be link in the realm
                 realm.confs[i + offset] = self.confs[i + offset]
             offset += len(realm.packs)
@@ -2476,27 +2587,25 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # print "Finishing pack Nb:", i
             cfg = self.confs[i]
 
-            # Create ours classes
-            cfg.hosts = Hosts(cfg.hosts)
-            cfg.services = Services(cfg.services)
             # Fill host groups
             for ori_hg in self.hostgroups:
                 hostgroup = cfg.hostgroups.find_by_name(ori_hg.get_name())
                 mbrs_id = []
                 for host in ori_hg.members:
-                    if host is not None:
-                        mbrs_id.append(host._id)
+                    if host != '':
+                        mbrs_id.append(host)
                 for host in cfg.hosts:
-                    if host._id in mbrs_id:
-                        hostgroup.members.append(host)
+                    if host.uuid in mbrs_id:
+                        hostgroup.members.append(host.uuid)
 
             # And also relink the hosts with the valid hostgroups
             for host in cfg.hosts:
                 orig_hgs = host.hostgroups
                 nhgs = []
-                for ohg in orig_hgs:
+                for ohg_id in orig_hgs:
+                    ohg = self.hostgroups[ohg_id]
                     nhg = cfg.hostgroups.find_by_name(ohg.get_name())
-                    nhgs.append(nhg)
+                    nhgs.append(nhg.uuid)
                 host.hostgroups = nhgs
 
             # Fill servicegroup
@@ -2505,19 +2614,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 mbrs = ori_sg.members
                 mbrs_id = []
                 for serv in mbrs:
-                    if serv is not None:
-                        mbrs_id.append(serv._id)
+                    if serv != '':
+                        mbrs_id.append(serv)
                 for serv in cfg.services:
-                    if serv._id in mbrs_id:
-                        servicegroup.members.append(serv)
+                    if serv.uuid in mbrs_id:
+                        servicegroup.members.append(serv.uuid)
 
             # And also relink the services with the valid servicegroups
             for host in cfg.services:
                 orig_hgs = host.servicegroups
                 nhgs = []
-                for ohg in orig_hgs:
+                for ohg_id in orig_hgs:
+                    ohg = self.servicegroups[ohg_id]
                     nhg = cfg.servicegroups.find_by_name(ohg.get_name())
-                    nhgs.append(nhg)
+                    nhgs.append(nhg.uuid)
                 host.servicegroups = nhgs
 
         # Now we fill other_elements by host (service are with their host
@@ -2594,7 +2704,7 @@ def lazy():
     TODO: Should be removed
     """
     # let's compute the "USER" properties and macros..
-    for i in xrange(1, 256):
+    for i in xrange(1, 15):
         i = str(i)
         Config.properties['$USER' + str(i) + '$'] = StringProp(default='')
         Config.macros['USER' + str(i)] = '$USER' + i + '$'

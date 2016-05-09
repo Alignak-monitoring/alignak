@@ -29,11 +29,13 @@ class Test_CheckResult_Brok(AlignakTest):
     expected_host_command_name = 'check-host-alive-parent'
     expected_svc_command_name = 'check_service'
 
+    hostname = 'test_host_0'
+
     def setUp(self):
         self.setup_with_file([self.cfg_file])
 
     def test_host_check_result_brok_has_command_name(self):
-        host = self.sched.hosts.find_by_name('test_host_0')
+        host = self.sched.hosts.find_by_name(self.hostname)
         res = {}
         host.fill_data_brok_from(res, 'check_result')
         self.assertIn('command_name', res)
@@ -41,7 +43,7 @@ class Test_CheckResult_Brok(AlignakTest):
 
     def test_service_check_result_brok_has_command_name(self):
         svc = self.sched.services.find_srv_by_name_and_hostname(
-            'test_host_0', 'test_ok_0')
+            self.hostname, 'test_ok_0')
         res = {}
         svc.fill_data_brok_from(res, 'check_result')
         self.assertIn('command_name', res)
@@ -53,6 +55,8 @@ class Test_CheckResult_Brok_Host_No_command(Test_CheckResult_Brok):
     cfg_file = 'etc/alignak_host_without_cmd.cfg'
 
     expected_host_command_name = "_internal_host_up"
+
+    hostname = "test_host_00"
 
 if __name__ == "__main__":
     unittest.main()

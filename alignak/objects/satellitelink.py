@@ -45,9 +45,9 @@ This module provides an abstraction layer for communications between Alignak dae
 Used by the Arbiter
 """
 import time
-import cPickle
 
 from alignak.util import get_obj_name_two_args_and_void
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
 from alignak.log import logger
@@ -59,7 +59,6 @@ class SatelliteLink(Item):
     Arbiter and other satellites. Used by the Dispatcher object.
 
     """
-    # _id = 0 each Class will have it's own id
 
     properties = Item.properties.copy()
     properties.update({
@@ -390,11 +389,11 @@ class SatelliteLink(Item):
 
         try:
             tab = self.con.get('what_i_managed')
-            print "[%s]What i managed raw value is %s" % (self.get_name(), tab)
+            print "[%s] What I managed raw value is %s" % (self.get_name(), tab)
 
             # Protect against bad return
             if not isinstance(tab, dict):
-                print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
+                print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
                       self.get_name(), tab
                 self.con = None
                 self.managed_confs = {}
@@ -404,9 +403,9 @@ class SatelliteLink(Item):
             tab_cleaned = {}
             for (key, val) in tab.iteritems():
                 try:
-                    tab_cleaned[int(key)] = val
+                    tab_cleaned[key] = val
                 except ValueError:
-                    print "[%s]What i managed: Got exception: bad what_i_managed returns" % \
+                    print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
                           self.get_name(), tab
             # We can update our list now
             self.managed_confs = tab_cleaned
@@ -415,7 +414,7 @@ class SatelliteLink(Item):
             # A timeout is not a crime, put this case aside
             # TODO : fix the timeout part?
             self.con = None
-            print "[%s]What i managed: Got exception: %s %s %s" % \
+            print "[%s] What I managed: Got exception: %s %s %s" % \
                   (self.get_name(), exp, type(exp), exp.__dict__)
             self.managed_confs = {}
 
@@ -466,7 +465,7 @@ class SatelliteLink(Item):
         """Send a HTTP request to the satellite (GET /ping)
         and THEN send a HTTP request to the satellite (GET /get_external_commands)
         Get external commands from satellite.
-        Unpickle data received.
+        Un-serialize data received.
 
         :return: External Command list on success, [] on failure
         :rtype: list
@@ -481,7 +480,7 @@ class SatelliteLink(Item):
         try:
             self.con.get('ping')
             tab = self.con.get('get_external_commands', wait='long')
-            tab = cPickle.loads(str(tab))
+            tab = unserialize(str(tab))
             # Protect against bad return
             if not isinstance(tab, list):
                 self.con = None
@@ -493,6 +492,8 @@ class SatelliteLink(Item):
         except AttributeError:
             self.con = None
             return []
+        except AlignakClassLookupException as exp:
+            logger.error('Cannot un-serialize external commands received: %s', exp)
 
     def prepare_for_conf(self):
         """Init cfg dict attribute with __class__.properties
@@ -548,7 +549,7 @@ class SatelliteLink(Item):
                 'use_ssl': self.use_ssl,
                 'hard_ssl_name_check': self.hard_ssl_name_check,
                 'name': self.get_name(),
-                'instance_id': self._id,
+                'instance_id': self.uuid,
                 'active': True,
                 'passive': self.passive,
                 'poller_tags': getattr(self, 'poller_tags', []),
@@ -556,49 +557,6 @@ class SatelliteLink(Item):
                 'api_key': self.__class__.api_key,
                 'secret':  self.__class__.secret,
                 }
-
-    def __getstate__(self):
-        """Used by pickle to serialize
-        Only dump attribute in properties and running_properties
-        except realm and con. Also add id attribute
-
-        :return: Dict with object properties and running_properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if prop != 'realm':
-                if hasattr(self, prop):
-                    res[prop] = getattr(self, prop)
-        for prop in cls.running_properties:
-            if prop != 'con':
-                if hasattr(self, prop):
-                    res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """Used by pickle to unserialize
-        Opposite of __getstate__
-        Update object with state keys
-        Reset con attribute
-
-        :param state: new satellite state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        for prop in cls.running_properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        # con needs to be explicitly set:
-        self.con = None
 
 
 class SatelliteLinks(Items):
@@ -632,13 +590,12 @@ class SatelliteLinks(Items):
             # If no realm name, take the default one
             if r_name == '':
                 realm = realms.get_default()
-                satlink.realm = realm
             else:  # find the realm one
                 realm = realms.find_by_name(r_name)
-                satlink.realm = realm
             # Check if what we get is OK or not
             if realm is not None:
-                satlink.register_to_my_realm()
+                satlink.realm = realm.uuid
+                getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
             else:
                 err = "The %s %s got a unknown realm '%s'" % \
                       (satlink.__class__.my_type, satlink.get_name(), r_name)

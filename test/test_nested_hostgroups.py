@@ -63,11 +63,11 @@ class TestNestedHostgroups(AlignakTest):
         router = self.sched.hosts.find_by_name("test_router_0")
         hg_high = self.sched.conf.hostgroups.find_by_name('high_level')
         self.assertIsNot(hg_high, None)
-        self.assertIn(host, hg_high.members)
-        self.assertIn(router, hg_high.members)
+        self.assertIn(host.uuid, hg_high.members)
+        self.assertIn(router.uuid, hg_high.members)
         hg_low = self.sched.conf.hostgroups.find_by_name('low_level')
         self.assertIsNot(hg_low, None)
-        self.assertIn(host, hg_low.members)
+        self.assertIn(host.uuid, hg_low.members)
         svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "NestedService")
         self.assertIsNot(svc1, None)
         svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "NestedService")
@@ -77,13 +77,13 @@ class TestNestedHostgroups(AlignakTest):
         # high_level, and the host test_host_2 should be on it, so it must have
         # this service too
         host2 = self.sched.hosts.find_by_name("test_host_2")
-        self.assertIn(host2, hg_high.members)
+        self.assertIn(host2.uuid, hg_high.members)
         svc3 = self.sched.services.find_srv_by_name_and_hostname("test_host_2", "testHostToGroup")
         self.assertIsNot(svc3, None)
 
         # And same with a host in the low_group, should have it too
         host3 = self.sched.hosts.find_by_name("test_host_3")
-        self.assertIn(host3, hg_high.members)
+        self.assertIn(host3.uuid, hg_high.members)
         svc4 = self.sched.services.find_srv_by_name_and_hostname("test_host_3", "testHostToGroup")
         self.assertIsNot(svc4, None)
 

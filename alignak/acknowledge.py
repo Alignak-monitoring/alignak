@@ -50,19 +50,18 @@ implements acknowledgment for notification. Basically used for parsing.
 
 """
 
+from alignak.alignakobject import AlignakObject
 
-class Acknowledge:  # pylint: disable=R0903
+
+class Acknowledge(AlignakObject):  # pylint: disable=R0903
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
     servicestate) are disabled.
     """
-    _id = 1
 
-    # Just to list the properties we will send as pickle
-    # so to others daemons, all but NOT REF
     properties = {
-        '_id': None,
+        'uuid': None,
         'sticky': None,
         'notify': None,
         'end_time': None,
@@ -79,56 +78,21 @@ class Acknowledge:  # pylint: disable=R0903
     # sent out to contacts indicating that the current service problem
     # has been acknowledged.
     #
-    # <WTF??>
     # If the "persistent" option is set to one (1), the comment
     # associated with the acknowledgement will survive across restarts
     # of the Alignak process. If not, the comment will be deleted the
-    # next time Alignak restarts. "persistent" not only means "survive
-    # restarts", but also
-    #
-    # => End of comment Missing!!
-    # </WTF??>
+    # next time Alignak restarts.
 
-    def __init__(self, ref, sticky, notify, persistent,
-                 author, comment, end_time=0):
-        self._id = self.__class__._id
-        self.__class__._id += 1
-        self.ref = ref  # pointer to srv or host we are applied
-        self.sticky = sticky
-        self.notify = notify
-        self.end_time = end_time
-        self.author = author
-        self.comment = comment
-        self.persistent = persistent
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
 
-    def __getstate__(self):
-        """Call by pickle for dataify the acknowledge
-        because we DO NOT WANT REF in this pickleisation!
+        Here we directly return all attributes
 
-        :return: dictionary of properties
+        :return: json representation of a Acknowledge
         :rtype: dict
         """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """
-        Inverse function of getstate
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        # If load a old ack, set the end_time to 0 which refers to infinite
-        if not hasattr(self, 'end_time'):
-            self.end_time = 0
+        return {'uuid': self.uuid, 'ref': self.ref, 'sticky': self.sticky, 'notify': self.notify,
+                'end_time': self.end_time, 'author': self.author, 'comment': self.comment,
+                'persistent': self.persistent
+                }

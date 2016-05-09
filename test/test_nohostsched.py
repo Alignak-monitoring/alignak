@@ -76,7 +76,8 @@ class TestHostspecialSched(AlignakTest):
         self.assertEqual('UP', host.state)
         self.assertEqual('HARD', host.state_type)
         # Reschedule the host as a normal way
-        host.schedule()
+        host.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                      self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
         print "Final", host.next_chk, host.in_checking
         print "Next check?", host.next_chk - now
         print "Next check should be still < 300", host.next_chk - now

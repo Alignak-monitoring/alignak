@@ -66,7 +66,7 @@ class TestConfig(AlignakTest):
         Load = self.sched.services.find_srv_by_name_and_hostname("myspecifichost", "Load")
         self.assertIsNot(Load, None)
         print Load.act_depend_of
-        self.assertIn(NRPE, [e[0] for e in Load.act_depend_of])
+        self.assertIn(NRPE.uuid, [e[0] for e in Load.act_depend_of])
 
 
 if __name__ == '__main__':

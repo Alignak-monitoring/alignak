@@ -71,20 +71,16 @@ import time
 import re
 
 
-from alignak.objects.item import Items
-from alignak.objects.schedulingitem import SchedulingItem
+from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
 from alignak.util import (
     strip_and_uniq,
     format_t_into_dhms_format,
     generate_key_value_sequences,
-    to_list_string_of_names,
     is_complex_expr,
     KeyValueSyntaxError)
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.macroresolver import MacroResolver
-from alignak.eventhandler import EventHandler
 from alignak.log import logger, naglog_result
 
 
@@ -96,9 +92,6 @@ class Service(SchedulingItem):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    # Every service have a unique ID, and 0 is always special in
-    # database and co...
-    _id = 1
     # The host and service do not have the same 0 value, now yes :)
     ok_up = 'OK'
     # used by item class for format specific value like for Broks
@@ -120,8 +113,7 @@ class Service(SchedulingItem):
         'service_description':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'servicegroups':
-            ListProp(default=[], fill_brok=['full_status'],
-                     brok_transformation=to_list_string_of_names, merging='join'),
+            ListProp(default=[], fill_brok=['full_status'], merging='join'),
         'is_volatile':
             BoolProp(default=False, fill_brok=['full_status']),
         'check_command':
@@ -142,8 +134,8 @@ class Service(SchedulingItem):
             BoolProp(default=True, fill_brok=['full_status']),
 
         # Easy Service dep definition
-        'service_dependencies':  # TODO: find a way to brok it?
-            ListProp(default=None, merging='join', split_on_coma=True, keep_empty=True),
+        'service_dependencies':
+            ListProp(default=[], merging='join', split_on_coma=True, keep_empty=True),
 
         # service generator
         'duplicate_foreach':
@@ -203,8 +195,8 @@ class Service(SchedulingItem):
         'SERVICEDURATIONSEC':     'get_duration_sec',
         'SERVICEDOWNTIME':        'get_downtime',
         'SERVICEPERCENTCHANGE':   'percent_state_change',
-        'SERVICEGROUPNAME':       'get_groupname',
-        'SERVICEGROUPNAMES':      'get_groupnames',
+        'SERVICEGROUPNAME':       ('get_groupname', 'servicegroups'),
+        'SERVICEGROUPNAMES':      ('get_groupnames', 'servicegroups'),
         'LASTSERVICECHECK':       'last_chk',
         'LASTSERVICESTATECHANGE': 'last_state_change',
         'LASTSERVICEOK':          'last_time_ok',
@@ -309,13 +301,13 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
-    def get_groupnames(self):
+    def get_groupnames(self, sgs):
         """Get servicegroups list
 
         :return: comma separated list of servicegroups
         :rtype: str
         """
-        return ','.join([sg.get_name() for sg in self.servicegroups])
+        return ','.join([sgs[sg].get_name() for sg in self.servicegroups])
 
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
@@ -323,35 +315,25 @@ class Service(SchedulingItem):
         :return: service full name
         :rtype: str
         """
-        if self.host and hasattr(self.host, 'host_name') and hasattr(self, 'service_description'):
-            return "%s/%s" % (self.host.host_name, self.service_description)
+        if self.host_name and hasattr(self, 'service_description'):
+            return "%s/%s" % (self.host_name, self.service_description)
         return 'UNKNOWN-SERVICE'
 
-    def get_realm(self):
-        """Wrapper to access get_realm method of host attribute
-
-        :return: service realm (host one)
-        :rtype: None | alignak.objects.realm.Realm
-        """
-        if self.host is None:
-            return None
-        return self.host.get_realm()
-
-    def get_hostgroups(self):
+    def get_hostgroups(self, hosts):
         """Wrapper to access hostgroups attribute of host attribute
 
         :return: service hostgroups (host one)
         :rtype: alignak.objects.hostgroup.Hostgroups
         """
-        return self.host.hostgroups
+        return hosts[self.host].hostgroups
 
-    def get_host_tags(self):
+    def get_host_tags(self, hosts):
         """Wrapper to access tags attribute of host attribute
 
         :return: service tags (host one)
         :rtype: alignak.objects.tag.Tags
         """
-        return self.host.tags
+        return hosts[self.host].tags
 
     def get_service_tags(self):
         """Accessor to tags attribute
@@ -392,101 +374,6 @@ class Service(SchedulingItem):
                                  self.my_type, self.get_name(), char)
                     state = False
         return state
-
-    # TODO: implement "not host dependent" feature.
-    def fill_daddy_dependency(self):
-        """Add network act_dependency for host
-
-        :return:None
-        TODO: Host object should not handle other host obj.
-              We should call obj.add_* on both obj.
-              This is 'Java' style
-        """
-        #  Depend of host, all status, is a networkdep
-        # and do not have timeperiod, and follow parents dep
-        if self.host is not None and self.host_dependency_enabled:
-            # I add the dep in MY list
-            self.act_depend_of.append(
-                (self.host, ['d', 'u', 's', 'f'], 'network_dep', None, True)
-            )
-            # I add the dep in Daddy list
-            self.host.act_depend_of_me.append(
-                (self, ['d', 'u', 's', 'f'], 'network_dep', None, True)
-            )
-
-            # And the parent/child dep lists too
-            self.host.register_son_in_parent_child_dependencies(self)
-
-    def add_service_act_dependency(self, srv, status, timeperiod, inherits_parent):
-        """Add logical act_dependency between two services.
-
-        :param srv: other service we want to add the dependency
-        :type srv: alignak.objects.service.Service
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Service object should not handle other host obj.
-             We should call obj.add_* on both obj.
-             This is 'Java' style
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        TODO: Looks like srv is a str when called. I bet it's a mistake.
-        """
-        # first I add the other the I depend on in MY list
-        self.act_depend_of.append((srv, status, 'logic_dep', timeperiod, inherits_parent))
-        # then I register myself in the other service dep list
-        srv.act_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        srv.register_son_in_parent_child_dependencies(self)
-
-    def add_business_rule_act_dependency(self, srv, status, timeperiod, inherits_parent):
-        """Add business act_dependency between two services.
-
-        :param srv: other service we want to add the dependency
-        :type srv: alignak.objects.service.Service
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # I only register so he know that I WILL be a impact
-        self.act_depend_of_me.append((srv, status, 'business_dep',
-                                      timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        self.register_son_in_parent_child_dependencies(srv)
-
-    def add_service_chk_dependency(self, srv, status, timeperiod, inherits_parent):
-        """Add logic chk_dependency between two services.
-
-        :param srv: other service we want to add the dependency
-        :type srv: alignak.objects.service.Service
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # first I add the other the I depend on in MY list
-        self.chk_depend_of.append((srv, status, 'logic_dep', timeperiod, inherits_parent))
-        # then I register myself in the other service dep list
-        srv.chk_depend_of_me.append(
-            (self, status, 'logic_dep', timeperiod, inherits_parent)
-        )
-
-        # And the parent/child dep lists too
-        srv.register_son_in_parent_child_dependencies(self)
 
     def duplicate(self, host):
         """For a given host, look for all copy we must create for for_each property
@@ -597,7 +484,7 @@ class Service(SchedulingItem):
             self.state = 'UNKNOWN'  # exit code UNDETERMINED
             self.state_id = 3
 
-    def set_state_from_exit_status(self, status):
+    def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, WARNING, CRITICAL or UNKNOWN
         with the status of a check. Also update last_state
 
@@ -650,7 +537,8 @@ class Service(SchedulingItem):
 
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
-
+            # Now we add a value, we update the is_flapping prop
+            self.update_flapping(notif_period, hosts, services)
         if self.state != self.last_state:
             self.last_state_change = self.last_state_update
 
@@ -702,7 +590,7 @@ class Service(SchedulingItem):
         :return: None
         """
         naglog_result('critical', 'SERVICE ALERT: %s;%s;%s;%s;%d;%s'
-                                  % (self.host.get_name(), self.get_name(),
+                                  % (self.host_name, self.get_name(),
                                      self.state, self.state_type,
                                      self.attempt, self.output))
 
@@ -716,7 +604,7 @@ class Service(SchedulingItem):
         """
         if self.__class__.log_initial_states:
             naglog_result('info', 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s'
-                                  % (self.host.get_name(), self.get_name(),
+                                  % (self.host_name, self.get_name(),
                                      self.state, self.state_type, self.attempt, self.output))
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
@@ -736,13 +624,13 @@ class Service(SchedulingItem):
         logger.warning("The results of service '%s' on host '%s' are stale "
                        "by %s (threshold=%s).  I'm forcing an immediate check "
                        "of the service.",
-                       self.get_name(), self.host.get_name(),
+                       self.get_name(), self.host_name,
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)
-        Format is : "SERVICE NOTIFICATION: *contact.get_name()*;*host.get_name()*;*self.get_name()*
+        Format is : "SERVICE NOTIFICATION: *contact.get_name()*;*host_name*;*self.get_name()*
                     ;*state*;*command.get_name()*;*output*"
         Example : "SERVICE NOTIFICATION: superadmin;server;Load;UP;notify-by-rss;no output"
 
@@ -750,7 +638,6 @@ class Service(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = notif.contact
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
                           'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
@@ -761,12 +648,12 @@ class Service(SchedulingItem):
         if self.__class__.log_notifications:
             naglog_result('critical', "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s"
                                       % (contact.get_name(),
-                                         self.host.get_name(), self.get_name(), state,
+                                         host_ref.get_name(), self.get_name(), state,
                                          command.get_name(), self.output))
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
-        Format is : "SERVICE EVENT HANDLER: *host.get_name()*;*self.get_name()*;*state*;*state_type*
+        Format is : "SERVICE EVENT HANDLER: *host_name*;*self.get_name()*;*state*;*state_type*
                     ;*attempt*;*command.get_name()*"
         Example : "SERVICE EVENT HANDLER: server;Load;UP;HARD;1;notify-by-rss"
 
@@ -776,13 +663,13 @@ class Service(SchedulingItem):
         """
         if self.__class__.log_event_handlers:
             naglog_result('critical', "SERVICE EVENT HANDLER: %s;%s;%s;%s;%s;%s"
-                                      % (self.host.get_name(), self.get_name(),
+                                      % (self.host_name, self.get_name(),
                                          self.state, self.state_type,
                                          self.attempt, command.get_name()))
 
     def raise_snapshot_log_entry(self, command):
         """Raise SERVICE SNAPSHOT entry (critical level)
-        Format is : "SERVICE SNAPSHOT: *host.get_name()*;*self.get_name()*;*state*;*state_type*;
+        Format is : "SERVICE SNAPSHOT: *host_name*;*self.get_name()*;*state*;*state_type*;
                     *attempt*;*command.get_name()*"
         Example : "SERVICE SNAPSHOT: server;Load;UP;HARD;1;notify-by-rss"
 
@@ -792,12 +679,12 @@ class Service(SchedulingItem):
         """
         if self.__class__.log_event_handlers:
             naglog_result('critical', "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s"
-                          % (self.host.get_name(), self.get_name(),
+                          % (self.host_name, self.get_name(),
                              self.state, self.state_type, self.attempt, command.get_name()))
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT START entry (critical level)
-        Format is : "SERVICE FLAPPING ALERT: *host.get_name()*;*self.get_name()*;STARTED;
+        Format is : "SERVICE FLAPPING ALERT: *host_name*;*self.get_name()*;STARTED;
                      Service appears to have started
                      flapping (*change_ratio*% change >= *threshold*% threshold)"
         Example : "SERVICE FLAPPING ALERT: server;Load;STARTED;
@@ -811,12 +698,12 @@ class Service(SchedulingItem):
         naglog_result('critical', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
                                   "Service appears to have started flapping "
                                   "(%.1f%% change >= %.1f%% threshold)"
-                                  % (self.host.get_name(), self.get_name(),
+                                  % (self.host_name, self.get_name(),
                                      change_ratio, threshold))
 
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT STOPPED entry (critical level)
-        Format is : "SERVICE FLAPPING ALERT: *host.get_name()*;*self.get_name()*;STOPPED;
+        Format is : "SERVICE FLAPPING ALERT: *host_name*;*self.get_name()*;STOPPED;
                      Service appears to have started
                      flapping (*change_ratio*% change >= *threshold*% threshold)"
         Example : "SERVICE FLAPPING ALERT: server;Load;STOPPED;
@@ -832,13 +719,13 @@ class Service(SchedulingItem):
         naglog_result('critical', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
                                   "Service appears to have stopped flapping "
                                   "(%.1f%% change < %.1f%% threshold)"
-                                  % (self.host.get_name(), self.get_name(),
+                                  % (self.host_name, self.get_name(),
                                      change_ratio, threshold))
 
     def raise_no_next_check_log_entry(self):
         """Raise no scheduled check entry (warning level)
         Format is : "I cannot schedule the check for the service '*get_name()*'
-                    on host '*host.get_name()*' because there is not future valid time"
+                    on host '*host_name*' because there is not future valid time"
         Example : "I cannot schedule the check for the service 'Load' on host 'Server'
                   because there is not future valid time"
 
@@ -846,11 +733,11 @@ class Service(SchedulingItem):
         """
         logger.warning("I cannot schedule the check for the service '%s' on "
                        "host '%s' because there is not future valid time",
-                       self.get_name(), self.host.get_name())
+                       self.get_name(), self.host_name)
 
     def raise_enter_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
-        Format is : "SERVICE DOWNTIME ALERT: *host.get_name()*;*get_name()*;STARTED;
+        Format is : "SERVICE DOWNTIME ALERT: *host_name*;*get_name()*;STARTED;
                     Service has entered a period of scheduled downtime"
         Example : "SERVICE DOWNTIME ALERT: test_host_0;Load;STARTED;
                    Service has entered a period of scheduled downtime"
@@ -859,11 +746,11 @@ class Service(SchedulingItem):
         """
         naglog_result('critical', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
                                   "Service has entered a period of scheduled "
-                                  "downtime" % (self.host.get_name(), self.get_name()))
+                                  "downtime" % (self.host_name, self.get_name()))
 
     def raise_exit_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
-        Format is : "SERVICE DOWNTIME ALERT: *host.get_name()*;*get_name()*;STOPPED;
+        Format is : "SERVICE DOWNTIME ALERT: *host_name*;*get_name()*;STOPPED;
                     Service has entered a period of scheduled downtime"
         Example : "SERVICE DOWNTIME ALERT: test_host_0;Load;STOPPED;
                    Service has entered a period of scheduled downtime"
@@ -872,11 +759,11 @@ class Service(SchedulingItem):
         """
         naglog_result('critical', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
                                   "has exited from a period of scheduled downtime"
-                      % (self.host.get_name(), self.get_name()))
+                      % (self.host_name, self.get_name()))
 
     def raise_cancel_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
-        Format is : "SERVICE DOWNTIME ALERT: *host.get_name()*;*get_name()*;CANCELLED;
+        Format is : "SERVICE DOWNTIME ALERT: *host_name*;*get_name()*;CANCELLED;
                     Service has entered a period of scheduled downtime"
         Example : "SERVICE DOWNTIME ALERT: test_host_0;Load;CANCELLED;
                    Service has entered a period of scheduled downtime"
@@ -886,7 +773,7 @@ class Service(SchedulingItem):
         naglog_result(
             'critical', "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
                         "Scheduled downtime for service has been cancelled."
-            % (self.host.get_name(), self.get_name()))
+            % (self.host_name, self.get_name()))
 
     def manage_stalking(self, check):
         """Check if the service need stalking or not (immediate recheck)
@@ -941,7 +828,8 @@ class Service(SchedulingItem):
         """
         return [self.host, self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
+                                           notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -951,8 +839,9 @@ class Service(SchedulingItem):
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return not contact.want_service_notification(self.last_chk, self.state,
-                                                     notif.type, self.business_impact,
+        return not contact.want_service_notification(notifways, timeperiods, cdowntimes,
+                                                     self.last_chk,
+                                                     self.state, notif.type, self.business_impact,
                                                      notif.command_call)
 
     def get_duration_sec(self):
@@ -1010,7 +899,8 @@ class Service(SchedulingItem):
         """
         return self.check_command.get_name()
 
-    def notification_is_blocked_by_item(self, n_type, t_wished=None):
+    def notification_is_blocked_by_item(self, notification_period, hosts, services,
+                                        n_type, t_wished=None):
         """Check if a notification is blocked by the service.
         Conditions are ONE of the following::
 
@@ -1039,6 +929,7 @@ class Service(SchedulingItem):
         :rtype: bool
         TODO: Refactor this, a lot of code duplication with Host.notification_is_blocked_by_item
         """
+        host = hosts[self.host]
         if t_wished is None:
             t_wished = time.time()
 
@@ -1052,8 +943,8 @@ class Service(SchedulingItem):
         # Does the notification period allow sending out this notification?
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
-                (self.notification_period is not None
-                    and not self.notification_period.is_time_valid(t_wished)) or \
+                (notification_period is not None and not
+                    notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
             return True
 
@@ -1064,17 +955,17 @@ class Service(SchedulingItem):
             self.state == 'OK' and 'r' not in self.notification_options
         ):
             return True
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
-                and 'f' not in self.notification_options):
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                'f' not in self.notification_options):
             return True
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
-                and 's' not in self.notification_options):
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+                's' not in self.notification_options):
             return True
 
         # Acknowledgements make no sense when the status is ok/up
         # Block if host is in a scheduled downtime
         if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up or \
-                self.host.scheduled_downtime_depth > 0:
+                host.scheduled_downtime_depth > 0:
             return True
 
         # When in downtime, only allow end-of-downtime notifications
@@ -1095,35 +986,18 @@ class Service(SchedulingItem):
                 self.is_flapping and n_type not in ('FLAPPINGSTART',
                                                     'FLAPPINGSTOP',
                                                     'FLAPPINGDISABLED') or \
-                self.host.state != self.host.ok_up:
+                host.state != host.ok_up:
             return True
 
         # Block if business rule smart notifications is enabled and all its
         # children have been acknowledged or are under downtime.
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
-                and self.business_rule_notification_is_blocked() is True \
+                and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
             return True
 
         return False
-
-    def get_obsessive_compulsive_processor_command(self):
-        """Create action for obsessive compulsive commands if such option is enabled
-
-        :return: None
-        """
-        cls = self.__class__
-        if not cls.obsess_over or not self.obsess_over_service:
-            return
-
-        macroresolver = MacroResolver()
-        data = self.get_data_for_event_handler()
-        cmd = macroresolver.resolve_command(cls.ocsp_command, data)
-        event_h = EventHandler(cmd, timeout=cls.ocsp_timeout)
-
-        # ok we can put it in our temp action queue
-        self.actions.append(event_h)
 
     def get_short_status(self):
         """Get the short status of this host
@@ -1171,7 +1045,7 @@ class Service(SchedulingItem):
         return str(self.scheduled_downtime_depth)
 
 
-class Services(Items):
+class Services(SchedulingItems):
     """Class for the services lists. It's mainly for configuration
 
     """
@@ -1185,7 +1059,7 @@ class Services(Items):
             if item.is_tpl():
                 self.add_template(item)
             else:
-                self.items[item._id] = item
+                self.items[item.uuid] = item
 
     def add_template(self, tpl):
         """
@@ -1207,7 +1081,7 @@ class Services(Items):
             tpl.configuration_errors.append(mesg)
         elif name:
             tpl = self.index_template(tpl)
-        self.templates[tpl._id] = tpl
+        self.templates[tpl.uuid] = tpl
 
     def add_item(self, item, index=True):
         """
@@ -1240,7 +1114,7 @@ class Services(Items):
 
         if index is True:
             item = self.index_item(item)
-        self.items[item._id] = item
+        self.items[item.uuid] = item
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1409,13 +1283,14 @@ class Services(Items):
                 hst_name = serv.host_name
                 # The new member list, in id
                 hst = hosts.find_by_name(hst_name)
-                serv.host = hst
                 # Let the host know we are his service
-                if serv.host is not None:
-                    hst.add_service_link(serv)
+                if hst is not None:
+                    serv.host = hst.uuid
+                    serv.realm = hst.realm
+                    hst.add_service_link(serv.uuid)
                 else:  # Ok, the host do not exists!
                     err = "Warning: the service '%s' got an invalid host_name '%s'" % \
-                          (self.get_name(), hst_name)
+                          (serv.get_name(), hst_name)
                     serv.configuration_warnings.append(err)
                     continue
             except AttributeError:
@@ -1435,7 +1310,7 @@ class Services(Items):
                     sg_name = sg_name.strip()
                     servicegroup = servicegroups.find_by_name(sg_name)
                     if servicegroup is not None:
-                        new_servicegroups.append(servicegroup)
+                        new_servicegroups.append(servicegroup.uuid)
                     else:
                         err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
                               (sg_name, serv.get_dbg_name())
@@ -1471,13 +1346,23 @@ class Services(Items):
                     if host is not None and hasattr(host, prop):
                         setattr(serv, prop, getattr(host, prop))
 
-    def apply_dependencies(self):
+    def apply_dependencies(self, hosts):
         """Wrapper to loop over services and call Service.fill_daddy_dependency()
 
         :return: None
         """
         for service in self:
-            service.fill_daddy_dependency()
+            if service.host and service.host_dependency_enabled:
+                host = hosts[service.host]
+                service.act_depend_of.append(
+                    (service.host, ['d', 'u', 's', 'f'], 'network_dep', '', True)
+                )
+                host.act_depend_of_me.append(
+                    (service.uuid, ['d', 'u', 's', 'f'], 'network_dep', '', True)
+                )
+
+                host.child_dependencies.add(service.uuid)
+                service.parent_dependencies.add(service.host)
 
     def clean(self):
         """Remove services without host object linked to
@@ -1487,7 +1372,7 @@ class Services(Items):
         to_del = []
         for serv in self:
             if not serv.host:
-                to_del.append(serv._id)
+                to_del.append(serv.uuid)
         for sid in to_del:
             del self.items[sid]
 
@@ -1731,7 +1616,7 @@ class Services(Items):
             self.explode_services_from_templates(hosts, template)
 
         # Explode services that have a duplicate_foreach clause
-        duplicates = [serv._id for serv in self if getattr(serv, 'duplicate_foreach', '')]
+        duplicates = [serv.uuid for serv in self if getattr(serv, 'duplicate_foreach', '')]
         for s_id in duplicates:
             serv = self.items[s_id]
             self.explode_services_duplicates(hosts, serv)
@@ -1751,30 +1636,6 @@ class Services(Items):
         for serv in self:
             self.register_service_into_servicegroups(serv, servicegroups)
             self.register_service_dependencies(serv, servicedependencies)
-
-    def create_business_rules(self, hosts, services):
-        """
-        Loop on services and call Service.create_business_rules(hosts, services)
-
-
-        :param hosts: hosts to link to
-        :type hosts: alignak.objects.host.Hosts
-        :param services: services to link to
-        :type services: alignak.objects.service.Services
-        :return: None
-        TODO: Move this function into SchedulingItems class
-        """
-        for serv in self:
-            serv.create_business_rules(hosts, services)
-
-    def create_business_rules_dependencies(self):
-        """Loop on services and call Service.create_business_rules_dependencies()
-
-        :return: None
-        TODO: Move this function into SchedulingItems class
-        """
-        for serv in self:
-            serv.create_business_rules_dependencies()
 
     def fill_predictive_missing_parameters(self):
         """Loop on services and call Service.fill_predictive_missing_parameters()

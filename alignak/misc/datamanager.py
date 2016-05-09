@@ -331,8 +331,8 @@ class DataManager(object):  # pylint: disable=R0904
         """
         Get a specific realm, but this will return None always
 
-        :param name: A realm name
-        :type name: str
+        :param realm: A realm name
+        :type realm: str
         :return: the Realm object with realm_name=name (that's not true)
         :rtype: alignak.objects.realm.Realm | None
         TODO: Remove this
@@ -359,8 +359,8 @@ class DataManager(object):  # pylint: disable=R0904
         """
         Get hosts tagged with a specific tag
 
-        :param name: A tag name
-        :type name: str
+        :param tag: A tag name
+        :type tag: str
         :return:  Hosts list with tag in host tags
         :rtype: alignak.objects.host.Host
         """

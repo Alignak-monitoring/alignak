@@ -75,8 +75,8 @@ class TestMacroResolver(AlignakTest):
     def test_resolv_simple(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
-        com = mr.resolve_command(svc.check_command, data)
+        data = [hst, svc]
+        com = mr.resolve_command(svc.check_command, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual("plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname test_host_0 --servicedesc test_ok_0 --custom custvalue", com)
 
@@ -87,11 +87,11 @@ class TestMacroResolver(AlignakTest):
     def test_special_macros(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$TOTALHOSTSUP$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing 2', com)
 
@@ -101,11 +101,11 @@ class TestMacroResolver(AlignakTest):
     def test_special_macros_realm(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$HOSTREALM$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing Default', com)
 
@@ -115,7 +115,7 @@ class TestMacroResolver(AlignakTest):
         "$HOSTOUTPUT$, $HOSTPERFDATA$, $HOSTACKAUTHOR$, $HOSTACKCOMMENT$, $SERVICEOUTPUT$, $SERVICEPERFDATA$, $SERVICEACKAUTHOR$, and $SERVICEACKCOMMENT$ "
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         illegal_macro_output_chars = self.sched.conf.illegal_macro_output_chars
         print "Illegal macros caracters:", illegal_macro_output_chars
         hst.output = 'monculcestdupoulet'
@@ -123,15 +123,15 @@ class TestMacroResolver(AlignakTest):
 
         for c in illegal_macro_output_chars:
             hst.output = 'monculcestdupoulet' + c
-            cc = CommandCall(self.conf.commands, dummy_call)
-            com = mr.resolve_command(cc, data)
+            cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+            com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
             print com
             self.assertEqual('plugins/nothing monculcestdupoulet', com)
 
     def test_env_macros(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         data.append(self.conf)
 
         env = mr.get_env_macros(data)
@@ -147,23 +147,23 @@ class TestMacroResolver(AlignakTest):
     def test_resource_file(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         dummy_call = "special_macro!$USER1$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         self.assertEqual('plugins/nothing plugins', com)
 
         dummy_call = "special_macro!$INTERESTINGVARIABLE$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print "CUCU", com
         self.assertEqual('plugins/nothing interestingvalue', com)
 
         # Look for multiple = in lines, should split the first
         # and keep others in the macro value
         dummy_call = "special_macro!$ANOTHERVALUE$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print "CUCU", com
         self.assertEqual('plugins/nothing blabla=toto', com)
 
@@ -173,39 +173,39 @@ class TestMacroResolver(AlignakTest):
     def test_ondemand_macros(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = hst.get_data_for_checks()
+        data = [hst, svc]
         hst.state = 'UP'
         svc.state = 'UNKNOWN'
 
         # Ok sample host call
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
 
         # Call with a void host name, means : myhost
-        data = hst.get_data_for_checks()
+        data = [hst]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
 
         # Now with a service, for our implicit host state
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
                                                         
                                         
         # Now with a service, for our implicit host state
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing UP', com)
 
@@ -214,18 +214,18 @@ class TestMacroResolver(AlignakTest):
         svc2.output = 'you should not pass'
 
         # Now call this data from our previous service
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         dummy_call = "special_macro!$SERVICEOUTPUT:test_host_0:test_another_service$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing you should not pass', com)
 
         # Ok now with a host implicit way
-        data = svc.get_data_for_checks()
+        data = [hst, svc]
         dummy_call = "special_macro!$SERVICEOUTPUT::test_another_service$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing you should not pass', com)
                                                 
@@ -235,12 +235,12 @@ class TestMacroResolver(AlignakTest):
     def test_hostadressX_macros(self):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
-        data = hst.get_data_for_checks()
+        data = [hst, svc]
 
         # Ok sample host call
         dummy_call = "special_macro!$HOSTADDRESS6$"
-        cc = CommandCall(self.conf.commands, dummy_call)
-        com = mr.resolve_command(cc, data)
+        cc = CommandCall({"commands": self.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self.sched.macromodulations, self.sched.timeperiods)
         print com
         self.assertEqual('plugins/nothing ::1', com)
 

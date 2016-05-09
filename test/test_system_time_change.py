@@ -81,10 +81,12 @@ class TestSystemTimeChange(AlignakTest):
         # Simulate a change now, because by default the value is 1970
         host.last_state_change = now
 
-        host.schedule()
+        host.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                         self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
         host_check = host.actions[0]
 
-        svc.schedule()
+        svc.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
+                         self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
         srv_check = svc.actions[0]
         print "Service check", srv_check, time.asctime(time.localtime(srv_check.t_to_go))
 
@@ -117,7 +119,7 @@ class TestSystemTimeChange(AlignakTest):
         print "current Host check", time.asctime(time.localtime(host_check.t_to_go))
         print "current Service check", time.asctime(time.localtime(srv_check.t_to_go))
         self.set_time(tomorow)
-        self.sched.sched_daemon.compensate_system_time_change(86400)
+        self.sched.sched_daemon.compensate_system_time_change(86400, self.sched.timeperiods)
         print "Tomorow Host check", time.asctime(time.localtime(host_check.t_to_go))
         print "Tomorow Service check", time.asctime(time.localtime(srv_check.t_to_go))
         self.assertEqual(86400, host_check.t_to_go - host_to_go )
@@ -127,7 +129,7 @@ class TestSystemTimeChange(AlignakTest):
         host_to_go = host_check.t_to_go
         srv_to_go = srv_check.t_to_go
         self.set_time(yesterday)
-        self.sched.sched_daemon.compensate_system_time_change(-86400*2)
+        self.sched.sched_daemon.compensate_system_time_change(-86400*2, self.sched.timeperiods)
         print "Yesterday Host check", time.asctime(time.localtime(host_check.t_to_go))
         print "Yesterday Service check", time.asctime(time.localtime(srv_check.t_to_go))
         print "New host check", time.asctime(time.localtime(host.next_chk))

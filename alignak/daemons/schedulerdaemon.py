@@ -56,10 +56,10 @@ import os
 import signal
 import time
 import traceback
-import cPickle
 from multiprocessing import process
 
 
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
@@ -103,7 +103,7 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.brokers = {}
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference, timeperiods):
         """Compensate a system time change of difference for all hosts/services/checks/notifs
 
         :param difference: difference in seconds
@@ -129,11 +129,12 @@ class Alignak(BaseSatellite):
             # Already launch checks should not be touch
             if chk.status == 'scheduled' and chk.t_to_go is not None:
                 t_to_go = chk.t_to_go
-                ref = chk.ref
+                ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
-                if ref.check_period is not None:
+                timeperiod = timeperiods[ref.check_period]
+                if timeperiod is not None:
                     # But it's no so simple, we must match the timeperiod
-                    new_t = ref.check_period.get_next_valid_time_from_t(new_t)
+                    new_t = timeperiod.get_next_valid_time_from_t(new_t)
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:
@@ -236,7 +237,10 @@ class Alignak(BaseSatellite):
                               statsd_enabled=new_c['statsd_enabled'])
 
             t00 = time.time()
-            conf = cPickle.loads(conf_raw)
+            try:
+                conf = unserialize(conf_raw)
+            except AlignakClassLookupException as exp:
+                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
@@ -297,7 +301,7 @@ class Alignak(BaseSatellite):
             self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")
-            self.conf.explode_global_conf()
+            self.conf.explode_global_conf()  # pylint: disable=E1101
 
             # we give sched it's conf
             self.sched.reset()
@@ -330,7 +334,7 @@ class Alignak(BaseSatellite):
 
             # We clear our schedulers managed (it's us :) )
             # and set ourselves in it
-            self.schedulers = {self.conf.instance_id: self.sched}
+            self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
 
     def what_i_managed(self):
         """Get my managed dict (instance id and push_flavor)
@@ -339,7 +343,7 @@ class Alignak(BaseSatellite):
         :rtype: dict
         """
         if hasattr(self, 'conf'):
-            return {self.conf.instance_id: self.conf.push_flavor}
+            return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
         else:
             return {}
 

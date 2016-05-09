@@ -47,7 +47,11 @@
 This module provide CheckModulation and CheckModulations classes used to describe
 the modulation of a check command. Modulation occurs on a check period (Timeperiod)
 """
-from alignak.objects.item import Item, Items
+import uuid
+
+from alignak.commandcall import CommandCall
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
 from alignak.log import logger
@@ -58,7 +62,6 @@ class CheckModulation(Item):
     during a check_period.
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'checkmodulation'
 
     properties = Item.properties.copy()
@@ -77,6 +80,25 @@ class CheckModulation(Item):
 
     macros = {}
 
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        if 'check_command' in params and isinstance(params['check_command'], dict):
+            # We recreate the object
+            self.check_command = CommandCall(params['check_command'])
+            # And remove prop, to prevent from being overridden
+            del params['check_command']
+
+        super(CheckModulation, self).__init__(params, parsing=parsing)
+
+    def serialize(self):
+        res = super(CheckModulation, self).serialize()
+        res['check_command'] = self.check_command.serialize()
+        return res
+
     def get_name(self):
         """Accessor to checkmodulation_name attribute
 
@@ -85,7 +107,7 @@ class CheckModulation(Item):
         """
         return self.checkmodulation_name
 
-    def get_check_command(self, t_to_go):
+    def get_check_command(self, timeperiods, t_to_go):
         """Get the check_command if we are in the check period modulation
 
         :param t_to_go: time to check if we are in the timeperiod
@@ -93,7 +115,7 @@ class CheckModulation(Item):
         :return: A check command if we are in the check period, None otherwise
         :rtype: alignak.objects.command.Command
         """
-        if not self.check_period or self.check_period.is_time_valid(t_to_go):
+        if not self.check_period or timeperiods[self.check_period].is_time_valid(t_to_go):
             return self.check_command
         return None
 
@@ -143,7 +165,7 @@ class CheckModulation(Item):
         return state
 
 
-class CheckModulations(Items):
+class CheckModulations(CommandCallItems):
     """CheckModulations class allowed to handle easily several CheckModulation objects
 
     """
@@ -174,7 +196,7 @@ class CheckModulations(Items):
         TODO: Remove this default mutable argument. Usually result in unexpected behavior
         """
         if name is None:
-            name = CheckModulation._id
+            name = 'Generated_checkmodulation_%s' % uuid.uuid4()
 
         if params is None:
             params = {}

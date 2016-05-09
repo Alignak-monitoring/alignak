@@ -91,7 +91,7 @@ class TestPropertyOverride(AlignakTest):
         # Check non overriden properies value
         for svc in (svc1, svc1proc1, svc1proc2, svc2proc1, svc12):
             self.assertEqual(["test_contact"], svc.contact_groups)
-            self.assertIs(tp24x7, svc.maintenance_period)
+            self.assertIs(tp24x7.uuid, svc.maintenance_period)
             self.assertEqual(1, svc.retry_interval)
             self.assertIs(cmdsvc, svc.check_command.command)
             self.assertEqual(["w","u","c","r","f","s"], svc.notification_options)
@@ -100,7 +100,7 @@ class TestPropertyOverride(AlignakTest):
         # Check overriden properies value
         for svc in (svc2, svc2proc2, svc22):
             self.assertEqual(["admins"], svc.contact_groups)
-            self.assertIs(tptest, svc.maintenance_period)
+            self.assertIs(tptest.uuid, svc.maintenance_period)
             self.assertEqual(3, svc.retry_interval)
             self.assertIs(cmdtest, svc.check_command.command)
             self.assertEqual(["c","r"], svc.notification_options)

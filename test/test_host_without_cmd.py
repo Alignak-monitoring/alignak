@@ -60,23 +60,23 @@ class TestConfig(AlignakTest):
         self.assertTrue(self.conf.conf_is_correct)
         # service always ok, host stays pending
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        host = self.sched.hosts.find_by_name("test_host_00")
         for c in host.checks_in_progress:
             # hurry up, we need an immediate result
-            c.t_to_go = 0
+            self.sched.checks[c].t_to_go = 0
         # scheduler.schedule() always schedules a check, even for this
         # kind of hosts
         #host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.checks_in_progress = []
         host.in_checking = False
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
         svc.checks_in_progress = []
         # this time we need the dependency from service to host
         #svc.act_depend_of = [] # no hostchecks on critical checkresults
 
         # initially the host is OK, we put it DOWN
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN']], nointernal=True)
         self.assertEqual('DOWN', host.state)
         self.assertEqual('OK', svc.state)
         # now force a dependency check of the host

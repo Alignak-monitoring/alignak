@@ -60,7 +60,6 @@ class Serviceescalation(Item):
     TODO: Why this class does not inherit from alignak.objects.Escalation.
           Maybe we can merge it
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'serviceescalation'
 
     properties = Item.properties.copy()
@@ -107,7 +106,7 @@ class Serviceescalations(Items):
         for svescal in self:
             properties = svescal.__class__.properties
 
-            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%d' % svescal._id}
+            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%s' % svescal.uuid}
             for prop in properties:
                 if hasattr(svescal, prop):
                     creation_dict[prop] = getattr(svescal, prop)

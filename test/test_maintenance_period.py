@@ -65,40 +65,40 @@ class TestMaintPeriod(AlignakTest):
         a_24_7 = self.sched.timeperiods.find_by_name("24x7")
         print "Get the hosts and services"
         test_router_0 = self.sched.hosts.find_by_name("test_router_0")
-        test_host_0 = self.sched.hosts.find_by_name("test_host_0")
+        test_host_0 = self.sched.hosts.find_by_name("test_host_01")
         test_nobody = self.sched.hosts.find_by_name("test_nobody")
 
-        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_01", "test_ok_0")
         svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_ok_0")
         svc3 = self.sched.services.find_srv_by_name_and_hostname("test_nobody", "test_ok_0")
 
         # Standard links
-        self.assertEqual(a_24_7, test_router_0.maintenance_period)
-        self.assertIs(None, test_host_0.maintenance_period)
-        self.assertIs(None, test_nobody.maintenance_period)
+        self.assertEqual(a_24_7.uuid, test_router_0.maintenance_period)
+        self.assertIs('', test_host_0.maintenance_period)
+        self.assertIs('', test_nobody.maintenance_period)
 
         # Now inplicit inheritance
         # This one is defined in the service conf
-        self.assertEqual(a_24_7, svc1.maintenance_period)
+        self.assertEqual(a_24_7.uuid, svc1.maintenance_period)
         # And others are implicitly inherited
-        self.assertIs(a_24_7, svc2.maintenance_period)
+        self.assertIs(a_24_7.uuid, svc2.maintenance_period)
         # This one got nothing :)
-        self.assertIs(None, svc3.maintenance_period)
+        self.assertIs('', svc3.maintenance_period)
 
     def test_check_enter_downtime(self):
         test_router_0 = self.sched.hosts.find_by_name("test_router_0")
         test_host_0 = self.sched.hosts.find_by_name("test_host_0")
         test_nobody = self.sched.hosts.find_by_name("test_nobody")
 
-        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = self.sched.services.find_srv_by_name_and_hostname("test_host_01", "test_ok_0")
         svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_ok_0")
         svc3 = self.sched.services.find_srv_by_name_and_hostname("test_nobody", "test_ok_0")
         # we want to focus on only one maintenance
-        test_router_0.maintenance_period = None
-        test_host_0.maintenance_period = None
-        test_nobody.maintenance_period = None
-        svc1.maintenance_period = None
-        svc2.maintenance_period = None
+        test_router_0.maintenance_period = ''
+        test_host_0.maintenance_period = ''
+        test_nobody.maintenance_period = ''
+        svc1.maintenance_period = ''
+        svc2.maintenance_period = ''
 
         # be sure we have some time before a new minute begins.
         # otherwise we get a race condition and a failed test here.
@@ -126,7 +126,7 @@ class TestMaintPeriod(AlignakTest):
         print "planned stop ", time.asctime(time.localtime(t_next))
         svc3.maintenance_period = t
 
-        self.assertFalse(svc3.in_maintenance)
+        self.assertIs(-1, svc3.in_maintenance)
         #
         # now let the scheduler run and wait until the maintenance period begins
         # it is now 10 seconds before the full minute. run for 30 seconds
@@ -147,12 +147,12 @@ class TestMaintPeriod(AlignakTest):
             print "looks like there is no downtime"
             pass
         self.assertEqual(1, len(svc3.downtimes))
-        self.assertIn(svc3.downtimes[0], self.sched.downtimes.values())
+        self.assertIn(svc3.downtimes[0], self.sched.downtimes)
         self.assertTrue(svc3.in_scheduled_downtime)
-        self.assertTrue(svc3.downtimes[0].fixed)
-        self.assertTrue(svc3.downtimes[0].is_in_effect)
-        self.assertFalse(svc3.downtimes[0].can_be_deleted)
-        self.assertEqual(svc3.downtimes[0]._id, svc3.in_maintenance)
+        self.assertTrue(self.sched.downtimes[svc3.downtimes[0]].fixed)
+        self.assertTrue(self.sched.downtimes[svc3.downtimes[0]].is_in_effect)
+        self.assertFalse(self.sched.downtimes[svc3.downtimes[0]].can_be_deleted)
+        self.assertEqual(self.sched.downtimes[svc3.downtimes[0]].uuid, svc3.in_maintenance)
 
         #
         # now the downtime should expire...
@@ -164,7 +164,7 @@ class TestMaintPeriod(AlignakTest):
         self.assertEqual(0, len(self.sched.downtimes))
         self.assertEqual(0, len(svc3.downtimes))
         self.assertFalse(svc3.in_scheduled_downtime)
-        self.assertIs(None, svc3.in_maintenance)
+        self.assertIs(-1, svc3.in_maintenance)
 
 
 

@@ -262,7 +262,7 @@ class Daemon(object):  # pylint: disable=R0902
             if self.http_thread.is_alive():
                 logger.warning("http_thread failed to terminate. Calling _Thread__stop")
                 try:
-                    self.http_thread._Thread__stop()
+                    self.http_thread._Thread__stop()  # pylint: disable=E1101
                 except Exception:  # pylint: disable=W0703
                     pass
             self.http_thread = None
@@ -1034,7 +1034,11 @@ class Daemon(object):  # pylint: disable=R0902
 
         # If we have more than 15 min time change, we need to compensate it
         if abs(difference) > 900:
-            self.compensate_system_time_change(difference)
+            if hasattr(self, "sched"):
+                self.compensate_system_time_change(difference,
+                                                   self.sched.timeperiods)  # pylint: disable=E1101
+            else:
+                self.compensate_system_time_change(difference, None)
         else:
             difference = 0
 
@@ -1042,7 +1046,7 @@ class Daemon(object):  # pylint: disable=R0902
 
         return difference
 
-    def compensate_system_time_change(self, difference):  # pylint: disable=R0201
+    def compensate_system_time_change(self, difference, timeperiods):  # pylint: disable=R0201,W0613
         """Default action for system time change. Actually a log is done
 
         :return: None

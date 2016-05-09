@@ -102,6 +102,9 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         self.tags = {}
         self.services_tags = {}
 
+        self.downtimes = {}
+        self.comments = {}
+
         # And in progress one
         self.inp_hosts = {}
         self.inp_services = {}
@@ -461,7 +464,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         for commandcall in commandcalls:
             cmdname = commandcall.command
             command = self.commands.find_by_name(cmdname)
-            commandcall.command = command
+            commandcall.command = command.uuid
 
     def linkify_a_timeperiod(self, obj, prop):
         """
@@ -480,7 +483,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
             return
         tpname = raw_timeperiod.timeperiod_name
         timeperiod = self.timeperiods.find_by_name(tpname)
-        setattr(obj, prop, timeperiod)
+        setattr(obj, prop, timeperiod.uuid)
 
     def linkify_a_timeperiod_by_name(self, obj, prop):
         """
@@ -498,7 +501,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
             setattr(obj, prop, None)
             return
         timeperiod = self.timeperiods.find_by_name(tpname)
-        setattr(obj, prop, timeperiod)
+        setattr(obj, prop, timeperiod.uuid)
 
     def linkify_contacts(self, obj, prop):
         """
@@ -519,7 +522,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         for cname in contacts:
             contact = self.contacts.find_by_name(cname)
             if contact:
-                new_v.append(contact)
+                new_v.append(contact.uuid)
         setattr(obj, prop, new_v)
 
     def linkify_dict_srv_and_hosts(self, obj, prop):
@@ -546,11 +549,11 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
             sdesc = elts[1]
             serv = self.services.find_srv_by_name_and_hostname(hname, sdesc)
             if serv:
-                new_v.append(serv)
+                new_v.append(serv.uuid)
         for hname in problems['hosts']:
             host = self.hosts.find_by_name(hname)
             if host:
-                new_v.append(host)
+                new_v.append(host.uuid)
         setattr(obj, prop, new_v)
 
     def linkify_host_and_hosts(self, obj, prop):
@@ -573,7 +576,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         for hname in hosts:
             host = self.hosts.find_by_name(hname)
             if host:
-                new_v.append(host)
+                new_v.append(host.uuid)
         setattr(obj, prop, new_v)
 
 ###############
@@ -631,7 +634,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         # Clean hosts from hosts and hostgroups
         for host in to_del_h:
             safe_print("Deleting", host.get_name())
-            del self.hosts[host._id]
+            del self.hosts[host.uuid]
 
         # Now clean all hostgroups too
         for hostgroup in self.hostgroups:
@@ -642,7 +645,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         for serv in to_del_srv:
             safe_print("Deleting", serv.get_full_name())
-            del self.services[serv._id]
+            del self.services[serv.uuid]
 
         # Now clean service groups
         for servicegroup in self.servicegroups:
@@ -670,11 +673,16 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         self.update_element(host, data)
 
         # We need to rebuild Downtime and Comment relationship
-        for dtc in host.downtimes + host.comments:
-            dtc.ref = host
+        for dtc_id in host.downtimes:
+            downtime = self.downtimes[dtc_id]
+            downtime.ref = host.uuid
+
+        for com_id in host.comments:
+            com = self.comments[com_id]
+            com.ref = host.uuid
 
         # Ok, put in in the in progress hosts
-        inp_hosts[host._id] = host
+        inp_hosts[host.uuid] = host
 
     def manage_initial_hostgroup_status_brok(self, brok):
         """
@@ -705,7 +713,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_hostgroups[hostgroup._id] = hostgroup
+        inp_hostgroups[hostgroup.uuid] = hostgroup
 
     def manage_initial_service_status_brok(self, brok):
         """
@@ -729,11 +737,17 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
         self.update_element(serv, data)
 
         # We need to rebuild Downtime and Comment relationship
-        for dtc in serv.downtimes + serv.comments:
-            dtc.ref = serv
+
+        for dtc_id in serv.downtimes:
+            downtime = self.downtimes[dtc_id]
+            downtime.ref = serv.uuid
+
+        for com_id in serv.comments:
+            com = self.comments[com_id]
+            com.ref = serv.uuid
 
         # Ok, put in in the in progress hosts
-        inp_services[serv._id] = serv
+        inp_services[serv.uuid] = serv
 
     def manage_initial_servicegroup_status_brok(self, brok):
         """
@@ -764,7 +778,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link hosts into hostgroups later
         # so now only save it
-        inp_servicegroups[servicegroup._id] = servicegroup
+        inp_servicegroups[servicegroup.uuid] = servicegroup
 
     def manage_initial_contact_status_brok(self, brok):
         """
@@ -851,7 +865,7 @@ class Regenerator(object):  # pylint: disable=R0904,R0902
 
         # We will link contacts into contactgroups later
         # so now only save it
-        inp_contactgroups[contactgroup._id] = contactgroup
+        inp_contactgroups[contactgroup.uuid] = contactgroup
 
     def manage_initial_timeperiod_status_brok(self, brok):
         """

@@ -22,19 +22,18 @@
 import subprocess
 import json
 from time import sleep
-import urllib
+import requests
 
-import base64
-import zlib
-import cPickle
 from alignak_test import unittest
 
+from alignak.misc.serialization import unserialize
 from alignak.http.generic_interface import GenericInterface
 from alignak.http.receiver_interface import ReceiverInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
 from alignak.check import Check
+
 
 class fullTest(unittest.TestCase):
     def _get_subproc_data(self, name):
@@ -58,6 +57,8 @@ class fullTest(unittest.TestCase):
 
     def test_daemons_outputs(self):
 
+        req = requests.Session()
+
         self.procs = {}
         satellite_map = {'arbiter': '7770',
                          'scheduler': '7768',
@@ -74,7 +75,7 @@ class fullTest(unittest.TestCase):
         args = ["../alignak/bin/alignak_arbiter.py", "-c", "etc/full_test/alignak.cfg"]
         self.procs['arbiter'] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        sleep(3)
+        sleep(8)
 
         print("Testing start")
         for name, proc in self.procs.items():
@@ -84,52 +85,180 @@ class fullTest(unittest.TestCase):
                 print(proc.stderr.read())
             self.assertIsNone(ret, "Daemon %s not started!" % name)
 
-        print("Testing sat list")
-        data = urllib.urlopen("http://127.0.0.1:%s/get_satellite_list" % satellite_map['arbiter']).read()
-        self.assertEqual(data, '{"reactionner": ["reactionner-master"], '
-                               '"broker": ["broker-master"], '
-                               '"arbiter": ["arbiter-master"], '
-                               '"scheduler": ["scheduler-master"], '
-                               '"receiver": ["receiver-1"], '
-                               '"poller": ["poller-fail", "poller-master"]}')
+        print("Testing get_satellite_list")
+        raw_data = req.get("http://127.0.0.1:%s/get_satellite_list" % satellite_map['arbiter'])
+        expected_data ={"reactionner": ["reactionner-master"],
+                               "broker": ["broker-master"],
+                               "arbiter": ["arbiter-master"],
+                               "scheduler": ["scheduler-master"],
+                               "receiver": ["receiver-1"],
+                               "poller": ["poller-fail", "poller-master"]}
+        data = raw_data.json()
+        self.assertIsInstance(data, dict, "Data is not a dict!")
+        for k, v in expected_data.iteritems():
+            self.assertEqual(set(data[k]), set(v))
 
         print("Testing have_conf")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            data = urllib.urlopen("http://127.0.0.1:%s/have_conf" % satellite_map[daemon]).read()
-            self.assertEqual(data, "true", "Daemon %s has no conf!" % daemon)
+            raw_data = req.get("http://127.0.0.1:%s/have_conf" % satellite_map[daemon])
+            data = raw_data.json()
+            self.assertEqual(data, True, "Daemon %s has no conf!" % daemon)
+            # TODO: test with magic_hash
 
         print("Testing ping")
         for name, port in satellite_map.items():
-            data = urllib.urlopen("http://127.0.0.1:%s/ping" % port).read()
-            self.assertEqual(data, '"pong"', "Daemon %s  did not ping back!" % name)
+            raw_data = req.get("http://127.0.0.1:%s/ping" % port)
+            data = raw_data.json()
+            self.assertEqual(data, 'pong', "Daemon %s  did not ping back!" % name)
 
-        print("Testing API")
+        print("Testing api")
+        name_to_interface = {'arbiter': ArbiterInterface,
+                             'scheduler': SchedulerInterface,
+                             'broker': BrokerInterface,
+                             'poller': GenericInterface,
+                             'reactionner': GenericInterface,
+                             'receiver': ReceiverInterface}
         for name, port in satellite_map.items():
-            data = urllib.urlopen("http://127.0.0.1:%s/api" % port).read()
-            name_to_interface = {'arbiter': ArbiterInterface,
-                                 'scheduler': SchedulerInterface,
-                                 'broker': BrokerInterface,
-                                 'poller': GenericInterface,
-                                 'reactionner': GenericInterface,
-                                 'receiver': ReceiverInterface}
+            raw_data = req.get("http://127.0.0.1:%s/api" % port)
+            data = raw_data.json()
             expected_data = set(name_to_interface[name](None).api())
-            self.assertEqual(set(json.loads(data)), expected_data, "Daemon %s has a bad API!" % name)
+            self.assertIsInstance(data, list, "Data is not a list!")
+            self.assertEqual(set(data), expected_data, "Daemon %s has a bad API!" % name)
 
-        print("Test get check on scheduler")
+        print("Testing get_checks on scheduler")
         # We need to sleep 10s to be sure the first check can be launched now (check_interval = 5)
         sleep(4)
-        raw_data = urllib.urlopen("http://127.0.0.1:%s/get_checks?do_checks=True&poller_tags=['TestPollerTag']" % satellite_map['scheduler']).read()
-        data = cPickle.loads(zlib.decompress(base64.b64decode(raw_data)))
+        raw_data = req.get("http://127.0.0.1:%s/get_checks" % satellite_map['scheduler'], params={'do_checks': True, 'poller_tags': ['TestPollerTag']})
+        data = unserialize(raw_data.json(), True)
         self.assertIsInstance(data, list, "Data is not a list!")
         self.assertNotEqual(len(data), 0, "List is empty!")
         for elem in data:
             self.assertIsInstance(elem, Check, "One elem of the list is not a Check!")
+
+        print("Testing get_raw_stats")
+        for name, port in satellite_map.items():
+            raw_data = req.get("http://127.0.0.1:%s/get_raw_stats" % port)
+            data = raw_data.json()
+            if name == 'broker':
+                self.assertIsInstance(data, list, "Data is not a list!")
+            else:
+                self.assertIsInstance(data, dict, "Data is not a dict!")
+
+        print("Testing what_i_managed")
+        for name, port in satellite_map.items():
+            raw_data = req.get("http://127.0.0.1:%s/what_i_managed" % port)
+            data = raw_data.json()
+            self.assertIsInstance(data, dict, "Data is not a dict!")
+            if name != 'arbiter':
+                self.assertEqual(1, len(data), "The dict must have 1 key/value!")
+
+        print("Testing get_external_commands")
+        for name, port in satellite_map.items():
+            raw_data = req.get("http://127.0.0.1:%s/get_external_commands" % port)
+            data = raw_data.json()
+            self.assertIsInstance(data, list, "Data is not a list!")
+
+        print("Testing get_log_level")
+        for name, port in satellite_map.items():
+            raw_data = req.get("http://127.0.0.1:%s/get_log_level" % port)
+            data = raw_data.json()
+            self.assertIsInstance(data, unicode, "Data is not an unicode!")
+            # TODO: seems level get not same tham defined in *d.ini files
+
+        print("Testing get_all_states")
+        raw_data = req.get("http://127.0.0.1:%s/get_all_states" % satellite_map['arbiter'])
+        data = raw_data.json()
+        self.assertIsInstance(data, dict, "Data is not a dict!")
+
+        print("Testing get_running_id")
+        for name, port in satellite_map.items():
+            raw_data = req.get("http://127.0.0.1:%s/get_running_id" % port)
+            data = raw_data.json()
+            self.assertIsInstance(data, unicode, "Data is not an unicode!")
+
+        print("Testing fill_initial_broks")
+        raw_data = req.get("http://127.0.0.1:%s/fill_initial_broks" % satellite_map['scheduler'], params={'bname': 'broker-master'})
+        data = raw_data.json()
+        self.assertIsNone(data, "Data must be None!")
+
+        print("Testing get_broks")
+        for name in ['scheduler', 'poller']:
+            raw_data = req.get("http://127.0.0.1:%s/get_broks" % satellite_map[name],
+                               params={'bname': 'broker-master'})
+            data = raw_data.json()
+            self.assertIsInstance(data, dict, "Data is not a dict!")
+
+        print("Testing get_returns")
+        # get_return requested by scheduler to poller daemons
+        for name in ['reactionner', 'receiver', 'poller']:
+            raw_data = req.get("http://127.0.0.1:%s/get_returns" % satellite_map[name], params={'sched_id': 0})
+            data = raw_data.json()
+            self.assertIsInstance(data, list, "Data is not a list!")
+
 
         print("Done testing")
         #os.kill(self.arb_proc.pid, signal.SIGHUP)  # This should log with debug level the Relaod Conf
         #os.kill(self.arb_proc.pid, signal.SIGINT)  # This should kill the proc
         #data = self._get_subproc_data()
         #self.assertRegexpMatches(data['out'], "Reloading configuration")
+
+        # total list
+        # arbiter
+        #   have_conf
+        #   put_conf
+        #   do_not_run
+        #   wait_new_conf
+        #[ok]   get_satellite_list
+        #[ok]   what_i_managed
+        #[ok]   get_all_states
+        #   get_objects_properties
+        #
+        # broker
+        #   push_broks
+        #   get_raw_stats
+        #
+        # receiver
+        #[ok]   get_raw_stats
+        #   push_host_names
+        #
+        # scheduler
+        #   get_checks
+        #   put_results
+        #[ok]   get_broks
+        #[ok]   fill_initial_broks
+        #[ok]   get_raw_stats
+        #   run_external_commands
+        #   put_conf
+        #   wait_new_conf
+        # generic
+        #   index
+        #[ok]   ping
+        #   get_start_time
+        #[ok]   get_running_id
+        #   put_conf
+        #   have_conf
+        #   set_log_level
+        #[ok]   get_log_level
+        #[ok]   api
+        #   api_full
+        #   remove_from_conf
+        #[ok]   what_i_managed
+        #   wait_new_conf
+        #[ok]   get_external_commands
+        #   push_actions (post)
+        #[ok]   get_returns
+        #[ok]   get_broks
+        #[ok]   get_raw_stats
+
+
+    #def test_daemons_inputs(self):
+    #    """
+    #    We test alignak function have connection.get('xx').
+    #    This will test if get and use data are ok
+
+    #    :return:
+    #    """
+    #    print('to')
 
 
 if __name__ == '__main__':

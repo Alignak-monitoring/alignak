@@ -57,7 +57,7 @@ class TestNullInheritance(AlignakTest):
     # We search to see if null as value really delete the inheritance
     # of a property
     def test_null_inheritance(self):
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_001")
         self.assertEqual('', svc.icon_image)
 
 

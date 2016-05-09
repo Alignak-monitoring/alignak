@@ -62,13 +62,21 @@ class TestConfig(AlignakTest):
         host.act_depend_of = []  # ignore the router
         cmd = "/error/pl"
         # Create a dummy notif
-        n = Notification('PROBLEM', 'scheduled', 'BADCOMMAND', cmd, host, None, 0)
+        data = {
+                   'type': 'PROBLEM',
+                   'status': 'scheduled',
+                   'command': 'BADCOMMAND',
+                   'command_call': cmd,
+                   'ref': host.id,
+                   'contact': None,
+                   't_to_go': 0}
+        n = Notification(data)
         n.execute()
         time.sleep(0.2)
         if n.status is not 'done':
             n.check_finished(8000)
         print n.__dict__
-        self.sched.actions[n._id] = n
+        self.sched.actions[n.uuid] = n
         self.sched.put_results(n)
         # Should have raised something like "Warning: the notification command 'BADCOMMAND' raised an error (exit code=2): '[Errno 2] No such file or directory'"
         # Ok, in HUDSON, we got a problem here. so always run with a shell run before release please

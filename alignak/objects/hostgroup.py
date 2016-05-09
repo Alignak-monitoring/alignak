@@ -57,7 +57,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
-from alignak.property import StringProp, IntegerProp
+from alignak.property import StringProp
 from alignak.log import logger
 
 
@@ -66,12 +66,11 @@ class Hostgroup(Itemgroup):
     Class to manage a group of host
     A Hostgroup is used to manage a group of hosts
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'hostgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':             IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':           StringProp(default='', fill_brok=['full_status']),
         'hostgroup_name': StringProp(fill_brok=['full_status']),
         'alias':          StringProp(fill_brok=['full_status']),
         'notes':          StringProp(default='', fill_brok=['full_status']),
@@ -195,7 +194,7 @@ class Hostgroups(Itemgroups):
         :return: None
         """
         self.linkify_hg_by_hst(hosts)
-        self.linkify_hg_by_realms(realms)
+        self.linkify_hg_by_realms(realms, hosts)
 
     def linkify_hg_by_hst(self, hosts):
         """
@@ -215,11 +214,14 @@ class Hostgroups(Itemgroups):
                 if mbr == '':  # void entry, skip this
                     continue
                 elif mbr == '*':
-                    new_mbrs.extend(hosts)
+                    new_mbrs.extend(hosts.items.keys())
                 else:
                     host = hosts.find_by_name(mbr)
                     if host is not None:
-                        new_mbrs.append(host)
+                        new_mbrs.append(host.uuid)
+                        host.hostgroups.append(hostgroup.uuid)
+                        # and be sure we are uniq in it
+                        host.hostgroups = list(set(host.hostgroups))
                     else:
                         hostgroup.add_string_unknown_member(mbr)
 
@@ -229,13 +231,7 @@ class Hostgroups(Itemgroups):
             # We find the id, we replace the names
             hostgroup.replace_members(new_mbrs)
 
-            # Now register us in our members
-            for host in hostgroup.members:
-                host.hostgroups.append(hostgroup)
-                # and be sure we are uniq in it
-                host.hostgroups = list(set(host.hostgroups))
-
-    def linkify_hg_by_realms(self, realms):
+    def linkify_hg_by_realms(self, realms, hosts):
         """
         More than an explode function, but we need to already
         have members so... Will be really linkify just after
@@ -258,7 +254,7 @@ class Hostgroups(Itemgroups):
 
             realm = realms.find_by_name(hostgroup.realm.strip())
             if realm is not None:
-                hostgroup.realm = realm
+                hostgroup.realm = realm.uuid
                 logger.debug("[hostgroups] %s is in %s realm",
                              hostgroup.get_name(), realm.get_name())
             else:
@@ -268,12 +264,13 @@ class Hostgroups(Itemgroups):
                 hostgroup.realm = None
                 continue
 
-            for host in hostgroup:
-                if host is None:
+            for host_id in hostgroup:
+                if host_id not in hosts:
                     continue
-                if host.realm is None or host.got_default_realm:  # default not hasattr(h, 'realm'):
+                host = hosts[host_id]
+                if host.realm == '' or host.got_default_realm:  # default not hasattr(h, 'realm'):
                     logger.debug("[hostgroups] apply a realm %s to host %s from a hostgroup "
-                                 "rule (%s)", hostgroup.realm.get_name(),
+                                 "rule (%s)", realms[hostgroup.realm].get_name(),
                                  host.get_name(), hostgroup.get_name())
                     host.realm = hostgroup.realm
                 else:

@@ -76,8 +76,8 @@ class TestServiceDepAndGroups(AlignakTest):
         all_services = []
         for services in svc.act_depend_of_me:
             all_services.extend(services)
-        self.assertIn(service_dependency_postfix, all_services)
-        self.assertIn(service_dependency_cpu, all_services)
+        self.assertIn(service_dependency_postfix.uuid, all_services)
+        self.assertIn(service_dependency_cpu.uuid, all_services)
 
 if __name__ == '__main__':
     unittest.main()

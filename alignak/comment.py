@@ -46,36 +46,30 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
-import warnings
-from alignak.log import logger
+from alignak.objects.item import Item
+from alignak.property import StringProp, BoolProp, IntegerProp
 
 
-class Comment:
+class Comment(Item):
     """Comment class implements comments for monitoring purpose.
     It contains data like author, type, expire_time, persistent etc..
     """
-    _id = 1
 
     properties = {
-        'entry_time':   None,
-        'persistent':   None,
-        'author':       None,
-        'comment':      None,
-        'comment_type': None,
-        'entry_type':   None,
-        'source':       None,
-        'expires':      None,
-        'expire_time':  None,
-        'can_be_deleted': None,
-
-        # TODO: find a very good way to handle the downtime "ref".
-        # ref must effectively not be in properties because it points
-        # onto a real object.
-        # 'ref':  None
+        'entry_time':   IntegerProp(),
+        'persistent':   BoolProp(),
+        'author':       StringProp(default='(Alignak)'),
+        'comment':      StringProp(default='Automatic Comment'),
+        'comment_type': IntegerProp(),
+        'entry_type':   IntegerProp(),
+        'source':       IntegerProp(),
+        'expires':      BoolProp(),
+        'expire_time':  IntegerProp(),
+        'can_be_deleted': BoolProp(default=False),
+        'ref':  StringProp(default='')
     }
 
-    def __init__(self, ref, persistent, author, comment, comment_type, entry_type, source, expires,
-                 expire_time):
+    def __init__(self, params):
         """Adds a comment to a particular service. If the "persistent" field
         is set to zero (0), the comment will be deleted the next time
         Alignak is restarted. Otherwise, the comment will persist
@@ -115,105 +109,9 @@ class Comment:
         :type expire_time: int
         :return: None
         """
-        self._id = self.__class__._id
-        self.__class__._id += 1
-        self.ref = ref  # pointer to srv or host we are apply
+        super(Comment, self).__init__(params)
         self.entry_time = int(time.time())
-        self.persistent = persistent
-        self.author = author
-        self.comment = comment
-        # Now the hidden attributes
-        # HOST_COMMENT=1,SERVICE_COMMENT=2
-        self.comment_type = comment_type
-        # USER_COMMENT=1,DOWNTIME_COMMENT=2,FLAPPING_COMMENT=3,ACKNOWLEDGEMENT_COMMENT=4
-        self.entry_type = entry_type
-        # COMMENTSOURCE_INTERNAL=0,COMMENTSOURCE_EXTERNAL=1
-        self.source = source
-        self.expires = expires
-        self.expire_time = expire_time
-        self.can_be_deleted = False
+        self.fill_default()
 
     def __str__(self):
-        return "Comment id=%d %s" % (self._id, self.comment)
-
-    @property
-    def id(self):  # pylint: disable=C0103
-        """Getter for id, raise deprecation warning
-
-        :return: self._id
-        """
-        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        return self._id
-
-    @id.setter
-    def id(self, value):  # pylint: disable=C0103
-        """Setter for id, raise deprecation warning
-
-        :param value: value to set
-        :return: None
-        """
-        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        self._id = value
-
-    def __getstate__(self):
-        """Call by pickle to dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dictionary of properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        return res
-
-    def __setstate__(self, state):
-        """Inverted function of getstate
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-
-        # Maybe it's not a dict but a list like in the old 0.4 format
-        # so we should call the 0.4 function for it
-        if isinstance(state, list):
-            self.__setstate_deprecated__(state)
-            return
-
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-        # to prevent from duplicating id in comments:
-        if self._id >= cls._id:
-            cls._id = self._id + 1
-
-    def __setstate_deprecated__(self, state):
-        """In 1.0 we move to a dict save.
-
-        :param state: it's the state
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-        # Check if the len of this state is like the previous,
-        # if not, we will do errors!
-        # -1 because of the '_id' prop
-        if len(cls.properties) != (len(state) - 1):
-            logger.debug("Passing comment")
-            return
-
-        self._id = state.pop()
-        for prop in cls.properties:
-            val = state.pop()
-            setattr(self, prop, val)
-        if self._id >= cls._id:
-            cls._id = self._id + 1
+        return "Comment id=%d %s" % (self.uuid, self.comment)

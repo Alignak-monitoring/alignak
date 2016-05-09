@@ -52,17 +52,19 @@
 implements way of sending notifications. Basically used for parsing.
 
 """
-from alignak.objects.item import Item, Items
+import uuid
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import logger
+from alignak.commandcall import CommandCall
 
 
 class NotificationWay(Item):
     """NotificationWay class is used to implement way of sending notifications (command, periods..)
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'notificationway'
 
     properties = Item.properties.copy()
@@ -103,6 +105,33 @@ class NotificationWay(Item):
     special_properties = ('service_notification_commands', 'host_notification_commands',
                           'service_notification_period', 'host_notification_period')
 
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
+                    and isinstance(params[prop][0], dict):
+                new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
+                # We recreate the object
+                setattr(self, prop, new_list)
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        super(NotificationWay, self).__init__(params, parsing=parsing)
+
+    def serialize(self):
+        res = super(NotificationWay, self).serialize()
+
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
+
+        return res
+
     def get_name(self):
         """Accessor to notificationway_name attribute
 
@@ -111,7 +140,8 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timeperiods,
+                                  timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -148,7 +178,8 @@ class NotificationWay(Item):
         if business_impact < self.min_business_impact:
             return False
 
-        valid = self.service_notification_period.is_time_valid(timestamp)
+        notif_period = timeperiods[self.service_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.service_notification_options:
             return False
         timestamp = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
@@ -170,7 +201,8 @@ class NotificationWay(Item):
 
         return False
 
-    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, timperiods, timestamp,
+                               state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -207,7 +239,8 @@ class NotificationWay(Item):
         if cmd and cmd not in self.host_notification_commands:
             return False
 
-        valid = self.host_notification_period.is_time_valid(timestamp)
+        notif_period = timperiods[self.host_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.host_notification_options:
             return False
         timestamp = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
@@ -317,7 +350,7 @@ class NotificationWay(Item):
         return state
 
 
-class NotificationWays(Items):
+class NotificationWays(CommandCallItems):
     """NotificationWays manage a list of NotificationWay objects, used for parsing configuration
 
     """
@@ -351,11 +384,13 @@ class NotificationWays(Items):
         :type params: dict
         :return: None
         """
+        new_uuid = uuid.uuid4().hex
         if name is None:
-            name = NotificationWay._id
+            name = 'Generated_notificationway_%s' % new_uuid
         if params is None:
             params = {}
         params['notificationway_name'] = name
+        params['uuid'] = new_uuid
         # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
         notificationway = NotificationWay(params)
         self.add_item(notificationway)

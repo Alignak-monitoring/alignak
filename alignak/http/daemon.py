@@ -95,7 +95,8 @@ class HTTPDaemon(object):
 
         self.srv = CherryPyWSGIServer((host, port),
                                       cherrypy.Application(http_interface, "/", config),
-                                      numthreads=daemon_thread_pool_size, shutdown_timeout=1)
+                                      numthreads=daemon_thread_pool_size, shutdown_timeout=1,
+                                      request_queue_size=30)
         if SSL and pyOpenSSLAdapter and use_ssl:
             adapter = pyOpenSSLAdapter(ssl_cert, ssl_key, ca_cert)
             context = adapter.get_context()

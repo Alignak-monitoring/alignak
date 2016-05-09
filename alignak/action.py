@@ -72,12 +72,13 @@ except ImportError:
 from alignak.log import logger
 from alignak.property import BoolProp, IntegerProp, FloatProp
 from alignak.property import StringProp, DictProp
+from alignak.alignakobject import AlignakObject
 
 __all__ = ('Action', )
 
 VALID_EXIT_STATUS = (0, 1, 2, 3)
 
-ONLY_COPY_PROP = ('_id', 'status', 'command', 't_to_go', 'timeout',
+ONLY_COPY_PROP = ('uuid', 'status', 'command', 't_to_go', 'timeout',
                   'env', 'module_type', 'execution_time', 'u_time', 's_time')
 
 SHELLCHARS = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
@@ -101,41 +102,39 @@ def no_block_read(output):
         return ''
 
 
-class ActionBase(object):
+class ActionBase(AlignakObject):
     """
     This abstract class is used just for having a common id for both
     actions and checks.
     """
-    _id = 0
     process = None
 
     properties = {
         'is_a':             StringProp(default=''),
         'type':             StringProp(default=''),
+        'creation_time':       FloatProp(default=0.0),
         '_in_timeout':      BoolProp(default=False),
-        'status':           StringProp(default=''),
+        'status':           StringProp(default='scheduled'),
         'exit_status':      IntegerProp(default=3),
-        'output':           StringProp(default=''),
-        't_to_go':          FloatProp(default=0),
+        'output':           StringProp(default='', fill_brok=['full_status']),
+        't_to_go':          FloatProp(default=0.0),
         'check_time':       IntegerProp(default=0),
         'execution_time':   FloatProp(default=0.0),
         'u_time':           FloatProp(default=0.0),
         's_time':           FloatProp(default=0.0),
         'reactionner_tag':  StringProp(default='None'),
         'env':              DictProp(default={}),
-        'module_type':      StringProp(default='fork'),
-        'worker':           StringProp(default='none')
+        'module_type':      StringProp(default='fork', fill_brok=['full_status']),
+        'worker':           StringProp(default='none'),
+        'command':          StringProp(),
+        'timeout':          IntegerProp(default=10),
+        'ref':              StringProp(default=''),
     }
 
-    @staticmethod
-    def assume_at_least_id(_id):
-        """Set Action._id to the maximum of itself and _id
-
-        :param _id: action id to compare (from a previous run usually)
-        :type _id: int
-        :return: None
-        """
-        Action._id = max(Action._id, _id)
+    def __init__(self, params=None, parsing=True):
+        super(ActionBase, self).__init__(params, parsing=parsing)
+        self.creation_time = time.time()
+        self.fill_default()
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
@@ -286,9 +285,9 @@ class ActionBase(object):
         del self.process
 
         if (  # check for bad syntax in command line:
-            'sh: -c: line 0: unexpected EOF while looking for matching' in self.stderrdata
-            or ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata)
-            or 'Syntax error: Unterminated quoted string' in self.stderrdata
+            'sh: -c: line 0: unexpected EOF while looking for matching' in self.stderrdata or
+            ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata) or
+            'Syntax error: Unterminated quoted string' in self.stderrdata
         ):
             # Very, very ugly. But subprocess._handle_exitstatus does
             # not see a difference between a regular "exit 1" and a
@@ -352,40 +351,10 @@ class ActionBase(object):
 
     def kill__(self):
         """Kill the action and close fds
-
         :return: None
         """
         pass
 
-    def __getstate__(self):
-        """Call by pickle for dataify the object.
-        We dont want to pickle ref
-
-        :return: dict containing notification data
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-
-        return res
-
-    def __setstate__(self, state):
-        """Inverted function of getstate
-
-        :param state: state to restore
-        :type state: dict
-        :return: None
-        """
-        cls = self.__class__
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-#
 # OS specific "execute__" & "kill__" are defined by "Action" class
 # definition:
 #
@@ -444,8 +413,8 @@ if os.name != 'nt':
                 logger.error("Fail launching command: %s %s %s",
                              self.command, exp, force_shell)
                 # Maybe it's just a shell we try to exec. So we must retry
-                if (not force_shell and exp.errno == 8
-                   and exp.strerror == 'Exec format error'):
+                if (not force_shell and exp.errno == 8 and
+                        exp.strerror == 'Exec format error'):
                     return self.execute__(True)
                 self.output = exp.__str__()
                 self.exit_status = 2
