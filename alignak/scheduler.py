@@ -72,7 +72,7 @@ import os
 import cStringIO
 import tempfile
 import traceback
-import threading
+from Queue import Queue
 from collections import defaultdict
 
 from alignak.external_command import ExternalCommand
@@ -107,8 +107,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.must_run = True
 
         # protect this uniq list
-        self.waiting_results_lock = threading.RLock()
-        self.waiting_results = []  # satellites returns us results
+        self.waiting_results = Queue()  # satellites returns us results
         # and to not wait for them, we put them here and
         # use them later
 
@@ -195,8 +194,9 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         self.must_run = True
-        with self.waiting_results_lock:
-            del self.waiting_results[:]
+
+        with self.waiting_results.mutex:
+            self.waiting_results.queue.clear()
         for obj in self.checks, self.actions, self.downtimes,\
                 self.contact_downtimes, self.comments,\
                 self.broks, self.brokers:
@@ -1148,8 +1148,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.debug("Received %d passive results", nb_received)
                     for result in results:
                         result.set_type_passive()
-                    with self.waiting_results_lock:
-                        self.waiting_results.extend(results)
+                        self.waiting_results.put(result)
                 except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
@@ -1179,8 +1178,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.debug("Received %d passive results", nb_received)
                     for result in results:
                         result.set_type_passive()
-                    with self.waiting_results_lock:
-                        self.waiting_results.extend(results)
+                        self.waiting_results.put(result)
                 except HTTPEXCEPTIONS, exp:
                     logger.warning("Connection problem to the %s %s: %s",
                                    type, poll['name'], str(exp))
@@ -1583,12 +1581,9 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # All results are in self.waiting_results
         # We need to get them first
-        with self.waiting_results_lock:
-            waiting_results = self.waiting_results
-            self.waiting_results = []
-
-        for chk in waiting_results:
-            self.put_results(chk)
+        queue_size = self.waiting_results.qsize()
+        for _ in xrange(queue_size):
+            self.put_results(self.waiting_results.get())
 
         # Then we consume them
         # print "**********Consume*********"

@@ -271,8 +271,7 @@ class AlignakTest(unittest.TestCase):
         check.exit_status = exit_status
         check.execution_time = 0.001
         check.status = 'waitconsume'
-        self.sched.waiting_results.append(check)
-
+        self.sched.waiting_results.put(check)
 
     def scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
                        nointernal=False):
