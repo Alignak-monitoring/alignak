@@ -314,6 +314,7 @@ class Item(AlignakObject):
         cls = self.__class__
         # id is not in *_properties
         res = {'uuid': self.uuid}
+
         for prop in cls.properties:
             if hasattr(self, prop):
                 if isinstance(cls.properties[prop], SetProp):
@@ -327,7 +328,6 @@ class Item(AlignakObject):
                     res[prop] = list(getattr(self, prop))
                 else:
                     res[prop] = getattr(self, prop)
-
         return res
 
     @classmethod
