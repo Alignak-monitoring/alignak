@@ -1668,9 +1668,10 @@ class Scheduler(object):  # pylint: disable=R0902
                 continue
 
             if elt.in_maintenance == -1:
-                if elt.maintenance_period.is_time_valid(now):
-                    start_dt = elt.maintenance_period.get_next_valid_time_from_t(now)
-                    end_dt = elt.maintenance_period.get_next_invalid_time_from_t(start_dt + 1) - 1
+                timeperiod = self.timeperiods[elt.maintenance_period]
+                if timeperiod.is_time_valid(now):
+                    start_dt = timeperiod.get_next_valid_time_from_t(now)
+                    end_dt = timeperiod.get_next_invalid_time_from_t(start_dt + 1) - 1
                     data = {'ref': elt.uuid, 'ref_type': elt.my_type, 'start_time': start_dt,
                             'end_time': end_dt, 'fixed': 1, 'trigger_id': '',
                             'duration': 0, 'author': "system",
