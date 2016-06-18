@@ -124,7 +124,8 @@ class TestMaintPeriod(AlignakTest):
         print "planned start", time.asctime(time.localtime(t_next))
         t_next = t.get_next_invalid_time_from_t(t_next + 1)
         print "planned stop ", time.asctime(time.localtime(t_next))
-        svc3.maintenance_period = t
+        svc3.maintenance_period = t.uuid
+        self.sched.timeperiods[t.uuid] = t
 
         self.assertIs(-1, svc3.in_maintenance)
         #
