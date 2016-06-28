@@ -1787,6 +1787,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         self.remove_in_progress_notifications()
                         if not no_action:
                             self.create_notifications('PROBLEM', notif_period, hosts, services)
+                        self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                 elif self.in_scheduled_downtime_during_last_check is True:
                     # during the last check i was in a downtime. but now
