@@ -154,14 +154,16 @@ class Alignak(BaseSatellite):
                 t_to_go = act.t_to_go
 
                 #  Event handler do not have ref
-                ref = getattr(act, 'ref', None)
+                ref_id = getattr(act, 'ref', None)
                 new_t = max(0, t_to_go + difference)
 
                 # Notification should be check with notification_period
                 if act.is_a == 'notification':
+                    ref = self.sched.find_item_by_id(ref_id)
                     if ref.notification_period:
                         # But it's no so simple, we must match the timeperiod
-                        new_t = ref.notification_period.get_next_valid_time_from_t(new_t)
+                        notification_period = self.sched.timeperiods[ref.notification_period]
+                        new_t = notification_period.get_next_valid_time_from_t(new_t)
                     # And got a creation_time variable too
                     act.creation_time += difference
 

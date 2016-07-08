@@ -46,11 +46,11 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
-from alignak.objects.item import Item
+from alignak.alignakobject import AlignakObject
 from alignak.property import StringProp, BoolProp, IntegerProp
 
 
-class Comment(Item):
+class Comment(AlignakObject):
     """Comment class implements comments for monitoring purpose.
     It contains data like author, type, expire_time, persistent etc..
     """
