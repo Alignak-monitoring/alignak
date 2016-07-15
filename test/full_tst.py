@@ -69,10 +69,10 @@ class fullTest(unittest.TestCase):
                          }
 
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            args = ["../alignak/bin/alignak_%s.py" %daemon, "-c", "etc/full_test/%sd.ini" % daemon]
+            args = ["../alignak/bin/alignak_%s.py" %daemon, "-c", "../etc/daemons/%sd.ini" % daemon]
             self.procs[daemon] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-c", "etc/full_test/alignak.cfg"]
+        args = ["../alignak/bin/alignak_arbiter.py", "-c", "../etc/alignak.cfg"]
         self.procs['arbiter'] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         sleep(8)
