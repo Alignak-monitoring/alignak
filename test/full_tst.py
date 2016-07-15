@@ -23,6 +23,7 @@ import subprocess
 import json
 from time import sleep
 import requests
+import shutil
 
 from alignak_test import unittest
 
@@ -59,6 +60,24 @@ class fullTest(unittest.TestCase):
 
         req = requests.Session()
 
+        # copy etc config files in test/cfg/full and change folder in files for run and log of
+        # alignak
+        shutil.copytree('../etc', 'cfg/full')
+        files = ['cfg/full/daemons/brokerd.ini', 'cfg/full/daemons/pollerd.ini',
+                 'cfg/full/daemons/reactionnerd.ini', 'cfg/full/daemons/receiverd.ini',
+                 'cfg/full/daemons/schedulerd.ini', 'cfg/full/alignak.cfg']
+        replacements = {'/var/run/alignak': '/tmp', '/var/log/alignak': '/tmp'}
+        for filename in files:
+            lines = []
+            with open(filename) as infile:
+                for line in infile:
+                    for src, target in replacements.iteritems():
+                        line = line.replace(src, target)
+                    lines.append(line)
+            with open(filename, 'w') as outfile:
+                for line in lines:
+                    outfile.write(line)
+
         self.procs = {}
         satellite_map = {'arbiter': '7770',
                          'scheduler': '7768',
@@ -69,10 +88,10 @@ class fullTest(unittest.TestCase):
                          }
 
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            args = ["../alignak/bin/alignak_%s.py" %daemon, "-c", "../etc/daemons/%sd.ini" % daemon]
+            args = ["../alignak/bin/alignak_%s.py" %daemon, "-c", "cfg/full/daemons/%sd.ini" % daemon]
             self.procs[daemon] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-c", "../etc/alignak.cfg"]
+        args = ["../alignak/bin/alignak_arbiter.py", "-c", "cfg/full/alignak.cfg"]
         self.procs['arbiter'] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         sleep(8)

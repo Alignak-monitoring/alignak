@@ -46,7 +46,7 @@ docs/tools/pages/
 
 # test and coverage
 test/tmp/.cov*
-
+test/cfg/full
 
 # Pbr
 pbr-*.egg/

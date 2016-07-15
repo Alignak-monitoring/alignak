@@ -21,7 +21,7 @@ script:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && travis_wait pylint --rcfile=.pylintrc -r no alignak; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
-  - cd test && (pkill -6 -f "alignak_-" || :) && sudo mkdir /var/run/alignak && sudo chown -R alignak /var/run/alignak && python full_tst.py && cd ..
+  - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..
   - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_all_setup.sh; fi
 # specific call to launch coverage data into coveralls.io
 after_success:
