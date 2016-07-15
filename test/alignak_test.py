@@ -137,47 +137,6 @@ class AlignakTest(unittest.TestCase):
         def assertRegex(self, *args, **kwargs):
             return self.assertRegexpMatches(*args, **kwargs)
 
-    @classmethod
-    def setUp(cls):
-        """
-        Load default configuration when start test
-
-        @verified
-
-        :return: None
-        """
-        cls.arbiter = Arbiter(['cfg/cfg_default.cfg'], False, False, False, False,
-                              '/tmp/arbiter.log')
-        cls.arbiter.load_config_file()
-        cls.scheduler = Alignak([], False, False, False, '/tmp/scheduler.log')
-        cls.scheduler.load_modules_manager()
-        for arb in cls.arbiter.conf.arbiters:
-            if arb.is_me():
-                cls.arbiter.myself = arb
-        cls.arbiter.dispatcher = Dispatcher(cls.arbiter.conf, cls.arbiter.myself)
-        for realm in cls.arbiter.conf.realms:
-            for sched in cls.arbiter.dispatcher.schedulers:
-                conf_package = {
-                    'conf': realm.serialized_confs.itervalues().next(),
-                    'override_conf': sched.get_override_configuration(),
-                    'modules': [],
-                    'satellites': {'pollers': [], 'reactionners': []},
-                    'instance_name': sched.scheduler_name,
-                    'push_flavor': random.randint(1, 1000000),
-                    'skip_initial_broks': sched.skip_initial_broks,
-                    'accept_passive_unknown_check_results':
-                        sched.accept_passive_unknown_check_results,
-                    'api_key': cls.arbiter.dispatcher.conf.api_key,
-                    'secret': cls.arbiter.dispatcher.conf.secret,
-                    'http_proxy': cls.arbiter.dispatcher.conf.http_proxy,
-                    'statsd_host': cls.arbiter.dispatcher.conf.statsd_host,
-                    'statsd_port': cls.arbiter.dispatcher.conf.statsd_port,
-                    'statsd_prefix': cls.arbiter.dispatcher.conf.statsd_prefix,
-                    'statsd_enabled': cls.arbiter.dispatcher.conf.statsd_enabled,
-                }
-                cls.scheduler.new_conf = conf_package
-                cls.scheduler.setup_new_conf()
-
     def setup_with_file(self, configuration_file):
         """
         Load alignak with defined configuration file
