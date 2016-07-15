@@ -1969,9 +1969,12 @@ class Scheduler(object):  # pylint: disable=R0902
             metrics.append('scheduler.%s.%s %d %d' % (
                 self.instance_name, what, len(getattr(self, what)), now))
 
-        metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name, res['latency']['min'], now))
-        metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name, res['latency']['avg'], now))
-        metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name, res['latency']['max'], now))
+        metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name,
+                                                           res['latency']['min'], now))
+        metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name,
+                                                           res['latency']['avg'], now))
+        metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name,
+                                                           res['latency']['max'], now))
 
         all_commands = {}
         # compute some stats
