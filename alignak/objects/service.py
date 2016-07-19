@@ -621,9 +621,8 @@ class Service(SchedulingItem):
         :type t_threshold: int
         :return: None
         """
-        logger.warning("The results of service '%s' on host '%s' are stale "
-                       "by %s (threshold=%s).  I'm forcing an immediate check "
-                       "of the service.",
+        logger.warning("The freshness period of service '%s' on host '%s' is expired "
+                       "by %s (threshold=%s). I'm forcing the state to freshness_state.",
                        self.get_name(), self.host_name,
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(t_threshold))
