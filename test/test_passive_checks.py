@@ -74,7 +74,7 @@ class TestPassiveChecks(AlignakTest):
 
         self.assertEqual("d", host_A.freshness_state)
         self.assertEqual("u", host_B.freshness_state)
-        self.assertEqual("n", host_C.freshness_state)
+        self.assertEqual("o", host_C.freshness_state)
         self.assertEqual("d", host_D.freshness_state)
 
         self.assertEqual("o", svc0.freshness_state)
@@ -86,10 +86,56 @@ class TestPassiveChecks(AlignakTest):
     def test_2_freshness_expiration(self):
         """
         Test in end of freshness, item get the state of freshness_state and have output
-        'Freshness period expired'
+        'Freshness period expired' and no check planned to check item (host / service)
 
         :return: None
         """
+        self.setup_with_file('cfg/cfg_passive_checks.cfg')
+        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
 
-        pass
+        host_A = self.scheduler.sched.hosts.find_by_name("test_host_A")
+        host_B = self.scheduler.sched.hosts.find_by_name("test_host_B")
+        host_C = self.scheduler.sched.hosts.find_by_name("test_host_C")
+        host_D = self.scheduler.sched.hosts.find_by_name("test_host_D")
 
+        host_A.last_state_update = int(time.time()) - 10000
+        host_B.last_state_update = int(time.time()) - 10000
+        host_C.last_state_update = int(time.time()) - 10000
+        host_D.last_state_update = int(time.time()) - 10000
+
+        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_0")
+        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_1")
+        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_2")
+        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_3")
+        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_4")
+
+        svc0.last_state_update = int(time.time()) - 10000
+        svc1.last_state_update = int(time.time()) - 10000
+        svc2.last_state_update = int(time.time()) - 10000
+        svc3.last_state_update = int(time.time()) - 10000
+        svc4.last_state_update = int(time.time()) - 10000
+
+        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP']], False)
+        time.sleep(0.1)
+
+        self.assertEqual("OK", svc0.state)
+        self.assertEqual("WARNING", svc1.state)
+        self.assertEqual("CRITICAL", svc2.state)
+        self.assertEqual("UNKNOWN", svc3.state)
+        self.assertEqual("UNKNOWN", svc4.state)
+
+        self.assertEqual("DOWN", host_A.state)
+        self.assertEqual("DOWN", host_B.state)
+        self.assertEqual("UP", host_C.state)
+        self.assertEqual("DOWN", host_D.state)
+
+        all = [svc0, svc1, svc2, svc3, svc4, host_A, host_B, host_C, host_D]
+        for item in all:
+            self.assertEqual("Freshness period expired", item.output)
+
+        self.assert_actions_count(0)
+        self.assert_checks_count(2) # test_host_0 and test_router_0
