@@ -71,7 +71,7 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
 from alignak.util import format_t_into_dhms_format
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import logger, naglog_result
 
 
@@ -133,6 +133,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+        'freshness_state':
+            CharProp(default='d', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
