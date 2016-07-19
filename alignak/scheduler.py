@@ -119,16 +119,15 @@ class Scheduler(object):  # pylint: disable=R0902
         self.recurrent_works = {
             0: ('update_downtimes_and_comments', self.update_downtimes_and_comments, 1),
             1: ('schedule', self.schedule, 1),  # just schedule
-            2: ('consume_results', self.consume_results, 1),  # incorporate checks and dependencies
+            2: ('check_freshness', self.check_freshness, 10),
+            3: ('consume_results', self.consume_results, 1),  # incorporate checks and dependencies
 
             # now get the news actions (checks, notif) raised
-            3: ('get_new_actions', self.get_new_actions, 1),
-            4: ('get_new_broks', self.get_new_broks, 1),  # and broks
-            5: ('scatter_master_notifications', self.scatter_master_notifications, 1),
-            6: ('delete_zombie_checks', self.delete_zombie_checks, 1),
-            7: ('delete_zombie_actions', self.delete_zombie_actions, 1),
-            # 3: (self.delete_unwanted_notifications, 1),
-            8: ('check_freshness', self.check_freshness, 10),
+            4: ('get_new_actions', self.get_new_actions, 1),
+            5: ('get_new_broks', self.get_new_broks, 1),  # and broks
+            6: ('scatter_master_notifications', self.scatter_master_notifications, 1),
+            7: ('delete_zombie_checks', self.delete_zombie_checks, 1),
+            8: ('delete_zombie_actions', self.delete_zombie_actions, 1),
             9: ('clean_caches', self.clean_caches, 1),
             10: ('update_retention_file', self.update_retention_file, 3600),
             11: ('check_orphaned', self.check_orphaned, 60),
@@ -1783,16 +1782,20 @@ class Scheduler(object):  # pylint: disable=R0902
             elt.broks = []
 
     def check_freshness(self):
-        """Iter over all hosts and services to check freshness
+        """
+        Iter over all hosts and services to check freshness if check_freshness enabled and
+        passive_checks_enabled enabled
 
         :return: None
         """
-        # print "********** Check freshness******"
         for elt in self.iter_hosts_and_services():
-            chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
-                                         self.macromodulations, self.checkmodulations, self.checks)
-            if chk is not None:
-                self.add(chk)
+            if elt.check_freshness and elt.passive_checks_enabled:
+                chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
+                                             self.macromodulations, self.checkmodulations,
+                                             self.checks)
+                if chk is not None:
+                    self.add(chk)
+                    self.waiting_results.put(chk)
 
     def check_orphaned(self):
         """Check for orphaned checks/actions::

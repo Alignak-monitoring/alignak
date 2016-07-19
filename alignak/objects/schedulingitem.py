@@ -119,6 +119,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
             IntegerProp(default=0, fill_brok=['full_status']),
+        'freshness_state':
+            CharProp(default='u', fill_brok=['full_status']),
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
         'event_handler_enabled':
@@ -631,34 +633,46 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
-        if not self.in_checking:
-            if cls.global_check_freshness:
-                if self.check_freshness and self.freshness_threshold != 0:
-                    # case we start alignak, we begin the freshness period
-                    if self.last_state_update == 0.0:
-                        self.last_state_update = now
-                    if self.last_state_update < now - (
-                            self.freshness_threshold + cls.additional_freshness_latency
-                    ):
-                        # Fred: Do not raise a check for passive
-                        # only checked hosts when not in check period ...
-                        if self.passive_checks_enabled and not self.active_checks_enabled:
-                            timeperiod = timeperiods[self.check_period]
-                            if timeperiod is None or timeperiod.is_time_valid(now):
-                                # Raise a log
-                                self.raise_freshness_log_entry(
-                                    int(now - self.last_state_update),
-                                    int(now - self.freshness_threshold)
-                                )
-                                # And a new check
-                                return self.launch_check(now, hosts, services, timeperiods,
-                                                         macromodulations, checkmodulations, checks)
-                            else:
-                                logger.debug(
-                                    "Should have checked freshness for passive only"
-                                    " checked host:%s, but host is not in check period.",
-                                    self.host_name
-                                )
+        if not self.in_checking and cls.global_check_freshness:
+            if self.check_freshness and self.freshness_threshold != 0:
+                # case we start alignak, we begin the freshness period
+                if self.last_state_update == 0.0:
+                    self.last_state_update = now
+                if self.last_state_update < now - (
+                        self.freshness_threshold + cls.additional_freshness_latency
+                ):
+                    # Fred: Do not raise a check for passive
+                    # only checked hosts when not in check period ...
+                    if self.passive_checks_enabled and not self.active_checks_enabled:
+                        timeperiod = timeperiods[self.check_period]
+                        if timeperiod is None or timeperiod.is_time_valid(now):
+                            # Raise a log
+                            self.raise_freshness_log_entry(
+                                int(now - self.last_state_update),
+                                int(now - self.freshness_threshold)
+                            )
+                            # And a new check
+                            chk = self.launch_check(now, hosts, services, timeperiods,
+                                                    macromodulations, checkmodulations, checks)
+                            chk.output = "Freshness period expired"
+                            chk.set_type_passive()
+                            if self.freshness_state == 'o':
+                                chk.exit_status = 0
+                            elif self.freshness_state == 'w':
+                                chk.exit_status = 1
+                            elif self.freshness_state == 'd':
+                                chk.exit_status = 2
+                            elif self.freshness_state == 'c':
+                                chk.exit_status = 2
+                            elif self.freshness_state == 'u':
+                                chk.exit_status = 3
+                            return chk
+                        else:
+                            logger.debug(
+                                "Should have checked freshness for passive only"
+                                " checked host:%s, but host is not in check period.",
+                                self.host_name
+                            )
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
@@ -1086,17 +1100,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # if the update is 'fresh', do not raise dep,
                 # cached_check_horizon = cached_service_check_horizon for service
                 if dep_item.last_state_update < now - cls.cached_check_horizon:
-                    logger.warning(dep_item.host_name)
-                    # Fred : passive only checked host dependency ...
-                    chk = dep_item.launch_check(now, hosts, services, timeperiods,
-                                                macromodulations, checkmodulations, checks,
-                                                ref_check, dependent=True)
-                    # i = dep_item.launch_check(now, ref_check)
-                    if chk is not None:
-                        new_checks.append(chk)
-                # else:
-                # print "DBG: **************** The state is FRESH",
-                # dep_item.host_name, time.asctime(time.localtime(dep_item.last_state_update))
+                    # not lunch check if dependence is a passive check
+                    if dep_item.active_checks_enabled:
+                        chk = dep_item.launch_check(now, hosts, services, timeperiods,
+                                                    macromodulations, checkmodulations, checks,
+                                                    ref_check, dependent=True)
+                        if chk is not None:
+                            new_checks.append(chk)
         return new_checks
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,

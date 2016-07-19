@@ -296,31 +296,3 @@ class TestDependencies(AlignakTest):
     #     self.assert_checks_count(1)
     #     self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
     #     self.assert_checks_match(0, 'hostname test_host_C', 'command')
-
-    def test_passive_dependencies(self):
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
-        # Test if not schedule a check on passive service/host when start alignak.
-        # So the freshness start
-
-        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
-        host.checks_in_progress = []
-        host.event_handler_enabled = False
-
-        host_A = self.scheduler.sched.hosts.find_by_name("test_host_A")
-        host_A.checks_in_progress = []
-        host_A.event_handler_enabled = False
-
-        self.scheduler_loop(1, [[host, 0, 'UP']], False)
-        time.sleep(0.1)
-
-        self.assert_actions_count(0)
-        self.assert_checks_count(11)
-
-
-
-        # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
-
-
-        pass
