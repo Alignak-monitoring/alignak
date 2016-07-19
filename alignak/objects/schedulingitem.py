@@ -119,6 +119,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
             IntegerProp(default=0, fill_brok=['full_status']),
+        'freshness_state':
+            CharProp(default='u', fill_brok=['full_status']),
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
         'event_handler_enabled':
