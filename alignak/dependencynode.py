@@ -73,21 +73,25 @@ class DependencyNode(object):
     """
     def __init__(self, params=None):
 
-        if params is None:
-            self.operand = None
-            self.sons = []
+        self.operand = None
+        self.sons = []
+        # Of: values are a triple OK,WARN,CRIT
+        self.of_values = ('0', '0', '0')
+        self.is_of_mul = False
+        self.configuration_errors = []
+        self.not_value = False
+        if params is not None:
+            if 'operand' in params:
+                self.operand = params['operand']
+            if 'sons' in params:
+                self.sons = [DependencyNode(elem) for elem in params['sons']]
             # Of: values are a triple OK,WARN,CRIT
-            self.of_values = ('0', '0', '0')
-            self.is_of_mul = False
-            self.configuration_errors = []
-            self.not_value = False
-        else:
-            self.operand = params['operand']
-            self.sons = [DependencyNode(elem) for elem in params['sons']]
-            # Of: values are a triple OK,WARN,CRIT
-            self.of_values = params['of_values']
-            self.is_of_mul = params['is_of_mul']
-            self.not_value = params['not_value']
+            if 'of_values' in params:
+                self.of_values = tuple(params['of_values'])
+            if 'is_of_mul' in params:
+                self.is_of_mul = params['is_of_mul']
+            if 'not_value' in params:
+                self.not_value = params['not_value']
 
     def __str__(self):
         return "Op:'%s' Val:'%s' Sons:'[%s]' IsNot:'%s'" % (self.operand, self.of_values,
