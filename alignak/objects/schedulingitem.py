@@ -1052,7 +1052,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * dep.last_state_update < now - cls.cached_check_horizon (check of dependency is "old")
 
         :param ref_check: Check we want to get dependency from
-        :type ref_check:
+        :type ref_check: alignak.check.Check
         :param hosts: hosts objects, used for almost every operation
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used for almost every operation
@@ -1073,25 +1073,27 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         new_checks = []
         for (dep_id, _, _, timeperiod_id, _) in self.act_depend_of:
             if dep_id in hosts:
-                dep = hosts[dep_id]
+                dep_item = hosts[dep_id]
             else:
-                dep = services[dep_id]
+                dep_item = services[dep_id]
             timeperiod = timeperiods[timeperiod_id]
-            # If the dep timeperiod is not valid, do not raise the dep,
+            # If the dep_item timeperiod is not valid, do not raise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
                 # if the update is 'fresh', do not raise dep,
                 # cached_check_horizon = cached_service_check_horizon for service
-                if dep.last_state_update < now - cls.cached_check_horizon:
+                if dep_item.last_state_update < now - cls.cached_check_horizon:
+                    logger.warning(dep_item.host_name)
                     # Fred : passive only checked host dependency ...
-                    chk = dep.launch_check(now, hosts, services, timeperiods, macromodulations,
-                                           checkmodulations, checks, ref_check, dependent=True)
-                    # i = dep.launch_check(now, ref_check)
+                    chk = dep_item.launch_check(now, hosts, services, timeperiods,
+                                                macromodulations, checkmodulations, checks,
+                                                ref_check, dependent=True)
+                    # i = dep_item.launch_check(now, ref_check)
                     if chk is not None:
                         new_checks.append(chk)
                 # else:
                 # print "DBG: **************** The state is FRESH",
-                # dep.host_name, time.asctime(time.localtime(dep.last_state_update))
+                # dep_item.host_name, time.asctime(time.localtime(dep_item.last_state_update))
         return new_checks
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
