@@ -222,7 +222,7 @@ class AlignakTest(unittest.TestCase):
         check.status = 'waitconsume'
         self.sched.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items):
+    def scheduler_loop(self, count, items, reset_checks=True):
         """
         Manage scheduler checks
 
@@ -234,21 +234,30 @@ class AlignakTest(unittest.TestCase):
         :type items: list
         :return: None
         """
-        for num in range(count):
+        if reset_checks:
             self.scheduler.sched.checks = {}
+        for num in range(count):
             for item in items:
                 (obj, exit_status, output) = item
-                self.scheduler.sched.schedule([obj])
-                for chk in self.scheduler.sched.checks.values():
-                    print(output)
-                    chk.set_type_active()
-                    chk.output = output
-                    chk.exit_status = exit_status
-                    self.scheduler.sched.waiting_results.put(chk)
-                for i in self.scheduler.sched.recurrent_works:
-                    (name, fun, nb_ticks) = self.scheduler.sched.recurrent_works[i]
-                    if nb_ticks == 1:
-                        fun()
+                obj.next_chk = time.time()
+                chk = obj.launch_check(obj.next_chk,
+                                       self.scheduler.sched.hosts,
+                                       self.scheduler.sched.services,
+                                       self.scheduler.sched.timeperiods,
+                                       self.scheduler.sched.macromodulations,
+                                       self.scheduler.sched.checkmodulations,
+                                       self.scheduler.sched.checks,
+                                       force=True)
+                self.scheduler.sched.add_check(chk)
+                # update the check to add the result
+                chk.set_type_active()
+                chk.output = output
+                chk.exit_status = exit_status
+                self.scheduler.sched.waiting_results.put(chk)
+            for i in self.scheduler.sched.recurrent_works:
+                (name, fun, nb_ticks) = self.scheduler.sched.recurrent_works[i]
+                if nb_ticks == 1:
+                    fun()
 
     def worker_loop(self, verbose=True):
         self.sched.delete_zombie_checks()
@@ -416,6 +425,49 @@ class AlignakTest(unittest.TestCase):
                                                                                for b in broks
                                                                                if b.type == 'log'),
                                                                               1))))
+
+    def assert_checks_count(self, number):
+        """
+        Check the number of actions
+
+        @verified
+
+        :param number: number of actions we must have
+        :type number: int
+        :return: None
+        """
+        print self.scheduler.sched.checks
+        checks = sorted(self.scheduler.sched.checks.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(checks),
+                         "Not found right number of checks:\nchecks_logs=[[[\n%s\n]]]" %
+                         ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
+                                    'command: %s' %
+                                    (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
+                                    for idx, b in enumerate(checks))))
+
+    def assert_checks_match(self, index, pattern, field):
+        """
+        Check if pattern verified in field(property) name of the check with index in check list
+
+        @verified
+
+        :param index: index number of checks list
+        :type index: int
+        :param pattern: pattern to verify is in the check
+        :type pattern: str
+        :param field: name of the field (property) of the check
+        :type field: str
+        :return: None
+        """
+        regex = re.compile(pattern)
+        checks = sorted(self.scheduler.sched.checks.values(), key=lambda x: x.creation_time)
+        mycheck = checks[index]
+        self.assertTrue(regex.search(getattr(mycheck, field)),
+                        "Not found a matched pattern in checks:\nindex=%s field=%s pattern=%r\n"
+                        "check_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
+                        "command: %s" % (
+                            index, field, pattern, mycheck.creation_time, mycheck.is_a,
+                            mycheck.type, mycheck.status, mycheck.t_to_go, mycheck.command))
 
     def _any_log_match(self, pattern, assert_not):
         regex = re.compile(pattern)
