@@ -634,6 +634,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not self.in_checking:
             if cls.global_check_freshness:
                 if self.check_freshness and self.freshness_threshold != 0:
+                    # case we start alignak, we begin the freshness period
+                    if self.last_state_update == 0.0:
+                        self.last_state_update = now
                     if self.last_state_update < now - (
                             self.freshness_threshold + cls.additional_freshness_latency
                     ):
