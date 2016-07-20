@@ -1791,7 +1791,8 @@ class Scheduler(object):  # pylint: disable=R0902
         for elt in self.iter_hosts_and_services():
             if elt.check_freshness and elt.passive_checks_enabled:
                 chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
-                                             self.macromodulations, self.checkmodulations, self.checks)
+                                             self.macromodulations, self.checkmodulations,
+                                             self.checks)
                 if chk is not None:
                     self.add(chk)
                     self.waiting_results.put(chk)
