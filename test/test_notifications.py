@@ -105,7 +105,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(1)
 
         now = int(time.time())
-        cmd = "[{}] ENABLE_SVC_NOTIFICATIONS;{};{}\n".format(now, svc.host_name, svc.service_description)
+        cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name, svc.service_description)
         self.scheduler.sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
