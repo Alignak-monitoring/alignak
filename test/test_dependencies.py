@@ -300,43 +300,42 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(0, 'hostname test_host_00', 'command')
 
-            # def test_multi_hosts(self):
-    #     """
-    #     Test when have multiple hosts dependency the host
-    #     test_host_A and test_host_B depends on test_host_C
-    #
-    #     TODO test_host_A and test_host_B... are only passive
-    #     :return: None
-    #     """
-    #     self.setup_with_file('cfg/cfg_dependencies.cfg')
-    #     # delete schedule
-    #     del self.scheduler.sched.recurrent_works[1]
-    #
-    #     host_A = self.scheduler.sched.hosts.find_by_name("test_host_A")
-    #     host_A.checks_in_progress = []
-    #     host_A.event_handler_enabled = False
-    #
-    #     host_B = self.scheduler.sched.hosts.find_by_name("test_host_B")
-    #     host_B.checks_in_progress = []
-    #     host_B.event_handler_enabled = False
-    #
-    #     host_C = self.scheduler.sched.hosts.find_by_name("test_host_C")
-    #     host_C.checks_in_progress = []
-    #     host_C.event_handler_enabled = False
-    #
-    #     self.scheduler_loop(1, [[host_A, 0, 'UP'], [host_B, 0, 'UP'], [host_C, 0, 'UP']], False)
-    #     time.sleep(0.1)
-    #     self.scheduler_loop(1, [[host_A, 0, 'UP'], [host_B, 0, 'UP'], [host_C, 0, 'UP']], False)
-    #     time.sleep(0.1)
-    #     self.assertEqual("HARD", host_A.state_type)
-    #     self.assertEqual("UP", host_A.state)
-    #     self.assertEqual("HARD", host_B.state_type)
-    #     self.assertEqual("UP", host_B.state)
-    #     self.assertEqual("HARD", host_C.state_type)
-    #     self.assertEqual("UP", host_C.state)
-    #
-    #     self.scheduler_loop(1, [[host_C, 2, 'DOWN']], False)
-    #     time.sleep(0.1)
-    #     self.assert_checks_count(1)
-    #     self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
-    #     self.assert_checks_match(0, 'hostname test_host_C', 'command')
+    def test_multi_hosts(self):
+        """
+        Test when have multiple hosts dependency the host
+        test_host_00 and test_host_11 depends on test_router_0
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.scheduler.sched.recurrent_works[1]
+
+        host_00 = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host_00.checks_in_progress = []
+        host_00.event_handler_enabled = False
+
+        host_11 = self.scheduler.sched.hosts.find_by_name("test_host_11")
+        host_11.checks_in_progress = []
+        host_11.event_handler_enabled = False
+
+        router_00 = self.scheduler.sched.hosts.find_by_name("test_router_00")
+        router_00.checks_in_progress = []
+        router_00.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']], False)
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']], False)
+        time.sleep(0.1)
+        self.assertEqual("HARD", host_00.state_type)
+        self.assertEqual("UP", host_00.state)
+        self.assertEqual("HARD", host_11.state_type)
+        self.assertEqual("UP", host_11.state)
+        self.assertEqual("HARD", router_00.state_type)
+        self.assertEqual("UP", router_00.state)
+
+        self.scheduler_loop(1, [[host_00, 2, 'DOWN'], [host_11, 2, 'DOWN']], False)
+        time.sleep(0.1)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')
