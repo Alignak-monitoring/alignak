@@ -1100,8 +1100,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # if the update is 'fresh', do not raise dep,
                 # cached_check_horizon = cached_service_check_horizon for service
                 if dep_item.last_state_update < now - cls.cached_check_horizon:
-                    # not lunch check if dependence is a passive check
-                    if dep_item.active_checks_enabled:
+                    # not lunch check if dependence is a passive check or if a check yet planned
+                    if dep_item.active_checks_enabled and not dep_item.in_checking:
                         chk = dep_item.launch_check(now, hosts, services, timeperiods,
                                                     macromodulations, checkmodulations, checks,
                                                     ref_check, dependent=True)
