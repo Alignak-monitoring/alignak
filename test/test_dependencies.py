@@ -256,7 +256,51 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(0, 'hostname test_host_00', 'command')
 
-    # def test_multi_hosts(self):
+    def test_passive_service_not_check_passive_host(self):
+        """
+        Test passive service critical not check the dependent host (passive)
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+
+        host = self.scheduler.sched.hosts.find_by_name("test_host_E")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_E", "test_ok_0")
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], False)
+        self.assert_actions_count(0)
+        self.assert_checks_count(0)
+
+    def test_passive_service_check_active_host(self):
+        """
+        Test passive service critical check the dependent host (active)
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+
+        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_passive_0")
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], False)
+        self.assert_actions_count(0)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_00', 'command')
+
+            # def test_multi_hosts(self):
     #     """
     #     Test when have multiple hosts dependency the host
     #     test_host_A and test_host_B depends on test_host_C
