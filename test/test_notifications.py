@@ -450,7 +450,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(2)
 
         now = time.time()
-        cmd = "[{}] ACKNOWLEDGE_SVC_PROBLEM;{};{};{};{};{};{};{}\n".\
+        cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(now, svc.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
         self.scheduler.sched.run_external_command(cmd)
@@ -502,7 +502,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(0)
 
         now = time.time()
-        cmd = "[{}] SCHEDULE_SVC_DOWNTIME;{};{};{};{};{};{};{};{};{}\n".\
+        cmd = "[{0}] SCHEDULE_SVC_DOWNTIME;{1};{2};{3};{4};{5};{6};{7};{8};{9}\n".\
             format(now, svc.host_name, svc.service_description, now, (now + 1000), 1, 0, 0,
                    'darth vader', 'add downtime for maintenance')
         self.scheduler.sched.run_external_command(cmd)
