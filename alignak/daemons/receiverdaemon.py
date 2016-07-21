@@ -56,6 +56,7 @@ import time
 import traceback
 from multiprocessing import active_children
 
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
@@ -197,7 +198,8 @@ class Receiver(Satellite):
         :return: None
         """
         with self.conf_lock:
-            conf = self.new_conf
+            #conf = self.new_conf
+            conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals
@@ -278,6 +280,10 @@ class Receiver(Satellite):
                 self.modules = mods = conf['global']['modules']
                 self.have_modules = True
                 logger.info("We received modules %s ", mods)
+
+                self.do_load_modules(self.modules)
+                # and start external modules too
+                self.modules_manager.start_external_instances()
 
             # Set our giving timezone from arbiter
             use_timezone = conf['global']['use_timezone']
@@ -407,9 +413,6 @@ class Receiver(Satellite):
                 return
 
             self.setup_new_conf()
-            self.do_load_modules(self.modules)
-            # and start external modules too
-            self.modules_manager.start_external_instances()
 
             # Do the modules part, we have our modules in self.modules
             # REF: doc/receiver-modules.png (1)
