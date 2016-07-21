@@ -18,12 +18,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
+"""
+This file test notifications
+"""
 
 import time
 from alignak_test import AlignakTest
 
 
 class TestNotifications(AlignakTest):
+    """
+    This class test notifications
+    """
 
     def test_0_nonotif(self):
         """
@@ -105,7 +111,8 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(1)
 
         now = int(time.time())
-        cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name, svc.service_description)
+        cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
+                                                                svc.service_description)
         self.scheduler.sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -136,7 +143,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -206,7 +214,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -261,7 +270,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -297,6 +307,11 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(2, 'serviceoutput WARNING', 'command')
 
     def test_notifications_with_delay(self):
+        """
+        Test notifications with use property first_notification_delay
+
+        :return: None
+        """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
@@ -357,7 +372,7 @@ class TestNotifications(AlignakTest):
         self.assertEqual(0, svc.current_notification_number)
         self.assert_actions_count(5)
 
-    def test_notifications_with_delay_recover_before_notif(self):
+    def test_notifications_delay_recover_before_notif(self):
         """
         TODO
 
@@ -379,7 +394,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -424,7 +440,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -489,7 +506,8 @@ class TestNotifications(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []

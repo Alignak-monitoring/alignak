@@ -256,7 +256,7 @@ class Alignak(BaseSatellite):
 
             self.cur_conf = conf
             self.override_conf = override_conf
-            self.modules = modules
+            self.modules = unserialize(modules, True)
             self.satellites = satellites
             # self.pollers = self.app.pollers
 
