@@ -198,7 +198,6 @@ class Receiver(Satellite):
         :return: None
         """
         with self.conf_lock:
-            #conf = self.new_conf
             conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
