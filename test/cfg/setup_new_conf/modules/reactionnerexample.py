@@ -3,7 +3,7 @@ from alignak.log import logger
 
 properties = {
     # Which daemon can load this module
-    'daemons': ['scheduler'],
+    'daemons': ['reactionner'],
     # name of the module type ; to distinguish between them:
     'type': 'example',
      # is the module "external" (external means here a daemon module)
@@ -14,16 +14,16 @@ properties = {
 
 
 def get_instance(mod_conf):
-    logger.info("[schedulerexample] Example module %s",
+    logger.info("[reactionnerexample] Example module %s",
                 mod_conf.get_name())
-    instance = Schedulerexample(mod_conf)
+    instance = Reactionnerexample(mod_conf)
     return instance
 
 
-class Schedulerexample(BaseModule):
+class Reactionnerexample(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
 
     def init(self):
-        logger.info("[Dummy Scheduler] Initialization of the dummy scheduler module")
+        logger.info("[Dummy Reactionner] Initialization of the dummy reactionner module")
         pass
