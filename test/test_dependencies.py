@@ -19,8 +19,8 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from alignak_test import AlignakTest
 import time
+from alignak_test import AlignakTest
 
 
 class TestDependencies(AlignakTest):
@@ -48,7 +48,8 @@ class TestDependencies(AlignakTest):
             if n_type == 'network_dep':
                 self.assertEqual(self.scheduler.sched.hosts[dep_id].host_name, 'test_host_00')
             elif n_type == 'logic_dep':
-                self.assertEqual(self.scheduler.sched.services[dep_id].service_description, 'test_ok_0')
+                self.assertEqual(self.scheduler.sched.services[dep_id].service_description,
+                                 'test_ok_0')
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
@@ -114,7 +115,8 @@ class TestDependencies(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -178,7 +180,8 @@ class TestDependencies(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                          "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -223,13 +226,15 @@ class TestDependencies(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
+        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                           "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc1.notification_interval = 0.001
         svc1.checks_in_progress = []
         svc1.event_handler_enabled = False
 
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0_disbld_hst_dep")
+        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname(
+            "test_host_00", "test_ok_0_disbld_hst_dep")
         # To make tests quicker we make notifications send very quickly
         svc2.notification_interval = 0.001
         svc2.checks_in_progress = []
@@ -266,7 +271,8 @@ class TestDependencies(AlignakTest):
         self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
 
         host = self.scheduler.sched.hosts.find_by_name("test_host_E")
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_E", "test_ok_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_E",
+                                                                          "test_ok_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
 
@@ -287,7 +293,8 @@ class TestDependencies(AlignakTest):
         self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
 
         host = self.scheduler.sched.hosts.find_by_name("test_host_00")
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_passive_0")
+        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                          "test_passive_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
 
@@ -323,9 +330,11 @@ class TestDependencies(AlignakTest):
         router_00.checks_in_progress = []
         router_00.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']], False)
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']],
+                            False)
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']], False)
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']],
+                            False)
         time.sleep(0.1)
         self.assertEqual("HARD", host_00.state_type)
         self.assertEqual("UP", host_00.state)
