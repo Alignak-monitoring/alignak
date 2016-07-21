@@ -56,7 +56,7 @@ import time
 import traceback
 from multiprocessing import active_children
 
-from alignak.misc.serialization import unserialize, AlignakClassLookupException
+from alignak.misc.serialization import unserialize
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
