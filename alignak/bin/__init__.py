@@ -50,6 +50,13 @@ Alignak.
 import sys
 from ._deprecated_VERSION import DeprecatedAlignakBin
 
+from alignak.notification import Notification
+from alignak.eventhandler import EventHandler
+from alignak.check import Check
+from alignak.downtime import Downtime
+from alignak.contactdowntime import ContactDowntime
+from alignak.comment import Comment
+
 # Make sure people are using Python 2.6 or higher
 # This is the canonical python version check
 if sys.version_info < (2, 6):
