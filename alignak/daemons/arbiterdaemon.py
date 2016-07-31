@@ -66,6 +66,7 @@ import traceback
 import socket
 import cStringIO
 import json
+import copy
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -399,15 +400,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Ok, here we must check if we go on or not.
         # TODO: check OK or not
-        self.log_level = self.conf.log_level
-        self.use_local_log = self.conf.use_local_log
-        self.local_log = self.conf.local_log
-        self.pidfile = os.path.abspath(self.conf.lock_file)
-        self.idontcareaboutsecurity = self.conf.idontcareaboutsecurity
-        self.user = self.conf.alignak_user
-        self.group = self.conf.alignak_group
-        self.daemon_enabled = self.conf.daemon_enabled
-        self.daemon_thread_pool_size = self.conf.daemon_thread_pool_size
+        self.log_level = copy.deepcopy(self.conf.log_level)
+        self.use_local_log = copy.deepcopy(self.conf.use_local_log)
+        self.local_log = copy.deepcopy(self.conf.local_log)
+        self.pidfile = copy.deepcopy(os.path.abspath(self.conf.lock_file))
+        self.idontcareaboutsecurity = copy.deepcopy(self.conf.idontcareaboutsecurity)
+        self.user = copy.deepcopy(self.conf.alignak_user)
+        self.group = copy.deepcopy(self.conf.alignak_group)
+        self.daemon_enabled = copy.deepcopy(self.conf.daemon_enabled)
+        self.daemon_thread_pool_size = copy.deepcopy(self.conf.daemon_thread_pool_size)
 
         self.accept_passive_unknown_check_results = BoolProp.pythonize(
             getattr(self.myself, 'accept_passive_unknown_check_results', '0')
@@ -418,7 +419,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if self.conf.workdir == '':
             self.workdir = os.path.abspath(os.path.dirname(self.pidfile))
         else:
-            self.workdir = self.conf.workdir
+            self.workdir = copy.deepcopy(self.conf.workdir)
 
         #  We need to set self.host & self.port to be used by do_daemon_init_and_start
         self.host = self.myself.address
@@ -510,40 +511,70 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        try:
-            # Setting log level
-            logger.setLevel('INFO')
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
+        # Setting log level
+        logger.setLevel('INFO')
+        # Force the debug level if the daemon is said to start with such level
+        if self.debug:
+            logger.setLevel('DEBUG')
 
-            # Log will be broks
-            for line in self.get_header():
-                logger.info(line)
+        # Log will be broks
+        for line in self.get_header():
+            logger.info(line)
 
-            self.load_config_file()
-            logger.setLevel(self.log_level)
+        initial_properties = {}
+        for attr in dir(self):
+            if not attr.startswith("__"):
+                value = getattr(self, attr)
+                if not callable(value):
+                    initial_properties[attr] = value
 
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-            self.do_daemon_init_and_start()
+        while True:
+            try:
+                self.load_config_file()
+                logger.setLevel(self.log_level)
 
-            # ok we are now fully daemonized (if requested)
-            # now we can start our "external" modules (if any):
-            self.modules_manager.start_external_instances()
+                # Look if we are enabled or not. If ok, start the daemon mode
+                self.look_for_early_exit()
+                self.do_daemon_init_and_start()
 
-            # Ok now we can load the retention data
-            self.hook_point('load_retention')
+                # ok we are now fully daemonized (if requested)
+                # now we can start our "external" modules (if any):
+                self.modules_manager.start_external_instances()
 
-            # And go for the main loop
-            self.do_mainloop()
-        except SystemExit, exp:
-            # With a 2.4 interpreter the sys.exit() in load_config_file
-            # ends up here and must be handled.
-            sys.exit(exp.code)
-        except Exception, exp:
-            self.print_unrecoverable(traceback.format_exc())
-            raise
+                # Ok now we can load the retention data
+                self.hook_point('load_retention')
+
+                # And go for the main loop
+                self.do_mainloop()
+            except SystemExit, exp:
+                # With a 2.4 interpreter the sys.exit() in load_config_file
+                # ends up here and must be handled.
+                sys.exit(exp.code)
+            except Exception, exp:
+                self.print_unrecoverable(traceback.format_exc())
+                raise
+            if not self.need_config_reload:
+                return
+            else:
+                self.need_config_reload = False
+
+                for attr in dir(self):
+                    if not attr.startswith("_"):
+                        if attr in initial_properties:
+                            setattr(self, attr, initial_properties[attr])
+                        else:
+                            delattr(self, attr)
+
+                #self.broks = {}
+                #self.is_master = False
+                #self.myself = None
+                #self.nb_broks_send = 0
+                #self.external_commands = []
+                #self.fifo = None
+                #self.must_run = True
+                #self.http_interface = ArbiterInterface(self)
+                #self.conf = Config()
+                self.do_replace = True
 
     def setup_new_conf(self):
         """ Setup a new conf received from a Master arbiter.
@@ -576,13 +607,31 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # If I am a spare, I wait for the master arbiter to send me
         # true conf.
-        if self.myself.spare:
-            logger.debug("I wait for master")
-            self.wait_for_master_death()
+        while True:
+            if self.myself.spare:
+                logger.debug("I wait for master")
+                self.wait_for_master_death()
 
-        if self.must_run:
-            # Main loop
-            self.run()
+            if self.must_run:
+                # Main loop
+                self.run()
+            if not self.need_config_reload:
+                break
+            else:
+                # self.log_level
+                self.myself = None
+                self.external_commands = None
+                self.external_command = None
+                self.dispatcher = None
+                self.external_commands = []
+                logger.debug("References.....")
+                self.http_thread = None
+                #del logger._broker.conf
+                del self.http_interface.app.conf
+                self.conf = None
+                self.conf = Config()
+                self.load_config_file()
+                self.need_config_reload = False
 
     def wait_for_master_death(self):
         """Wait for a master timeout and take the lead if necessary
@@ -758,6 +807,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if self.need_dump_memory:
                 self.dump_memory()
                 self.need_dump_memory = False
+
+            if self.need_config_reload:
+                return
 
     def get_daemons(self, daemon_type):
         """Returns the daemons list defined in our conf for the given type

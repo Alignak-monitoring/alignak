@@ -26,6 +26,8 @@ try:
 except ImportError:
     import json
 
+from alignak.log import logger
+
 
 def serialize(obj, no_dump=False):
     """

@@ -64,6 +64,7 @@ from __future__ import print_function
 import os
 import errno
 import sys
+import copy
 import time
 import signal
 import select
@@ -332,7 +333,7 @@ class Daemon(object):  # pylint: disable=R0902
                 self.need_objects_dump = False
             if self.need_config_reload:
                 logger.debug('Reloading configuration')
-                self.need_config_reload = False
+                return
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
                 break
@@ -656,14 +657,9 @@ class Daemon(object):  # pylint: disable=R0902
         """
         self.change_to_user_group()
         self.change_to_workdir()
-        self.check_parallel_run()
+        #self.check_parallel_run()
+        self.__open_pidfile()
         self.setup_communication_daemon()
-
-        # Setting log level
-        logger.setLevel(self.log_level)
-        # Force the debug level if the daemon is said to start with such level
-        if self.debug:
-            logger.setLevel('DEBUG')
 
         # Then start to log all in the local file if asked so
         self.register_local_log()
@@ -699,19 +695,19 @@ class Daemon(object):  # pylint: disable=R0902
         else:
             ssl_conf = self.conf     # arbiter daemon..
 
-        use_ssl = ssl_conf.use_ssl
+        use_ssl = copy.deepcopy(ssl_conf.use_ssl)
         ca_cert = ssl_cert = ssl_key = ''
 
         # The SSL part
         if use_ssl:
-            ssl_cert = os.path.abspath(str(ssl_conf.server_cert))
+            ssl_cert = os.path.abspath(str(copy.deepcopy(ssl_conf.server_cert)))
             if not os.path.exists(ssl_cert):
                 logger.error('Error : the SSL certificate %s is missing (server_cert).'
                              'Please fix it in your configuration', ssl_cert)
                 sys.exit(2)
-            ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
+            ca_cert = os.path.abspath(str(copy.deepcopy(ssl_conf.ca_cert)))
             logger.info("Using ssl ca cert file: %s", ca_cert)
-            ssl_key = os.path.abspath(str(ssl_conf.server_key))
+            ssl_key = os.path.abspath(str(copy.deepcopy(ssl_conf.server_key)))
             if not os.path.exists(ssl_key):
                 logger.error('Error : the SSL key %s is missing (server_key).'
                              'Please fix it in your configuration', ssl_key)
