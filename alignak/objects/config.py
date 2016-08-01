@@ -1464,7 +1464,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.debug("[config] time to serialize the global conf : %s (size:%s)",
                          time.time() - t00, len(whole_conf_pack))
             self.whole_conf_pack = whole_conf_pack
-            logger.debug("[config]serializing total: %s", (time.time() - t01))
+            logger.debug("[config] serializing total: %s", (time.time() - t01))
 
         else:
             logger.info('Using the multiprocessing serialization pass')
