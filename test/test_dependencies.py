@@ -18,12 +18,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
+"""
+This file test the dependencies between services, hosts
+"""
 
 import time
 from alignak_test import AlignakTest
 
 
 class TestDependencies(AlignakTest):
+    """
+    This class test dependencies between services, hosts
+    """
 
     def test_conf_dependencies(self):
         """
@@ -53,18 +59,18 @@ class TestDependencies(AlignakTest):
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
-        test_host_C = self.scheduler.sched.hosts.find_by_name("test_host_C")
-        self.assertEqual(2, len(test_host_C.act_depend_of))
+        test_host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
+        self.assertEqual(2, len(test_host_c.act_depend_of))
         hosts = []
-        for (host, _, n_type, _, _) in test_host_C.act_depend_of:
+        for (host, _, n_type, _, _) in test_host_c.act_depend_of:
             hosts.append(self.scheduler.sched.hosts[host].host_name)
             self.assertEqual('logic_dep', n_type)
         self.assertItemsEqual(hosts, ['test_host_A', 'test_host_B'])
 
         # test test_host_E -> test_host_D
-        test_host_E = self.scheduler.sched.hosts.find_by_name("test_host_E")
-        self.assertEqual(1, len(test_host_E.act_depend_of))
-        for (host, _, _, _, _) in test_host_E.act_depend_of:
+        test_host_e = self.scheduler.sched.hosts.find_by_name("test_host_E")
+        self.assertEqual(1, len(test_host_e.act_depend_of))
+        for (host, _, _, _, _) in test_host_e.act_depend_of:
             self.assertEqual(self.scheduler.sched.hosts[host].host_name, 'test_host_D')
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc

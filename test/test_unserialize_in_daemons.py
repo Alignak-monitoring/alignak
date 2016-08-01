@@ -19,6 +19,9 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
+"""
+This file test unserialisation of data
+"""
 
 
 import unittest
@@ -27,9 +30,17 @@ from alignak import bin
 from alignak.misc.serialization import unserialize
 
 
-class testUnserialize(unittest.TestCase):
+class TestUnserialize(unittest.TestCase):
+    """
+    This class test the unserialize process
+    """
 
     def test_unserialize_notif(self):
+        """
+        Test unserialize notifications
+
+        :return: None
+        """
 
         var = '''
         {"98a76354619746fa8e6d2637a5ef94cb": {
@@ -165,7 +176,11 @@ class testUnserialize(unittest.TestCase):
         self.assertTrue(True)
 
     def test_unserialize_check(self):
+        """
+        Test unserialize checks
 
+        :return: None
+        """
         var = '''
         {"content":
                    {"check_type":0,"exit_status":3,"creation_time":1469152287.6731250286,
@@ -183,7 +198,3 @@ class testUnserialize(unittest.TestCase):
 
         unserialize(var)
         self.assertTrue(True)
-
-if __name__ == '__main__':
-    unittest.main()
-

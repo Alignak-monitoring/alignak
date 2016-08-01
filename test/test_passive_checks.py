@@ -18,12 +18,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
+"""
+This file test passive checks
+"""
 
-from alignak_test import AlignakTest
 import time
+from alignak_test import AlignakTest
 
 
 class TestPassiveChecks(AlignakTest):
+    """
+    This class test passive checks of host and services
+    """
 
     def test_0_start_freshness_on_start_alignak(self):
         """
@@ -61,21 +67,26 @@ class TestPassiveChecks(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        host_A = self.scheduler.sched.hosts.find_by_name("test_host_A")
-        host_B = self.scheduler.sched.hosts.find_by_name("test_host_B")
-        host_C = self.scheduler.sched.hosts.find_by_name("test_host_C")
-        host_D = self.scheduler.sched.hosts.find_by_name("test_host_D")
+        host_a = self.scheduler.sched.hosts.find_by_name("test_host_A")
+        host_b = self.scheduler.sched.hosts.find_by_name("test_host_B")
+        host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
+        host_d = self.scheduler.sched.hosts.find_by_name("test_host_D")
 
-        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_0")
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_1")
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_2")
-        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_3")
-        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_4")
+        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_0")
+        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_1")
+        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_2")
+        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_3")
+        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_4")
 
-        self.assertEqual("d", host_A.freshness_state)
-        self.assertEqual("u", host_B.freshness_state)
-        self.assertEqual("o", host_C.freshness_state)
-        self.assertEqual("d", host_D.freshness_state)
+        self.assertEqual("d", host_a.freshness_state)
+        self.assertEqual("u", host_b.freshness_state)
+        self.assertEqual("o", host_c.freshness_state)
+        self.assertEqual("d", host_d.freshness_state)
 
         self.assertEqual("o", svc0.freshness_state)
         self.assertEqual("w", svc1.freshness_state)
@@ -93,21 +104,26 @@ class TestPassiveChecks(AlignakTest):
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
 
-        host_A = self.scheduler.sched.hosts.find_by_name("test_host_A")
-        host_B = self.scheduler.sched.hosts.find_by_name("test_host_B")
-        host_C = self.scheduler.sched.hosts.find_by_name("test_host_C")
-        host_D = self.scheduler.sched.hosts.find_by_name("test_host_D")
+        host_a = self.scheduler.sched.hosts.find_by_name("test_host_A")
+        host_b = self.scheduler.sched.hosts.find_by_name("test_host_B")
+        host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
+        host_d = self.scheduler.sched.hosts.find_by_name("test_host_D")
 
-        host_A.last_state_update = int(time.time()) - 10000
-        host_B.last_state_update = int(time.time()) - 10000
-        host_C.last_state_update = int(time.time()) - 10000
-        host_D.last_state_update = int(time.time()) - 10000
+        host_a.last_state_update = int(time.time()) - 10000
+        host_b.last_state_update = int(time.time()) - 10000
+        host_c.last_state_update = int(time.time()) - 10000
+        host_d.last_state_update = int(time.time()) - 10000
 
-        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_0")
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_1")
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_2")
-        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_3")
-        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A", "test_ok_4")
+        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_0")
+        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_1")
+        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_2")
+        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_3")
+        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+                                                                           "test_ok_4")
 
         svc0.last_state_update = int(time.time()) - 10000
         svc1.last_state_update = int(time.time()) - 10000
@@ -128,14 +144,14 @@ class TestPassiveChecks(AlignakTest):
         self.assertEqual("UNKNOWN", svc3.state)
         self.assertEqual("UNKNOWN", svc4.state)
 
-        self.assertEqual("DOWN", host_A.state)
-        self.assertEqual("DOWN", host_B.state)
-        self.assertEqual("UP", host_C.state)
-        self.assertEqual("DOWN", host_D.state)
+        self.assertEqual("DOWN", host_a.state)
+        self.assertEqual("DOWN", host_b.state)
+        self.assertEqual("UP", host_c.state)
+        self.assertEqual("DOWN", host_d.state)
 
-        all = [svc0, svc1, svc2, svc3, svc4, host_A, host_B, host_C, host_D]
+        all = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
         for item in all:
             self.assertEqual("Freshness period expired", item.output)
 
         self.assert_actions_count(0)
-        self.assert_checks_count(2) # test_host_0 and test_router_0
+        self.assert_checks_count(2)  # test_host_0 and test_router_0
