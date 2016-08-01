@@ -66,6 +66,7 @@ import re
 import random
 import time
 import traceback
+import sys
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -3100,7 +3101,11 @@ class SchedulingItems(CommandCallItems):
         :type inherits_parents: bool
         :return:
         """
-        son = self[son_id]
+        if son_id in self:
+            son = self[son_id]
+        else:
+            logger.error("Dependency son (%s) unknown, configuration error", son_id)
+            sys.exit(2)
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
                                   inherits_parents))

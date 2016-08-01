@@ -93,17 +93,79 @@ class TestDependencies(AlignakTest):
                 self.assertEqual(self.scheduler.sched.services[dep_id].service_description,
                                  'test_ok_0')
 
-    def test_conf_notright(self):
+    def test_conf_notright1(self):
         """
-        Test arbiter give an error when have an orphelan dependency in config files
+        Test arbiter give an error when have an orphan dependency in config files
+        in hostdependency dependent_host_name unknown
 
         :return: None
         """
-        pass
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad1.cfg')
+
+    def test_conf_notright2(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in hostdependency host_name unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad2.cfg')
+
+    def test_conf_notright3(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in host definition, parent unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad3.cfg')
+
+    def test_conf_notright4(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, dependent_service_description unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad4.cfg')
+
+    def test_conf_notright5(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, dependent_host_name unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad5.cfg')
+
+    def test_conf_notright6(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, host_name unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad6.cfg')
+
+    def test_conf_notright7(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, service_description unknown
+
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad7.cfg')
 
     def test_service_host_case_1(self):
         """
-        test dependency (checks and notifications) between the service and the host (case 1)
+        Test dependency (checks and notifications) between the service and the host (case 1)
 
         08:00:00 check_host OK HARD
         08:01:30 check_service CRITICAL SOFT
