@@ -18,14 +18,17 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
+"""
+This file test load the new conf on each module
+"""
 
+import sys
 from alignak_test import AlignakTest
 from alignak.daemons.schedulerdaemon import Alignak as schedulerdaemon
 from alignak.daemons.receiverdaemon import Receiver as receiverdaemon
 from alignak.daemons.pollerdaemon import Poller as pollerdaemon
 from alignak.daemons.brokerdaemon import Broker as brokerdaemon
 from alignak.daemons.reactionnerdaemon import Reactionner as reactionnerdaemon
-import sys
 
 
 class TestSetupNewConf(AlignakTest):
@@ -43,14 +46,15 @@ class TestSetupNewConf(AlignakTest):
         # Configuration received by scheduler, so give to scheduler to load it
         sys.path.append('cfg/setup_new_conf/modules/schedulerexample.py')
 
-        sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False, '/tmp/scheduler.log')
+        sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False,
+                                '/tmp/scheduler.log')
         sched.load_config_file()
         sched.load_modules_manager()
         if hasattr(sched, 'modules'):
             self.assertEqual(0, len(sched.modules))
 
-        s = open('cfg/setup_new_conf/scheduler_new_conf.dict', 'r').read()
-        sched.new_conf = eval(s)
+        conf_dict = open('cfg/setup_new_conf/scheduler_new_conf.dict', 'r').read()
+        sched.new_conf = eval(conf_dict)
         sched.setup_new_conf()
         self.assertEqual(1, len(sched.modules))
         self.assertEqual(sched.modules[0].module_alias, 'schedulerexample')
@@ -72,8 +76,8 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(receiv, 'modules'):
             self.assertEqual(0, len(receiv.modules))
 
-        s = open('cfg/setup_new_conf/receiver_new_conf.dict', 'r').read()
-        receiv.new_conf = eval(s)
+        conf_dict = open('cfg/setup_new_conf/receiver_new_conf.dict', 'r').read()
+        receiv.new_conf = eval(conf_dict)
         receiv.setup_new_conf()
         self.assertEqual(1, len(receiv.modules))
         self.assertEqual(receiv.modules[0].module_alias, 'receiverexample')
@@ -88,14 +92,14 @@ class TestSetupNewConf(AlignakTest):
         sys.path.append('cfg/setup_new_conf/modules/pollerexample.py')
 
         poller = pollerdaemon('cfg/setup_new_conf/daemons/pollerd.ini', False, False, False,
-                                '/tmp/poller.log')
+                              '/tmp/poller.log')
         poller.load_config_file()
         poller.load_modules_manager()
         if hasattr(poller, 'modules'):
             self.assertEqual(0, len(poller.modules))
 
-        s = open('cfg/setup_new_conf/poller_new_conf.dict', 'r').read()
-        poller.new_conf = eval(s)
+        conf_dict = open('cfg/setup_new_conf/poller_new_conf.dict', 'r').read()
+        poller.new_conf = eval(conf_dict)
         poller.setup_new_conf()
         self.assertEqual(1, len(poller.new_modules_conf))
         self.assertEqual(poller.new_modules_conf[0].module_alias, 'pollerexample')
@@ -110,31 +114,36 @@ class TestSetupNewConf(AlignakTest):
         sys.path.append('cfg/setup_new_conf/modules/brokerexample.py')
 
         broker = brokerdaemon('cfg/setup_new_conf/daemons/brokerd.ini', False, False, False,
-                                '/tmp/broker.log')
+                              '/tmp/broker.log')
         broker.load_config_file()
         broker.load_modules_manager()
         if hasattr(broker, 'modules'):
             self.assertEqual(0, len(broker.modules))
 
-        s = open('cfg/setup_new_conf/broker_new_conf.dict', 'r').read()
-        broker.new_conf = eval(s)
+        conf_dict = open('cfg/setup_new_conf/broker_new_conf.dict', 'r').read()
+        broker.new_conf = eval(conf_dict)
         broker.setup_new_conf()
         self.assertEqual(1, len(broker.modules))
         self.assertEqual(broker.modules[0].module_alias, 'brokerexample')
         self.assertEqual(broker.modules[0].myvar, 'hoth')
 
-    def test_conf_reactioner(self):
+    def test_conf_reactionner(self):
+        """
+        Test load new conf in reactionner
+
+        :return: None
+        """
         sys.path.append('cfg/setup_new_conf/modules/reactionnerexample.py')
 
-        reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False, False,
-                                '/tmp/reactionner.log')
+        reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False,
+                                 False, '/tmp/reactionner.log')
         reac.load_config_file()
         reac.load_modules_manager()
         if hasattr(reac, 'modules'):
             self.assertEqual(0, len(reac.modules))
 
-        s = open('cfg/setup_new_conf/reactionner_new_conf.dict', 'r').read()
-        reac.new_conf = eval(s)
+        conf_dict = open('cfg/setup_new_conf/reactionner_new_conf.dict', 'r').read()
+        reac.new_conf = eval(conf_dict)
         reac.setup_new_conf()
         self.assertEqual(1, len(reac.new_modules_conf))
         self.assertEqual(reac.new_modules_conf[0].module_alias, 'reactionnerexample')
