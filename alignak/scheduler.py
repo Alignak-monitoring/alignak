@@ -1130,8 +1130,6 @@ class Scheduler(object):  # pylint: disable=R0902
             if con is not None:
                 try:
                     # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     try:
                         results = str(results)
@@ -1176,8 +1174,6 @@ class Scheduler(object):  # pylint: disable=R0902
             if con is not None:
                 try:
                     # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     results = unserialize(str(results))
                     nb_received = len(results)

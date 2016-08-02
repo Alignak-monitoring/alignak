@@ -164,7 +164,6 @@ class SatelliteLink(Item):
             return False
 
         try:
-            self.con.get('ping')
             self.con.post('put_conf', {'conf': conf}, wait='long')
             print "PUT CONF SUCCESS", self.get_name()
             return True
@@ -453,8 +452,6 @@ class SatelliteLink(Item):
             return False
 
         try:
-            # Always do a simple ping to avoid a LOOOONG lock
-            self.con.get('ping')
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
         except HTTPEXCEPTIONS:
@@ -478,7 +475,6 @@ class SatelliteLink(Item):
             return []
 
         try:
-            self.con.get('ping')
             tab = self.con.get('get_external_commands', wait='long')
             tab = unserialize(str(tab))
             # Protect against bad return
