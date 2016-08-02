@@ -678,8 +678,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     con = None
                 if con is not None:  # None = not initialized
                     # OK, go for it :)
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     tmp = con.get('get_checks', {
                         'do_checks': do_checks, 'do_actions': do_actions,
                         'poller_tags': self.poller_tags,
