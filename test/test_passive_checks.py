@@ -38,11 +38,11 @@ class TestPassiveChecks(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
         # Test if not schedule a check on passive service/host when start alignak.
         # So the freshness start (item.last_state_update) will begin with time.time() of start
         # Alignak
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
@@ -61,26 +61,26 @@ class TestPassiveChecks(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        host_a = self.scheduler.sched.hosts.find_by_name("test_host_A")
-        host_b = self.scheduler.sched.hosts.find_by_name("test_host_B")
-        host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
-        host_d = self.scheduler.sched.hosts.find_by_name("test_host_D")
+        host_a = self.schedulers[0].sched.hosts.find_by_name("test_host_A")
+        host_b = self.schedulers[0].sched.hosts.find_by_name("test_host_B")
+        host_c = self.schedulers[0].sched.hosts.find_by_name("test_host_C")
+        host_d = self.schedulers[0].sched.hosts.find_by_name("test_host_D")
 
-        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc0 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_0")
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_1")
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_2")
-        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc3 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_3")
-        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc4 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_4")
 
         self.assertEqual("d", host_a.freshness_state)
@@ -102,27 +102,27 @@ class TestPassiveChecks(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
 
-        host_a = self.scheduler.sched.hosts.find_by_name("test_host_A")
-        host_b = self.scheduler.sched.hosts.find_by_name("test_host_B")
-        host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
-        host_d = self.scheduler.sched.hosts.find_by_name("test_host_D")
+        host_a = self.schedulers[0].sched.hosts.find_by_name("test_host_A")
+        host_b = self.schedulers[0].sched.hosts.find_by_name("test_host_B")
+        host_c = self.schedulers[0].sched.hosts.find_by_name("test_host_C")
+        host_d = self.schedulers[0].sched.hosts.find_by_name("test_host_D")
 
         host_a.last_state_update = int(time.time()) - 10000
         host_b.last_state_update = int(time.time()) - 10000
         host_c.last_state_update = int(time.time()) - 10000
         host_d.last_state_update = int(time.time()) - 10000
 
-        svc0 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc0 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_0")
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_1")
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_2")
-        svc3 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc3 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_3")
-        svc4 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_A",
+        svc4 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
                                                                            "test_ok_4")
 
         svc0.last_state_update = int(time.time()) - 10000
@@ -131,7 +131,7 @@ class TestPassiveChecks(AlignakTest):
         svc3.last_state_update = int(time.time()) - 10000
         svc4.last_state_update = int(time.time()) - 10000
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 

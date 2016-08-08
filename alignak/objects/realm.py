@@ -80,10 +80,6 @@ class Realm(Itemgroup):
         'higher_realms': ListProp(default=[], split_on_coma=True),
         'default':       BoolProp(default=False),
         'broker_complete_links':       BoolProp(default=False),
-        # 'alias': {'required':  True, 'fill_brok': ['full_status']},
-        # 'notes': {'required': False, 'default':'', 'fill_brok': ['full_status']},
-        # 'notes_url': {'required': False, 'default':'', 'fill_brok': ['full_status']},
-        # 'action_url': {'required': False, 'default':'', 'fill_brok': ['full_status']},
     })
 
     running_properties = Item.running_properties.copy()
@@ -199,18 +195,20 @@ class Realm(Itemgroup):
         else:
             return []
 
-    def get_all_subs_satellites_by_type(self, sat_type):
+    def get_all_subs_satellites_by_type(self, sat_type, realms):
         """Get all satellites of the wanted type in this realm recursively
 
         :param sat_type: satellite type wanted (scheduler, poller ..)
         :type sat_type:
+        :param realms: all realms
+        :type realms: list of realm object
         :return: list of satellite in this realm
         :rtype: list
         TODO: Make this generic
         """
         res = copy.copy(getattr(self, sat_type))
         for member in self.realm_members:
-            tmps = member.get_all_subs_satellites_by_type(sat_type)
+            tmps = realms[member].get_all_subs_satellites_by_type(sat_type, realms)
             for mem in tmps:
                 res.append(mem)
         return res
@@ -324,11 +322,20 @@ class Realm(Itemgroup):
             logger.debug("[realm] do not have this kind of satellites: %s", s_type)
             return 0
 
-    def fill_broker_with_poller_reactionner_links(self, broker, pollers, reactionners, receivers):
+    def fill_broker_with_poller_reactionner_links(self, broker, pollers, reactionners, receivers,
+                                                  realms):
         """Fill brokerlink object with satellite data
 
         :param broker: broker link we want to fill
         :type broker: alignak.objects.brokerlink.Brokerlink
+        :param pollers: pollers
+        :type pollers:
+        :param reactionners: reactionners
+        :type reactionners:
+        :param receivers: receivers
+        :type receivers:
+        :param realms: realms
+        :type realms:
         :return: None
         """
 
@@ -358,25 +365,25 @@ class Realm(Itemgroup):
         # Then sub if we must to it
         if broker.manage_sub_realms:
             # Now pollers
-            for poller_id in self.get_all_subs_satellites_by_type('pollers'):
+            for poller_id in self.get_all_subs_satellites_by_type('pollers', realms):
                 poller = pollers[poller_id]
                 cfg = poller.give_satellite_cfg()
                 broker.cfg['pollers'][poller.uuid] = cfg
 
             # Now reactionners
-            for reactionner_id in self.get_all_subs_satellites_by_type('reactionners'):
+            for reactionner_id in self.get_all_subs_satellites_by_type('reactionners', realms):
                 reactionner = reactionners[reactionner_id]
                 cfg = reactionner.give_satellite_cfg()
                 broker.cfg['reactionners'][reactionner.uuid] = cfg
 
             # Now receivers
-            for receiver_id in self.get_all_subs_satellites_by_type('receivers'):
+            for receiver_id in self.get_all_subs_satellites_by_type('receivers', realms):
                 receiver = receivers[receiver_id]
                 cfg = receiver.give_satellite_cfg()
                 broker.cfg['receivers'][receiver.uuid] = cfg
 
     def get_satellites_links_for_scheduler(self, pollers, reactionners):
-        """Get a configuration dict with pollers and reactionners data
+        """Get a configuration dict with pollers and reactionners data for scheduler
 
         :return: dict containing pollers and reactionners config (key is satellite id)
         :rtype: dict
@@ -399,7 +406,6 @@ class Realm(Itemgroup):
             config = reactionner.give_satellite_cfg()
             cfg['reactionners'][reactionner.uuid] = config
 
-        # print "***** Preparing a satellites conf for a scheduler", cfg
         return cfg
 
 
