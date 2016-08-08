@@ -388,7 +388,7 @@ class Dispatcher:
             arbiters_cfg[arb.uuid] = arb.give_satellite_cfg()
 
         for realm in self.realms:
-            for (i, cfg) in realm.confs.iteritems():
+            for cfg in realm.confs.values():
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                     self.prepare_dispatch_other_modules(sat_type, realm, cfg, arbiters_cfg)
 
