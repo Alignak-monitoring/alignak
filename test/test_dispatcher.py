@@ -23,7 +23,6 @@ This file test the dispatcher (distribute configuration to satellites)
 """
 
 import time
-import requests
 import requests_mock
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
