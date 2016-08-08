@@ -232,8 +232,6 @@ class Alignak(BaseSatellite):
 
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(self.sched, instance_name, 'scheduler',
-                              api_key=new_c['api_key'], secret=new_c['secret'],
-                              http_proxy=new_c['http_proxy'],
                               statsd_host=new_c['statsd_host'], statsd_port=new_c['statsd_port'],
                               statsd_prefix=new_c['statsd_prefix'],
                               statsd_enabled=new_c['statsd_enabled'])

@@ -148,40 +148,25 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         self.arbiter = None
-        self.scheduler = None
 
         self.arbiter = Arbiter([configuration_file], False, False, False, False,
-                              '/tmp/arbiter.log')
+                              '/tmp/arbiter.log', 'arbiter-master')
 
         self.arbiter.load_config_file()
-        self.scheduler = Alignak([], False, False, False, '/tmp/scheduler.log')
-        self.scheduler.load_modules_manager()
         for arb in self.arbiter.conf.arbiters:
-            if arb.is_me():
+            if arb.get_name() == self.arbiter.config_name:
                 self.arbiter.myself = arb
         self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
-        for realm in self.arbiter.conf.realms:
-            for sched in self.arbiter.dispatcher.schedulers:
-                conf_package = {
-                    'conf': realm.serialized_confs.itervalues().next(),
-                    'override_conf': sched.get_override_configuration(),
-                    'modules': [],
-                    'satellites': {'pollers': [], 'reactionners': []},
-                    'instance_name': sched.scheduler_name,
-                    'push_flavor': random.randint(1, 1000000),
-                    'skip_initial_broks': sched.skip_initial_broks,
-                    'accept_passive_unknown_check_results':
-                        sched.accept_passive_unknown_check_results,
-                    'api_key': self.arbiter.dispatcher.conf.api_key,
-                    'secret': self.arbiter.dispatcher.conf.secret,
-                    'http_proxy': self.arbiter.dispatcher.conf.http_proxy,
-                    'statsd_host': self.arbiter.dispatcher.conf.statsd_host,
-                    'statsd_port': self.arbiter.dispatcher.conf.statsd_port,
-                    'statsd_prefix': self.arbiter.dispatcher.conf.statsd_prefix,
-                    'statsd_enabled': self.arbiter.dispatcher.conf.statsd_enabled,
-                }
-                self.scheduler.new_conf = conf_package
-                self.scheduler.setup_new_conf()
+        self.arbiter.dispatcher.prepare_dispatch()
+
+        self.schedulers = []
+        for scheduler in self.arbiter.dispatcher.schedulers:
+            sched = Alignak([], False, False, False, '/tmp/scheduler.log')
+            sched.load_modules_manager()
+            sched.new_conf = scheduler.conf_package
+            if sched.new_conf:
+                sched.setup_new_conf()
+            self.schedulers.append(sched)
 
     def add(self, b):
         if isinstance(b, Brok):
@@ -235,27 +220,27 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         if reset_checks:
-            self.scheduler.sched.checks = {}
+            self.schedulers[0].sched.checks = {}
         for num in range(count):
             for item in items:
                 (obj, exit_status, output) = item
                 obj.next_chk = time.time()
                 chk = obj.launch_check(obj.next_chk,
-                                       self.scheduler.sched.hosts,
-                                       self.scheduler.sched.services,
-                                       self.scheduler.sched.timeperiods,
-                                       self.scheduler.sched.macromodulations,
-                                       self.scheduler.sched.checkmodulations,
-                                       self.scheduler.sched.checks,
+                                       self.schedulers[0].sched.hosts,
+                                       self.schedulers[0].sched.services,
+                                       self.schedulers[0].sched.timeperiods,
+                                       self.schedulers[0].sched.macromodulations,
+                                       self.schedulers[0].sched.checkmodulations,
+                                       self.schedulers[0].sched.checks,
                                        force=True)
-                self.scheduler.sched.add_check(chk)
+                self.schedulers[0].sched.add_check(chk)
                 # update the check to add the result
                 chk.set_type_active()
                 chk.output = output
                 chk.exit_status = exit_status
-                self.scheduler.sched.waiting_results.put(chk)
-            for i in self.scheduler.sched.recurrent_works:
-                (name, fun, nb_ticks) = self.scheduler.sched.recurrent_works[i]
+                self.schedulers[0].sched.waiting_results.put(chk)
+            for i in self.schedulers[0].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
 
@@ -363,9 +348,9 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print self.scheduler.sched.actions
-        actions = sorted(self.scheduler.sched.actions.values(), key=lambda x: x.creation_time)
-        self.assertEqual(number, len(self.scheduler.sched.actions),
+        print self.schedulers[0].sched.actions
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(self.schedulers[0].sched.actions),
                          "Not found right number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
                                     'command: %s' %
@@ -387,7 +372,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        actions = sorted(self.scheduler.sched.actions.values(), key=lambda x: x.creation_time)
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
         myaction = actions[index]
         self.assertTrue(regex.search(getattr(myaction, field)),
                         "Not found a matched pattern in actions:\nindex=%s field=%s pattern=%r\n"
@@ -408,7 +393,7 @@ class AlignakTest(unittest.TestCase):
         """
         regex = re.compile(pattern)
         log_num = 1
-        broks = sorted(self.scheduler.sched.broks.values(), key=lambda x: x.creation_time)
+        broks = sorted(self.schedulers[0].sched.broks.values(), key=lambda x: x.creation_time)
         found = False
         for brok in broks:
             if brok.type == 'log':
@@ -436,8 +421,8 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print self.scheduler.sched.checks
-        checks = sorted(self.scheduler.sched.checks.values(), key=lambda x: x.creation_time)
+        print self.schedulers[0].sched.checks
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
                          "Not found right number of checks:\nchecks_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
@@ -460,7 +445,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        checks = sorted(self.scheduler.sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
         mycheck = checks[index]
         self.assertTrue(regex.search(getattr(mycheck, field)),
                         "Not found a matched pattern in checks:\nindex=%s field=%s pattern=%r\n"

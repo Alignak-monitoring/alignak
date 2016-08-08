@@ -45,7 +45,7 @@ This module provide SchedulerLink and SchedulerLinks classes used to manage sche
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
 from alignak.log import logger
 from alignak.http.client import HTTPEXCEPTIONS
 
@@ -70,6 +70,7 @@ class SchedulerLink(SatelliteLink):
     running_properties = SatelliteLink.running_properties.copy()
     running_properties.update({
         'conf': StringProp(default=None),
+        'conf_package': DictProp(default={}),
         'need_conf': StringProp(default=True),
         'external_commands': StringProp(default=[]),
         'push_flavor': IntegerProp(default=0),

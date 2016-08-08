@@ -40,57 +40,57 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg')
 
         # test_host_00 -> test_router_00
-        test_host_00 = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        test_host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         self.assertEqual(1, len(test_host_00.act_depend_of))
         for (host, _, n_type, _, _) in test_host_00.act_depend_of:
             self.assertEqual('network_dep', n_type)
-            self.assertEqual(self.scheduler.sched.hosts[host].host_name, 'test_router_00')
+            self.assertEqual(self.schedulers[0].sched.hosts[host].host_name, 'test_router_00')
 
         # test test_host_00.test_ok_1 -> test_host_00
         # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
                                                                           "test_ok_1")
         for (dep_id, status, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
-                self.assertEqual(self.scheduler.sched.hosts[dep_id].host_name, 'test_host_00')
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_00')
             elif n_type == 'logic_dep':
-                self.assertEqual(self.scheduler.sched.services[dep_id].service_description,
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
                                  'test_ok_0')
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
-        test_host_c = self.scheduler.sched.hosts.find_by_name("test_host_C")
+        test_host_c = self.schedulers[0].sched.hosts.find_by_name("test_host_C")
         self.assertEqual(2, len(test_host_c.act_depend_of))
         hosts = []
         for (host, _, n_type, _, _) in test_host_c.act_depend_of:
-            hosts.append(self.scheduler.sched.hosts[host].host_name)
+            hosts.append(self.schedulers[0].sched.hosts[host].host_name)
             self.assertEqual('logic_dep', n_type)
         self.assertItemsEqual(hosts, ['test_host_A', 'test_host_B'])
 
         # test test_host_E -> test_host_D
-        test_host_e = self.scheduler.sched.hosts.find_by_name("test_host_E")
+        test_host_e = self.schedulers[0].sched.hosts.find_by_name("test_host_E")
         self.assertEqual(1, len(test_host_e.act_depend_of))
         for (host, _, _, _, _) in test_host_e.act_depend_of:
-            self.assertEqual(self.scheduler.sched.hosts[host].host_name, 'test_host_D')
+            self.assertEqual(self.schedulers[0].sched.hosts[host].host_name, 'test_host_D')
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_11",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
                                                                           "test_parent_svc")
         for (dep_id, status, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
-                self.assertEqual(self.scheduler.sched.hosts[dep_id].host_name, 'test_host_11')
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
             elif n_type == 'logic_dep':
-                self.assertEqual(self.scheduler.sched.services[dep_id].service_description,
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
                                  'test_son_svc')
 
         # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_11",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
                                                                           "test_ok_1")
         for (dep_id, status, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
-                self.assertEqual(self.scheduler.sched.hosts[dep_id].host_name, 'test_host_11')
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
             elif n_type == 'logic_dep':
-                self.assertEqual(self.scheduler.sched.services[dep_id].service_description,
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
                                  'test_ok_0')
 
     def test_conf_notright1(self):
@@ -177,13 +177,13 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
                                                                           "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
@@ -212,13 +212,13 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        host_00 = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host_00.checks_in_progress = []
         host_00.event_handler_enabled = False
 
-        router_00 = self.scheduler.sched.hosts.find_by_name("test_router_00")
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
         router_00.checks_in_progress = []
         router_00.event_handler_enabled = False
 
@@ -242,13 +242,13 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
                                                                           "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
@@ -275,7 +275,7 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(0, 'hostname test_router_00', 'command')
 
-        router_00 = self.scheduler.sched.hosts.find_by_name("test_router_00")
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
         self.scheduler_loop(1, [[router_00, 2, 'DOWN']], False)
         time.sleep(0.1)
         self.assert_checks_count(0)
@@ -288,20 +288,20 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        svc1 = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+        svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
                                                                            "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc1.notification_interval = 0.001
         svc1.checks_in_progress = []
         svc1.event_handler_enabled = False
 
-        svc2 = self.scheduler.sched.services.find_srv_by_name_and_hostname(
+        svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname(
             "test_host_00", "test_ok_0_disbld_hst_dep")
         # To make tests quicker we make notifications send very quickly
         svc2.notification_interval = 0.001
@@ -336,10 +336,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_E")
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_E",
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_E")
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_E",
                                                                           "test_ok_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
@@ -358,10 +358,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.scheduler.sched.update_recurrent_works_tick('check_freshness', 1)
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_00")
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_00",
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
                                                                           "test_passive_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
@@ -384,17 +384,17 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         # delete schedule
-        del self.scheduler.sched.recurrent_works[1]
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        host_00 = self.scheduler.sched.hosts.find_by_name("test_host_00")
+        host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host_00.checks_in_progress = []
         host_00.event_handler_enabled = False
 
-        host_11 = self.scheduler.sched.hosts.find_by_name("test_host_11")
+        host_11 = self.schedulers[0].sched.hosts.find_by_name("test_host_11")
         host_11.checks_in_progress = []
         host_11.event_handler_enabled = False
 
-        router_00 = self.scheduler.sched.hosts.find_by_name("test_router_00")
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
         router_00.checks_in_progress = []
         router_00.event_handler_enabled = False
 
