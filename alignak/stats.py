@@ -46,13 +46,13 @@
 """
 import threading
 import time
-import json
+# import json
 import hashlib
 import base64
 import socket
 
 from alignak.log import logger
-from alignak.http.client import HTTPClient, HTTPException
+from alignak.http.client import HTTPClient
 
 
 BLOCK_SIZE = 16
@@ -205,11 +205,11 @@ class Stats(object):
 
         :return: None
         """
-        try:
-            from Crypto.Cipher import AES
-        except ImportError:
-            logger.error('Cannot find python lib crypto: stats export is not available')
-            AES = None  # pylint: disable=C0103
+        # try:
+        #     from Crypto.Cipher import AES
+        # except ImportError:
+        #     logger.error('Cannot find python lib crypto: stats export is not available')
+        AES = None  # pylint: disable=C0103,W0612
 
         while True:
             now = int(time.time())
@@ -244,7 +244,7 @@ class Stats(object):
             struct = self.app.get_stats_struct()
             struct['metrics'].extend(metrics)
             # logger.debug('REAPER whole struct %s' % struct)
-            j = json.dumps(struct)
+            # j = json.dumps(struct)
             time.sleep(60)
 
 # pylint: disable=C0103
