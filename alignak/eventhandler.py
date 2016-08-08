@@ -75,8 +75,8 @@ class EventHandler(Action):
         'is_snapshot':    BoolProp(default=False),
     })
 
-    def __init__(self, params=None):
-        super(EventHandler, self).__init__(params)
+    def __init__(self, params=None, parsing=True):
+        super(EventHandler, self).__init__(params, parsing=parsing)
         self.t_to_go = time.time()
 
     def copy_shell(self):

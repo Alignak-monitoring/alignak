@@ -88,9 +88,6 @@ class Stats(object):
         self.stats = {}
         # There are two modes that are not exclusive
         # first the kernel mode
-        self.api_key = ''
-        self.secret = ''
-        self.http_proxy = ''
         self.con = HTTPClient(uri='http://kernel.alignak.io')
         # then the statsd one
         self.statsd_sock = None
@@ -105,9 +102,8 @@ class Stats(object):
         self.reaper_thread.daemon = True
         self.reaper_thread.start()
 
-    def register(self, app, name, _type, api_key='', secret='', http_proxy='',
-                 statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
-                 statsd_enabled=False):
+    def register(self, app, name, _type, statsd_host='localhost', statsd_port=8125,
+                 statsd_prefix='alignak', statsd_enabled=False):
         """Init statsd instance with real values
 
         :param app: application (arbiter, scheduler..)
@@ -116,12 +112,6 @@ class Stats(object):
         :type name: str
         :param _type: daemon type
         :type _type:
-        :param api_key: api_key to post data
-        :type api_key: str
-        :param secret: secret to post data
-        :type secret: str
-        :param http_proxy: proxy http if necessary
-        :type http_proxy: str
         :param statsd_host: host to post data
         :type statsd_host: str
         :param statsd_port: port to post data
@@ -136,9 +126,6 @@ class Stats(object):
         self.name = name
         self.type = _type
         # kernel.io part
-        self.api_key = api_key
-        self.secret = secret
-        self.http_proxy = http_proxy
         # local statsd part
         self.statsd_host = statsd_host
         self.statsd_port = statsd_port
@@ -149,9 +136,6 @@ class Stats(object):
             logger.debug('Loading statsd communication with %s:%s.%s',
                          self.statsd_host, self.statsd_port, self.statsd_prefix)
             self.load_statsd()
-
-        # Also load the proxy if need
-        self.con.set_proxy(self.http_proxy)
 
     def load_statsd(self):
         """Create socket connection to statsd host
@@ -236,7 +220,7 @@ class Stats(object):
                 string = ', '.join(['%s:%s' % (key, v) for (key, v) in stats.iteritems()])
             # If we are not in an initializer daemon we skip, we cannot have a real name, it sucks
             # to find the data after this
-            if not self.name or not self.api_key or not self.secret:
+            if not self.name:
                 time.sleep(60)
                 continue
 
@@ -261,17 +245,6 @@ class Stats(object):
             struct['metrics'].extend(metrics)
             # logger.debug('REAPER whole struct %s' % struct)
             j = json.dumps(struct)
-            if AES is not None and self.secret != '':
-                logger.debug('Stats PUT to kernel.alignak.io/api/v1/put/ with %s %s',
-                             self.api_key,
-                             self.secret)
-
-                # assume a %16 length messagexs
-                encrypted_text = self._encrypt(j)
-                try:
-                    self.con.put('/api/v1/put/?api_key=%s' % (self.api_key), encrypted_text)
-                except HTTPException, exp:
-                    logger.error('Stats REAPER cannot put to the metric server %s', exp)
             time.sleep(60)
 
 # pylint: disable=C0103

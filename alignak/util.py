@@ -774,6 +774,24 @@ def sort_by_ids(x00, y00):
     return 0
 
 
+def sort_by_number_values(x00, y00):
+    """Compare x00, y00 base on number of values
+
+    :param x00: first elem to compare
+    :type x00: int
+    :param y00: second elem to compare
+    :type y00: int
+    :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
+    :rtype: int
+    """
+    if len(x00) < len(y00):
+        return 1
+    if len(x00) > len(y00):
+        return -1
+    # So is equal
+    return 0
+
+
 def average_percentile(values):
     """
     Get the average, min percentile (5%) and
@@ -1308,6 +1326,9 @@ def parse_daemon_args(arbiter=False):
                                  'multiple -c can be used, they will be concatenated')
         parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
                             help="Verify config file and exit")
+        parser.add_argument("-n", "--config-name", dest="config_name", default='arbiter-master',
+                            help="Use name of arbiter defined in the configuration files "
+                                 "(default arbiter-master)")
     else:
         parser.add_argument('-c', '--config', dest="config_file", required=True,
                             help='Config file')
