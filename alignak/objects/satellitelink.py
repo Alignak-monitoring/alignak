@@ -44,8 +44,6 @@
 This module provides an abstraction layer for communications between Alignak daemons
 Used by the Arbiter
 """
-import time
-
 from alignak.util import get_obj_name_two_args_and_void
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
