@@ -1160,7 +1160,7 @@ class Daemon(object):  # pylint: disable=R0902
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new ticket including"
+        logger.critical("If you think this is a bug, create a new issue including "
                         "details mentioned in the README")
         logger.critical("Back trace of the error: %s", trace)
 
