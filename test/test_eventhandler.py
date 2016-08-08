@@ -46,11 +46,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -103,11 +103,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -161,11 +161,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -244,11 +244,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -301,11 +301,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -359,11 +359,11 @@ class TestEventhandler(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.scheduler.sched.hosts.find_by_name("test_host_0")
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.scheduler.sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
