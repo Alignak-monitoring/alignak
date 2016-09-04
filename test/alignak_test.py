@@ -161,7 +161,8 @@ class AlignakTest(unittest.TestCase):
 
         self.schedulers = []
         for scheduler in self.arbiter.dispatcher.schedulers:
-            sched = Alignak([], False, False, False, '/tmp/scheduler.log')
+            sched = Alignak([], False, False, True, '/tmp/scheduler.log')
+            # logger.setLevel('DEBUG')
             sched.load_modules_manager()
             sched.new_conf = scheduler.conf_package
             if sched.new_conf:
