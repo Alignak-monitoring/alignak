@@ -504,7 +504,6 @@ class Scheduler(object):  # pylint: disable=R0902
             return
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
-            # print("found action for %s: %s" % (elt.__class__.__name__, f.__name__))
             fun(self, elt)
         else:
             logger.warning(
