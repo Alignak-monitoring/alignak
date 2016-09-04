@@ -1072,8 +1072,9 @@ class ExternalCommandManager:
         TODO: add a better ACK management
         """
         notif_period = self.sched.timeperiods[host.notification_period]
-        self.sched.add(host.acknowledge_problem(notif_period, None, sticky, notify,
-                                                persistent, author, comment, end_time=end_time))
+        self.sched.add(host.acknowledge_problem(notif_period, self.hosts, self.services, sticky,
+                                                notify, persistent, author, comment,
+                                                end_time=end_time))
 
     def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value
