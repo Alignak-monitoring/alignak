@@ -159,14 +159,6 @@
 755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daemons
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daterange.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/daterange.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_mysql.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_mysql.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_oracle.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_oracle.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_sqlite.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/db_sqlite.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dependencynode.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dependencynode.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/dispatcher.py
@@ -277,8 +269,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/common.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/custom_module.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/custom_module.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/datamanager.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/datamanager.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/filter.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/filter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/logevent.py
