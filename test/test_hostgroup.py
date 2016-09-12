@@ -26,6 +26,7 @@ This file test all cases of eventhandler
 
 import time
 
+from alignak.objects import Host
 from alignak.objects import Hostgroup
 from alignak_test import AlignakTest
 
@@ -51,6 +52,8 @@ class TestHostGroupMembers(AlignakTest):
 
     def test_hostgroup_members(self):
         """
+        Test if members are linked from group
+
         :return: None
         """
         self.print_header()
@@ -67,9 +70,61 @@ class TestHostGroupMembers(AlignakTest):
             2
         )
 
-        self.assertEqual(len(hg.get_hostgroup_members()), 5)
+        self.assertEqual(len(hg.get_hostgroup_members()), 4)
 
         self.assertEqual(len(hg.get_hosts()), 2)
+
+    def test_members_hostgroup(self):
+        """
+        Test if group is linked from the member
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/hostgroup/alignak_hostgroup_members.cfg')
+        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+
+        #  Found a hostgroup named allhosts_and_groups
+        hg = self.schedulers[0].sched.hostgroups.find_by_name("allhosts_and_groups")
+        self.assertIsInstance(hg, Hostgroup)
+        self.assertEqual(hg.get_name(), "allhosts_and_groups")
+
+        self.assertEqual(
+            len(self.schedulers[0].sched.hostgroups.get_members_by_name("allhosts_and_groups")),
+            2
+        )
+
+        self.assertEqual(len(hg.get_hosts()), 2)
+        print("List hostgroup hosts:")
+        for host_id in hg.members:
+            host = self.schedulers[0].sched.hosts[host_id]
+            print("Host: %s" % host)
+            self.assertIsInstance(host, Host)
+
+            if host.get_name() == 'test_router_0':
+                self.assertEqual(len(host.get_hostgroups()), 3)
+                for group_id in host.hostgroups:
+                    group = self.schedulers[0].sched.hostgroups[group_id]
+                    print("Group: %s" % group)
+                    self.assertIn(group.get_name(), [
+                        'router', 'allhosts', 'allhosts_and_groups'
+                    ])
+
+            if host.get_name() == 'test_host_0':
+                self.assertEqual(len(host.get_hostgroups()), 4)
+                for group_id in host.hostgroups:
+                    group = self.schedulers[0].sched.hostgroups[group_id]
+                    print("Group: %s" % group)
+                    self.assertIn(group.get_name(), [
+                        'allhosts', 'allhosts_and_groups', 'up', 'hostgroup_01'
+                    ])
+
+        print("List hostgroup groups:")
+        self.assertEqual(len(hg.get_hostgroup_members()), 4)
+        for group in hg.get_hostgroup_members():
+            print("Group: %s" % group)
+            self.assertIn(group, [
+                'hostgroup_01', 'hostgroup_02', 'hostgroup_03', 'hostgroup_04'
+            ])
 
 
 class TestHostGroupNoHost(AlignakTest):
