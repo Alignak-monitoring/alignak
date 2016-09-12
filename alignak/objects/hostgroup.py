@@ -74,7 +74,7 @@ class Hostgroup(Itemgroup):
         'hostgroup_name':       StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
         'test':                 StringProp(fill_brok=['full_status']),
-        'hostgroup_members':    ListProp(default=['a'], fill_brok=['full_status'],
+        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
                                          merging='join', split_on_coma=True),
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
@@ -114,24 +114,15 @@ class Hostgroup(Itemgroup):
 
     def get_hostgroup_members(self):
         """
-        Get hostgroup members
+        Get list of groups members of this hostgroup
 
         :return: list of hosts
         :rtype: list
         """
-        # # TODO: consistency : a Hostgroup instance should always
-        # # have its hostgroup_members attribute defined, even if the empty list
         if hasattr(self, 'hostgroup_members'):
             return self.hostgroup_members
-            # consistency: any Hostgroup instance's hostgroup_members attribute
-            # should already be decoded/parsed:
-            # this should already be in its list form.
-            return [m.strip() for m in self.hostgroup_members.split(',')]
         else:
             return []
-        if not hasattr(self, 'hostgroup_members'):
-            return []
-        return self.hostgroup_members
 
     def get_hosts_by_explosion(self, hostgroups):
         """
@@ -310,10 +301,11 @@ class Hostgroups(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
+        # We do not want a same hostgroup to be exploded again and again
         # so we tag it
         for tmp_hg in self.items.values():
             tmp_hg.already_explode = False
+
         for hostgroup in self.items.values():
             if hasattr(hostgroup, 'hostgroup_members') and not \
                     hostgroup.already_explode:
