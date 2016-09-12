@@ -73,15 +73,15 @@ class TestPassiveChecks(AlignakTest):
         host_d = self.schedulers[0].sched.hosts.find_by_name("test_host_D")
 
         svc0 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_0")
+                                                                               "test_ok_0")
         svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_1")
+                                                                               "test_ok_1")
         svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_2")
+                                                                               "test_ok_2")
         svc3 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_3")
+                                                                               "test_ok_3")
         svc4 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_4")
+                                                                               "test_ok_4")
 
         self.assertEqual("d", host_a.freshness_state)
         self.assertEqual("u", host_b.freshness_state)
@@ -115,15 +115,15 @@ class TestPassiveChecks(AlignakTest):
         host_d.last_state_update = int(time.time()) - 10000
 
         svc0 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_0")
+                                                                               "test_ok_0")
         svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_1")
+                                                                               "test_ok_1")
         svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_2")
+                                                                               "test_ok_2")
         svc3 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_3")
+                                                                               "test_ok_3")
         svc4 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_A",
-                                                                           "test_ok_4")
+                                                                               "test_ok_4")
 
         svc0.last_state_update = int(time.time()) - 10000
         svc1.last_state_update = int(time.time()) - 10000
@@ -149,8 +149,8 @@ class TestPassiveChecks(AlignakTest):
         self.assertEqual("UP", host_c.state)
         self.assertEqual("DOWN", host_d.state)
 
-        all = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
-        for item in all:
+        items = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
+        for item in items:
             self.assertEqual("Freshness period expired", item.output)
 
         self.assert_actions_count(0)
