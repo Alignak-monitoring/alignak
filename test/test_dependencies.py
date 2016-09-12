@@ -49,8 +49,8 @@ class TestDependencies(AlignakTest):
         # test test_host_00.test_ok_1 -> test_host_00
         # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
-                                                                          "test_ok_1")
-        for (dep_id, status, n_type, _, _) in svc.act_depend_of:
+                                                                              "test_ok_1")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
                 self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_00')
             elif n_type == 'logic_dep':
@@ -75,8 +75,8 @@ class TestDependencies(AlignakTest):
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
-                                                                          "test_parent_svc")
-        for (dep_id, status, n_type, _, _) in svc.act_depend_of:
+                                                                              "test_parent_svc")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
                 self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
             elif n_type == 'logic_dep':
@@ -85,8 +85,8 @@ class TestDependencies(AlignakTest):
 
         # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
-                                                                          "test_ok_1")
-        for (dep_id, status, n_type, _, _) in svc.act_depend_of:
+                                                                              "test_ok_1")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
             if n_type == 'network_dep':
                 self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
             elif n_type == 'logic_dep':
@@ -184,7 +184,7 @@ class TestDependencies(AlignakTest):
         host.event_handler_enabled = False
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -249,7 +249,7 @@ class TestDependencies(AlignakTest):
         host.event_handler_enabled = False
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -295,7 +295,7 @@ class TestDependencies(AlignakTest):
         host.event_handler_enabled = False
 
         svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
-                                                                           "test_ok_0")
+                                                                               "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc1.notification_interval = 0.001
         svc1.checks_in_progress = []
@@ -340,7 +340,7 @@ class TestDependencies(AlignakTest):
 
         host = self.schedulers[0].sched.hosts.find_by_name("test_host_E")
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_E",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
 
@@ -362,7 +362,7 @@ class TestDependencies(AlignakTest):
 
         host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
-                                                                          "test_passive_0")
+                                                                              "test_passive_0")
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
 

@@ -51,7 +51,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -108,7 +108,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -166,7 +166,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -249,7 +249,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -306,7 +306,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -364,7 +364,7 @@ class TestEventhandler(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                          "test_ok_0")
+                                                                              "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False

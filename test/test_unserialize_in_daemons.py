@@ -23,10 +23,9 @@
 This file test unserialisation of data
 """
 
-
 import unittest
 
-from alignak import bin
+
 from alignak.misc.serialization import unserialize
 
 
