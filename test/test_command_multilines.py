@@ -111,4 +111,7 @@ class TestCommandMultilines(AlignakTest):
                     '	      <tr><td colspan=2 class=customer><b>OUR COMPANY</b></td></tr> ' \
                     '</table></body></html>" | sendmail -v -t'
         reference = reference.replace('\n', '\\n')
+        print command.command_line
+        print '-----------------------'
+        print reference
         self.assertEqual(command.command_line, reference)

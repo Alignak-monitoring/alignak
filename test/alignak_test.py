@@ -132,6 +132,7 @@ class Pluginconf(object):
 class AlignakTest(unittest.TestCase):
 
     time_hacker = TimeHacker()
+    maxDiff = None
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
