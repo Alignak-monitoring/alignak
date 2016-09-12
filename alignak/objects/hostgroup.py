@@ -74,7 +74,7 @@ class Hostgroup(Itemgroup):
         'hostgroup_name':       StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
         'test':                 StringProp(fill_brok=['full_status']),
-        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
+        'hostgroup_members':    ListProp(default=['a'], fill_brok=['full_status'],
                                          merging='join', split_on_coma=True),
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
@@ -121,13 +121,16 @@ class Hostgroup(Itemgroup):
         """
         # # TODO: consistency : a Hostgroup instance should always
         # # have its hostgroup_members attribute defined, even if the empty list
-        # if hasattr(self, 'hostgroup_members'):
-        #     # consistency: any Hostgroup instance's hostgroup_members attribute
-        #     # should already be decoded/parsed:
-        #     # this should already be in its list form.
-        #     return [m.strip() for m in self.hostgroup_members.split(',')]
-        # else:
-        #     return []
+        if hasattr(self, 'hostgroup_members'):
+            return self.hostgroup_members
+            # consistency: any Hostgroup instance's hostgroup_members attribute
+            # should already be decoded/parsed:
+            # this should already be in its list form.
+            return [m.strip() for m in self.hostgroup_members.split(',')]
+        else:
+            return []
+        if not hasattr(self, 'hostgroup_members'):
+            return []
         return self.hostgroup_members
 
     def get_hosts_by_explosion(self, hostgroups):
