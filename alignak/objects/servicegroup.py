@@ -66,13 +66,13 @@ class Servicegroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':              StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_name': StringProp(fill_brok=['full_status']),
-        'alias':             StringProp(fill_brok=['full_status']),
-        'notes':             StringProp(default='', fill_brok=['full_status']),
-        'notes_url':         StringProp(default='', fill_brok=['full_status']),
-        'action_url':        StringProp(default='', fill_brok=['full_status']),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_name':    StringProp(fill_brok=['full_status']),
+        'alias':                StringProp(fill_brok=['full_status']),
         'servicegroup_members': StringProp(default='', fill_brok=['full_status']),
+        'notes':                StringProp(default='', fill_brok=['full_status']),
+        'notes_url':            StringProp(default='', fill_brok=['full_status']),
+        'action_url':           StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
