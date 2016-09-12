@@ -129,8 +129,8 @@ class TestHostGroup(AlignakTest):
                         'allhosts', 'allhosts_and_groups', 'up', 'hostgroup_01'
                     ])
 
-        print("List hostgroup groups:")
         self.assertEqual(len(hg.get_hostgroup_members()), 4)
+        print("List hostgroup groups:")
         for group in hg.get_hostgroup_members():
             print("Group: %s" % group)
             self.assertIn(group, [
