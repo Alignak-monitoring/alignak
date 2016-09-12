@@ -230,12 +230,9 @@ class TestDispatcher(AlignakTest):
 
             self.setup_with_file('cfg/cfg_dispatcher_scheduler_spare.cfg')
             master_index = -1
-            spare_index = -1
             for index, scheduler in enumerate(self.schedulers):
                 if hasattr(scheduler, 'conf'):
                     master_index = index
-                else:
-                    spare_index = index
             self.assertGreater(master_index, -1)
 
             json_managed = {self.schedulers[master_index].conf.uuid:
