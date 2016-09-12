@@ -61,12 +61,6 @@ class TestServiceGroup(AlignakTest):
         self.assertEqual(sg.get_name(), "NOALIAS")
         self.assertEqual(sg.alias, "NOALIAS")
 
-
-class TestServiceGroupMembers(AlignakTest):
-    """
-    This class tests the servicegroups
-    """
-
     def test_servicegroup_members(self):
         """
         Test if members are linked from group
@@ -78,18 +72,18 @@ class TestServiceGroupMembers(AlignakTest):
         self.assertTrue(self.schedulers[0].conf.conf_is_correct)
 
         #  Found a servicegroup named allhosts_and_groups
-        sg = self.schedulers[0].sched.servicegroups.find_by_name("allhosts_and_groups")
+        sg = self.schedulers[0].sched.servicegroups.find_by_name("allservices_and_groups")
         self.assertIsInstance(sg, Servicegroup)
-        self.assertEqual(sg.get_name(), "allhosts_and_groups")
+        self.assertEqual(sg.get_name(), "allservices_and_groups")
 
         self.assertEqual(
-            len(self.schedulers[0].sched.servicegroups.get_members_by_name("allhosts_and_groups")),
-            2
+            len(self.schedulers[0].sched.servicegroups.get_members_by_name("allservices_and_groups")),
+            1
         )
 
-        self.assertEqual(len(sg.get_servicegroup_members()), 4)
+        self.assertEqual(len(sg.get_services()), 1)
 
-        self.assertEqual(len(sg.get_hosts()), 2)
+        self.assertEqual(len(sg.get_servicegroup_members()), 4)
 
     def test_members_servicegroup(self):
         """
@@ -128,16 +122,13 @@ class TestServiceGroupMembers(AlignakTest):
                         'ok', 'servicegroup_01', 'servicegroup_02', 'allservices_and_groups'
                     ])
 
-        print("List servicegroup groups:")
         self.assertEqual(len(sg.get_servicegroup_members()), 4)
+        print("List servicegroup groups:")
         for group in sg.get_servicegroup_members():
             print("Group: %s" % group)
             self.assertIn(group, [
                 'servicegroup_01', 'servicegroup_02', 'servicegroup_03', 'servicegroup_04'
             ])
-
-
-class TestServiceGroupNoHost(AlignakTest):
 
     def test_servicegroup_with_no_service(self):
         """
@@ -163,9 +154,6 @@ class TestServiceGroupNoHost(AlignakTest):
 
         print("Services: %s" % sg.get_services())
         self.assertEqual(len(sg.get_services()), 0)
-
-
-class TestServiceGroupWithSpace(AlignakTest):
 
     def test_servicegroup_with_space(self):
         """
@@ -206,3 +194,35 @@ class TestServiceGroupWithSpace(AlignakTest):
             ),
             []
         )
+
+    def test_servicegroups_generated(self):
+        """
+        Test that servicegroups can have a name with spaces
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/servicegroup/alignak_servicegroups_generated.cfg')
+        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+        self.nb_servicegroups = len(self.schedulers[0].sched.servicegroups)
+
+        sgs = []
+        for name in ["MYSVCGP", "MYSVCGP2", "MYSVCGP3", "MYSVCGP4"]:
+            sg = self.schedulers[0].sched.servicegroups.find_by_name(name)
+            self.assertIsNot(sg, None)
+            sgs.append(sg)
+
+        svc3 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("fake host", "fake svc3")
+        svc4 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("fake host", "fake svc4")
+        self.assertIn(svc3.uuid, sgs[0].members)
+        self.assertIn(svc3.uuid, sgs[1].members)
+        self.assertIn(svc4.uuid, sgs[2].members)
+        self.assertIn(svc4.uuid, sgs[3].members)
+
+        self.assertIn(sgs[0].uuid, svc3.servicegroups)
+        self.assertIn(sgs[1].uuid, svc3.servicegroups)
+        self.assertIn(sgs[2].uuid, svc4.servicegroups)
+        self.assertIn(sgs[3].uuid, svc4.servicegroups)
+
+
+if __name__ == '__main__':
+    unittest.main()
