@@ -26,7 +26,7 @@ script:
   - (pkill -6 -f "alignak_-" || :)
   - python full_tst.py
   - cd ..
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_all_setup.sh; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_virtualenv_setup.sh; fi
 # specific call to launch coverage data into coveralls.io
 after_success:
   # to get coverage data with relative paths and not absolute we have to

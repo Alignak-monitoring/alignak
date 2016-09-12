@@ -180,7 +180,7 @@ for pyenv in "root" "virtualenv"; do
         PYTHONVERSION=$(get_python_version_formatted)
         SHORTPYVERSION=$(echo $PYTHONVERSION | sed "s:thon::g")
 
-        if [[ ! -e ./test/install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE} ]]; then
+        if [[ ! -e ./test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE} ]]; then
             echo "Test not supported for python setup.py $install_type $pyenv with suffix : ${SUFFIX_TESTFILE}"
             continue
         fi
