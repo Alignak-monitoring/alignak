@@ -60,12 +60,6 @@ class TestHostGroup(AlignakTest):
         self.assertEqual(hg.get_name(), "NOALIAS")
         self.assertEqual(hg.alias, "NOALIAS")
 
-
-class TestHostGroupMembers(AlignakTest):
-    """
-    This class tests the hostgroups
-    """
-
     def test_hostgroup_members(self):
         """
         Test if members are linked from group
@@ -143,9 +137,6 @@ class TestHostGroupMembers(AlignakTest):
                 'hostgroup_01', 'hostgroup_02', 'hostgroup_03', 'hostgroup_04'
             ])
 
-
-class TestHostGroupNoHost(AlignakTest):
-
     def test_hostgroup_with_no_host(self):
         """
         Allow hostgroups with no hosts
@@ -168,9 +159,6 @@ class TestHostGroupNoHost(AlignakTest):
         self.assertEqual(len(hg.get_hostgroup_members()), 0)
 
         self.assertEqual(len(hg.get_hosts()), 0)
-
-
-class TestHostGroupWithSpace(AlignakTest):
 
     def test_hostgroup_with_space(self):
         """
