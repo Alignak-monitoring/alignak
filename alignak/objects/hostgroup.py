@@ -57,7 +57,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
-from alignak.property import StringProp
+from alignak.property import StringProp, ListProp
 from alignak.log import logger
 
 
@@ -73,7 +73,9 @@ class Hostgroup(Itemgroup):
         'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'hostgroup_name':       StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
-        'hostgroup_members':    StringProp(fill_brok=['full_status']),
+        'test':                 StringProp(fill_brok=['full_status']),
+        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True),
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
         'action_url':           StringProp(default='', fill_brok=['full_status']),
@@ -117,15 +119,16 @@ class Hostgroup(Itemgroup):
         :return: list of hosts
         :rtype: list
         """
-        # TODO: consistency : a Hostgroup instance should always
-        # have its hostgroup_members attribute defined, even if the empty list
-        if hasattr(self, 'hostgroup_members'):
-            # consistency: any Hostgroup instance's hostgroup_members attribute
-            # should already be decoded/parsed:
-            # this should already be in its list form.
-            return [m.strip() for m in self.hostgroup_members.split(',')]
-        else:
-            return []
+        # # TODO: consistency : a Hostgroup instance should always
+        # # have its hostgroup_members attribute defined, even if the empty list
+        # if hasattr(self, 'hostgroup_members'):
+        #     # consistency: any Hostgroup instance's hostgroup_members attribute
+        #     # should already be decoded/parsed:
+        #     # this should already be in its list form.
+        #     return [m.strip() for m in self.hostgroup_members.split(',')]
+        # else:
+        #     return []
+        return self.hostgroup_members
 
     def get_hosts_by_explosion(self, hostgroups):
         """
