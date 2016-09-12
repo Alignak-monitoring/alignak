@@ -86,6 +86,7 @@ class TestHostGroupMembers(AlignakTest):
             2
         )
 
+        self.assertEqual(len(hg.hostgroup_members), 4)
         self.assertEqual(len(hg.get_hostgroup_members()), 4)
 
         self.assertEqual(len(hg.get_hosts()), 2)

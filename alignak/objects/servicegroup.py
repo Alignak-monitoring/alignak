@@ -69,7 +69,7 @@ class Servicegroup(Itemgroup):
         'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'servicegroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
-        'servicegroup_members': StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_members': StringProp(fill_brok=['full_status']),
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
         'action_url':           StringProp(default='', fill_brok=['full_status']),
@@ -111,14 +111,15 @@ class Servicegroup(Itemgroup):
         :return: list of services (members)
         :rtype: list | str
         """
-        # TODO: a Servicegroup instance should always have its servicegroup_members defined.
-        if hasattr(self, 'servicegroup_members'):
-            sg_members = [m.strip() for m in self.servicegroup_members.split(',')]
-            if len(sg_members) == 1 and not sg_members[0]:
-                return []
-            return sg_members
-        else:
-            return []
+        # # TODO: a Servicegroup instance should always have its servicegroup_members defined.
+        # if hasattr(self, 'servicegroup_members'):
+        #     sg_members = [m.strip() for m in self.servicegroup_members.split(',')]
+        #     if len(sg_members) == 1 and not sg_members[0]:
+        #         return []
+        #     return sg_members
+        # else:
+        #     return []
+        return self.servicegroup_members
 
     def get_services_by_explosion(self, servicegroups):
         """
