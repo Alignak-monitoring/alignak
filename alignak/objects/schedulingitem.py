@@ -2720,6 +2720,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.add_comment(comm.uuid)
             self.broks.append(self.get_update_status_brok())
             return comm
+        else:
+            logger.warning(
+                "Acknowledge requested for %s %s but element state is OK/UP.",
+                self.my_type, self.get_name()
+            )
 
     def check_for_expire_acknowledge(self, comments):
         """
