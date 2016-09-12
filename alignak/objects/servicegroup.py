@@ -113,7 +113,10 @@ class Servicegroup(Itemgroup):
         """
         # TODO: a Servicegroup instance should always have its servicegroup_members defined.
         if hasattr(self, 'servicegroup_members'):
-            return [m.strip() for m in self.servicegroup_members.split(',')]
+            sg_members = [m.strip() for m in self.servicegroup_members.split(',')]
+            if len(sg_members) == 1 and not sg_members[0]:
+                return []
+            return sg_members
         else:
             return []
 
