@@ -113,7 +113,6 @@ class Servicegroup(Itemgroup):
         :rtype: list | str
         """
         if hasattr(self, 'servicegroup_members'):
-            print("SG groups members: " % self.servicegroup_members)
             return self.servicegroup_members
         else:
             return []
@@ -151,7 +150,6 @@ class Servicegroup(Itemgroup):
             if servicegroup is not None:
                 value = servicegroup.get_services_by_explosion(servicegroups)
                 if value is not None:
-                    print("SG string member: %s" % value)
                     self.add_string_member(value)
 
         if hasattr(self, 'members'):
