@@ -20,14 +20,6 @@ alignak.misc.custom_module module
     :undoc-members:
     :show-inheritance:
 
-alignak.misc.datamanager module
--------------------------------
-
-.. automodule:: alignak.misc.datamanager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.misc.filter module
 --------------------------
 
