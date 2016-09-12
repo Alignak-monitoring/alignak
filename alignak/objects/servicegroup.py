@@ -262,7 +262,6 @@ class Servicegroups(Itemgroups):
             servicegroup.already_explode = False
 
         for servicegroup in self.items.values():
-            print("SG: %s" % servicegroup)
             if hasattr(servicegroup, 'servicegroup_members') and not \
                     servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
