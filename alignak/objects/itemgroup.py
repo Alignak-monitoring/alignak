@@ -129,6 +129,9 @@ class Itemgroup(Item):
         :type member: str
         :return: None
         """
+        # Avoid empty elements in lists ...
+        if not member:
+            return
         add_fun = list.extend if isinstance(member, list) else list.append
         if not hasattr(self, "members"):
             self.members = []
@@ -168,7 +171,7 @@ class Itemgroup(Item):
 
         if self.unknown_members:
             for member in self.unknown_members:
-                logger.error("[itemgroup::%s] as %s, got unknown member %s",
+                logger.error("[itemgroup::%s] as %s, got unknown member '%s'",
                              self.get_name(), self.__class__.my_type, member)
             res = False
 
