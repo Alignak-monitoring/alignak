@@ -45,6 +45,22 @@ class TestHostGroup(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.schedulers[0].conf.conf_is_correct)
 
+    def test_look_for_alias(self):
+        """
+        Default configuration has no loading problems ... as of it hostgroups are parsed correctly
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/hostgroup/alignak_groups_with_no_alias.cfg')
+        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+
+        #  Found a hostgroup named NOALIAS
+        hg = self.schedulers[0].sched.hostgroups.find_by_name("NOALIAS")
+        self.assertIsInstance(hg, Hostgroup)
+        self.assertEqual(hg.get_name(), "NOALIAS")
+        self.assertEqual(hg.alias, "NOALIAS")
+
+
 class TestHostGroupMembers(AlignakTest):
     """
     This class tests the hostgroups
