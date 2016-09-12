@@ -71,6 +71,7 @@ class Contactgroup(Itemgroup):
         'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'contactgroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
+        'contactgroup_members': StringProp(fill_brok=['full_status']),
     })
 
     macros = {
