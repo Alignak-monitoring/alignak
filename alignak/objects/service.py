@@ -301,6 +301,14 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
+    def get_servicegroups(self):
+        """Accessor to servicegroups attribute
+
+        :return: servicegroup list object of host
+        :rtype: list
+        """
+        return self.servicegroups
+
     def get_groupnames(self, sgs):
         """Get servicegroups list
 
