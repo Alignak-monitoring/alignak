@@ -75,7 +75,7 @@ from alignak.dependencynode import DependencyNode
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import to_list_of_names, get_obj_name
+from alignak.util import from_set_to_list, get_obj_name
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -380,7 +380,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # use for having all contacts we have notified
         'notified_contacts':  SetProp(default=set(),
                                       retention=True,
-                                      retention_preparation=to_list_of_names),
+                                      retention_preparation=from_set_to_list),
         'in_scheduled_downtime': BoolProp(
             default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
