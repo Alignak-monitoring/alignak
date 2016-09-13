@@ -2987,17 +2987,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         pass
 
     def is_correct(self):
+        """Check if this object configuration is correct ::
+
+        * Check our own specific properties
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False
+        :rtype: bool
         """
-        Check if this object is correct
-
-        This function:
-        - control some specific properties
-        - call the parent object check function (checks required properties
-                                                 and log warnings and errors)
-
-        :return:
-        """
-
         state = True
 
         # for prop, entry in self.__class__.properties.items():
