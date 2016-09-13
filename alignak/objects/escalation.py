@@ -249,7 +249,7 @@ class Escalation(Item):
                 self.configuration_errors.append(msg)
                 state = False
 
-        return super(Escalation, self).is_correct() or state
+        return super(Escalation, self).is_correct() and state
 
 
 class Escalations(Items):

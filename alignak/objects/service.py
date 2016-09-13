@@ -360,6 +360,7 @@ class Service(SchedulingItem):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
+        state = True
         cls = self.__class__
 
         # Set display_name if need
@@ -385,7 +386,7 @@ class Service(SchedulingItem):
                     )
                     state = False
 
-        return super(Service, self).is_correct() or state
+        return super(Service, self).is_correct() and state
 
     def duplicate(self, host):
         """For a given host, look for all copy we must create for for_each property

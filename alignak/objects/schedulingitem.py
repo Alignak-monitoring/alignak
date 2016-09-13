@@ -3133,7 +3133,10 @@ class SchedulingItems(CommandCallItems):
             son = self[son_id]
         else:
             logger.error("Dependency son (%s) unknown, configuration error", son_id)
-            sys.exit(2)
+            msg = "Dependency son (%s) unknown, configuration error" % (son_id)
+            self.configuration_errors.append(msg)
+            # sys.exit(2)
+            return False
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
                                   inherits_parents))

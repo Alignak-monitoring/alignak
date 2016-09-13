@@ -177,7 +177,7 @@ class Itemgroup(Item):
                 self.configuration_errors.append(msg)
             state = False
 
-        return super(Itemgroup, self).is_correct() or state
+        return super(Itemgroup, self).is_correct() and state
 
     def has(self, prop):
         """
