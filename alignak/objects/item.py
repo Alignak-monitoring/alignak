@@ -1114,10 +1114,15 @@ class Items(object):
             i.tags = self.get_all_tags(i)
 
     def is_correct(self):
-        """
-        Check if all items are correct (no error)
+        """Check if the items list configuration is correct ::
 
-        :return: True if correct, otherwise False
+        * check if duplicate items exist in the list and warn about this
+        * set alias and display_name property for each item in the list if they do not exist
+        * check each item in the list
+        * log all previous warnings
+        * log all previous errors
+
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         # we are ok at the beginning. Hope we are still ok at the end...

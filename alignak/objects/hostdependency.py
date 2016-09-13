@@ -260,10 +260,11 @@ class Hostdependencies(Items):
                     getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
 
-            hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
-                                     hostdep.notification_failure_criteria,
-                                     getattr(hostdep, 'dependency_period', ''),
-                                     hostdep.inherits_parent)
+            if not hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                            hostdep.notification_failure_criteria,
+                                            getattr(hostdep, 'dependency_period', ''),
+                                            hostdep.inherits_parent):
+                return
 
             hosts.add_chk_dependency(hostdep.dependent_host_name, hostdep.host_name,
                                      hostdep.execution_failure_criteria,
@@ -305,4 +306,4 @@ class Hostdependencies(Items):
                         )
                         self.configuration_errors.append(msg)
 
-        return super(Hostdependencies, self).is_correct() or state
+        return super(Hostdependencies, self).is_correct() and state
