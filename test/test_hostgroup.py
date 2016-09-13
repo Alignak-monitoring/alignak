@@ -21,7 +21,7 @@
 #
 
 """
-This file test all cases of eventhandler
+This file contains the test for the hostgroups objects
 """
 
 import time
