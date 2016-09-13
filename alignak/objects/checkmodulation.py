@@ -76,7 +76,7 @@ class CheckModulation(Item):
 
     running_properties = Item.running_properties.copy()
 
-    _special_properties = ('check_period',)
+    special_properties = ('check_period',)
 
     macros = {}
 
