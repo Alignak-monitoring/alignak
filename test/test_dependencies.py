@@ -38,6 +38,8 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.assertEqual(len(self.configuration_errors), 0)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
         # test_host_00 -> test_router_00
         test_host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
@@ -102,6 +104,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad1.cfg')
+        self.assertEqual(len(self.configuration_errors), 4)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_conf_notright2(self):
         """
@@ -112,6 +116,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad2.cfg')
+        self.assertEqual(len(self.configuration_errors), 4)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_conf_notright3(self):
         """
@@ -122,6 +128,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad3.cfg')
+        self.assertEqual(len(self.configuration_errors), 1)
+        self.assertEqual(len(self.configuration_warnings), 8)
 
     def test_conf_notright4(self):
         """
@@ -132,6 +140,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad4.cfg')
+        self.assertEqual(len(self.configuration_errors), 1)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_conf_notright5(self):
         """
@@ -142,6 +152,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad5.cfg')
+        self.assertEqual(len(self.configuration_errors), 1)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_conf_notright6(self):
         """
@@ -152,6 +164,8 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad6.cfg')
+        self.assertEqual(len(self.configuration_errors), 1)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_conf_notright7(self):
         """
@@ -162,6 +176,9 @@ class TestDependencies(AlignakTest):
         """
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/cfg_dependencies_bad7.cfg')
+        # Service test_ok_0_notknown not found for 2 hosts.
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
     def test_service_host_case_1(self):
         """
