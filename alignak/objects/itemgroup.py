@@ -60,7 +60,6 @@ from alignak.objects.item import Item, Items
 
 from alignak.brok import Brok
 from alignak.property import ListProp
-from alignak.log import logger
 
 
 class Itemgroup(Item):

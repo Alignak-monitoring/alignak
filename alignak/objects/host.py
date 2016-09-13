@@ -286,10 +286,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # Internal checks before executing inherited function...
         cls = self.__class__
         if hasattr(self, 'host_name'):
-            for c in cls.illegal_object_name_chars:
-                if c in self.host_name:
+            for char in cls.illegal_object_name_chars:
+                if char in self.host_name:
                     msg = "[%s::%s] host_name got an illegal character: %s" % (
-                        self.my_type, self.get_name(), c
+                        self.my_type, self.get_name(), char
                     )
                     self.configuration_errors.append(msg)
                     state = False
