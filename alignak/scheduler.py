@@ -576,10 +576,11 @@ class Scheduler(object):  # pylint: disable=R0902
             to_del_checks = to_del_checks[:-max_checks]
             nb_checks_drops = len(to_del_checks)
             if nb_checks_drops > 0:
-                logger.info("I have to del some checks (%d)..., sorry", nb_checks_drops)
+                logger.debug("I have to del some checks (%d)..., sorry", nb_checks_drops)
             for chk in to_del_checks:
                 c_id = chk.uuid
-                elt = chk.ref
+                items = getattr(self, chk.ref_type + 's')
+                elt = items[chk.ref]
                 # First remove the link in host/service
                 elt.remove_in_progress_check(chk)
                 # Then in dependent checks (I depend on, or check
@@ -593,12 +594,13 @@ class Scheduler(object):  # pylint: disable=R0902
             nb_checks_drops = 0
 
         # For broks and actions, it's more simple
-        # or brosk, manage global but also all brokers queue
+        # or broks, manage global but also all brokers queue
         b_lists = [self.broks]
         for elem in self.brokers.values():
             b_lists.append(elem['broks'])
         for broks in b_lists:
             if len(broks) > max_broks:
+                logger.debug("I have to del some broks (%d)..., sorry", len(broks))
                 to_del_broks = [c for c in broks.values()]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
@@ -609,6 +611,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 nb_broks_drops = 0
 
         if len(self.actions) > max_actions:
+            logger.debug("I have to del some actions (%d)..., sorry", len(self.actions))
             to_del_actions = [c for c in self.actions.values()]
             to_del_actions.sort(key=lambda x: x.creation_time)
             to_del_actions = to_del_actions[:-max_actions]
