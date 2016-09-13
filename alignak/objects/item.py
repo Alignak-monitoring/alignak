@@ -1163,15 +1163,6 @@ class Items(object):
                 self.configuration_errors += i.configuration_errors
             if i.configuration_warnings:
                 self.configuration_warnings += i.configuration_warnings
-                    # The is_correct method of an item already makes the logs...
-                # for msg in i.configuration_warnings:
-                #     logger.warning("[W] -> %s", msg)
-                #     self.configuration_warnings.append(msg)
-                #
-                # for msg in i.configuration_errors:
-                #     logger.error("[E] -> %s", msg)
-                #     self.configuration_errors.append(msg)
-                #     valid = False
 
         # Log all previously sawn warnings
         if self.configuration_warnings:
