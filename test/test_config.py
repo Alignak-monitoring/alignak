@@ -23,7 +23,8 @@
 """
 This file contains the test for the Alignak configuration checks
 """
-
+import os
+import time
 from alignak_test import AlignakTest
 
 
@@ -45,6 +46,17 @@ class TestConfig(AlignakTest):
         self.assertEqual(len(self.configuration_errors), 0)
         # No warning messages
         self.assertEqual(len(self.configuration_warnings), 0)
+
+
+    def test_symlinks(self):
+        if os.name == 'nt':
+            return
+
+        self.print_header()
+        self.setup_with_file('cfg/conf_in_symlinks/alignak_conf_in_symlinks.cfg')
+
+        svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_HIDDEN")
+        self.assertIsNotNone(svc)
 
     def test_broken_configuration(self):
         """
@@ -144,6 +156,48 @@ class TestConfig(AlignakTest):
             "Some hosts have been ignored"
         )
 
+    def test_business_rules_bad_realm_conf(self):
+        """
+        Config is not correct because of bad configuration in BR realms
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_business_rules_bad_realm_conf.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Error: Business_rule \'test_host_realm1/Test bad services BP rules\' "
+            "got hosts from another realm: Realm2"
+        )
+        self.assert_any_cfg_log_match(
+            "Business_rule \'test_host_realm1/Test bad services BP rules complex'\ "
+            "got hosts from another realm: Realm2"
+        )
+        self.assert_any_cfg_log_match(
+            "Business_rule \'test_host_realm1/Test bad services BP rules complex\' "
+            "got hosts from another realm: Realm2"
+        )
+        self.assert_any_cfg_log_match(
+            "Business_rule \'test_host_realm1/Test bad host BP rules\' "
+            "got hosts from another realm: Realm2"
+        )
+        self.assert_any_cfg_log_match(
+            "Error: the realm configuration of yours hosts is not good because there is more "
+            "than one realm in one pack \(host relations\):"
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm2 is in the realm "
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm1 is in the realm "
+        )
+        self.assert_any_cfg_log_match(
+            "There are 4 hosts defined, and 2 hosts dispatched in the realms. "
+            "Some hosts have been ignored"
+        )
+
     def test_bad_satellite_realm_conf(self):
         """
         Config is not correct because of an unknown notification_period
@@ -190,6 +244,7 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/host_config_all.cfg')
+        self.assertTrue(self.conf_is_correct)
 
         cg = self.schedulers[0].sched.hosts.find_by_name('test_host_0')
         self.assertEqual('DOWN', cg.state)
@@ -202,6 +257,48 @@ class TestConfig(AlignakTest):
 
         cg = self.schedulers[0].sched.hosts.find_by_name('test_host_3')
         self.assertEqual('UP', cg.state)
+
+    def test_config_hosts_names(self):
+        """
+        Test hosts allowed hosts names:
+            - Check that it is allowed to have a host with the "__ANTI-VIRG__"
+            substring in its hostname
+            - Check that the semicolon is a comment delimiter
+            - Check that it is possible to have a host with a semicolon in its hostname:
+               The consequences of this aren't tested. We try just to send a command but
+               other programs which send commands probably don't escape the semicolon.
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_antivirg.cfg')
+        self.assertTrue(self.conf_is_correct, "Configuration is not valid")
+
+        # try to get the host
+        # if it is not possible to get the host, it is probably because
+        # "__ANTI-VIRG__" has been replaced by ";"
+        hst = self.arbiter.conf.hosts.find_by_name('test__ANTI-VIRG___0')
+        self.assertIsNotNone(hst, "host 'test__ANTI-VIRG___0' not found")
+        self.assertTrue(hst.is_correct(), "config of host '%s' is not correct" % hst.get_name())
+
+        # try to get the host
+        hst = self.arbiter.conf.hosts.find_by_name('test_host_1')
+        self.assertIsNotNone(hst, "host 'test_host_1' not found")
+        self.assertTrue(hst.is_correct(), "config of host '%s' is not true" % (hst.get_name()))
+
+        # try to get the host
+        hst = self.arbiter.conf.hosts.find_by_name('test_host_2;with_semicolon')
+        self.assertIsNotNone(hst, "host 'test_host_2;with_semicolon' not found")
+        self.assertTrue(hst.is_correct(), "config of host '%s' is not true" % hst.get_name())
+
+        # We can send a command by escaping the semicolon.
+        command = '[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
+        time.time())
+        self.schedulers[0].sched.run_external_command(command)
+
+        # can need 2 run for get the consum (I don't know why)
+        self.scheduler_loop(1, [])
+        self.scheduler_loop(1, [])
 
     def test_config_services(self):
         """
