@@ -413,7 +413,7 @@ class Item(AlignakObject):
         Check if this object is correct
 
         This function:
-        - checks if the required properties are defined
+        - checks if the required properties are defined, ignoring special_properties if some exist
         - logs the previously found warnings and errors
 
         :return: True if it's correct, otherwise False
@@ -423,7 +423,7 @@ class Item(AlignakObject):
         properties = self.__class__.properties
 
         for prop, entry in properties.items():
-            if hasattr(self, 'special_properties') and prop in self.special_properties:
+            if hasattr(self, 'special_properties') and prop in getattr(self, 'special_properties'):
                 continue
             if not hasattr(self, prop) and entry.required:
                 msg = "[%s::%s] %s property is missing" % (
