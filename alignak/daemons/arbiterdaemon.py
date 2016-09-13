@@ -370,9 +370,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # The conf can be incorrect here if the cut into parts see errors like
         # a realm with hosts and not schedulers for it
         if not self.conf.conf_is_correct:
-            self.conf.show_errors()
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
+            self.conf.show_errors()
             sys.exit(err)
 
         logger.info('Things look okay - No serious problems were detected '
