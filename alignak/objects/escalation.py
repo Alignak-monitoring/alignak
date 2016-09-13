@@ -217,10 +217,8 @@ class Escalation(Item):
         # Internal checks before executing inherited function...
 
         # If we got the _time parameters, we are time based. Unless, we are not :)
-        special_properties = self.special_properties
         if hasattr(self, 'first_notification_time') or hasattr(self, 'last_notification_time'):
             self.time_based = True
-            special_properties = self.special_properties_time_based
 
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
