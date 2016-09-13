@@ -3,36 +3,6 @@ import sys
 import re
 import fileinput
 import getpass
-import pwd
-import grp
-
-def user_exists(user_name):
-    """
-    Returns True if the user 'user_name' exists
-    :param login: user account login to check for
-    :return:
-    """
-    try:
-        pwd.getpwnam(user_name)
-        return True
-    except KeyError:
-        return False
-
-
-def group_exists(group_name):
-    """
-    Returns True if the group 'group_name' exists
-    :param login: user group to check for
-    :return:
-    """
-    try:
-        grp.getgrnam(group_name)
-        return True
-    except KeyError:
-        print("The user group '%s' does not exist. "
-              "You must create this user on your system to proceed with Alignak installation."
-              % group_name)
-        return False
 
 
 def get_init_scripts(config):
@@ -40,7 +10,7 @@ def get_init_scripts(config):
     data_files = config['files']['data_files']
     if 'win' in sys.platform:
         pass
-    elif 'linux2' in sys.platform or 'sunos5' in sys.platform:
+    elif 'linux' in sys.platform or 'sunos5' in sys.platform:
         data_files = data_files + "\netc/init.d = bin/init.d/*"
         data_files = data_files + "\netc/default = bin/default/alignak.in"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
@@ -49,16 +19,6 @@ def get_init_scripts(config):
         raise "Unsupported platform, sorry"
         data_files = []
     config['files']['data_files'] = data_files
-
-    # Check Alignak recommended user existence
-    if not user_exists('alignak2'):
-        raise SystemExit("The user account 'alignak' does not exist on your system. "
-                         "You must create this user on your system to proceed with "
-                         "Alignak installation.")
-    if not group_exists('alignak'):
-        raise SystemExit("The user group 'alignak' does not exist on your system. "
-                         "You must create this users group on your system to proceed with "
-                         "Alignak installation.")
 
 
 def fix_alignak_cfg(config):
@@ -203,4 +163,3 @@ def fix_alignak_cfg(config):
               "==                                                                                                   ==\n"
               "=======================================================================================================\n"
               )
-
