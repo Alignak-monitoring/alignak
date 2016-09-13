@@ -1152,7 +1152,7 @@ class Items(object):
                 )
                 self.configuration_errors.append(msg)
 
-                # The is_correct method of an item already makes the logs...
+                # The is_correct method of an item already makes the logs...
                 # for msg in i.configuration_warnings:
                 #     logger.warning("[W] -> %s", msg)
                 #     self.configuration_warnings.append(msg)
