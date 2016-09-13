@@ -56,14 +56,19 @@ class TestHostGroup(AlignakTest):
 
         # Configuration is not ok
         self.assertEqual(self.conf_is_correct, False)
-        # Only one error
-        self.assertEqual(len(self.configuration_errors), 1)
-        # Error is an unknown member in a group
-        self.assert_any_log_match("[itemgroup::.*] as hostgroup, got unknown member 'BAD_HOST'")
-        print("Configuration errors: %s" % self.configuration_errors)
-        assert False
-
-        self.show_logs()
+        # Two error messages, bad hostgroup member
+        self.assertEqual(len(self.configuration_errors), 2)
+        # Two warning messages
+        self.assertEqual(len(self.configuration_warnings), 2)
+        # Error is an unknown member in a group (\ escape the [ and ' ...)
+        self.assert_any_cfg_log_match(
+            "\[hostgroup::allhosts_bad\] as hostgroup, got unknown member \'BAD_HOST\'"
+        )
+        self.assert_any_cfg_log_match(
+            "Configuration in hostgroup::allhosts_bad is incorrect; from: "\
+            "cfg/hostgroup/../default/daemons/reactionner-master.cfg:43"
+        )
+        self.show_configuration_logs()
 
     def test_look_for_alias(self):
         """
