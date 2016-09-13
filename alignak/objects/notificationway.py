@@ -352,7 +352,7 @@ class NotificationWay(Item):
             self.configuration_errors.append(msg)
             state = False
 
-        return super(NotificationWay, self).is_correct() or state
+        return super(NotificationWay, self).is_correct() and state
 
 
 class NotificationWays(CommandCallItems):

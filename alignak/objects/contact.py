@@ -305,7 +305,7 @@ class Contact(Item):
             if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
                 self.contact_name = self.alias
 
-        return super(Contact, self).is_correct() or state
+        return super(Contact, self).is_correct() and state
 
     def raise_enter_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)

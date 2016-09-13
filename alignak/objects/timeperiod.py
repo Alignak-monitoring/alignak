@@ -592,23 +592,29 @@ class Timeperiod(Item):
         return hasattr(self, prop)
 
     def is_correct(self):
-        """
-        Check if dateranges of timeperiod are valid
+        """Check if this object configuration is correct ::
 
-        :return: false if at least one datarange is invalid
+        * Check if dateranges of timeperiod are valid
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False if at least one daterange
+        is not correct
         :rtype: bool
         """
-        valid = True
+        state = True
         for daterange in self.dateranges:
             good = daterange.is_correct()
             if not good:
-                logger.error("[timeperiod::%s] invalid daterange ", self.get_name())
-            valid &= good
+                msg = "[timeperiod::%s] invalid daterange " % (self.get_name())
+                self.configuration_errors.append(msg)
+            state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
-            logger.warning("[timeperiod::%s] invalid entry '%s'", self.get_name(), entry)
-        return valid
+            msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
+            self.configuration_errors.append(msg)
+
+        return super(Timeperiod, self).is_correct() and state
 
     def __str__(self):
         """
