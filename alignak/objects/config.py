@@ -2108,16 +2108,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             cur = getattr(self, obj)
             if not cur.is_correct():
+                if self.read_config_silent == 0:
+                    logger.info('Checked %s, not correct!', obj)
+
                 valid = False
                 self.configuration_errors += cur.configuration_errors
-                logger.error("\t%s conf incorrect!!", obj)
-                logger.error(
-                    "\t%s configuration errors: %d, total: %d",
-                    obj, len(cur.configuration_errors), len(self.configuration_errors)
-                )
+                logger.error("\t%s configuration is incorrect!", obj)
             if cur.configuration_warnings:
                 self.configuration_warnings += cur.configuration_warnings
-                logger.error("\t%s configuration warnings: %d, total: %d", obj,
+                logger.warning("\t%s configuration warnings: %d, total: %d", obj,
                              len(cur.configuration_warnings), len(self.configuration_warnings))
 
             if self.read_config_silent == 0:
@@ -2132,12 +2131,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 continue
             if self.read_config_silent == 0:
                 logger.info('Checking %s...', obj)
+
             if not cur.is_correct():
+                if self.read_config_silent == 0:
+                    logger.info('Checked %s, not correct!', obj)
+
                 valid = False
                 self.configuration_errors += cur.configuration_errors
-                logger.error("\t%s conf incorrect!!", obj)
-                logger.error("\t%s configuration errors: %d, total: %d", obj,
-                             len(cur.configuration_errors), len(self.configuration_errors))
+                logger.error("\t%s configuration is incorrect!", obj)
             if cur.configuration_warnings:
                 self.configuration_warnings += cur.configuration_warnings
                 logger.error("\t%s configuration warnings: %d, total: %d", obj,
