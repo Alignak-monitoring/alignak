@@ -888,8 +888,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # it's a macro or a useless now param, we don't touch this
                 val = value
             else:
-                logger.warning("Guessing the property %s type because it is not in "
-                               "%s object properties", key, self.__class__.__name__)
+                msg = "Guessing the property %s type because it is not in %s object properties" % (
+                    key, self.__class__.__name__
+                )
+                self.configuration_warnings.append(msg)
+                logger.warning(msg)
                 val = ToGuessProp.pythonize(clean_params[key])
 
             setattr(self, key, val)
@@ -2106,7 +2109,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
             cur = getattr(self, obj)
             if not cur.is_correct():
                 valid = False
+                self.configuration_errors += cur.configuration_errors
                 logger.error("\t%s conf incorrect!!", obj)
+                logger.error("\t%s configuration errors: %d, total: %d", obj, len(cur.configuration_errors), len(self.configuration_errors))
+            if cur.configuration_warnings:
+                self.configuration_warnings += cur.configuration_warnings
+                logger.error("\t%s configuration warnings: %d, total: %d", obj,
+                             len(cur.configuration_warnings), len(self.configuration_warnings))
+
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
@@ -2121,7 +2131,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.info('Checking %s...', obj)
             if not cur.is_correct():
                 valid = False
+                self.configuration_errors += cur.configuration_errors
                 logger.error("\t%s conf incorrect!!", obj)
+                logger.error("\t%s configuration errors: %d, total: %d", obj,
+                             len(cur.configuration_errors), len(self.configuration_errors))
+            if cur.configuration_warnings:
+                self.configuration_warnings += cur.configuration_warnings
+                logger.error("\t%s configuration warnings: %d, total: %d", obj,
+                             len(cur.configuration_warnings), len(self.configuration_warnings))
+
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
@@ -2234,12 +2252,24 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.conf_is_correct = False
 
     def show_errors(self):
-        """Loop over configuration_errors and log them
+        """
+        Loop over configuration warnings and log them as INFO log
+        Loop over configuration errors and log them as INFO log
+
+        Note that the warnings and errors are logged on the fly during the configuration parsing.
+        It is not necessary to log as WARNING and ERROR in this function which is used as a sum-up
+        on the end of configuration parsing when an error has been detected.
 
         :return:  None
         """
-        for err in self.configuration_errors:
-            logger.error(err)
+        if self.configuration_warnings:
+            logger.info("Configuration warnings:")
+            for msg in self.configuration_warnings:
+                logger.info(msg)
+        if self.configuration_errors:
+            logger.info("Configuration errors:")
+            for msg in self.configuration_errors:
+                logger.info(msg)
 
     def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)

@@ -412,22 +412,34 @@ class Item(AlignakObject):
         """
         Check if this object is correct
 
+        This function:
+        - checks if the required properties are defined
+        - logs the previously found warnings and errors
+
         :return: True if it's correct, otherwise False
         :rtype: bool
         """
         state = True
         properties = self.__class__.properties
 
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
         for prop, entry in properties.items():
             if not hasattr(self, prop) and entry.required:
-                logger.error("[item::%s] %s property is missing", self.get_name(), prop)
+                msg = "[%s::%s] %s property is missing" % (
+                    self.my_type, self.get_name(), prop
+                )
+                self.configuration_errors.append(msg)
                 state = False
+
+        # Log all previously sawn warnings
+        if self.configuration_warnings:
+            for msg in self.configuration_warnings:
+                logger.warning("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
+
+        # Raise all previously sawn errors
+        if self.configuration_errors:
+            state = False
+            for msg in self.configuration_errors:
+                logger.error("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
 
         return state
 
@@ -1106,8 +1118,9 @@ class Items(object):
         :return: True if correct, otherwise False
         :rtype: bool
         """
-        # we are ok at the beginning. Hope we still ok at the end...
+        # we are ok at the beginning. Hope we are still ok at the end...
         valid = True
+
         # Some class do not have twins, because they do not have names
         # like servicedependencies
         twins = getattr(self, 'twins', None)
@@ -1115,21 +1128,13 @@ class Items(object):
             # Ok, look at no twins (it's bad!)
             for t_id in twins:
                 i = self.items[t_id]
-                logger.warning("[items] %s.%s is duplicated from %s",
-                               i.__class__.my_type,
-                               i.get_name(),
-                               getattr(i, 'imported_from', "unknown source"))
+                msg = "[items] %s.%s is duplicated from %s" % (
+                    i.__class__.my_type, i.get_name(),
+                    getattr(i, 'imported_from', "unknown source")
+                )
+                self.configuration_warnings.append(msg)
 
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[items] %s", err)
-
-        for err in self.configuration_errors:
-            logger.error("[items] %s", err)
-            valid = False
-
-        # Then look for individual ok
+        # Better check individual items before displaying the global items list errors and warnings
         for i in self:
             # Alias and display_name hook hook
             prop_name = getattr(self.__class__, 'name_property', None)
@@ -1140,9 +1145,33 @@ class Items(object):
 
             # Now other checks
             if not i.is_correct():
-                source = getattr(i, 'imported_from', "unknown source")
-                logger.error("[items] In %s is incorrect ; from %s", i.get_name(), source)
                 valid = False
+                source = getattr(i, 'imported_from', "unknown source")
+                msg = "Configuration in %s::%s is incorrect; from: %s" % (
+                    i.my_type, i.get_name(), source
+                )
+                self.configuration_errors.append(msg)
+
+                # The is_correct method of an item already makes the logs...
+                # for msg in i.configuration_warnings:
+                #     logger.warning("[W] -> %s", msg)
+                #     self.configuration_warnings.append(msg)
+                #
+                # for msg in i.configuration_errors:
+                #     logger.error("[E] -> %s", msg)
+                #     self.configuration_errors.append(msg)
+                #     valid = False
+
+        # Log all previously sawn warnings
+        if self.configuration_warnings:
+            for msg in self.configuration_warnings:
+                logger.warning("[items] %s", msg)
+
+        # Raise all previously sawn errors
+        if self.configuration_errors:
+            valid = False
+            for msg in self.configuration_errors:
+                logger.error("[items] %s", msg)
 
         return valid
 
