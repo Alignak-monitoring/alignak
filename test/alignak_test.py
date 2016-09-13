@@ -148,6 +148,8 @@ class AlignakTest(unittest.TestCase):
         :type configuration_file: str
         :return: None
         """
+        self.broks = {}
+        self.schedulers = []
         self.arbiter = None
 
         self.arbiter = Arbiter([configuration_file], False, False, False, False,
@@ -160,7 +162,6 @@ class AlignakTest(unittest.TestCase):
         self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
         self.arbiter.dispatcher.prepare_dispatch()
 
-        self.schedulers = []
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched = Alignak([], False, False, True, '/tmp/scheduler.log')
             # logger.setLevel('DEBUG')
@@ -175,7 +176,7 @@ class AlignakTest(unittest.TestCase):
             self.broks[b.uuid] = b
             return
         if isinstance(b, ExternalCommand):
-            self.sched.run_external_command(b.cmd_line)
+            self.schedulers[0].run_external_command(b.cmd_line)
 
     def fake_check(self, ref, exit_status, output="OK"):
         # print "fake", ref
@@ -268,10 +269,10 @@ class AlignakTest(unittest.TestCase):
 
     def show_logs(self):
         print "--- logs <<<----------------------------------"
-        if hasattr(self.scheduler, "sched"):
-            broks = self.scheduler.sched.broks
-        else:
-            broks = self.broks
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
         for brok in sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
             if brok.type == 'log':
                 brok.prepare()
@@ -309,8 +310,8 @@ class AlignakTest(unittest.TestCase):
         self.clear_actions()
 
     def count_logs(self):
-        if hasattr(self.scheduler, "sched"):
-            broks = self.scheduler.sched.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
         else:
             broks = self.broks
         return len([b for b in broks.values() if b.type == 'log'])
@@ -323,10 +324,10 @@ class AlignakTest(unittest.TestCase):
         return len(actions.values())
 
     def clear_logs(self):
-        if hasattr(self.scheduler, "sched"):
-            broks = self.scheduler.sched.broks
-        else:
-            broks = self.broks
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
         id_to_del = []
         for b in broks.values():
             if b.type == 'log':
@@ -395,7 +396,10 @@ class AlignakTest(unittest.TestCase):
         """
         regex = re.compile(pattern)
         log_num = 1
-        broks = sorted(self.schedulers[0].sched.broks.values(), key=lambda x: x.creation_time)
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
         found = False
         for brok in broks:
             if brok.type == 'log':
@@ -458,8 +462,10 @@ class AlignakTest(unittest.TestCase):
 
     def _any_log_match(self, pattern, assert_not):
         regex = re.compile(pattern)
-        broks = getattr(self, 'sched', self).broks
-        broks = sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid))
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
         for brok in broks:
             if brok.type == 'log':
                 brok.prepare()
@@ -481,7 +487,11 @@ class AlignakTest(unittest.TestCase):
     def get_log_match(self, pattern):
         regex = re.compile(pattern)
         res = []
-        for brok in sorted(self.sched.broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
+        for brok in broks:
             if brok.type == 'log':
                 if re.search(regex, brok.data['log']):
                     res.append(brok.data['log'])
