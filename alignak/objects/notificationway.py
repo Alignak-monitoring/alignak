@@ -304,7 +304,7 @@ class NotificationWay(Item):
         else:
             for cmd in self.service_notification_commands:
                 if cmd is None:
-                    msg = "[notificationway::%s] a service_notification_command is missing" %(
+                    msg = "[notificationway::%s] a service_notification_command is missing" % (
                         self.get_name()
                     )
                     self.configuration_errors.append(msg)
