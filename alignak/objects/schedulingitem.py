@@ -66,7 +66,6 @@ import re
 import random
 import time
 import traceback
-import sys
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems

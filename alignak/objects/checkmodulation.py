@@ -54,7 +54,6 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
-from alignak.log import logger
 
 
 class CheckModulation(Item):
@@ -129,7 +128,6 @@ class CheckModulation(Item):
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
         # Internal checks before executing inherited function...
         if not hasattr(self, 'check_command'):

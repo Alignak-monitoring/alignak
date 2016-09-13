@@ -57,7 +57,6 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import logger
 from alignak.commandcall import CommandCall
 
 
@@ -283,7 +282,6 @@ class NotificationWay(Item):
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
         # Do not execute checks if notifications are disabled
         if (hasattr(self, 'service_notification_options') and
