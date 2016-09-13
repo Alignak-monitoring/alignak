@@ -2117,7 +2117,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if cur.configuration_warnings:
                 self.configuration_warnings += cur.configuration_warnings
                 logger.warning("\t%s configuration warnings: %d, total: %d", obj,
-                             len(cur.configuration_warnings), len(self.configuration_warnings))
+                               len(cur.configuration_warnings), len(self.configuration_warnings))
 
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
