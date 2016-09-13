@@ -423,7 +423,9 @@ class Item(AlignakObject):
         properties = self.__class__.properties
 
         for prop, entry in properties.items():
-            if prop not in self.special_properties and not hasattr(self, prop) and entry.required:
+            if hasattr(self, 'special_properties') and prop in self.special_properties:
+                continue
+            if not hasattr(self, prop) and entry.required:
                 msg = "[%s::%s] %s property is missing" % (
                     self.my_type, self.get_name(), prop
                 )
