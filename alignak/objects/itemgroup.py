@@ -167,20 +167,17 @@ class Itemgroup(Item):
         :return: True if group is correct, otherwise False
         :rtype: bool
         """
-        res = True
+        state = True
 
         if self.unknown_members:
             for member in self.unknown_members:
-                logger.error("[itemgroup::%s] as %s, got unknown member '%s'",
-                             self.get_name(), self.__class__.my_type, member)
-            res = False
+                msg = "[%s::%s] as %s, got unknown member '%s'" % (
+                    self.my_type, self.get_name(), self.__class__.my_type, member
+                )
+                self.configuration_errors.append(msg)
+            state = False
 
-        if self.configuration_errors != []:
-            for err in self.configuration_errors:
-                logger.error("[itemgroup] %s", err)
-            res = False
-
-        return res
+        return super(Itemgroup, self).is_correct() or state
 
     def has(self, prop):
         """
