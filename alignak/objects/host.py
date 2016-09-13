@@ -273,10 +273,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
