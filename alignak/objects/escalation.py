@@ -260,6 +260,7 @@ class Escalation(Item):
 
         return state_parent and state
 
+
 class Escalations(Items):
     """Escalations manage a list of Escalation objects, used for parsing configuration
 
