@@ -73,7 +73,6 @@ class Hostgroup(Itemgroup):
         'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'hostgroup_name':       StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
-        'test':                 StringProp(fill_brok=['full_status']),
         'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
                                          merging='join', split_on_coma=True),
         'notes':                StringProp(default='', fill_brok=['full_status']),
