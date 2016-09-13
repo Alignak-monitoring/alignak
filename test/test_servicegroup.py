@@ -222,7 +222,3 @@ class TestServiceGroup(AlignakTest):
         self.assertIn(sgs[1].uuid, svc3.servicegroups)
         self.assertIn(sgs[2].uuid, svc4.servicegroups)
         self.assertIn(sgs[3].uuid, svc4.servicegroups)
-
-
-if __name__ == '__main__':
-    unittest.main()
