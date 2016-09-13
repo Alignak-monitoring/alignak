@@ -2370,14 +2370,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if elt.realm:
                     tmp_realms.add(elt.realm)
             if len(tmp_realms) > 1:
-                self.add_error("Error: the realm configuration of yours hosts is not good "
-                               "because there a more than one realm in one pack (host relations):")
-                for host in pack:
+                self.add_error("Error: the realm configuration of yours hosts is not good because "
+                               "there is more than one realm in one pack (host relations):")
+                for host_id in pack:
+                    host = self.hosts[host_id]
                     if host.realm is None:
-                        self.add_error('   the host %s do not have a realm' % host.get_name())
+                        self.add_error(' -> the host %s do not have a realm' % host.get_name())
                     else:
-                        self.add_error('   the host %s is in the realm %s' %
-                                       (host.get_name(), host.realm.get_name()))
+                        # Do not use get_name for the realm because it is not an object but a
+                        # string containing the not found realm name if the realm is not existing!
+                        # As of it, it may raise an exception
+                        # TODO: improve this log to have the realm name
+                        self.add_error(' -> the host %s is in the realm %s' %
+                                       (host.get_name(), host.realm))
             if len(tmp_realms) == 1:  # Ok, good
                 realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)
