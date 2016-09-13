@@ -271,10 +271,10 @@ class Contact(Item):
         return res
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
@@ -282,32 +282,30 @@ class Contact(Item):
         state = True
         cls = self.__class__
 
-        # All of the above are checks in the notificationways part
-        for prop, entry in cls.properties.items():
-            if prop not in self.special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[contact::%s] %s property not set", self.get_name(), prop)
-                    state = False  # Bad boy...
+        # Internal checks before executing inherited function...
 
         # There is a case where there is no nw: when there is not special_prop defined
         # at all!!
         if self.notificationways == []:
             for prop in self.special_properties:
                 if not hasattr(self, prop):
-                    logger.error("[contact::%s] %s property is missing", self.get_name(), prop)
+                    msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
+                    self.configuration_errors.append(msg)
                     state = False
 
         if hasattr(self, 'contact_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.contact_name:
-                    logger.error("[contact::%s] %s character not allowed in contact_name",
-                                 self.get_name(), char)
+                    msg = "[contact::%s] %s character not allowed in contact_name" % (
+                        self.get_name(), char
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
         else:
             if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
                 self.contact_name = self.alias
 
-        return state
+        return super(Contact, self).is_correct() or state
 
     def raise_enter_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)

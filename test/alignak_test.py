@@ -142,6 +142,13 @@ class AlignakTest(unittest.TestCase):
         """
         Load alignak with defined configuration file
 
+        If the configuration loading fails, a SystemExit exception is raised to the caller.
+
+        The conf_is_correct property indicates if the configuration loading succeeded or failed.
+
+        The configuration errors property contains a list of the error message that are normally
+        logged as ERROR by the arbiter.
+
         @verified
 
         :param configuration_file: path + file name of the main configuration file
@@ -151,11 +158,29 @@ class AlignakTest(unittest.TestCase):
         self.broks = {}
         self.schedulers = []
         self.arbiter = None
+        self.conf_is_correct = False
+        self.configuration_warnings = []
+        self.configuration_errors = []
 
         self.arbiter = Arbiter([configuration_file], False, False, False, False,
                               '/tmp/arbiter.log', 'arbiter-master')
 
-        self.arbiter.load_config_file()
+        try:
+            self.arbiter.load_config_file()
+            # If this assertion does not match, then there is a bug in the arbiter :)
+            self.assertTrue(self.arbiter.conf.conf_is_correct)
+            self.conf_is_correct = True
+        except SystemExit:
+            self.configuration_warnings = self.arbiter.conf.configuration_warnings
+            print("Configuration warnings:")
+            for msg in self.configuration_warnings:
+                print(" - %s" % msg)
+            self.configuration_errors = self.arbiter.conf.configuration_errors
+            print("Configuration errors:")
+            for msg in self.configuration_errors:
+                print(" - %s" % msg)
+            raise
+
         for arb in self.arbiter.conf.arbiters:
             if arb.get_name() == self.arbiter.config_name:
                 self.arbiter.myself = arb
@@ -505,6 +530,40 @@ class AlignakTest(unittest.TestCase):
     def xtest_conf_is_correct(self):
         self.print_header()
         self.assertTrue(self.conf.conf_is_correct)
+
+
+    def assert_configuration_log_match(self, index, pattern):
+        """
+        Search if the log with the index number has the pattern
+
+        :param index: index number
+        :type index: int
+        :param pattern: string to search in log
+        :type pattern: str
+        :return: None
+        """
+        regex = re.compile(pattern)
+        log_num = 1
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
+        found = False
+        for brok in broks:
+            if brok.type == 'log':
+                brok.prepare()
+                if index == log_num:
+                    if regex.search(brok.data['log']):
+                        found = True
+                log_num += 1
+        self.assertTrue(found,
+                        "Not found a matched log line in broks:\nindex=%s pattern=%r\n"
+                        "broks_logs=[[[\n%s\n]]]" % (
+                            index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
+                                                      for idx, b in enumerate((b.data['log']
+                                                                               for b in broks
+                                                                               if b.type == 'log'),
+                                                                              1))))
 
 
 ShinkenTest = AlignakTest
