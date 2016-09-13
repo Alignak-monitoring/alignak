@@ -21,10 +21,8 @@
 #
 
 """
-This file test all cases of eventhandler
+This file contains the test for the Alignak configuration checks
 """
-
-import time
 
 from alignak_test import AlignakTest
 
@@ -48,7 +46,7 @@ class TestConfig(AlignakTest):
         # No warning messages
         self.assertEqual(len(self.configuration_warnings), 0)
 
-    def test_config_ko_1(self):
+    def test_broken_configuration(self):
         """
         Configuration is not correct because of a wrong relative path in the main config file
         :return: None
@@ -58,6 +56,132 @@ class TestConfig(AlignakTest):
             self.setup_with_file('cfg/config/alignak_broken_1.cfg')
         self.assertFalse(self.conf_is_correct)
         self.show_configuration_logs()
+
+    def test_bad_contact(self):
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_contact_call.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        # The service got a unknow contact. It should raise an error
+        svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_badcon")
+        print "Contacts:", svc.contacts
+        self.assertFalse(svc.is_correct())
+        self.assert_any_cfg_log_match(
+            "Configuration in service::test_ok_0_badcon is incorrect; from: "\
+            "cfg/config/../default/daemons/reactionner-master.cfg:42"
+        )
+        self.assert_any_cfg_log_match(
+            "the contact 'IDONOTEXIST' defined for 'test_ok_0_badcon' is unknown"
+        )
+
+    def test_bad_notification_period(self):
+        """
+        Config is not correct because of an unknown notification_period
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_notification_period.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Configuration in service::test_ok_0_badperiod is incorrect; from: "\
+            "cfg/config/../default/daemons/reactionner-master.cfg:42"
+        )
+        self.assert_any_cfg_log_match(
+            "The notification_period of the service 'test_ok_0_badperiod' "\
+            "named 'IDONOTEXIST' is unknown!"
+        )
+
+    def test_bad_realm_conf(self):
+        """
+        Config is not correct because of an unknown notification_period
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_realm_conf.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Configuration in host::test_host_realm3 is incorrect; from: "
+            "cfg/config/../default/daemons/reactionner-master.cfg:90"
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm3 got an invalid realm \(Realm3\)!"
+        )
+        self.assert_any_cfg_log_match(
+            "Configuration in realm::Realm1 is incorrect; from: cfg/config/../default/daemons/reactionner-master.cfg:47"
+        )
+        self.assert_any_cfg_log_match(
+            "\[realm::Realm1\] as realm, got unknown member 'UNKNOWNREALM'"
+        )
+        self.assert_any_cfg_log_match(
+            "Error : More than one realm are set to the default realm"
+        )
+        self.assert_any_cfg_log_match(
+            "Error: the realm configuration of yours hosts is not good because there is more "
+            "than one realm in one pack \(host relations\):"
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm2 is in the realm "
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm1 is in the realm "
+        )
+        self.assert_any_cfg_log_match(
+            "the host test_host_realm3 is in the realm Realm3"
+        )
+        # self.assert_any_cfg_log_match(
+        #     "The realm Realm2 has hosts but no scheduler!"
+        # )
+        self.assert_any_cfg_log_match(
+            "There are 6 hosts defined, and 3 hosts dispatched in the realms. "
+            "Some hosts have been ignored"
+        )
+
+    def test_bad_satellite_realm_conf(self):
+        """
+        Config is not correct because of an unknown notification_period
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_sat_realm_conf.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Configuration in broker::Broker-test is incorrect; from: "
+            "cfg/config/../default/daemons/reactionner-master.cfg:42"
+        )
+        self.assert_any_cfg_log_match(
+            "The broker Broker-test got a unknown realm 'NoGood'"
+        )
+
+    def test_bad_service_interval(self):
+        """
+        Config is not correct because of a bad service interval configuration
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_service_interval.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Configuration in service::fake svc1 is incorrect; from: "
+            "cfg/config/../default/daemons/reactionner-master.cfg:50"
+        )
+        self.assert_any_cfg_log_match(
+            "Error while pythonizing parameter \'check_interval\': "
+            "invalid literal for float\(\): 1,555"
+        )
 
     def test_config_hosts(self):
         """
