@@ -72,7 +72,7 @@ class MacroModulation(Item):
 
     running_properties = Item.running_properties.copy()
 
-    _special_properties = ('modulation_period',)
+    special_properties = ('modulation_period',)
 
     macros = {}
 
@@ -115,7 +115,7 @@ class MacroModulation(Item):
                 logger.error("[item::%s] %s", self.get_name(), err)
 
         for prop, entry in cls.properties.items():
-            if prop not in cls._special_properties:
+            if prop not in cls.special_properties:
                 if not hasattr(self, prop) and entry.required:
                     logger.error(
                         "[macromodulation::%s] %s property not set", self.get_name(), prop
