@@ -281,17 +281,20 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = super(Host, self).is_correct()
-        cls = self.__class__
+        state = True
 
+        # Internal checks before executing inherited function...
+        cls = self.__class__
         if hasattr(self, 'host_name'):
-            for char in cls.illegal_object_name_chars:
-                if char in self.host_name:
-                    logger.error("[%s::%s] host_name got an illegal character: %s",
-                                 self.my_type, self.get_name(), char)
+            for c in cls.illegal_object_name_chars:
+                if c in self.host_name:
+                    msg = "[%s::%s] host_name got an illegal character: %s" % (
+                        self.my_type, self.get_name(), c
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
-        return state
+        return super(Host, self).is_correct() or state
 
     def get_services(self):
         """Get all services for this host
@@ -1297,7 +1300,7 @@ class Hosts(SchedulingItems):
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
         """
-        valid = super(Hosts, self).is_correct()
+        state = True
         loop = self.no_loop_in_parents("self", "parents")
         if len(loop) > 0:
             logger.error("Loop detected while checking hosts ")
@@ -1309,6 +1312,6 @@ class Hosts(SchedulingItems):
                     elif elem in item.parents:
                         logger.error("Host %s is child in dependency defined in %s",
                                      self[elem].get_name(), self[elem].imported_from)
-            return False
+            state = False
 
-        return valid
+        return super(Hosts, self).is_correct() or state

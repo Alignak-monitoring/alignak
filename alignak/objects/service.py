@@ -360,7 +360,6 @@ class Service(SchedulingItem):
         :return: True if the configuration is correct, False otherwise
         :rtype: bool
         """
-        state = super(Service, self).is_correct()
         cls = self.__class__
 
         # Set display_name if need
@@ -368,20 +367,25 @@ class Service(SchedulingItem):
             self.display_name = getattr(self, 'service_description', '')
 
         if not self.host_name:
-            logger.error("[%s::%s] not bound do any host.", self.my_type, self.get_name())
+            msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
+            self.configuration_errors.append(msg)
             state = False
         elif self.host is None:
-            logger.error("[%s::%s] unknown host_name '%s'",
-                         self.my_type, self.get_name(), self.host_name)
+            msg = "[%s::%s] unknown host_name '%s'" % (
+                self.my_type, self.get_name(), self.host_name
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         if hasattr(self, 'service_description'):
-            for char in cls.illegal_object_name_chars:
-                if char in self.service_description:
-                    logger.error("[%s::%s] service_description got an illegal character: %s",
-                                 self.my_type, self.get_name(), char)
+            for c in cls.illegal_object_name_chars:
+                if c in self.service_description:
+                    msg = "[%s::%s] service_description got an illegal character: %s" % (
+                        self.my_type, self.get_name(), c
+                    )
                     state = False
-        return state
+
+        return super(Service, self).is_correct() or state
 
     def duplicate(self, host):
         """For a given host, look for all copy we must create for for_each property
