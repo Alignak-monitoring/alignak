@@ -3149,6 +3149,8 @@ class SchedulingItems(CommandCallItems):
         son.parent_dependencies.add(parent_id)
         parent.child_dependencies.add(son_id)
 
+        return True
+
     def del_act_dependency(self, son_id, parent_id):
         """Remove act_dependency between two hosts or services.
 
