@@ -530,39 +530,61 @@ class AlignakTest(unittest.TestCase):
         self.print_header()
         self.assertTrue(self.conf.conf_is_correct)
 
-
-    def assert_configuration_log_match(self, index, pattern):
+    def show_configuration_logs(self):
         """
-        Search if the log with the index number has the pattern
+        Prints the configuration logs
 
-        :param index: index number
-        :type index: int
-        :param pattern: string to search in log
-        :type pattern: str
-        :return: None
+        @verified
+        :return:
+        """
+        print("Configuration warnings:")
+        for msg in self.configuration_warnings:
+            print(" - %s" % msg)
+        print("Configuration errors:")
+        for msg in self.configuration_errors:
+            print(" - %s" % msg)
+
+    def _any_cfg_log_match(self, pattern, assert_not):
+        """
+        Search a pattern in configuration log (warning and error)
+
+        @verified
+        :param pattern:
+        :return:
         """
         regex = re.compile(pattern)
-        log_num = 1
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
-            broks = self.schedulers[0].sched.broks
 
-        found = False
-        for brok in broks:
-            if brok.type == 'log':
-                brok.prepare()
-                if index == log_num:
-                    if regex.search(brok.data['log']):
-                        found = True
-                log_num += 1
-        self.assertTrue(found,
-                        "Not found a matched log line in broks:\nindex=%s pattern=%r\n"
-                        "broks_logs=[[[\n%s\n]]]" % (
-                            index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
-                                                      for idx, b in enumerate((b.data['log']
-                                                                               for b in broks
-                                                                               if b.type == 'log'),
-                                                                              1))))
+        cfg_logs = self.configuration_warnings + self.configuration_errors
+
+        for log in cfg_logs:
+            if re.search(regex, log):
+                self.assertTrue(not assert_not,
+                                "Found matching log line:\n"
+                                "pattern = %r\nlog = %r" % (pattern, log))
+                return
+
+        self.assertTrue(assert_not, "No matching log line found:\n"
+                                    "pattern = %r\n" "logs = %r" % (pattern, cfg_logs))
+
+    def assert_any_cfg_log_match(self, pattern):
+        """
+        Assert if any configuration log matches the pattern
+
+        @verified
+        :param pattern:
+        :return:
+        """
+        self._any_cfg_log_match(pattern, assert_not=False)
+
+    def assert_no_cfg_log_match(self, pattern):
+        """
+        Assert if no configuration log matches the pattern
+
+        @verified
+        :param pattern:
+        :return:
+        """
+        self._any_cfg_log_match(pattern, assert_not=True)
 
 
 ShinkenTest = AlignakTest
