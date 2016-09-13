@@ -45,6 +45,26 @@ class TestHostGroup(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
         self.assertTrue(self.schedulers[0].conf.conf_is_correct)
 
+    def test_bad_hostgroup(self):
+        """
+        Default configuration has no loading problems ... as of it hostgroups are parsed correctly
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/hostgroup/alignak_bad_hg_conf.cfg')
+
+        # Configuration is not ok
+        self.assertEqual(self.conf_is_correct, False)
+        # Only one error
+        self.assertEqual(len(self.configuration_errors), 1)
+        # Error is an unknown member in a group
+        self.assert_any_log_match("[itemgroup::.*] as hostgroup, got unknown member 'BAD_HOST'")
+        print("Configuration errors: %s" % self.configuration_errors)
+        assert False
+
+        self.show_logs()
+
     def test_look_for_alias(self):
         """
         Default configuration has no loading problems ... as of it hostgroups are parsed correctly
