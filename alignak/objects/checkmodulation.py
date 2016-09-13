@@ -152,7 +152,7 @@ class CheckModulation(Item):
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        return super(CheckModulation, self).is_correct() or state
+        return super(CheckModulation, self).is_correct() and state
 
 
 class CheckModulations(CommandCallItems):

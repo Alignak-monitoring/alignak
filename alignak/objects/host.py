@@ -294,7 +294,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                     self.configuration_errors.append(msg)
                     state = False
 
-        return super(Host, self).is_correct() or state
+        return super(Host, self).is_correct() and state
 
     def get_services(self):
         """Get all services for this host
@@ -1296,26 +1296,34 @@ class Hosts(SchedulingItems):
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if the hosts list configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * check if any loop exists in each host dependencies
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
+
+        # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
         if len(loop) > 0:
-            logger.error("Loop detected while checking hosts ")
+            msg = "Loop detected while checking hosts "
+            self.configuration_errors.append(msg)
+            state = False
             for uuid, item in self.items.iteritems():
                 for elem in loop:
                     if elem == uuid:
-                        logger.error("Host %s is parent in dependency defined in %s",
-                                     item.get_name(), item.imported_from)
+                        msg = "Host %s is parent in dependency defined in %s" % (
+                            item.get_name(), item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
                     elif elem in item.parents:
-                        logger.error("Host %s is child in dependency defined in %s",
-                                     self[elem].get_name(), self[elem].imported_from)
+                        msg = "Host %s is child in dependency defined in %s" % (
+                            self[elem].get_name(), self[elem].imported_from
+                        )
+                        self.configuration_errors.append(msg)
             state = False
 
-        return super(Hosts, self).is_correct() or state
+        return super(Hosts, self).is_correct() and state
