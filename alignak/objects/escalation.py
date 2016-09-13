@@ -212,7 +212,6 @@ class Escalation(Item):
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
         # Internal checks before executing inherited function...
 
