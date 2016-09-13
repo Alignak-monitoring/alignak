@@ -506,6 +506,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.last_state = self.state_before_impact
         else:
             self.last_state = self.state
+
         # There is no 1 case because it should have been managed by the caller for a host
         # like the schedulingitem::consume method.
         if status == 0:
@@ -523,11 +524,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
+
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
             # Now we add a value, we update the is_flapping prop
             self.update_flapping(notif_period, hosts, services)
-        if self.state != self.last_state:
+
+        if self.state != self.last_state and \
+                not (self.state == "DOWN" and self.last_state == "UNREACHABLE"):
             self.last_state_change = self.last_state_update
         self.duration_sec = now - self.last_state_change
 
