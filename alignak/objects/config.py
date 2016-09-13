@@ -2084,7 +2084,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         #      r &= False
         return valid
 
-    def is_correct(self):  # pylint: disable=R0912
+    def is_correct(self):  # pylint: disable=R0912,R0915
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2118,7 +2118,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if cur.configuration_warnings:
                 self.configuration_warnings += cur.configuration_warnings
                 logger.warning("\t%s configuration warnings: %d, total: %d", obj,
-                             len(cur.configuration_warnings), len(self.configuration_warnings))
+                               len(cur.configuration_warnings), len(self.configuration_warnings))
 
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)

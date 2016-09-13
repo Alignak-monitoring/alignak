@@ -57,7 +57,6 @@ from alignak.objects.item import Item, Items
 
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import logger
 
 
 class Escalation(Item):
@@ -249,8 +248,17 @@ class Escalation(Item):
                 self.configuration_errors.append(msg)
                 state = False
 
-        return super(Escalation, self).is_correct() and state
+        # Change the special_properties definition according to time_based ...
+        save_special_properties = self.special_properties
+        if self.time_based:
+            self.special_properties = self.special_properties_time_based
 
+        state_parent = super(Escalation, self).is_correct()
+
+        if self.time_based:
+            self.special_properties = save_special_properties
+
+        return state_parent and state
 
 class Escalations(Items):
     """Escalations manage a list of Escalation objects, used for parsing configuration

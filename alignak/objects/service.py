@@ -379,10 +379,10 @@ class Service(SchedulingItem):
             state = False
 
         if hasattr(self, 'service_description'):
-            for c in cls.illegal_object_name_chars:
-                if c in self.service_description:
+            for char in cls.illegal_object_name_chars:
+                if char in self.service_description:
                     msg = "[%s::%s] service_description got an illegal character: %s" % (
-                        self.my_type, self.get_name(), c
+                        self.my_type, self.get_name(), char
                     )
                     state = False
 

@@ -66,7 +66,6 @@ import re
 import random
 import time
 import traceback
-import sys
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -3148,6 +3147,8 @@ class SchedulingItems(CommandCallItems):
         # TODO: Is it necessary? We already have this info in act_depend_* attributes
         son.parent_dependencies.add(parent_id)
         parent.child_dependencies.add(son_id)
+
+        return True
 
     def del_act_dependency(self, son_id, parent_id):
         """Remove act_dependency between two hosts or services.
