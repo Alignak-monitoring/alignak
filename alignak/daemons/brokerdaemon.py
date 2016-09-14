@@ -321,7 +321,7 @@ class Broker(BaseSatellite):
                 mod.manage_brok(brok)
             except Exception, exp:  # pylint: disable=W0703
                 logger.debug(str(exp.__dict__))
-                logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
+                logger.warning("The module %s raised an exception: %s, I'm tagging it to restart later",
                                mod.get_name(), str(exp))
                 logger.warning("Exception type: %s", type(exp))
                 logger.warning("Back trace of this kill: %s", traceback.format_exc())
