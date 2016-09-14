@@ -269,7 +269,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                      "with the value '%s'."
                      " Thanks." % (self.config_name, socket.gethostname()))
 
-        logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
+        if self.myself.modules:
+            logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
 
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
