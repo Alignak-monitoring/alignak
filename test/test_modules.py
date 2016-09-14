@@ -104,7 +104,7 @@ class TestModules(AlignakTest):
         ])
         # ...is in the configuration
 
-    @unittest.skip("Disabled - ModuleManager does not handle Module object ")
+    @unittest.skip("Disabled - ModuleManager does not handle Module object #340")
     def test_module_on_module(self):
         """
 
