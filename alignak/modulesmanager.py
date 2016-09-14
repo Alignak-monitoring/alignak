@@ -93,10 +93,11 @@ class ModulesManager(object):
     def load_and_init(self, mod_confs):
         """Import, instantiate & "init" the modules we have been requested
 
-        :return: None
+        :return: Number of module instances loaded and initialized
+        :rtype: int
         """
         self.load(mod_confs)
-        self.get_instances()
+        return len(self.get_instances())
 
     @staticmethod
     def find_module_properties_and_get_instance(module, mod_name):
