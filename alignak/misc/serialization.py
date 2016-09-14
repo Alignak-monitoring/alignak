@@ -43,9 +43,10 @@ def serialize(obj, no_dump=False):
     """
     if hasattr(obj, "serialize") and callable(obj.serialize):
         o_cls = obj.__class__
-        o_dict = {'__sys_python_module__': '', 'content': {}}
-        o_dict['content'] = obj.serialize()
-        o_dict['__sys_python_module__'] = "%s.%s" % (o_cls.__module__, o_cls.__name__)
+        o_dict = {
+            'content': obj.serialize(),
+            '__sys_python_module__': "%s.%s" % (o_cls.__module__, o_cls.__name__)
+        }
 
     elif isinstance(obj, dict):
         o_dict = {}

@@ -356,6 +356,8 @@ class Contacts(CommandCallItems):
 
          * contacts -> notificationways
 
+        :param commands: list of all commands
+        :type commands: list
         :param notificationways: notificationways to link
         :type notificationways: alignak.objects.notificationway.Notificationways
         :return: None
