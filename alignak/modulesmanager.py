@@ -96,7 +96,7 @@ class ModulesManager(object):
         :return: Number of module instances loaded and initialized
         """
         self.load(mod_confs)
-        return self.get_instances()
+        return len(self.get_instances())
 
     @staticmethod
     def find_module_properties_and_get_instance(module, mod_name):
