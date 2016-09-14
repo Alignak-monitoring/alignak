@@ -111,6 +111,8 @@ class CheckModulation(Item):
 
         :param t_to_go: time to check if we are in the timeperiod
         :type t_to_go:
+        :param timeperiods: List of all timeperiods
+        :type timeperiods: dict
         :return: A check command if we are in the check period, None otherwise
         :rtype: alignak.objects.command.Command
         """
