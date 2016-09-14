@@ -157,6 +157,7 @@ class AlignakTest(unittest.TestCase):
         """
         self.broks = {}
         self.schedulers = []
+        self.brokers = []
         self.arbiter = None
         self.conf_is_correct = False
         self.configuration_warnings = []
@@ -182,6 +183,9 @@ class AlignakTest(unittest.TestCase):
             for msg in self.configuration_errors:
                 print(" - %s" % msg)
             raise
+
+        for broker in self.arbiter.conf.brokers:
+            self.brokers.append(broker)
 
         for arb in self.arbiter.conf.arbiters:
             if arb.get_name() == self.arbiter.config_name:
