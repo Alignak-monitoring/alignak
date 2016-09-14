@@ -390,7 +390,7 @@ class Dispatcher:
         for realm in self.realms:
             for cfg in realm.confs.values():
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
-                    self.prepare_dispatch_other_modules(sat_type, realm, cfg, arbiters_cfg)
+                    self.prepare_dispatch_other_satellites(sat_type, realm, cfg, arbiters_cfg)
 
     def prepare_dispatch_schedulers(self):
         """
@@ -504,9 +504,9 @@ class Dispatcher:
                 # "so it do not ask anymore for conf"
                 sched.need_conf = False
 
-    def prepare_dispatch_other_modules(self, sat_type, realm, cfg, arbiters_cfg):
+    def prepare_dispatch_other_satellites(self, sat_type, realm, cfg, arbiters_cfg):
         """
-        Prepare dispatch of other modules: reactionner, poller, broker and receiver
+        Prepare dispatch of other satellites: reactionner, poller, broker and receiver
 
         :return:
         """
