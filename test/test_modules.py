@@ -104,6 +104,7 @@ class TestModules(AlignakTest):
         ])
         # ...is in the configuration
 
+<<<<<<< c2e6b0629e1a5a1f91d79c5ee48ed5737a4e130c
     @unittest.skip("Disabled - ModuleManager does not handle Module object #340")
     def test_module_on_module(self):
         """
@@ -151,13 +152,32 @@ class TestModules(AlignakTest):
         self.modulemanager = ModulesManager('broker', None)
         count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
         self.assertEqual(count_modules, 2)
+=======
+    def test_conflicting_modules(self):
+
+        # prepare 2 modconfs:
+        modconfA = Module({'module_alias': 'whatever',
+                           'python_name': 'test_module_as_package_dir.modA'})
+        modconfB = Module({'module_alias': '42',
+                           'python_name': 'test_module_as_package_dir.modB'})
+
+        self.modulemanager = ModulesManager('broker', None)
+        count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
+        self.assertEqual(len(count_modules), 2)
+>>>>>>> Test modules and tag auto-generated modules #338
 
         modA = None
         modB = None
         for _, mod in self.modulemanager.modules_assoc:
+<<<<<<< c2e6b0629e1a5a1f91d79c5ee48ed5737a4e130c
             if mod.__package__ == 'test_modules_conflicting.modA':
                 modA = mod
             elif mod.__package__ == 'test_modules_conflicting.modB':
+=======
+            if mod.__package__ == 'test_module_as_package_dir.modA':
+                modA = mod
+            elif mod.__package__ == 'test_module_as_package_dir.modB':
+>>>>>>> Test modules and tag auto-generated modules #338
                 modB = mod
 
             if mod.properties['type'].startswith("mod"):
