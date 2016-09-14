@@ -222,11 +222,11 @@ class Dispatcher:
                         sched.need_conf = True
                         sched.conf = None
 
-        self.check_disptach_other_modules()
+        self.check_disptach_other_satellites()
 
-    def check_disptach_other_modules(self):
+    def check_disptach_other_satellites(self):
         """
-        Check the dispatch in other modules: reactionner, poller, broker, receiver
+        Check the dispatch in other satellites: reactionner, poller, broker, receiver
 
         :return: None
         """
