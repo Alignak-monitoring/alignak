@@ -1892,6 +1892,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
+        # TODO: auto-generated modules, issue #338
         # We list all modules we will add to brokers
         mod_to_add = []
         mod_to_add_to_schedulers = []
@@ -2008,6 +2009,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         TODO: Factorize with hack_old_nagios_parameters"""
         # We list all modules we will add to arbiters
+        # TODO: auto-generated modules, issue #338
         mod_to_add = []
 
         # For command_file
