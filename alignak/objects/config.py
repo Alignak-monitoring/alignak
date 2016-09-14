@@ -1760,7 +1760,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 'realm_name': 'Default', 'alias': 'Self created default realm', 'default': '1'}
             )
             self.realms = Realms([default])
-            logger.warning("No realms defined, I add one at %s", default.get_name())
+            logger.warning("No realms defined, I add one as %s", default.get_name())
             lists = [self.pollers, self.brokers, self.reactionners, self.receivers, self.schedulers]
             for lst in lists:
                 for elt in lst:
