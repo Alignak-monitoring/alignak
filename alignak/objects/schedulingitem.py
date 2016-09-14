@@ -634,7 +634,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Then check if item want freshness, then check freshness
         cls = self.__class__
         if not self.in_checking and cls.global_check_freshness:
-            if self.check_freshness and self.freshness_threshold != 0:
+            if self.freshness_threshold != 0:
                 # case we start alignak, we begin the freshness period
                 if self.last_state_update == 0.0:
                     self.last_state_update = now
@@ -643,7 +643,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 ):
                     # Fred: Do not raise a check for passive
                     # only checked hosts when not in check period ...
-                    if self.passive_checks_enabled and not self.active_checks_enabled:
+                    if not self.active_checks_enabled:
                         timeperiod = timeperiods[self.check_period]
                         if timeperiod is None or timeperiod.is_time_valid(now):
                             # Raise a log
