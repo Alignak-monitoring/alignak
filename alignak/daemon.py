@@ -343,9 +343,23 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
-        self.modules_manager.load_and_init(mod_confs)
-        logger.info("I correctly loaded the modules: [%s]",
-                    ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        logger.info("I received %d modules configuration" % len(mod_confs))
+        count_modules = self.modules_manager.load_and_init(mod_confs)
+        if count_modules == len(mod_confs):
+            logger.info(
+                "I correctly loaded all the modules. Loaded modules: [%s]",
+                ','.join([inst.get_name() for inst in self.modules_manager.instances])
+            )
+            return True
+        elif count_modules:
+            logger.warning(
+                "I could not load and intialize all the modules. Loaded modules: [%s]",
+                ','.join([inst.get_name() for inst in self.modules_manager.instances])
+            )
+            return True
+        else:
+            logger.error("I could not load any module.")
+            return False
 
     def add(self, elt):
         """ Abstract method for adding brok
