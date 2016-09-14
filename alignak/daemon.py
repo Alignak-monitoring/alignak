@@ -343,6 +343,10 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
+        if not mod_confs:
+            logger.info("I do not have any module")
+            return
+
         logger.info("I received %d modules configuration" % len(mod_confs))
         count_modules = self.modules_manager.load_and_init(mod_confs)
         if count_modules == len(mod_confs):
