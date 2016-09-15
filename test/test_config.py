@@ -169,6 +169,38 @@ class TestConfig(AlignakTest):
             )
         )
 
+    def test_bad_template_use_itself(self):
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/bad_template_use_itself.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "Host u'bla' use/inherits from itself ! "
+                "Imported from: cfg/config/bad_template_use_itself.cfg:1"
+            )
+        )
+
+    def test_bad_host_use_undefined_template(self):
+        self.print_header()
+        self.setup_with_file('cfg/config/bad_host_use_undefined_template.cfg')
+        self.assertTrue(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[host::bla] no contacts nor contact_groups property"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "Host u'bla' use/inherit from an unknown template (u'undefined') ! "
+                "Imported from: cfg/config/bad_host_use_undefined_template.cfg:2"
+            )
+        )
+
     def test_bad_contact(self):
         self.print_header()
         with self.assertRaises(SystemExit):
