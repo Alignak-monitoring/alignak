@@ -158,6 +158,7 @@ class TestDispatcher(AlignakTest):
         realm realm2:
         * 1 scheduler
         * 1 receiver
+        * 1 poller
 
         realm realm3:
         * 1 scheduler
@@ -180,7 +181,7 @@ class TestDispatcher(AlignakTest):
             for cfg in realm.confs.values():
                 self.assertTrue(cfg.is_assigned)
         self.assertEqual(3, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(9, len(self.arbiter.dispatcher.satellites),
+        self.assertEqual(10, len(self.arbiter.dispatcher.satellites),
                          self.arbiter.dispatcher.satellites)
 
         for satellite in self.arbiter.dispatcher.satellites:
