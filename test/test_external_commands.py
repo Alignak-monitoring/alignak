@@ -53,6 +53,7 @@
 
 from alignak_test import AlignakTest, time_hacker
 from alignak.external_command import ExternalCommandManager
+from alignak.misc.common import DICT_MODATTR
 import time
 import ujson
 
@@ -337,18 +338,28 @@ class TestExternalCommands(AlignakTest):
         # Receiver receives unknown host external command
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        self.scheduler_loop(1, [])
-        self.scheduler_loop(1, [])  # Need 2 run for get then consume)
-        svc = self.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+
+        for i in self.schedulers[0].sched.recurrent_works:
+            (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+            if nb_ticks == 1:
+                fun()
+
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                              "test_ok_0")
         self.assertEqual(1, svc.modified_attributes)
         self.assertFalse(getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute))
 
     def test_change_retry_host_check_interval(self):
         excmd = '[%d] CHANGE_RETRY_HOST_CHECK_INTERVAL;test_host_0;42' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        self.scheduler_loop(1, [])
-        self.scheduler_loop(1, [])
-        hst = self.conf.hosts.find_by_name("test_host_0")
-        self.assertEqual(2048, hst.modified_attributes)
-        self.assertEqual(getattr(hst, DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].attribute), 42)
+
+        for i in self.schedulers[0].sched.recurrent_works:
+            (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+            if nb_ticks == 1:
+                fun()
+
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
+
+        self.assertEqual(2048, host.modified_attributes)
+        self.assertEqual(getattr(host, DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].attribute), 42)
         self.assert_no_log_match("A command was received for service.*")
