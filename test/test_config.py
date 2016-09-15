@@ -24,6 +24,7 @@
 This file contains the test for the Alignak configuration checks
 """
 import os
+import re
 import time
 from alignak_test import AlignakTest
 
@@ -68,6 +69,21 @@ class TestConfig(AlignakTest):
             self.setup_with_file('cfg/config/alignak_broken_1.cfg')
         self.assertFalse(self.conf_is_correct)
         self.show_configuration_logs()
+
+        # Error messages
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[config] cannot open config file 'cfg/config/etc/broken_1/minimal.cfg' for reading: "
+                "[Errno 2] No such file or directory: u'cfg/config/etc/broken_1/minimal.cfg'"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[config] cannot open config file 'cfg/config/resource.cfg' for reading: "
+                "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
+            )
+        )
 
     def test_bad_contact(self):
         self.print_header()
@@ -140,13 +156,13 @@ class TestConfig(AlignakTest):
             "than one realm in one pack \(host relations\):"
         )
         self.assert_any_cfg_log_match(
-            "the host test_host_realm2 is in the realm "
+            "the host test_host_realm2 is in the realm Realm2"
         )
         self.assert_any_cfg_log_match(
-            "the host test_host_realm1 is in the realm "
+            "the host test_host_realm1 is in the realm Realm1"
         )
         self.assert_any_cfg_log_match(
-            "the host test_host_realm3 is in the realm Realm3"
+            "the host test_host_realm3 do not have a realm"
         )
         # self.assert_any_cfg_log_match(
         #     "The realm Realm2 has hosts but no scheduler!"

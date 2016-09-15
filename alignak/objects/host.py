@@ -1193,6 +1193,9 @@ class Hosts(SchedulingItems):
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
                     host.configuration_errors.append(err)
+                    # This to avoid having an host.realm as a string name
+                    host.realm_name = host.realm
+                    host.realm = None
                 else:
                     host.realm = realm.uuid
                     host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro

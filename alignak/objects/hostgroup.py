@@ -272,8 +272,9 @@ class Hostgroups(Itemgroups):
                     host.realm = hostgroup.realm
                 else:
                     if host.realm != hostgroup.realm:
-                        logger.warning("[hostgroups] host %s it not in the same realm than it's "
-                                       "hostgroup %s", host.get_name(), hostgroup.get_name())
+                        msg = "[hostgroups] host %s is not in the same realm " \
+                              "than its hostgroup %s" % (host.get_name(), hostgroup.get_name())
+                        hostgroup.configuration_warnings.append(msg)
 
     def add_member(self, hname, hgname):
         """
