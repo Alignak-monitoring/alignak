@@ -2785,7 +2785,7 @@ class ExternalCommandManager:
                 logger.warning(
                     "Received a passive service check for '%s' but the timestamp of this "
                     "check is too old (%s) regarding the last service check (%s).",
-                    host.get_full_name(), self.current_timestamp, service.last_chk
+                    service.get_full_name(), self.current_timestamp, service.last_chk
                 )
                 return
 
@@ -2793,6 +2793,8 @@ class ExternalCommandManager:
                                        self.sched.macromodulations, self.sched.checkmodulations,
                                        self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
+            logger.error('%s > Passive service check. Got check:',
+                         service.get_full_name(), chk)
             if not chk:
                 logger.error('%s > Passive service check failed. None check launched !?',
                              service.get_full_name())
