@@ -1755,8 +1755,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         if len(self.realms) == 0:
             # Create a default realm with default value =1
-            # so all hosts without realm will be link with it
-            default = Realm({'realm_name': 'Default', 'default': '1'})
+            # so all hosts without realm will be linked with it
+            default = Realm({
+                'realm_name': 'Default', 'alias': 'Self created default realm', 'default': '1'}
+            )
             self.realms = Realms([default])
             logger.warning("No realms defined, I add one as %s", default.get_name())
             lists = [self.pollers, self.brokers, self.reactionners, self.receivers, self.schedulers]
@@ -2102,14 +2104,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
             valid = False
             logger.error("Check global parameters failed")
 
-        for obj in ('hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
+        for obj in ['hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
                     'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
                     'hostsextinfo', 'servicesextinfo', 'checkmodulations', 'macromodulations',
-                    'realms'):
+                    'realms', 'servicedependencies', 'hostdependencies', 'resultmodulations',
+                    'businessimpactmodulations',
+                    'arbiters', 'schedulers', 'reactionners', 'pollers', 'brokers', 'receivers', ]:
             if self.read_config_silent == 0:
                 logger.info('Checking %s...', obj)
 
-            cur = getattr(self, obj)
+            try:
+                cur = getattr(self, obj)
+            except AttributeError:
+                logger.info("\t%s are not present in the configuration", obj)
+                continue
+
             if not cur.is_correct():
                 if self.read_config_silent == 0:
                     logger.info('Checked %s, not correct!', obj)
@@ -2125,56 +2134,45 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if self.read_config_silent == 0:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
-        for obj in ('servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
-                    'reactionners', 'pollers', 'brokers', 'receivers', 'resultmodulations',
-                    'businessimpactmodulations'):
-            try:
-                cur = getattr(self, obj)
-            except AttributeError:
-                continue
-            if self.read_config_silent == 0:
-                logger.info('Checking %s...', obj)
-
-            if not cur.is_correct():
-                if self.read_config_silent == 0:
-                    logger.info('Checked %s, not correct!', obj)
-
-                valid = False
-                self.configuration_errors += cur.configuration_errors
-                logger.error("\t%s configuration is incorrect!", obj)
-            if cur.configuration_warnings:
-                self.configuration_warnings += cur.configuration_warnings
-                logger.warning("\t%s configuration warnings: %d, total: %d", obj,
-                             len(cur.configuration_warnings), len(self.configuration_warnings))
-
-            if self.read_config_silent == 0:
-                logger.info('\tChecked %d %s', len(cur), obj)
-
         # Look that all scheduler got a broker that will take brok.
-        # If there are no, raise an Error
+        # If not, raise an Error
         for scheduler in self.schedulers:
             rea_id = scheduler.realm
             if rea_id:
                 rea = self.realms[rea_id]
                 if len(rea.potential_brokers) == 0:
-                    logger.error("The scheduler %s got no broker in its realm or upper",
-                                 scheduler.get_name())
-                    self.add_error("Error: the scheduler %s got no broker in its realm "
-                                   "or upper" % scheduler.get_name())
+                    logger.error(
+                        "The scheduler %s got no broker in its realm or upper",
+                        scheduler.get_name()
+                    )
+                    self.add_error(
+                        "Error: the scheduler %s got no broker "
+                        "in its realm or upper" % scheduler.get_name()
+                    )
                     valid = False
 
         # Check that for each poller_tag of a host, a poller exists with this tag
-        # TODO: need to check that poller are in the good realm too
         hosts_tag = set()
+        hosts_realms = set()
         services_tag = set()
         pollers_tag = set()
+        pollers_realms = set()
         for host in self.hosts:
             hosts_tag.add(host.poller_tag)
+            hosts_realms.add(self.realms[host.realm])
         for service in self.services:
             services_tag.add(service.poller_tag)
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
+            pollers_realms.add(self.realms[poller.realm])
+
+        if not hosts_realms.issubset(pollers_realms):
+            for realm in hosts_realms.difference(pollers_realms):
+                logger.error("Hosts exist in the realm %s but no poller in this realm", realm)
+                self.add_error("Error: Hosts exist in the realm %s but no poller "
+                               "in this realm" % realm)
+                valid = False
         if not hosts_tag.issubset(pollers_tag):
             for tag in hosts_tag.difference(pollers_tag):
                 logger.error("Hosts exist with poller_tag %s but no poller got this tag", tag)
@@ -2280,9 +2278,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
-        It create a graph. All hosts are connected to their
-        parents, and hosts without parent are connected to host 'root'.
-        services are link to the host. Dependencies are managed
+        It creates a graph. All hosts are connected to their
+        parents, and hosts without parent are connected to the host 'root'.
+        services are linked to the host. Dependencies are managed
         REF: doc/pack-creation.png
         TODO : Check why np_packs is not used.
 
@@ -2357,10 +2355,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             graph.add_edge(host, dep)
 
         # Now We find the default realm
-        default_realm = None
-        for realm in self.realms:
-            if hasattr(realm, 'default') and realm.default:
-                default_realm = realm
+        default_realm = self.realms.get_default()
 
         # Access_list from a node il all nodes that are connected
         # with it: it's a list of ours mini_packs
@@ -2393,7 +2388,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if default_realm is not None:
                     default_realm.packs.append(pack)
                 else:
-                    self.add_error("Error: some hosts do not have a realm and you do not "
+                    self.add_error("Error: some hosts do not have a realm and you did not "
                                    "defined a default realm!")
                     for host in pack:
                         self.add_error('    Impacted host: %s ' % host.get_name())
