@@ -208,14 +208,14 @@ class AlignakTest(unittest.TestCase):
     def fake_check(self, ref, exit_status, output="OK"):
         # print "fake", ref
         now = time.time()
-        check = ref.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
-                             self.sched.macromodulations, self.sched.checkmodulations,
-                             self.sched.checks, force=True)
+        check = ref.schedule(self.schedulers[0].sched.hosts, self.schedulers[0].sched.services, self.schedulers[0].sched.timeperiods,
+                             self.schedulers[0].sched.macromodulations, self.schedulers[0].sched.checkmodulations,
+                             self.schedulers[0].sched.checks, force=True)
         # now checks are schedule and we get them in
         # the action queue
         # check = ref.actions.pop()
-        self.sched.add(check)  # check is now in sched.checks[]
-        # check = self.sched.checks[ref.checks_in_progress[0]]
+        self.schedulers[0].sched.add(check)  # check is now in sched.checks[]
+        # check = self.schedulers[0].sched.checks[ref.checks_in_progress[0]]
 
         # Allows to force check scheduling without setting its status nor
         # output. Useful for manual business rules rescheduling, for instance.
@@ -235,7 +235,7 @@ class AlignakTest(unittest.TestCase):
         check.exit_status = exit_status
         check.execution_time = 0.001
         check.status = 'waitconsume'
-        self.sched.waiting_results.put(check)
+        self.schedulers[0].sched.waiting_results.put(check)
 
     def scheduler_loop(self, count, items, reset_checks=True):
         """
@@ -262,7 +262,7 @@ class AlignakTest(unittest.TestCase):
                                        self.schedulers[0].sched.macromodulations,
                                        self.schedulers[0].sched.checkmodulations,
                                        self.schedulers[0].sched.checks,
-                                       force=True)
+                                       force=False)
                 self.schedulers[0].sched.add_check(chk)
                 # update the check to add the result
                 chk.set_type_active()
@@ -274,11 +274,61 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
+    def external_command_loop(self, count, items, reset_checks=True):
+        """
+        Manage scheduler checks
+
+        @verified
+
+        :param count: number of checks to pass
+        :type count: int
+        :param items: list of list [[object, exist_status, output]]
+        :type items: list
+        :return: None
+        """
+        if reset_checks:
+            self.schedulers[0].sched.checks = {}
+
+        for num in range(count):
+            for i in self.schedulers[0].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                if nb_ticks == 1:
+                    fun()
+
+    def fred_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
+                       nointernal=False):
+        for ref in reflist:
+            (obj, exit_status, output) = ref
+            obj.checks_in_progress = []
+        for loop in range(1, count + 1):
+            if verbose is True:
+                print "processing check", loop
+            for ref in reflist:
+                (obj, exit_status, output) = ref
+                obj.update_in_checking()
+                self.fake_check(obj, exit_status, output)
+            if not nointernal:
+                self.schedulers[0].sched.manage_internal_checks()
+
+            self.schedulers[0].sched.consume_results()
+            self.schedulers[0].sched.get_new_actions()
+            self.schedulers[0].sched.get_new_broks()
+            self.schedulers[0].sched.scatter_master_notifications()
+            self.worker_loop(verbose)
+            for ref in reflist:
+                (obj, exit_status, output) = ref
+                obj.checks_in_progress = []
+                obj.update_in_checking()
+            self.schedulers[0].sched.update_downtimes_and_comments()
+            #time.sleep(ref.retry_interval * 60 + 1)
+            if do_sleep:
+                time.sleep(sleep_time)
+
     def worker_loop(self, verbose=True):
-        self.sched.delete_zombie_checks()
-        self.sched.delete_zombie_actions()
-        checks = self.sched.get_to_run_checks(True, False, worker_name='tester')
-        actions = self.sched.get_to_run_checks(False, True, worker_name='tester')
+        self.schedulers[0].sched.delete_zombie_checks()
+        self.schedulers[0].sched.delete_zombie_actions()
+        checks = self.schedulers[0].sched.get_to_run_checks(True, False, worker_name='tester')
+        actions = self.schedulers[0].sched.get_to_run_checks(False, True, worker_name='tester')
         # print "------------ worker loop checks ----------------"
         # print checks
         # print "------------ worker loop actions ----------------"
@@ -289,7 +339,7 @@ class AlignakTest(unittest.TestCase):
             a.status = 'inpoller'
             a.check_time = time.time()
             a.exit_status = 0
-            self.sched.put_results(a)
+            self.schedulers[0].sched.put_results(a)
         if verbose is True:
             self.show_actions()
         # print "------------ worker loop end ----------------"
@@ -364,7 +414,7 @@ class AlignakTest(unittest.TestCase):
 
     def clear_actions(self):
         if hasattr(self, "sched"):
-            self.sched.actions = {}
+            self.schedulers[0].sched.actions = {}
         else:
             self.actions = {}
 

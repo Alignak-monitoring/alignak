@@ -33,7 +33,6 @@ class TestConfig(AlignakTest):
     """
     This class tests the configuration
     """
-
     def test_config_ok(self):
         """
         Default configuration has no loading problems ...
@@ -47,7 +46,6 @@ class TestConfig(AlignakTest):
         self.assertEqual(len(self.configuration_errors), 0)
         # No warning messages
         self.assertEqual(len(self.configuration_warnings), 0)
-
 
     def test_symlinks(self):
         if os.name == 'nt':
