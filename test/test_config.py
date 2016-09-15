@@ -40,12 +40,78 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
         self.assertTrue(self.conf_is_correct)
+
         # No error messages
         self.assertEqual(len(self.configuration_errors), 0)
         # No warning messages
         self.assertEqual(len(self.configuration_warnings), 0)
+
+        # Arbiter is named as in the configuration
+        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        arbiter_link = self.arbiter.conf.arbiters.find_by_name('arbiter-master')
+        self.assertIsNotNone(arbiter_link)
+        self.assertListEqual(arbiter_link.configuration_errors, [])
+        self.assertListEqual(arbiter_link.configuration_warnings, [])
+
+        # Schedulers
+        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        scheduler_link= self.arbiter.conf.schedulers.find_by_name('scheduler-master')
+        self.assertIsNotNone(scheduler_link)
+        # Scheduler configuration is ok
+        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+
+        # Broker, Poller, Reactionner
+        link = self.arbiter.conf.brokers.find_by_name('broker-master')
+        self.assertIsNotNone(link)
+        link = self.arbiter.conf.pollers.find_by_name('poller-master')
+        self.assertIsNotNone(link)
+        link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
+        self.assertIsNotNone(link)
+
+        # Receiver - no default receiver created
+        link = self.arbiter.conf.receivers.find_by_name('receiver-master')
+        self.assertIsNotNone(link)
+
+    def test_config_ok_no_declared_daemons(self):
+        """
+        Default configuration has no loading problems ... but no daemons are defined
+        The arbiter will create default daemons except or the receiver.
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/host_config_simple.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        # Arbiter is named as Default
+        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        arbiter_link = self.arbiter.conf.arbiters.find_by_name('Default-Arbiter')
+        self.assertIsNotNone(arbiter_link)
+        self.assertListEqual(arbiter_link.configuration_errors, [])
+        self.assertListEqual(arbiter_link.configuration_warnings, [])
+
+        # Schedulers
+        link= self.arbiter.conf.schedulers.find_by_name('Default-Scheduler')
+        self.assertIsNotNone(link)
+        # Scheduler configuration is ok
+        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+
+        # Broker, Poller, Reactionner
+        link = self.arbiter.conf.brokers.find_by_name('Default-Broker')
+        self.assertIsNotNone(link)
+        link = self.arbiter.conf.pollers.find_by_name('Default-Poller')
+        self.assertIsNotNone(link)
+        link = self.arbiter.conf.reactionners.find_by_name('Default-Reactionner')
+        self.assertIsNotNone(link)
+
+        # Receiver - no default receiver created
+        link = self.arbiter.conf.receivers.find_by_name('Default-Receiver')
+        self.assertIsNone(link)
 
     def test_symlinks(self):
         if os.name == 'nt':
@@ -56,6 +122,25 @@ class TestConfig(AlignakTest):
 
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_HIDDEN")
         self.assertIsNotNone(svc)
+
+    def test_bad_template_use_itself(self):
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/bad_template_use_itself.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.assertIn(u"Host u'bla' use/inherits from itself ! Imported from: "
+                      u"cfg/config/../default/daemons/reactionner-master.cfg:42",
+                      self.arbiter.conf.hosts.configuration_errors)
+
+    def test_bad_host_use_undefined_template(self):
+        self.print_header()
+        self.setup_with_file('cfg/config/bad_host_use_undefined_template.cfg')
+        self.assertTrue(self.conf_is_correct)
+        self.assertIn(u"[host::bla] no contacts nor contact_groups property",
+                  self.arbiter.conf.hosts.configuration_warnings)
+        self.assertIn(u"Host u'bla' use/inherit from an unknown template (u'undefined') ! "
+                  u"Imported from: cfg/config/bad_host_use_undefined_template.cfg:2",
+                  self.arbiter.conf.hosts.configuration_warnings)
 
     def test_broken_configuration(self):
         """
@@ -147,7 +232,7 @@ class TestConfig(AlignakTest):
         print "Contacts:", svc.contacts
         self.assertFalse(svc.is_correct())
         self.assert_any_cfg_log_match(
-            "Configuration in service::test_ok_0_badcon is incorrect; from: "\
+            "Configuration in service::test_ok_0_badcon is incorrect; from: " \
             "cfg/config/../default/daemons/reactionner-master.cfg:42"
         )
         self.assert_any_cfg_log_match(
@@ -166,11 +251,11 @@ class TestConfig(AlignakTest):
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
-            "Configuration in service::test_ok_0_badperiod is incorrect; from: "\
+            "Configuration in service::test_ok_0_badperiod is incorrect; from: " \
             "cfg/config/../default/daemons/reactionner-master.cfg:42"
         )
         self.assert_any_cfg_log_match(
-            "The notification_period of the service 'test_ok_0_badperiod' "\
+            "The notification_period of the service 'test_ok_0_badperiod' " \
             "named 'IDONOTEXIST' is unknown!"
         )
 
@@ -359,7 +444,7 @@ class TestConfig(AlignakTest):
 
         # We can send a command by escaping the semicolon.
         command = '[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
-        time.time())
+            time.time())
         self.schedulers[0].sched.run_external_command(command)
 
         # can need 2 run for get the consum (I don't know why)
