@@ -63,11 +63,12 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms.cfg')
+        self.assertTrue(self.conf_is_correct)
 
         for scheduler in self.schedulers:
-            if scheduler.sched.instance_name == 'blabla1':
+            if scheduler.sched.instance_name == 'Scheduler-1':
                 sched_realm1 = scheduler.sched
-            elif scheduler.sched.instance_name == 'blabla2':
+            elif scheduler.sched.instance_name == 'Scheduler-2':
                 sched_realm2 = scheduler.sched
         realm1 = self.arbiter.conf.realms.find_by_name('realm1')
         self.assertIsNotNone(realm1)
@@ -97,6 +98,36 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 1)
+
+        self.assert_any_cfg_log_match(
+            "host test_host3_hg_realm2 is not in the same realm than its hostgroup in_realm2"
+        )
+
+        # Check all daemons exist
+        self.assertEqual(len(self.arbiter.conf.arbiters), 1)
+        self.assertEqual(len(self.arbiter.conf.schedulers), 2)
+        self.assertEqual(len(self.arbiter.conf.brokers), 2)
+        self.assertEqual(len(self.arbiter.conf.pollers), 2)
+        self.assertEqual(len(self.arbiter.conf.reactionners), 1)
+        self.assertEqual(len(self.arbiter.conf.receivers), 0)
+
+        for daemon in self.arbiter.conf.schedulers:
+            self.assertIn(daemon.get_name(), ['Scheduler-1', 'Scheduler-2'])
+            self.assertIn(daemon.realm, self.arbiter.conf.realms)
+
+        for daemon in self.arbiter.conf.brokers:
+            self.assertIn(daemon.get_name(), ['Broker-1', 'Broker-2'])
+            self.assertIn(daemon.realm, self.arbiter.conf.realms)
+
+        for daemon in self.arbiter.conf.pollers:
+            self.assertIn(daemon.get_name(), ['Poller-1', 'Poller-2'])
+            self.assertIn(daemon.realm, self.arbiter.conf.realms)
 
         in_realm2 = self.schedulers[0].sched.hostgroups.find_by_name('in_realm2')
         realm1 = self.arbiter.conf.realms.find_by_name('realm1')
@@ -105,9 +136,9 @@ class TestRealms(AlignakTest):
         self.assertIsNotNone(realm2)
 
         for scheduler in self.schedulers:
-            if scheduler.sched.instance_name == 'blabla1':
+            if scheduler.sched.instance_name == 'Scheduler-1':
                 sched_realm1 = scheduler.sched
-            elif scheduler.sched.instance_name == 'blabla2':
+            elif scheduler.sched.instance_name == 'Scheduler-2':
                 sched_realm2 = scheduler.sched
 
         # 1 and 2 are link to realm2 because they are in the hostgroup in_realm2
@@ -132,7 +163,6 @@ class TestRealms(AlignakTest):
         self.assertIsNotNone(hostgroup_realm2)
         hostgroup_realm2 = sched_realm2.hostgroups.find_by_name("in_realm2")
         self.assertIsNotNone(hostgroup_realm2)
-        # TODO catch the warning in log when parse configuration
 
     def test_sub_realms_assignations(self):
         """
@@ -142,6 +172,7 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms_sub.cfg')
+        self.assertTrue(self.conf_is_correct)
 
         world = self.arbiter.conf.realms.find_by_name('World')
         self.assertIsNot(world, None)

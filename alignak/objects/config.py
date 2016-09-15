@@ -754,7 +754,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'nagios_group': 'alignak_group'
     }
 
-    read_config_silent = 0
+    read_config_silent = False
 
     early_created_types = ['arbiter', 'module']
 
@@ -796,13 +796,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         super(Config, self).__init__(params, parsing=parsing)
         self.params = {}
         self.resource_macros_names = []
-        # By default the conf is correct
+        # By default the conf is correct and the warnings and errors lists are empty
         self.conf_is_correct = True
+        self.configuration_warnings = []
+        self.configuration_errors = []
         # We tag the conf with a magic_hash, a random value to
-        # idify this conf
+        # identify this conf
         random.seed(time.time())
         self.magic_hash = random.randint(1, 100000)
-        self.configuration_errors = []
         self.triggers_dirs = []
         self.packs_dirs = []
 
@@ -938,7 +939,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # if the previous does not finish with a line return
             res.write(os.linesep)
             res.write('# IMPORTEDFROM=%s' % (c_file) + os.linesep)
-            if self.read_config_silent == 0:
+            if not self.read_config_silent:
                 logger.info("[config] opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
@@ -947,9 +948,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 file_d.close()
                 self.config_base_dir = os.path.dirname(c_file)
             except IOError, exp:
-                logger.error("[config] cannot open config file '%s' for reading: %s", c_file, exp)
-                # The configuration is invalid because we have a bad file!
-                self.conf_is_correct = False
+                msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
+                self.add_error(msg)
                 continue
 
             for line in buf:
@@ -967,7 +967,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     cfg_file_name = cfg_file_name.strip()
                     try:
                         file_d = open(cfg_file_name, 'rU')
-                        if self.read_config_silent == 0:
+                        if not self.read_config_silent:
                             logger.info("Processing object config file '%s'", cfg_file_name)
                         res.write(os.linesep + '# IMPORTEDFROM=%s' % (cfg_file_name) + os.linesep)
                         res.write(file_d.read().decode('utf8', 'replace'))
@@ -975,10 +975,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         res.write(os.linesep)
                         file_d.close()
                     except IOError, exp:
-                        logger.error("Cannot open config file '%s' for reading: %s",
-                                     cfg_file_name, exp)
-                        # The configuration is invalid because we have a bad file!
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open config file '%s' for reading: %s" % (
+                            cfg_file_name, exp
+                        )
+                        self.add_error(msg)
                 elif re.search("^cfg_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -987,8 +987,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         cfg_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(cfg_dir_name):
-                        logger.error("Cannot open config dir '%s' for reading", cfg_dir_name)
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open config dir '%s' for reading: %s" % \
+                              (cfg_dir_name)
+                        self.add_error(msg)
 
                     # Look for .pack file into it :)
                     self.packs_dirs.append(cfg_dir_name)
@@ -998,7 +999,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         for c_file in files:
                             if not re.search(r"\.cfg$", c_file):
                                 continue
-                            if self.read_config_silent == 0:
+                            if not self.read_config_silent:
                                 logger.info("Processing object config file '%s'",
                                             os.path.join(root, c_file))
                             try:
@@ -1010,11 +1011,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 res.write(os.linesep)
                                 file_d.close()
                             except IOError, exp:
-                                logger.error("Cannot open config file '%s' for reading: %s",
-                                             os.path.join(root, c_file), exp)
-                                # The configuration is invalid
-                                # because we have a bad file!
-                                self.conf_is_correct = False
+                                msg = "[config] cannot open config file '%s' for reading: %s" % \
+                                      (os.path.join(root, c_file), exp)
+                                self.add_error(msg)
                 elif re.search("^triggers_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -1023,8 +1022,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         trig_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(trig_dir_name):
-                        logger.error("Cannot open triggers dir '%s' for reading", trig_dir_name)
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open triggers dir '%s' for reading: %s" % \
+                              (trig_dir_name)
+                        self.add_error(msg)
                         continue
                     # Ok it's a valid one, I keep it
                     self.triggers_dirs.append(trig_dir_name)
@@ -2094,11 +2094,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: True if the configuration is correct else False
         :rtype: bool
         """
-        logger.info('Running pre-flight check on configuration data...')
+        logger.info(
+            'Running pre-flight check on configuration data, initial state: %s',
+            self.conf_is_correct
+        )
         valid = self.conf_is_correct
+        self.configuration_errors = []
+        self.configuration_warnings = []
 
         # Globally unmanaged parameters
-        if self.read_config_silent == 0:
+        if not self.read_config_silent:
             logger.info('Checking global parameters...')
         if not self.check_error_on_hard_unmanaged_parameters():
             valid = False
@@ -2110,7 +2115,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     'realms', 'servicedependencies', 'hostdependencies', 'resultmodulations',
                     'businessimpactmodulations',
                     'arbiters', 'schedulers', 'reactionners', 'pollers', 'brokers', 'receivers', ]:
-            if self.read_config_silent == 0:
+            if not self.read_config_silent:
                 logger.info('Checking %s...', obj)
 
             try:
@@ -2120,7 +2125,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 continue
 
             if not cur.is_correct():
-                if self.read_config_silent == 0:
+                if not self.read_config_silent:
                     logger.info('Checked %s, not correct!', obj)
 
                 valid = False
@@ -2131,7 +2136,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.warning("\t%s configuration warnings: %d, total: %d", obj,
                                len(cur.configuration_warnings), len(self.configuration_warnings))
 
-            if self.read_config_silent == 0:
+            if not self.read_config_silent:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
         # Look that all scheduler got a broker that will take brok.
@@ -2247,13 +2252,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """Add an error in the configuration error list so we can print them
          all in one place
 
+         Set the configuration as not valid
+
         :param txt: Text error
         :type txt: str
         :return: None
         """
-        err = txt
-        self.configuration_errors.append(err)
-
+        logger.error("********** add_error: %s", txt)
+        self.configuration_errors.append(txt)
         self.conf_is_correct = False
 
     def show_errors(self):
@@ -2378,9 +2384,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         # Do not use get_name for the realm because it is not an object but a
                         # string containing the not found realm name if the realm is not existing!
                         # As of it, it may raise an exception
-                        # TODO: improve this log to have the realm name
                         self.add_error(' -> the host %s is in the realm %s' %
-                                       (host.get_name(), host.realm))
+                                       (host.get_name(), host.realm_name))
             if len(tmp_realms) == 1:  # Ok, good
                 realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)

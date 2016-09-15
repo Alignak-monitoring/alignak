@@ -171,6 +171,8 @@ class AlignakTest(unittest.TestCase):
             # If this assertion does not match, then there is a bug in the arbiter :)
             self.assertTrue(self.arbiter.conf.conf_is_correct)
             self.conf_is_correct = True
+            self.configuration_warnings = self.arbiter.conf.configuration_warnings
+            self.configuration_errors = self.arbiter.conf.configuration_errors
         except SystemExit:
             self.configuration_warnings = self.arbiter.conf.configuration_warnings
             print("Configuration warnings:")
