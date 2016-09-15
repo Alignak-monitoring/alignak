@@ -602,13 +602,13 @@ class ExternalCommandManager:
 
         # If we are a receiver, just look in the receiver
         if self.mode == 'receiver':
-            logger.info("Receiver looking a scheduler for the external command %s %s",
+            logger.debug("Receiver searching for a scheduler for the external command %s %s",
                         host_name, command)
             sched = self.receiver.get_sched_from_hname(host_name)
             if sched:
                 host_found = True
                 logger.debug("Receiver found a scheduler: %s", sched)
-                logger.info("Receiver pushing external command to scheduler %s", sched)
+                logger.debug("Receiver pushing external command to scheduler %s", sched)
                 sched['external_commands'].append(extcmd)
         else:
             for cfg in self.confs.values():
@@ -767,6 +767,9 @@ class ExternalCommandManager:
                         elif self.conf.accept_passive_unknown_check_results:
                             brok = self.get_unknown_check_result_brok(command)
                             self.sched.add_brok(brok)
+                        else:
+                            logger.warning("A command was received for an host '%s', "
+                                           "but the host could not be found!", val)
 
                     elif type_searched == 'contact':
                         contact = self.contacts.find_by_name(val)
@@ -2785,7 +2788,7 @@ class ExternalCommandManager:
                 logger.warning(
                     "Received a passive service check for '%s' but the timestamp of this "
                     "check is too old (%s) regarding the last service check (%s).",
-                    host.get_full_name(), self.current_timestamp, service.last_chk
+                    service.get_full_name(), self.current_timestamp, service.last_chk
                 )
                 return
 
@@ -2793,6 +2796,8 @@ class ExternalCommandManager:
                                        self.sched.macromodulations, self.sched.checkmodulations,
                                        self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
+            logger.error('%s > Passive service check. Got check:',
+                         service.get_full_name(), chk)
             if not chk:
                 logger.error('%s > Passive service check failed. None check launched !?',
                              service.get_full_name())

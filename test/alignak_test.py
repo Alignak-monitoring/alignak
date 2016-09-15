@@ -278,29 +278,20 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
-    def external_command_loop(self, count, items, reset_checks=True):
+    def external_command_loop(self):
         """
-        Manage scheduler checks
+        Execute the scheduler actions for external commands.
 
         @verified
-
-        :param count: number of checks to pass
-        :type count: int
-        :param items: list of list [[object, exist_status, output]]
-        :type items: list
-        :return: None
+        :return:
         """
-        if reset_checks:
-            self.schedulers[0].sched.checks = {}
+        for i in self.schedulers[0].sched.recurrent_works:
+            (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+            if nb_ticks == 1:
+                fun()
 
-        for num in range(count):
-            for i in self.schedulers[0].sched.recurrent_works:
-                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
-                if nb_ticks == 1:
-                    fun()
-
-    def fred_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
-                       nointernal=False):
+    def old_scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
+                           nointernal=False):
         for ref in reflist:
             (obj, exit_status, output) = ref
             obj.checks_in_progress = []
