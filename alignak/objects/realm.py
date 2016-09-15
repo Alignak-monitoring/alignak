@@ -75,6 +75,7 @@ class Realm(Itemgroup):
     properties.update({
         'uuid':          StringProp(default='', fill_brok=['full_status']),
         'realm_name':    StringProp(fill_brok=['full_status']),
+        'alias':         StringProp(fill_brok=['full_status']),
         # No status_broker_name because it put hosts, not host_name
         'realm_members': ListProp(default=[], split_on_coma=True),
         'higher_realms': ListProp(default=[], split_on_coma=True),
