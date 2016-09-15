@@ -2705,10 +2705,16 @@ class ExternalCommandManager:
             )
         now = time.time()
         cls = host.__class__
+
         # If globally disable OR locally, do not launch
         if cls.accept_passive_checks and host.passive_checks_enabled:
             # Maybe the check is just too old, if so, bail out!
             if self.current_timestamp < host.last_chk:
+                logger.warning(
+                    "Received a passive host check for '%s' but the timestamp of this "
+                    "check is too old (%s) regarding the last host check (%s).",
+                    host.get_full_name(), self.current_timestamp, host.last_chk
+                )
                 return
 
             chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
@@ -2716,7 +2722,7 @@ class ExternalCommandManager:
                                     self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
             if not chk:
-                logger.error('%s > Passive host check failed. None check launched !?',
+                logger.error('%s > Passive host check failed. No check launched !?',
                              host.get_full_name())
                 return
             # Now we 'transform the check into a result'
@@ -2730,6 +2736,11 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             self.sched.add(chk)
             # Ok now this result will be read by scheduler the next loop
+        else:
+            logger.warning(
+                "Received a passive host check for '%s' but passive hosts checks are "
+                "not enabled or this host does not accept them.", host.get_full_name()
+            )
 
     def process_host_output(self, host, plugin_output):
         """Process host output
@@ -2771,6 +2782,11 @@ class ExternalCommandManager:
         if cls.accept_passive_checks and service.passive_checks_enabled:
             # Maybe the check is just too old, if so, bail out!
             if self.current_timestamp < service.last_chk:
+                logger.warning(
+                    "Received a passive service check for '%s' but the timestamp of this "
+                    "check is too old (%s) regarding the last service check (%s).",
+                    host.get_full_name(), self.current_timestamp, service.last_chk
+                )
                 return
 
             chk = service.launch_check(now, self.hosts, self.services, self.timeperiods,
@@ -2792,6 +2808,11 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             self.sched.add(chk)
             # Ok now this result will be reap by scheduler the next loop
+        else:
+            logger.warning(
+                "Received a passive service check for '%s' but passive service checks are "
+                "not enabled or this service does not accept them.", service.get_full_name()
+            )
 
     def process_service_output(self, service, plugin_output):
         """Process service output
