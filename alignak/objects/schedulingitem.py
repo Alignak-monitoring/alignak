@@ -1280,6 +1280,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
+        logger.error("update_in_checking, %s, in_progress: %s", self, self.checks_in_progress)
+        for c in self.checks_in_progress:
+            logger.error("Check in progress: %s", c)
         self.in_checking = (len(self.checks_in_progress) != 0)
 
     def remove_in_progress_notification(self, notif):
@@ -1532,6 +1535,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Protect against bad type output
         # if str, go in unicode
+        # TODO: should protect against bad decoding ...
         if isinstance(chk.output, str):
             chk.output = chk.output.decode('utf8', 'ignore')
             chk.long_output = chk.long_output.decode('utf8', 'ignore')
@@ -1541,6 +1545,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # migration from old shinken version, that got output as str
         # and not unicode
         # if str, go in unicode
+        # TODO: should protect against bad decoding ...
         if isinstance(self.output, str):
             self.output = self.output.decode('utf8', 'ignore')
             self.long_output = self.long_output.decode('utf8', 'ignore')
@@ -2262,6 +2267,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                      dependent=False):
         """Launch a check (command)
 
+        The `force` parameter is set to True by the external commands and triggers. As of it, one
+        can consider that this parameter indicates that the check will not be "launched" but rather
+        is a bypass to launch.
+
         :param timestamp:
         :type timestamp: int
         :param checkmodulations: Checkmodulations objects, used to change check command if necessary
@@ -2281,11 +2290,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Look if we are in check or not
         self.update_in_checking()
 
-        logger.error("Checks 1: %s", checks)
+        for c in checks:
+            logger.error("Check: %s", str(checks[c]))
 
-        # the check is being forced, so we just replace next_chk time by now
+        # the check is being forced, so we just replace next_chk time by now if the same check
+        # is already scheduled to be launched. We return the id of the check.
+        logger.error("launch_check, force: %s, in_checking: %s, %s", force, self.in_checking, self)
         if force and self.in_checking:
-            logger.error("Checks 1bis: %s", checks)
             now = time.time()
             c_in_progress = checks[self.checks_in_progress[0]]
             c_in_progress.t_to_go = now
@@ -2295,10 +2306,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If ref_check_id is not None , this is a dependency_ check
         # If none, it might be a forced check, so OK, I do a new
 
+        logger.error("launch_check 2: %s", checks)
         # Dependency check, we have to create a new check that will be launched only once (now)
         # Otherwise it will delay the next real check. this can lead to an infinite SOFT state.
         if not force and (self.in_checking and ref_check is not None):
-            logger.error("Checks 2: %s", checks)
             c_in_progress = checks[self.checks_in_progress[0]]
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
@@ -2322,7 +2333,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return chk
 
         if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
-            logger.error("Checks 3: %s", checks)
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
@@ -2385,7 +2395,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             self.checks_in_progress.append(chk.uuid)
 
-        logger.error("Checks 4: %s", checks)
         self.update_in_checking()
 
         # We need to put this new check in our actions queue

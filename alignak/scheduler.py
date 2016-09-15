@@ -1586,6 +1586,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # All results are in self.waiting_results
         # We need to get them first
+        logger.error("consume_results")
         queue_size = self.waiting_results.qsize()
         for _ in xrange(queue_size):
             self.put_results(self.waiting_results.get())
