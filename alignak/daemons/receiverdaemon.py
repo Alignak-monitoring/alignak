@@ -224,6 +224,7 @@ class Receiver(Satellite):
             g_conf = conf['global']
 
             # If we've got something in the schedulers, we do not want it anymore
+            self.host_assoc = {}
             for sched_id in conf['schedulers']:
 
                 old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
@@ -236,6 +237,8 @@ class Receiver(Satellite):
                     external_commands = self.schedulers[old_sched_id]['external_commands']
                     con = self.schedulers[old_sched_id]['con']
                     del self.schedulers[old_sched_id]
+
+                self.push_host_names(sched_id, conf['hosts'])
 
                 sched = conf['schedulers'][sched_id]
                 self.schedulers[sched_id] = sched
@@ -286,6 +289,13 @@ class Receiver(Satellite):
                 logger.info("Setting our timezone to %s", use_timezone)
                 os.environ['TZ'] = use_timezone
                 time.tzset()
+
+    # hnames = [h.get_name() for h in cfg.hosts]
+    # logger.debug("[%s] Sending %s hostnames to the "
+    #              "receiver %s",
+    #              realm.get_name(), len(hnames),
+    #              sat.get_name())
+    # sat.push_host_names(conf_uuid, hnames)
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)

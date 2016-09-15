@@ -580,12 +580,12 @@ class Dispatcher:
             # of this configuration
             if sat_type != 'receiver':
                 continue
-            hnames = [h.get_name() for h in cfg.hosts]
-            logger.debug("[%s] Sending %s hostnames to the "
-                         "receiver %s",
-                         realm.get_name(), len(hnames),
-                         sat.get_name())
-            sat.push_host_names(conf_uuid, hnames)
+            # hnames = [h.get_name() for h in cfg.hosts]
+            # logger.debug("[%s] Sending %s hostnames to the "
+            #              "receiver %s",
+            #              realm.get_name(), len(hnames),
+            #              sat.get_name())
+            # sat.push_host_names(conf_uuid, hnames)
 
         # I've got enough satellite, the next ones are considered spares
         if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
