@@ -33,7 +33,6 @@ class TestConfig(AlignakTest):
     """
     This class tests the configuration
     """
-
     def test_config_ok(self):
         """
         Default configuration has no loading problems ...
