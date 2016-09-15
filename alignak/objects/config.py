@@ -2141,10 +2141,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if rea_id:
                 rea = self.realms[rea_id]
                 if len(rea.potential_brokers) == 0:
-                    logger.error("The scheduler %s got no broker in its realm or upper",
-                                 scheduler.get_name())
-                    self.add_error("Error: the scheduler %s got no broker in its realm "
-                                   "or upper" % scheduler.get_name())
+                    logger.error(
+                        "The scheduler %s got no broker in its realm or upper",
+                        scheduler.get_name()
+                    )
+                    self.add_error(
+                        "Error: the scheduler %s got no broker "
+                        "in its realm or upper" % scheduler.get_name()
+                    )
                     valid = False
 
         # Check that for each poller_tag of a host, a poller exists with this tag
