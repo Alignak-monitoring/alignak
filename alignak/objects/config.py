@@ -2124,11 +2124,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             if not cur.is_correct():
                 if not self.read_config_silent:
-                    logger.info('Checked %s, not correct!', obj)
+                    logger.info('Checked %s, configuration is incorrect!', obj)
 
                 valid = False
                 self.configuration_errors += cur.configuration_errors
-                logger.error("\t%s configuration is incorrect!", obj)
+                msg = "%s configuration is incorrect!" % obj
+                self.configuration_errors.append(msg)
+                logger.error(msg)
             if cur.configuration_warnings:
                 self.configuration_warnings += cur.configuration_warnings
                 logger.warning("\t%s configuration warnings: %d, total: %d", obj,

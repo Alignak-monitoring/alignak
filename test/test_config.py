@@ -68,7 +68,6 @@ class TestConfig(AlignakTest):
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/config/alignak_broken_1.cfg')
         self.assertFalse(self.conf_is_correct)
-        self.show_configuration_logs()
 
         # Error messages
         self.assertEqual(len(self.configuration_errors), 2)
@@ -90,7 +89,6 @@ class TestConfig(AlignakTest):
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/config/bad_template_use_itself.cfg')
         self.assertFalse(self.conf_is_correct)
-        self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
             re.escape(
@@ -116,6 +114,28 @@ class TestConfig(AlignakTest):
                 "Imported from: cfg/config/bad_host_use_undefined_template.cfg:2"
             )
         )
+
+    def test_bad_timeperiod(self):
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_bad_timeperiods.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[timeperiod::24x7_bad2] invalid entry 'satourday 00:00-24:00'"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[timeperiod::24x7_bad] invalid daterange"
+            )
+        )
+
+        tp = self.arbiter.conf.timeperiods.find_by_name("24x7")
+        self.assertEqual(True, tp.is_correct())
+        tp = self.arbiter.conf.timeperiods.find_by_name("24x7_bad")
+        self.assertEqual(False, tp.is_correct())
 
     def test_bad_contact(self):
         self.print_header()
