@@ -27,7 +27,7 @@ import time
 from alignak_test import AlignakTest
 
 
-class TestNotifications(AlignakTest):
+class TestAcknowledges(AlignakTest):
     """
     This class test acknowledge
     """
