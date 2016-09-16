@@ -359,11 +359,8 @@ class AlignakTest(unittest.TestCase):
 
     def show_actions(self):
         print "--- actions <<<----------------------------------"
-        if hasattr(self.scheduler, "sched"):
-            actions = self.scheduler.sched.actions
-        else:
-            actions = self.actions
-        for a in sorted(actions.values(), lambda x, y: cmp(x.creation_time, y.creation_time)):
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        for a in actions:
             if a.is_a == 'notification':
                 item = self.scheduler.sched.find_item_by_id(a.ref)
                 if item.my_type == "host":
@@ -377,6 +374,17 @@ class AlignakTest(unittest.TestCase):
             elif a.is_a == 'eventhandler':
                 print "EVENTHANDLER:", a
         print "--- actions >>>----------------------------------"
+
+    def show_checks(self):
+        """
+        Show checks from the scheduler
+        :return:
+        """
+        print "--- checks <<<--------------------------------"
+
+        for check in self.schedulers[0].sched.checks.values():
+            print("- %s" % check)
+        print "--- checks >>>--------------------------------"
 
     def show_and_clear_logs(self, scheduler=False):
         """
@@ -408,11 +416,13 @@ class AlignakTest(unittest.TestCase):
         return len([b for b in broks.values() if b.type == 'log'])
 
     def count_actions(self):
-        if hasattr(self.scheduler, "sched"):
-            actions = self.scheduler.sched.actions
-        else:
-            actions = self.actions
-        return len(actions.values())
+        """
+        Count the actions in the scheduler's actions.
+
+        @verified
+        :return:
+        """
+        return len(self.schedulers[0].sched.actions.values())
 
     def clear_logs(self, scheduler=False):
         """
@@ -434,10 +444,13 @@ class AlignakTest(unittest.TestCase):
             del broks[id]
 
     def clear_actions(self):
-        if hasattr(self, "sched"):
-            self.schedulers[0].sched.actions = {}
-        else:
-            self.actions = {}
+        """
+        Clear the actions in the scheduler's actions.
+
+        @verified
+        :return:
+        """
+        self.schedulers[0].sched.actions = {}
 
     def assert_actions_count(self, number):
         """
@@ -449,7 +462,7 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print self.schedulers[0].sched.actions
+        print("Actions: %s" % self.schedulers[0].sched.actions)
         actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(self.schedulers[0].sched.actions),
                          "Not found right number of actions:\nactions_logs=[[[\n%s\n]]]" %
@@ -503,7 +516,6 @@ class AlignakTest(unittest.TestCase):
 
         found = False
         for brok in broks.values():
-            print ("--- Brok: %s" % brok)
             if brok.type == 'log':
                 brok.prepare()
                 if index == log_num:
@@ -529,7 +541,6 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print self.schedulers[0].sched.checks
         checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
                          "Not found right number of checks:\nchecks_logs=[[[\n%s\n]]]" %
