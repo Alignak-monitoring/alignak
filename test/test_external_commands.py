@@ -50,13 +50,9 @@
 #
 # This file is used to test reading and processing of config files
 #
-
-<<<<<<< ef70a5536bb364ef9764bf7048a7d7decbdfdc59
 from alignak_test import AlignakTest, time_hacker
 from alignak.external_command import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
-=======
->>>>>>> Test commit for @ddurieux
 import time
 import ujson
 import unittest2 as unittest
@@ -264,7 +260,6 @@ class TestExternalCommands(AlignakTest):
         # Show recent logs
         self.show_logs()
 
-    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_command_scheduler(self):
         # The scheduler accepts unknown passive checks...
         self.schedulers[0].sched.conf.accept_passive_unknown_check_results = True
@@ -324,37 +319,6 @@ class TestExternalCommands(AlignakTest):
                                  'on host .*, but the service could not be found!', scheduler=True)
         self.clear_logs(scheduler=True)
 
-        # Sched receives unknown host and service service_check_result
-        self.schedulers[0].sched.broks.clear()
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;' \
-                'Service is Warning|rtt=9999;5;10;0;10000' % time.time()
-        self.schedulers[0].sched.run_external_command(excmd)
-        # No brok...
-        broks = [b for b in self.schedulers[0].sched.broks.values()
-                 if b.type == 'unknown_service_check_result']
-        self.assertTrue(len(broks) == 0)
-        # ...but a log
-        self.show_logs(scheduler=True)
-        self.assert_log_match(1, 'A command was received for service .* '
-                                 'on host .*, but the service could not be found!', scheduler=True)
-        self.clear_logs(scheduler=True)
-
-        # Sched receives unknown host host_check_result
-        self.schedulers[0].sched.broks.clear()
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;' \
-                '1;Host is Down|rtt=9999;5;10;0;10000' % time.time()
-        self.schedulers[0].sched.run_external_command(excmd)
-        # No brok...
-        broks = [b for b in self.schedulers[0].sched.broks.values()
-                 if b.type == 'unknown_host_check_result']
-        self.assertTrue(len(broks) == 0)
-        # ...but a log
-        self.show_logs(scheduler=True)
-        self.assert_log_match(1, 'A command was received for an host .*, '
-                                 'but the host could not be found!', scheduler=True)
-        self.clear_logs(scheduler=True)
-
-    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_command_receiver(self):
         receiverdaemon = Receiver(None, False, False, False, None)
         receiverdaemon.direct_routing = True
@@ -397,7 +361,6 @@ class TestExternalCommands(AlignakTest):
         #                           'for the external command ', scheduler=True)
         self.clear_logs(scheduler=True)
 
-    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_brok(self):
         # unknown_host_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down'
