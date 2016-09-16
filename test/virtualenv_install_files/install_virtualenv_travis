@@ -269,14 +269,10 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/common.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/custom_module.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/custom_module.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/filter.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/filter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/logevent.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/logevent.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/perfdata.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/perfdata.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/sorter.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/misc/sorter.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/__init__.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/__init__.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/objects/arbiterlink.py

@@ -442,9 +442,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     }
 
     old_properties = {
-        'normal_check_interval':    'check_interval',
-        'retry_check_interval':    'retry_interval',
-        'criticity':    'business_impact',
+        'normal_check_interval': 'check_interval',
+        'retry_check_interval': 'retry_interval',
+        'criticity': 'business_impact',
     }
 
     special_properties = []
@@ -612,7 +612,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                            checks):
-        """Check freshness and schedule a check now if necessary.
+        """
+        Check freshness and schedule a check now if necessary.
+
+        Before calling, check if host or service has check_freshness and passive_checks enabled
 
         :param hosts: hosts objects, used to launch checks
         :type hosts: alignak.objects.host.Hosts
@@ -630,19 +633,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype: None | object
         """
         now = time.time()
-        # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
         if not self.in_checking and cls.global_check_freshness:
             if self.freshness_threshold != 0:
-                # case we start alignak, we begin the freshness period
+                # If we start alignak, we begin the freshness period
                 if self.last_state_update == 0.0:
                     self.last_state_update = now
                 if self.last_state_update < now - (
                         self.freshness_threshold + cls.additional_freshness_latency
                 ):
-                    # Fred: Do not raise a check for passive
-                    # only checked hosts when not in check period ...
+                    # Do not raise a check for passive only checked hosts
+                    # when not in check period ...
                     if not self.active_checks_enabled:
                         timeperiod = timeperiods[self.check_period]
                         if timeperiod is None or timeperiod.is_time_valid(now):
@@ -2771,6 +2773,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 if comm.entry_type == 4 and not comm.persistent:
                     self.del_comment(comm.uuid, comments)
             self.broks.append(self.get_update_status_brok())
+        else:
+            logger.warning(
+                "Deleting acknowledge requested for %s %s but element is not acknowledged.",
+                self.my_type, self.get_name()
+            )
 
     def unacknowledge_problem_if_not_sticky(self, comments):
         """
@@ -2781,6 +2788,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem(comments)
+        else:
+            logger.warning(
+                "Deleting acknowledge requested for %s %s but element is not acknowledged.",
+                self.my_type, self.get_name()
+            )
 
     def raise_alert_log_entry(self):
         """Raise ALERT entry (critical level)
@@ -3015,24 +3027,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         state = True
 
-        # for prop, entry in self.__class__.properties.items():
-        #     if not entry.special and not hasattr(self, prop) and entry.required:
-        #         logger.error("[%s::%s] %s property not set",
-        #                      self.my_type, self.get_name(), prop)
-        #         state = False
-        #
-        # # Then look if we have some errors in the conf
-        # # Juts print warnings, but raise errors
-        # for err in self.configuration_warnings:
-        #     logger.warning("[%s::%s] %s", self.my_type, self.get_name(), err)
-        #
-        # # Raised all previously saw errors like unknown contacts and co
-        # if self.configuration_errors != []:
-        #     state = False
-        #     for err in self.configuration_errors:
-        #         logger.error("[%s::%s] %s", self.my_type, self.get_name(), err)
-
-        # If no notif period, set it to None, mean 24x7
+        # If no notification period, set it to None, meaning 24x7
         if not hasattr(self, 'notification_period'):
             self.notification_period = None
 
