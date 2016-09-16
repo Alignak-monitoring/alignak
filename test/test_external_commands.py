@@ -61,8 +61,9 @@ import time
 import ujson
 import unittest2 as unittest
 from alignak_test import AlignakTest, time_hacker
-from alignak.external_command import ExternalCommandManager
+from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
+from alignak.daemons.receiverdaemon import Receiver
 
 
 class TestExternalCommands(AlignakTest):
@@ -92,7 +93,7 @@ class TestExternalCommands(AlignakTest):
         fd.write(s)
         fd.close()
 
-    @unittest.skip("Temporary disabled")
+    # @unittest.skip("Temporary disabled")
     def test_external_commands(self):
         now = time.time()
         host = self.schedulers[0].sched.hosts.find_by_name('test_host_0')
@@ -106,18 +107,18 @@ class TestExternalCommands(AlignakTest):
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         # Set host as UP and its service as CRITICAL
-        # self.schedulers[0].sched.delete_zombie_checks()
-        # self.scheduler_loop(1, [
-        #     [host, 0, 'Host is Up | value1=1 value2=2']
-        # ])
-        # self.assertEqual('UP', host.state)
-        # self.assertEqual('HARD', host.state_type)
-        # self.scheduler_loop(2, [
-        #     [svc, 2, 'Service is Critical | value1=0 value2=0']
-        # ])
-        # svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        # self.assertEqual('CRITICAL', svc.state)
-        # self.assertEqual('HARD', svc.state_type)
+        self.schedulers[0].sched.delete_zombie_checks()
+        self.scheduler_loop(1, [
+            [host, 0, 'Host is Up | value1=1 value2=2']
+        ])
+        self.assertEqual('UP', host.state)
+        self.assertEqual('HARD', host.state_type)
+        self.scheduler_loop(2, [
+            [svc, 2, 'Service is Critical | value1=0 value2=0']
+        ])
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        self.assertEqual('CRITICAL', svc.state)
+        self.assertEqual('HARD', svc.state_type)
 
         for c in self.schedulers[0].sched.checks:
             print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
@@ -142,6 +143,9 @@ class TestExternalCommands(AlignakTest):
         # part of the performance data?
         for c in self.schedulers[0].sched.checks:
             print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
+        self.schedulers[0].sched.checks = {}
+        self.schedulers[0].sched.broks.clear()
+
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
         self.external_command_loop()
@@ -154,6 +158,7 @@ class TestExternalCommands(AlignakTest):
         for c in self.schedulers[0].sched.checks:
             print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
         self.schedulers[0].sched.checks = {}
+        self.schedulers[0].sched.broks.clear()
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is Warning|rtt=9999;5;10;0;10000' % time.time()
         print("***** Checks before *****: %s" % self.schedulers[0].sched.checks)
@@ -161,7 +166,7 @@ class TestExternalCommands(AlignakTest):
         print("********** Checks after *****: %s" % self.schedulers[0].sched.checks)
         self.external_command_loop()
         self.assertEqual('WARNING', svc.state)
-        self.assertEqual('Bobby is not happy', svc.output)
+        self.assertEqual('Service is Warning', svc.output)
         print "perf (%s)" % svc.perf_data
         self.assertEqual('rtt=9999;5;10;0;10000', svc.perf_data)
 
@@ -259,67 +264,140 @@ class TestExternalCommands(AlignakTest):
         # Show recent logs
         self.show_logs()
 
-    @unittest.skip("Temporary disabled")
+    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_command_scheduler(self):
-        self.schedulers[0].schedconf.accept_passive_unknown_check_results = True
+        # The scheduler accepts unknown passive checks...
+        self.schedulers[0].sched.conf.accept_passive_unknown_check_results = True
 
         # Sched receives known host but unknown service service_check_result
-        self.schedulers[0].schedbroks.clear()
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;' \
+                'Service is Warning|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        broks = [b for b in self.schedulers[0].schedbroks.values() if b.type == 'unknown_service_check_result']
+        # A brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_service_check_result']
         self.assertTrue(len(broks) == 1)
+        # ...but no logs
+        self.assertEqual(0, self.count_logs(scheduler=True))
 
         # Sched receives unknown host and service service_check_result
-        self.schedulers[0].schedbroks.clear()
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;' \
+                'Service is Warning|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        broks = [b for b in self.schedulers[0].schedbroks.values() if b.type == 'unknown_service_check_result']
+        # A brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_service_check_result']
         self.assertTrue(len(broks) == 1)
+        # ...but no logs
+        self.assertEqual(0, self.count_logs(scheduler=True))
 
         # Sched receives unknown host host_check_result
-        self.schedulers[0].schedbroks.clear()
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;' \
+                '1;Host is Down|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        broks = [b for b in self.schedulers[0].schedbroks.values() if b.type == 'unknown_host_check_result']
+        # A brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_host_check_result']
         self.assertTrue(len(broks) == 1)
+        # ...but no logs
+        self.assertEqual(0, self.count_logs(scheduler=True))
 
+        # -----------------------------------------------------------------------------------------
         # Now turn it off...
-        self.schedulers[0].schedconf.accept_passive_unknown_check_results = False
+        self.schedulers[0].sched.conf.accept_passive_unknown_check_results = False
 
         # Sched receives known host but unknown service service_check_result
-        self.schedulers[0].schedbroks.clear()
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;' \
+                'Service is Warning|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        broks = [b for b in self.schedulers[0].schedbroks.values() if b.type == 'unknown_service_check_result']
+        # No brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_service_check_result']
         self.assertTrue(len(broks) == 0)
-        self.assert_log_match(1, 'A command was received for service .* on host .*, but the service could not be found!')
-        self.clear_logs()
+        # ...but a log
+        self.show_logs(scheduler=True)
+        self.assert_log_match(1, 'A command was received for service .* '
+                                 'on host .*, but the service could not be found!', scheduler=True)
+        self.clear_logs(scheduler=True)
 
-    @unittest.skip("Temporary disabled")
+        # Sched receives unknown host and service service_check_result
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;' \
+                'Service is Warning|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.run_external_command(excmd)
+        # No brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_service_check_result']
+        self.assertTrue(len(broks) == 0)
+        # ...but a log
+        self.show_logs(scheduler=True)
+        self.assert_log_match(1, 'A command was received for service .* '
+                                 'on host .*, but the service could not be found!', scheduler=True)
+        self.clear_logs(scheduler=True)
+
+        # Sched receives unknown host host_check_result
+        self.schedulers[0].sched.broks.clear()
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;' \
+                '1;Host is Down|rtt=9999;5;10;0;10000' % time.time()
+        self.schedulers[0].sched.run_external_command(excmd)
+        # No brok...
+        broks = [b for b in self.schedulers[0].sched.broks.values()
+                 if b.type == 'unknown_host_check_result']
+        self.assertTrue(len(broks) == 0)
+        # ...but a log
+        self.show_logs(scheduler=True)
+        self.assert_log_match(1, 'A command was received for an host .*, '
+                                 'but the host could not be found!', scheduler=True)
+        self.clear_logs(scheduler=True)
+
+    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_command_receiver(self):
         receiverdaemon = Receiver(None, False, False, False, None)
         receiverdaemon.direct_routing = True
         receiverdaemon.accept_passive_unknown_check_results = True
 
         # Receiver receives unknown host external command
-        excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time())
+        excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;'
+                                '1;Service is Warning|rtt=9999;5;10;0;10000' % time.time())
         receiverdaemon.unprocessed_external_commands.append(excmd)
         receiverdaemon.push_external_commands_to_schedulers()
-        broks = [b for b in receiverdaemon.broks.values() if b.type == 'unknown_service_check_result']
+        # A brok...
+        broks = [b for b in receiverdaemon.broks.values()
+                 if b.type == 'unknown_service_check_result']
         self.assertEqual(len(broks), 1)
+        # ...but no logs!
+        self.show_logs(scheduler=True)
+        self.assert_no_log_match('Passive check result was received for host .*, '
+                                 'but the host could not be found!', scheduler=True)
+        # self.assert_any_log_match('Receiver searching for a scheduler '
+        #                           'for the external command ', scheduler=True)
+        self.clear_logs(scheduler=True)
 
         # now turn it off...
         receiverdaemon.accept_passive_unknown_check_results = False
 
-        excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;Bobby is not happy|rtt=9999;5;10;0;10000' % time.time())
+        excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;'
+                                '1;Service is Warning|rtt=9999;5;10;0;10000' % time.time())
         receiverdaemon.unprocessed_external_commands.append(excmd)
         receiverdaemon.push_external_commands_to_schedulers()
         receiverdaemon.broks.clear()
-        broks = [b for b in receiverdaemon.broks.values() if b.type == 'unknown_service_check_result']
+        # No brok...
+        broks = [b for b in receiverdaemon.broks.values()
+                 if b.type == 'unknown_service_check_result']
         self.assertEqual(len(broks), 0)
+        # ...but a log
+        self.show_logs(scheduler=True)
+        self.assert_any_log_match('Passive check result was received for host .*, '
+                                 'but the host could not be found!', scheduler=True)
+        # self.assert_any_log_match('Receiver searching for a scheduler '
+        #                           'for the external command ', scheduler=True)
+        self.clear_logs(scheduler=True)
 
-    @unittest.skip("Temporary disabled")
+    # @unittest.skip("Temporary disabled")
     def test_unknown_check_result_brok(self):
         # unknown_host_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down'
@@ -340,12 +418,12 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(expected, result)
 
         # unknown_service_check_result_brok with perfdata
-        excmd = '[1234567890] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Bobby is not happy|rtt=9999;5;10;0;10000'
-        expected = {'host_name': 'test_host_0', 'time_stamp': 1234567890, 'service_description': 'test_ok_0', 'return_code': '1', 'output': 'Bobby is not happy', 'perf_data': 'rtt=9999;5;10;0;10000'}
+        excmd = '[1234567890] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is Warning|rtt=9999;5;10;0;10000'
+        expected = {'host_name': 'test_host_0', 'time_stamp': 1234567890, 'service_description': 'test_ok_0', 'return_code': '1', 'output': 'Service is Warning', 'perf_data': 'rtt=9999;5;10;0;10000'}
         result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
         self.assertEqual(expected, result)
 
-    @unittest.skip("Temporary disabled")
+    # @unittest.skip("Temporary disabled")
     def test_change_and_reset_modattr(self):
         # Receiver receives unknown host external command
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % time.time()
@@ -361,7 +439,7 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(1, svc.modified_attributes)
         self.assertFalse(getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute))
 
-    @unittest.skip("Temporary disabled")
+    # @unittest.skip("Temporary disabled")
     def test_change_retry_host_check_interval(self):
         excmd = '[%d] CHANGE_RETRY_HOST_CHECK_INTERVAL;test_host_0;42' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
