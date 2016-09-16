@@ -261,6 +261,10 @@ class TestDependencies(AlignakTest):
         # delete schedule
         del self.schedulers[0].sched.recurrent_works[1]
 
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
+        router_00.checks_in_progress = []
+        router_00.event_handler_enabled = False
+
         host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -272,30 +276,42 @@ class TestDependencies(AlignakTest):
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        # Host is UP
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], reset_checks=True)
         time.sleep(0.1)
         self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
         self.assert_actions_count(0)
 
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        # Service is CRITICAL
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], reset_checks=True)
         time.sleep(0.1)
         self.assertEqual("SOFT", svc.state_type)
+        self.assertEqual("CRITICAL", svc.state)
         self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
         self.assert_actions_count(0)
+        # New host check
         self.assert_checks_count(1)
+        self.show_checks()
         self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(0, 'hostname test_host_00', 'command')
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN']], False)
+        # Host is DOWN
+        self.scheduler_loop(1, [[host, 2, 'DOWN']], reset_checks=True)
         time.sleep(0.1)
+        # New dependent host check
         self.assert_checks_count(1)
+        self.show_checks()
         self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(0, 'hostname test_router_00', 'command')
 
-        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
+        # Router is DOWN
         self.scheduler_loop(1, [[router_00, 2, 'DOWN']], False)
         time.sleep(0.1)
-        self.assert_checks_count(0)
+        # New router check
+        self.assert_checks_count(1)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')
 
     def test_multi_services(self):
         """
