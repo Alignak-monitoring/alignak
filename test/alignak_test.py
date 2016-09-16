@@ -505,7 +505,7 @@ class AlignakTest(unittest.TestCase):
         print("Actions: %s" % self.schedulers[0].sched.actions)
         actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(self.schedulers[0].sched.actions),
-                         "Not found right number of actions:\nactions_logs=[[[\n%s\n]]]" %
+                         "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
                                     'command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
@@ -529,7 +529,7 @@ class AlignakTest(unittest.TestCase):
         actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
         myaction = actions[index]
         self.assertTrue(regex.search(getattr(myaction, field)),
-                        "Not found a matched pattern in actions:\nindex=%s field=%s pattern=%r\n"
+                        "Not found a matching patternin actions:\nindex=%s field=%s pattern=%r\n"
                         "action_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
                         "command: %s" % (
                             index, field, pattern, myaction.creation_time, myaction.is_a,
@@ -583,7 +583,7 @@ class AlignakTest(unittest.TestCase):
         """
         checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
-                         "Not found right number of checks:\nchecks_logs=[[[\n%s\n]]]" %
+                         "Not found expected number of checks:\nchecks_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
                                     'command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
@@ -607,11 +607,58 @@ class AlignakTest(unittest.TestCase):
         checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
         mycheck = checks[index]
         self.assertTrue(regex.search(getattr(mycheck, field)),
-                        "Not found a matched pattern in checks:\nindex=%s field=%s pattern=%r\n"
+                        "Not found a matching pattern in checks:\nindex=%s field=%s pattern=%r\n"
                         "check_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
                         "command: %s" % (
                             index, field, pattern, mycheck.creation_time, mycheck.is_a,
                             mycheck.type, mycheck.status, mycheck.t_to_go, mycheck.command))
+
+    def _any_check_match(self, pattern, field, assert_not):
+        """
+        Search if any chek matches the requested pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :param assert_not:
+        :return:
+        """
+        regex = re.compile(pattern)
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        for check in checks:
+            if re.search(regex, getattr(check, field)):
+                self.assertTrue(not assert_not,
+                                "Found check:\nfield=%s pattern=%r\n"
+                                "check_line=creation: %s, is_a: %s, type: %s, status: %s, "
+                                "planned: %s, command: %s" % (
+                                    field, pattern, check.creation_time, check.is_a,
+                                    check.type, check.status, check.t_to_go, check.command)
+                                )
+                return
+        self.assertTrue(assert_not, "No matching check found:\n"
+                                    "pattern = %r\n" "checks = %r" % (pattern, checks))
+
+    def assert_any_check_match(self, pattern, field):
+        """
+        Assert if any check matches the pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :return:
+        """
+        self._any_check_match(pattern, field, assert_not=False)
+
+    def assert_no_check_match(self, pattern, field):
+        """
+        Assert if no check matches the pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :return:
+        """
+        self._any_check_match(pattern, field, assert_not=True)
 
     def _any_log_match(self, pattern, assert_not, scheduler=False):
         """
