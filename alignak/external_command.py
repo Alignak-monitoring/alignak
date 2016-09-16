@@ -698,7 +698,6 @@ class ExternalCommandManager:
 
         :rtype: dict | None
         """
-        # safe_print("Trying to resolve", command)
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
         try:
@@ -710,7 +709,6 @@ class ExternalCommandManager:
             logger.debug("Malformed command '%s'", command)
             return None
 
-        # safe_print("Get command name", c_name)
         if c_name not in ExternalCommandManager.commands:
             logger.debug("Command '%s' is not recognized, sorry", c_name)
             return None
@@ -755,7 +753,6 @@ class ExternalCommandManager:
 
                 if not in_service:
                     type_searched = entry['args'][i - 1]
-                    # safe_print("Search for a arg", type_searched)
 
                     if type_searched == 'host':
                         if self.mode == 'dispatcher' or self.mode == 'receiver':
@@ -818,7 +815,6 @@ class ExternalCommandManager:
                     elif type_searched == 'service':
                         in_service = True
                         tmp_host = elt.strip()
-                        # safe_print("TMP HOST", tmp_host)
                         if tmp_host[-1] == '\n':
                             tmp_host = tmp_host[:-1]
                         if self.mode == 'dispatcher':
@@ -836,7 +832,6 @@ class ExternalCommandManager:
                         self.search_host_and_dispatch(tmp_host, command, extcmd)
                         return None
 
-                    # safe_print("Got service full", tmp_host, srv_name)
                     serv = self.services.find_srv_by_name_and_hostname(tmp_host, srv_name)
                     if serv is not None:
                         args.append(serv)
@@ -851,9 +846,7 @@ class ExternalCommandManager:
         except IndexError:
             logger.debug("Sorry, the arguments are not corrects")
             return None
-        # safe_print('Finally got ARGS:', args)
         if len(args) == len(entry['args']):
-            # safe_print("OK, we can call the command", c_name, "with", args)
             return {'global': False, 'c_name': c_name, 'args': args}
             # f = getattr(self, c_name)
             # apply(f, args)
