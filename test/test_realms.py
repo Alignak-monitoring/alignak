@@ -55,6 +55,28 @@ class TestRealms(AlignakTest):
     This class test realms usage
     """
 
+    def test_no_broker_in_realm_warning(self):
+        """
+        Test realms on each host
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/realms/alignak_no_broker_in_realm_warning.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.assertIn(u"Error: the scheduler Scheduler-distant got no broker in its realm or upper",
+                      self.configuration_errors)
+
+        dist = self.arbiter.conf.realms.find_by_name("Distant")
+        self.assertIsNotNone(dist)
+        sched = self.arbiter.conf.schedulers.find_by_name("Scheduler-distant")
+        self.assertIsNotNone(sched)
+        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_brokers))
+        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_pollers))
+        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_reactionners))
+        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_receivers))
+
     def test_realm_host_assignation(self):
         """
         Test realms on each host
