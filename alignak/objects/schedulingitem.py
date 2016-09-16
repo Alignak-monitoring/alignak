@@ -115,12 +115,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'check_period':
             StringProp(fill_brok=['full_status'],
                        special=True),
+        # Set a default freshness threshold not 0 if parameter is missing
+        # and check_freshness is enabled
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'freshness_state':
-            CharProp(default='u', fill_brok=['full_status']),
+            IntegerProp(default=3600, fill_brok=['full_status']),
+
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
         'event_handler_enabled':
