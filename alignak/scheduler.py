@@ -452,7 +452,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type downtime: alignak.downtime.Downtime
         :return: None
         """
-        # TODO: ADD downtime brok for regenerator
+        # TODO: ADD downtime brok
         self.downtimes[downtime.uuid] = downtime
 
     def add_contactdowntime(self, contact_dt):
@@ -462,7 +462,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type contact_dt: alignak.contactdowntime.ContactDowntime
         :return: None
         """
-        # TODO: ADD contactdowntime brok for regenerator
+        # TODO: ADD contactdowntime brok
         self.contact_downtimes[contact_dt.uuid] = contact_dt
 
     def add_comment(self, comment):
@@ -472,7 +472,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type comment: alignak.comment.Comment
         :return: None
         """
-        # TODO: ADD comment brok for regenerator
+        # TODO: ADD comment brok
         self.comments[comment.uuid] = comment
         item = self.find_item_by_id(comment.ref)
         brok = item.get_update_status_brok()
