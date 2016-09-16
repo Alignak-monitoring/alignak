@@ -2295,7 +2295,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # the check is being forced, so we just replace next_chk time by now if the same check
         # is already scheduled to be launched. We return the id of the check.
-        # logger.error("launch_check, force: %s, in_checking: %s, %s", force, self.in_checking, self)
+        # logger.error("launch_check, force: %s, in_checking: %s, %s",
+        #              force, self.in_checking, self)
         if force and self.in_checking:
             now = time.time()
             c_in_progress = checks[self.checks_in_progress[0]]
