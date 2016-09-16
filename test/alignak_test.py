@@ -245,6 +245,9 @@ class AlignakTest(unittest.TestCase):
         """
         Manage scheduler checks
 
+        !!!!!!!!!! This function is to be replaced by the scheduler_loop_new !!!!!!!!!!
+
+
         @verified
         :param count: number of checks to pass
         :type count: int
@@ -281,6 +284,8 @@ class AlignakTest(unittest.TestCase):
         """
         Manage scheduler checks
 
+        !!!!!!!!!! This function will replace the scheduler_loop !!!!!!!!!!
+
         @verified
 
         :param count: number of checks to pass
@@ -309,17 +314,13 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
-    def external_command_loop(self, reset_checks=False):
+    def external_command_loop(self):
         """
         Execute the scheduler actions for external commands.
 
         @verified
-        :param reset_checks: reset or not the current checks list
-        :type items: bool
         :return:
         """
-        #if reset_checks:
-        #    self.schedulers[0].sched.checks = {}
         for i in self.schedulers[0].sched.recurrent_works:
             (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
             if nb_ticks == 1:
