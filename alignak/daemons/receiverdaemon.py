@@ -238,9 +238,8 @@ class Receiver(Satellite):
                     con = self.schedulers[old_sched_id]['con']
                     del self.schedulers[old_sched_id]
 
-                self.push_host_names(sched_id, conf['hosts'])
-
                 sched = conf['schedulers'][sched_id]
+                self.push_host_names(sched_id, sched['hosts'])
                 self.schedulers[sched_id] = sched
 
                 if sched['name'] in g_conf['satellitemap']:
