@@ -335,10 +335,19 @@ class AlignakTest(unittest.TestCase):
             self.show_actions()
         # print "------------ worker loop end ----------------"
 
-    def show_logs(self):
+    def show_logs(self, scheduler=False):
+        """
+        Show logs from the Arbiter. Get the Arbiter broks list an filter to
+        display only the 'log' type broks
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :param scheduler:
+        :return:
+        """
         print "--- logs <<<----------------------------------"
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+        broks = self.arbiter.broks
+        if scheduler:
             broks = self.schedulers[0].sched.broks
 
         for brok in sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
@@ -369,19 +378,33 @@ class AlignakTest(unittest.TestCase):
                 print "EVENTHANDLER:", a
         print "--- actions >>>----------------------------------"
 
-    def show_and_clear_logs(self):
-        self.show_logs()
-        self.clear_logs()
+    def show_and_clear_logs(self, scheduler=False):
+        """
+        Prints and then delete the current Arbiter logs
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :return:
+        """
+        self.show_logs(scheduler=scheduler)
+        self.clear_logs(scheduler=scheduler)
 
     def show_and_clear_actions(self):
         self.show_actions()
         self.clear_actions()
 
-    def count_logs(self):
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+    def count_logs(self, scheduler=False):
+        """
+        Count the log lines in the Arbiter broks.
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :return:
+        """
+        broks = self.arbiter.broks
+        if scheduler:
             broks = self.schedulers[0].sched.broks
-        else:
-            broks = self.broks
+
         return len([b for b in broks.values() if b.type == 'log'])
 
     def count_actions(self):
@@ -391,9 +414,16 @@ class AlignakTest(unittest.TestCase):
             actions = self.actions
         return len(actions.values())
 
-    def clear_logs(self):
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+    def clear_logs(self, scheduler=False):
+        """
+        Remove the 'log' broks from the current Arbiter broks list
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :return:
+        """
+        broks = self.arbiter.broks
+        if scheduler:
             broks = self.schedulers[0].sched.broks
 
         id_to_del = []
@@ -452,9 +482,11 @@ class AlignakTest(unittest.TestCase):
                             index, field, pattern, myaction.creation_time, myaction.is_a,
                             myaction.type, myaction.status, myaction.t_to_go, myaction.command))
 
-    def assert_log_match(self, index, pattern):
+    def assert_log_match(self, index, pattern, scheduler=False):
         """
-        Search if the log with the index number has the pattern
+        Search if the log with the index number has the pattern in the Arbiter logs.
+
+        If 'scheduler' is True, then uses the scheduler's broks list.
 
         :param index: index number
         :type index: int
@@ -462,14 +494,16 @@ class AlignakTest(unittest.TestCase):
         :type pattern: str
         :return: None
         """
-        regex = re.compile(pattern)
-        log_num = 1
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+        broks = self.arbiter.broks
+        if scheduler:
             broks = self.schedulers[0].sched.broks
 
+        regex = re.compile(pattern)
+        log_num = 1
+
         found = False
-        for brok in broks:
+        for brok in broks.values():
+            print ("--- Brok: %s" % brok)
             if brok.type == 'log':
                 brok.prepare()
                 if index == log_num:
@@ -477,11 +511,11 @@ class AlignakTest(unittest.TestCase):
                         found = True
                 log_num += 1
         self.assertTrue(found,
-                        "Not found a matched log line in broks:\nindex=%s pattern=%r\n"
+                        "Not found a matching log line in broks:\nindex=%s pattern=%r\n"
                         "broks_logs=[[[\n%s\n]]]" % (
                             index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
                                                       for idx, b in enumerate((b.data['log']
-                                                                               for b in broks
+                                                                               for b in broks.values()
                                                                                if b.type == 'log'),
                                                                               1))))
 
@@ -528,13 +562,22 @@ class AlignakTest(unittest.TestCase):
                             index, field, pattern, mycheck.creation_time, mycheck.is_a,
                             mycheck.type, mycheck.status, mycheck.t_to_go, mycheck.command))
 
-    def _any_log_match(self, pattern, assert_not):
+    def _any_log_match(self, pattern, assert_not, scheduler=False):
+        """
+        Search if any log in the Arbiter logs matches the requested pattern
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :param pattern:
+        :param assert_not:
+        :return:
+        """
         regex = re.compile(pattern)
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+        broks = self.arbiter.broks
+        if scheduler:
             broks = self.schedulers[0].sched.broks
 
-        for brok in broks:
+        for brok in broks.values():
             if brok.type == 'log':
                 brok.prepare()
                 if re.search(regex, brok.data['log']):
@@ -542,14 +585,30 @@ class AlignakTest(unittest.TestCase):
                                     "Found matching log line:\n"
                                     "pattern = %r\nbrok log = %r" % (pattern, brok.data['log']))
                     return
-        logs = [brok.data['log'] for brok in broks if brok.type == 'log']
+        logs = [brok.data['log'] for brok in broks.values() if brok.type == 'log']
         self.assertTrue(assert_not, "No matching log line found:\n"
                                     "pattern = %r\n" "logs broks = %r" % (pattern, logs))
 
-    def assert_any_log_match(self, pattern):
+    def assert_any_log_match(self, pattern, scheduler=False):
+        """
+        Assert if any log (Arbiter or Scheduler if True) matches the pattern
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
         self._any_log_match(pattern, assert_not=False)
 
-    def assert_no_log_match(self, pattern):
+    def assert_no_log_match(self, pattern, scheduler=False):
+        """
+        Assert if no log (Arbiter or Scheduler if True) matches the pattern
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
         self._any_log_match(pattern, assert_not=True)
 
     def get_log_match(self, pattern):
