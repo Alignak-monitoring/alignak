@@ -2290,9 +2290,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Look if we are in check or not
         self.update_in_checking()
 
-        # for c in checks:
-        #     logger.error("Check: %s", str(checks[c]))
-
         # the check is being forced, so we just replace next_chk time by now if the same check
         # is already scheduled to be launched. We return the id of the check.
         # logger.error("launch_check, force: %s, in_checking: %s, %s",
@@ -2304,10 +2301,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return c_in_progress
 
         # If I'm already in checking, Why launch a new check?
-        # If ref_check_id is not None , this is a dependency_ check
+        # If ref_check_id is not None, this is a dependency_ check
         # If none, it might be a forced check, so OK, I do a new
 
-        # logger.error("launch_check 2: %s", checks)
         # Dependency check, we have to create a new check that will be launched only once (now)
         # Otherwise it will delay the next real check. this can lead to an infinite SOFT state.
         if not force and (self.in_checking and ref_check is not None):
@@ -2377,13 +2373,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if check_command.timeout != -1:
                 timeout = check_command.timeout
 
-            # Make the Check object and put the service in checking
+            # Make the Check object and put it in checking
             # Make the check inherit poller_tag from the command
             # And reactionner_tag too
             data = {
                 'command': command_line,
                 'timeout': timeout,
                 'poller_tag': check_command.poller_tag,
+                'reactionner_tag': check_command.reactionner_tag,
                 'env': env,
                 'module_type': check_command.module_type,
                 't_to_go': timestamp,
