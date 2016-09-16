@@ -489,7 +489,7 @@ class Dispatcher:
                         realm.to_satellites_managed_by[sat_type][cfg_id] = []
 
                     # Special case for receiver because need to send it the hosts list
-                    hnames = [h.get_name() for h in cfg.hosts]
+                    hnames = [h.get_name() for h in conf.hosts]
                     sat_cfg['hosts'] = hnames
                     realm.to_satellites['receiver'][cfg_id] = sat_cfg
 
