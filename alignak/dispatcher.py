@@ -482,10 +482,16 @@ class Dispatcher:
 
                     # Now we generate the conf for satellites:
                     cfg_id = conf.uuid
+                    sat_cfg = sched.give_satellite_cfg()
                     for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
-                        realm.to_satellites[sat_type][cfg_id] = sched.give_satellite_cfg()
+                        realm.to_satellites[sat_type][cfg_id] = sat_cfg
                         realm.to_satellites_need_dispatch[sat_type][cfg_id] = True
                         realm.to_satellites_managed_by[sat_type][cfg_id] = []
+
+                    # Special case for receiver because need to send it the hosts list
+                    hnames = [h.get_name() for h in cfg.hosts]
+                    sat_cfg['hosts'] = hnames
+                    realm.to_satellites['receiver'][cfg_id] = sat_cfg
 
                     # The config is prepared for a scheduler, no need check another scheduler
                     break
@@ -575,17 +581,6 @@ class Dispatcher:
             # broker in a classic realm.
             if sat_type == "broker" and not realm.broker_complete_links:
                 break
-
-            # If receiver, we must send the hostnames
-            # of this configuration
-            if sat_type != 'receiver':
-                continue
-            # hnames = [h.get_name() for h in cfg.hosts]
-            # logger.debug("[%s] Sending %s hostnames to the "
-            #              "receiver %s",
-            #              realm.get_name(), len(hnames),
-            #              sat.get_name())
-            # sat.push_host_names(conf_uuid, hnames)
 
         # I've got enough satellite, the next ones are considered spares
         if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
