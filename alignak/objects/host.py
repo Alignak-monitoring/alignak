@@ -133,6 +133,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+
         'freshness_state':
             CharProp(default='d', fill_brok=['full_status']),
 
@@ -605,10 +606,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         logger.warning("The freshness period of host '%s' is expired by %s "
-                       "(threshold=%s).  I'm forcing the state to freshness_state.",
+                       "(threshold=%s).  I'm forcing the state to freshness state (%s).",
                        self.get_name(),
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
     def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)

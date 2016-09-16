@@ -80,7 +80,7 @@ from alignak.util import (
     generate_key_value_sequences,
     is_complex_expr,
     KeyValueSyntaxError)
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import logger, naglog_result
 
 
@@ -132,6 +132,9 @@ class Service(SchedulingItem):
 
         'host_dependency_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
+
+        'freshness_state':
+            CharProp(default='u', fill_brok=['full_status']),
 
         # Easy Service dep definition
         'service_dependencies':
@@ -635,10 +638,11 @@ class Service(SchedulingItem):
         :return: None
         """
         logger.warning("The freshness period of service '%s' on host '%s' is expired "
-                       "by %s (threshold=%s). I'm forcing the state to freshness_state.",
+                       "by %s (threshold=%s). I'm forcing the state to freshness state (%s).",
                        self.get_name(), self.host_name,
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)

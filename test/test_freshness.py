@@ -55,38 +55,62 @@ from alignak.util import format_t_into_dhms_format
 
 from alignak_test import *
 
-import alignak.objects.host
 from alignak.objects.host import Host
 
 
 class TestFreshness(AlignakTest):
 
+    """
+    This class tests the external commands
+    """
     def setUp(self):
-        self.setup_with_file(['etc/alignak_freshness.cfg'])
+        """
+        For each test load and check the configuration
+        :return: None
+        """
+        self.setup_with_file('cfg/freshness/alignak_freshness.cfg')
+        self.assertTrue(self.conf_is_correct)
 
-    # Check if the check_freshnes is doing it's job
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
     def test_check_freshness(self):
+        """
+        Check if the check_freshnes is doing its job
+
+        :return:
+        """
         self.print_header()
         # We want an eventhandelr (the perfdata command) to be put in the actions dict
         # after we got a service check
         now = time.time()
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         svc.active_checks_enabled = False
         self.assertEqual(True, svc.check_freshness)
+        self.assertEqual(120, svc.freshness_threshold)
+        self.assertEqual('u', svc.freshness_state)
+        self.assertEqual(0, len(svc.actions))
+
         #--------------------------------------------------------------
         # initialize host/service state
         #--------------------------------------------------------------
         # We do not want to be just a string but a real command
         print "Additonal freshness latency", svc.__class__.additional_freshness_latency
         self.scheduler_loop(1, [[svc, 0, 'OK | bibi=99%']])
-        print "Addi:", svc.last_state_update, svc.freshness_threshold, svc.check_freshness
-        # By default check fresh ness is set at false, so no new checks
-        self.assertEqual(0, len(svc.actions))
-        svc.do_check_freshness(self.sched.hosts, self.sched.services, self.sched.timeperiods,
-                               self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
+        # By default check_freshness is set at false, so no new checks
+        chk = svc.do_check_freshness(self.schedulers[0].sched.hosts,
+                                     self.schedulers[0].sched.services,
+                                     self.schedulers[0].sched.timeperiods,
+                                     self.schedulers[0].sched.macromodulations,
+                                     self.schedulers[0].sched.checkmodulations,
+                                     self.schedulers[0].sched.checks)
+        # No check
+        self.assertIsNone(chk)
         self.assertEqual(0, len(svc.actions))
 
         # We make it 10s less than it was
@@ -96,26 +120,53 @@ class TestFreshness(AlignakTest):
         # Now we active it, with a too small value (now - 10s is still higer than now - (1 - 15, the addition time)
         # So still no check
         svc.freshness_threshold = 1
-        print "Addi:", svc.last_state_update, svc.freshness_threshold, svc.check_freshness
-        svc.do_check_freshness(self.sched.hosts, self.sched.services, self.sched.timeperiods,
-                               self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
+        chk = svc.do_check_freshness(self.schedulers[0].sched.hosts,
+                                     self.schedulers[0].sched.services,
+                                     self.schedulers[0].sched.timeperiods,
+                                     self.schedulers[0].sched.macromodulations,
+                                     self.schedulers[0].sched.checkmodulations,
+                                     self.schedulers[0].sched.checks)
+        # No check
+        self.assertIsNone(chk)
         self.assertEqual(0, len(svc.actions))
 
         # Now active globaly the check freshness
         cmd = "[%lu] ENABLE_SERVICE_FRESHNESS_CHECKS" % now
-        self.sched.run_external_command(cmd)
+        self.schedulers[0].sched.run_external_command(cmd)
 
-        # Ok, now, we remove again 10s. Here we will saw the new entry
+        # Ok, now, we remove again 10s. Here we will see the new entry
         svc.last_state_update = svc.last_state_update - 10
-        svc.do_check_freshness(self.sched.hosts, self.sched.services, self.sched.timeperiods,
-                               self.sched.macromodulations, self.sched.checkmodulations, self.sched.checks)
+        chk = svc.do_check_freshness(self.schedulers[0].sched.hosts,
+                                     self.schedulers[0].sched.services,
+                                     self.schedulers[0].sched.timeperiods,
+                                     self.schedulers[0].sched.macromodulations,
+                                     self.schedulers[0].sched.checkmodulations,
+                                     self.schedulers[0].sched.checks)
+        self.assertIsNotNone(chk)
+        self.assertEqual(chk.output, 'Freshness period expired')
+        self.assertEqual(chk.check_type, 1)
+        self.assertEqual(chk.exit_status, 3)
+        # 1 action
         self.assertEqual(1, len(svc.actions))
+        self.show_actions()
+        # 3 checks prepared: depending host, host and service
+        self.assert_checks_count(3)
+        self.show_checks()
+        self.assert_any_check_match('test_hostcheck.pl', 'command')
+        self.assert_any_check_match('hostname test_router_0', 'command')
+        self.assert_any_check_match('test_hostcheck.pl', 'command')
+        self.assert_any_check_match('hostname test_host_0', 'command')
+        self.assert_any_check_match('test_servicecheck.pl', 'command')
+        self.assert_any_check_match('servicedesc test_ok_0', 'command')
         # And we check for the message in the log too
-        self.assert_any_log_match('The results of service.*')
+        self.show_logs()
+        self.assert_any_log_match('The freshness period of service .* on host .* is '
+                                  'expired by 0d 0h 0m 20s ')
+        self.assert_any_log_match('forcing the state to freshness state (.*).')
 
     def test_scheduler_check_freshness(self):
         now = time.time()
-        sched = self.sched
+        sched = self.schedulers[0].sched
 
         # we need a host to act on :
         host = sched.hosts.find_by_name('test_host_0')
@@ -156,7 +207,7 @@ class TestFreshness(AlignakTest):
                 self.assertFalse(sched.checks)
 
                 # now call the scheduler.check_freshness() :
-                self.sched.check_freshness()
+                self.schedulers[0].sched.check_freshness()
 
         # and here comes the post-asserts :
         self.assertEqual(1, len(host.actions),
@@ -176,12 +227,12 @@ class TestFreshness(AlignakTest):
         self.assertIs(chk, sched.checks[chk.uuid])
 
         log_mock.warning.assert_called_once_with(
-            "The results of host '%s' are stale by %s "
-            "(threshold=%s).  I'm forcing an immediate check "
-            "of the host.",
+            "The freshness period of host '%s' is expired by %s "
+            "(threshold=%s).  I'm forcing the state to freshness state (%s).",
             host.get_name(),
             format_t_into_dhms_format(int(now - host.last_state_update)),
             format_t_into_dhms_format(int(now - host.freshness_threshold)),
+            host.freshness_state
         )
 
         # finally assert the there had a new host_next_scheduler brok:
@@ -193,8 +244,6 @@ class TestFreshness(AlignakTest):
         brok.prepare()
         self.assertEqual(host.host_name, brok.data['host_name'])
         self.assertTrue(brok.data['in_checking'])
-        # verify the host next_chk attribute is good:
-        self.assertLess(now, brok.data['next_chk'])
         interval = host.check_interval * host.interval_length
         interval = min(interval, host.max_check_spread * host.interval_length)
         max_next_chk = now + min(interval, host.max_check_spread * host.interval_length)
@@ -204,7 +253,3 @@ class TestFreshness(AlignakTest):
         # but NB: this could highly depend on the condition applied to the
         # host used in this test case !!
         self.assertEqual(expected_host_next_chk, brok.data['next_chk'])
-
-
-if __name__ == '__main__':
-    unittest.main()
