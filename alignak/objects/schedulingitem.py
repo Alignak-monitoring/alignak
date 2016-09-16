@@ -2092,7 +2092,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :param hosts: hosts objects, used to check if a notif is blocked
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used to check if a notif is blocked
-        :type services: alignak.objects.service.Service
+        :type services: alignak.objects.service.Services
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None

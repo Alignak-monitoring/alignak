@@ -1329,6 +1329,5 @@ class Hosts(SchedulingItems):
                             self[elem].get_name(), self[elem].imported_from
                         )
                         self.configuration_errors.append(msg)
-            state = False
 
         return super(Hosts, self).is_correct() and state

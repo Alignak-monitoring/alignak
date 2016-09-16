@@ -130,17 +130,17 @@ class TestConfig(AlignakTest):
         self.assertFalse(self.conf_is_correct)
         self.assertIn(u"Host u'bla' use/inherits from itself ! Imported from: "
                       u"cfg/config/../default/daemons/reactionner-master.cfg:42",
-                      self.arbiter.conf.hosts.configuration_errors)
+                      self.configuration_errors)
 
     def test_bad_host_use_undefined_template(self):
         self.print_header()
         self.setup_with_file('cfg/config/bad_host_use_undefined_template.cfg')
         self.assertTrue(self.conf_is_correct)
         self.assertIn(u"[host::bla] no contacts nor contact_groups property",
-                  self.arbiter.conf.hosts.configuration_warnings)
+                  self.configuration_warnings)
         self.assertIn(u"Host u'bla' use/inherit from an unknown template (u'undefined') ! "
                   u"Imported from: cfg/config/bad_host_use_undefined_template.cfg:2",
-                  self.arbiter.conf.hosts.configuration_warnings)
+                  self.configuration_warnings)
 
     def test_broken_configuration(self):
         """
@@ -164,37 +164,6 @@ class TestConfig(AlignakTest):
             re.escape(
                 "[config] cannot open config file 'cfg/config/resource.cfg' for reading: "
                 "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
-            )
-        )
-
-    def test_bad_template_use_itself(self):
-        self.print_header()
-        with self.assertRaises(SystemExit):
-            self.setup_with_file('cfg/config/bad_template_use_itself.cfg')
-        self.assertFalse(self.conf_is_correct)
-
-        self.assert_any_cfg_log_match(
-            re.escape(
-                "Host u'bla' use/inherits from itself ! "
-                "Imported from: cfg/config/bad_template_use_itself.cfg:1"
-            )
-        )
-
-    def test_bad_host_use_undefined_template(self):
-        self.print_header()
-        self.setup_with_file('cfg/config/bad_host_use_undefined_template.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.show_configuration_logs()
-
-        self.assert_any_cfg_log_match(
-            re.escape(
-                "[host::bla] no contacts nor contact_groups property"
-            )
-        )
-        self.assert_any_cfg_log_match(
-            re.escape(
-                "Host u'bla' use/inherit from an unknown template (u'undefined') ! "
-                "Imported from: cfg/config/bad_host_use_undefined_template.cfg:2"
             )
         )
 

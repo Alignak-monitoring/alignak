@@ -1068,6 +1068,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         lines = buf.split('\n')
         line_nb = 0  # Keep the line number for the file path
         for line in lines:
+            # filefrom = ''
             if line.startswith("# IMPORTEDFROM="):
                 filefrom = line.split('=')[1]
                 line_nb = 0  # reset the line number too
@@ -2260,7 +2261,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :type txt: str
         :return: None
         """
-        logger.error("********** add_error: %s", txt)
         self.configuration_errors.append(txt)
         self.conf_is_correct = False
 
