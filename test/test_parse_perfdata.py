@@ -53,9 +53,11 @@ from alignak_test import *
 from alignak.misc.perfdata import Metric, PerfDatas
 
 
-class TestParsePerfdata(AlignakTest):
+class TestPerfdataParing(AlignakTest):
 
-    def test_parsing_perfdata(self):
+    def test_perfdata_parsing(self):
+        self.print_header()
+
         s = 'ramused=1009MB;;;0;1982 swapused=540MB;;;0;3827 memused=1550MB;2973;3964;0;5810'
         s = 'ramused=1009MB;;;0;1982'
         m = Metric(s)
@@ -164,11 +166,7 @@ class TestParsePerfdata(AlignakTest):
         self.assertEqual(m.min, 0)
         self.assertEqual(m.max, None)
 
-        #Test that creating a perfdata with nothing dosen't fail
+        # Test that creating a perfdata with nothing does not fail
         s = None
         p = PerfDatas(s)
         self.assertEqual(len(p), 0)
-
-if __name__ == '__main__':
-    unittest.main()
-
