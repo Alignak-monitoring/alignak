@@ -246,7 +246,6 @@ class AlignakTest(unittest.TestCase):
         Manage scheduler checks
 
         @verified
-
         :param count: number of checks to pass
         :type count: int
         :param items: list of list [[object, exist_status, output]]
@@ -278,13 +277,17 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
-    def external_command_loop(self):
+    def external_command_loop(self, reset_checks=True):
         """
         Execute the scheduler actions for external commands.
 
         @verified
+        :param reset_checks: reset or not the current checks list
+        :type items: bool
         :return:
         """
+        if reset_checks:
+            self.schedulers[0].sched.checks = {}
         for i in self.schedulers[0].sched.recurrent_works:
             (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
             if nb_ticks == 1:
