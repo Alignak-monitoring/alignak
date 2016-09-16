@@ -1633,8 +1633,8 @@ class Items(object):
         :type attr1: str
         :param attr2: attribute name
         :type attr2: str
-        :return: True if no loop, otherwise false
-        :rtype: bool
+        :return: list
+        :rtype: list
         """
         # Ok, we say "from now, no loop :) "
         # in_loop = []

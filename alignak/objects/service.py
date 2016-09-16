@@ -387,6 +387,7 @@ class Service(SchedulingItem):
                     msg = "[%s::%s] service_description got an illegal character: %s" % (
                         self.my_type, self.get_name(), char
                     )
+                    self.configuration_errors.append(msg)
                     state = False
 
         return super(Service, self).is_correct() and state
