@@ -94,6 +94,7 @@ class ModulesManager(object):
         """Import, instantiate & "init" the modules we have been requested
 
         :return: Number of module instances loaded and initialized
+        :rtype: int
         """
         self.load(mod_confs)
         return len(self.get_instances())
