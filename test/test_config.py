@@ -59,7 +59,7 @@ class TestConfig(AlignakTest):
         scheduler_link= self.arbiter.conf.schedulers.find_by_name('scheduler-master')
         self.assertIsNotNone(scheduler_link)
         # Scheduler configuration is ok
-        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+        self.assertTrue(self.schedulers[0].sched.conf.conf_is_correct)
 
         # Broker, Poller, Reactionner
         link = self.arbiter.conf.brokers.find_by_name('broker-master')
@@ -99,7 +99,7 @@ class TestConfig(AlignakTest):
         link= self.arbiter.conf.schedulers.find_by_name('Default-Scheduler')
         self.assertIsNotNone(link)
         # Scheduler configuration is ok
-        self.assertTrue(self.schedulers[0].conf.conf_is_correct)
+        self.assertTrue(self.schedulers[0].sched.conf.conf_is_correct)
 
         # Broker, Poller, Reactionner
         link = self.arbiter.conf.brokers.find_by_name('Default-Broker')
@@ -122,6 +122,30 @@ class TestConfig(AlignakTest):
 
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_HIDDEN")
         self.assertIsNotNone(svc)
+
+    def test_not_hostname_in_service(self):
+        """
+        The service test_ok_0 is applied with a host_group on "test_host_0","test_host_1"
+        but have a host_name with !"test_host_1" so it will only be attached to "test_host_0"
+
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_not_hostname.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
+        self.assertIsNotNone(host)
+        self.assertTrue(host.is_correct())
+        host.act_depend_of = []  # ignore the router
+
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        # Check that the service is attached to test_host_0
+        self.assertIsNotNone(svc)
+        self.assertTrue(svc.is_correct())
+        svc_not = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_1", "test_ok_0")
+        # Check that the service is NOT attached to test_host_1
+        self.assertIsNone(svc_not)
 
     def test_bad_template_use_itself(self):
         self.print_header()
@@ -366,16 +390,16 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/host_config_all.cfg')
         self.assertTrue(self.conf_is_correct)
 
-        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_0')
+        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_0')
         self.assertEqual('DOWN', cg.state)
 
-        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_1')
+        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_1')
         self.assertEqual('UNREACHABLE', cg.state)
 
-        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_2')
+        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_2')
         self.assertEqual('UP', cg.state)
 
-        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_3')
+        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_3')
         self.assertEqual('UP', cg.state)
 
     def test_config_hosts_names(self):
@@ -414,11 +438,11 @@ class TestConfig(AlignakTest):
         # We can send a command by escaping the semicolon.
         command = '[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
             time.time())
-        self.schedulers[0].sched.run_external_command(command)
+        self.schedulers[0].sched.sched.run_external_command(command)
 
         # can need 2 run for get the consum (I don't know why)
-        self.scheduler_loop(1, [])
-        self.scheduler_loop(1, [])
+        self.schedulers[0].scheduler_loop(1, [])
+        self.schedulers[0].scheduler_loop(1, [])
 
     def test_config_services(self):
         """
@@ -429,18 +453,18 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/service_config_all.cfg')
 
-        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_0')
+        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_0')
         self.assertEqual('WARNING', cg.state)
 
-        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_1')
+        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_1')
         self.assertEqual('UNKNOWN', cg.state)
 
-        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_2')
+        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_2')
         self.assertEqual('CRITICAL', cg.state)
 
-        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_3')
+        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_3')
         self.assertEqual('OK', cg.state)
 
-        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_4')
+        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_4')
         self.assertEqual('OK', cg.state)
 
