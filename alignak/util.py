@@ -73,37 +73,6 @@ except AttributeError, exp:
 
 
 # ########## Strings #############
-def safe_print(*args):
-    """Try to print strings, but if there is an utf8 error, go in simple ascii mode
-    (Like if the terminal do not have en_US.UTF8 as LANG for example)
-
-    :param args: args to print
-    :type args:
-    :return: None
-    """
-    lst = []
-    for arg in args:
-        # If we got an str, go in unicode, and if we cannot print
-        # utf8, go in ascii mode
-        if isinstance(arg, str):
-            if SAFE_STDOUT:
-                string = unicode(arg, 'utf8', errors='ignore')
-            else:
-                string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
-                    decode('ascii', 'replace')
-            lst.append(string)
-        # Same for unicode, but skip the unicode pass
-        elif isinstance(arg, unicode):
-            if SAFE_STDOUT:
-                string = arg
-            else:
-                string = arg.encode('ascii', 'replace')
-            lst.append(string)
-        # Other types can be directly convert in unicode
-        else:
-            lst.append(unicode(arg))
-    # Ok, now print it :)
-    print u' '.join(lst)
 
 
 def split_semicolon(line, maxsplit=None):
@@ -246,20 +215,6 @@ def get_end_of_day(year, month_id, day):
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
-
-
-def print_date(timestamp):
-    """Get date (local) in asc format from timestamp
-
-    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
-
-    :param timestamp: timestamp
-    :type timestamp; int
-    :return: formatted time
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return time.asctime(time.localtime(timestamp))
 
 
 def get_day(timestamp):
