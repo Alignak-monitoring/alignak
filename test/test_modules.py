@@ -47,7 +47,7 @@
 This file is used to test realms usage
 """
 import time
-import unittest
+import unittest2 as unittest
 from alignak_test import AlignakTest, time_hacker
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
