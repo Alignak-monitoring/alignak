@@ -277,7 +277,39 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
-    def external_command_loop(self, reset_checks=True):
+    def scheduler_loop_new(self, count, items):
+        """
+        Manage scheduler checks
+
+        @verified
+
+        :param count: number of checks to pass
+        :type count: int
+        :param items: list of list [[object, exist_status, output]]
+        :type items: list
+        :return: None
+        """
+        for num in range(count):
+            for item in items:
+                (obj, exit_status, output) = item
+                if len(obj.checks_in_progress) == 0:
+                    for i in self.schedulers[0].sched.recurrent_works:
+                        (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                        if nb_ticks == 1:
+                            fun()
+                self.assertGreater(len(obj.checks_in_progress), 0)
+                chk = self.schedulers[0].sched.checks[obj.checks_in_progress[0]]
+                chk.set_type_active()
+                chk.output = output
+                chk.exit_status = exit_status
+                self.schedulers[0].sched.waiting_results.put(chk)
+
+            for i in self.schedulers[0].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                if nb_ticks == 1:
+                    fun()
+
+    def external_command_loop(self, reset_checks=False):
         """
         Execute the scheduler actions for external commands.
 
@@ -286,8 +318,8 @@ class AlignakTest(unittest.TestCase):
         :type items: bool
         :return:
         """
-        if reset_checks:
-            self.schedulers[0].sched.checks = {}
+        #if reset_checks:
+        #    self.schedulers[0].sched.checks = {}
         for i in self.schedulers[0].sched.recurrent_works:
             (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
             if nb_ticks == 1:
