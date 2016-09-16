@@ -2796,8 +2796,6 @@ class ExternalCommandManager:
                                        self.sched.macromodulations, self.sched.checkmodulations,
                                        self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
-            logger.error('%s > Passive service check. Got check:',
-                         service.get_full_name(), chk)
             if not chk:
                 logger.error('%s > Passive service check failed. None check launched !?',
                              service.get_full_name())
