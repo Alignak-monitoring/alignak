@@ -141,7 +141,6 @@ class TestModules(AlignakTest):
         self.assertTrue(self.schedulers[0].conf.is_correct)
 
     def test_modules_conflicting(self):
-<<<<<<< cb2a94f25e52b5c954000ed71ddd6f8514f7a409
 
         # prepare 2 modconfs:
         modconfA = Module({'module_alias': 'whatever',
@@ -152,10 +151,6 @@ class TestModules(AlignakTest):
         self.modulemanager = ModulesManager('broker', None)
         count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
         self.assertEqual(count_modules, 2)
-=======
-    def test_conflicting_modules(self):
-=======
->>>>>>> Tests for modules
 
         # prepare 2 modconfs:
         modconfA = Module({'module_alias': 'whatever',
@@ -165,31 +160,20 @@ class TestModules(AlignakTest):
 
         self.modulemanager = ModulesManager('broker', None)
         count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
-<<<<<<< cb2a94f25e52b5c954000ed71ddd6f8514f7a409
         self.assertEqual(len(count_modules), 2)
->>>>>>> Test modules and tag auto-generated modules #338
-=======
-        self.assertEqual(count_modules, 2)
->>>>>>> Tests for modules
 
         modA = None
         modB = None
         for _, mod in self.modulemanager.modules_assoc:
-<<<<<<< cb2a94f25e52b5c954000ed71ddd6f8514f7a409
-<<<<<<< c2e6b0629e1a5a1f91d79c5ee48ed5737a4e130c
             if mod.__package__ == 'test_modules_conflicting.modA':
                 modA = mod
             elif mod.__package__ == 'test_modules_conflicting.modB':
-=======
             if mod.__package__ == 'test_module_as_package_dir.modA':
                 modA = mod
             elif mod.__package__ == 'test_module_as_package_dir.modB':
->>>>>>> Test modules and tag auto-generated modules #338
-=======
             if mod.__package__ == 'test_modules_conflicting.modA':
                 modA = mod
             elif mod.__package__ == 'test_modules_conflicting.modB':
->>>>>>> Tests for modules
                 modB = mod
 
             if mod.properties['type'].startswith("mod"):
