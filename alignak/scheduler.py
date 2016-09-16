@@ -1782,7 +1782,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def check_freshness(self):
         """
-        Iter over all hosts and services to check freshness if check_freshness enabled and
+        Iterate over all hosts and services to check freshness if check_freshness enabled and
         passive_checks_enabled enabled
 
         :return: None
