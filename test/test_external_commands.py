@@ -54,12 +54,8 @@ from alignak_test import AlignakTest, time_hacker
 from alignak.external_command import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
 import time
-import ujson
-import unittest2 as unittest
 from alignak_test import AlignakTest, time_hacker
-from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
-from alignak.daemons.receiverdaemon import Receiver
 
 
 class TestExternalCommands(AlignakTest):
@@ -119,6 +115,23 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(2048, host.modified_attributes)
         self.assertEqual(getattr(host, DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].attribute), 42)
         self.assert_no_log_match("A command was received for service.*")
+
+    def test_unknown_command(self):
+        # Malformed command
+        excmd = '[%d] MALFORMED COMMAND' % int(time.time())
+        self.schedulers[0].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.assert_any_log_match(
+            "Malformed external command "
+        )
+
+        # Unknowncommand
+        excmd = '[%d] UNKNOWN_COMMAND' % int(time.time())
+        self.schedulers[0].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.assert_any_log_match(
+            re.escape("Command 'unknown_command' is not recognized, sorry")
+        )
 
     def test_special_commands(self):
         # RESTART_PROGRAM

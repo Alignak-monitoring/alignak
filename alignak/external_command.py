@@ -496,7 +496,7 @@ class ExternalCommandManager:
         """
         self.receiver = receiver
 
-    def open(self):
+    def open(self):  # pragma: no cover - not mesurable with unit tests
         """Create if necessary and open a pipe
         (Won't work under Windows)
 
@@ -519,7 +519,7 @@ class ExternalCommandManager:
         self.fifo = os.open(self.pipe_path, os.O_NONBLOCK)
         return self.fifo
 
-    def get(self):
+    def get(self):  # pragma: no cover - not mesurable with unit tests
         """Get external commands from fifo
 
         :return: external commands
@@ -699,18 +699,18 @@ class ExternalCommandManager:
         :rtype: dict | None
         """
         command = command.rstrip()
-        elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
+        elts = split_semicolon(command)  # danger!!! passive check results with perfdata
         try:
             timestamp, c_name = elts[0].split(' ')
             timestamp = timestamp[1:-1]
             c_name = c_name.lower()
             self.current_timestamp = to_int(timestamp)
         except (ValueError, IndexError):
-            logger.debug("Malformed command '%s'", command)
+            logger.warning("Malformed external command '%s'", command)
             return None
 
         if c_name not in ExternalCommandManager.commands:
-            logger.debug("Command '%s' is not recognized, sorry", c_name)
+            logger.warning("Command '%s' is not recognized, sorry", c_name)
             return None
 
         # Split again based on the number of args we expect. We cannot split
