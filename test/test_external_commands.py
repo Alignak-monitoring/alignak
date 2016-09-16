@@ -92,75 +92,109 @@ class TestExternalCommands(AlignakTest):
     # @unittest.skip("Temporary disabled")
     def test_external_commands(self):
         now = time.time()
+        # delete schedule
+        # del self.schedulers[0].sched.recurrent_works[1]
+
         host = self.schedulers[0].sched.hosts.find_by_name('test_host_0')
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
         self.assertIsNotNone(host)
+
         router = self.schedulers[0].sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.event_handler_enabled = False
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
         self.assertIsNotNone(router)
+
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
         self.assertIsNotNone(svc)
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         # Set host as UP and its service as CRITICAL
-        self.schedulers[0].sched.delete_zombie_checks()
-        self.scheduler_loop(1, [
-            [host, 0, 'Host is Up | value1=1 value2=2']
-        ])
+        self.scheduler_loop(1, [[host, 0, 'Host is Up | value1=1 value2=2']], True)
+        self.assert_checks_count(2)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
         self.assertEqual('UP', host.state)
         self.assertEqual('HARD', host.state_type)
-        self.scheduler_loop(2, [
-            [svc, 2, 'Service is Critical | value1=0 value2=0']
-        ])
-        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+
+        self.scheduler_loop(2, [[svc, 2, 'Service is Critical | value1=0 value2=0']], False)
+        self.assert_checks_count(3)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
+        self.assert_checks_match(2, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(2, 'hostname test_host_0', 'command')
         self.assertEqual('CRITICAL', svc.state)
         self.assertEqual('HARD', svc.state_type)
 
-        for c in self.schedulers[0].sched.checks:
-            print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
+        # Receive passive host check
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        self.external_command_loop()
+        self.external_command_loop(False)
+        time.sleep(0.1)
+        self.assert_checks_count(2)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
         self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is Down', host.output)
 
         # Now with performance data
-        for c in self.schedulers[0].sched.checks:
-            print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down|rtt=9999' % time.time()
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is Up|rtt=9999' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        self.external_command_loop()
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is Down', host.output)
+        self.external_command_loop(False)
+        self.assert_checks_count(2)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
+        self.assertEqual('UP', host.state)
+        self.assertEqual('Host is Up', host.output)
         self.assertEqual('rtt=9999', host.perf_data)
 
         # Now with full-blown performance data. Here we have to watch out:
         # Is a ";" a separator for the external command or is it
         # part of the performance data?
-        for c in self.schedulers[0].sched.checks:
-            print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
-        self.schedulers[0].sched.checks = {}
-        self.schedulers[0].sched.broks.clear()
+        # for c in self.schedulers[0].sched.checks:
+        #     print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
+        # self.schedulers[0].sched.checks.clear()
+        # self.schedulers[0].sched.broks.clear()
 
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is Down|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
-        self.external_command_loop()
+        self.external_command_loop(True)
+        self.schedulers[0].sched.consumeresults()
+        self.assert_checks_count(1)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_0', 'command')
+        self.assert_checks_match(0, 'waitconsume', 'status')
+        self.external_command_loop(True)
         self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is Down', host.output)
-        print "perf (%s)" % host.perf_data
         self.assertEqual('rtt=9999;5;10;0;10000', host.perf_data)
 
         # The same with a service
-        for c in self.schedulers[0].sched.checks:
-            print("Check: %s" % str(self.schedulers[0].sched.checks[c]))
-        self.schedulers[0].sched.checks = {}
-        self.schedulers[0].sched.broks.clear()
-
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is Warning|rtt=9999;5;10;0;10000' % time.time()
-        print("***** Checks before *****: %s" % self.schedulers[0].sched.checks)
         self.schedulers[0].sched.run_external_command(excmd)
-        print("********** Checks after *****: %s" % self.schedulers[0].sched.checks)
         self.external_command_loop()
+
         self.assertEqual('WARNING', svc.state)
         self.assertEqual('Service is Warning', svc.output)
         print "perf (%s)" % svc.perf_data
@@ -180,7 +214,7 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(False, svc.problem_has_been_acknowledged)
 
         # Service is going ok ...
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Bobby is happy now!|rtt=9999;5;10;0;10000' % time.time()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is Ok|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual('OK', svc.state)
@@ -188,7 +222,7 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual('rtt=9999;5;10;0;10000', svc.perf_data)
 
         # Host is going up ...
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Bob is also happy now!' % time.time()
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is Up' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual('UP', host.state)
@@ -196,7 +230,7 @@ class TestExternalCommands(AlignakTest):
 
         # Now with PAST DATA. We take the router because it was not called from now.
         past = int(time.time() - 30)
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Host is Down|rtt=9999;5;10;0;10000' % past
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down|rtt=9999;5;10;0;10000' % past
         self.schedulers[0].sched.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual('DOWN', router.state)
@@ -208,7 +242,7 @@ class TestExternalCommands(AlignakTest):
 
         # Now an even earlier check, should NOT be take
         very_past = int(time.time() - 3600)
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Host is Down|rtt=9999;5;10;0;10000' % very_past
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down|rtt=9999;5;10;0;10000' % very_past
         self.schedulers[0].sched.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual('DOWN', router.state)
@@ -226,6 +260,7 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual('DOWN', host.state)
         self.assertEqual(u'Bob got a crappy character  é   and so is not not happy', host.output)
         self.assertEqual('rtt=9999', host.perf_data)
+        assert False
 
         # ACK HOST
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
