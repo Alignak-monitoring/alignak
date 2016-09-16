@@ -603,7 +603,7 @@ class ExternalCommandManager:
         # If we are a receiver, just look in the receiver
         if self.mode == 'receiver':
             logger.debug("Receiver searching for a scheduler for the external command %s %s",
-                        host_name, command)
+                         host_name, command)
             sched = self.receiver.get_sched_from_hname(host_name)
             if sched:
                 host_found = True
