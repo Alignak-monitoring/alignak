@@ -1280,9 +1280,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.error("update_in_checking, %s, in_progress: %s", self, self.checks_in_progress)
-        for c in self.checks_in_progress:
-            logger.error("Check in progress: %s", c)
+        # logger.error("update_in_checking, %s, in_progress: %s", self, self.checks_in_progress)
+        # for c in self.checks_in_progress:
+        #     logger.error("Check in progress: %s", c)
         self.in_checking = (len(self.checks_in_progress) != 0)
 
     def remove_in_progress_notification(self, notif):
@@ -2290,12 +2290,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Look if we are in check or not
         self.update_in_checking()
 
-        for c in checks:
-            logger.error("Check: %s", str(checks[c]))
+        # for c in checks:
+        #     logger.error("Check: %s", str(checks[c]))
 
         # the check is being forced, so we just replace next_chk time by now if the same check
         # is already scheduled to be launched. We return the id of the check.
-        logger.error("launch_check, force: %s, in_checking: %s, %s", force, self.in_checking, self)
+        # logger.error("launch_check, force: %s, in_checking: %s, %s",
+        #              force, self.in_checking, self)
         if force and self.in_checking:
             now = time.time()
             c_in_progress = checks[self.checks_in_progress[0]]
@@ -2306,7 +2307,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If ref_check_id is not None , this is a dependency_ check
         # If none, it might be a forced check, so OK, I do a new
 
-        logger.error("launch_check 2: %s", checks)
+        # logger.error("launch_check 2: %s", checks)
         # Dependency check, we have to create a new check that will be launched only once (now)
         # Otherwise it will delay the next real check. this can lead to an infinite SOFT state.
         if not force and (self.in_checking and ref_check is not None):
