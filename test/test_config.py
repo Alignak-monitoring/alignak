@@ -76,7 +76,7 @@ class TestConfig(AlignakTest):
     def test_config_ok_no_declared_daemons(self):
         """
         Default configuration has no loading problems ... but no daemons are defined
-        The arbiter will create default daemons except or the receiver.
+        The arbiter will create default daemons except for the receiver.
         :return: None
         """
         self.print_header()
@@ -114,6 +114,10 @@ class TestConfig(AlignakTest):
         self.assertIsNone(link)
 
     def test_symlinks(self):
+        """
+        Test a configuration with symlinks to files
+        :return:
+        """
         if os.name == 'nt':
             return
 
@@ -122,6 +126,56 @@ class TestConfig(AlignakTest):
 
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_HIDDEN")
         self.assertIsNotNone(svc)
+
+    def test_define_syntax(self):
+        """
+        Define syntax si correctly check: spaces, multi-lines, white-spaces
+        do not raise any error ...
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_define_with_space.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        host = self.schedulers[0].sched.hosts.find_by_name('spaced-host')
+        self.assertIsNotNone(host)
+
+    def test_definition_order(self):
+        """
+        An element (host, service, ...) can be defined several times then the definition_order
+        will be used to choose which definition is the to be used one...
+
+        Here, the 'same_service' is defined twice but the 'specific' one will be retained rather
+        than the 'generic' one ...
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_definition_order.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        svc_specific = self.schedulers[0].sched.services.find_srv_by_name_and_hostname(
+            "test_host_specific", "same_service"
+        )
+        # Got the 'specific' model command name
+        self.assertEqual('specific', svc_specific.check_command.command.command_name)
+        self.assertIsNotNone(svc_specific)
+
+        svc_generic = self.schedulers[0].sched.services.find_srv_by_name_and_hostname(
+            "test_host_generic", "same_service"
+        )
+        # Got the 'generic' model command name
+        self.assertEqual('general', svc_generic.check_command.command.command_name)
+        self.assertIsNotNone(svc_generic)
 
     def test_not_hostname_in_service(self):
         """
@@ -173,6 +227,37 @@ class TestConfig(AlignakTest):
         # Service template linked to an host template
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host", "svc_inherited")
         self.assertIsNotNone(svc)
+
+    def test_service_with_no_host(self):
+        """
+        A service not linked to any host raises an error
+        :return:
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_service_nohost.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.assertIn("Configuration in service::will_not_exist is incorrect; "
+                      "from: cfg/config/alignak_service_nohost.cfg:1",
+                      self.configuration_errors)
+        self.assertIn("a service has been defined without host_name nor "
+                      "hostgroups in cfg/config/alignak_service_nohost.cfg:1",
+                      self.configuration_errors)
+        self.assertIn("[service::will_not_exist] not bound to any host.",
+                      self.configuration_errors)
+        self.assertIn("[service::will_not_exist] no check_command",
+                      self.configuration_errors)
+
+        self.assertIn("Configuration in service::will_error is incorrect; "
+                      "from: cfg/config/alignak_service_nohost.cfg:6",
+                      self.configuration_errors)
+        self.assertIn("[service::will_error] unknown host_name 'NOEXIST'",
+                      self.configuration_errors)
+        self.assertIn("[service::will_error] check_command 'None' invalid",
+                      self.configuration_errors)
+
+        self.assertIn("services configuration is incorrect!",
+                      self.configuration_errors)
 
     def test_bad_template_use_itself(self):
         self.print_header()
@@ -417,16 +502,16 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/host_config_all.cfg')
         self.assertTrue(self.conf_is_correct)
 
-        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_0')
+        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_0')
         self.assertEqual('DOWN', cg.state)
 
-        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_1')
+        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_1')
         self.assertEqual('UNREACHABLE', cg.state)
 
-        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_2')
+        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_2')
         self.assertEqual('UP', cg.state)
 
-        cg = self.schedulers[0].sched.sched.hosts.find_by_name('test_host_3')
+        cg = self.schedulers[0].sched.hosts.find_by_name('test_host_3')
         self.assertEqual('UP', cg.state)
 
     def test_config_hosts_names(self):
@@ -465,7 +550,7 @@ class TestConfig(AlignakTest):
         # We can send a command by escaping the semicolon.
         command = '[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
             time.time())
-        self.schedulers[0].sched.sched.run_external_command(command)
+        self.schedulers[0].sched.run_external_command(command)
 
         # can need 2 run for get the consum (I don't know why)
         self.schedulers[0].scheduler_loop(1, [])
@@ -480,18 +565,18 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/service_config_all.cfg')
 
-        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_0')
+        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_0')
         self.assertEqual('WARNING', cg.state)
 
-        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_1')
+        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_1')
         self.assertEqual('UNKNOWN', cg.state)
 
-        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_2')
+        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_2')
         self.assertEqual('CRITICAL', cg.state)
 
-        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_3')
+        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_3')
         self.assertEqual('OK', cg.state)
 
-        cg = self.schedulers[0].sched.sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_4')
+        cg = self.schedulers[0].sched.services.find_srv_by_name_and_hostname('test_host_0', 'test_service_4')
         self.assertEqual('OK', cg.state)
 
