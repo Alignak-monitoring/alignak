@@ -147,6 +147,33 @@ class TestConfig(AlignakTest):
         # Check that the service is NOT attached to test_host_1
         self.assertIsNone(svc_not)
 
+    def test_service_inheritance(self):
+        """
+        Services are attached to hosts thanks to template inheritance
+
+        SSH services are created from a template and attached to an host
+
+        svc_inherited is created from a service template linked to an host template with a simple
+        host declaration
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # Service linked to an host
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("MYHOST", "SSH")
+        self.assertIsNotNone(svc)
+
+        # Service linked to several hosts
+        for hname in ["MYHOST2", "MYHOST3"]:
+            svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname(hname, "SSH")
+            self.assertIsNotNone(svc)
+
+        # Service template linked to an host template
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host", "svc_inherited")
+        self.assertIsNotNone(svc)
+
     def test_bad_template_use_itself(self):
         self.print_header()
         with self.assertRaises(SystemExit):
