@@ -133,7 +133,7 @@ class Item(AlignakObject):
                 if key in self.properties:
                     val = self.properties[key].pythonize(params[key])
                 elif key in self.running_properties:
-                    warning = "using a the running property %s in a config file" % key
+                    warning = "using the running property %s in a config file" % key
                     self.configuration_warnings.append(warning)
                     val = self.running_properties[key].pythonize(params[key])
                 elif hasattr(self, 'old_properties') and key in self.old_properties:
@@ -758,22 +758,6 @@ class Items(object):
         else:
             self.add_items(items, index_items)
 
-    @staticmethod
-    def get_source(item):
-        """
-        Get source, so with what system we import this item
-
-        :param item: item object
-        :type item: object
-        :return: name of the source
-        :rtype: str
-        """
-        source = getattr(item, 'imported_from', None)
-        if source:
-            return " in %s" % source
-        else:
-            return ""
-
     def add_items(self, items, index_items):
         """
         Add items to template if is template, else add in item list
@@ -835,10 +819,10 @@ class Items(object):
         else:
             # Don't know which one to keep, lastly defined has precedence
             objcls = getattr(self.inner_class, "my_type", "[unknown]")
-            mesg = "duplicate %s name %s%s, using lastly defined. You may " \
+            mesg = "duplicate %s name %s, from: %s, using lastly defined. You may " \
                    "manually set the definition_order parameter to avoid " \
                    "this message." % \
-                   (objcls, name, self.get_source(item))
+                   (objcls, name, item.imported_from)
             item.configuration_warnings.append(mesg)
         if item.is_tpl():
             self.remove_template(existing)
@@ -868,8 +852,8 @@ class Items(object):
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
         if not name:
-            mesg = "a %s template has been defined without name%s%s" % \
-                   (objcls, tpl.imported_from, self.get_source(tpl))
+            mesg = "a %s template has been defined without name, from: %s" % \
+                   (objcls, tpl.imported_from)
             tpl.configuration_errors.append(mesg)
         elif name in self.name_to_template:
             tpl = self.manage_conflict(tpl, name)
@@ -957,9 +941,10 @@ class Items(object):
         name = getattr(item, name_property, '')
         if not name:
             objcls = self.inner_class.my_type
-            mesg = "a %s item has been defined without %s%s" % \
-                   (objcls, name_property, self.get_source(item))
-            item.configuration_errors.append(mesg)
+            msg = "a %s item has been defined without %s, from: %s" % (
+                objcls, name_property, item.imported_from
+            )
+            item.configuration_errors.append(msg)
         elif name in self.name_to_item:
             item = self.manage_conflict(item, name)
         self.name_to_item[name] = item
@@ -1083,19 +1068,18 @@ class Items(object):
             template = self.find_tpl_by_name(name)
             if template is None:
                 # TODO: Check if this should not be better to report as an error ?
-                self.configuration_warnings.append("%s %r use/inherit from an unknown template "
-                                                   "(%r) ! Imported from: "
-                                                   "%s" % (type(item).__name__,
-                                                           item._get_name(),
-                                                           name,
-                                                           item.imported_from))
+                self.configuration_warnings.append(
+                    "%s %s use/inherit from an unknown template: %s ! from: %s" % (
+                        type(item).__name__, item.get_name(), name, item.imported_from
+                    )
+                )
             else:
                 if template is item:
                     self.configuration_errors.append(
-                        '%s %r use/inherits from itself ! Imported from: '
-                        '%s' % (type(item).__name__,
-                                item._get_name(),
-                                item.imported_from))
+                        "%s %s use/inherits from itself ! from: %s" % (
+                            type(item).__name__, item._get_name(), item.imported_from
+                        )
+                    )
                 else:
                     tpls.append(template.uuid)
         item.templates = tpls
@@ -1137,7 +1121,7 @@ class Items(object):
                 i = self.items[t_id]
                 msg = "[items] %s.%s is duplicated from %s" % (
                     i.__class__.my_type, i.get_name(),
-                    getattr(i, 'imported_from', "unknown source")
+                    i.imported_from
                 )
                 self.configuration_warnings.append(msg)
 
@@ -1153,9 +1137,8 @@ class Items(object):
             # Now other checks
             if not i.is_correct():
                 valid = False
-                source = getattr(i, 'imported_from', "unknown source")
                 msg = "Configuration in %s::%s is incorrect; from: %s" % (
-                    i.my_type, i.get_name(), source
+                    i.my_type, i.get_name(), i.imported_from
                 )
                 self.configuration_errors.append(msg)
 

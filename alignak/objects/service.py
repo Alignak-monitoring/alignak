@@ -1093,9 +1093,10 @@ class Services(SchedulingItems):
         name = getattr(tpl, 'name', '')
         hname = getattr(tpl, 'host_name', '')
         if not name and not hname:
-            mesg = "a %s template has been defined without name nor " \
-                   "host_name%s" % (objcls, self.get_source(tpl))
-            tpl.configuration_errors.append(mesg)
+            msg = "a %s template has been defined without name nor host_name. from: %s" % (
+                objcls, tpl.imported_from
+            )
+            tpl.configuration_errors.append(msg)
         elif name:
             tpl = self.index_template(tpl)
         self.templates[tpl.uuid] = tpl
@@ -1117,17 +1118,15 @@ class Services(SchedulingItems):
         hname = getattr(item, 'host_name', '')
         hgname = getattr(item, 'hostgroup_name', '')
         sdesc = getattr(item, 'service_description', '')
-        source = getattr(item, 'imported_from', 'unknown')
-        if source:
-            in_file = " in %s" % source
-        else:
-            in_file = ""
+
         if not hname and not hgname:
-            mesg = "a %s has been defined without host_name nor hostgroups%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
+            msg = "a %s has been defined without " \
+                  "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
+            item.configuration_errors.append(msg)
         if not sdesc:
-            mesg = "a %s has been defined without service_description%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
+            msg = "a %s has been defined without " \
+                  "service_description, from: %s" % (objcls, item.imported_from)
+            item.configuration_errors.append(msg)
 
         if index is True:
             item = self.index_item(item)
