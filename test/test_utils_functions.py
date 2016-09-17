@@ -19,15 +19,43 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import numpy as np
 from collections import namedtuple
 from alignak.util import alive_then_spare_then_deads, average_percentile
-from alignak_test import unittest
+from alignak.util import split_semicolon, strip_and_uniq
+from alignak_test import AlignakTest
 
 
-class TestUnknownEventHandler(unittest.TestCase):
+class TestUtilFunctions(AlignakTest):
+    """
+    Test the functions of the util module
+    """
+
+    def test_strip_and_uniq(self):
+        """
+        Test the split_semicolons function
+        :return:
+        """
+        ref=['a', 'c', 'b']
+        self.assertEqual(ref, strip_and_uniq(
+            [ '   a', 'a    ', 'c', 'b ', 'c']
+        ))
+
+    def test_split_semicolons(self):
+        """
+        Test the split_semicolons function
+        :return:
+        """
+        self.assertEqual(['a,b', 'c', '', 'g'], split_semicolon('a,b;c;;g'))
+
+        self.assertEqual(['a,b', 'c', ';g'], split_semicolon('a,b;c;;g', 2))
+
+        self.assertEqual(['a,b', 'c;', 'g'], split_semicolon(r'a,b;c\;;g', 2))
 
     def test_sort_alive_then_spare_then_deads(self):
+        """
+        Test the satellites sorting function
+        :return:
+        """
         SmallSat = namedtuple("SmallSat", ["alive", "spare"])
 
         sat_list = [SmallSat(alive=True, spare=False),
@@ -50,15 +78,15 @@ class TestUnknownEventHandler(unittest.TestCase):
         sat_list.sort(alive_then_spare_then_deads)
 
         self.assertListEqual(sat_list[:5], expected_sat_list,
-                            "Function alive_then_spare_then_deads does not sort as exepcted!")
+                            "Function alive_then_spare_then_deads does not sort as expected!")
 
     def test_average_percentile(self):
+        """
+
+        :return:
+        """
         my_values = [10, 8, 9, 7, 3, 11, 7, 13, 9, 10]
         lat_avg, lat_min, lat_max = average_percentile(my_values)
         self.assertEqual(8.7, lat_avg, 'Average')
         self.assertEqual(4.8, lat_min, 'Minimum')
         self.assertEqual(12.1, lat_max, 'Maximum')
-
-if __name__ == '__main__':
-    unittest.main()
-
