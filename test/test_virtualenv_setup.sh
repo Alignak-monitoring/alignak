@@ -192,7 +192,7 @@ for pyenv in "root" "virtualenv"; do
         $SUDO pip install -r test/requirements.txt 2>&1 1>/dev/null
         $SUDO python setup.py $install_type 2>&1 >/dev/null
 
-        test_setup "test/install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
+        test_setup "test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
 
         if [[ $? -ne 0 ]];then
             echo "An error occurred during ${install_type} ${pyenv}"
