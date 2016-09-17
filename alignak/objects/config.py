@@ -987,7 +987,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         cfg_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(cfg_dir_name):
-                        msg = "[config] cannot open config dir '%s' for reading: %s" % \
+                        msg = "[config] cannot open config dir '%s' for reading" % \
                               (cfg_dir_name)
                         self.add_error(msg)
 
@@ -1022,7 +1022,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         trig_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(trig_dir_name):
-                        msg = "[config] cannot open triggers dir '%s' for reading: %s" % \
+                        msg = "[config] cannot open triggers dir '%s' for reading" % \
                               (trig_dir_name)
                         self.add_error(msg)
                         continue

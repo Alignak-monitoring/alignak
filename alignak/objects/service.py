@@ -1395,7 +1395,7 @@ class Services(SchedulingItems):
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
-        Explodes a service based on a lis of hosts.
+        Explodes a service based on a list of hosts.
 
         :param hosts: The hosts container
         :type hosts:
