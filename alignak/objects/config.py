@@ -1067,8 +1067,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         tmp_line = ''
         lines = buf.split('\n')
         line_nb = 0  # Keep the line number for the file path
+        filefrom = ''
         for line in lines:
-            # filefrom = ''
             if line.startswith("# IMPORTEDFROM="):
                 filefrom = line.split('=')[1]
                 line_nb = 0  # reset the line number too
@@ -1104,8 +1104,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             if re.search(r"^\s*#|^\s*$|^\s*}", line) is not None:
                 pass
-            # A define must be catch and the type save
-            # The old entry must be save before
+            # A define must be catched and the type saved
+            # The old entry must be saved before
             elif re.search("^define", line) is not None:
                 if re.search(r".*\{.*$", line) is not None:  # pylint: disable=R0102
                     in_define = True
@@ -1116,7 +1116,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     objectscfg[tmp_type] = []
                 objectscfg[tmp_type].append(tmp)
                 tmp = []
-                tmp.append("imported_from " + filefrom + ':%d' % line_nb)
+                tmp.append("imported_from %s:%s" % (filefrom, line_nb))
                 # Get new type
                 elts = re.split(r'\s', line)
                 # Maybe there was space before and after the type
@@ -1136,7 +1136,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         objectscfg[tmp_type].append(tmp)
         objects = {}
 
-        # print "Params", params
         self.load_params(params)
         # And then update our MACRO dict
         self.fill_resource_macros_names_macros()
@@ -1168,11 +1167,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: raw_objects with 3 extras commands
         :rtype: dict
         """
-        bp_rule = {'command_name': 'bp_rule', 'command_line': 'bp_rule'}
+        bp_rule = {
+            'command_name': 'bp_rule', 'command_line': 'bp_rule',
+            'imported_from': 'self'
+        }
         raw_objects['command'].append(bp_rule)
-        host_up = {'command_name': '_internal_host_up', 'command_line': '_internal_host_up'}
+        host_up = {
+            'command_name': '_internal_host_up', 'command_line': '_internal_host_up',
+            'imported_from': 'self'
+        }
         raw_objects['command'].append(host_up)
-        echo_obj = {'command_name': '_echo', 'command_line': '_echo'}
+        echo_obj = {
+            'command_name': '_echo', 'command_line': '_echo',
+            'imported_from': 'self'
+        }
         raw_objects['command'].append(echo_obj)
 
     def create_objects(self, raw_objects):

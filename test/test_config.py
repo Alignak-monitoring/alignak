@@ -177,7 +177,7 @@ class TestConfig(AlignakTest):
         self.assertEqual('general', svc_generic.check_command.command.command_name)
         self.assertIsNotNone(svc_generic)
 
-    def test_not_hostname_in_service(self):
+    def test_service_not_hostname(self):
         """
         The service test_ok_0 is applied with a host_group on "test_host_0","test_host_1"
         but have a host_name with !"test_host_1" so it will only be attached to "test_host_0"
@@ -185,7 +185,7 @@ class TestConfig(AlignakTest):
         :return:
         """
         self.print_header()
-        self.setup_with_file('cfg/config/alignak_not_hostname.cfg')
+        self.setup_with_file('cfg/config/alignak_service_not_hostname.cfg')
         self.assertTrue(self.conf_is_correct)
 
         host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
@@ -241,7 +241,7 @@ class TestConfig(AlignakTest):
                       "from: cfg/config/alignak_service_nohost.cfg:1",
                       self.configuration_errors)
         self.assertIn("a service has been defined without host_name nor "
-                      "hostgroups in cfg/config/alignak_service_nohost.cfg:1",
+                      "hostgroup_name, from: cfg/config/alignak_service_nohost.cfg:1",
                       self.configuration_errors)
         self.assertIn("[service::will_not_exist] not bound to any host.",
                       self.configuration_errors)
@@ -264,18 +264,22 @@ class TestConfig(AlignakTest):
         with self.assertRaises(SystemExit):
             self.setup_with_file('cfg/config/bad_template_use_itself.cfg')
         self.assertFalse(self.conf_is_correct)
-        self.assertIn(u"Host u'bla' use/inherits from itself ! Imported from: "
-                      u"cfg/config/../default/daemons/reactionner-master.cfg:42",
+        # TODO, issue #344
+        self.assertIn("Host bla use/inherits from itself ! "
+                      "from: cfg/config/../default/daemons/reactionner-master.cfg:42",
                       self.configuration_errors)
 
-    def test_bad_host_use_undefined_template(self):
+    def test_use_undefined_template(self):
         self.print_header()
-        self.setup_with_file('cfg/config/bad_host_use_undefined_template.cfg')
+        self.setup_with_file('cfg/config/use_undefined_template.cfg')
         self.assertTrue(self.conf_is_correct)
-        self.assertIn(u"[host::bla] no contacts nor contact_groups property",
+        # TODO, issue #344
+        self.assertIn("Host test_host use/inherit from an unknown template: undefined_host ! "
+                      "from: cfg/config/../default/daemons/reactionner-master.cfg:43",
                   self.configuration_warnings)
-        self.assertIn(u"Host u'bla' use/inherit from an unknown template (u'undefined') ! "
-                  u"Imported from: cfg/config/bad_host_use_undefined_template.cfg:2",
+        self.assertIn("Service test_service use/inherit from an unknown template: "
+                      "undefined_service ! from: cfg/config/../default/daemons/"
+                      "reactionner-master.cfg:48",
                   self.configuration_warnings)
 
     def test_broken_configuration(self):
@@ -553,8 +557,8 @@ class TestConfig(AlignakTest):
         self.schedulers[0].sched.run_external_command(command)
 
         # can need 2 run for get the consum (I don't know why)
-        self.schedulers[0].scheduler_loop(1, [])
-        self.schedulers[0].scheduler_loop(1, [])
+        self.scheduler_loop(1, [])
+        self.scheduler_loop(1, [])
 
     def test_config_services(self):
         """

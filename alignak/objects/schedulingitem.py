@@ -467,6 +467,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             del params['business_rule']
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
             self.acknowledgement = Acknowledge(params['acknowledgement'])
+
         super(SchedulingItem, self).__init__(params, parsing=parsing)
 
     def serialize(self):
