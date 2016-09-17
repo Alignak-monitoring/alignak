@@ -112,10 +112,10 @@ class TestParseLogEvent(AlignakTest):
         self.assertEqual(event.data, expected)
 
     def test_downtime_alert_host(self):
-        log = '[1279250211] HOST DOWNTIME ALERT: maast64;STARTED; Host has entered a period of scheduled downtime'
+        log = '[1279250211] HOST DOWNTIME ALERT: testhost;STARTED; Host has entered a period of scheduled downtime'
         expected = {
             'event_type': 'DOWNTIME',
-            'hostname': 'maast64',
+            'hostname': 'testhost',
             'service_desc': None,
             'state': 'STARTED',
             'time': 1279250211,
@@ -126,14 +126,15 @@ class TestParseLogEvent(AlignakTest):
         self.assertEqual(event.data, expected)
 
     def test_downtime_alert_service(self):
-        log = '[1279250211] SERVICE DOWNTIME ALERT: maast64;STARTED; Host has entered a period of scheduled downtime'
+        log = '[1279250211] SERVICE DOWNTIME ALERT: testhost;check_ssh;STARTED; Service has entered a period of scheduled downtime'
         expected = {
             'event_type': 'DOWNTIME',
-            'hostname': 'maast64',
+            'hostname': 'testhost',
+            'service_desc': 'check_ssh',
             'state': 'STARTED',
             'time': 1279250211,
-            'output': ' Host has entered a period of scheduled downtime',
-            'downtime_type': 'HOST'
+            'output': ' Service has entered a period of scheduled downtime',
+            'downtime_type': 'SERVICE'
         }
         event = LogEvent(log)
         self.assertEqual(event.data, expected)
