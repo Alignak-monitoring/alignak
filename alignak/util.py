@@ -428,9 +428,10 @@ def to_best_int_float(val):
     return flt
 
 
-# bool('0') = true, so...
 def to_bool(val):
     """Convert value to bool
+
+    bool('0') = true, so...
 
     :param val: value to convert
     :type val:
@@ -671,8 +672,10 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
-def scheduler_no_spare_first(x00, y00):
+def scheduler_no_spare_first(x00, y00):  # pragma: no cover - not used anywhere
     """Compare two satellite link based on spare attribute(scheduler usually)
+
+    TODO: remove because this function is not used in the application
 
     :param x00: first link to compare
     :type x00:
@@ -1265,7 +1268,7 @@ def is_complex_expr(expr):
     return False
 
 
-def parse_daemon_args(arbiter=False):
+def parse_daemon_args(arbiter=False):  # pragma: no cover - do not know how to measure in unit tests
     """Generic parsing function for daemons
 
     :param arbiter: Do we parse args for arbiter?
