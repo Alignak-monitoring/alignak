@@ -496,7 +496,7 @@ class ExternalCommandManager:
         """
         self.receiver = receiver
 
-    def open(self):
+    def open(self):  # pragma: no cover - not mesurable with unit tests
         """Create if necessary and open a pipe
         (Won't work under Windows)
 
@@ -519,7 +519,7 @@ class ExternalCommandManager:
         self.fifo = os.open(self.pipe_path, os.O_NONBLOCK)
         return self.fifo
 
-    def get(self):
+    def get(self):  # pragma: no cover - not mesurable with unit tests
         """Get external commands from fifo
 
         :return: external commands
@@ -602,13 +602,13 @@ class ExternalCommandManager:
 
         # If we are a receiver, just look in the receiver
         if self.mode == 'receiver':
-            logger.info("Receiver looking a scheduler for the external command %s %s",
-                        host_name, command)
+            logger.debug("Receiver searching for a scheduler for the external command %s %s",
+                         host_name, command)
             sched = self.receiver.get_sched_from_hname(host_name)
             if sched:
                 host_found = True
                 logger.debug("Receiver found a scheduler: %s", sched)
-                logger.info("Receiver pushing external command to scheduler %s", sched)
+                logger.debug("Receiver pushing external command to scheduler %s", sched)
                 sched['external_commands'].append(extcmd)
         else:
             for cfg in self.confs.values():
@@ -698,21 +698,19 @@ class ExternalCommandManager:
 
         :rtype: dict | None
         """
-        # safe_print("Trying to resolve", command)
         command = command.rstrip()
-        elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
+        elts = split_semicolon(command)  # danger!!! passive check results with perfdata
         try:
             timestamp, c_name = elts[0].split(' ')
             timestamp = timestamp[1:-1]
             c_name = c_name.lower()
             self.current_timestamp = to_int(timestamp)
         except (ValueError, IndexError):
-            logger.debug("Malformed command '%s'", command)
+            logger.warning("Malformed external command '%s'", command)
             return None
 
-        # safe_print("Get command name", c_name)
         if c_name not in ExternalCommandManager.commands:
-            logger.debug("Command '%s' is not recognized, sorry", c_name)
+            logger.warning("Command '%s' is not recognized, sorry", c_name)
             return None
 
         # Split again based on the number of args we expect. We cannot split
@@ -755,7 +753,6 @@ class ExternalCommandManager:
 
                 if not in_service:
                     type_searched = entry['args'][i - 1]
-                    # safe_print("Search for a arg", type_searched)
 
                     if type_searched == 'host':
                         if self.mode == 'dispatcher' or self.mode == 'receiver':
@@ -767,6 +764,9 @@ class ExternalCommandManager:
                         elif self.conf.accept_passive_unknown_check_results:
                             brok = self.get_unknown_check_result_brok(command)
                             self.sched.add_brok(brok)
+                        else:
+                            logger.warning("A command was received for an host '%s', "
+                                           "but the host could not be found!", val)
 
                     elif type_searched == 'contact':
                         contact = self.contacts.find_by_name(val)
@@ -815,7 +815,6 @@ class ExternalCommandManager:
                     elif type_searched == 'service':
                         in_service = True
                         tmp_host = elt.strip()
-                        # safe_print("TMP HOST", tmp_host)
                         if tmp_host[-1] == '\n':
                             tmp_host = tmp_host[:-1]
                         if self.mode == 'dispatcher':
@@ -833,7 +832,6 @@ class ExternalCommandManager:
                         self.search_host_and_dispatch(tmp_host, command, extcmd)
                         return None
 
-                    # safe_print("Got service full", tmp_host, srv_name)
                     serv = self.services.find_srv_by_name_and_hostname(tmp_host, srv_name)
                     if serv is not None:
                         args.append(serv)
@@ -848,9 +846,7 @@ class ExternalCommandManager:
         except IndexError:
             logger.debug("Sorry, the arguments are not corrects")
             return None
-        # safe_print('Finally got ARGS:', args)
         if len(args) == len(entry['args']):
-            # safe_print("OK, we can call the command", c_name, "with", args)
             return {'global': False, 'c_name': c_name, 'args': args}
             # f = getattr(self, c_name)
             # apply(f, args)
@@ -1072,8 +1068,9 @@ class ExternalCommandManager:
         TODO: add a better ACK management
         """
         notif_period = self.sched.timeperiods[host.notification_period]
-        self.sched.add(host.acknowledge_problem(notif_period, None, sticky, notify,
-                                                persistent, author, comment, end_time=end_time))
+        self.sched.add(host.acknowledge_problem(notif_period, self.hosts, self.services, sticky,
+                                                notify, persistent, author, comment,
+                                                end_time=end_time))
 
     def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value
@@ -2704,10 +2701,16 @@ class ExternalCommandManager:
             )
         now = time.time()
         cls = host.__class__
+
         # If globally disable OR locally, do not launch
         if cls.accept_passive_checks and host.passive_checks_enabled:
             # Maybe the check is just too old, if so, bail out!
             if self.current_timestamp < host.last_chk:
+                logger.warning(
+                    "Received a passive host check for '%s' but the timestamp of this "
+                    "check is too old (%s) regarding the last host check (%s).",
+                    host.get_full_name(), self.current_timestamp, host.last_chk
+                )
                 return
 
             chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
@@ -2715,7 +2718,7 @@ class ExternalCommandManager:
                                     self.sched.checks, force=True)
             # Should not be possible to not find the check, but if so, don't crash
             if not chk:
-                logger.error('%s > Passive host check failed. None check launched !?',
+                logger.error('%s > Passive host check failed. No check launched !?',
                              host.get_full_name())
                 return
             # Now we 'transform the check into a result'
@@ -2729,6 +2732,11 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             self.sched.add(chk)
             # Ok now this result will be read by scheduler the next loop
+        else:
+            logger.warning(
+                "Received a passive host check for '%s' but passive hosts checks are "
+                "not enabled or this host does not accept them.", host.get_full_name()
+            )
 
     def process_host_output(self, host, plugin_output):
         """Process host output
@@ -2770,6 +2778,11 @@ class ExternalCommandManager:
         if cls.accept_passive_checks and service.passive_checks_enabled:
             # Maybe the check is just too old, if so, bail out!
             if self.current_timestamp < service.last_chk:
+                logger.warning(
+                    "Received a passive service check for '%s' but the timestamp of this "
+                    "check is too old (%s) regarding the last service check (%s).",
+                    service.get_full_name(), self.current_timestamp, service.last_chk
+                )
                 return
 
             chk = service.launch_check(now, self.hosts, self.services, self.timeperiods,
@@ -2791,6 +2804,11 @@ class ExternalCommandManager:
             self.sched.nb_check_received += 1
             self.sched.add(chk)
             # Ok now this result will be reap by scheduler the next loop
+        else:
+            logger.warning(
+                "Received a passive service check for '%s' but passive service checks are "
+                "not enabled or this service does not accept them.", service.get_full_name()
+            )
 
     def process_service_output(self, service, plugin_output):
         """Process service output

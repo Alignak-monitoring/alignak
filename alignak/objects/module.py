@@ -70,7 +70,7 @@ class Module(Item):
     properties.update({
         'module_alias': StringProp(),
         'python_name': StringProp(),
-        'modules': ListProp(default=[''], split_on_coma=True),
+        'modules': ListProp(default=[''], split_on_coma=True)
     })
 
     macros = {}

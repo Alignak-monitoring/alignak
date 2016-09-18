@@ -71,7 +71,7 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
 from alignak.util import format_t_into_dhms_format
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import logger, naglog_result
 
 
@@ -133,6 +133,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+
+        'freshness_state':
+            CharProp(default='d', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
@@ -271,25 +274,28 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = super(Host, self).is_correct()
-        cls = self.__class__
+        state = True
 
+        # Internal checks before executing inherited function...
+        cls = self.__class__
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    logger.error("[%s::%s] host_name got an illegal character: %s",
-                                 self.my_type, self.get_name(), char)
+                    msg = "[%s::%s] host_name got an illegal character: %s" % (
+                        self.my_type, self.get_name(), char
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
-        return state
+        return super(Host, self).is_correct() and state
 
     def get_services(self):
         """Get all services for this host
@@ -501,6 +507,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.last_state = self.state_before_impact
         else:
             self.last_state = self.state
+
         # There is no 1 case because it should have been managed by the caller for a host
         # like the schedulingitem::consume method.
         if status == 0:
@@ -518,11 +525,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
+
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
             # Now we add a value, we update the is_flapping prop
             self.update_flapping(notif_period, hosts, services)
-        if self.state != self.last_state:
+
+        if self.state != self.last_state and \
+                not (self.state == "DOWN" and self.last_state == "UNREACHABLE"):
             self.last_state_change = self.last_state_update
         self.duration_sec = now - self.last_state_change
 
@@ -595,12 +605,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type t_threshold: int
         :return: None
         """
-        logger.warning("The results of host '%s' are stale by %s "
-                       "(threshold=%s).  I'm forcing an immediate check "
-                       "of the host.",
+        logger.warning("The freshness period of host '%s' is expired by %s "
+                       "(threshold=%s).  I'm forcing the state to freshness state (%s).",
                        self.get_name(),
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
     def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
@@ -1161,7 +1171,7 @@ class Hosts(SchedulingItems):
                     new_parents.append(o_parent.uuid)
                 else:
                     err = "the parent '%s' on host '%s' is unknown!" % (parent, host.get_name())
-                    self.configuration_warnings.append(err)
+                    self.configuration_errors.append(err)
             # print "Me,", h.host_name, "define my parents", new_parents
             # We find the id, we replace the names
             host.parents = new_parents
@@ -1185,6 +1195,9 @@ class Hosts(SchedulingItems):
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
                     host.configuration_errors.append(err)
+                    # This to avoid having an host.realm as a string name
+                    host.realm_name = host.realm
+                    host.realm = None
                 else:
                     host.realm = realm.uuid
                     host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
@@ -1288,26 +1301,33 @@ class Hosts(SchedulingItems):
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if the hosts list configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * check if any loop exists in each host dependencies
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Hosts, self).is_correct()
+        state = True
+
+        # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
         if len(loop) > 0:
-            logger.error("Loop detected while checking hosts ")
+            msg = "Loop detected while checking hosts "
+            self.configuration_errors.append(msg)
+            state = False
             for uuid, item in self.items.iteritems():
                 for elem in loop:
                     if elem == uuid:
-                        logger.error("Host %s is parent in dependency defined in %s",
-                                     item.get_name(), item.imported_from)
+                        msg = "Host %s is parent in dependency defined in %s" % (
+                            item.get_name(), item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
                     elif elem in item.parents:
-                        logger.error("Host %s is child in dependency defined in %s",
-                                     self[elem].get_name(), self[elem].imported_from)
-            return False
+                        msg = "Host %s is child in dependency defined in %s" % (
+                            self[elem].get_name(), self[elem].imported_from
+                        )
+                        self.configuration_errors.append(msg)
 
-        return valid
+        return super(Hosts, self).is_correct() and state

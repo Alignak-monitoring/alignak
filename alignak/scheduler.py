@@ -119,16 +119,15 @@ class Scheduler(object):  # pylint: disable=R0902
         self.recurrent_works = {
             0: ('update_downtimes_and_comments', self.update_downtimes_and_comments, 1),
             1: ('schedule', self.schedule, 1),  # just schedule
-            2: ('consume_results', self.consume_results, 1),  # incorporate checks and dependencies
+            2: ('check_freshness', self.check_freshness, 10),
+            3: ('consume_results', self.consume_results, 1),  # incorporate checks and dependencies
 
             # now get the news actions (checks, notif) raised
-            3: ('get_new_actions', self.get_new_actions, 1),
-            4: ('get_new_broks', self.get_new_broks, 1),  # and broks
-            5: ('scatter_master_notifications', self.scatter_master_notifications, 1),
-            6: ('delete_zombie_checks', self.delete_zombie_checks, 1),
-            7: ('delete_zombie_actions', self.delete_zombie_actions, 1),
-            # 3: (self.delete_unwanted_notifications, 1),
-            8: ('check_freshness', self.check_freshness, 10),
+            4: ('get_new_actions', self.get_new_actions, 1),
+            5: ('get_new_broks', self.get_new_broks, 1),  # and broks
+            6: ('scatter_master_notifications', self.scatter_master_notifications, 1),
+            7: ('delete_zombie_checks', self.delete_zombie_checks, 1),
+            8: ('delete_zombie_actions', self.delete_zombie_actions, 1),
             9: ('clean_caches', self.clean_caches, 1),
             10: ('update_retention_file', self.update_retention_file, 3600),
             11: ('check_orphaned', self.check_orphaned, 60),
@@ -150,6 +149,7 @@ class Scheduler(object):  # pylint: disable=R0902
             18: ('check_for_expire_acknowledge', self.check_for_expire_acknowledge, 1),
             19: ('send_broks_to_modules', self.send_broks_to_modules, 1),
             20: ('get_objects_from_from_queues', self.get_objects_from_from_queues, 1),
+            21: ('get_latency_average_percentile', self.get_latency_average_percentile, 10),
         }
 
         # stats part
@@ -157,6 +157,13 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_actions_send = 0
         self.nb_broks_send = 0
         self.nb_check_received = 0
+        self.stats = {
+            'latency': {
+                'avg': 0.0,
+                'min': 0.0,
+                'max': 0.0
+            }
+        }
 
         # Log init
         # pylint: disable=E1101
@@ -445,7 +452,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type downtime: alignak.downtime.Downtime
         :return: None
         """
-        # TODO: ADD downtime brok for regenerator
+        # TODO: ADD downtime brok
         self.downtimes[downtime.uuid] = downtime
 
     def add_contactdowntime(self, contact_dt):
@@ -455,7 +462,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type contact_dt: alignak.contactdowntime.ContactDowntime
         :return: None
         """
-        # TODO: ADD contactdowntime brok for regenerator
+        # TODO: ADD contactdowntime brok
         self.contact_downtimes[contact_dt.uuid] = contact_dt
 
     def add_comment(self, comment):
@@ -465,7 +472,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type comment: alignak.comment.Comment
         :return: None
         """
-        # TODO: ADD comment brok for regenerator
+        # TODO: ADD comment brok
         self.comments[comment.uuid] = comment
         item = self.find_item_by_id(comment.ref)
         brok = item.get_update_status_brok()
@@ -497,7 +504,6 @@ class Scheduler(object):  # pylint: disable=R0902
             return
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
-            # print("found action for %s: %s" % (elt.__class__.__name__, f.__name__))
             fun(self, elt)
         else:
             logger.warning(
@@ -570,10 +576,11 @@ class Scheduler(object):  # pylint: disable=R0902
             to_del_checks = to_del_checks[:-max_checks]
             nb_checks_drops = len(to_del_checks)
             if nb_checks_drops > 0:
-                logger.info("I have to del some checks (%d)..., sorry", nb_checks_drops)
+                logger.debug("I have to del some checks (%d)..., sorry", nb_checks_drops)
             for chk in to_del_checks:
                 c_id = chk.uuid
-                elt = chk.ref
+                items = getattr(self, chk.ref_type + 's')
+                elt = items[chk.ref]
                 # First remove the link in host/service
                 elt.remove_in_progress_check(chk)
                 # Then in dependent checks (I depend on, or check
@@ -587,12 +594,13 @@ class Scheduler(object):  # pylint: disable=R0902
             nb_checks_drops = 0
 
         # For broks and actions, it's more simple
-        # or brosk, manage global but also all brokers queue
+        # or broks, manage global but also all brokers queue
         b_lists = [self.broks]
         for elem in self.brokers.values():
             b_lists.append(elem['broks'])
         for broks in b_lists:
             if len(broks) > max_broks:
+                logger.debug("I have to del some broks (%d)..., sorry", len(broks))
                 to_del_broks = [c for c in broks.values()]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
@@ -603,6 +611,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 nb_broks_drops = 0
 
         if len(self.actions) > max_actions:
+            logger.debug("I have to del some actions (%d)..., sorry", len(self.actions))
             to_del_actions = [c for c in self.actions.values()]
             to_del_actions.sort(key=lambda x: x.creation_time)
             to_del_actions = to_del_actions[:-max_actions]
@@ -1123,8 +1132,6 @@ class Scheduler(object):  # pylint: disable=R0902
             if con is not None:
                 try:
                     # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     try:
                         results = str(results)
@@ -1169,8 +1176,6 @@ class Scheduler(object):  # pylint: disable=R0902
             if con is not None:
                 try:
                     # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     results = unserialize(str(results))
                     nb_received = len(results)
@@ -1331,7 +1336,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         if fun:
                             val = fun(serv, val)
                         s_dict[prop] = val
-            all_data['services'][(serv.host.host_name, serv.service_description)] = s_dict
+            all_data['services'][(serv.host_name, serv.service_description)] = s_dict
         return all_data
 
     def restore_retention_data(self, data):  # pylint: disable=R0912
@@ -1581,12 +1586,12 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # All results are in self.waiting_results
         # We need to get them first
+        # logger.error("consume_results")
         queue_size = self.waiting_results.qsize()
         for _ in xrange(queue_size):
             self.put_results(self.waiting_results.get())
 
         # Then we consume them
-        # print "**********Consume*********"
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
                 item = self.find_item_by_id(chk.ref)
@@ -1736,6 +1741,8 @@ class Scheduler(object):  # pylint: disable=R0902
         """Iter over all hosts and services and call schedule method
         (schedule next check)
 
+        :param elems: None or list of host / services to schedule
+        :type elems: None | list
         :return: None
         """
         if not elems:
@@ -1774,16 +1781,20 @@ class Scheduler(object):  # pylint: disable=R0902
             elt.broks = []
 
     def check_freshness(self):
-        """Iter over all hosts and services to check freshness
+        """
+        Iterate over all hosts and services to check freshness if check_freshness enabled and
+        passive_checks_enabled enabled
 
         :return: None
         """
-        # print "********** Check freshness******"
         for elt in self.iter_hosts_and_services():
-            chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
-                                         self.macromodulations, self.checkmodulations, self.checks)
-            if chk is not None:
-                self.add(chk)
+            if elt.check_freshness and elt.passive_checks_enabled:
+                chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
+                                             self.macromodulations, self.checkmodulations,
+                                             self.checks)
+                if chk is not None:
+                    self.add(chk)
+                    self.waiting_results.put(chk)
 
     def check_orphaned(self):
         """Check for orphaned checks/actions::
@@ -1848,6 +1859,20 @@ class Scheduler(object):  # pylint: disable=R0902
         :rtype:
         """
         return self.sched_daemon.get_objects_from_from_queues()
+
+    def get_latency_average_percentile(self):
+        """
+        Get a overview of the latencies with just a 95 percentile + min/max values
+
+        :return: None
+        """
+        latencies = [s.latency for s in self.services]
+        lat_avg, lat_min, lat_max = average_percentile(latencies)
+        if lat_avg is not None:
+            self.stats['latency']['avg'] = lat_avg
+            self.stats['latency']['min'] = lat_min
+            self.stats['latency']['max'] = lat_max
+            logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
 
     def get_checks_status_counts(self, checks=None):
         """ Compute the counts of the different checks status and
@@ -1922,13 +1947,7 @@ class Scheduler(object):  # pylint: disable=R0902
         res = self.sched_daemon.get_stats_struct()
         res.update({'name': self.instance_name, 'type': 'scheduler'})
 
-        # Get a overview of the latencies with just
-        # a 95 percentile view, but lso min/max values
-        latencies = [s.latency for s in self.services]
-        lat_avg, lat_min, lat_max = average_percentile(latencies)
-        res['latency'] = (0.0, 0.0, 0.0)
-        if lat_avg:
-            res['latency'] = {'avg': lat_avg, 'min': lat_min, 'max': lat_max}
+        res['latency'] = self.stats['latency']
 
         res['hosts'] = len(self.hosts)
         res['services'] = len(self.services)
@@ -1952,10 +1971,12 @@ class Scheduler(object):  # pylint: disable=R0902
             metrics.append('scheduler.%s.%s %d %d' % (
                 self.instance_name, what, len(getattr(self, what)), now))
 
-        if lat_min:
-            metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name, lat_min, now))
-            metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name, lat_avg, now))
-            metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name, lat_max, now))
+        metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name,
+                                                           res['latency']['min'], now))
+        metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name,
+                                                           res['latency']['avg'], now))
+        metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name,
+                                                           res['latency']['max'], now))
 
         all_commands = {}
         # compute some stats
@@ -2100,13 +2121,6 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Checks: total %s, scheduled %s,"
                          "inpoller %s, zombies %s, notifications %s",
                          len(self.checks), nb_scheduled, nb_inpoller, nb_zombies, nb_notifications)
-
-            # Get a overview of the latencies with just
-            # a 95 percentile view, but lso min/max values
-            latencies = [s.latency for s in self.services]
-            lat_avg, lat_min, lat_max = average_percentile(latencies)
-            if lat_avg is not None:
-                logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
 
             # print "Notifications:", nb_notifications
             now = time.time()

@@ -95,7 +95,6 @@ class ReceiverLink(SatelliteLink):
                 return
 
             # r = self.con.push_host_names(sched_id, hnames)
-            self.con.get('ping')
             self.con.post('push_host_names', {'sched_id': sched_id, 'hnames': hnames}, wait='long')
         except HTTPEXCEPTIONS, exp:
             self.add_failed_check_attempt(reason=str(exp))

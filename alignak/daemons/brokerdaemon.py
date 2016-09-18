@@ -276,8 +276,6 @@ class Broker(BaseSatellite):
             return
 
         try:
-            # initial ping must be quick
-            con.get('ping')
             new_run_id = con.get('get_running_id')
             new_run_id = float(new_run_id)
             # data transfer can be longer
@@ -323,8 +321,10 @@ class Broker(BaseSatellite):
                 mod.manage_brok(brok)
             except Exception, exp:  # pylint: disable=W0703
                 logger.debug(str(exp.__dict__))
-                logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
-                               mod.get_name(), str(exp))
+                logger.warning(
+                    "The module %s raised an exception: %s, I'm tagging it to restart later",
+                    mod.get_name(), str(exp)
+                )
                 logger.warning("Exception type: %s", type(exp))
                 logger.warning("Back trace of this kill: %s", traceback.format_exc())
                 self.modules_manager.set_to_restart(mod)
@@ -379,8 +379,6 @@ class Broker(BaseSatellite):
                 con = links[sched_id]['con']
                 if con is not None:  # None = not initialized
                     t00 = time.time()
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
                         tmp_broks = unserialize(tmp_broks, True)
@@ -460,9 +458,6 @@ class Broker(BaseSatellite):
             else:
                 name = 'Unnamed broker'
             self.name = name
-            self.api_key = g_conf['api_key']
-            self.secret = g_conf['secret']
-            self.http_proxy = g_conf['http_proxy']
             self.statsd_host = g_conf['statsd_host']
             self.statsd_port = g_conf['statsd_port']
             self.statsd_prefix = g_conf['statsd_prefix']
@@ -472,7 +467,6 @@ class Broker(BaseSatellite):
             # pylint: disable=E1101
             logger.load_obj(self, name)
             statsmgr.register(self, name, 'broker',
-                              api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
                               statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                               statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 

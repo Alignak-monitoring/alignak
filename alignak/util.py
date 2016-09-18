@@ -73,37 +73,6 @@ except AttributeError, exp:
 
 
 # ########## Strings #############
-def safe_print(*args):
-    """Try to print strings, but if there is an utf8 error, go in simple ascii mode
-    (Like if the terminal do not have en_US.UTF8 as LANG for example)
-
-    :param args: args to print
-    :type args:
-    :return: None
-    """
-    lst = []
-    for arg in args:
-        # If we got an str, go in unicode, and if we cannot print
-        # utf8, go in ascii mode
-        if isinstance(arg, str):
-            if SAFE_STDOUT:
-                string = unicode(arg, 'utf8', errors='ignore')
-            else:
-                string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
-                    decode('ascii', 'replace')
-            lst.append(string)
-        # Same for unicode, but skip the unicode pass
-        elif isinstance(arg, unicode):
-            if SAFE_STDOUT:
-                string = arg
-            else:
-                string = arg.encode('ascii', 'replace')
-            lst.append(string)
-        # Other types can be directly convert in unicode
-        else:
-            lst.append(unicode(arg))
-    # Ok, now print it :)
-    print u' '.join(lst)
 
 
 def split_semicolon(line, maxsplit=None):
@@ -246,20 +215,6 @@ def get_end_of_day(year, month_id, day):
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
-
-
-def print_date(timestamp):
-    """Get date (local) in asc format from timestamp
-
-    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
-
-    :param timestamp: timestamp
-    :type timestamp; int
-    :return: formatted time
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return time.asctime(time.localtime(timestamp))
 
 
 def get_day(timestamp):
@@ -473,9 +428,10 @@ def to_best_int_float(val):
     return flt
 
 
-# bool('0') = true, so...
 def to_bool(val):
     """Convert value to bool
+
+    bool('0') = true, so...
 
     :param val: value to convert
     :type val:
@@ -555,8 +511,8 @@ def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
     return ",".join([e.get_name() for e in tab])
 
 
-def to_list_of_names(ref, tab):  # pylint: disable=W0613
-    """Convert list into a list of element name
+def from_set_to_list(ref, tab):  # pylint: disable=W0613
+    """Convert set into a list of element name
 
     :param ref: Not used
     :type ref:
@@ -565,7 +521,7 @@ def to_list_of_names(ref, tab):  # pylint: disable=W0613
     :return: list of names
     :rtype: list
     """
-    return [e.get_name() for e in tab]
+    return list(tab)
 
 
 def to_name_if_possible(ref, value):  # pylint: disable=W0613
@@ -716,8 +672,10 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
-def scheduler_no_spare_first(x00, y00):
+def scheduler_no_spare_first(x00, y00):  # pragma: no cover - not used anywhere
     """Compare two satellite link based on spare attribute(scheduler usually)
+
+    TODO: remove because this function is not used in the application
 
     :param x00: first link to compare
     :type x00:
@@ -770,6 +728,24 @@ def sort_by_ids(x00, y00):
         return -1
     if x00.uuid > y00.uuid:
         return 1
+    # So is equal
+    return 0
+
+
+def sort_by_number_values(x00, y00):
+    """Compare x00, y00 base on number of values
+
+    :param x00: first elem to compare
+    :type x00: int
+    :param y00: second elem to compare
+    :type y00: int
+    :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
+    :rtype: int
+    """
+    if len(x00) < len(y00):
+        return 1
+    if len(x00) > len(y00):
+        return -1
     # So is equal
     return 0
 
@@ -1292,7 +1268,7 @@ def is_complex_expr(expr):
     return False
 
 
-def parse_daemon_args(arbiter=False):
+def parse_daemon_args(arbiter=False):  # pragma: no cover - do not know how to measure in unit tests
     """Generic parsing function for daemons
 
     :param arbiter: Do we parse args for arbiter?
@@ -1308,6 +1284,9 @@ def parse_daemon_args(arbiter=False):
                                  'multiple -c can be used, they will be concatenated')
         parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
                             help="Verify config file and exit")
+        parser.add_argument("-n", "--config-name", dest="config_name", default='arbiter-master',
+                            help="Use name of arbiter defined in the configuration files "
+                                 "(default arbiter-master)")
     else:
         parser.add_argument('-c', '--config', dest="config_file", required=True,
                             help='Config file')

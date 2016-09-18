@@ -129,7 +129,7 @@ class BaseSatellite(Daemon):
 
         :return: a dict of scheduler id as key and push_flavor as values
         :rtype: dict
-"""
+        """
         res = {}
         for (key, val) in self.schedulers.iteritems():
             res[key] = val['push_flavor']
@@ -678,8 +678,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     con = None
                 if con is not None:  # None = not initialized
                     # OK, go for it :)
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     tmp = con.get('get_checks', {
                         'do_checks': do_checks, 'do_actions': do_actions,
                         'poller_tags': self.poller_tags,
@@ -894,10 +892,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             else:
                 name = 'Unnamed satellite'
             self.name = name
-            # kernel.io part
-            self.api_key = g_conf['api_key']
-            self.secret = g_conf['secret']
-            self.http_proxy = g_conf['http_proxy']
             # local statsd
             self.statsd_host = g_conf['statsd_host']
             self.statsd_port = g_conf['statsd_port']
@@ -907,14 +901,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # we got a name, we can now say it to our statsmgr
             if 'poller_name' in g_conf:
                 statsmgr.register(self, self.name, 'poller',
-                                  api_key=self.api_key, secret=self.secret,
-                                  http_proxy=self.http_proxy,
                                   statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                                   statsd_prefix=self.statsd_prefix,
                                   statsd_enabled=self.statsd_enabled)
             else:
                 statsmgr.register(self, self.name, 'reactionner',
-                                  api_key=self.api_key, secret=self.secret,
                                   statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                                   statsd_prefix=self.statsd_prefix,
                                   statsd_enabled=self.statsd_enabled)
@@ -1000,7 +991,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # Now manage modules
             # TODO: check how to better handle this with modules_manager..
-            mods = g_conf['modules']
+            mods = unserialize(g_conf['modules'], True)
             self.new_modules_conf = []
             for module in mods:
                 # If we already got it, bypass

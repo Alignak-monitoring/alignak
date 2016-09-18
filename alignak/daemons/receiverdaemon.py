@@ -56,6 +56,7 @@ import time
 import traceback
 from multiprocessing import active_children
 
+from alignak.misc.serialization import unserialize
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
 from alignak.log import logger
@@ -197,7 +198,7 @@ class Receiver(Satellite):
         :return: None
         """
         with self.conf_lock:
-            conf = self.new_conf
+            conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals
@@ -206,16 +207,12 @@ class Receiver(Satellite):
             else:
                 name = 'Unnamed receiver'
             self.name = name
-            self.api_key = conf['global']['api_key']
-            self.secret = conf['global']['secret']
-            self.http_proxy = conf['global']['http_proxy']
             self.statsd_host = conf['global']['statsd_host']
             self.statsd_port = conf['global']['statsd_port']
             self.statsd_prefix = conf['global']['statsd_prefix']
             self.statsd_enabled = conf['global']['statsd_enabled']
 
             statsmgr.register(self, self.name, 'receiver',
-                              api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
                               statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                               statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
             # pylint: disable=E1101
@@ -227,6 +224,7 @@ class Receiver(Satellite):
             g_conf = conf['global']
 
             # If we've got something in the schedulers, we do not want it anymore
+            self.host_assoc = {}
             for sched_id in conf['schedulers']:
 
                 old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
@@ -241,6 +239,7 @@ class Receiver(Satellite):
                     del self.schedulers[old_sched_id]
 
                 sched = conf['schedulers'][sched_id]
+                self.push_host_names(sched_id, sched['hosts'])
                 self.schedulers[sched_id] = sched
 
                 if sched['name'] in g_conf['satellitemap']:
@@ -279,12 +278,23 @@ class Receiver(Satellite):
                 self.have_modules = True
                 logger.info("We received modules %s ", mods)
 
+                self.do_load_modules(self.modules)
+                # and start external modules too
+                self.modules_manager.start_external_instances()
+
             # Set our giving timezone from arbiter
             use_timezone = conf['global']['use_timezone']
             if use_timezone != 'NOTSET':
                 logger.info("Setting our timezone to %s", use_timezone)
                 os.environ['TZ'] = use_timezone
                 time.tzset()
+
+    # hnames = [h.get_name() for h in cfg.hosts]
+    # logger.debug("[%s] Sending %s hostnames to the "
+    #              "receiver %s",
+    #              realm.get_name(), len(hnames),
+    #              sat.get_name())
+    # sat.push_host_names(conf_uuid, hnames)
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
@@ -407,9 +417,6 @@ class Receiver(Satellite):
                 return
 
             self.setup_new_conf()
-            self.do_load_modules(self.modules)
-            # and start external modules too
-            self.modules_manager.start_external_instances()
 
             # Do the modules part, we have our modules in self.modules
             # REF: doc/receiver-modules.png (1)

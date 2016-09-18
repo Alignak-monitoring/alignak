@@ -52,7 +52,6 @@ import time
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
-from alignak.log import logger
 
 
 class MacroModulation(Item):
@@ -72,7 +71,7 @@ class MacroModulation(Item):
 
     running_properties = Item.running_properties.copy()
 
-    _special_properties = ('modulation_period',)
+    special_properties = ('modulation_period',)
 
     macros = {}
 
@@ -99,34 +98,18 @@ class MacroModulation(Item):
         return False
 
     def is_correct(self):
-        """
-        Check if the macromodulation is valid and have all properties defined
+        """Check if this object configuration is correct ::
 
-        :return: True if valid, otherwise False
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-        cls = self.__class__
-
-        # Raised all previously saw errors like unknown commands or timeperiods
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
-        for prop, entry in cls.properties.items():
-            if prop not in cls._special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error(
-                        "[macromodulation::%s] %s property not set", self.get_name(), prop
-                    )
-                    state = False  # Bad boy...
-
         # Ok just put None as modulation_period, means 24x7
         if not hasattr(self, 'modulation_period'):
             self.modulation_period = None
 
-        return state
+        return super(MacroModulation, self).is_correct()
 
 
 class MacroModulations(Items):
