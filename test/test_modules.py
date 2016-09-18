@@ -152,25 +152,9 @@ class TestModules(AlignakTest):
         count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
         self.assertEqual(count_modules, 2)
 
-        # prepare 2 modconfs:
-        modconfA = Module({'module_alias': 'whatever',
-                           'python_name': 'test_modules_conflicting.modA'})
-        modconfB = Module({'module_alias': '42',
-                           'python_name': 'test_modules_conflicting.modB'})
-
-        self.modulemanager = ModulesManager('broker', None)
-        count_modules = self.modulemanager.load_and_init([modconfA, modconfB])
-        self.assertEqual(len(count_modules), 2)
-
         modA = None
         modB = None
         for _, mod in self.modulemanager.modules_assoc:
-            if mod.__package__ == 'test_modules_conflicting.modA':
-                modA = mod
-            elif mod.__package__ == 'test_modules_conflicting.modB':
-            if mod.__package__ == 'test_module_as_package_dir.modA':
-                modA = mod
-            elif mod.__package__ == 'test_module_as_package_dir.modB':
             if mod.__package__ == 'test_modules_conflicting.modA':
                 modA = mod
             elif mod.__package__ == 'test_modules_conflicting.modB':

@@ -50,9 +50,7 @@
 #
 # This file is used to test reading and processing of config files
 #
-from alignak_test import AlignakTest, time_hacker
-from alignak.external_command import ExternalCommandManager
-from alignak.misc.common import DICT_MODATTR
+import re
 import time
 from alignak_test import AlignakTest, time_hacker
 from alignak.misc.common import DICT_MODATTR
@@ -94,13 +92,11 @@ class TestExternalCommands(AlignakTest):
             (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
             if nb_ticks == 1:
                 fun()
-
         svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         self.assertEqual(1, svc.modified_attributes)
         self.assertFalse(getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute))
 
-    # @unittest.skip("Temporary disabled")
     def test_change_retry_host_check_interval(self):
         excmd = '[%d] CHANGE_RETRY_HOST_CHECK_INTERVAL;test_host_0;42' % time.time()
         self.schedulers[0].sched.run_external_command(excmd)
@@ -109,7 +105,6 @@ class TestExternalCommands(AlignakTest):
             (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
             if nb_ticks == 1:
                 fun()
-
         host = self.schedulers[0].sched.hosts.find_by_name("test_host_0")
 
         self.assertEqual(2048, host.modified_attributes)
