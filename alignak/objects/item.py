@@ -133,7 +133,7 @@ class Item(AlignakObject):
                 if key in self.properties:
                     val = self.properties[key].pythonize(params[key])
                 elif key in self.running_properties:
-                    warning = "using a the running property %s in a config file" % key
+                    warning = "using the running property %s in a config file" % key
                     self.configuration_warnings.append(warning)
                     val = self.running_properties[key].pythonize(params[key])
                 elif hasattr(self, 'old_properties') and key in self.old_properties:
@@ -412,22 +412,36 @@ class Item(AlignakObject):
         """
         Check if this object is correct
 
+        This function:
+        - checks if the required properties are defined, ignoring special_properties if some exist
+        - logs the previously found warnings and errors
+
         :return: True if it's correct, otherwise False
         :rtype: bool
         """
         state = True
         properties = self.__class__.properties
 
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
         for prop, entry in properties.items():
+            if hasattr(self, 'special_properties') and prop in getattr(self, 'special_properties'):
+                continue
             if not hasattr(self, prop) and entry.required:
-                logger.error("[item::%s] %s property is missing", self.get_name(), prop)
+                msg = "[%s::%s] %s property is missing" % (
+                    self.my_type, self.get_name(), prop
+                )
+                self.configuration_errors.append(msg)
                 state = False
+
+        # Log all previously sawn warnings
+        if self.configuration_warnings:
+            for msg in self.configuration_warnings:
+                logger.warning("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
+
+        # Raise all previously sawn errors
+        if self.configuration_errors:
+            state = False
+            for msg in self.configuration_errors:
+                logger.error("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
 
         return state
 
@@ -744,22 +758,6 @@ class Items(object):
         else:
             self.add_items(items, index_items)
 
-    @staticmethod
-    def get_source(item):
-        """
-        Get source, so with what system we import this item
-
-        :param item: item object
-        :type item: object
-        :return: name of the source
-        :rtype: str
-        """
-        source = getattr(item, 'imported_from', None)
-        if source:
-            return " in %s" % source
-        else:
-            return ""
-
     def add_items(self, items, index_items):
         """
         Add items to template if is template, else add in item list
@@ -821,10 +819,10 @@ class Items(object):
         else:
             # Don't know which one to keep, lastly defined has precedence
             objcls = getattr(self.inner_class, "my_type", "[unknown]")
-            mesg = "duplicate %s name %s%s, using lastly defined. You may " \
+            mesg = "duplicate %s name %s, from: %s, using lastly defined. You may " \
                    "manually set the definition_order parameter to avoid " \
                    "this message." % \
-                   (objcls, name, self.get_source(item))
+                   (objcls, name, item.imported_from)
             item.configuration_warnings.append(mesg)
         if item.is_tpl():
             self.remove_template(existing)
@@ -854,8 +852,8 @@ class Items(object):
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
         if not name:
-            mesg = "a %s template has been defined without name%s%s" % \
-                   (objcls, tpl.imported_from, self.get_source(tpl))
+            mesg = "a %s template has been defined without name, from: %s" % \
+                   (objcls, tpl.imported_from)
             tpl.configuration_errors.append(mesg)
         elif name in self.name_to_template:
             tpl = self.manage_conflict(tpl, name)
@@ -943,9 +941,10 @@ class Items(object):
         name = getattr(item, name_property, '')
         if not name:
             objcls = self.inner_class.my_type
-            mesg = "a %s item has been defined without %s%s" % \
-                   (objcls, name_property, self.get_source(item))
-            item.configuration_errors.append(mesg)
+            msg = "a %s item has been defined without %s, from: %s" % (
+                objcls, name_property, item.imported_from
+            )
+            item.configuration_errors.append(msg)
         elif name in self.name_to_item:
             item = self.manage_conflict(item, name)
         self.name_to_item[name] = item
@@ -1069,19 +1068,18 @@ class Items(object):
             template = self.find_tpl_by_name(name)
             if template is None:
                 # TODO: Check if this should not be better to report as an error ?
-                self.configuration_warnings.append("%s %r use/inherit from an unknown template "
-                                                   "(%r) ! Imported from: "
-                                                   "%s" % (type(item).__name__,
-                                                           item._get_name(),
-                                                           name,
-                                                           item.imported_from))
+                self.configuration_warnings.append(
+                    "%s %s use/inherit from an unknown template: %s ! from: %s" % (
+                        type(item).__name__, item.get_name(), name, item.imported_from
+                    )
+                )
             else:
                 if template is item:
                     self.configuration_errors.append(
-                        '%s %r use/inherits from itself ! Imported from: '
-                        '%s' % (type(item).__name__,
-                                item._get_name(),
-                                item.imported_from))
+                        "%s %s use/inherits from itself ! from: %s" % (
+                            type(item).__name__, item._get_name(), item.imported_from
+                        )
+                    )
                 else:
                     tpls.append(template.uuid)
         item.templates = tpls
@@ -1100,14 +1098,20 @@ class Items(object):
             i.tags = self.get_all_tags(i)
 
     def is_correct(self):
-        """
-        Check if all items are correct (no error)
+        """Check if the items list configuration is correct ::
 
-        :return: True if correct, otherwise False
+        * check if duplicate items exist in the list and warn about this
+        * set alias and display_name property for each item in the list if they do not exist
+        * check each item in the list
+        * log all previous warnings
+        * log all previous errors
+
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        # we are ok at the beginning. Hope we still ok at the end...
+        # we are ok at the beginning. Hope we are still ok at the end...
         valid = True
+
         # Some class do not have twins, because they do not have names
         # like servicedependencies
         twins = getattr(self, 'twins', None)
@@ -1115,21 +1119,13 @@ class Items(object):
             # Ok, look at no twins (it's bad!)
             for t_id in twins:
                 i = self.items[t_id]
-                logger.warning("[items] %s.%s is duplicated from %s",
-                               i.__class__.my_type,
-                               i.get_name(),
-                               getattr(i, 'imported_from', "unknown source"))
+                msg = "[items] %s.%s is duplicated from %s" % (
+                    i.__class__.my_type, i.get_name(),
+                    i.imported_from
+                )
+                self.configuration_warnings.append(msg)
 
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[items] %s", err)
-
-        for err in self.configuration_errors:
-            logger.error("[items] %s", err)
-            valid = False
-
-        # Then look for individual ok
+        # Better check individual items before displaying the global items list errors and warnings
         for i in self:
             # Alias and display_name hook hook
             prop_name = getattr(self.__class__, 'name_property', None)
@@ -1140,9 +1136,27 @@ class Items(object):
 
             # Now other checks
             if not i.is_correct():
-                source = getattr(i, 'imported_from', "unknown source")
-                logger.error("[items] In %s is incorrect ; from %s", i.get_name(), source)
                 valid = False
+                msg = "Configuration in %s::%s is incorrect; from: %s" % (
+                    i.my_type, i.get_name(), i.imported_from
+                )
+                self.configuration_errors.append(msg)
+
+            if i.configuration_errors:
+                self.configuration_errors += i.configuration_errors
+            if i.configuration_warnings:
+                self.configuration_warnings += i.configuration_warnings
+
+        # Log all previously sawn warnings
+        if self.configuration_warnings:
+            for msg in self.configuration_warnings:
+                logger.warning("[items] %s", msg)
+
+        # Raise all previously sawn errors
+        if self.configuration_errors:
+            valid = False
+            for msg in self.configuration_errors:
+                logger.error("[items] %s", msg)
 
         return valid
 
@@ -1602,8 +1616,8 @@ class Items(object):
         :type attr1: str
         :param attr2: attribute name
         :type attr2: str
-        :return: True if no loop, otherwise false
-        :rtype: bool
+        :return: list
+        :rtype: list
         """
         # Ok, we say "from now, no loop :) "
         # in_loop = []

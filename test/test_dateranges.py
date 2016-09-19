@@ -18,45 +18,67 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-"""This file is used to test dateranges
+"""
+This file is used to test dateranges
 
 We make timestamp with time.mktime because timestamp not same is you are in timezone UTC or Paris
 """
+# pylint: disable=R0904
 
-from alignak_test import *
+import time
+from freezegun import freeze_time
+from alignak_test import AlignakTest
 from alignak.objects.timeperiod import Timeperiod
 from alignak.daterange import CalendarDaterange, StandardDaterange, MonthWeekDayDaterange, \
     MonthDateDaterange, WeekDayDaterange, MonthDayDaterange, find_day_by_weekday_offset, \
     find_day_by_offset
 import alignak.util
-import time
-import datetime
-import calendar
-from freezegun import freeze_time
 
 
-#@unittest.skipIf(True, """\
-#Test fails with many dates, temporarily disabled until it's completely fixed
-# """)
 class TestDataranges(AlignakTest):
+    """
+    This class test dataranges
+    """
 
     def test_get_start_of_day(self):
+        """
+        Test function get_start_of_day and return the timestamp of begin of day
+
+        :return: None
+        """
         now = time.localtime()
         start = time.mktime((2015, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_start_of_day(2015, 7, 26)
         self.assertEqual(start, timestamp)
 
     def test_get_end_of_day(self):
+        """
+        Test function get_end_of_day and return the timestamp of end of day
+
+        :return: None
+        """
         now = time.localtime()
         start = time.mktime((2016, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_end_of_day(2016, 8, 20)
         self.assertEqual(start, timestamp)
 
     def test_find_day_by_weekday_offset(self):
+        """
+        Test function find_day_by_weekday_offset to get day number.
+        In this case, 1 = thuesday and -1 = last thuesday of July 2010, so it's the 27 july 2010
+
+        :return: None
+        """
         ret = find_day_by_weekday_offset(2010, 7, 1, -1)
         self.assertEqual(27, ret)
 
     def test_find_day_by_offset(self):
+        """
+        Test function find_day_by_offset to get the day with offset.
+        In this case, the last day number of july, so the 31th
+
+        :return: None
+        """
         ret = find_day_by_offset(2015, 7, -1)
         self.assertEqual(31, ret)
 
@@ -64,7 +86,12 @@ class TestDataranges(AlignakTest):
         self.assertEqual(10, ret)
 
     def test_calendardaterange_start_end_time(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test CalendarDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
@@ -89,9 +116,9 @@ class TestDataranges(AlignakTest):
             },
         }
         params = {'syear': 2015, 'smon': 7, 'smday': 26, 'swday': 0,
-                    'swday_offset': 0, 'eyear': 2016, 'emon': 8, 'emday': 20,
-                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': 3,
-                    'other': ''}
+                  'swday_offset': 0, 'eyear': 2016, 'emon': 8, 'emday': 20,
+                  'ewday': 0, 'ewday_offset': 0, 'skip_interval': 3,
+                  'other': ''}
         caldate = CalendarDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
@@ -101,25 +128,30 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_start_end_time(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test StandardDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
         else:
             local_hour_offset = "+%02d" % -local_hour_offset
         data = {}
-        for x in xrange(1, 3):
-            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+        for num in xrange(1, 3):
+            data['2015-07-%02d 01:50:00 %s' % (num, local_hour_offset)] = {
                 'start': 1435881600 + local_offset,
                 'end': 1435967999 + local_offset
             }
-        for x in xrange(4, 10):
-            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+        for num in xrange(4, 10):
+            data['2015-07-%02d 01:50:00 %s' % (num, local_hour_offset)] = {
                 'start': 1436486400 + local_offset,
                 'end': 1436572799 + local_offset
             }
-        for x in xrange(11, 17):
-            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+        for num in xrange(11, 17):
+            data['2015-07-%02d 01:50:00 %s' % (num, local_hour_offset)] = {
                 'start': 1437091200 + local_offset,
                 'end': 1437177599 + local_offset
             }
@@ -133,27 +165,32 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['start'], ret[0])
                 self.assertEqual(data[date_now]['end'], ret[1])
 
-    def test_MonthWeekDayDaterange_start_end_time(self):
+    def test_monthweekdaydaterange_start_end_time(self):
+        """
+        Test MonthWeekDayDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
         data = {}
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
         else:
             local_hour_offset = "+%02d" % -local_hour_offset
-        for x in xrange(1, 31):
-            data['2015-07-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+        for num in xrange(1, 31):
+            data['2015-07-%02d 01:50:00 %s' % (num, local_hour_offset)] = {
                 'start': 1436832000 + local_offset,
                 'end': 1440201599 + local_offset
             }
-        for x in xrange(1, 21):
-            data['2015-08-%02d 01:50:00 %s' % (x, local_hour_offset)] = {
+        for num in xrange(1, 21):
+            data['2015-08-%02d 01:50:00 %s' % (num, local_hour_offset)] = {
                 'start': 1436832000 + local_offset,
                 'end': 1440201599 + local_offset
             }
 
-        for x in xrange(22, 31):
-            data['2015-08-%02d 01:50:00 %s ' % (x, local_hour_offset)] = {
+        for num in xrange(22, 31):
+            data['2015-08-%02d 01:50:00 %s ' % (num, local_hour_offset)] = {
                 'start': 1468281600 + local_offset,
                 'end': 1471651199 + local_offset
             }
@@ -174,7 +211,12 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdatedaterange_start_end_time(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test MonthDateDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
@@ -198,9 +240,9 @@ class TestDataranges(AlignakTest):
                 'end': 1471737599 + local_offset
             },
         }
-        params = {'syear': 0, 'smon': 7, 'smday': 26, 'swday': 0,'swday_offset': 0,
-                'eyear': 0, 'emon': 8, 'emday': 20, 'ewday': 0, 'ewday_offset': 0,
-                'skip_interval': 0, 'other': ''}
+        params = {'syear': 0, 'smon': 7, 'smday': 26, 'swday': 0, 'swday_offset': 0,
+                  'eyear': 0, 'emon': 8, 'emday': 20, 'ewday': 0, 'ewday_offset': 0,
+                  'skip_interval': 0, 'other': ''}
         caldate = MonthDateDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
@@ -210,7 +252,12 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test WeekDayDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
@@ -235,7 +282,7 @@ class TestDataranges(AlignakTest):
             },
         }
         # second monday - third tuesday
-        params = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': 0,'swday_offset': 2,
+        params = {'syear': 0, 'smon': 0, 'smday': 0, 'swday': 0, 'swday_offset': 2,
                   'eyear': 0, 'emon': 0, 'emday': 0, 'ewday': 1, 'ewday_offset': 3,
                   'skip_interval': 0, 'other': ''}
         caldate = WeekDayDaterange(params)
@@ -247,7 +294,12 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
@@ -273,7 +325,7 @@ class TestDataranges(AlignakTest):
         }
 
         # day -1 - 5 00:00-10:00
-        params = {'syear': 0, 'smon': 0, 'smday': 1, 'swday': 0,'swday_offset': 0,
+        params = {'syear': 0, 'smon': 0, 'smday': 1, 'swday': 0, 'swday_offset': 0,
                   'eyear': 0, 'emon': 0, 'emday': 5, 'ewday': 0, 'ewday_offset': 0,
                   'skip_interval': 0, 'other': ''}
         caldate = MonthDayDaterange(params)
@@ -285,7 +337,13 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time_negative(self):
-        local_offset = time.timezone - 3600 * time.daylight  #TS below are for UTC
+        """
+        Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range with
+        negative values
+
+        :return: None
+        """
+        local_offset = time.timezone - 3600 * time.daylight  # TS below are for UTC
         local_hour_offset = local_offset / 3600
         if local_hour_offset >= 0:
             local_hour_offset = "-%02d" % local_hour_offset
@@ -327,421 +385,540 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_is_correct(self):
-        # Time from next wednesday morning to next wednesday night
+        """
+        Test if time from next wednesday morning to next wednesday night is correct
+
+        :return: None
+        """
         caldate = StandardDaterange({'day': 'wednesday', 'other': '00:00-24:00'})
         self.assertTrue(caldate.is_correct())
 
     def test_monthweekdaydaterange_is_correct(self):
-        # Time from next wednesday morning to next wednesday night
-        params = {'syear': 2015, 'smon': 7, 'smday': 0, 'swday': 1,'swday_offset': 2,
+        """
+        Test if time from next wednesday morning to next wednesday night is correct
+
+        :return: None
+        """
+        params = {'syear': 2015, 'smon': 7, 'smday': 0, 'swday': 1, 'swday_offset': 2,
                   'eyear': 2015, 'emon': 8, 'emday': 0, 'ewday': 4, 'ewday_offset': 3,
                   'skip_interval': 0, 'other': ''}
         caldate = MonthWeekDayDaterange(params)
         self.assertTrue(caldate.is_correct())
 
     def test_resolve_daterange_case1(self):
-        t = Timeperiod()
-        entry = '2015-07-26 - 2016-08-20 / 3 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 1
 
-        self.assertEqual(2015, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(26, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(2016, t.dateranges[0].eyear)
-        self.assertEqual(8, t.dateranges[0].emon)
-        self.assertEqual(20, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(3, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = '2015-07-26 - 2016-08-20 / 3 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(2015, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(26, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(2016, timeperiod.dateranges[0].eyear)
+        self.assertEqual(8, timeperiod.dateranges[0].emon)
+        self.assertEqual(20, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(3, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case2(self):
-        t = Timeperiod()
-        entry = '2015-07-26 / 7             00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 2
 
-        self.assertEqual(2015, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(26, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(2015, t.dateranges[0].eyear)
-        self.assertEqual(7, t.dateranges[0].emon)
-        self.assertEqual(26, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(7, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = '2015-07-26 / 7             00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(2015, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(26, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(2015, timeperiod.dateranges[0].eyear)
+        self.assertEqual(7, timeperiod.dateranges[0].emon)
+        self.assertEqual(26, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(7, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case3(self):
-        t = Timeperiod()
-        entry = '2015-07-26 - 2016-08-20    00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 3
 
-        self.assertEqual(2015, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(26, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(2016, t.dateranges[0].eyear)
-        self.assertEqual(8, t.dateranges[0].emon)
-        self.assertEqual(20, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = '2015-07-26 - 2016-08-20    00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(2015, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(26, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(2016, timeperiod.dateranges[0].eyear)
+        self.assertEqual(8, timeperiod.dateranges[0].emon)
+        self.assertEqual(20, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case4(self):
-        t = Timeperiod()
-        entry = '2015-07-26  00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 4
 
-        self.assertEqual(2015, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(26, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(2015, t.dateranges[0].eyear)
-        self.assertEqual(7, t.dateranges[0].emon)
-        self.assertEqual(26, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = '2015-07-26  00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(2015, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(26, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(2015, timeperiod.dateranges[0].eyear)
+        self.assertEqual(7, timeperiod.dateranges[0].emon)
+        self.assertEqual(26, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case5(self):
-        t = Timeperiod()
-        entry = 'tuesday 1 october - friday 2 may / 6 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 5
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(10, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(1, t.dateranges[0].swday)
-        self.assertEqual(1, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(5, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(4, t.dateranges[0].ewday)
-        self.assertEqual(2, t.dateranges[0].ewday_offset)
-        self.assertEqual(6, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'tuesday 1 october - friday 2 may / 6 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(10, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(5, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(4, timeperiod.dateranges[0].ewday)
+        self.assertEqual(2, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(6, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case6(self):
-        t = Timeperiod()
-        entry = 'monday 4 - thursday 3 / 2 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 6
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(4, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(3, t.dateranges[0].ewday)
-        self.assertEqual(3, t.dateranges[0].ewday_offset)
-        self.assertEqual(2, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'monday 4 - thursday 3 / 2 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(4, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(2, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case7(self):
-        t = Timeperiod()
-        entry = 'march 4 - july 3 / 2 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 7
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(3, t.dateranges[0].smon)
-        self.assertEqual(4, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(7, t.dateranges[0].emon)
-        self.assertEqual(3, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(2, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'march 4 - july 3 / 2 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(3, timeperiod.dateranges[0].smon)
+        self.assertEqual(4, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(7, timeperiod.dateranges[0].emon)
+        self.assertEqual(3, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(2, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case8(self):
-        t = Timeperiod()
-        entry = 'day 4 - day 3 / 2 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 8
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(4, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(3, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(2, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'day 4 - day 3 / 2 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(4, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(3, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(2, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case9(self):
-        t = Timeperiod()
-        entry = 'friday 2 - 15 / 5             00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 9
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(4, t.dateranges[0].swday)
-        self.assertEqual(2, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(4, t.dateranges[0].ewday)
-        self.assertEqual(15, t.dateranges[0].ewday_offset)
-        self.assertEqual(5, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'friday 2 - 15 / 5             00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(4, timeperiod.dateranges[0].swday)
+        self.assertEqual(2, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(4, timeperiod.dateranges[0].ewday)
+        self.assertEqual(15, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(5, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case10(self):
-        t = Timeperiod()
-        entry = 'july 2 - 15 / 5             00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 10
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(2, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(7, t.dateranges[0].emon)
-        self.assertEqual(15, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(5, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'july 2 - 15 / 5             00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(2, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(7, timeperiod.dateranges[0].emon)
+        self.assertEqual(15, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(5, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case11(self):
-        t = Timeperiod()
-        entry = 'day 8 - 15 / 5             00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 11
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(8, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(15, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(5, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'day 8 - 15 / 5             00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(8, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(15, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(5, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case12(self):
-        t = Timeperiod()
-        entry = 'tuesday 3 july - friday 2 september 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 12
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(1, t.dateranges[0].swday)
-        self.assertEqual(3, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(9, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(4, t.dateranges[0].ewday)
-        self.assertEqual(2, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'tuesday 3 july - friday 2 september 00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday)
+        self.assertEqual(3, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(9, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(4, timeperiod.dateranges[0].ewday)
+        self.assertEqual(2, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case13(self):
-        t = Timeperiod()
-        entry = 'friday 1 - 3         00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 13
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(4, t.dateranges[0].swday)
-        self.assertEqual(1, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(4, t.dateranges[0].ewday)
-        self.assertEqual(3, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'friday 1 - 3         00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(4, timeperiod.dateranges[0].swday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(4, timeperiod.dateranges[0].ewday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case14(self):
-        t = Timeperiod()
-        entry = 'july -10 - -1              00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 14
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(7, t.dateranges[0].smon)
-        self.assertEqual(-10, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(7, t.dateranges[0].emon)
-        self.assertEqual(-1, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'july -10 - -1              00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(7, timeperiod.dateranges[0].smon)
+        self.assertEqual(-10, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(7, timeperiod.dateranges[0].emon)
+        self.assertEqual(-1, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case15(self):
-        t = Timeperiod()
-        entry = 'day 1 - 15         00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 15
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(1, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(15, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'day 1 - 15         00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(1, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(15, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case16(self):
-        t = Timeperiod()
-        entry = 'monday 3 - thursday 4      00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 16
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(3, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(3, t.dateranges[0].ewday)
-        self.assertEqual(4, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'monday 3 - thursday 4      00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(3, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday)
+        self.assertEqual(4, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case17(self):
-        t = Timeperiod()
-        entry = 'april 10 - may 15          00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 17
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(4, t.dateranges[0].smon)
-        self.assertEqual(10, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(5, t.dateranges[0].emon)
-        self.assertEqual(15, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'april 10 - may 15          00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(4, timeperiod.dateranges[0].smon)
+        self.assertEqual(10, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(5, timeperiod.dateranges[0].emon)
+        self.assertEqual(15, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case18(self):
-        t = Timeperiod()
-        entry = 'day 10 - day 15          00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 18
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(10, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(15, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'day 10 - day 15          00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(10, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(15, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case19(self):
-        t = Timeperiod()
-        entry = 'tuesday 3 november        00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 19
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(11, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(1, t.dateranges[0].swday)
-        self.assertEqual(3, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(11, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(1, t.dateranges[0].ewday)
-        self.assertEqual(3, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'tuesday 3 november        00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(11, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday)
+        self.assertEqual(3, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(11, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(1, timeperiod.dateranges[0].ewday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case20(self):
-        t = Timeperiod()
-        entry = 'tuesday 3      00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 20
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(0, t.dateranges[0].smday)
-        self.assertEqual(1, t.dateranges[0].swday)
-        self.assertEqual(3, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(0, t.dateranges[0].emday)
-        self.assertEqual(1, t.dateranges[0].ewday)
-        self.assertEqual(3, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'tuesday 3      00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(0, timeperiod.dateranges[0].smday)
+        self.assertEqual(1, timeperiod.dateranges[0].swday)
+        self.assertEqual(3, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(0, timeperiod.dateranges[0].emday)
+        self.assertEqual(1, timeperiod.dateranges[0].ewday)
+        self.assertEqual(3, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case21(self):
-        t = Timeperiod()
-        entry = 'may 3      00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 21
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(5, t.dateranges[0].smon)
-        self.assertEqual(3, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(5, t.dateranges[0].emon)
-        self.assertEqual(3, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'may 3      00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(5, timeperiod.dateranges[0].smon)
+        self.assertEqual(3, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(5, timeperiod.dateranges[0].emon)
+        self.assertEqual(3, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case22(self):
-        t = Timeperiod()
-        entry = 'day 3      00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        """
+        Test resolve daterange, case 22
 
-        self.assertEqual(0, t.dateranges[0].syear)
-        self.assertEqual(0, t.dateranges[0].smon)
-        self.assertEqual(3, t.dateranges[0].smday)
-        self.assertEqual(0, t.dateranges[0].swday)
-        self.assertEqual(0, t.dateranges[0].swday_offset)
-        self.assertEqual(0, t.dateranges[0].eyear)
-        self.assertEqual(0, t.dateranges[0].emon)
-        self.assertEqual(3, t.dateranges[0].emday)
-        self.assertEqual(0, t.dateranges[0].ewday)
-        self.assertEqual(0, t.dateranges[0].ewday_offset)
-        self.assertEqual(0, t.dateranges[0].skip_interval)
-        self.assertEqual('00:00-24:00', t.dateranges[0].other)
+        :return: None
+        """
+        timeperiod = Timeperiod()
+        entry = 'day 3      00:00-24:00'
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
+
+        self.assertEqual(0, timeperiod.dateranges[0].syear)
+        self.assertEqual(0, timeperiod.dateranges[0].smon)
+        self.assertEqual(3, timeperiod.dateranges[0].smday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday)
+        self.assertEqual(0, timeperiod.dateranges[0].swday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].eyear)
+        self.assertEqual(0, timeperiod.dateranges[0].emon)
+        self.assertEqual(3, timeperiod.dateranges[0].emday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday)
+        self.assertEqual(0, timeperiod.dateranges[0].ewday_offset)
+        self.assertEqual(0, timeperiod.dateranges[0].skip_interval)
+        self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case23(self):
-        t = Timeperiod()
+        """
+        Test resolve daterange, case 23
+
+        :return: None
+        """
+        timeperiod = Timeperiod()
         entry = 'sunday 00:00-24:00'
-        t.resolve_daterange(t.dateranges, entry)
+        timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
-        self.assertEqual('sunday', t.dateranges[0].day)
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual('sunday', timeperiod.dateranges[0].day)

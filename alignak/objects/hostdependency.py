@@ -260,10 +260,11 @@ class Hostdependencies(Items):
                     getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
 
-            hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
-                                     hostdep.notification_failure_criteria,
-                                     getattr(hostdep, 'dependency_period', ''),
-                                     hostdep.inherits_parent)
+            if not hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                            hostdep.notification_failure_criteria,
+                                            getattr(hostdep, 'dependency_period', ''),
+                                            hostdep.inherits_parent):
+                return
 
             hosts.add_chk_dependency(hostdep.dependent_host_name, hostdep.host_name,
                                      hostdep.execution_failure_criteria,
@@ -276,26 +277,33 @@ class Hostdependencies(Items):
                     hosts[hostdep.dependent_host_name].get_name())
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Hostdependencies, self).is_correct()
+        state = True
+
+        # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("host_name", "dependent_host_name")
         if len(loop) > 0:
-            logger.error("Loop detected while checking host dependencies")
+            msg = "Loop detected while checking host dependencies"
+            self.configuration_errors.append(msg)
+            state = False
             for item in self:
                 for elem in loop:
                     if elem == item.host_name:
-                        logger.error("Host %s is parent host_name in dependency defined in %s",
-                                     item.host_name_string, item.imported_from)
+                        msg = "Host %s is parent host_name in dependency defined in %s" % (
+                            item.host_name_string, item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
                     elif elem == item.dependent_host_name:
-                        logger.error("Host %s is child host_name in dependency defined in %s",
-                                     item.dependent_host_name_string, item.imported_from)
-            return False
+                        msg = "Host %s is child host_name in dependency defined in %s" % (
+                            item.dependent_host_name_string, item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
 
-        return valid
+        return super(Hostdependencies, self).is_correct() and state

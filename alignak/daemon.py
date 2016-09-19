@@ -343,9 +343,27 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
-        self.modules_manager.load_and_init(mod_confs)
-        logger.info("I correctly loaded the modules: [%s]",
-                    ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        if not mod_confs:
+            logger.info("I do not have any module")
+            return
+
+        logger.info("I received %d modules configuration", len(mod_confs))
+        count_modules = self.modules_manager.load_and_init(mod_confs)
+        if count_modules == len(mod_confs):
+            logger.info(
+                "I correctly loaded all the modules. Loaded modules: [%s]",
+                ','.join([inst.get_name() for inst in self.modules_manager.instances])
+            )
+            return True
+        elif count_modules:
+            logger.warning(
+                "I could not load and intialize all the modules. Loaded modules: [%s]",
+                ','.join([inst.get_name() for inst in self.modules_manager.instances])
+            )
+            return True
+        else:
+            logger.error("I could not load any module.")
+            return False
 
     def add(self, elt):
         """ Abstract method for adding brok
@@ -1160,7 +1178,7 @@ class Daemon(object):  # pylint: disable=R0902
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new ticket including"
+        logger.critical("If you think this is a bug, create a new issue including "
                         "details mentioned in the README")
         logger.critical("Back trace of the error: %s", trace)
 

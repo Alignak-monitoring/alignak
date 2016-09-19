@@ -77,5 +77,3 @@ from alignak.objects.trigger import Trigger, Triggers
 from alignak.objects.businessimpactmodulation import Businessimpactmodulation, \
     Businessimpactmodulations
 from alignak.objects.macromodulation import MacroModulation, MacroModulations
-
-# from config import Config

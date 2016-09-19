@@ -60,7 +60,6 @@ from alignak.objects.item import Item, Items
 
 from alignak.brok import Brok
 from alignak.property import ListProp
-from alignak.log import logger
 
 
 class Itemgroup(Item):
@@ -129,6 +128,9 @@ class Itemgroup(Item):
         :type member: str
         :return: None
         """
+        # Avoid empty elements in lists ...
+        if not member:
+            return
         add_fun = list.extend if isinstance(member, list) else list.append
         if not hasattr(self, "members"):
             self.members = []
@@ -164,20 +166,17 @@ class Itemgroup(Item):
         :return: True if group is correct, otherwise False
         :rtype: bool
         """
-        res = True
+        state = True
 
         if self.unknown_members:
             for member in self.unknown_members:
-                logger.error("[itemgroup::%s] as %s, got unknown member %s",
-                             self.get_name(), self.__class__.my_type, member)
-            res = False
+                msg = "[%s::%s] as %s, got unknown member '%s'" % (
+                    self.my_type, self.get_name(), self.__class__.my_type, member
+                )
+                self.configuration_errors.append(msg)
+            state = False
 
-        if self.configuration_errors != []:
-            for err in self.configuration_errors:
-                logger.error("[itemgroup] %s", err)
-            res = False
-
-        return res
+        return super(Itemgroup, self).is_correct() and state
 
     def has(self, prop):
         """

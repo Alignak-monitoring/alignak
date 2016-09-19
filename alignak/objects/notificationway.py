@@ -57,7 +57,6 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import logger
 from alignak.commandcall import CommandCall
 
 
@@ -69,6 +68,8 @@ class NotificationWay(Item):
 
     properties = Item.properties.copy()
     properties.update({
+        'uuid':
+            StringProp(default='', fill_brok=['full_status']),
         'notificationway_name':
             StringProp(fill_brok=['full_status']),
         'host_notifications_enabled':
@@ -274,80 +275,84 @@ class NotificationWay(Item):
         return notif_commands
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
-        # Raised all previously saw errors like unknown commands or timeperiods
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
+        # Do not execute checks if notifications are disabled
         if (hasattr(self, 'service_notification_options') and
                 self.service_notification_options == ['n']):
             if (hasattr(self, 'host_notification_options') and
                     self.host_notification_options == ['n']):
                 return True
 
-        for prop, entry in cls.properties.items():
-            if prop not in self.special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[notificationway::%s] %s property not set",
-                                 self.get_name(), prop)
-                    state = False  # Bad boy...
+        # Internal checks before executing inherited function...
 
-        # Ok now we manage special cases...
         # Service part
         if not hasattr(self, 'service_notification_commands'):
-            logger.error("[notificationway::%s] do not have any "
-                         "service_notification_commands defined", self.get_name())
+            msg = "[notificationway::%s] do not have any service_notification_commands defined" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         else:
             for cmd in self.service_notification_commands:
                 if cmd is None:
-                    logger.error("[notificationway::%s] a "
-                                 "service_notification_command is missing", self.get_name())
+                    msg = "[notificationway::%s] a service_notification_command is missing" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
                 if not cmd.is_valid():
-                    logger.error("[notificationway::%s] a "
-                                 "service_notification_command is invalid", self.get_name())
+                    msg = "[notificationway::%s] a service_notification_command is invalid" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
         if getattr(self, 'service_notification_period', None) is None:
-            logger.error("[notificationway::%s] the "
-                         "service_notification_period is invalid", self.get_name())
+            msg = "[notificationway::%s] the service_notification_period is invalid" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         # Now host part
         if not hasattr(self, 'host_notification_commands'):
-            logger.error("[notificationway::%s] do not have any "
-                         "host_notification_commands defined", self.get_name())
+            msg = "[notificationway::%s] do not have any host_notification_commands defined" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         else:
             for cmd in self.host_notification_commands:
                 if cmd is None:
-                    logger.error("[notificationway::%s] a "
-                                 "host_notification_command is missing", self.get_name())
+                    msg = "[notificationway::%s] a host_notification_command is missing" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
                 if not cmd.is_valid():
-                    logger.error("[notificationway::%s] a host_notification_command "
-                                 "is invalid (%s)", cmd.get_name(), str(cmd.__dict__))
+                    msg = "[notificationway::%s] a host_notification_command is invalid (%s)" % (
+                        cmd.get_name(), str(cmd.__dict__)
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
         if getattr(self, 'host_notification_period', None) is None:
-            logger.error("[notificationway::%s] the host_notification_period "
-                         "is invalid", self.get_name())
+            msg = "[notificationway::%s] the host_notification_period is invalid" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
-        return state
+        return super(NotificationWay, self).is_correct() and state
 
 
 class NotificationWays(CommandCallItems):

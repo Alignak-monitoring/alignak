@@ -80,7 +80,7 @@ from alignak.util import (
     generate_key_value_sequences,
     is_complex_expr,
     KeyValueSyntaxError)
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import logger, naglog_result
 
 
@@ -132,6 +132,9 @@ class Service(SchedulingItem):
 
         'host_dependency_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
+
+        'freshness_state':
+            CharProp(default='u', fill_brok=['full_status']),
 
         # Easy Service dep definition
         'service_dependencies':
@@ -301,6 +304,14 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
+    def get_servicegroups(self):
+        """Accessor to servicegroups attribute
+
+        :return: servicegroup list object of host
+        :rtype: list
+        """
+        return self.servicegroups
+
     def get_groupnames(self, sgs):
         """Get servicegroups list
 
@@ -344,15 +355,15 @@ class Service(SchedulingItem):
         return self.tags
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = super(Service, self).is_correct()
+        state = True
         cls = self.__class__
 
         # Set display_name if need
@@ -360,20 +371,26 @@ class Service(SchedulingItem):
             self.display_name = getattr(self, 'service_description', '')
 
         if not self.host_name:
-            logger.error("[%s::%s] not bound do any host.", self.my_type, self.get_name())
+            msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
+            self.configuration_errors.append(msg)
             state = False
         elif self.host is None:
-            logger.error("[%s::%s] unknown host_name '%s'",
-                         self.my_type, self.get_name(), self.host_name)
+            msg = "[%s::%s] unknown host_name '%s'" % (
+                self.my_type, self.get_name(), self.host_name
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         if hasattr(self, 'service_description'):
             for char in cls.illegal_object_name_chars:
                 if char in self.service_description:
-                    logger.error("[%s::%s] service_description got an illegal character: %s",
-                                 self.my_type, self.get_name(), char)
+                    msg = "[%s::%s] service_description got an illegal character: %s" % (
+                        self.my_type, self.get_name(), char
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
-        return state
+
+        return super(Service, self).is_correct() and state
 
     def duplicate(self, host):
         """For a given host, look for all copy we must create for for_each property
@@ -621,12 +638,12 @@ class Service(SchedulingItem):
         :type t_threshold: int
         :return: None
         """
-        logger.warning("The results of service '%s' on host '%s' are stale "
-                       "by %s (threshold=%s).  I'm forcing an immediate check "
-                       "of the service.",
+        logger.warning("The freshness period of service '%s' on host '%s' is expired "
+                       "by %s (threshold=%s). I'm forcing the state to freshness state (%s).",
                        self.get_name(), self.host_name,
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)
@@ -1076,9 +1093,10 @@ class Services(SchedulingItems):
         name = getattr(tpl, 'name', '')
         hname = getattr(tpl, 'host_name', '')
         if not name and not hname:
-            mesg = "a %s template has been defined without name nor " \
-                   "host_name%s" % (objcls, self.get_source(tpl))
-            tpl.configuration_errors.append(mesg)
+            msg = "a %s template has been defined without name nor host_name. from: %s" % (
+                objcls, tpl.imported_from
+            )
+            tpl.configuration_errors.append(msg)
         elif name:
             tpl = self.index_template(tpl)
         self.templates[tpl.uuid] = tpl
@@ -1100,17 +1118,15 @@ class Services(SchedulingItems):
         hname = getattr(item, 'host_name', '')
         hgname = getattr(item, 'hostgroup_name', '')
         sdesc = getattr(item, 'service_description', '')
-        source = getattr(item, 'imported_from', 'unknown')
-        if source:
-            in_file = " in %s" % source
-        else:
-            in_file = ""
+
         if not hname and not hgname:
-            mesg = "a %s has been defined without host_name nor hostgroups%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
+            msg = "a %s has been defined without " \
+                  "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
+            item.configuration_errors.append(msg)
         if not sdesc:
-            mesg = "a %s has been defined without service_description%s" % (objcls, in_file)
-            item.configuration_errors.append(mesg)
+            msg = "a %s has been defined without " \
+                  "service_description, from: %s" % (objcls, item.imported_from)
+            item.configuration_errors.append(msg)
 
         if index is True:
             item = self.index_item(item)
@@ -1378,7 +1394,7 @@ class Services(SchedulingItems):
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
-        Explodes a service based on a lis of hosts.
+        Explodes a service based on a list of hosts.
 
         :param hosts: The hosts container
         :type hosts:

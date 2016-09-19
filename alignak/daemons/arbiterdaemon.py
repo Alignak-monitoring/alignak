@@ -86,7 +86,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, analyse=None):
+                 debug_file, config_name, analyse=None):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)
@@ -94,6 +94,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.config_files = config_files
         self.verify_only = verify_only
         self.analyse = analyse
+        self.config_name = config_name
 
         self.broks = {}
         self.is_master = False
@@ -211,7 +212,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
-        * Read all .cfg files in  cfg_dir
+        * Read all .cfg files in cfg_dir
         * Read all files in cfg_file
         * Create objects (Arbiter, Module)
         * Set HTTP links info (ssl etc)
@@ -227,7 +228,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)
+        logger.info("Loaded configuration files, state: %s", self.conf.conf_is_correct)
 
+        # TODO: why is it here?
         logger.debug("Opening local log file")
 
         # First we need to get arbiters and modules
@@ -239,7 +242,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Search which Arbiterlink I am
         for arb in self.conf.arbiters:
-            if arb.is_me():
+            if arb.get_name() in ['Default-Arbiter', self.config_name]:
                 arb.need_conf = False
                 self.myself = arb
                 self.is_master = not self.myself.spare
@@ -248,15 +251,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 else:
                     logger.info("I am a spare Arbiter: %s", arb.get_name())
                 # export this data to our statsmgr object :)
-                api_key = getattr(self.conf, 'api_key', '')
-                secret = getattr(self.conf, 'secret', '')
-                http_proxy = getattr(self.conf, 'http_proxy', '')
                 statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
                 statsd_port = getattr(self.conf, 'statsd_port', 8125)
                 statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
                 statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
                 statsmgr.register(self, arb.get_name(), 'arbiter',
-                                  api_key=api_key, secret=secret, http_proxy=http_proxy,
                                   statsd_host=statsd_host, statsd_port=statsd_port,
                                   statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
@@ -266,13 +265,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 arb.need_conf = True
 
         if not self.myself:
-            sys.exit("Error: I cannot find my own Arbiter object, I bail out. \
-                     To solve it, please change the host_name parameter in \
-                     the object Arbiter in the file alignak-specific.cfg. \
-                     With the value %s \
-                     Thanks." % socket.gethostname())
+            sys.exit("Error: I cannot find my own Arbiter object (%s), I bail out. "
+                     "To solve this, please change the arbiter_name parameter in "
+                     "the arbiter configuration file (certainly arbiter-master.cfg) "
+                     "with the value '%s'."
+                     " Thanks." % (self.config_name, socket.gethostname()))
 
-        logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
+        if self.myself.modules:
+            logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
 
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
@@ -373,9 +373,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # The conf can be incorrect here if the cut into parts see errors like
         # a realm with hosts and not schedulers for it
         if not self.conf.conf_is_correct:
-            self.conf.show_errors()
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
+            self.conf.show_errors()
             sys.exit(err)
 
         logger.info('Things look okay - No serious problems were detected '
@@ -664,8 +664,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
-            print "ARR3:", arb
-            if arb.is_me():
+            if arb.get_name() in ['Default-Arbiter', self.config_name]:
                 self.myself = arb
 
         if self.conf.human_timestamp_log:
@@ -676,6 +675,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.dispatcher.check_alive()
         self.dispatcher.check_dispatch()
         # REF: doc/alignak-conf-dispatching.png (3)
+        self.dispatcher.prepare_dispatch()
         self.dispatcher.dispatch()
 
         # Now we can get all initial broks for our satellites
@@ -722,6 +722,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # REF: doc/alignak-conf-dispatching.png (3)
             _t0 = time.time()
+            self.dispatcher.prepare_dispatch()
             self.dispatcher.dispatch()
             statsmgr.incr('core.dispatch', time.time() - _t0)
 

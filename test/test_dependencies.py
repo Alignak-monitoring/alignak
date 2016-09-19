@@ -18,281 +18,434 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
-# This file incorporates work covered by the following copyright and
-# permission notice:
-#
-#  Copyright (C) 2009-2014:
-#     Hartmut Goebel, h.goebel@goebel-consult.de
-#     Grégory Starck, g.starck@gmail.com
-#     Sebastien Coavoux, s.coavoux@free.fr
-#     Jean Gabes, naparuba@gmail.com
-#     Zoran Zaric, zz@zoranzaric.de
-#     Gerhard Lausser, gerhard.lausser@consol.de
+"""
+This file test the dependencies between services, hosts
+"""
 
-#  This file is part of Shinken.
-#
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
-#
-# This file is used to test host- and service-downtimes.
-#
-
-from alignak_test import *
-sys.setcheckinterval(10000)
+import time
+from alignak_test import AlignakTest
 
 
-class TestConfig(AlignakTest):
+class TestDependencies(AlignakTest):
+    """
+    This class test dependencies between services, hosts
+    """
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_dependencies.cfg'])
+    def test_conf_dependencies(self):
+        """
+        Test dependencies right loaded from config files
 
-    def test_service_dependencies(self):
-        self.print_header()
-        now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
-        test_host_1 = self.sched.hosts.find_by_name("test_host_11")
-        test_host_0.checks_in_progress = []
-        test_host_1.checks_in_progress = []
-        test_host_0.act_depend_of = []  # ignore the router
-        test_host_1.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_00")
-        router.checks_in_progress = []
-        router.act_depend_of = []  # ignore other routers
-        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
-        test_host_0_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_1")
-        test_host_1_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_ok_0")
-        test_host_1_test_ok_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_ok_1")
-        # the most important: test_ok_0 is in the chk_depend_of-list of test_ok_1
-        self.assertIn(test_host_0_test_ok_0.uuid, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
-        self.assertIn(test_host_1_test_ok_0.uuid, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.assertEqual(len(self.configuration_errors), 0)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-        # and not vice versa
-        self.assertNotIn(test_host_0_test_ok_1.uuid, [x[0] for x in test_host_0_test_ok_0.chk_depend_of])
-        self.assertNotIn(test_host_1_test_ok_1.uuid, [x[0] for x in test_host_1_test_ok_0.chk_depend_of])
+        # test_host_00 -> test_router_00
+        test_host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        self.assertEqual(1, len(test_host_00.act_depend_of))
+        for (host, _, n_type, _, _) in test_host_00.act_depend_of:
+            self.assertEqual('network_dep', n_type)
+            self.assertEqual(self.schedulers[0].sched.hosts[host].host_name, 'test_router_00')
 
-        # test_ok_0 is also in the act_depend_of-list of test_ok_1
-        self.assertIn(test_host_0_test_ok_0.uuid, [x[0] for x in test_host_0_test_ok_1.chk_depend_of])
-        self.assertIn(test_host_1_test_ok_0.uuid, [x[0] for x in test_host_1_test_ok_1.chk_depend_of])
+        # test test_host_00.test_ok_1 -> test_host_00
+        # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                              "test_ok_1")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
+            if n_type == 'network_dep':
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_00')
+            elif n_type == 'logic_dep':
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
+                                 'test_ok_0')
 
-        # check the criteria
-        # execution_failure_criteria      u,c
-        # notification_failure_criteria   u,c,w
-        self.assertEqual([x[1] for x in test_host_0_test_ok_1.chk_depend_of if x[0] == test_host_0_test_ok_0.uuid], [['u', 'c']] )
-        self.assertEqual([x[1] for x in test_host_1_test_ok_1.chk_depend_of if x[0] == test_host_1_test_ok_0.uuid], [['u', 'c']] )
-        self.assertEqual([x[1] for x in test_host_0_test_ok_1.act_depend_of if x[0] == test_host_0_test_ok_0.uuid], [['u', 'c', 'w']] )
-        self.assertEqual([x[1] for x in test_host_1_test_ok_1.act_depend_of if x[0] == test_host_1_test_ok_0.uuid], [['u', 'c', 'w']] )
+        # test test_host_C -> test_host_A
+        # test test_host_C -> test_host_B
+        test_host_c = self.schedulers[0].sched.hosts.find_by_name("test_host_C")
+        self.assertEqual(2, len(test_host_c.act_depend_of))
+        hosts = []
+        for (host, _, n_type, _, _) in test_host_c.act_depend_of:
+            hosts.append(self.schedulers[0].sched.hosts[host].host_name)
+            self.assertEqual('logic_dep', n_type)
+        self.assertItemsEqual(hosts, ['test_host_A', 'test_host_B'])
 
-        # and every service has the host in it's act_depend_of-list
-        self.assertIn(test_host_0.uuid, [x[0] for x in test_host_0_test_ok_0.act_depend_of])
-        self.assertIn(test_host_0.uuid, [x[0] for x in test_host_0_test_ok_1.act_depend_of])
-        self.assertIn(test_host_1.uuid, [x[0] for x in test_host_1_test_ok_0.act_depend_of])
-        self.assertIn(test_host_1.uuid, [x[0] for x in test_host_1_test_ok_1.act_depend_of])
+        # test test_host_E -> test_host_D
+        test_host_e = self.schedulers[0].sched.hosts.find_by_name("test_host_E")
+        self.assertEqual(1, len(test_host_e.act_depend_of))
+        for (host, _, _, _, _) in test_host_e.act_depend_of:
+            self.assertEqual(self.schedulers[0].sched.hosts[host].host_name, 'test_host_D')
 
-        # and final count the masters
-        self.assertEqual(0, len(test_host_0_test_ok_0.chk_depend_of))
-        self.assertEqual(1, len(test_host_0_test_ok_1.chk_depend_of))
-        self.assertEqual(0, len(test_host_1_test_ok_0.chk_depend_of))
-        self.assertEqual(1, len(test_host_1_test_ok_1.chk_depend_of))
-        self.assertEqual(1, len(test_host_0_test_ok_0.act_depend_of))  # same, plus the host
-        self.assertEqual(2, len(test_host_0_test_ok_1.act_depend_of))
-        self.assertEqual(1, len(test_host_1_test_ok_0.act_depend_of))
-        self.assertEqual(2, len(test_host_1_test_ok_1.act_depend_of))
+        # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
+                                                                              "test_parent_svc")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
+            if n_type == 'network_dep':
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
+            elif n_type == 'logic_dep':
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
+                                 'test_son_svc')
 
-    def test_host_dependencies(self):
-        self.print_header()
-        now = time.time()
-        #
-        #   A  <------  B  <--
-        #   ^                 \---  C
-        #   |---------------------
-        #
-        host_A = self.sched.hosts.find_by_name("test_host_A")
-        host_B = self.sched.hosts.find_by_name("test_host_B")
-        host_C = self.sched.hosts.find_by_name("test_host_C")
-        host_D = self.sched.hosts.find_by_name("test_host_D")
+        # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_11",
+                                                                              "test_ok_1")
+        for (dep_id, _, n_type, _, _) in svc.act_depend_of:
+            if n_type == 'network_dep':
+                self.assertEqual(self.schedulers[0].sched.hosts[dep_id].host_name, 'test_host_11')
+            elif n_type == 'logic_dep':
+                self.assertEqual(self.schedulers[0].sched.services[dep_id].service_description,
+                                 'test_ok_0')
 
-        # the most important: test_ok_0 is in the chk_depend_of-list of test_ok_1
-        #self.assertTrue(host_A in [x[0] for x in host_C.chk_depend_of])
-        print host_C.act_depend_of
-        print host_C.chk_depend_of
-        print host_C.chk_depend_of_me
-        self.assertIn(host_B.uuid, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_A.uuid, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_A.uuid, [x[0] for x in host_B.act_depend_of])
-        self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_B.uuid, [x[0] for x in host_C.chk_depend_of])
-        self.assertIn(host_A.uuid, [x[0] for x in host_C.chk_depend_of])
-        self.assertIn(host_A.uuid, [x[0] for x in host_B.chk_depend_of])
-        self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_B.uuid, [x[0] for x in host_A.act_depend_of_me])
-        self.assertIn(host_C.uuid, [x[0] for x in host_A.act_depend_of_me])
-        self.assertIn(host_C.uuid, [x[0] for x in host_B.act_depend_of_me])
-        #self.assertEqual([], host_C.act_depend_of_me) # D in here
-        self.assertIn(host_B.uuid, [x[0] for x in host_A.chk_depend_of_me])
-        self.assertIn(host_C.uuid, [x[0] for x in host_A.chk_depend_of_me])
-        self.assertIn(host_C.uuid, [x[0] for x in host_B.chk_depend_of_me])
-        self.assertIn(host_D.uuid, [x[0] for x in host_C.chk_depend_of_me])
+    def test_conf_notright1(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in hostdependency dependent_host_name unknown
 
-        # check the notification/execution criteria
-        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] == host_B.uuid])
-        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] == host_B.uuid])
-        self.assertEqual([['d', 'u']], [x[1] for x in host_C.act_depend_of if x[0] == host_A.uuid])
-        self.assertEqual([['d']],       [x[1] for x in host_C.chk_depend_of if x[0] == host_A.uuid])
-        self.assertEqual([['d', 'u']], [x[1] for x in host_B.act_depend_of if x[0] == host_A.uuid])
-        self.assertEqual([['n']],       [x[1] for x in host_B.chk_depend_of if x[0] == host_A.uuid])
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad1.cfg')
+        self.assertEqual(len(self.configuration_errors), 6)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-    def test_host_inherits_dependencies(self):
-        self.print_header()
-        now = time.time()
-        #
-        #   A  <------  B  <--
-        #   ^                 \---  C   <--  D
-        #   |---------------------
-        #
-        host_A = self.sched.hosts.find_by_name("test_host_A")
-        host_B = self.sched.hosts.find_by_name("test_host_B")
-        host_C = self.sched.hosts.find_by_name("test_host_C")
-        host_D = self.sched.hosts.find_by_name("test_host_D")
+    def test_conf_notright2(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in hostdependency host_name unknown
 
-        print "A depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_A.chk_depend_of])
-        print "B depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_B.chk_depend_of])
-        print "C depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_C.chk_depend_of])
-        print "D depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_D.chk_depend_of])
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad2.cfg')
+        self.assertEqual(len(self.configuration_errors), 6)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-        self.assertEqual([], host_A.act_depend_of)
-        self.assertIn(host_A.uuid, [x[0] for x in host_B.act_depend_of])
-        self.assertIn(host_A.uuid, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_B.uuid, [x[0] for x in host_C.act_depend_of])
-        self.assertIn(host_C.uuid, [x[0] for x in host_D.act_depend_of])
+    def test_conf_notright3(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in host definition, parent unknown
 
-        # and through inherits_parent....
-        #self.assertTrue(host_A in [x[0] for x in host_D.act_depend_of])
-        #self.assertTrue(host_B in [x[0] for x in host_D.act_depend_of])
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad3.cfg')
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assertEqual(len(self.configuration_warnings), 8)
 
+    def test_conf_notright4(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, dependent_service_description unknown
 
-    # Now test a in service service_dep definition. More easierto use than create a full new object
-    def test_in_servicedef_dep(self):
-        svc_parent = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_parent_svc")
-        svc_son = self.sched.services.find_srv_by_name_and_hostname("test_host_11", "test_son_svc")
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad4.cfg')
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-        print "DumP", self.conf.servicedependencies
+    def test_conf_notright5(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, dependent_host_name unknown
 
-        # the most important: test_parent is in the chk_depend_of-list of test_son
-        print "Dep: ", svc_son.act_depend_of
-        self.assertEqual([x[1] for x in svc_son.act_depend_of if x[0] == svc_parent.uuid], [['u', 'c', 'w']] )
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad5.cfg')
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-    def test_host_non_inherits_dependencies(self):
-        #
-        #   A  <------  B  <--
-        #   ^                 \NOT/---  C   <--  D
-        #   |---------------------
-        #
-        host_A = self.sched.hosts.find_by_name("test_host_A")
-        host_B = self.sched.hosts.find_by_name("test_host_B")
-        host_C = self.sched.hosts.find_by_name("test_host_C")
-        host_D = self.sched.hosts.find_by_name("test_host_D")
-        host_E = self.sched.hosts.find_by_name("test_host_E")
+    def test_conf_notright6(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, host_name unknown
 
-        print "A depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_A.chk_depend_of])
-        print "B depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_B.chk_depend_of])
-        print "C depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_C.chk_depend_of])
-        print "D depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_D.chk_depend_of])
-        print "E depends on", ",".join([self.sched.find_item_by_id(x[0]).get_name() for x in host_E.chk_depend_of])
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad6.cfg')
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-        host_C.state = 'DOWN'
-        print "D state", host_D.state
-        print "E dep", host_E.chk_depend_of
-        print "I raise?", host_D.do_i_raise_dependency('d', False, self.sched.hosts,
-                                                       self.sched.services, self.sched.timeperiods)
-        # If I ask D for dep, he should raise Nothing if we do not want parents.
-        self.assertFalse(host_D.do_i_raise_dependency('d', False, self.sched.hosts,
-                                                      self.sched.services, self.sched.timeperiods))
-        # But he should raise a problem (C here) of we ask for its parents
-        self.assertTrue(host_D.do_i_raise_dependency('d', True, self.sched.hosts,
-                                                     self.sched.services, self.sched.timeperiods) )
+    def test_conf_notright7(self):
+        """
+        Test arbiter give an error when have an orphan dependency in config files
+        in servicedependency, service_description unknown
 
+        :return: None
+        """
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/cfg_dependencies_bad7.cfg')
+        # Service test_ok_0_notknown not found for 2 hosts.
+        self.assertEqual(len(self.configuration_errors), 3)
+        self.assertEqual(len(self.configuration_warnings), 0)
 
-    def test_check_dependencies(self):
-        self.print_header()
-        now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
-        test_host_0.checks_in_progress = []
-        test_host_0.act_depend_of = []  # ignore the router
+    def test_service_host_case_1(self):
+        """
+        Test dependency (checks and notifications) between the service and the host (case 1)
 
-        test_host_0_test_ok_0 = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
-        # The pending state is always different. Let assume it OK
-        test_host_0.state = 'OK'
+        08:00:00 check_host OK HARD
+        08:01:30 check_service CRITICAL SOFT
+        => host check planned
 
-        # Create a fake check already done for service
-        cs = Check({'status': 'waitconsume', 'command': 'foo', 'ref': test_host_0_test_ok_0.id, 't_to_go': now})
-        cs.exit_status = 2
-        cs.output = 'BAD'
-        cs.check_time = now
-        cs.execution_time = now
+        08:02:30 check_service CRITICAL HARD
 
-        # Create a fake check for the host (so that it is in checking)
-        ch = Check({'status': 'scheduled', 'command': 'foo', 'ref': test_host_0.id, 't_to_go': now})
-        test_host_0.checks_in_progress.append(ch.uuid)
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.schedulers[0].sched.recurrent_works[1]
 
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
 
-        # This service should have his host dep
-        self.assertNotEqual(0, len(test_host_0_test_ok_0.act_depend_of))
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                              "test_ok_0")
+        # To make tests quicker we make notifications send very quickly
+        svc.notification_interval = 0.001
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
 
-        # Ok we are at attempt 0 (we should have a 1 with the OK state, but nervermind)
-        self.assertEqual(0, test_host_0.attempt)
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        self.assert_actions_count(0)
 
-        # Add the check to sched queue
-        self.sched.add(cs)
-        self.sched.add(ch)
-        # This should raise a log entry and schedule the host check now
-        self.sched.consume_results()
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assertEqual("SOFT", svc.state_type)
+        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        self.assert_actions_count(0)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_00', 'command')
 
-        # Take the host check. The one generated by dependency not the usual one
-        c_dep = test_host_0.actions[1]
-        self.assertTrue(bool(c_dep.dependency_check))
+    def test_host_host(self):
+        """
+        Test the dependency between 2 hosts
 
-        # Hack it to consider it as down and returning critical state
-        c_dep.status = 'waitconsume'
-        c_dep.exit_status = 2
-        c_dep.output = 'BAD'
-        c_dep.check_time = now
-        c_dep.execution_time = now
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.schedulers[0].sched.recurrent_works[1]
 
-        # Add and process result
-        self.sched.add(c_dep)
-        self.sched.consume_results()
+        host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        host_00.checks_in_progress = []
+        host_00.event_handler_enabled = False
 
-        # We should not have a new attempt as it was a depency check.
-        self.assertEqual(0, test_host_0.attempt)
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
+        router_00.checks_in_progress = []
+        router_00.event_handler_enabled = False
 
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [router_00, 0, 'UP']])
+        time.sleep(0.1)
+        self.assert_actions_count(0)
+        self.assert_checks_count(0)
 
-    def test_disabled_host_service_dependencies(self):
-        self.print_header()
-        now = time.time()
-        test_host_0 = self.sched.hosts.find_by_name("test_host_00")
-        test_host_0.checks_in_progress = []
-        test_host_0.act_depend_of = []  # ignore the router
-        test_host_0_test_ok_0_d = self.sched.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0_disbld_hst_dep")
-        self.assertEqual(0, len(test_host_0_test_ok_0_d.act_depend_of))
-        self.assertNotIn(test_host_0_test_ok_0_d, [x[0] for x in test_host_0.act_depend_of_me])
+        self.scheduler_loop(1, [[host_00, 2, 'DOWN']])
+        time.sleep(0.1)
+        self.assert_actions_count(0)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')
 
+    def test_service_host_host(self):
+        """
+        Test the dependencies between host -> host -> host
 
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.schedulers[0].sched.recurrent_works[1]
 
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
+        router_00.checks_in_progress = []
+        router_00.event_handler_enabled = False
 
-if __name__ == '__main__':
-    import cProfile
-    command = """unittest.main()"""
-    unittest.main()
-    #cProfile.runctx( command, globals(), locals(), filename="Thruk.profile" )
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                              "test_ok_0")
+        # To make tests quicker we make notifications send very quickly
+        svc.notification_interval = 0.001
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
+
+        # Host is UP
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], reset_checks=True)
+        time.sleep(0.1)
+        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        self.assert_actions_count(0)
+
+        # Service is CRITICAL
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], reset_checks=True)
+        time.sleep(0.1)
+        self.assertEqual("SOFT", svc.state_type)
+        self.assertEqual("CRITICAL", svc.state)
+        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        self.assert_actions_count(0)
+        # New host check
+        self.assert_checks_count(1)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_00', 'command')
+
+        # Host is DOWN
+        self.scheduler_loop(1, [[host, 2, 'DOWN']], reset_checks=True)
+        time.sleep(0.1)
+        # New dependent host check
+        self.assert_checks_count(1)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')
+
+        # Router is DOWN
+        self.scheduler_loop(1, [[router_00, 2, 'DOWN']], False)
+        time.sleep(0.1)
+        # New router check
+        self.assert_checks_count(1)
+        self.show_checks()
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')
+
+    def test_multi_services(self):
+        """
+        Test when have multiple services dependency the host
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.schedulers[0].sched.recurrent_works[1]
+
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+
+        svc1 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                               "test_ok_0")
+        # To make tests quicker we make notifications send very quickly
+        svc1.notification_interval = 0.001
+        svc1.checks_in_progress = []
+        svc1.event_handler_enabled = False
+
+        svc2 = self.schedulers[0].sched.services.find_srv_by_name_and_hostname(
+            "test_host_00", "test_ok_0_disbld_hst_dep")
+        # To make tests quicker we make notifications send very quickly
+        svc2.notification_interval = 0.001
+        svc2.checks_in_progress = []
+        svc2.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']], False)
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']], False)
+        time.sleep(0.1)
+        self.assertEqual("HARD", svc1.state_type)
+        self.assertEqual("OK", svc1.state)
+        self.assertEqual("HARD", svc2.state_type)
+        self.assertEqual("OK", svc2.state)
+        self.assertEqual("HARD", host.state_type)
+        self.assertEqual("UP", host.state)
+        self.assert_actions_count(0)
+        self.assert_checks_count(0)
+
+        self.scheduler_loop(1, [[svc1, 2, 'CRITICAL'], [svc2, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(0)
+        self.assert_checks_count(1)
+        self.assertEqual("UP", host.state)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_00', 'command')
+
+    def test_passive_service_not_check_passive_host(self):
+        """
+        Test passive service critical not check the dependent host (passive)
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
+
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_E")
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_E",
+                                                                              "test_ok_0")
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], False)
+        self.assert_actions_count(0)
+        self.assert_checks_count(0)
+
+    def test_passive_service_check_active_host(self):
+        """
+        Test passive service critical check the dependent host (active)
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.schedulers[0].sched.update_recurrent_works_tick('check_freshness', 1)
+
+        host = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        svc = self.schedulers[0].sched.services.find_srv_by_name_and_hostname("test_host_00",
+                                                                              "test_passive_0")
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']], False)
+        self.assert_actions_count(0)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_00', 'command')
+
+    def test_multi_hosts(self):
+        """
+        Test when have multiple hosts dependency the host
+        test_host_00 and test_host_11 depends on test_router_0
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # delete schedule
+        del self.schedulers[0].sched.recurrent_works[1]
+
+        host_00 = self.schedulers[0].sched.hosts.find_by_name("test_host_00")
+        host_00.checks_in_progress = []
+        host_00.event_handler_enabled = False
+
+        host_11 = self.schedulers[0].sched.hosts.find_by_name("test_host_11")
+        host_11.checks_in_progress = []
+        host_11.event_handler_enabled = False
+
+        router_00 = self.schedulers[0].sched.hosts.find_by_name("test_router_00")
+        router_00.checks_in_progress = []
+        router_00.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']],
+                            False)
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[host_00, 0, 'UP'], [host_11, 0, 'UP'], [router_00, 0, 'UP']],
+                            False)
+        time.sleep(0.1)
+        self.assertEqual("HARD", host_00.state_type)
+        self.assertEqual("UP", host_00.state)
+        self.assertEqual("HARD", host_11.state_type)
+        self.assertEqual("UP", host_11.state)
+        self.assertEqual("HARD", router_00.state_type)
+        self.assertEqual("UP", router_00.state)
+
+        self.scheduler_loop(1, [[host_00, 2, 'DOWN'], [host_11, 2, 'DOWN']], False)
+        time.sleep(0.1)
+        self.assert_checks_count(1)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_00', 'command')

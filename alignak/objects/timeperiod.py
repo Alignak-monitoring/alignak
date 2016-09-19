@@ -592,23 +592,29 @@ class Timeperiod(Item):
         return hasattr(self, prop)
 
     def is_correct(self):
-        """
-        Check if dateranges of timeperiod are valid
+        """Check if this object configuration is correct ::
 
-        :return: false if at least one datarange is invalid
+        * Check if dateranges of timeperiod are valid
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False if at least one daterange
+        is not correct
         :rtype: bool
         """
-        valid = True
+        state = True
         for daterange in self.dateranges:
             good = daterange.is_correct()
             if not good:
-                logger.error("[timeperiod::%s] invalid daterange ", self.get_name())
-            valid &= good
+                msg = "[timeperiod::%s] invalid daterange '%s'" % (self.get_name(), daterange)
+                self.configuration_errors.append(msg)
+            state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
-            logger.warning("[timeperiod::%s] invalid entry '%s'", self.get_name(), entry)
-        return valid
+            msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
+            self.configuration_errors.append(msg)
+
+        return super(Timeperiod, self).is_correct() and state
 
     def __str__(self):
         """
@@ -947,11 +953,12 @@ class Timeperiod(Item):
             excluded_tps = self.exclude
             # print "I will exclude from:", excluded_tps
             for tp_name in excluded_tps:
-                timepriod = timeperiods.find_by_name(tp_name.strip())
-                if timepriod is not None:
-                    new_exclude.append(timepriod.uuid)
+                timeperiod = timeperiods.find_by_name(tp_name.strip())
+                if timeperiod is not None:
+                    new_exclude.append(timeperiod.uuid)
                 else:
-                    logger.error("[timeentry::%s] unknown %s timeperiod", self.get_name(), tp_name)
+                    msg = "[timeentry::%s] unknown %s timeperiod" % (self.get_name(), tp_name)
+                    self.configuration_errors.append(msg)
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
@@ -962,7 +969,8 @@ class Timeperiod(Item):
         :rtype: bool
         """
         if self.rec_tag:
-            logger.error("[timeentry::%s] is in a loop in exclude parameter", self.get_name())
+            msg = "[timeentry::%s] is in a loop in exclude parameter" % (self.get_name())
+            self.configuration_errors.append(msg)
             return False
         self.rec_tag = True
         for timeperiod in self.exclude:
@@ -1064,14 +1072,26 @@ class Timeperiods(Items):
         for timeperiod in self.items.values():
             for tmp_tp in self.items.values():
                 tmp_tp.rec_tag = False
-            valid &= timeperiod.check_exclude_rec()
+            valid = timeperiod.check_exclude_rec() and valid
 
-        # We clean the tags
+        # We clean the tags and collect the warning/erro messages
         for timeperiod in self.items.values():
             del timeperiod.rec_tag
 
+            # Now other checks
+            if not timeperiod.is_correct():
+                valid = False
+                source = getattr(timeperiod, 'imported_from', "unknown source")
+                msg = "Configuration in %s::%s is incorrect; from: %s" % (
+                    timeperiod.my_type, timeperiod.get_name(), source
+                )
+                self.configuration_errors.append(msg)
+
+            self.configuration_errors += timeperiod.configuration_errors
+            self.configuration_warnings += timeperiod.configuration_warnings
+
         # And check all timeperiods for correct (sunday is false)
         for timeperiod in self:
-            valid &= timeperiod.is_correct()
+            valid = timeperiod.is_correct() and valid
 
         return valid

@@ -74,7 +74,7 @@ from alignak.dependencynode import DependencyNode
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import to_list_of_names, get_obj_name
+from alignak.util import from_set_to_list, get_obj_name
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -115,10 +115,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'check_period':
             StringProp(fill_brok=['full_status'],
                        special=True),
+        # Set a default freshness threshold not 0 if parameter is missing
+        # and check_freshness is enabled
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=3600, fill_brok=['full_status']),
+
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
         'event_handler_enabled':
@@ -377,7 +380,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # use for having all contacts we have notified
         'notified_contacts':  SetProp(default=set(),
                                       retention=True,
-                                      retention_preparation=to_list_of_names),
+                                      retention_preparation=from_set_to_list),
         'in_scheduled_downtime': BoolProp(
             default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
@@ -440,9 +443,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     }
 
     old_properties = {
-        'normal_check_interval':    'check_interval',
-        'retry_check_interval':    'retry_interval',
-        'criticity':    'business_impact',
+        'normal_check_interval': 'check_interval',
+        'retry_check_interval': 'retry_interval',
+        'criticity': 'business_impact',
     }
 
     special_properties = []
@@ -464,6 +467,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             del params['business_rule']
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
             self.acknowledgement = Acknowledge(params['acknowledgement'])
+
         super(SchedulingItem, self).__init__(params, parsing=parsing)
 
     def serialize(self):
@@ -610,7 +614,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                            checks):
-        """Check freshness and schedule a check now if necessary.
+        """
+        Check freshness and schedule a check now if necessary.
+
+        Before calling, check if host or service has check_freshness and passive_checks enabled
 
         :param hosts: hosts objects, used to launch checks
         :type hosts: alignak.objects.host.Hosts
@@ -628,34 +635,48 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype: None | object
         """
         now = time.time()
-        # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
-        if not self.in_checking:
-            if cls.global_check_freshness:
-                if self.check_freshness and self.freshness_threshold != 0:
-                    if self.last_state_update < now - (
-                            self.freshness_threshold + cls.additional_freshness_latency
-                    ):
-                        # Fred: Do not raise a check for passive
-                        # only checked hosts when not in check period ...
-                        if self.passive_checks_enabled and not self.active_checks_enabled:
-                            timeperiod = timeperiods[self.check_period]
-                            if timeperiod is None or timeperiod.is_time_valid(now):
-                                # Raise a log
-                                self.raise_freshness_log_entry(
-                                    int(now - self.last_state_update),
-                                    int(now - self.freshness_threshold)
-                                )
-                                # And a new check
-                                return self.launch_check(now, hosts, services, timeperiods,
-                                                         macromodulations, checkmodulations, checks)
-                            else:
-                                logger.debug(
-                                    "Should have checked freshness for passive only"
-                                    " checked host:%s, but host is not in check period.",
-                                    self.host_name
-                                )
+        if not self.in_checking and cls.global_check_freshness:
+            if self.freshness_threshold != 0:
+                # If we start alignak, we begin the freshness period
+                if self.last_state_update == 0.0:
+                    self.last_state_update = now
+                if self.last_state_update < now - (
+                        self.freshness_threshold + cls.additional_freshness_latency
+                ):
+                    # Do not raise a check for passive only checked hosts
+                    # when not in check period ...
+                    if not self.active_checks_enabled:
+                        timeperiod = timeperiods[self.check_period]
+                        if timeperiod is None or timeperiod.is_time_valid(now):
+                            # Raise a log
+                            self.raise_freshness_log_entry(
+                                int(now - self.last_state_update),
+                                int(now - self.freshness_threshold)
+                            )
+                            # And a new check
+                            chk = self.launch_check(now, hosts, services, timeperiods,
+                                                    macromodulations, checkmodulations, checks)
+                            chk.output = "Freshness period expired"
+                            chk.set_type_passive()
+                            if self.freshness_state == 'o':
+                                chk.exit_status = 0
+                            elif self.freshness_state == 'w':
+                                chk.exit_status = 1
+                            elif self.freshness_state == 'd':
+                                chk.exit_status = 2
+                            elif self.freshness_state == 'c':
+                                chk.exit_status = 2
+                            elif self.freshness_state == 'u':
+                                chk.exit_status = 3
+                            return chk
+                        else:
+                            logger.debug(
+                                "Should have checked freshness for passive only"
+                                " checked host:%s, but host is not in check period.",
+                                self.host_name
+                            )
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
@@ -1052,7 +1073,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * dep.last_state_update < now - cls.cached_check_horizon (check of dependency is "old")
 
         :param ref_check: Check we want to get dependency from
-        :type ref_check:
+        :type ref_check: alignak.check.Check
         :param hosts: hosts objects, used for almost every operation
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used for almost every operation
@@ -1073,25 +1094,23 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         new_checks = []
         for (dep_id, _, _, timeperiod_id, _) in self.act_depend_of:
             if dep_id in hosts:
-                dep = hosts[dep_id]
+                dep_item = hosts[dep_id]
             else:
-                dep = services[dep_id]
+                dep_item = services[dep_id]
             timeperiod = timeperiods[timeperiod_id]
-            # If the dep timeperiod is not valid, do not raise the dep,
+            # If the dep_item timeperiod is not valid, do not raise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
                 # if the update is 'fresh', do not raise dep,
                 # cached_check_horizon = cached_service_check_horizon for service
-                if dep.last_state_update < now - cls.cached_check_horizon:
-                    # Fred : passive only checked host dependency ...
-                    chk = dep.launch_check(now, hosts, services, timeperiods, macromodulations,
-                                           checkmodulations, checks, ref_check, dependent=True)
-                    # i = dep.launch_check(now, ref_check)
-                    if chk is not None:
-                        new_checks.append(chk)
-                # else:
-                # print "DBG: **************** The state is FRESH",
-                # dep.host_name, time.asctime(time.localtime(dep.last_state_update))
+                if dep_item.last_state_update < now - cls.cached_check_horizon:
+                    # not lunch check if dependence is a passive check or if a check yet planned
+                    if dep_item.active_checks_enabled and not dep_item.in_checking:
+                        chk = dep_item.launch_check(now, hosts, services, timeperiods,
+                                                    macromodulations, checkmodulations, checks,
+                                                    ref_check, dependent=True)
+                        if chk is not None:
+                            new_checks.append(chk)
         return new_checks
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
@@ -1265,16 +1284,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
+        # logger.error("update_in_checking, %s, in_progress: %s", self, self.checks_in_progress)
+        # for c in self.checks_in_progress:
+        #     logger.error("Check in progress: %s", c)
         self.in_checking = (len(self.checks_in_progress) != 0)
 
     def remove_in_progress_notification(self, notif):
-        """Remove a notification and mark them as zombie
+        """
+        Remove a "master" notification and mark them as zombie
 
         :param notif: the notification to remove
         :type notif:
         :return: None
         """
-        if notif.uuid in self.notifications_in_progress:
+        if notif.uuid in self.notifications_in_progress and notif.command == 'VOID':
             notif.status = 'zombie'
             del self.notifications_in_progress[notif.uuid]
 
@@ -1405,7 +1428,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.actions.append(event_h)
 
     def check_for_flexible_downtime(self, timeperiods, downtimes, hosts, services):
-        """Enter in a dowtime if necessary and raise start notification
+        """Enter in a downtime if necessary and raise start notification
         When a non Ok state occurs we try to raise a flexible downtime.
 
         :param timeperiods: Timeperiods objects, used for downtime period
@@ -1516,6 +1539,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Protect against bad type output
         # if str, go in unicode
+        # TODO: should protect against bad decoding ...
         if isinstance(chk.output, str):
             chk.output = chk.output.decode('utf8', 'ignore')
             chk.long_output = chk.long_output.decode('utf8', 'ignore')
@@ -1525,6 +1549,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # migration from old shinken version, that got output as str
         # and not unicode
         # if str, go in unicode
+        # TODO: should protect against bad decoding ...
         if isinstance(self.output, str):
             self.output = self.output.decode('utf8', 'ignore')
             self.long_output = self.long_output.decode('utf8', 'ignore')
@@ -1747,6 +1772,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.state_type == 'SOFT':
                 if not chk.is_dependent():
                     self.add_attempt()
+                # Cases where go:
+                #  * warning soft => critical hard
+                #  * warning soft => critical soft
+                if self.state != self.last_state:
+                    self.unacknowledge_problem_if_not_sticky(comments)
                 if self.is_max_attempts():
                     # Ok here is when we just go to the hard state
                     self.state_type = 'HARD'
@@ -1787,6 +1817,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         self.remove_in_progress_notifications()
                         if not no_action:
                             self.create_notifications('PROBLEM', notif_period, hosts, services)
+                        self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                 elif self.in_scheduled_downtime_during_last_check is True:
                     # during the last check i was in a downtime. but now
@@ -2062,7 +2093,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :param hosts: hosts objects, used to check if a notif is blocked
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used to check if a notif is blocked
-        :type services: alignak.objects.service.Service
+        :type services: alignak.objects.service.Services
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None
@@ -2111,7 +2142,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             # downtime/flap/etc do not change the notification number
             next_notif_nb = self.current_notification_number
-
         data = {
             'type': n_type,
             'command': 'VOID',
@@ -2241,6 +2271,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                      dependent=False):
         """Launch a check (command)
 
+        The `force` parameter is set to True by the external commands and triggers. As of it, one
+        can consider that this parameter indicates that the check will not be "launched" but rather
+        is a bypass to launch.
+
         :param timestamp:
         :type timestamp: int
         :param checkmodulations: Checkmodulations objects, used to change check command if necessary
@@ -2260,7 +2294,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Look if we are in check or not
         self.update_in_checking()
 
-        # the check is being forced, so we just replace next_chk time by now
+        # the check is being forced, so we just replace next_chk time by now if the same check
+        # is already scheduled to be launched. We return the id of the check.
+        # logger.error("launch_check, force: %s, in_checking: %s, %s",
+        #              force, self.in_checking, self)
         if force and self.in_checking:
             now = time.time()
             c_in_progress = checks[self.checks_in_progress[0]]
@@ -2268,13 +2305,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return c_in_progress
 
         # If I'm already in checking, Why launch a new check?
-        # If ref_check_id is not None , this is a dependency_ check
+        # If ref_check_id is not None, this is a dependency_ check
         # If none, it might be a forced check, so OK, I do a new
 
         # Dependency check, we have to create a new check that will be launched only once (now)
         # Otherwise it will delay the next real check. this can lead to an infinite SOFT state.
         if not force and (self.in_checking and ref_check is not None):
-
             c_in_progress = checks[self.checks_in_progress[0]]
 
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
@@ -2288,6 +2324,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check],
                 'ref': self.uuid,
+                'ref_type': self.my_type,
                 'dependency_check': True,
                 'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
             }
@@ -2340,18 +2377,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if check_command.timeout != -1:
                 timeout = check_command.timeout
 
-            # Make the Check object and put the service in checking
+            # Make the Check object and put it in checking
             # Make the check inherit poller_tag from the command
             # And reactionner_tag too
             data = {
                 'command': command_line,
                 'timeout': timeout,
                 'poller_tag': check_command.poller_tag,
+                'reactionner_tag': check_command.reactionner_tag,
                 'env': env,
                 'module_type': check_command.module_type,
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check] if ref_check else [],
                 'ref': self.uuid,
+                'ref_type': self.my_type,
                 'internal': self.got_business_rule or command_line.startswith('_internal')
             }
             chk = Check(data)
@@ -2736,6 +2775,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 if comm.entry_type == 4 and not comm.persistent:
                     self.del_comment(comm.uuid, comments)
             self.broks.append(self.get_update_status_brok())
+        else:
+            logger.warning(
+                "Deleting acknowledge requested for %s %s but element is not acknowledged.",
+                self.my_type, self.get_name()
+            )
 
     def unacknowledge_problem_if_not_sticky(self, comments):
         """
@@ -2746,6 +2790,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem(comments)
+        else:
+            logger.warning(
+                "Deleting acknowledge requested for %s %s but element is not acknowledged.",
+                self.my_type, self.get_name()
+            )
 
     def raise_alert_log_entry(self):
         """Raise ALERT entry (critical level)
@@ -2970,67 +3019,73 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         pass
 
     def is_correct(self):
+        """Check if this object configuration is correct ::
 
+        * Check our own specific properties
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False
+        :rtype: bool
+        """
         state = True
 
-        for prop, entry in self.__class__.properties.items():
-            if not entry.special and not hasattr(self, prop) and entry.required:
-                logger.error("[%s::%s] %s property not set",
-                             self.my_type, self.get_name(), prop)
-                state = False
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[%s::%s] %s", self.my_type, self.get_name(), err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[%s::%s] %s", self.my_type, self.get_name(), err)
-
-        # If no notif period, set it to None, mean 24x7
+        # If no notification period, set it to None, meaning 24x7
         if not hasattr(self, 'notification_period'):
             self.notification_period = None
 
         # Ok now we manage special cases...
         if self.notifications_enabled and self.contacts == []:
-            logger.warning("[%s::%s] no contacts nor contact_groups property",
-                           self.my_type, self.get_name())
+            msg = "[%s::%s] no contacts nor contact_groups property" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_warnings.append(msg)
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("[%s::%s] event_handler '%s' is invalid",
-                         self.my_type, self.get_name(), self.event_handler.command)
+            msg = "[%s::%s] event_handler '%s' is invalid" % (
+                self.my_type, self.get_name(), self.event_handler.command
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         if not hasattr(self, 'check_command'):
-            logger.error("[%s::%s] no check_command", self.my_type, self.get_name())
+            msg = "[%s::%s] no check_command" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
-                logger.error("[%s::%s] check_command '%s' invalid",
-                             self.my_type, self.get_name(), self.check_command.command)
+                msg = "[%s::%s] check_command '%s' invalid" % (
+                    self.my_type, self.get_name(), self.check_command.command
+                )
+                self.configuration_errors.append(msg)
                 state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    logger.error("[%s::%s] business_rule invalid",
-                                 self.my_type, self.get_name())
+                    msg = "[%s::%s] business_rule invalid" % (
+                        self.my_type, self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     for bperror in self.business_rule.configuration_errors:
-                        logger.error("[%s::%s]: %s", self.my_type, self.get_name(), bperror)
+                        msg = "[%s::%s]: %s" % (self.my_type, self.get_name(), bperror)
+                        self.configuration_errors.append(msg)
                     state = False
 
         if not hasattr(self, 'notification_interval') \
                 and self.notifications_enabled is True:
-            logger.error("[%s::%s] no notification_interval but notifications enabled",
-                         self.my_type, self.get_name())
+            msg = "[%s::%s] no notification_interval but notifications enabled" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         # if no check_period, means 24x7, like for services
         if not hasattr(self, 'check_period'):
             self.check_period = None
+
+        state = super(SchedulingItem, self).is_correct()
 
         return state
 
@@ -3084,7 +3139,14 @@ class SchedulingItems(CommandCallItems):
         :type inherits_parents: bool
         :return:
         """
-        son = self[son_id]
+        if son_id in self:
+            son = self[son_id]
+        else:
+            logger.error("Dependency son (%s) unknown, configuration error", son_id)
+            msg = "Dependency son (%s) unknown, configuration error" % (son_id)
+            self.configuration_errors.append(msg)
+            # sys.exit(2)
+            return False
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
                                   inherits_parents))
@@ -3094,6 +3156,8 @@ class SchedulingItems(CommandCallItems):
         # TODO: Is it necessary? We already have this info in act_depend_* attributes
         son.parent_dependencies.add(parent_id)
         parent.child_dependencies.add(son_id)
+
+        return True
 
     def del_act_dependency(self, son_id, parent_id):
         """Remove act_dependency between two hosts or services.

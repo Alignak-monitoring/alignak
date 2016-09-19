@@ -159,6 +159,8 @@ class ArbiterLinks(SatelliteLinks):
 
         :param modules: list of modules
         :type modules: list
+        :param realms: list of realms
+        :type realms: list | None
         :return: None
         """
         self.linkify_s_by_plug(modules)

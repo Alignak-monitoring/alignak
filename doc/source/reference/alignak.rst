@@ -143,38 +143,6 @@ alignak.daterange module
     :undoc-members:
     :show-inheritance:
 
-alignak.db module
------------------
-
-.. automodule:: alignak.db
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_mysql module
------------------------
-
-.. automodule:: alignak.db_mysql
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_oracle module
-------------------------
-
-.. automodule:: alignak.db_oracle
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_sqlite module
-------------------------
-
-.. automodule:: alignak.db_sqlite
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.dependencynode module
 -----------------------------
 

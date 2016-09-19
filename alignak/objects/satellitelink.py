@@ -44,8 +44,6 @@
 This module provides an abstraction layer for communications between Alignak daemons
 Used by the Arbiter
 """
-import time
-
 from alignak.util import get_obj_name_two_args_and_void
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
@@ -91,9 +89,10 @@ class SatelliteLink(Item):
         'attempt':              StringProp(default=0, fill_brok=['full_status']),
 
         # can be network ask or not (dead or check in timeout or error)
-        'reachable':            BoolProp(default=False, fill_brok=['full_status']),
-        'last_check':           IntegerProp(default=0, fill_brok=['full_status']),
-        'managed_confs':        StringProp(default={}),
+        'reachable':     BoolProp(default=True, fill_brok=['full_status']),
+        'last_check':    IntegerProp(default=0, fill_brok=['full_status']),
+        'managed_confs': StringProp(default={}),
+        'is_sent':       BoolProp(default=False),
     })
 
     def __init__(self, *args, **kwargs):
@@ -164,7 +163,6 @@ class SatelliteLink(Item):
             return False
 
         try:
-            self.con.get('ping')
             self.con.post('put_conf', {'conf': conf}, wait='long')
             print "PUT CONF SUCCESS", self.get_name()
             return True
@@ -241,7 +239,7 @@ class SatelliteLink(Item):
         if self.attempt == self.max_check_attempts:
             self.set_dead()
 
-    def update_infos(self):
+    def update_infos(self, now):
         """Update satellite info each self.check_interval seconds
         so we smooth arbiter actions for just useful actions.
         Create update Brok
@@ -249,15 +247,16 @@ class SatelliteLink(Item):
         :return: None
         """
         # First look if it's not too early to ping
-        now = time.time()
-        since_last_check = now - self.last_check
-        if since_last_check < self.check_interval:
+        if (now - self.last_check) < self.check_interval:
             return
 
         self.last_check = now
 
         # We ping and update the managed list
         self.ping()
+        if not self.alive or self.attempt > 0:
+            return
+
         self.update_managed_list()
 
         # Update the state of this element
@@ -453,8 +452,6 @@ class SatelliteLink(Item):
             return False
 
         try:
-            # Always do a simple ping to avoid a LOOOONG lock
-            self.con.get('ping')
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
         except HTTPEXCEPTIONS:
@@ -478,7 +475,6 @@ class SatelliteLink(Item):
             return []
 
         try:
-            self.con.get('ping')
             tab = self.con.get('get_external_commands', wait='long')
             tab = unserialize(str(tab))
             # Protect against bad return
@@ -509,9 +505,6 @@ class SatelliteLink(Item):
                 self.cfg['global'][prop] = getattr(self, prop)
         cls = self.__class__
         # Also add global values
-        self.cfg['global']['api_key'] = cls.api_key
-        self.cfg['global']['secret'] = cls.secret
-        self.cfg['global']['http_proxy'] = cls.http_proxy
         self.cfg['global']['statsd_host'] = cls.statsd_host
         self.cfg['global']['statsd_port'] = cls.statsd_port
         self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
@@ -554,8 +547,6 @@ class SatelliteLink(Item):
                 'passive': self.passive,
                 'poller_tags': getattr(self, 'poller_tags', []),
                 'reactionner_tags': getattr(self, 'reactionner_tags', []),
-                'api_key': self.__class__.api_key,
-                'secret':  self.__class__.secret,
                 }
 
 
