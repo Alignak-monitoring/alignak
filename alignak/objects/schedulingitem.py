@@ -1667,7 +1667,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
             # print "Case 1 (OK following a previous OK):
             # code:%s last_state:%s" % (c.exit_status, self.last_state)
-            self.unacknowledge_problem(comments)
+            if self.problem_has_been_acknowledged:
+                self.unacknowledge_problem(comments)
             # action in return can be notification or other checks (dependencies)
             if (self.state_type == 'SOFT') and self.last_state != 'PENDING':
                 if self.is_max_attempts() and self.state_type == 'SOFT':
@@ -1680,7 +1681,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # OK following a NON-OK.
         elif chk.exit_status == 0 and self.last_state not in (ok_up, 'PENDING'):
-            self.unacknowledge_problem(comments)
+            if self.problem_has_been_acknowledged:
+                self.unacknowledge_problem(comments)
             # print "Case 2 (OK following a NON-OK):
             #  code:%s last_state:%s" % (c.exit_status, self.last_state)
             if self.state_type == 'SOFT':
