@@ -84,11 +84,12 @@ logger.load_obj(__DUMMY())
 logger.setLevel(ERROR)
 
 #############################################################################
-
 # We overwrite the functions time() and sleep()
 # This way we can modify sleep() so that it immediately returns although
 # for a following time() it looks like thee was actually a delay.
 # This massively speeds up the tests.
+
+
 class TimeHacker(object):
 
     def __init__(self):
@@ -131,127 +132,94 @@ class Pluginconf(object):
 class AlignakTest(unittest.TestCase):
 
     time_hacker = TimeHacker()
+    maxDiff = None
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
             return self.assertRegexpMatches(*args, **kwargs)
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_1r_1h_1s.cfg'], add_default=False)
+    def setup_with_file(self, configuration_file):
+        """
+        Load alignak with defined configuration file
 
-    def setup_with_file(self, paths, add_default=True):
-        self.time_hacker.set_my_time()
-        self.print_header()
-        # i am arbiter-like
+        If the configuration loading fails, a SystemExit exception is raised to the caller.
+
+        The conf_is_correct property indicates if the configuration loading succeeded or failed.
+
+        The configuration errors property contains a list of the error message that are normally
+        logged as ERROR by the arbiter.
+
+        @verified
+
+        :param configuration_file: path + file name of the main configuration file
+        :type configuration_file: str
+        :return: None
+        """
         self.broks = {}
-        self.me = None
-        self.log = logger
-        self.log.load_obj(self)
-        if not isinstance(paths, list):
-            paths = [paths]  # Fix for modules tests
-            add_default = False # Don't mix config
-        if add_default:
-            paths.insert(0, 'etc/alignak_1r_1h_1s.cfg')
-        self.config_files = paths
-        self.conf = Config()
-        buf = self.conf.read_config(self.config_files)
-        raw_objects = self.conf.read_config_buf(buf)
-        self.conf.create_objects_for_type(raw_objects, 'arbiter')
-        self.conf.create_objects_for_type(raw_objects, 'module')
-        self.conf.early_arbiter_linking()
+        self.schedulers = []
+        self.brokers = []
+        self.arbiter = None
+        self.conf_is_correct = False
+        self.configuration_warnings = []
+        self.configuration_errors = []
 
-        # If we got one arbiter defined here (before default) we should be in a case where
-        # the tester want to load/test a module, so we simulate an arbiter daemon
-        # and the modules loading phase. As it has its own modulesmanager, should
-        # not impact scheduler modules ones, especially we are asking for arbiter type :)
-        if len(self.conf.arbiters) == 1:
-            arbdaemon = Arbiter([''], [''], False, False, None, None)
+        self.arbiter = Arbiter([configuration_file], False, False, False, False,
+                              '/tmp/arbiter.log', 'arbiter-master')
 
-            arbdaemon.load_modules_manager()
+        try:
+            self.arbiter.load_config_file()
+            # If this assertion does not match, then there is a bug in the arbiter :)
+            self.assertTrue(self.arbiter.conf.conf_is_correct)
+            self.conf_is_correct = True
+            self.configuration_warnings = self.arbiter.conf.configuration_warnings
+            self.configuration_errors = self.arbiter.conf.configuration_errors
+        except SystemExit:
+            self.configuration_warnings = self.arbiter.conf.configuration_warnings
+            print("Configuration warnings:")
+            for msg in self.configuration_warnings:
+                print(" - %s" % msg)
+            self.configuration_errors = self.arbiter.conf.configuration_errors
+            print("Configuration errors:")
+            for msg in self.configuration_errors:
+                print(" - %s" % msg)
+            raise
 
-            # we request the instances without them being *started*
-            # (for those that are concerned ("external" modules):
-            # we will *start* these instances after we have been daemonized (if requested)
-            me = None
-            for arb in self.conf.arbiters:
-                me = arb
-                arbdaemon.do_load_modules(arb.modules)
-                arbdaemon.load_modules_configuration_objects(raw_objects)
+        for broker in self.arbiter.conf.brokers:
+            self.brokers.append(broker)
 
-        self.conf.create_objects(raw_objects)
-        self.conf.instance_id = 0
-        self.conf.instance_name = 'test'
-        # Hack push_flavor, that is set by the dispatcher
-        self.conf.push_flavor = 0
-        self.conf.load_triggers()
-        #import pdb;pdb.set_trace()
-        self.conf.linkify_templates()
-        #import pdb;pdb.set_trace()
-        self.conf.apply_inheritance()
-        #import pdb;pdb.set_trace()
-        self.conf.explode()
-        #print "Aconf.services has %d elements" % len(self.conf.services)
-        self.conf.apply_implicit_inheritance()
-        self.conf.fill_default()
-        self.conf.remove_templates()
-        #print "conf.services has %d elements" % len(self.conf.services)
-        self.conf.override_properties()
-        self.conf.linkify()
-        self.conf.apply_dependencies()
-        self.conf.explode_global_conf()
-        self.conf.propagate_timezone_option()
-        self.conf.create_business_rules()
-        self.conf.create_business_rules_dependencies()
-        self.conf.is_correct()
-        if not self.conf.conf_is_correct:
-            print "The conf is not correct, I stop here"
-            self.conf.dump()
-            return
-        self.conf.clean()
+        for arb in self.arbiter.conf.arbiters:
+            if arb.get_name() == self.arbiter.config_name:
+                self.arbiter.myself = arb
+        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
+        self.arbiter.dispatcher.prepare_dispatch()
 
-        self.confs = self.conf.cut_into_parts()
-        self.conf.prepare_for_sending()
-        self.conf.show_errors()
-        self.dispatcher = Dispatcher(self.conf, self.me)
-
-        scheddaemon = Alignak(None, False, False, False, None)
-        self.scheddaemon = scheddaemon
-        self.sched = scheddaemon.sched
-        scheddaemon.load_modules_manager()
-        # Remember to clean the logs we just created before launching tests
-        self.clear_logs()
-        m = MacroResolver()
-        m.init(self.conf)
-        self.sched.load_conf(self.conf)
-        e = ExternalCommandManager(self.conf, 'applyer')
-        self.sched.external_command = e
-        e.load_scheduler(self.sched)
-        e2 = ExternalCommandManager(self.conf, 'dispatcher')
-        e2.load_arbiter(self)
-        self.external_command_dispatcher = e2
-        self.sched.conf.accept_passive_unknown_check_results = False
-
-        self.sched.schedule()
+        for scheduler in self.arbiter.dispatcher.schedulers:
+            sched = Alignak([], False, False, True, '/tmp/scheduler.log')
+            # logger.setLevel('DEBUG')
+            sched.load_modules_manager()
+            sched.new_conf = scheduler.conf_package
+            if sched.new_conf:
+                sched.setup_new_conf()
+            self.schedulers.append(sched)
 
     def add(self, b):
         if isinstance(b, Brok):
             self.broks[b.uuid] = b
             return
         if isinstance(b, ExternalCommand):
-            self.sched.run_external_command(b.cmd_line)
+            self.schedulers[0].run_external_command(b.cmd_line)
 
     def fake_check(self, ref, exit_status, output="OK"):
-        #print "fake", ref
+        # print "fake", ref
         now = time.time()
-        check = ref.schedule(self.sched.hosts, self.sched.services, self.sched.timeperiods,
-                     self.sched.macromodulations, self.sched.checkmodulations,
-                     self.sched.checks, force=True)
+        check = ref.schedule(self.schedulers[0].sched.hosts, self.schedulers[0].sched.services, self.schedulers[0].sched.timeperiods,
+                             self.schedulers[0].sched.macromodulations, self.schedulers[0].sched.checkmodulations,
+                             self.schedulers[0].sched.checks, force=True)
         # now checks are schedule and we get them in
         # the action queue
-        #check = ref.actions.pop()
-        self.sched.add(check)  # check is now in sched.checks[]
-        #check = self.sched.checks[ref.checks_in_progress[0]]
-
+        # check = ref.actions.pop()
+        self.schedulers[0].sched.add(check)  # check is now in sched.checks[]
+        # check = self.schedulers[0].sched.checks[ref.checks_in_progress[0]]
 
         # Allows to force check scheduling without setting its status nor
         # output. Useful for manual business rules rescheduling, for instance.
@@ -271,10 +239,95 @@ class AlignakTest(unittest.TestCase):
         check.exit_status = exit_status
         check.execution_time = 0.001
         check.status = 'waitconsume'
-        self.sched.waiting_results.put(check)
+        self.schedulers[0].sched.waiting_results.put(check)
 
-    def scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
-                       nointernal=False):
+    def scheduler_loop(self, count, items, reset_checks=True):
+        """
+        Manage scheduler checks
+
+        !!!!!!!!!! This function is to be replaced by the scheduler_loop_new !!!!!!!!!!
+
+
+        @verified
+        :param count: number of checks to pass
+        :type count: int
+        :param items: list of list [[object, exist_status, output]]
+        :type items: list
+        :return: None
+        """
+        if reset_checks:
+            self.schedulers[0].sched.checks = {}
+        for num in range(count):
+            for item in items:
+                (obj, exit_status, output) = item
+                obj.next_chk = time.time()
+                chk = obj.launch_check(obj.next_chk,
+                                       self.schedulers[0].sched.hosts,
+                                       self.schedulers[0].sched.services,
+                                       self.schedulers[0].sched.timeperiods,
+                                       self.schedulers[0].sched.macromodulations,
+                                       self.schedulers[0].sched.checkmodulations,
+                                       self.schedulers[0].sched.checks,
+                                       force=False)
+                self.schedulers[0].sched.add_check(chk)
+                # update the check to add the result
+                chk.set_type_active()
+                chk.output = output
+                chk.exit_status = exit_status
+                self.schedulers[0].sched.waiting_results.put(chk)
+            for i in self.schedulers[0].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                if nb_ticks == 1:
+                    fun()
+
+    def scheduler_loop_new(self, count, items):
+        """
+        Manage scheduler checks
+
+        !!!!!!!!!! This function will replace the scheduler_loop !!!!!!!!!!
+
+        @verified
+
+        :param count: number of checks to pass
+        :type count: int
+        :param items: list of list [[object, exist_status, output]]
+        :type items: list
+        :return: None
+        """
+        for num in range(count):
+            for item in items:
+                (obj, exit_status, output) = item
+                if len(obj.checks_in_progress) == 0:
+                    for i in self.schedulers[0].sched.recurrent_works:
+                        (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                        if nb_ticks == 1:
+                            fun()
+                self.assertGreater(len(obj.checks_in_progress), 0)
+                chk = self.schedulers[0].sched.checks[obj.checks_in_progress[0]]
+                chk.set_type_active()
+                chk.output = output
+                chk.exit_status = exit_status
+                self.schedulers[0].sched.waiting_results.put(chk)
+
+            for i in self.schedulers[0].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                if nb_ticks == 1:
+                    fun()
+
+    def external_command_loop(self):
+        """
+        Execute the scheduler actions for external commands.
+
+        @verified
+        :return:
+        """
+        for i in self.schedulers[0].sched.recurrent_works:
+            (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+            if nb_ticks == 1:
+                fun()
+
+    def old_scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
+                           nointernal=False):
         for ref in reflist:
             (obj, exit_status, output) = ref
             obj.checks_in_progress = []
@@ -286,50 +339,57 @@ class AlignakTest(unittest.TestCase):
                 obj.update_in_checking()
                 self.fake_check(obj, exit_status, output)
             if not nointernal:
-                self.sched.manage_internal_checks()
+                self.schedulers[0].sched.manage_internal_checks()
 
-            self.sched.consume_results()
-            self.sched.get_new_actions()
-            self.sched.get_new_broks()
-            self.sched.scatter_master_notifications()
+            self.schedulers[0].sched.consume_results()
+            self.schedulers[0].sched.get_new_actions()
+            self.schedulers[0].sched.get_new_broks()
+            self.schedulers[0].sched.scatter_master_notifications()
             self.worker_loop(verbose)
             for ref in reflist:
                 (obj, exit_status, output) = ref
                 obj.checks_in_progress = []
                 obj.update_in_checking()
-            self.sched.update_downtimes_and_comments()
+            self.schedulers[0].sched.update_downtimes_and_comments()
             #time.sleep(ref.retry_interval * 60 + 1)
             if do_sleep:
                 time.sleep(sleep_time)
 
-
     def worker_loop(self, verbose=True):
-        self.sched.delete_zombie_checks()
-        self.sched.delete_zombie_actions()
-        checks = self.sched.get_to_run_checks(True, False, worker_name='tester')
-        actions = self.sched.get_to_run_checks(False, True, worker_name='tester')
-        #print "------------ worker loop checks ----------------"
-        #print checks
-        #print "------------ worker loop actions ----------------"
+        self.schedulers[0].sched.delete_zombie_checks()
+        self.schedulers[0].sched.delete_zombie_actions()
+        checks = self.schedulers[0].sched.get_to_run_checks(True, False, worker_name='tester')
+        actions = self.schedulers[0].sched.get_to_run_checks(False, True, worker_name='tester')
+        # print "------------ worker loop checks ----------------"
+        # print checks
+        # print "------------ worker loop actions ----------------"
         if verbose is True:
             self.show_actions()
-        #print "------------ worker loop new ----------------"
+        # print "------------ worker loop new ----------------"
         for a in actions:
             a.status = 'inpoller'
             a.check_time = time.time()
             a.exit_status = 0
-            self.sched.put_results(a)
+            self.schedulers[0].sched.put_results(a)
         if verbose is True:
             self.show_actions()
-        #print "------------ worker loop end ----------------"
+        # print "------------ worker loop end ----------------"
 
+    def show_logs(self, scheduler=False):
+        """
+        Show logs from the Arbiter. Get the Arbiter broks list an filter to
+        display only the 'log' type broks
+        If 'scheduler' is True, then uses the scheduler's broks list.
 
-    def show_logs(self):
+        @verified
+        :param scheduler:
+        :return:
+        """
         print "--- logs <<<----------------------------------"
-        if hasattr(self, "sched"):
-            broks = self.sched.broks
-        else:
-            broks = self.broks
+        broks = self.arbiter.broks
+        if scheduler:
+            broks = self.schedulers[0].sched.broks
+
         for brok in sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
             if brok.type == 'log':
                 brok.prepare()
@@ -337,58 +397,85 @@ class AlignakTest(unittest.TestCase):
 
         print "--- logs >>>----------------------------------"
 
-
     def show_actions(self):
         print "--- actions <<<----------------------------------"
-        if hasattr(self, "sched"):
-            actions = self.sched.actions
-        else:
-            actions = self.actions
-        for a in sorted(actions.values(), lambda x, y: cmp(x.uuid, y.uuid)):
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        for a in actions:
             if a.is_a == 'notification':
-                item = self.sched.find_item_by_id(a.ref)
+                item = self.scheduler.sched.find_item_by_id(a.ref)
                 if item.my_type == "host":
                     ref = "host: %s" % item.get_name()
                 else:
-                    hst = self.sched.find_item_by_id(item.host)
+                    hst = self.scheduler.sched.find_item_by_id(item.host)
                     ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s %s %s %s %s" % (a.uuid, ref, a.type, time.asctime(time.localtime(a.t_to_go)), a.status)
+                print "NOTIFICATION %s %s %s %s %s" % (a.uuid, ref, a.type,
+                                                       time.asctime(time.localtime(a.t_to_go)),
+                                                       a.status)
             elif a.is_a == 'eventhandler':
                 print "EVENTHANDLER:", a
         print "--- actions >>>----------------------------------"
 
+    def show_checks(self):
+        """
+        Show checks from the scheduler
+        :return:
+        """
+        print "--- checks <<<--------------------------------"
 
-    def show_and_clear_logs(self):
-        self.show_logs()
-        self.clear_logs()
+        for check in self.schedulers[0].sched.checks.values():
+            print("- %s" % check)
+        print "--- checks >>>--------------------------------"
 
+    def show_and_clear_logs(self, scheduler=False):
+        """
+        Prints and then delete the current Arbiter logs
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :return:
+        """
+        self.show_logs(scheduler=scheduler)
+        self.clear_logs(scheduler=scheduler)
 
     def show_and_clear_actions(self):
         self.show_actions()
         self.clear_actions()
 
+    def count_logs(self, scheduler=False):
+        """
+        Count the log lines in the Arbiter broks.
+        If 'scheduler' is True, then uses the scheduler's broks list.
 
-    def count_logs(self):
-        if hasattr(self, "sched"):
-            broks = self.sched.broks
-        else:
-            broks = self.broks
+        @verified
+        :return:
+        """
+        broks = self.arbiter.broks
+        if scheduler:
+            broks = self.schedulers[0].sched.broks
+
         return len([b for b in broks.values() if b.type == 'log'])
 
-
     def count_actions(self):
-        if hasattr(self, "sched"):
-            actions = self.sched.actions
-        else:
-            actions = self.actions
-        return len(actions.values())
+        """
+        Count the actions in the scheduler's actions.
 
+        @verified
+        :return:
+        """
+        return len(self.schedulers[0].sched.actions.values())
 
-    def clear_logs(self):
-        if hasattr(self, "sched"):
-            broks = self.sched.broks
-        else:
-            broks = self.broks
+    def clear_logs(self, scheduler=False):
+        """
+        Remove the 'log' broks from the current Arbiter broks list
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :return:
+        """
+        broks = self.arbiter.broks
+        if scheduler:
+            broks = self.schedulers[0].sched.broks
+
         id_to_del = []
         for b in broks.values():
             if b.type == 'log':
@@ -396,70 +483,240 @@ class AlignakTest(unittest.TestCase):
         for id in id_to_del:
             del broks[id]
 
-
     def clear_actions(self):
-        if hasattr(self, "sched"):
-            self.sched.actions = {}
-        else:
-            self.actions = {}
+        """
+        Clear the actions in the scheduler's actions.
 
+        @verified
+        :return:
+        """
+        self.schedulers[0].sched.actions = {}
 
-    def assert_log_match(self, index, pattern, no_match=True):
-        # log messages are counted 1...n, so index=1 for the first message
-        if not no_match:
-            self.assertGreaterEqual(self.count_logs(), index)
+    def assert_actions_count(self, number):
+        """
+        Check the number of actions
+
+        @verified
+
+        :param number: number of actions we must have
+        :type number: int
+        :return: None
+        """
+        print("Actions: %s" % self.schedulers[0].sched.actions)
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(self.schedulers[0].sched.actions),
+                         "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
+                         ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
+                                    'command: %s' %
+                                    (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
+                                    for idx, b in enumerate(actions))))
+
+    def assert_actions_match(self, index, pattern, field):
+        """
+        Check if pattern verified in field(property) name of the action with index in action list
+
+        @verified
+
+        :param index: index number of actions list
+        :type index: int
+        :param pattern: pattern to verify is in the action
+        :type pattern: str
+        :param field: name of the field (property) of the action
+        :type field: str
+        :return: None
+        """
         regex = re.compile(pattern)
-        lognum = 1
-        broks = sorted(self.sched.broks.values(), key=lambda x: x.uuid)
-        for brok in broks:
+        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        myaction = actions[index]
+        self.assertTrue(regex.search(getattr(myaction, field)),
+                        "Not found a matching patternin actions:\nindex=%s field=%s pattern=%r\n"
+                        "action_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
+                        "command: %s" % (
+                            index, field, pattern, myaction.creation_time, myaction.is_a,
+                            myaction.type, myaction.status, myaction.t_to_go, myaction.command))
+
+    def assert_log_match(self, index, pattern, scheduler=False):
+        """
+        Search if the log with the index number has the pattern in the Arbiter logs.
+
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        :param index: index number
+        :type index: int
+        :param pattern: string to search in log
+        :type pattern: str
+        :return: None
+        """
+        broks = self.arbiter.broks
+        if scheduler:
+            broks = self.schedulers[0].sched.broks
+
+        regex = re.compile(pattern)
+        log_num = 1
+
+        found = False
+        for brok in broks.values():
             if brok.type == 'log':
                 brok.prepare()
-                if index == lognum:
-                    if re.search(regex, brok.data['log']):
-                        return
-                lognum += 1
-        self.assertTrue(no_match, "%s found a matched log line in broks :\n"
-                               "index=%s pattern=%r\n"
-                               "broks_logs=[[[\n%s\n]]]" % (
-            '*HAVE*' if no_match else 'Not',
-            index, pattern, '\n'.join(
-                '\t%s=%s' % (idx, b.strip())
-                for idx, b in enumerate(
-                    (b.data['log'] for b in broks if b.type == 'log'),
-                    1)
-            )
-        ))
+                if index == log_num:
+                    if regex.search(brok.data['log']):
+                        found = True
+                log_num += 1
+        self.assertTrue(found,
+                        "Not found a matching log line in broks:\nindex=%s pattern=%r\n"
+                        "broks_logs=[[[\n%s\n]]]" % (
+                            index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
+                                                      for idx, b in enumerate((b.data['log']
+                                                                               for b in broks.values()
+                                                                               if b.type == 'log'),
+                                                                              1))))
 
-    def _any_log_match(self, pattern, assert_not):
+    def assert_checks_count(self, number):
+        """
+        Check the number of actions
+
+        @verified
+
+        :param number: number of actions we must have
+        :type number: int
+        :return: None
+        """
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(checks),
+                         "Not found expected number of checks:\nchecks_logs=[[[\n%s\n]]]" %
+                         ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
+                                    'command: %s' %
+                                    (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
+                                    for idx, b in enumerate(checks))))
+
+    def assert_checks_match(self, index, pattern, field):
+        """
+        Check if pattern verified in field(property) name of the check with index in check list
+
+        @verified
+
+        :param index: index number of checks list
+        :type index: int
+        :param pattern: pattern to verify is in the check
+        :type pattern: str
+        :param field: name of the field (property) of the check
+        :type field: str
+        :return: None
+        """
         regex = re.compile(pattern)
-        broks = getattr(self, 'sched', self).broks
-        broks = sorted(broks.values(), lambda x, y: cmp(x.uuid,y.uuid))
-        for brok in broks:
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        mycheck = checks[index]
+        self.assertTrue(regex.search(getattr(mycheck, field)),
+                        "Not found a matching pattern in checks:\nindex=%s field=%s pattern=%r\n"
+                        "check_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
+                        "command: %s" % (
+                            index, field, pattern, mycheck.creation_time, mycheck.is_a,
+                            mycheck.type, mycheck.status, mycheck.t_to_go, mycheck.command))
+
+    def _any_check_match(self, pattern, field, assert_not):
+        """
+        Search if any chek matches the requested pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :param assert_not:
+        :return:
+        """
+        regex = re.compile(pattern)
+        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        for check in checks:
+            if re.search(regex, getattr(check, field)):
+                self.assertTrue(not assert_not,
+                                "Found check:\nfield=%s pattern=%r\n"
+                                "check_line=creation: %s, is_a: %s, type: %s, status: %s, "
+                                "planned: %s, command: %s" % (
+                                    field, pattern, check.creation_time, check.is_a,
+                                    check.type, check.status, check.t_to_go, check.command)
+                                )
+                return
+        self.assertTrue(assert_not, "No matching check found:\n"
+                                    "pattern = %r\n" "checks = %r" % (pattern, checks))
+
+    def assert_any_check_match(self, pattern, field):
+        """
+        Assert if any check matches the pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :return:
+        """
+        self._any_check_match(pattern, field, assert_not=False)
+
+    def assert_no_check_match(self, pattern, field):
+        """
+        Assert if no check matches the pattern
+
+        @verified
+        :param pattern:
+        :param field to search with pattern:
+        :return:
+        """
+        self._any_check_match(pattern, field, assert_not=True)
+
+    def _any_log_match(self, pattern, assert_not, scheduler=False):
+        """
+        Search if any log in the Arbiter logs matches the requested pattern
+        If 'scheduler' is True, then uses the scheduler's broks list.
+
+        @verified
+        :param pattern:
+        :param assert_not:
+        :return:
+        """
+        regex = re.compile(pattern)
+        broks = self.arbiter.broks
+        if scheduler:
+            broks = self.schedulers[0].sched.broks
+
+        for brok in broks.values():
             if brok.type == 'log':
                 brok.prepare()
                 if re.search(regex, brok.data['log']):
                     self.assertTrue(not assert_not,
                                     "Found matching log line:\n"
-                                    "pattern = %r\nbrok log = %r" % (pattern, brok.data['log'])
-                    )
+                                    "pattern = %r\nbrok log = %r" % (pattern, brok.data['log']))
                     return
-        logs = [brok.data['log'] for brok in broks if brok.type == 'log']
-        self.assertTrue(assert_not,
-            "No matching log line found:\n"
-            "pattern = %r\n" "logs broks = %r" % (pattern, logs)
-        )
+        logs = [brok.data['log'] for brok in broks.values() if brok.type == 'log']
+        self.assertTrue(assert_not, "No matching log line found:\n"
+                                    "pattern = %r\n" "logs broks = %r" % (pattern, logs))
 
-    def assert_any_log_match(self, pattern):
+    def assert_any_log_match(self, pattern, scheduler=False):
+        """
+        Assert if any log (Arbiter or Scheduler if True) matches the pattern
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
         self._any_log_match(pattern, assert_not=False)
 
-    def assert_no_log_match(self, pattern):
-        self._any_log_match(pattern, assert_not=True)
+    def assert_no_log_match(self, pattern, scheduler=False):
+        """
+        Assert if no log (Arbiter or Scheduler if True) matches the pattern
 
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
+        self._any_log_match(pattern, assert_not=True)
 
     def get_log_match(self, pattern):
         regex = re.compile(pattern)
         res = []
-        for brok in sorted(self.sched.broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
+        broks = self.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
+            broks = self.schedulers[0].sched.broks
+
+        for brok in broks:
             if brok.type == 'log':
                 if re.search(regex, brok.data['log']):
                     res.append(brok.data['log'])
@@ -474,10 +731,66 @@ class AlignakTest(unittest.TestCase):
         self.print_header()
         self.assertTrue(self.conf.conf_is_correct)
 
+    def show_configuration_logs(self):
+        """
+        Prints the configuration logs
+
+        @verified
+        :return:
+        """
+        print("Configuration warnings:")
+        for msg in self.configuration_warnings:
+            print(" - %s" % msg)
+        print("Configuration errors:")
+        for msg in self.configuration_errors:
+            print(" - %s" % msg)
+
+    def _any_cfg_log_match(self, pattern, assert_not):
+        """
+        Search a pattern in configuration log (warning and error)
+
+        @verified
+        :param pattern:
+        :return:
+        """
+        regex = re.compile(pattern)
+
+        cfg_logs = self.configuration_warnings + self.configuration_errors
+
+        for log in cfg_logs:
+            if re.search(regex, log):
+                self.assertTrue(not assert_not,
+                                "Found matching log line:\n"
+                                "pattern = %r\nlog = %r" % (pattern, log))
+                return
+
+        self.assertTrue(assert_not, "No matching log line found:\n"
+                                    "pattern = %r\n" "logs = %r" % (pattern, cfg_logs))
+
+    def assert_any_cfg_log_match(self, pattern):
+        """
+        Assert if any configuration log matches the pattern
+
+        @verified
+        :param pattern:
+        :return:
+        """
+        self._any_cfg_log_match(pattern, assert_not=False)
+
+    def assert_no_cfg_log_match(self, pattern):
+        """
+        Assert if no configuration log matches the pattern
+
+        @verified
+        :param pattern:
+        :return:
+        """
+        self._any_cfg_log_match(pattern, assert_not=True)
+
 
 ShinkenTest = AlignakTest
 
-#Time hacking for every test!
+# Time hacking for every test!
 time_hacker = AlignakTest.time_hacker
 
 if __name__ == '__main__':
