@@ -1328,8 +1328,8 @@ def parse_daemon_args(arbiter=False):
                             help="Verify config file and exit")
         parser.add_argument("-n", "--config-name", dest="config_name",
                             default='arbiter-master',
-                            help = "Use name of arbiter defined in the configuration files "
-                                   "(default arbiter-master)")
+                            help="Use name of arbiter defined in the configuration files "
+                                 "(default arbiter-master)")
     else:
         parser.add_argument('-c', '--config', dest="config_file", required=True,
                             help='Config file')
