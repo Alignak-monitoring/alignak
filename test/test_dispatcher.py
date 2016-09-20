@@ -222,21 +222,14 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         with requests_mock.mock() as mockreq:
-            mockreq.get('http://localhost:7768/ping', json='pong')
-            mockreq.get('http://localhost:7772/ping', json='pong')
-            mockreq.get('http://localhost:7771/ping', json='pong')
-            mockreq.get('http://localhost:7769/ping', json='pong')
-            mockreq.get('http://localhost:7773/ping', json='pong')
-            mockreq.get('http://localhost:8002/ping', json='pong')
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
             self.setup_with_file('cfg/cfg_dispatcher_scheduler_spare.cfg')
             json_managed = {self.schedulers['scheduler-master'].conf.uuid:
                             self.schedulers['scheduler-master'].conf.push_flavor}
-            mockreq.get('http://localhost:7768/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7772/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7771/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7769/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7773/what_i_managed', json=json_managed)
+            for port in ['7768', '7772', '7771', '7769', '7773']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
             mockreq.get('http://localhost:8002/what_i_managed', json='{}')
 
             self.arbiter.dispatcher.check_alive()
@@ -278,24 +271,15 @@ class TestDispatcher(AlignakTest):
         time.sleep(1)
 
         with requests_mock.mock() as mockreq:
-            mockreq.get('http://localhost:7772/ping', json='pong')
-            mockreq.get('http://localhost:7771/ping', json='pong')
-            mockreq.get('http://localhost:7769/ping', json='pong')
-            mockreq.get('http://localhost:7773/ping', json='pong')
-            mockreq.get('http://localhost:8002/ping', json='pong')
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
-            mockreq.get('http://localhost:7772/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7771/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7769/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7773/what_i_managed', json=json_managed)
+            for port in ['7772', '7771', '7769', '7773']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
             mockreq.get('http://localhost:8002/what_i_managed', json='{}')
 
-            mockreq.post('http://localhost:8002/put_conf', json='true')
-            mockreq.post('http://localhost:7773/put_conf', json='true')
-            mockreq.post('http://localhost:7769/put_conf', json='true')
-            mockreq.post('http://localhost:7771/put_conf', json='true')
-            mockreq.post('http://localhost:7772/put_conf', json='true')
-            mockreq.post('http://localhost:7771/put_conf', json='true')
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
 
             self.arbiter.dispatcher.check_alive()
             self.arbiter.dispatcher.check_dispatch()
@@ -358,27 +342,15 @@ class TestDispatcher(AlignakTest):
         # return of the scheduler master
         print "*********** Return of the king / master ***********"
         with requests_mock.mock() as mockreq:
-            mockreq.get('http://localhost:7768/ping', json='pong')
-            mockreq.get('http://localhost:7772/ping', json='pong')
-            mockreq.get('http://localhost:7771/ping', json='pong')
-            mockreq.get('http://localhost:7769/ping', json='pong')
-            mockreq.get('http://localhost:7773/ping', json='pong')
-            mockreq.get('http://localhost:8002/ping', json='pong')
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
             mockreq.get('http://localhost:7768/what_i_managed', json=json_managed)
-            mockreq.get('http://localhost:7772/what_i_managed', json=json_managed_spare)
-            mockreq.get('http://localhost:7771/what_i_managed', json=json_managed_spare)
-            mockreq.get('http://localhost:7769/what_i_managed', json=json_managed_spare)
-            mockreq.get('http://localhost:7773/what_i_managed', json=json_managed_spare)
-            mockreq.get('http://localhost:8002/what_i_managed', json=json_managed_spare)
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed_spare)
 
-            mockreq.post('http://localhost:7768/put_conf', json='true')
-            mockreq.post('http://localhost:8002/put_conf', json='true')
-            mockreq.post('http://localhost:7773/put_conf', json='true')
-            mockreq.post('http://localhost:7769/put_conf', json='true')
-            mockreq.post('http://localhost:7771/put_conf', json='true')
-            mockreq.post('http://localhost:7772/put_conf', json='true')
-            mockreq.post('http://localhost:7771/put_conf', json='true')
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
 
             time.sleep(1)
             self.arbiter.dispatcher.check_alive()

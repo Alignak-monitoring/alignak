@@ -778,9 +778,9 @@ def sort_by_number_values(x00, y00):
     """Compare x00, y00 base on number of values
 
     :param x00: first elem to compare
-    :type x00: int
+    :type x00: list
     :param y00: second elem to compare
-    :type y00: int
+    :type y00: list
     :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
     :rtype: int
     """
