@@ -156,7 +156,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         self.broks = {}
-        self.schedulers = []
+        self.schedulers = {}
         self.brokers = []
         self.arbiter = None
         self.conf_is_correct = False
@@ -200,26 +200,26 @@ class AlignakTest(unittest.TestCase):
             sched.new_conf = scheduler.conf_package
             if sched.new_conf:
                 sched.setup_new_conf()
-            self.schedulers.append(sched)
+            self.schedulers[scheduler.scheduler_name] = sched
 
     def add(self, b):
         if isinstance(b, Brok):
             self.broks[b.uuid] = b
             return
         if isinstance(b, ExternalCommand):
-            self.schedulers[0].run_external_command(b.cmd_line)
+            self.schedulers['scheduler-master'].run_external_command(b.cmd_line)
 
     def fake_check(self, ref, exit_status, output="OK"):
         # print "fake", ref
         now = time.time()
-        check = ref.schedule(self.schedulers[0].sched.hosts, self.schedulers[0].sched.services, self.schedulers[0].sched.timeperiods,
-                             self.schedulers[0].sched.macromodulations, self.schedulers[0].sched.checkmodulations,
-                             self.schedulers[0].sched.checks, force=True)
+        check = ref.schedule(self.schedulers['scheduler-master'].sched.hosts, self.schedulers['scheduler-master'].sched.services, self.schedulers['scheduler-master'].sched.timeperiods,
+                             self.schedulers['scheduler-master'].sched.macromodulations, self.schedulers['scheduler-master'].sched.checkmodulations,
+                             self.schedulers['scheduler-master'].sched.checks, force=True)
         # now checks are schedule and we get them in
         # the action queue
         # check = ref.actions.pop()
-        self.schedulers[0].sched.add(check)  # check is now in sched.checks[]
-        # check = self.schedulers[0].sched.checks[ref.checks_in_progress[0]]
+        self.schedulers['scheduler-master'].sched.add(check)  # check is now in sched.checks[]
+        # check = self.schedulers['scheduler-master'].sched.checks[ref.checks_in_progress[0]]
 
         # Allows to force check scheduling without setting its status nor
         # output. Useful for manual business rules rescheduling, for instance.
@@ -239,7 +239,7 @@ class AlignakTest(unittest.TestCase):
         check.exit_status = exit_status
         check.execution_time = 0.001
         check.status = 'waitconsume'
-        self.schedulers[0].sched.waiting_results.put(check)
+        self.schedulers['scheduler-master'].sched.waiting_results.put(check)
 
     def scheduler_loop(self, count, items, reset_checks=True):
         """
@@ -256,27 +256,27 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         if reset_checks:
-            self.schedulers[0].sched.checks = {}
+            self.schedulers['scheduler-master'].sched.checks = {}
         for num in range(count):
             for item in items:
                 (obj, exit_status, output) = item
                 obj.next_chk = time.time()
                 chk = obj.launch_check(obj.next_chk,
-                                       self.schedulers[0].sched.hosts,
-                                       self.schedulers[0].sched.services,
-                                       self.schedulers[0].sched.timeperiods,
-                                       self.schedulers[0].sched.macromodulations,
-                                       self.schedulers[0].sched.checkmodulations,
-                                       self.schedulers[0].sched.checks,
+                                       self.schedulers['scheduler-master'].sched.hosts,
+                                       self.schedulers['scheduler-master'].sched.services,
+                                       self.schedulers['scheduler-master'].sched.timeperiods,
+                                       self.schedulers['scheduler-master'].sched.macromodulations,
+                                       self.schedulers['scheduler-master'].sched.checkmodulations,
+                                       self.schedulers['scheduler-master'].sched.checks,
                                        force=False)
-                self.schedulers[0].sched.add_check(chk)
+                self.schedulers['scheduler-master'].sched.add_check(chk)
                 # update the check to add the result
                 chk.set_type_active()
                 chk.output = output
                 chk.exit_status = exit_status
-                self.schedulers[0].sched.waiting_results.put(chk)
-            for i in self.schedulers[0].sched.recurrent_works:
-                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                self.schedulers['scheduler-master'].sched.waiting_results.put(chk)
+            for i in self.schedulers['scheduler-master'].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
 
@@ -298,19 +298,19 @@ class AlignakTest(unittest.TestCase):
             for item in items:
                 (obj, exit_status, output) = item
                 if len(obj.checks_in_progress) == 0:
-                    for i in self.schedulers[0].sched.recurrent_works:
-                        (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+                    for i in self.schedulers['scheduler-master'].sched.recurrent_works:
+                        (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
                         if nb_ticks == 1:
                             fun()
                 self.assertGreater(len(obj.checks_in_progress), 0)
-                chk = self.schedulers[0].sched.checks[obj.checks_in_progress[0]]
+                chk = self.schedulers['scheduler-master'].sched.checks[obj.checks_in_progress[0]]
                 chk.set_type_active()
                 chk.output = output
                 chk.exit_status = exit_status
-                self.schedulers[0].sched.waiting_results.put(chk)
+                self.schedulers['scheduler-master'].sched.waiting_results.put(chk)
 
-            for i in self.schedulers[0].sched.recurrent_works:
-                (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+            for i in self.schedulers['scheduler-master'].sched.recurrent_works:
+                (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
 
@@ -321,8 +321,8 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        for i in self.schedulers[0].sched.recurrent_works:
-            (name, fun, nb_ticks) = self.schedulers[0].sched.recurrent_works[i]
+        for i in self.schedulers['scheduler-master'].sched.recurrent_works:
+            (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
             if nb_ticks == 1:
                 fun()
 
@@ -339,27 +339,27 @@ class AlignakTest(unittest.TestCase):
                 obj.update_in_checking()
                 self.fake_check(obj, exit_status, output)
             if not nointernal:
-                self.schedulers[0].sched.manage_internal_checks()
+                self.schedulers['scheduler-master'].sched.manage_internal_checks()
 
-            self.schedulers[0].sched.consume_results()
-            self.schedulers[0].sched.get_new_actions()
-            self.schedulers[0].sched.get_new_broks()
-            self.schedulers[0].sched.scatter_master_notifications()
+            self.schedulers['scheduler-master'].sched.consume_results()
+            self.schedulers['scheduler-master'].sched.get_new_actions()
+            self.schedulers['scheduler-master'].sched.get_new_broks()
+            self.schedulers['scheduler-master'].sched.scatter_master_notifications()
             self.worker_loop(verbose)
             for ref in reflist:
                 (obj, exit_status, output) = ref
                 obj.checks_in_progress = []
                 obj.update_in_checking()
-            self.schedulers[0].sched.update_downtimes_and_comments()
+            self.schedulers['scheduler-master'].sched.update_downtimes_and_comments()
             #time.sleep(ref.retry_interval * 60 + 1)
             if do_sleep:
                 time.sleep(sleep_time)
 
     def worker_loop(self, verbose=True):
-        self.schedulers[0].sched.delete_zombie_checks()
-        self.schedulers[0].sched.delete_zombie_actions()
-        checks = self.schedulers[0].sched.get_to_run_checks(True, False, worker_name='tester')
-        actions = self.schedulers[0].sched.get_to_run_checks(False, True, worker_name='tester')
+        self.schedulers['scheduler-master'].sched.delete_zombie_checks()
+        self.schedulers['scheduler-master'].sched.delete_zombie_actions()
+        checks = self.schedulers['scheduler-master'].sched.get_to_run_checks(True, False, worker_name='tester')
+        actions = self.schedulers['scheduler-master'].sched.get_to_run_checks(False, True, worker_name='tester')
         # print "------------ worker loop checks ----------------"
         # print checks
         # print "------------ worker loop actions ----------------"
@@ -370,7 +370,7 @@ class AlignakTest(unittest.TestCase):
             a.status = 'inpoller'
             a.check_time = time.time()
             a.exit_status = 0
-            self.schedulers[0].sched.put_results(a)
+            self.schedulers['scheduler-master'].sched.put_results(a)
         if verbose is True:
             self.show_actions()
         # print "------------ worker loop end ----------------"
@@ -388,7 +388,7 @@ class AlignakTest(unittest.TestCase):
         print "--- logs <<<----------------------------------"
         broks = self.arbiter.broks
         if scheduler:
-            broks = self.schedulers[0].sched.broks
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         for brok in sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
             if brok.type == 'log':
@@ -399,7 +399,7 @@ class AlignakTest(unittest.TestCase):
 
     def show_actions(self):
         print "--- actions <<<----------------------------------"
-        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
         for a in actions:
             if a.is_a == 'notification':
                 item = self.scheduler.sched.find_item_by_id(a.ref)
@@ -422,7 +422,7 @@ class AlignakTest(unittest.TestCase):
         """
         print "--- checks <<<--------------------------------"
 
-        for check in self.schedulers[0].sched.checks.values():
+        for check in self.schedulers['scheduler-master'].sched.checks.values():
             print("- %s" % check)
         print "--- checks >>>--------------------------------"
 
@@ -451,7 +451,7 @@ class AlignakTest(unittest.TestCase):
         """
         broks = self.arbiter.broks
         if scheduler:
-            broks = self.schedulers[0].sched.broks
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         return len([b for b in broks.values() if b.type == 'log'])
 
@@ -462,7 +462,7 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        return len(self.schedulers[0].sched.actions.values())
+        return len(self.schedulers['scheduler-master'].sched.actions.values())
 
     def clear_logs(self, scheduler=False):
         """
@@ -474,7 +474,7 @@ class AlignakTest(unittest.TestCase):
         """
         broks = self.arbiter.broks
         if scheduler:
-            broks = self.schedulers[0].sched.broks
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         id_to_del = []
         for b in broks.values():
@@ -490,7 +490,7 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        self.schedulers[0].sched.actions = {}
+        self.schedulers['scheduler-master'].sched.actions = {}
 
     def assert_actions_count(self, number):
         """
@@ -502,9 +502,9 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print("Actions: %s" % self.schedulers[0].sched.actions)
-        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
-        self.assertEqual(number, len(self.schedulers[0].sched.actions),
+        print("Actions: %s" % self.schedulers['scheduler-master'].sched.actions)
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(self.schedulers['scheduler-master'].sched.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
                                     'command: %s' %
@@ -526,7 +526,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        actions = sorted(self.schedulers[0].sched.actions.values(), key=lambda x: x.creation_time)
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
         myaction = actions[index]
         self.assertTrue(regex.search(getattr(myaction, field)),
                         "Not found a matching patternin actions:\nindex=%s field=%s pattern=%r\n"
@@ -549,7 +549,7 @@ class AlignakTest(unittest.TestCase):
         """
         broks = self.arbiter.broks
         if scheduler:
-            broks = self.schedulers[0].sched.broks
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         regex = re.compile(pattern)
         log_num = 1
@@ -581,7 +581,7 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
                          "Not found expected number of checks:\nchecks_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
@@ -604,7 +604,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
         mycheck = checks[index]
         self.assertTrue(regex.search(getattr(mycheck, field)),
                         "Not found a matching pattern in checks:\nindex=%s field=%s pattern=%r\n"
@@ -624,7 +624,7 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         regex = re.compile(pattern)
-        checks = sorted(self.schedulers[0].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
         for check in checks:
             if re.search(regex, getattr(check, field)):
                 self.assertTrue(not assert_not,
@@ -673,7 +673,7 @@ class AlignakTest(unittest.TestCase):
         regex = re.compile(pattern)
         broks = self.arbiter.broks
         if scheduler:
-            broks = self.schedulers[0].sched.broks
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         for brok in broks.values():
             if brok.type == 'log':
@@ -713,8 +713,8 @@ class AlignakTest(unittest.TestCase):
         regex = re.compile(pattern)
         res = []
         broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers[0], "sched"):
-            broks = self.schedulers[0].sched.broks
+        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers['scheduler-master'], "sched"):
+            broks = self.schedulers['scheduler-master'].sched.broks
 
         for brok in broks:
             if brok.type == 'log':
