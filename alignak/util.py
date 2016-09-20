@@ -1308,6 +1308,10 @@ def parse_daemon_args(arbiter=False):
                                  'multiple -c can be used, they will be concatenated')
         parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
                             help="Verify config file and exit")
+        parser.add_argument("-n", "--config-name", dest="config_name",
+                            default='arbiter-master',
+                            help = "Use name of arbiter defined in the configuration files "
+                                   "(default arbiter-master)")
     else:
         parser.add_argument('-c', '--config', dest="config_file", required=True,
                             help='Config file')
