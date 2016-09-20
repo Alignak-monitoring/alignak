@@ -774,6 +774,24 @@ def sort_by_ids(x00, y00):
     return 0
 
 
+def sort_by_number_values(x00, y00):
+    """Compare x00, y00 base on number of values
+
+    :param x00: first elem to compare
+    :type x00: int
+    :param y00: second elem to compare
+    :type y00: int
+    :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
+    :rtype: int
+    """
+    if len(x00) < len(y00):
+        return 1
+    if len(x00) > len(y00):
+        return -1
+    # So is equal
+    return 0
+
+
 def average_percentile(values):
     """
     Get the average, min percentile (5%) and

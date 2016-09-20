@@ -676,6 +676,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.dispatcher.check_alive()
         self.dispatcher.check_dispatch()
         # REF: doc/alignak-conf-dispatching.png (3)
+        self.dispatcher.prepare_dispatch()
         self.dispatcher.dispatch()
 
         # Now we can get all initial broks for our satellites
@@ -722,6 +723,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # REF: doc/alignak-conf-dispatching.png (3)
             _t0 = time.time()
+            self.dispatcher.prepare_dispatch()
             self.dispatcher.dispatch()
             statsmgr.incr('core.dispatch', time.time() - _t0)
 
