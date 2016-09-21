@@ -150,27 +150,30 @@ class TestDispatcher(AlignakTest):
 
     def test_realms_with_sub(self):
         """
-        Test with 2 realms but some satellites are sub_realms
-        ralm All:
+        Test with 2 realms but some satellites are sub_realms:
+            * All -> realm2
+            * realm3
+
+        realm All:
         * 1 scheduler
         * 1 receiver
 
         realm realm2:
-        * 1 scheduler
         * 1 receiver
+        * 1 scheduler
         * 1 poller
+
+        realm All + realm2 (sub realm):
+        * 1 broker
+        * 1 poller
+        * 1 reactionner
 
         realm realm3:
-        * 1 scheduler
         * 1 receiver
-        * 1 poller
+        * 1 scheduler
         * 1 reactionner
         * 1 broker
-
-        realm 1 + sub_realm:
         * 1 poller
-        * 1 reactionner
-        * 1 broker
 
         :return: None
         """
