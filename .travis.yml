@@ -16,13 +16,17 @@ script:
   - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
   - nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
   - coverage combine
-  - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
+  - cd ..
+  - pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
   - unset PYTHONWARNINGS
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && travis_wait pylint --rcfile=.pylintrc -r no alignak; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
-  - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_all_setup.sh; fi
+  - cd test
+  - (pkill -6 -f "alignak_-" || :)
+  - python full_tst.py
+  - cd ..
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_virtualenv_setup.sh; fi
 # specific call to launch coverage data into coveralls.io
 after_success:
   # to get coverage data with relative paths and not absolute we have to

@@ -86,7 +86,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
 
     def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, analyse=None):
+                 debug_file, config_name, analyse=None):
 
         super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
                                       debug, debug_file)
@@ -94,6 +94,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.config_files = config_files
         self.verify_only = verify_only
         self.analyse = analyse
+        self.config_name = config_name
 
         self.broks = {}
         self.is_master = False
@@ -239,7 +240,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Search which Arbiterlink I am
         for arb in self.conf.arbiters:
-            if arb.is_me():
+            if arb.get_name() in ['Default-Arbiter', self.config_name]:
                 arb.need_conf = False
                 self.myself = arb
                 self.is_master = not self.myself.spare
@@ -266,11 +267,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 arb.need_conf = True
 
         if not self.myself:
-            sys.exit("Error: I cannot find my own Arbiter object, I bail out. \
-                     To solve it, please change the host_name parameter in \
-                     the object Arbiter in the file alignak-specific.cfg. \
-                     With the value %s \
-                     Thanks." % socket.gethostname())
+            sys.exit("Error: I cannot find my own Arbiter object (%s), I bail out. "
+                     "To solve this, please change the arbiter_name parameter in "
+                     "the arbiter configuration file (certainly arbiter-master.cfg) "
+                     "with the value '%s'."
+                     " Thanks." % (self.config_name, socket.gethostname()))
 
         logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
 
@@ -664,8 +665,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
         for arb in self.conf.arbiters:
-            print "ARR3:", arb
-            if arb.is_me():
+            if arb.get_name() in ['Default-Arbiter', self.config_name]:
                 self.myself = arb
 
         if self.conf.human_timestamp_log:
@@ -676,6 +676,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.dispatcher.check_alive()
         self.dispatcher.check_dispatch()
         # REF: doc/alignak-conf-dispatching.png (3)
+        self.dispatcher.prepare_dispatch()
         self.dispatcher.dispatch()
 
         # Now we can get all initial broks for our satellites
@@ -722,6 +723,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # REF: doc/alignak-conf-dispatching.png (3)
             _t0 = time.time()
+            self.dispatcher.prepare_dispatch()
             self.dispatcher.dispatch()
             statsmgr.incr('core.dispatch', time.time() - _t0)
 

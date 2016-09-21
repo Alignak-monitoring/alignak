@@ -109,7 +109,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 from alignak.objects.trigger import Triggers
 from alignak.objects.pack import Packs
-from alignak.util import split_semicolon
+from alignak.util import split_semicolon, sort_by_number_values
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -2438,7 +2438,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             assoc = {}
 
             # Now we explode the numerous packs into nb_packs reals packs:
-            # we 'load balance' them in a round-robin way
+            # we 'load balance' them in a round-robin way but with count number of hosts in
+            # case have some packs with too many hosts and other with few
+            realm.packs.sort(sort_by_number_values)
+            pack_higher_hosts = 0
             for pack in realm.packs:
                 valid_value = False
                 old_pack = -1
@@ -2467,9 +2470,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if valid_value and old_pack in packindices:
                     # print 'Use a old id for pack', old_pack, [h.get_name() for h in pack]
                     i = old_pack
-                else:  # take a new one
-                    # print 'take a new id for pack', [h.get_name() for h in pack]
-                    i = round_robin.next()
+                else:
+                    if isinstance(i, int):
+                        i = round_robin.next()
+                    elif (len(packs[packindices[i]]) + len(pack)) >= pack_higher_hosts:
+                        pack_higher_hosts = (len(packs[packindices[i]]) + len(pack))
+                        i = round_robin.next()
 
                 for elt_id in pack:
                     elt = self.hosts[elt_id]
