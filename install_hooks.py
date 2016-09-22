@@ -140,11 +140,13 @@ def fix_alignak_cfg(config):
         config.install_dir, "etc", "alignak", "arbiter", "resource.d", "paths.cfg"
     )
     if not os.path.exists(alignak_file):
-        print("\n"
-              "=======================================================================================================\n"
-              "==  The configuration file '%s' is missing.\n"
-              "=======================================================================================================\n"
-              % alignak_file)
+        print(
+            "\n"
+            "================================================================================\n"
+            "==  The configuration file '%s' is missing.                                   ==\n"
+            "================================================================================\n"
+            % alignak_file
+        )
 
     for line in fileinput.input(alignak_file, inplace=True):
         line = line.strip()
@@ -160,11 +162,13 @@ def fix_alignak_cfg(config):
     # Fix alignak.cfg
     alignak_file = os.path.join(config.install_dir, "etc", "alignak", "alignak.cfg")
     if not os.path.exists(alignak_file):
-        print("\n"
-              "=======================================================================================================\n"
-              "==  The configuration file '%s' is missing.\n"
-              "=======================================================================================================\n"
-              % alignak_file)
+        print(
+            "\n"
+            "================================================================================\n"
+            "==  The configuration file '%s' is missing.                                   ==\n"
+            "================================================================================\n"
+            % alignak_file
+        )
 
     for line in fileinput.input(alignak_file, inplace=True):
         line = line.strip()
@@ -199,13 +203,15 @@ def fix_alignak_cfg(config):
         changing_path = re.compile("^(%s) *= *" % pattern)
 
         # Fix ini file
-        alignak_file = os.path.join(config.install_dir, "etc","alignak", "daemons", ini_file)
+        alignak_file = os.path.join(config.install_dir, "etc", "alignak", "daemons", ini_file)
         if not os.path.exists(alignak_file):
-            print("\n"
-                  "=======================================================================================================\n"
-                  "==  The configuration file '%s' is missing.\n"
-                  "=======================================================================================================\n"
-                  % alignak_file)
+            print(
+                "\n"
+                "================================================================================\n"
+                "==  The configuration file '%s' is missing.                                   ==\n"
+                "================================================================================\n"
+                % alignak_file
+            )
 
         for line in fileinput.input(alignak_file, inplace=True):
             line = line.strip()
@@ -275,6 +281,18 @@ def fix_alignak_cfg(config):
             else:
                 print(line)
 
+    # Alignak run script
+    alignak_run = ''
+    if 'win' in sys.platform:
+        pass
+    elif 'linux' in sys.platform or 'sunos5' in sys.platform:
+        alignak_run = os.path.join(config.install_dir, "etc", "init.d", "alignak start")
+    elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
+        alignak_run = os.path.join(config.install_dir, "etc", "rc.d", "alignak start")
+
+    # Alignak configuration root directory
+    alignak_etc = os.path.join(config.install_dir, "etc", "alignak")
+
     # Add ENV vars only if we are in virtualenv
     # in order to get init scripts working
     if 'VIRTUAL_ENV' in os.environ:
@@ -283,23 +301,55 @@ def fix_alignak_cfg(config):
             afd = open(activate_file, 'r+')
         except Exception as exp:
             print(exp)
+            raise Exception("Virtual environment error")
+
         env_config = ("""export PYTHON_EGG_CACHE=.\n"""
                       """export ALIGNAK_DEFAULT_FILE=%s/etc/default/alignak\n"""
                       % os.environ.get("VIRTUAL_ENV"))
+        alignak_etc = "%s/etc/alignak" % os.environ.get("VIRTUAL_ENV")
+        alignak_run = "%s/etc/init.d alignak start" % os.environ.get("VIRTUAL_ENV")
+
         if afd.read().find(env_config) == -1:
             afd.write(env_config)
-            print("\n"
-                  "=======================================================================================================\n"
-                  "==                                                                                                   ==\n"
-                  "==  You need to REsource env/bin/activate in order to set appropriate variables to use init scripts  ==\n"
-                  "==                                                                                                   ==\n"
-                  "=======================================================================================================\n"
-                  )
+            print(
+                "\n"
+                "================================================================================\n"
+                "==                                                                            ==\n"
+                "==  You need to REsource env/bin/activate in order to set appropriate         ==\n"
+                "== variables to use init scripts                                              ==\n"
+                "==                                                                            ==\n"
+                "================================================================================\n"
+            )
 
     print("\n"
-          "=======================================================================================================\n"
-          "==                                                                                                   ==\n"
-          "==  The installation succeded.                                                                       ==\n"
-          "==                                                                                                   ==\n"
-          "=======================================================================================================\n"
+          "================================================================================\n"
+          "==                                                                            ==\n"
+          "==  The installation succeded.                                                ==\n"
+          "==                                                                            ==\n"
+          "== -------------------------------------------------------------------------- ==\n"
+          "==                                                                            ==\n"
+          "== You can run Alignak with:                                                  ==\n"
+          "==   %s\n"
+          "==                                                                            ==\n"
+          "== The default installed configuration is located here:                       ==\n"
+          "==   %s\n"
+          "==                                                                            ==\n"
+          "== You will find more information about Alignak configuration here:           ==\n"
+          "==   http://alignak-doc.readthedocs.io/en/latest/04_configuration/index.html  ==\n"
+          "==                                                                            ==\n"
+          "== -------------------------------------------------------------------------- ==\n"
+          "==                                                                            ==\n"
+          "== You should grant the write permissions on the configuration directory to   ==\n"
+          "== the user alignak:                                                          ==\n"
+          "==   sudo chmod -R 777 %s\n"
+          "==                                                                            ==\n"
+          "== -------------------------------------------------------------------------- ==\n"
+          "==                                                                            ==\n"
+          "== Please note that installing Alignak with the setup.py script is not the    ==\n"
+          "== recommended way. You'd rather use the packaging built for your OS          ==\n"
+          "== distribution that you can find here:                                       ==\n"
+          "==   http://alignak-monitoring.github.io/download/                            ==\n"
+          "==                                                                            ==\n"
+          "================================================================================\n"
+          % (alignak_run, alignak_etc, alignak_etc)
           )
