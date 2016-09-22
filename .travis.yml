@@ -7,6 +7,7 @@ python:
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
 install:
+  - sudo useradd -p $1$/goz4USO$3QNU7YVvUbgyhAuROfTAw1 alignak
   - ./test/setup_test.sh
 # command to run tests
 # notice: the nose-cov is used because it is compatible with --processes, but produce a .coverage by process
@@ -22,6 +23,7 @@ script:
   - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && travis_wait pylint --rcfile=.pylintrc -r no alignak; fi
   - export PYTHONWARNINGS=all
   - pep257 --select=D300 alignak
+  - sudo python setup.py install
   - cd test
   - (pkill -6 -f "alignak_-" || :)
   - python full_tst.py
