@@ -46,6 +46,7 @@
 # $VAR$ is where we put some variables files (replaced by $RUN$ and $LOG$ for now)
 # $RUN$ is where we put pid files
 # $LOG$ is where we put log files
+# $LIB$ is where we put plugins files
 # $SCRIPTS_BIN$ is where the launch scripts will be send
 
 
@@ -55,6 +56,7 @@ VAR=$VAR$
 BIN=$SCRIPTS_BIN$
 RUN=$RUN$
 LOG=$LOG$
+LIB=$LIB$
 
 
 ### ARBITER PART ###
