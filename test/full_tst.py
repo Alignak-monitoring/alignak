@@ -66,7 +66,7 @@ class fullTest(unittest.TestCase):
         files = ['cfg/full/daemons/brokerd.ini', 'cfg/full/daemons/pollerd.ini',
                  'cfg/full/daemons/reactionnerd.ini', 'cfg/full/daemons/receiverd.ini',
                  'cfg/full/daemons/schedulerd.ini', 'cfg/full/alignak.cfg']
-        replacements = {'/var/run/alignak': '/tmp', '/var/log/alignak': '/tmp'}
+        replacements = {'/usr/local/var/run/alignak': '/tmp', '/usr/local/var/log/alignak': '/tmp'}
         for filename in files:
             lines = []
             with open(filename) as infile:
