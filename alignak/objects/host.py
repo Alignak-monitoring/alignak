@@ -71,7 +71,7 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
 from alignak.util import format_t_into_dhms_format
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import logger, naglog_result
 
 
@@ -133,6 +133,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+        'freshness_state':
+            CharProp(default='d', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
@@ -595,12 +597,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type t_threshold: int
         :return: None
         """
-        logger.warning("The results of host '%s' are stale by %s "
-                       "(threshold=%s).  I'm forcing an immediate check "
-                       "of the host.",
+        logger.warning("The freshness period of host '%s' is expired by %s "
+                       "(threshold=%s).  I'm forcing the state to freshness state (%s).",
                        self.get_name(),
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
     def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
