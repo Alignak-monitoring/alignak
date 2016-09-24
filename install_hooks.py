@@ -67,19 +67,6 @@ def get_init_scripts(config):
         line = line.strip().split('=')
         print("Installable directories/files: %s" % line)
 
-    # Check Alignak recommended user existence
-    if not user_exists('alignak'):
-        print("The user account 'alignak' does not exist on your system. " \
-              "You must create this user on your system to proceed with " \
-              "Alignak installation.")
-        raise Exception("Installation stopped")
-
-    if not group_exists('alignak'):
-        print("The user group 'alignak' does not exist on your system. " \
-              "You must create this users group on your system to proceed with "
-              "Alignak installation.")
-        raise Exception("Installation stopped")
-
 
 def fix_alignak_cfg(config):
     """
@@ -341,7 +328,8 @@ def fix_alignak_cfg(config):
           "==                                                                            ==\n"
           "== You should grant the write permissions on the configuration directory to   ==\n"
           "== the user alignak:                                                          ==\n"
-          "==   sudo chmod -R 777 %s\n"
+          "==   sudo find %s -type f -exec chmod 664 {}\n"
+          "==   sudo find %s -type d -exec chmod 775 {}\n"
           "==                                                                            ==\n"
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
@@ -351,5 +339,26 @@ def fix_alignak_cfg(config):
           "==   http://alignak-monitoring.github.io/download/                            ==\n"
           "==                                                                            ==\n"
           "================================================================================\n"
-          % (alignak_run, alignak_etc, alignak_etc)
+          % (alignak_run, alignak_etc, alignak_etc, alignak_etc)
           )
+
+    # Check Alignak recommended user existence
+    if not user_exists('alignak'):
+        print(
+            "\n"
+            "================================================================================\n"
+            "==                                                                            ==\n"
+            "== The user account 'alignak' does not exist on your system.                  ==\n"
+            "==                                                                            ==\n"
+            "================================================================================\n"
+        )
+
+    if not group_exists('alignak'):
+        print(
+            "\n"
+            "================================================================================\n"
+            "==                                                                            ==\n"
+            "== The user group 'alignak' does not exist on your system.                    ==\n"
+            "==                                                                            ==\n"
+            "================================================================================\n"
+        )
