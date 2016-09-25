@@ -1060,7 +1060,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 # get actions
                 lst = self.get_to_run_checks(True, False, poller_tags, worker_name=poll['name'])
                 try:
-                    # initial ping must be quick
                     logger.debug("Sending %s actions", len(lst))
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
@@ -1091,7 +1090,6 @@ class Scheduler(object):  # pylint: disable=R0902
                                              reactionner_tags=reactionner_tags,
                                              worker_name=poll['name'])
                 try:
-                    # initial ping must be quick
                     logger.debug("Sending %d actions", len(lst))
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
@@ -1119,9 +1117,6 @@ class Scheduler(object):  # pylint: disable=R0902
             con = poll['con']
             if con is not None:
                 try:
-                    # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     try:
                         results = str(results)
@@ -1165,9 +1160,6 @@ class Scheduler(object):  # pylint: disable=R0902
             con = poll['con']
             if con is not None:
                 try:
-                    # initial ping must be quick
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
                     results = unserialize(str(results))
                     nb_received = len(results)
