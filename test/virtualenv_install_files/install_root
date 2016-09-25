@@ -205,8 +205,6 @@
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/scheduler.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/schedulerlink.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/schedulerlink.pyc
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/shinken_import_hook.py
-644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/shinken_import_hook.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/stats.py
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/stats.pyc
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/trigger_functions.py
