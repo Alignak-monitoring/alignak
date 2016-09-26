@@ -205,8 +205,6 @@
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/scheduler.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/schedulerlink.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/schedulerlink.pyc
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/shinken_import_hook.py
-644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/shinken_import_hook.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/stats.py
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/stats.pyc
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/trigger_functions.py

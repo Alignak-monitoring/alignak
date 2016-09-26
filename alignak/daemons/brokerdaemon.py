@@ -276,8 +276,6 @@ class Broker(BaseSatellite):
             return
 
         try:
-            # initial ping must be quick
-            con.get('ping')
             new_run_id = con.get('get_running_id')
             new_run_id = float(new_run_id)
             # data transfer can be longer
@@ -379,8 +377,6 @@ class Broker(BaseSatellite):
                 con = links[sched_id]['con']
                 if con is not None:  # None = not initialized
                     t00 = time.time()
-                    # Before ask a call that can be long, do a simple ping to be sure it is alive
-                    con.get('ping')
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
                         tmp_broks = unserialize(tmp_broks, True)
