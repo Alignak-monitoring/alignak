@@ -1779,14 +1779,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if len(self.realms) == 0:
             # Create a default realm with default value =1
             # so all hosts without realm will be link with it
-            default = Realm({'realm_name': 'Default', 'default': '1'})
+            default = Realm({
+                'realm_name': 'All', 'alias': 'Self created default realm', 'default': '1'
+            })
             self.realms = Realms([default])
             logger.warning("No realms defined, I add one at %s", default.get_name())
             lists = [self.pollers, self.brokers, self.reactionners, self.receivers, self.schedulers]
             for lst in lists:
                 for elt in lst:
                     if not hasattr(elt, 'realm'):
-                        elt.realm = 'Default'
+                        elt.realm = 'All'
                         logger.info("Tagging %s with realm %s", elt.get_name(), default.get_name())
 
     def fill_default_satellites(self):
