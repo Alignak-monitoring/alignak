@@ -420,7 +420,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: True if is excluded, otherwise False
         :rtype: bool
         """
-        return self.is_excluded_for_sdesc(service.service_description, service.is_tpl())
+        return self.is_excluded_for_sdesc(
+            getattr(self, 'service_description', None), service.is_tpl()
+        )
 
     def is_excluded_for_sdesc(self, sdesc, is_tpl=False):
         """ Check whether this host should have the passed service *description*
