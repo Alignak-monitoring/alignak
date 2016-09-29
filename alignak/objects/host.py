@@ -1175,12 +1175,7 @@ class Hosts(SchedulingItems):
         :type realms: alignak.objects.realm.Realms
         :return: None
         """
-        default_realm = None
-        for realm in realms:
-            if getattr(realm, 'default', False):
-                default_realm = realm
-        # if default_realm is None:
-        #    print "Error: there is no default realm defined!"
+        default_realm = realms.get_default()
         for host in self:
             if host.realm != '':
                 realm = realms.find_by_name(host.realm.strip())
@@ -1191,8 +1186,7 @@ class Hosts(SchedulingItems):
                     host.realm = realm.uuid
                     host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
             else:
-                # print("Notice: applying default realm %s to host %s"
-                #       % (default_realm.get_name(), h.get_name()))
+                # Applying default realm to an host
                 host.realm = default_realm.uuid if default_realm else ''
                 host.realm_name = default_realm.get_name() if default_realm else ''
                 host.got_default_realm = True
