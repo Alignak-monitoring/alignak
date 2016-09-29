@@ -57,7 +57,7 @@ def get_init_scripts(config):
         data_files = data_files + "\netc/init.d = bin/init.d/*"
         data_files = data_files + "\netc/default = bin/default/alignak.in"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        data_files = data_files + "\nusr/local/etc/rc.d = bin/rc.d/*"
+        data_files = data_files + "\netc/rc.d = bin/rc.d/*"
     else:
         raise Exception("Unsupported platform, sorry")
 
