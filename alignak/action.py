@@ -305,8 +305,6 @@ class ActionBase(AlignakObject):
         # Now grep what we want in the output
         self.get_outputs(self.stdoutdata, max_plugins_output_length)
 
-        if self.exit_status > 0:
-            logger.info("Check output: %d for %s: %s", self.exit_status, self.command, self.output)
         # We can clean the useless properties now
         del self.stdoutdata
         del self.stderrdata
