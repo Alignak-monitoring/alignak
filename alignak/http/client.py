@@ -46,13 +46,13 @@
 """This module provides HTTPClient class. Used by daemon to connect to HTTP servers (other daemons)
 
 """
+import logging
 import warnings
-
 import requests
 
-
-from alignak.log import logger
 from alignak.misc.serialization import serialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class HTTPException(Exception):

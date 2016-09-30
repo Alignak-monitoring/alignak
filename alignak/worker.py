@@ -58,10 +58,12 @@ import signal
 import traceback
 import uuid
 import cStringIO
+import logging
 
-
-from alignak.log import logger, BrokHandler
+from alignak.log import BrokHandler
 from alignak.misc.common import setproctitle
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Worker(object):

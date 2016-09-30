@@ -56,9 +56,10 @@ from tempfile import NamedTemporaryFile
 
 import logging
 from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, StreamHandler
-from alignak.log import logger as alignak_logger, naglog_result, Log, HUMAN_TIMESTAMP_LOG
+from alignak.log import naglog_result, Log, HUMAN_TIMESTAMP_LOG
 from alignak.log import DEFAULT_FORMATTER, BrokHandler, ColorStreamHandler
 
+alignak_logger = logging.getLogger("alignak")
 alignak_logger.set_log = True
 
 from alignak.brok import Brok

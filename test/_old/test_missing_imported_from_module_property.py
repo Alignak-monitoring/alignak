@@ -54,7 +54,6 @@ from alignak_test import (
 
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
-from alignak.log import logger
 
 
 class TestMissingimportedFrom(AlignakTest):

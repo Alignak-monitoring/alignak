@@ -53,11 +53,14 @@ implements way of sending notifications. Basically used for parsing.
 
 """
 import uuid
+import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.commandcall import CommandCall
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class NotificationWay(Item):

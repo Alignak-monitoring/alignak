@@ -43,11 +43,13 @@
 """
 This module provide SchedulerLink and SchedulerLinks classes used to manage schedulers
 """
-
+import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
-from alignak.log import logger
+
 from alignak.http.client import HTTPEXCEPTIONS
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SchedulerLink(SatelliteLink):

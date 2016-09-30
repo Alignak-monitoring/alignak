@@ -38,6 +38,7 @@ import socket
 
 import unittest2 as unittest
 
+import logging
 
 import alignak
 from alignak.objects.config import Config
@@ -45,7 +46,6 @@ from alignak.objects.command import Command
 from alignak.objects.module import Module
 
 from alignak.dispatcher import Dispatcher
-from alignak.log import logger
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager, ExternalCommand
@@ -79,7 +79,7 @@ myself = os.path.abspath(__file__)
 class __DUMMY:
     def add(self, obj):
         pass
-
+logger = logging.getLogger("alignak")
 logger.load_obj(__DUMMY())
 logger.setLevel(ERROR)
 

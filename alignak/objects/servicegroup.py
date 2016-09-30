@@ -50,11 +50,12 @@
 """
 This module provide Servicegroup and Servicegroups classes used to group services
 """
+import logging
 
 from alignak.property import StringProp
-from alignak.log import logger
-
 from .itemgroup import Itemgroup, Itemgroups
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Servicegroup(Itemgroup):

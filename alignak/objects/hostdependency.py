@@ -54,10 +54,11 @@
 implements dependencies between hosts. Basically used for parsing.
 
 """
+import logging
 from alignak.objects.item import Item, Items
-
 from alignak.property import BoolProp, StringProp, ListProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Hostdependency(Item):

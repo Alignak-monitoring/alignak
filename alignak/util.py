@@ -59,11 +59,13 @@ import sys
 import os
 import json
 import argparse
+import logging
 
 import numpy as np
 
-from alignak.log import logger
 from alignak.version import VERSION
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')

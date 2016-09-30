@@ -17,14 +17,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Arbiter."""
-import json
-import time
 
+import time
+import logging
+import json
 import cherrypy
 
-from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import jsonify_r
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ArbiterInterface(GenericInterface):

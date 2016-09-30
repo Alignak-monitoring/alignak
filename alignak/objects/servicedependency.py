@@ -54,10 +54,12 @@
 implements dependencies between services. Basically used for parsing.
 
 """
+import logging
 from alignak.property import BoolProp, StringProp, ListProp
-from alignak.log import logger
 
 from .item import Item, Items
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Servicedependency(Item):

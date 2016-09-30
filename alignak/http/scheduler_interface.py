@@ -18,12 +18,14 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Scheduler."""
 
+import logging
 import cherrypy
 
-from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import average_percentile
 from alignak.misc.serialization import serialize, unserialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SchedulerInterface(GenericInterface):

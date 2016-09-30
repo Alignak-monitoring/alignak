@@ -67,9 +67,9 @@
 If you look at the scheduling part, look at the scheduling item class"""
 # pylint: disable=C0302
 # pylint: disable=R0904
+import logging
 import time
 import re
-
 
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
@@ -81,7 +81,9 @@ from alignak.util import (
     is_complex_expr,
     KeyValueSyntaxError)
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
-from alignak.log import logger, naglog_result
+from alignak.log import naglog_result
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Service(SchedulingItem):

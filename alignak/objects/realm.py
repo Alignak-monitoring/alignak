@@ -54,11 +54,12 @@ implements realm for Alignak. Basically used for parsing.
 
 """
 import copy
-
+import logging
 from alignak.objects.item import Item
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 from alignak.property import BoolProp, StringProp, DictProp, ListProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 # It change from hostgroup Class because there is no members
 # properties, just the realm_members that we rewrite on it.
