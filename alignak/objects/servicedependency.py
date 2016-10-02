@@ -406,28 +406,35 @@ class Servicedependencies(Items):
                     services[servicedep.dependent_service_description].get_name())
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Servicedependencies, self).is_correct()
+        state = True
+
+        # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")
         if len(loop) > 0:
-            logger.error("Loop detected while checking service dependencies")
+            msg = "Loop detected while checking service dependencies"
+            self.configuration_errors.append(msg)
+            state = False
             for item in self:
                 for elem in loop:
                     if elem == item.service_description:
-                        logger.error("Service %s is parent service_description in dependency "
-                                     "defined in %s", item.service_description_string,
-                                     item.imported_from)
+                        msg = "Service %s is parent service_description in dependency "\
+                              "defined in %s" % (
+                                  item.service_description_string, item.imported_from
+                              )
+                        self.configuration_errors.append(msg)
                     elif elem == item.dependent_service_description:
-                        logger.error("Service %s is child service_description in dependency"
-                                     " defined in %s", item.dependent_service_description_string,
-                                     item.imported_from)
-            return False
+                        msg = "Service %s is child service_description in dependency"\
+                              " defined in %s" % (
+                                  item.dependent_service_description_string, item.imported_from
+                              )
+                        self.configuration_errors.append(msg)
 
-        return valid
+        return super(Servicedependencies, self).is_correct() and state

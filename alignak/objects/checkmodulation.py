@@ -54,7 +54,6 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 from alignak.property import StringProp
 from alignak.util import to_name_if_possible
-from alignak.log import logger
 
 
 class CheckModulation(Item):
@@ -76,7 +75,7 @@ class CheckModulation(Item):
 
     running_properties = Item.running_properties.copy()
 
-    _special_properties = ('check_period',)
+    special_properties = ('check_period',)
 
     macros = {}
 
@@ -120,49 +119,38 @@ class CheckModulation(Item):
         return None
 
     def is_correct(self):
-        """Check if the CheckModulation definition is correct::
+        """Check if this object configuration is correct ::
 
-        * Check for required attribute
-        * Raise previous configuration errors
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
-        :return: True if the definition is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
-        # Raised all previously saw errors like unknown commands or timeperiods
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
-        for prop, entry in cls.properties.items():
-            if prop not in cls._special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[checkmodulation::%s] %s property not set", self.get_name(),
-                                 prop)
-                    state = False  # Bad boy...
-
-        # Ok now we manage special cases...
-        # Service part
+        # Internal checks before executing inherited function...
         if not hasattr(self, 'check_command'):
-            logger.error("[checkmodulation::%s] do not have any check_command defined",
-                         self.get_name())
+            msg = "[checkmodulation::%s] do not have any check_command defined" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         else:
             if self.check_command is None:
-                logger.error("[checkmodulation::%s] a check_command is missing", self.get_name())
+                msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
             if not self.check_command.is_valid():
-                logger.error("[checkmodulation::%s] a check_command is invalid", self.get_name())
+                msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
 
         # Ok just put None as check_period, means 24x7
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        return state
+        return super(CheckModulation, self).is_correct() and state
 
 
 class CheckModulations(CommandCallItems):

@@ -212,7 +212,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
-        * Read all .cfg files in  cfg_dir
+        * Read all .cfg files in cfg_dir
         * Read all files in cfg_file
         * Create objects (Arbiter, Module)
         * Set HTTP links info (ssl etc)
@@ -228,7 +228,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)
+        logger.info("Loaded configuration files, state: %s", self.conf.conf_is_correct)
 
+        # TODO: why is it here?
         logger.debug("Opening local log file")
 
         # First we need to get arbiters and modules
@@ -374,9 +376,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # The conf can be incorrect here if the cut into parts see errors like
         # a realm with hosts and not schedulers for it
         if not self.conf.conf_is_correct:
-            self.conf.show_errors()
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
+            self.conf.show_errors()
             sys.exit(err)
 
         logger.info('Things look okay - No serious problems were detected '
