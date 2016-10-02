@@ -39,6 +39,7 @@ import socket
 import unittest2 as unittest
 
 import logging
+from logging import Handler
 
 import alignak
 from alignak.objects.config import Config
@@ -75,13 +76,6 @@ from alignak_tst_utils import safe_print
 # Modules are by default on the ../modules
 myself = os.path.abspath(__file__)
 
-
-class __DUMMY:
-    def add(self, obj):
-        pass
-logger = logging.getLogger("alignak")
-logger.load_obj(__DUMMY())
-logger.setLevel(ERROR)
 
 #############################################################################
 # We overwrite the functions time() and sleep()
@@ -129,6 +123,25 @@ class Pluginconf(object):
     pass
 
 
+class CollectorHandler(Handler):
+    """
+    This log handler collecting all emitted log.
+
+    Used for tet purpose (assertion)
+    """
+
+    def __init__(self):
+        Handler.__init__(self, logging.DEBUG)
+        self.collector = []
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.collector.append(msg)
+        except TypeError:
+            self.handleError(record)
+
+
 class AlignakTest(unittest.TestCase):
 
     time_hacker = TimeHacker()
@@ -162,12 +175,30 @@ class AlignakTest(unittest.TestCase):
         self.conf_is_correct = False
         self.configuration_warnings = []
         self.configuration_errors = []
+        self.logger = logging.getLogger("alignak")
+        # Add collector for test purpose.
+        collector_h = CollectorHandler()
+        collector_h.setFormatter(self.logger.handlers[0].formatter)  # Need to copy format
+        self.logger.addHandler(collector_h)
 
         self.arbiter = Arbiter([configuration_file], False, False, False, False,
                               '/tmp/arbiter.log', 'arbiter-master')
 
         try:
+            # The following is copy paste from setup_alignak_logger
+            # The only difference is that keep logger at INFO level to gather messages
+            # This is needed to assert later on logs we received.
+            self.logger.setLevel('INFO')
+            # Force the debug level if the daemon is said to start with such level
+            if self.arbiter.debug:
+                self.logger.setLevel('DEBUG')
+
+            # Log will be broks
+            for line in self.arbiter.get_header():
+                self.logger.info(line)
+
             self.arbiter.load_config_file()
+
             # If this assertion does not match, then there is a bug in the arbiter :)
             self.assertTrue(self.arbiter.conf.conf_is_correct)
             self.conf_is_correct = True
@@ -377,23 +408,17 @@ class AlignakTest(unittest.TestCase):
 
     def show_logs(self, scheduler=False):
         """
-        Show logs from the Arbiter. Get the Arbiter broks list an filter to
-        display only the 'log' type broks
-        If 'scheduler' is True, then uses the scheduler's broks list.
+        Show logs. Get logs collected by the collector handler and print them
 
         @verified
         :param scheduler:
         :return:
         """
         print "--- logs <<<----------------------------------"
-        broks = self.arbiter.broks
-        if scheduler:
-            broks = self.schedulers['scheduler-master'].sched.broks
-
-        for brok in sorted(broks.values(), lambda x, y: cmp(x.uuid, y.uuid)):
-            if brok.type == 'log':
-                brok.prepare()
-                safe_print("LOG: ", brok.data['log'])
+        collector_h = [hand for hand in self.logger.handlers
+                       if isinstance(hand, CollectorHandler)][0]
+        for log in collector_h.collector:
+            safe_print(log)
 
         print "--- logs >>>----------------------------------"
 
@@ -547,29 +572,26 @@ class AlignakTest(unittest.TestCase):
         :type pattern: str
         :return: None
         """
-        broks = self.arbiter.broks
-        if scheduler:
-            broks = self.schedulers['scheduler-master'].sched.broks
+        collector_h = [hand for hand in self.logger.handlers
+                       if isinstance(hand, CollectorHandler)][0]
 
         regex = re.compile(pattern)
         log_num = 1
 
         found = False
-        for brok in broks.values():
-            if brok.type == 'log':
-                brok.prepare()
-                if index == log_num:
-                    if regex.search(brok.data['log']):
-                        found = True
-                log_num += 1
+        for log in collector_h.collector:
+            if index == log_num:
+                if regex.search(log):
+                    found = True
+            log_num += 1
         self.assertTrue(found,
-                        "Not found a matching log line in broks:\nindex=%s pattern=%r\n"
-                        "broks_logs=[[[\n%s\n]]]" % (
+                        "Not found a matching log line in logs:\nindex=%s pattern=%r\n"
+                        "logs=[[[\n%s\n]]]" % (
                             index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
-                                                      for idx, b in enumerate((b.data['log']
-                                                                               for b in broks.values()
-                                                                               if b.type == 'log'),
-                                                                              1))))
+                                                      for idx, b in enumerate(collector_h.collector)
+                                                      )
+                            )
+                        )
 
     def assert_checks_count(self, number):
         """
@@ -671,21 +693,20 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         regex = re.compile(pattern)
-        broks = self.arbiter.broks
-        if scheduler:
-            broks = self.schedulers['scheduler-master'].sched.broks
 
-        for brok in broks.values():
-            if brok.type == 'log':
-                brok.prepare()
-                if re.search(regex, brok.data['log']):
-                    self.assertTrue(not assert_not,
-                                    "Found matching log line:\n"
-                                    "pattern = %r\nbrok log = %r" % (pattern, brok.data['log']))
-                    return
-        logs = [brok.data['log'] for brok in broks.values() if brok.type == 'log']
+        collector_h = [hand for hand in self.logger.handlers
+                       if isinstance(hand, CollectorHandler)][0]
+
+        for log in collector_h.collector:
+            if re.search(regex, log):
+                self.assertTrue(not assert_not,
+                                "Found matching log line:\n"
+                                "pattern = %r\nbrok log = %r" % (pattern, log))
+                return
+
         self.assertTrue(assert_not, "No matching log line found:\n"
-                                    "pattern = %r\n" "logs broks = %r" % (pattern, logs))
+                                    "pattern = %r\n" "logs broks = %r" % (pattern,
+                                                                          collector_h.collector))
 
     def assert_any_log_match(self, pattern, scheduler=False):
         """
@@ -712,14 +733,12 @@ class AlignakTest(unittest.TestCase):
     def get_log_match(self, pattern):
         regex = re.compile(pattern)
         res = []
-        broks = self.broks
-        if hasattr(self, "schedulers") and self.schedulers and hasattr(self.schedulers['scheduler-master'], "sched"):
-            broks = self.schedulers['scheduler-master'].sched.broks
+        collector_h = [hand for hand in self.logger.handlers
+                       if isinstance(hand, CollectorHandler)][0]
 
-        for brok in broks:
-            if brok.type == 'log':
-                if re.search(regex, brok.data['log']):
-                    res.append(brok.data['log'])
+        for log in collector_h.collector:
+            if re.search(regex, log):
+                res.append(log)
         return res
 
     def print_header(self):
