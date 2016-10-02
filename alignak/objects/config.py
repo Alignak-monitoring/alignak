@@ -781,7 +781,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'nagios_group': 'alignak_group'
     }
 
-    read_config_silent = 0
+    read_config_silent = False
 
     early_created_types = ['arbiter', 'module']
 
@@ -823,13 +823,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         super(Config, self).__init__(params, parsing=parsing)
         self.params = {}
         self.resource_macros_names = []
-        # By default the conf is correct
+        # By default the conf is correct and the warnings and errors lists are empty
         self.conf_is_correct = True
+        self.configuration_warnings = []
+        self.configuration_errors = []
         # We tag the conf with a magic_hash, a random value to
-        # idify this conf
+        # identify this conf
         random.seed(time.time())
         self.magic_hash = random.randint(1, 100000)
-        self.configuration_errors = []
         self.triggers_dirs = []
         self.packs_dirs = []
 
@@ -915,8 +916,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # it's a macro or a useless now param, we don't touch this
                 val = value
             else:
-                logger.warning("Guessing the property %s type because it is not in "
-                               "%s object properties", key, self.__class__.__name__)
+                msg = "Guessing the property %s type because it is not in %s object properties" % (
+                    key, self.__class__.__name__
+                )
+                self.configuration_warnings.append(msg)
+                logger.warning(msg)
                 val = ToGuessProp.pythonize(clean_params[key])
 
             setattr(self, key, val)
@@ -962,7 +966,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # if the previous does not finish with a line return
             res.write(os.linesep)
             res.write('# IMPORTEDFROM=%s' % (c_file) + os.linesep)
-            if self.read_config_silent == 0:
+            if not self.read_config_silent:
                 logger.info("[config] opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
@@ -971,9 +975,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 file_d.close()
                 self.config_base_dir = os.path.dirname(c_file)
             except IOError, exp:
-                logger.error("[config] cannot open config file '%s' for reading: %s", c_file, exp)
-                # The configuration is invalid because we have a bad file!
-                self.conf_is_correct = False
+                msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
+                self.add_error(msg)
                 continue
 
             for line in buf:
@@ -991,7 +994,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     cfg_file_name = cfg_file_name.strip()
                     try:
                         file_d = open(cfg_file_name, 'rU')
-                        if self.read_config_silent == 0:
+                        if not self.read_config_silent:
                             logger.info("Processing object config file '%s'", cfg_file_name)
                         res.write(os.linesep + '# IMPORTEDFROM=%s' % (cfg_file_name) + os.linesep)
                         res.write(file_d.read().decode('utf8', 'replace'))
@@ -999,10 +1002,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         res.write(os.linesep)
                         file_d.close()
                     except IOError, exp:
-                        logger.error("Cannot open config file '%s' for reading: %s",
-                                     cfg_file_name, exp)
-                        # The configuration is invalid because we have a bad file!
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open config file '%s' for reading: %s" % (
+                            cfg_file_name, exp
+                        )
+                        self.add_error(msg)
                 elif re.search("^cfg_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -1011,8 +1014,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         cfg_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(cfg_dir_name):
-                        logger.error("Cannot open config dir '%s' for reading", cfg_dir_name)
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open config dir '%s' for reading" % \
+                              (cfg_dir_name)
+                        self.add_error(msg)
 
                     # Look for .pack file into it :)
                     self.packs_dirs.append(cfg_dir_name)
@@ -1022,7 +1026,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         for c_file in files:
                             if not re.search(r"\.cfg$", c_file):
                                 continue
-                            if self.read_config_silent == 0:
+                            if not self.read_config_silent:
                                 logger.info("Processing object config file '%s'",
                                             os.path.join(root, c_file))
                             try:
@@ -1034,11 +1038,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 res.write(os.linesep)
                                 file_d.close()
                             except IOError, exp:
-                                logger.error("Cannot open config file '%s' for reading: %s",
-                                             os.path.join(root, c_file), exp)
-                                # The configuration is invalid
-                                # because we have a bad file!
-                                self.conf_is_correct = False
+                                msg = "[config] cannot open config file '%s' for reading: %s" % \
+                                      (os.path.join(root, c_file), exp)
+                                self.add_error(msg)
                 elif re.search("^triggers_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -1047,8 +1049,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         trig_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(trig_dir_name):
-                        logger.error("Cannot open triggers dir '%s' for reading", trig_dir_name)
-                        self.conf_is_correct = False
+                        msg = "[config] cannot open triggers dir '%s' for reading" % \
+                              (trig_dir_name)
+                        self.add_error(msg)
                         continue
                     # Ok it's a valid one, I keep it
                     self.triggers_dirs.append(trig_dir_name)
@@ -1091,6 +1094,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         tmp_line = ''
         lines = buf.split('\n')
         line_nb = 0  # Keep the line number for the file path
+        filefrom = ''
         for line in lines:
             if line.startswith("# IMPORTEDFROM="):
                 filefrom = line.split('=')[1]
@@ -1126,8 +1130,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             if re.search(r"^\s*#|^\s*$|^\s*}", line) is not None:
                 pass
-            # A define must be catch and the type save
-            # The old entry must be save before
+            # A define must be catched and the type saved
+            # The old entry must be saved before
             elif re.search("^define", line) is not None:
                 if re.search(r".*\{.*$", line) is not None:  # pylint: disable=R0102
                     in_define = True
@@ -1138,7 +1142,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     objectscfg[tmp_type] = []
                 objectscfg[tmp_type].append(tmp)
                 tmp = []
-                tmp.append("imported_from " + filefrom + ':%d' % line_nb)
+                tmp.append("imported_from %s:%s" % (filefrom, line_nb))
                 # Get new type
                 elts = re.split(r'\s', line)
                 # Maybe there was space before and after the type
@@ -1158,7 +1162,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         objectscfg[tmp_type].append(tmp)
         objects = {}
 
-        # print "Params", params
         self.load_params(params)
         # And then update our MACRO dict
         self.fill_resource_macros_names_macros()
@@ -2115,70 +2118,91 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: True if the configuration is correct else False
         :rtype: bool
         """
-        logger.info('Running pre-flight check on configuration data...')
+        logger.info(
+            'Running pre-flight check on configuration data, initial state: %s',
+            self.conf_is_correct
+        )
         valid = self.conf_is_correct
+        self.configuration_errors = []
+        self.configuration_warnings = []
 
         # Globally unmanaged parameters
-        if self.read_config_silent == 0:
+        if not self.read_config_silent:
             logger.info('Checking global parameters...')
         if not self.check_error_on_hard_unmanaged_parameters():
             valid = False
             logger.error("Check global parameters failed")
 
-        for obj in ('hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
+        for obj in ['hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
                     'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
                     'hostsextinfo', 'servicesextinfo', 'checkmodulations', 'macromodulations',
-                    'realms'):
-            if self.read_config_silent == 0:
+                    'realms', 'servicedependencies', 'hostdependencies', 'resultmodulations',
+                    'businessimpactmodulations', 'arbiters', 'schedulers', 'reactionners',
+                    'pollers', 'brokers', 'receivers', ]:
+            if not self.read_config_silent:
                 logger.info('Checking %s...', obj)
 
-            cur = getattr(self, obj)
-            if not cur.is_correct():
-                valid = False
-                logger.error("\t%s conf incorrect!!", obj)
-            if self.read_config_silent == 0:
-                logger.info('\tChecked %d %s', len(cur), obj)
-
-        for obj in ('servicedependencies', 'hostdependencies', 'arbiters', 'schedulers',
-                    'reactionners', 'pollers', 'brokers', 'receivers', 'resultmodulations',
-                    'businessimpactmodulations'):
             try:
                 cur = getattr(self, obj)
             except AttributeError:
+                logger.info("\t%s are not present in the configuration", obj)
                 continue
-            if self.read_config_silent == 0:
-                logger.info('Checking %s...', obj)
+
             if not cur.is_correct():
+                if not self.read_config_silent:
+                    logger.info('Checked %s, configuration is incorrect!', obj)
+
                 valid = False
-                logger.error("\t%s conf incorrect!!", obj)
-            if self.read_config_silent == 0:
+                self.configuration_errors += cur.configuration_errors
+                msg = "%s configuration is incorrect!" % obj
+                self.configuration_errors.append(msg)
+                logger.error(msg)
+            if cur.configuration_warnings:
+                self.configuration_warnings += cur.configuration_warnings
+                logger.error("\t%s configuration warnings: %d, total: %d", obj,
+                             len(cur.configuration_warnings), len(self.configuration_warnings))
+
+            if not self.read_config_silent:
                 logger.info('\tChecked %d %s', len(cur), obj)
 
         # Look that all scheduler got a broker that will take brok.
-        # If there are no, raise an Error
+        # If not, raise an Error
         for scheduler in self.schedulers:
-            rea_id = scheduler.realm
-            if rea_id:
-                rea = self.realms[rea_id]
-                if len(rea.potential_brokers) == 0:
-                    logger.error("The scheduler %s got no broker in its realm or upper",
-                                 scheduler.get_name())
-                    self.add_error("Error: the scheduler %s got no broker in its realm "
-                                   "or upper" % scheduler.get_name())
+            if scheduler.realm:
+                if len(self.realms[scheduler.realm].potential_brokers) == 0:
+                    logger.error(
+                        "The scheduler %s got no broker in its realm or upper",
+                        scheduler.get_name()
+                    )
+                    self.add_error(
+                        "Error: the scheduler %s got no broker "
+                        "in its realm or upper" % scheduler.get_name()
+                    )
                     valid = False
 
         # Check that for each poller_tag of a host, a poller exists with this tag
-        # TODO: need to check that poller are in the good realm too
         hosts_tag = set()
+        hosts_realms = set()
         services_tag = set()
         pollers_tag = set()
+        pollers_realms = set()
         for host in self.hosts:
             hosts_tag.add(host.poller_tag)
+            hosts_realms.add(self.realms[host.realm])
         for service in self.services:
             services_tag.add(service.poller_tag)
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
+            pollers_realms.add(self.realms[poller.realm])
+
+        if not hosts_realms.issubset(pollers_realms):
+            for realm in hosts_realms.difference(pollers_realms):
+                logger.error("Hosts exist in the realm %s but no poller in this realm", realm)
+                self.add_error("Error: Hosts exist in the realm %s but no poller "
+                               "in this realm" % realm)
+                valid = False
+
         if not hosts_tag.issubset(pollers_tag):
             for tag in hosts_tag.difference(pollers_tag):
                 logger.error("Hosts exist with poller_tag %s but no poller got this tag", tag)
@@ -2196,15 +2220,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for lst in [self.services, self.hosts]:
             for item in lst:
                 if item.got_business_rule:
-                    e_ro_id = item.realm
-                    e_ro = self.realms[e_ro_id]
+                    e_ro = self.realms[item.realm]
                     # Something was wrong in the conf, will be raised elsewhere
                     if not e_ro:
                         continue
                     e_r = e_ro.realm_name
                     for elt in item.business_rule.list_all_elements():
-                        r_o_id = elt.realm
-                        r_o = self.realms[r_o_id]
+                        r_o = self.realms[elt.realm]
                         # Something was wrong in the conf, will be raised elsewhere
                         if not r_o:
                             continue
@@ -2253,22 +2275,34 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """Add an error in the configuration error list so we can print them
          all in one place
 
+         Set the configuration as not valid
+
         :param txt: Text error
         :type txt: str
         :return: None
         """
-        err = txt
-        self.configuration_errors.append(err)
-
+        self.configuration_errors.append(txt)
         self.conf_is_correct = False
 
     def show_errors(self):
-        """Loop over configuration_errors and log them
+        """
+        Loop over configuration warnings and log them as INFO log
+        Loop over configuration errors and log them as INFO log
+
+        Note that the warnings and errors are logged on the fly during the configuration parsing.
+        It is not necessary to log as WARNING and ERROR in this function which is used as a sum-up
+        on the end of configuration parsing when an error has been detected.
 
         :return:  None
         """
-        for err in self.configuration_errors:
-            logger.error(err)
+        if self.configuration_warnings:
+            logger.info("Configuration warnings:")
+            for msg in self.configuration_warnings:
+                logger.info(msg)
+        if self.configuration_errors:
+            logger.info("Configuration errors:")
+            for msg in self.configuration_errors:
+                logger.info(msg)
 
     def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
@@ -2349,10 +2383,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             graph.add_edge(host, dep)
 
         # Now We find the default realm
-        default_realm = None
-        for realm in self.realms:
-            if hasattr(realm, 'default') and realm.default:
-                default_realm = realm
+        default_realm = self.realms.get_default()
 
         # Access_list from a node il all nodes that are connected
         # with it: it's a list of ours mini_packs
@@ -2365,14 +2396,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if elt.realm:
                     tmp_realms.add(elt.realm)
             if len(tmp_realms) > 1:
-                self.add_error("Error: the realm configuration of yours hosts is not good "
-                               "because there a more than one realm in one pack (host relations):")
-                for host in pack:
+                self.add_error("Error: the realm configuration of yours hosts is not good because "
+                               "there is more than one realm in one pack (host relations):")
+                for host_id in pack:
+                    host = self.hosts[host_id]
                     if host.realm is None:
-                        self.add_error('   the host %s do not have a realm' % host.get_name())
+                        self.add_error(' -> the host %s do not have a realm' % host.get_name())
                     else:
-                        self.add_error('   the host %s is in the realm %s' %
-                                       (host.get_name(), host.realm.get_name()))
+                        # Do not use get_name for the realm because it is not an object but a
+                        # string containing the not found realm name if the realm is not existing!
+                        # As of it, it may raise an exception
+                        self.add_error(' -> the host %s is in the realm %s' %
+                                       (host.get_name(), host.realm_name))
             if len(tmp_realms) == 1:  # Ok, good
                 realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)
@@ -2380,7 +2415,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if default_realm is not None:
                     default_realm.packs.append(pack)
                 else:
-                    self.add_error("Error: some hosts do not have a realm and you do not "
+                    self.add_error("Error: some hosts do not have a realm and you did not "
                                    "defined a default realm!")
                     for host in pack:
                         self.add_error('    Impacted host: %s ' % host.get_name())

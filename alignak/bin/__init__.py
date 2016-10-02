@@ -48,14 +48,14 @@ Alignak.
 
 
 import sys
-from ._deprecated_VERSION import DeprecatedAlignakBin
-
 from alignak.notification import Notification
 from alignak.eventhandler import EventHandler
 from alignak.check import Check
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
+from ._deprecated_VERSION import DeprecatedAlignakBin
+
 
 # Make sure people are using Python 2.6 or higher
 # This is the canonical python version check

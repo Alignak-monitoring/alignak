@@ -2079,7 +2079,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :param hosts: hosts objects, used to check if a notif is blocked
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used to check if a notif is blocked
-        :type services: alignak.objects.service.Service
+        :type services: alignak.objects.service.Services
         :param t_wished: time we want to notify
         :type t_wished: int
         :return: None
@@ -2987,25 +2987,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         pass
 
     def is_correct(self):
+        """
+        Check if this object configuration is correct ::
 
+        * Check our own specific properties
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False
+        :rtype: bool
+        """
         state = True
-
-        for prop, entry in self.__class__.properties.items():
-            if not entry.special and not hasattr(self, prop) and entry.required:
-                logger.error("[%s::%s] %s property not set",
-                             self.my_type, self.get_name(), prop)
-                state = False
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[%s::%s] %s", self.my_type, self.get_name(), err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[%s::%s] %s", self.my_type, self.get_name(), err)
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):
@@ -3013,42 +3004,57 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Ok now we manage special cases...
         if self.notifications_enabled and self.contacts == []:
-            logger.warning("[%s::%s] no contacts nor contact_groups property",
-                           self.my_type, self.get_name())
+            msg = "[%s::%s] no contacts nor contact_groups property" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_warnings.append(msg)
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("[%s::%s] event_handler '%s' is invalid",
-                         self.my_type, self.get_name(), self.event_handler.command)
+            msg = "[%s::%s] event_handler '%s' is invalid" % (
+                self.my_type, self.get_name(), self.event_handler.command
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         if not hasattr(self, 'check_command'):
-            logger.error("[%s::%s] no check_command", self.my_type, self.get_name())
+            msg = "[%s::%s] no check_command" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
-                logger.error("[%s::%s] check_command '%s' invalid",
-                             self.my_type, self.get_name(), self.check_command.command)
+                msg = "[%s::%s] check_command '%s' invalid" % (
+                    self.my_type, self.get_name(), self.check_command.command
+                )
+                self.configuration_errors.append(msg)
                 state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    logger.error("[%s::%s] business_rule invalid",
-                                 self.my_type, self.get_name())
+                    msg = "[%s::%s] business_rule invalid" % (
+                        self.my_type, self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     for bperror in self.business_rule.configuration_errors:
-                        logger.error("[%s::%s]: %s", self.my_type, self.get_name(), bperror)
+                        msg = "[%s::%s]: %s" % (self.my_type, self.get_name(), bperror)
+                        self.configuration_errors.append(msg)
                     state = False
 
         if not hasattr(self, 'notification_interval') \
                 and self.notifications_enabled is True:
-            logger.error("[%s::%s] no notification_interval but notifications enabled",
-                         self.my_type, self.get_name())
+            msg = "[%s::%s] no notification_interval but notifications enabled" % (
+                self.my_type, self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         # if no check_period, means 24x7, like for services
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
+        state = super(SchedulingItem, self).is_correct()
         return state
 
 

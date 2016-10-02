@@ -273,25 +273,28 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = super(Host, self).is_correct()
-        cls = self.__class__
+        state = True
 
+        # Internal checks before executing inherited function...
+        cls = self.__class__
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    logger.error("[%s::%s] host_name got an illegal character: %s",
-                                 self.my_type, self.get_name(), char)
+                    msg = "[%s::%s] host_name got an illegal character: %s" % (
+                        self.my_type, self.get_name(), char
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
-        return state
+        return super(Host, self).is_correct() and state
 
     def get_services(self):
         """Get all services for this host
@@ -1184,6 +1187,9 @@ class Hosts(SchedulingItems):
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
                     host.configuration_errors.append(err)
+                    # This to avoid having an host.realm as a string name
+                    host.realm_name = host.realm
+                    host.realm = None
                 else:
                     host.realm = realm.uuid
                     host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
@@ -1286,26 +1292,33 @@ class Hosts(SchedulingItems):
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if the hosts list configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * check if any loop exists in each host dependencies
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Hosts, self).is_correct()
+        state = True
+
+        # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
         if len(loop) > 0:
-            logger.error("Loop detected while checking hosts ")
+            msg = "Loop detected while checking hosts "
+            self.configuration_errors.append(msg)
+            state = False
             for uuid, item in self.items.iteritems():
                 for elem in loop:
                     if elem == uuid:
-                        logger.error("Host %s is parent in dependency defined in %s",
-                                     item.get_name(), item.imported_from)
+                        msg = "Host %s is parent in dependency defined in %s" % (
+                            item.get_name(), item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
                     elif elem in item.parents:
-                        logger.error("Host %s is child in dependency defined in %s",
-                                     self[elem].get_name(), self[elem].imported_from)
-            return False
+                        msg = "Host %s is child in dependency defined in %s" % (
+                            self[elem].get_name(), self[elem].imported_from
+                        )
+                        self.configuration_errors.append(msg)
 
-        return valid
+        return super(Hosts, self).is_correct() and state
