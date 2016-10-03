@@ -1739,6 +1739,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.state_type == 'SOFT':
                 if not chk.is_dependent():
                     self.add_attempt()
+                # Cases where go:
+                #  * warning soft => critical hard
+                #  * warning soft => critical soft
+                if self.state != self.last_state:
+                    self.unacknowledge_problem_if_not_sticky(comments)
                 if self.is_max_attempts():
                     # Ok here is when we just go to the hard state
                     self.state_type = 'HARD'
