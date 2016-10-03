@@ -228,6 +228,7 @@ class Receiver(Satellite):
             g_conf = conf['global']
 
             # If we've got something in the schedulers, we do not want it anymore
+            self.host_assoc = {}
             for sched_id in conf['schedulers']:
 
                 old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
@@ -243,6 +244,8 @@ class Receiver(Satellite):
 
                 sched = conf['schedulers'][sched_id]
                 self.schedulers[sched_id] = sched
+
+                self.push_host_names(sched_id, sched['hosts'])
 
                 if sched['name'] in g_conf['satellitemap']:
                     sched.update(g_conf['satellitemap'][sched['name']])

@@ -82,6 +82,8 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(1, len(receiv.modules))
         self.assertEqual(receiv.modules[0].module_alias, 'receiverexample')
         self.assertEqual(receiv.modules[0].myvar, 'coruscant')
+        # check get hosts
+        self.assertGreater(len(receiv.host_assoc), 2)
 
     def test_conf_poller(self):
         """
