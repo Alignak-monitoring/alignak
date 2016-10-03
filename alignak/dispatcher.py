@@ -576,8 +576,6 @@ class Dispatcher:
             sat.active = False
             sat.is_sent = False
 
-            # if is_sent:
-            #     # We change the satellite configuration, update our data
             sat.known_conf_managed_push(conf_uuid, cfg.push_flavor)
 
             nb_cfg_prepared += 1
