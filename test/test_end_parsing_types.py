@@ -43,21 +43,7 @@
 This file is used to test properties types after config loaded and parsed
 """
 import logging
-
-#
-# This file is used to test reading and processing of config files
-#
-
-import unittest2 as unittest
-
-import string
-from alignak.objects.item import Items
-
-from alignak_test import time_hacker
-from alignak.log import logger
-from alignak.objects.config import Config
-from alignak.brok import Brok
-from alignak.external_command import ExternalCommand
+from alignak_test import AlignakTest
 from alignak.property import UnusedProp, StringProp, IntegerProp, \
     BoolProp, CharProp, DictProp, FloatProp, ListProp, AddrProp, ToGuessProp
 from alignak.check import Check
@@ -65,12 +51,25 @@ from alignak.notification import Notification
 from alignak.eventhandler import EventHandler
 from alignak.objects.command import Command
 from alignak.objects.timeperiod import Timeperiod
+from alignak.objects.item import Items
 
 logger = logging.getLogger(__name__)
 
-class TestEndParsingType(unittest.TestCase):
+class TestEndParsingType(AlignakTest):
+    """
+    This class test properties types after config loaded and parsed
+    """
 
     def check_object_property(self, obj, prop):
+        """
+        Check the property of an object
+
+        :param obj: object reference
+        :type obj: object
+        :param prop: property name
+        :type prop: str
+        :return: None
+        """
         if prop in (
                 'realm',  # Realm
                 'check_period',    # CheckPeriod
@@ -90,7 +89,15 @@ class TestEndParsingType(unittest.TestCase):
                                   "The %s attr/property of %s object isn't a %s: %s, value=%r" %
                                   (prop, obj, obj_expected_type, value.__class__, value))
 
-    def map_type(self, obj):
+    @staticmethod
+    def map_type(obj):
+        """
+        Detect type of a property
+
+        :param obj: get type of object
+        :type obj: object
+        :return: instance type
+        """
         # TODO: Replace all basestring with unicode when done in property.default attribute
         # TODO: Fix ToGuessProp as it may be a list.
 
@@ -124,67 +131,30 @@ class TestEndParsingType(unittest.TestCase):
         if isinstance(obj, ToGuessProp):
             return basestring
 
-    def print_header(self):
-        print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
-        print "#" + string.center(self.id(), 78) + "#"
-        print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
-
-    def add(self, b):
-        if isinstance(b, Brok):
-            self.broks[b.uuid] = b
-            return
-        if isinstance(b, ExternalCommand):
-            self.sched.run_external_command(b.cmd_line)
-
     def check_objects_from(self, container):
+        """
+        Check properties of an alignak item
+
+        :param container: object / alignak item
+        :type container: object
+        :return: None
+        """
         self.assertIsInstance(container, Items)
         for obj in container:
             for prop in obj.properties:
                 self.check_object_property(obj, prop)
 
-    def test_types(self):
-        path = 'etc/alignak_1r_1h_1s.cfg'
-        time_hacker.set_my_time()
+    def test_types(self):  # pylint: disable=R0912
+        """
+        Test properties types
+
+        :return: None
+        """
         self.print_header()
-        # i am arbiter-like
-        self.broks = {}
-        self.me = None
-        self.log = logger
-        self.log.setLevel("INFO")
-        self.log.load_obj(self)
-        self.config_files = [path]
-        self.conf = Config()
-        buf = self.conf.read_config(self.config_files)
-        raw_objects = self.conf.read_config_buf(buf)
-        self.conf.create_objects_for_type(raw_objects, 'arbiter')
-        self.conf.create_objects_for_type(raw_objects, 'module')
-        self.conf.early_arbiter_linking()
-        self.conf.create_objects(raw_objects)
-        self.conf.instance_id = 0
-        self.conf.instance_name = 'test'
-        # Hack push_flavor, that is set by the dispatcher
-        self.conf.push_flavor = 0
-        self.conf.load_triggers()
-        self.conf.linkify_templates()
-        self.conf.apply_inheritance()
-        self.conf.explode()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
-        self.conf.apply_implicit_inheritance()
-        self.conf.fill_default()
-        self.conf.remove_templates()
-
-        self.conf.override_properties()
-        self.conf.linkify()
-        self.conf.apply_dependencies()
-        self.conf.explode_global_conf()
-        self.conf.propagate_timezone_option()
-        self.conf.create_business_rules()
-        self.conf.create_business_rules_dependencies()
-        self.conf.is_correct()
-
-        ###############
-
-        for objects in (self.conf.arbiters, self.conf.contacts, self.conf.notificationways, self.conf.hosts):
+        for objects in (self.arbiter.conf.arbiters, self.arbiter.conf.contacts,
+                        self.arbiter.conf.notificationways, self.arbiter.conf.hosts):
             self.check_objects_from(objects)
 
         print "== test Check() =="
@@ -193,12 +163,12 @@ class TestEndParsingType(unittest.TestCase):
             if hasattr(check, prop):
                 value = getattr(check, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
-                if prop not in ['ref']: # TODO : clean this
+                if prop not in ['ref']:  # TODO : clean this
                     if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
+                        print "TESTING %s with value %s" % (prop, value)
                         self.assertIsInstance(value, self.map_type(check.properties[prop]))
                     else:
-                        print("Skipping %s " % prop)
+                        print "Skipping %s " % prop
 
         print "== test Notification() =="
         notification = Notification()
@@ -206,12 +176,12 @@ class TestEndParsingType(unittest.TestCase):
             if hasattr(notification, prop):
                 value = getattr(notification, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
-                if prop not in ['already_start_escalations']: # TODO : clean this
+                if prop not in ['already_start_escalations']:  # TODO : clean this
                     if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
+                        print "TESTING %s with value %s" % (prop, value)
                         self.assertIsInstance(value, self.map_type(notification.properties[prop]))
                     else:
-                        print("Skipping %s " % prop)
+                        print "Skipping %s " % prop
 
         print "== test EventHandler() =="
         eventhandler = EventHandler({})
@@ -219,12 +189,12 @@ class TestEndParsingType(unittest.TestCase):
             if hasattr(eventhandler, prop):
                 value = getattr(eventhandler, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
-                if prop not in ['jjjj']: # TODO : clean this
+                if prop not in ['jjjj']:  # TODO : clean this
                     if value is not None:
-                        print("TESTING %s with value %s" % (prop, value))
+                        print "TESTING %s with value %s" % (prop, value)
                         self.assertIsInstance(value, self.map_type(eventhandler.properties[prop]))
                     else:
-                        print("Skipping %s " % prop)
+                        print "Skipping %s " % prop
 
         print "== test Timeperiod() =="
         timeperiod = Timeperiod()
@@ -233,10 +203,10 @@ class TestEndParsingType(unittest.TestCase):
                 value = getattr(timeperiod, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
-                    print("TESTING %s with value %s" % (prop, value))
+                    print "TESTING %s with value %s" % (prop, value)
                     self.assertIsInstance(value, self.map_type(timeperiod.properties[prop]))
                 else:
-                    print("Skipping %s " % prop)
+                    print "Skipping %s " % prop
 
         print "== test Command() =="
         command = Command({})
@@ -245,12 +215,7 @@ class TestEndParsingType(unittest.TestCase):
                 value = getattr(command, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
-                    print("TESTING %s with value %s" % (prop, value))
+                    print "TESTING %s with value %s" % (prop, value)
                     self.assertIsInstance(value, self.map_type(command.properties[prop]))
                 else:
-                    print("Skipping %s " % prop)
-
-
-
-if __name__ == '__main__':
-    unittest.main()
+                    print "Skipping %s " % prop
