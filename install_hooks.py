@@ -36,9 +36,6 @@ def group_exists(group_name):
         grp.getgrnam(group_name)
         return True
     except KeyError:
-        print("The user group '%s' does not exist. "
-              "You must create this user on your system to proceed with Alignak installation."
-              % group_name)
         return False
 
 
