@@ -298,8 +298,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
-            sys.exit("***> One or more problems was encountered "
-                     "while processing the config files...")
+            err = "Problems encountered while processing the configuration files."
+            logger.error(err)
+            self.conf.show_errors()
+            sys.exit(err)
 
         # Manage all post-conf modules
         self.hook_point('early_configuration')
