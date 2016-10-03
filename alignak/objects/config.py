@@ -76,6 +76,7 @@ import time
 import random
 import tempfile
 import uuid
+import logging
 from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
@@ -117,12 +118,13 @@ from alignak.objects.brokerlink import BrokerLink, BrokerLinks
 from alignak.objects.receiverlink import ReceiverLink, ReceiverLinks
 from alignak.objects.pollerlink import PollerLink, PollerLinks
 from alignak.graph import Graph
-from alignak.log import logger
 from alignak.property import (UnusedProp, BoolProp, IntegerProp, CharProp,
                               StringProp, LogLevelProp, ListProp, ToGuessProp)
 from alignak.daemon import get_cur_user, get_cur_group
 from alignak.util import jsonify_r
 
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 NO_LONGER_USED = ('This parameter is not longer take from the main file, but must be defined '
                   'in the status_dat broker module instead. But Alignak will create you one '

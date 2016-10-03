@@ -118,7 +118,7 @@ This module provide Timeperiod class used to define time periods to do
 action or not if we are in right period
 """
 
-
+import logging
 import time
 import re
 import warnings
@@ -130,8 +130,10 @@ from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
 from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
-from alignak.log import logger, naglog_result
+from alignak.log import naglog_result
 from alignak.misc.serialization import get_alignak_class
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Timeperiod(Item):

@@ -39,6 +39,10 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This file is used to test properties types after config loaded and parsed
+"""
+import logging
 
 #
 # This file is used to test reading and processing of config files
@@ -62,6 +66,7 @@ from alignak.eventhandler import EventHandler
 from alignak.objects.command import Command
 from alignak.objects.timeperiod import Timeperiod
 
+logger = logging.getLogger(__name__)
 
 class TestEndParsingType(unittest.TestCase):
 

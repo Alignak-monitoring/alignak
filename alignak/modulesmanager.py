@@ -48,7 +48,7 @@
 """This module provides ModulesManager class. Used to load modules in Alignak
 
 """
-
+import logging
 import time
 import traceback
 import cStringIO
@@ -57,7 +57,8 @@ import importlib
 
 
 from alignak.basemodule import BaseModule
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ModulesManager(object):

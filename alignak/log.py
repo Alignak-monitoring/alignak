@@ -290,7 +290,7 @@ class Log(logging.Logger):
 # --- create the main logger ---
 logging.setLoggerClass(Log)
 # pylint: disable=C0103
-logger = logging.getLogger('Alignak')
+logger = logging.getLogger('alignak')  # pylint: disable=C0103
 if hasattr(sys.stdout, 'isatty'):
     CSH = ColorStreamHandler(sys.stdout)
     if logger.name is not None:

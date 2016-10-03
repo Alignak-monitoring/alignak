@@ -55,6 +55,7 @@
 for handling check and notification execution (handle output, execute process, kill process..)
 
 """
+import logging
 import os
 import time
 import shlex
@@ -69,10 +70,11 @@ try:
 except ImportError:
     fcntl = None  # pylint: disable=C0103
 
-from alignak.log import logger
 from alignak.property import BoolProp, IntegerProp, FloatProp
 from alignak.property import StringProp, DictProp
 from alignak.alignakobject import AlignakObject
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 __all__ = ('Action', )
 

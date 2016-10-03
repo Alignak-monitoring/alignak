@@ -53,14 +53,16 @@ Basically used to handle perfdata, exit status and output
 """
 import time
 import re
+import logging
 
 from alignak.misc.perfdata import PerfDatas
-from alignak.log import logger
 from alignak.objects.host import Hosts
 from alignak.objects.service import Services
 from alignak.objects.timeperiod import Timeperiods
 from alignak.objects.macromodulation import MacroModulations
 from alignak.objects.checkmodulation import CheckModulations
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 OBJS = {'hosts': Hosts({}), 'services': Services({}), 'timeperiods': Timeperiods({}),
         'macromodulations': MacroModulations({}), 'checkmodulations': CheckModulations({}),

@@ -62,6 +62,7 @@ or the consume_check. It's a very important class!
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+import logging
 import re
 import random
 import time
@@ -81,8 +82,9 @@ from alignak.eventhandler import EventHandler
 from alignak.dependencynode import DependencyNodeFactory
 from alignak.acknowledge import Acknowledge
 from alignak.comment import Comment
-from alignak.log import logger
 from alignak.commandcall import CommandCall
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SchedulingItem(Item):  # pylint: disable=R0902

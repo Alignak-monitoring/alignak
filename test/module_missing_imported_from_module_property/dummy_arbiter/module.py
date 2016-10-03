@@ -44,11 +44,12 @@
 # This Class is an example of an Arbiter module
 # Here for the configuration phase AND running one
 
+import logging
 import time
 
 from alignak.basemodule import BaseModule
 from alignak.external_command import ExternalCommand
-from alignak.log import logger
+logger = logging.getLogger(__name__)
 
 properties = {
     'daemons': ['arbiter'],

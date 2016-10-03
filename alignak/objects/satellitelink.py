@@ -44,12 +44,15 @@
 This module provides an abstraction layer for communications between Alignak daemons
 Used by the Arbiter
 """
+import logging
+
 from alignak.util import get_obj_name_two_args_and_void
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
-from alignak.log import logger
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SatelliteLink(Item):

@@ -24,11 +24,11 @@ import inspect
 import logging
 import random
 import time
-
 import cherrypy
 
-from alignak.log import logger
 from alignak.misc.serialization import serialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class GenericInterface(object):
@@ -116,7 +116,8 @@ class GenericInterface(object):
         :type loglevel: str
         :return: None
         """
-        return logger.setLevel(loglevel)
+        alignak_logger = logging.getLogger("alignak")
+        return alignak_logger.setLevel(loglevel)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

@@ -70,6 +70,7 @@ The major part of monitoring "intelligence" is in this module.
 import time
 import os
 import cStringIO
+import logging
 import tempfile
 import traceback
 from Queue import Queue
@@ -83,13 +84,14 @@ from alignak.brok import Brok
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
-from alignak.log import logger
 from alignak.util import average_percentile
 from alignak.load import Load
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Scheduler(object):  # pylint: disable=R0902

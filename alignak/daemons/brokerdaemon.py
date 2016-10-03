@@ -62,17 +62,20 @@ import sys
 import time
 import traceback
 import threading
+import logging
+
 from multiprocessing import active_children
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
-from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.external_command import ExternalCommand
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.broker_interface import BrokerInterface
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Broker(BaseSatellite):
@@ -852,16 +855,7 @@ class Broker(BaseSatellite):
         :return: None
         """
         try:
-            self.load_config_file()
-
-            # Setting log level
-            logger.setLevel(self.log_level)
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
-
-            for line in self.get_header():
-                logger.info(line)
+            self.setup_alignak_logger()
 
             logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
 

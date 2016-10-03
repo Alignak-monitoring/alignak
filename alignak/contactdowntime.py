@@ -48,9 +48,12 @@
 """
 import time
 import uuid
-from alignak.log import logger
+import logging
+
 from alignak.alignakobject import AlignakObject
 from alignak.property import BoolProp, IntegerProp, StringProp
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ContactDowntime(AlignakObject):

@@ -49,7 +49,6 @@
 #
 
 from alignak_test import *
-from alignak.log import logger
 
 
 class TestConfig(AlignakTest):

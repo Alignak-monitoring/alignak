@@ -53,11 +53,13 @@ Typical use is for passive results. This allows passive check data to be modifie
 import os
 import re
 import traceback
+import logging
 
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, StringProp
-from alignak.log import logger
 from alignak.trigger_functions import OBJS, TRIGGER_FUNCTIONS, set_value
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Trigger(Item):

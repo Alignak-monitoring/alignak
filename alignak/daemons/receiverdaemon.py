@@ -54,15 +54,17 @@ This module provide Receiver class used to run a receiver daemon
 import os
 import time
 import traceback
+import logging
 from multiprocessing import active_children
 
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp
-from alignak.log import logger
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.http.client import HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.http.receiver_interface import ReceiverInterface
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Receiver(Satellite):
@@ -381,19 +383,10 @@ class Receiver(Satellite):
         :return: None
         """
         try:
-            self.load_config_file()
-
-            # Setting log level
-            logger.setLevel(self.log_level)
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
+            self.setup_alignak_logger()
 
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
-
-            for line in self.get_header():
-                logger.info(line)
 
             logger.info("[Receiver] Using working directory: %s", os.path.abspath(self.workdir))
 

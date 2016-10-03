@@ -59,6 +59,7 @@
 """
 This module provide Arbiter class used to run a arbiter daemon
 """
+import logging
 import sys
 import os
 import time
@@ -72,12 +73,13 @@ from alignak.objects.config import Config
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
 from alignak.daemon import Daemon
-from alignak.log import logger
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
 from alignak.property import BoolProp
 from alignak.http.arbiter_interface import ArbiterInterface
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Arbiter(Daemon):  # pylint: disable=R0902
@@ -514,19 +516,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         try:
-            # Setting log level
-            logger.setLevel('INFO')
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
-
-            # Log will be broks
-            for line in self.get_header():
-                logger.info(line)
-
-            self.load_config_file()
-            logger.setLevel(self.log_level)
-
+            self.setup_alignak_logger()
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
             self.do_daemon_init_and_start()

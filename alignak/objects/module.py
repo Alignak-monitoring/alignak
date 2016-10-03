@@ -52,12 +52,13 @@
 This module provide Module and Modules classes used to manage internal and external modules
 for each daemon
 """
-
+import logging
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp
 from alignak.util import strip_and_uniq
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Module(Item):

@@ -54,10 +54,12 @@
 """
 This module provide Contactgroup and Contactgroups class used to manage contact groups
 """
+import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.property import StringProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Contactgroup(Itemgroup):

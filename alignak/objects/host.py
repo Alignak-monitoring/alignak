@@ -66,13 +66,16 @@ scheduling/consume check smart things :)
 """
 
 import time
+import logging
 
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
 from alignak.util import format_t_into_dhms_format
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
-from alignak.log import logger, naglog_result
+from alignak.log import naglog_result
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Host(SchedulingItem):  # pylint: disable=R0904

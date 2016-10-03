@@ -59,6 +59,7 @@ Used to process command sent by users
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+import logging
 import os
 import time
 import re
@@ -69,10 +70,11 @@ from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.commandcall import CommandCall
-from alignak.log import logger, naglog_result
+from alignak.log import naglog_result
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ExternalCommand:  # pylint: disable=R0903

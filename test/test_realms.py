@@ -65,13 +65,15 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/realms/no_defined_realms.cfg')
+        # self.logger.setLevel("INFO")  # We need Info level to assert on logs received
         # self.assertTrue(self.conf_is_correct)
         self.assertTrue(self.conf_is_correct)
         self.show_logs()
         # The following log line is not available in the test catched log, because too early
         # in the configuration load process
         # self.assert_any_log_match("WARNING: [Alignak] No realms defined, I add one as Default")
-        self.assert_any_log_match(re.escape("[Alignak] [All] Prepare dispatching this realm"))
+        self.assert_any_log_match(re.escape("[alignak.dispatcher] "
+                                            "[All] Prepare dispatching this realm"))
 
         # Only one realm in the configuration
         self.assertEqual(len(self.arbiter.conf.realms), 1)

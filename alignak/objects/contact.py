@@ -51,6 +51,7 @@
 """ This module provide Contact and Contacts classes that
 implements contact for notification. Basically used for parsing.
 """
+import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
@@ -58,6 +59,8 @@ from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.log import naglog_result
 from alignak.commandcall import CommandCall
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Contact(Item):

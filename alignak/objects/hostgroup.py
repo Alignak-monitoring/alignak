@@ -53,12 +53,13 @@
 This module provide Hostgroup and Hostgroups class used to manage host groups
 """
 
-
+import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
 from alignak.property import StringProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Hostgroup(Itemgroup):

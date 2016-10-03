@@ -57,11 +57,13 @@
  dead one to the spare
 """
 
+import logging
 import time
 import random
 
 from alignak.util import alive_then_spare_then_deads
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 # Always initialize random :)
 random.seed()

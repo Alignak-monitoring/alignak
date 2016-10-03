@@ -42,7 +42,8 @@ except ImportError:
 
 # load global helper objects for logs and stats computation
 from alignak.http.cherrypy_extend import zlib_processor
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class InvalidWorkDir(Exception):

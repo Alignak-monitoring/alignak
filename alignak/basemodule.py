@@ -59,10 +59,11 @@ import traceback
 import re
 from multiprocessing import Queue, Process
 import warnings
+import logging
 
-from alignak.log import logger
 from alignak.misc.common import setproctitle
 
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 # The `properties dict defines what the module can do and
 # if it's an external module or not.

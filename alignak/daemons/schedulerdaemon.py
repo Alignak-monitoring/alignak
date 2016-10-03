@@ -56,8 +56,9 @@ import os
 import signal
 import time
 import traceback
-from multiprocessing import process
+import logging
 
+from multiprocessing import process
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
@@ -66,9 +67,10 @@ from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.property import PathProp, IntegerProp
-from alignak.log import logger
 from alignak.satellite import BaseSatellite
 from alignak.stats import statsmgr
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Alignak(BaseSatellite):
@@ -360,13 +362,7 @@ class Alignak(BaseSatellite):
         :return: None
         """
         try:
-            self.load_config_file()
-            # Setting log level
-            logger.setLevel(self.log_level)
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
-
+            self.setup_alignak_logger()
             self.look_for_early_exit()
             self.do_daemon_init_and_start()
             self.load_modules_manager()

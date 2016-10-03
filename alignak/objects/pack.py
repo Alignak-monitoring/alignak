@@ -49,7 +49,7 @@
 """
 This module provide Pack and Packs classes used to define 'group' of configurations
 """
-
+import logging
 import os
 import re
 try:
@@ -59,7 +59,8 @@ except ImportError:
 
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Pack(Item):

@@ -50,10 +50,11 @@ import json
 import hashlib
 import base64
 import socket
+import logging
 
-from alignak.log import logger
 from alignak.http.client import HTTPClient, HTTPException
 
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 BLOCK_SIZE = 16
 
