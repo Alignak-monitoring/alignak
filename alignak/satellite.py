@@ -998,7 +998,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # Now manage modules
             # TODO: check how to better handle this with modules_manager..
-            mods = g_conf['modules']
+            mods = unserialize(g_conf['modules'], True)
             self.new_modules_conf = []
             for module in mods:
                 # If we already got it, bypass
