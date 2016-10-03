@@ -1110,7 +1110,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if re.search(r"\\\s*$", line) is not None:
                 continuation_line = True
                 line = re.sub(r"\\\s*$", "", line)
-                #line = re.sub(r"^\s+", " ", line)
+                # line = re.sub(r"^\s+", " ", line)
                 tmp_line += line
                 continue
             elif continuation_line:
