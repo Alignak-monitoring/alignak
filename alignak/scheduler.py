@@ -1321,7 +1321,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         if fun:
                             val = fun(serv, val)
                         s_dict[prop] = val
-            all_data['services'][(serv.host.host_name, serv.service_description)] = s_dict
+            all_data['services'][(serv.host_name, serv.service_description)] = s_dict
         return all_data
 
     def restore_retention_data(self, data):  # pylint: disable=R0912

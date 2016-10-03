@@ -557,8 +557,8 @@ def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
     return ",".join([e.get_name() for e in tab])
 
 
-def to_list_of_names(ref, tab):  # pylint: disable=W0613
-    """Convert list into a list of element name
+def from_set_to_list(ref, tab):  # pylint: disable=W0613
+    """Convert set into a list of element name
 
     :param ref: Not used
     :type ref:
@@ -567,7 +567,7 @@ def to_list_of_names(ref, tab):  # pylint: disable=W0613
     :return: list of names
     :rtype: list
     """
-    return [e.get_name() for e in tab]
+    return list(tab)
 
 
 def to_name_if_possible(ref, value):  # pylint: disable=W0613
