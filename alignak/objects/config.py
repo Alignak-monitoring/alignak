@@ -1195,11 +1195,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: raw_objects with 3 extras commands
         :rtype: dict
         """
-        bp_rule = {'command_name': 'bp_rule', 'command_line': 'bp_rule'}
+        bp_rule = {
+            'command_name': 'bp_rule',
+            'command_line': 'bp_rule',
+            'imported_from': 'alignak-self'
+        }
         raw_objects['command'].append(bp_rule)
-        host_up = {'command_name': '_internal_host_up', 'command_line': '_internal_host_up'}
+        host_up = {
+            'command_name': '_internal_host_up',
+            'command_line': '_internal_host_up',
+            'imported_from': 'alignak-self'
+        }
         raw_objects['command'].append(host_up)
-        echo_obj = {'command_name': '_echo', 'command_line': '_echo'}
+        echo_obj = {
+            'command_name': '_echo',
+            'command_line': '_echo',
+            'imported_from': 'alignak-self'
+        }
         raw_objects['command'].append(echo_obj)
 
     def create_objects(self, raw_objects):
