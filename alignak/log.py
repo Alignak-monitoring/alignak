@@ -290,7 +290,7 @@ class Log(logging.Logger):
 
         :return: None
         """
-        global LOG_STACK  # pylint: disable=W0602
+        global LOG_STACK  # pylint: disable=W0602,W0603
 
         logger.debug("Begin - Dump stored logs")
         for (level, args, kwargs) in LOG_STACK:
