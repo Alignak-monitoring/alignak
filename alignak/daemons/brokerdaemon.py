@@ -514,7 +514,7 @@ class Broker(BaseSatellite):
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
-            logger.info("We have our schedulers: %s ", self.schedulers)
+            logger.error("We have our schedulers: %s ", self.schedulers)
 
             # Now get arbiter
             for arb_id in conf['arbiters']:
@@ -857,22 +857,33 @@ class Broker(BaseSatellite):
         try:
             self.setup_alignak_logger()
 
-            logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
-
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
+
+            logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
+
             self.do_daemon_init_and_start()
+
+            # Todo: confirm there is no need for this?
+            # self.do_post_daemon_init()
+
             self.load_modules_manager()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
             if not self.new_conf:
                 return
-
             self.setup_new_conf()
 
             # Do the modules part, we have our modules in self.modules
             # REF: doc/broker-modules.png (1)
+            # Todo: confirm there is no need/interest for this?
+            # # We can load our modules now
+            # self.do_load_modules(self.new_modules_conf)
+            # # And even start external ones
+            # self.modules_manager.start_external_instances()
+
+            # Restore retention data
             self.hook_point('load_retention')
 
             # Now the main loop
