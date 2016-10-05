@@ -81,7 +81,6 @@ from alignak.http.arbiter_interface import ArbiterInterface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
-
 class Arbiter(Daemon):  # pylint: disable=R0902
     """Arbiter class. Referenced as "app" in most Interface
 
@@ -226,6 +225,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
+        if self.verify_only:
+            # Force the global logger at INFO level
+            alignak_logger = logging.getLogger("alignak")
+            alignak_logger.setLevel(logging.INFO)
+            logger.info("Arbiter is in configuration check mode")
+            logger.info("-----")
+
         logger.info("Loading configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
@@ -386,6 +392,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Exit if we are just here for config checking
         if self.verify_only:
+            logger.info("Arbiter checked the configuration")
             sys.exit(0)
 
         if self.analyse:
