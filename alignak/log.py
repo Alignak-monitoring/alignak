@@ -67,17 +67,18 @@ from termcolor import cprint
 HUMAN_TIMESTAMP_LOG = False
 
 # Default UTC date formatting is: '%a, %d %b %Y %H:%M:%S %Z'
-# Former date formatting was: '%a %b %d %H:%M:%S %Y'
 HUMAN_TIMESTAMP_FORMAT = '%a, %d %b %Y %H:%M:%S %Z'
+# Former date formatting was: '%a %b %d %H:%M:%S %Y'
+# HUMAN_TIMESTAMP_FORMAT = '%a %b %d %H:%M:%S %Y'
 
 # Default log formatter (no human timestamp)
 DEFAULT_FORMATTER = Formatter('[%(created)i] %(levelname)s: %(message)s')
 DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
 
 # Human timestamped log formatter
-HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
+HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', HUMAN_TIMESTAMP_FORMAT)
 HUMAN_FORMATTER_NAMED = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                                  '%a %b %d %H:%M:%S %Y')
+                                  HUMAN_TIMESTAMP_FORMAT)
 
 # Nagios log formatter
 NAGIOS_FORMATTER = Formatter('[%(created)i] %(message)s')
@@ -298,6 +299,7 @@ class Log(logging.Logger):
                 self.warning('Missing level for a log? %s', level)
                 continue
             fun(self, *args, **kwargs)
+        LOG_STACK = []
         logger.debug("End - Dump stored logs")
 
     def debug(self, *args, **kwargs):
