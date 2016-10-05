@@ -51,8 +51,8 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
-This module provide logging facilities for Alignak.
-There is a custom log handler that create broks for every log emitted with level < debug
+This module provides logging facilities for Alignak.
+There is a custom log handler that creates broks for every log emitted with level < debug
 """
 import logging
 import sys
@@ -64,16 +64,31 @@ from logging.handlers import TimedRotatingFileHandler  # pylint: disable=C0412
 from termcolor import cprint
 
 
-# obj = None
-# name = None
 HUMAN_TIMESTAMP_LOG = False
 
+# Default UTC date formatting is: '%a, %d %b %Y %H:%M:%S %Z'
+# Former date formatting was: '%a %b %d %H:%M:%S %Y'
+HUMAN_TIMESTAMP_FORMAT = '%a, %d %b %Y %H:%M:%S %Z'
+
+# Default log formatter (no human timestamp)
 DEFAULT_FORMATTER = Formatter('[%(created)i] %(levelname)s: %(message)s')
 DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
+
+# Human timestamped log formatter
 HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
 HUMAN_FORMATTER_NAMED = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
                                   '%a %b %d %H:%M:%S %Y')
-NAG_FORMATTER = Formatter('[%(created)i] %(message)s')
+
+# Nagios log formatter
+NAGIOS_FORMATTER = Formatter('[%(created)i] %(message)s')
+
+# Time rotation for file logger
+ROTATION_WHEN = 'midnight'
+ROTATION_INTERVAL = 1
+ROTATION_COUNT = 5
+
+# Use a global log stack to store logs emitted before the logger get fully configured
+LOG_STACK = []
 
 
 class BrokHandler(Handler):
@@ -125,7 +140,6 @@ class Log(logging.Logger):
 
     def __init__(self, name="Alignak", level=NOTSET, log_set=False):
         logging.Logger.__init__(self, name, level)
-        self.pre_log_buffer = []
         self.log_set = log_set
 
     def setLevel(self, level):
@@ -162,7 +176,7 @@ class Log(logging.Logger):
         if name_ is not None or self.name is not None:
             if name_ is not None:
                 self.name = name_
-            # We need to se the name format to all other handlers
+            # We need to set the same format than all other handlers
             for handler in self.handlers:
                 handler.setFormatter(DEFAULT_FORMATTER_NAMED)
             __brokhandler__.setFormatter(DEFAULT_FORMATTER_NAMED)
@@ -187,6 +201,9 @@ class Log(logging.Logger):
         :type purge_buffer: bool
         :return:
         """
+        # Apply the human timestamp to this newly created handler
+        global HUMAN_TIMESTAMP_LOG  # pylint: disable=W0603
+
         self.log_set = True
         # Todo : Create a config var for backup count
         if os.path.exists(path) and not stat.S_ISREG(os.stat(path).st_mode):
@@ -194,14 +211,21 @@ class Log(logging.Logger):
             # It can be one of the stat.S_IS* (FIFO? CHR?)
             handler = FileHandler(path)
         else:
-            handler = TimedRotatingFileHandler(path, 'midnight',  # pylint: disable=R0204
-                                               backupCount=5)
+            handler = TimedRotatingFileHandler(path,
+                                               when=ROTATION_WHEN,  # pylint: disable=R0204
+                                               interval=ROTATION_INTERVAL,
+                                               backupCount=ROTATION_COUNT)
         if level is not None:
+            if not isinstance(level, int):
+                level = getattr(logging, level, None)
             handler.setLevel(level)
         if self.name is not None:
-            handler.setFormatter(DEFAULT_FORMATTER_NAMED)
+            handler.setFormatter(HUMAN_TIMESTAMP_LOG and
+                                 HUMAN_FORMATTER_NAMED or DEFAULT_FORMATTER_NAMED)
         else:
-            handler.setFormatter(DEFAULT_FORMATTER)
+            handler.setFormatter(HUMAN_TIMESTAMP_LOG and
+                                 HUMAN_FORMATTER or DEFAULT_FORMATTER)
+
         self.addHandler(handler)
 
         # Ok now unstack all previous logs
@@ -231,14 +255,15 @@ class Log(logging.Logger):
                 continue
 
             if self.name is not None:
-                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER_NAMED or
-                                     DEFAULT_FORMATTER_NAMED)
+                handler.setFormatter(HUMAN_TIMESTAMP_LOG and
+                                     HUMAN_FORMATTER_NAMED or DEFAULT_FORMATTER_NAMED)
             else:
-                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER or DEFAULT_FORMATTER)
+                handler.setFormatter(HUMAN_TIMESTAMP_LOG and
+                                     HUMAN_FORMATTER or DEFAULT_FORMATTER)
 
     def _stack(self, level, args, kwargs):
         """
-        Stack logs if we don't open a log file so we will be able to flush them
+        Stack logs until we open a log file so we will be able to flush them
         Stack max 500 logs (no memory leak please...)
 
         :param level: level log
@@ -251,9 +276,11 @@ class Log(logging.Logger):
         """
         if self.log_set:
             return
-        self.pre_log_buffer.append((level, args, kwargs))
-        if len(self.pre_log_buffer) > 500:
-            self.pre_log_buffer = self.pre_log_buffer[2:]
+
+        global LOG_STACK
+        LOG_STACK.append((level, args, kwargs))
+        if len(LOG_STACK) > 500:
+            LOG_STACK = LOG_STACK[2:]
 
     def _destack(self):
         """
@@ -262,12 +289,16 @@ class Log(logging.Logger):
 
         :return: None
         """
-        for (level, args, kwargs) in self.pre_log_buffer:
+        global LOG_STACK
+
+        logger.debug("Begin - Dump stored logs")
+        for (level, args, kwargs) in LOG_STACK:
             fun = getattr(logging.Logger, level, None)
             if fun is None:
                 self.warning('Missing level for a log? %s', level)
                 continue
             fun(self, *args, **kwargs)
+        logger.debug("End - Dump stored logs")
 
     def debug(self, *args, **kwargs):
         self._stack('debug', args, kwargs)
@@ -275,7 +306,6 @@ class Log(logging.Logger):
 
     def info(self, *args, **kwargs):
         self._stack('info', args, kwargs)
-        # super(logging.Logger, self).info(*args, **kwargs)
         logging.Logger.info(self, *args, **kwargs)
 
     def warning(self, *args, **kwargs):
@@ -302,7 +332,7 @@ if hasattr(sys.stdout, 'isatty'):
 
 def naglog_result(level, result):
     """
-    Function use for old Nag compatibility. We to set format properly for this call only.
+    Function used for Nagios compatibility. We set the format properly for this call only.
 
     Dirty Hack to keep the old format, we should have another logger and
     use one for Alignak logs and another for monitoring data
@@ -310,7 +340,7 @@ def naglog_result(level, result):
     prev_formatters = []
     for handler in logger.handlers:
         prev_formatters.append(handler.formatter)
-        handler.setFormatter(NAG_FORMATTER)
+        handler.setFormatter(NAGIOS_FORMATTER)
 
     log_fun = getattr(logger, level)
 
