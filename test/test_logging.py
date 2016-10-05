@@ -49,6 +49,7 @@ import time
 import logging
 import unittest
 import alignak.log
+import os.path
 
 from logging import DEBUG, INFO, WARNING
 from alignak.log import naglog_result, HUMAN_TIMESTAMP_LOG
@@ -72,6 +73,7 @@ class TestLogging(AlignakTest):
     def setUp(self):
         self.logger.setLevel('INFO')
         self.logger.set_human_format(False)
+        alignak.log.LOG_STACK = []
 
     def test_setting_and_unsetting_human_timestamp_format(self):
         # :hack: alignak.log.human_timestamp_log is a global variable
@@ -125,7 +127,7 @@ class TestLogging(AlignakTest):
 
     def test_log_stack(self):
         initial_log_stack_length = len(alignak.log.LOG_STACK)
-        self.assertGreater(initial_log_stack_length, 0)
+        self.assertEqual(initial_log_stack_length, 0)
 
         self.logger.info("This message will be stacked")
         self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 1)
@@ -136,28 +138,48 @@ class TestLogging(AlignakTest):
         self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 3)
 
     def test_register_local_log(self):
+        """
+        Register a local log file into the Alignak logger and set a log level
+        :return:
+        """
         initial_log_stack_length = len(alignak.log.LOG_STACK)
-        self.assertGreater(initial_log_stack_length, 0)
+        self.assertEqual(initial_log_stack_length, 0)
 
-        self.logger.info("This message will be stacked")
+        self.logger.warning("This message will be stacked")
         self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 1)
-        self.logger.setLevel(WARNING)
         self.logger.info("This message will also be stacked")
         self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 2)
-        self.logger.debug("And even this one will be stacked")
+        self.logger.debug("And even this one will be stacked but not logged")
         self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 3)
+
+        # Clean log file if it exists
+        log_file = "/tmp/log_file.log"
+        if os.path.isfile(log_file):
+            os.remove(log_file)
+        self.assertFalse(os.path.isfile(log_file))
 
         # Two handlers:
         # ColorStreamHandler (as default)
-        # and
+        #  and
         # CollectorHandler (added in this class setUp function)
         self.assertEqual(len(self.logger.handlers), 2)
-        self.logger.register_local_log("log_file.log")
+        # Register a log file handler
+        self.logger.register_local_log(log_file, 'WARNING')
         # One more handler for the file log
         self.assertEqual(len(self.logger.handlers), 3)
         # Stored log is now an empty list
         self.assertEqual(len(alignak.log.LOG_STACK), 0)
-        # Cannot check that the stored logs have been pushed to the lo file...
+        # The log file exists...
+        self.assertTrue(os.path.isfile(log_file))
+        count = 0
+        with open(log_file) as f:
+            for count, line in enumerate(f):
+                print("Log: %s" % line)
+                pass
+        count += 1
+        # ...and it contains only 1 line (the WARNING log...)
+        self.assertEqual(count, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
