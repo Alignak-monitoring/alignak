@@ -262,10 +262,6 @@ class Alignak(BaseSatellite):
             self.satellites = satellites
             # self.pollers = self.app.pollers
 
-            if self.conf.human_timestamp_log:
-                # pylint: disable=E1101
-                logger.set_human_format()
-
             # Now We create our pollers and reactionners
             for sat_type in ['pollers', 'reactionners']:
                 for sat_id in satellites[sat_type]:
@@ -363,12 +359,22 @@ class Alignak(BaseSatellite):
         """
         try:
             self.setup_alignak_logger()
+
+            # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
+
+            logger.info("[Scheduler] Using working directory: %s", os.path.abspath(self.workdir))
+
             self.do_daemon_init_and_start()
+
+            # Todo: confirm there is no need for this?
+            # self.do_post_daemon_init()
+
             self.load_modules_manager()
 
             self.uri = self.http_daemon.uri
-            logger.info("[scheduler] General interface is at: %s", self.uri)
+            logger.info("[Scheduler] General interface is at: %s", self.uri)
+
             self.do_mainloop()
         except Exception:
             self.print_unrecoverable(traceback.format_exc())
