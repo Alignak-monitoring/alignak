@@ -70,8 +70,12 @@ def main():
         sys.exit(2)
 
     # Protect for windows multiprocessing that will RELAUNCH all
-    daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
-    daemon.main()
+    while True:
+        daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
+        daemon.main()
+        if not daemon.need_config_reload:
+            break
+        daemon = None
 
 
 if __name__ == '__main__':

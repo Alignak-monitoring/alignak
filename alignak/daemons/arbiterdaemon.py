@@ -532,6 +532,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # And go for the main loop
             self.do_mainloop()
+            if self.need_config_reload:
+                logger.info('Reloading configuration')
+                self.unlink()
+                self.do_stop()
+            else:
+                self.request_stop()
+
         except SystemExit, exp:
             # With a 2.4 interpreter the sys.exit() in load_config_file
             # ends up here and must be handled.
@@ -687,7 +694,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.debug("Run baby, run...")
         timeout = 1.0
 
-        while self.must_run and not self.interrupted:
+        while self.must_run and not self.interrupted and not self.need_config_reload:
             # This is basically sleep(timeout) and returns 0, [], int
             # We could only paste here only the code "used" but it could be
             # harder to maintain.

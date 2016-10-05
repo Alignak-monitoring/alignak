@@ -333,8 +333,7 @@ class Daemon(object):  # pylint: disable=R0902
                 logger.debug('Dumping objects')
                 self.need_objects_dump = False
             if self.need_config_reload:
-                logger.debug('Reloading configuration')
-                self.need_config_reload = False
+                return
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
                 break
