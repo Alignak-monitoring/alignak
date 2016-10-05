@@ -408,8 +408,8 @@ class Daemon(object):  # pylint: disable=R0902
             self.relative_paths_to_full(os.path.dirname(self.config_file))
 
         logger.info("My configuration: ")
-        for prop, entry in self.properties.items():
-            logger.info(" - %s=%s" % (prop, getattr(self, prop, 'Not found!')))
+        for prop, _ in self.properties.items():
+            logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))
 
     def load_modules_manager(self):
         """Instantiate Modulesmanager and load the SyncManager (multiprocessing)

@@ -202,7 +202,7 @@ class Log(logging.Logger):
         :return:
         """
         # Apply the human timestamp to this newly created handler
-        global HUMAN_TIMESTAMP_LOG  # pylint: disable=W0603
+        global HUMAN_TIMESTAMP_LOG  # pylint: disable=W0602
 
         self.log_set = True
         # Todo : Create a config var for backup count
@@ -211,8 +211,8 @@ class Log(logging.Logger):
             # It can be one of the stat.S_IS* (FIFO? CHR?)
             handler = FileHandler(path)
         else:
-            handler = TimedRotatingFileHandler(path,
-                                               when=ROTATION_WHEN,  # pylint: disable=R0204
+            handler = TimedRotatingFileHandler(path,  # pylint: disable=R0204
+                                               when=ROTATION_WHEN,
                                                interval=ROTATION_INTERVAL,
                                                backupCount=ROTATION_COUNT)
         if level is not None:
@@ -277,7 +277,7 @@ class Log(logging.Logger):
         if self.log_set:
             return
 
-        global LOG_STACK
+        global LOG_STACK  # pylint: disable=W0602,W0603
         LOG_STACK.append((level, args, kwargs))
         if len(LOG_STACK) > 500:
             LOG_STACK = LOG_STACK[2:]
@@ -289,7 +289,7 @@ class Log(logging.Logger):
 
         :return: None
         """
-        global LOG_STACK
+        global LOG_STACK  # pylint: disable=W0602
 
         logger.debug("Begin - Dump stored logs")
         for (level, args, kwargs) in LOG_STACK:
