@@ -1214,7 +1214,7 @@ class Daemon(object):  # pylint: disable=R0902
 
         # Set the human timestamp log if required
         human_log_format = getattr(self, 'human_timestamp_log', False)
-        alignak_logger.set_human_format(human_log_format)
+        alignak_logger.set_human_format(human_log_format)  # pylint: disable=E1101
 
         # Register local log file if required
         if getattr(self, 'use_local_log', False):
