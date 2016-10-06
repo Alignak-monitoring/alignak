@@ -2307,6 +2307,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check],
                 'ref': self.uuid,
+                'ref_type': self.my_type,
                 'dependency_check': True,
                 'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
             }
@@ -2371,6 +2372,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check] if ref_check else [],
                 'ref': self.uuid,
+                'ref_type': self.my_type,
                 'internal': self.got_business_rule or command_line.startswith('_internal')
             }
             chk = Check(data)
