@@ -1105,13 +1105,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             line_nb += 1
             # Remove comments
-            line = split_semicolon(line)[0].strip()
+            if not continuation_line:
+                line = split_semicolon(line)[0].strip()
 
             # A backslash means, there is more to come
             if re.search(r"\\\s*$", line) is not None:
                 continuation_line = True
                 line = re.sub(r"\\\s*$", "", line)
-                line = re.sub(r"^\s+", " ", line)
+                # line = re.sub(r"^\s+", " ", line)
                 tmp_line += line
                 continue
             elif continuation_line:
