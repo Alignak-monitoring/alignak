@@ -36,9 +36,6 @@ def group_exists(group_name):
         grp.getgrnam(group_name)
         return True
     except KeyError:
-        print("The user group '%s' does not exist. "
-              "You must create this user on your system to proceed with Alignak installation."
-              % group_name)
         return False
 
 
@@ -328,8 +325,14 @@ def fix_alignak_cfg(config):
           "==                                                                            ==\n"
           "== You should grant the write permissions on the configuration directory to   ==\n"
           "== the user alignak:                                                          ==\n"
-          "==   sudo find %s -type f -exec chmod 664 {} +\n"
-          "==   sudo find %s -type d -exec chmod 775 {} +\n"
+          "==   find %s -type f -exec chmod 664 {} +\n"
+          "==   find %s -type d -exec chmod 775 {} +\n"
+          "== -------------------------------------------------------------------------- ==\n"
+          "==                                                                            ==\n"
+          "== You should also grant ownership on those directories to the user alignak:  ==\n"
+          "==   chown -R alignak:alignak /usr/local/var/run/alignak                      ==\n"
+          "==   chown -R alignak:alignak /usr/local/var/log/alignak                      ==\n"
+          "==   chown -R alignak:alignak /usr/local/var/libexec/alignak                  ==\n"
           "==                                                                            ==\n"
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
