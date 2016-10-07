@@ -400,17 +400,24 @@ class Receiver(Satellite):
 
             self.do_daemon_init_and_start()
 
+            # Todo: confirm there is no need for this?
+            # self.do_post_daemon_init()
+
             self.load_modules_manager()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
             if not self.new_conf:
                 return
-
             self.setup_new_conf()
 
             # Do the modules part, we have our modules in self.modules
             # REF: doc/receiver-modules.png (1)
+            # Todo: confirm there is no need/interest for this?
+            # # We can load our modules now
+            # self.do_load_modules(self.new_modules_conf)
+            # # And even start external ones
+            # self.modules_manager.start_external_instances()
 
             # Now the main loop
             self.do_mainloop()

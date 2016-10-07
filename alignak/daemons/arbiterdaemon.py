@@ -226,14 +226,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
+        if self.verify_only:
+            # Force the global logger at INFO level
+            alignak_logger = logging.getLogger("alignak")
+            alignak_logger.setLevel(logging.INFO)
+            logger.info("Arbiter is in configuration check mode")
+            logger.info("-----")
+
         logger.info("Loading configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)
         logger.info("Loaded configuration files, state: %s", self.conf.conf_is_correct)
-
-        # TODO: why is it here?
-        logger.debug("Opening local log file")
 
         # First we need to get arbiters and modules
         # so we can ask them for objects
@@ -277,8 +281,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                      "with the value '%s'."
                      " Thanks." % (self.config_name, socket.gethostname()))
 
-        logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
-
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
         # we request the instances without them being *started*
@@ -293,7 +295,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # (example modules: glpi, mongodb, dummy_arbiter)
         self.load_modules_configuration_objects(raw_objects)
 
-        # Resume standard operations ###
+        # Resume standard operations
         self.conf.create_objects(raw_objects)
 
         # Maybe conf is already invalid
@@ -374,7 +376,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #    sys.exit("Configuration is incorrect, sorry, I bail out")
 
         # REF: doc/alignak-conf-dispatching.png (2)
-        logger.info("Cutting the hosts and services into parts")
+        logger.info("Splitting hosts and services into parts")
         self.confs = self.conf.cut_into_parts()
 
         # The conf can be incorrect here if the cut into parts see errors like
@@ -393,6 +395,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Exit if we are just here for config checking
         if self.verify_only:
+            logger.info("Arbiter checked the configuration")
             sys.exit(0)
 
         if self.analyse:
@@ -400,15 +403,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             sys.exit(0)
 
         # Some properties need to be "flatten" (put in strings)
-        # before being send, like realms for hosts for example
+        # before being sent, like realms for hosts for example
         # BEWARE: after the cutting part, because we stringify some properties
         self.conf.prepare_for_sending()
 
-        # Ok, here we must check if we go on or not.
-        # TODO: check OK or not
+        # Update arbiter's own daemon parameters with the parameters got in the main configuration
         self.log_level = self.conf.log_level
         self.use_local_log = self.conf.use_local_log
         self.local_log = self.conf.local_log
+        self.human_timestamp_log = self.conf.human_timestamp_log
         self.pidfile = os.path.abspath(self.conf.lock_file)
         self.idontcareaboutsecurity = self.conf.idontcareaboutsecurity
         self.user = self.conf.alignak_user
@@ -416,16 +419,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.daemon_enabled = self.conf.daemon_enabled
         self.daemon_thread_pool_size = self.conf.daemon_thread_pool_size
 
-        self.accept_passive_unknown_check_results = BoolProp.pythonize(
-            getattr(self.myself, 'accept_passive_unknown_check_results', '0')
-        )
-
-        # If the user sets a workdir, lets use it. If not, use the
-        # pidfile directory
+        # If the user sets a workdir, let's use it. If not, use the pidfile directory
         if self.conf.workdir == '':
             self.workdir = os.path.abspath(os.path.dirname(self.pidfile))
         else:
             self.workdir = self.conf.workdir
+
+        self.accept_passive_unknown_check_results = BoolProp.pythonize(
+            getattr(self.myself, 'accept_passive_unknown_check_results', '0')
+        )
 
         #  We need to set self.host & self.port to be used by do_daemon_init_and_start
         self.host = self.myself.address
@@ -519,6 +521,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         try:
             self.setup_alignak_logger()
+
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
             self.do_daemon_init_and_start()

@@ -49,6 +49,7 @@ import time
 import logging
 import unittest
 import alignak.log
+import os.path
 
 from logging import DEBUG, INFO, WARNING
 from alignak.log import naglog_result, HUMAN_TIMESTAMP_LOG
@@ -58,14 +59,21 @@ from alignak_test import AlignakTest, CollectorHandler
 
 class TestLogging(AlignakTest):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         # By default get alignak logger and setup to Info level and add collector
-        self.logger = logging.getLogger("alignak")
+        cls.logger = logging.getLogger("alignak")
+        assert len(cls.logger.handlers) == 1
+
         # Add collector for test purpose.
         collector_h = CollectorHandler()
-        collector_h.setFormatter(self.logger.handlers[0].formatter)  # Need to copy format
-        self.logger.addHandler(collector_h)
+        collector_h.setFormatter(cls.logger.handlers[0].formatter)  # Need to copy format
+        cls.logger.addHandler(collector_h)
+
+    def setUp(self):
         self.logger.setLevel('INFO')
+        self.logger.set_human_format(False)
+        alignak.log.LOG_STACK = []
 
     def test_setting_and_unsetting_human_timestamp_format(self):
         # :hack: alignak.log.human_timestamp_log is a global variable
@@ -113,8 +121,65 @@ class TestLogging(AlignakTest):
         logs = self.get_log_match('\[.*\] INFO: \[%s\] %s3' % (self.logger.name, msg))
         human_time = logs[0].split(']')[0][1:]
         # Will raise a ValueError if strptime fails
-        self.assertIsNotNone(time.strptime(human_time, '%a %b %d %H:%M:%S %Y'))
+        # self.assertIsNotNone(time.strptime(human_time, '%a %b %d %H:%M:%S %Y'))
+        self.assertIsNotNone(time.strptime(human_time, alignak.log.HUMAN_TIMESTAMP_FORMAT))
         self.logger.set_human_format(False)
+
+    def test_log_stack(self):
+        initial_log_stack_length = len(alignak.log.LOG_STACK)
+        self.assertEqual(initial_log_stack_length, 0)
+
+        self.logger.info("This message will be stacked")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 1)
+        self.logger.setLevel(WARNING)
+        self.logger.info("This message will also be stacked")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 2)
+        self.logger.debug("And even this one will be stacked")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 3)
+
+    def test_register_local_log(self):
+        """
+        Register a local log file into the Alignak logger and set a log level
+        :return:
+        """
+        initial_log_stack_length = len(alignak.log.LOG_STACK)
+        self.assertEqual(initial_log_stack_length, 0)
+
+        self.logger.warning("This message will be stacked")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 1)
+        self.logger.info("This message will also be stacked")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 2)
+        self.logger.debug("And even this one will be stacked but not logged")
+        self.assertEqual(len(alignak.log.LOG_STACK), initial_log_stack_length + 3)
+
+        # Clean log file if it exists
+        log_file = "/tmp/log_file.log"
+        if os.path.isfile(log_file):
+            os.remove(log_file)
+        self.assertFalse(os.path.isfile(log_file))
+
+        # Two handlers:
+        # ColorStreamHandler (as default)
+        #  and
+        # CollectorHandler (added in this class setUp function)
+        self.assertEqual(len(self.logger.handlers), 2)
+        # Register a log file handler
+        self.logger.register_local_log(log_file, 'WARNING')
+        # One more handler for the file log
+        self.assertEqual(len(self.logger.handlers), 3)
+        # Stored log is now an empty list
+        self.assertEqual(len(alignak.log.LOG_STACK), 0)
+        # The log file exists...
+        self.assertTrue(os.path.isfile(log_file))
+        count = 0
+        with open(log_file) as f:
+            for count, line in enumerate(f):
+                print("Log: %s" % line)
+                pass
+        count += 1
+        # ...and it contains only 1 line (the WARNING log...)
+        self.assertEqual(count, 1)
+
 
 if __name__ == '__main__':
     unittest.main()

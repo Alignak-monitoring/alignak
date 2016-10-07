@@ -170,7 +170,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'log_level':
             LogLevelProp(default='WARNING'),
 
-
         'local_log':
             StringProp(default='/var/log/alignak/arbiterd.log'),
 
