@@ -52,11 +52,11 @@ class Testretention(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
 
         retention = self.schedulers['scheduler-master'].sched.get_retention_data()
@@ -87,16 +87,16 @@ class Testretention(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
 
         retention = self.schedulers['scheduler-master'].sched.get_retention_data()
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
         time.sleep(0.1)
 
         self.schedulers['scheduler-master'].sched.restore_retention_data(retention)
