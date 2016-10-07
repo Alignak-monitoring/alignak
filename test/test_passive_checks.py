@@ -46,7 +46,7 @@ class TestPassiveChecks(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
 
         self.assert_actions_count(0)
@@ -135,7 +135,7 @@ class TestPassiveChecks(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
 
         self.assertEqual("OK", svc0.state)

@@ -272,7 +272,7 @@ class AlignakTest(unittest.TestCase):
         check.status = 'waitconsume'
         self.schedulers['scheduler-master'].sched.waiting_results.put(check)
 
-    def scheduler_loop_new(self, count, items):
+    def scheduler_loop(self, count, items):
         """
         Manage scheduler checks
 

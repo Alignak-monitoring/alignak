@@ -57,37 +57,37 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl CRITICAL HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl CRITICAL HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
@@ -114,37 +114,37 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
@@ -172,33 +172,33 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("SOFT", svc.state_type)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(3)
@@ -206,19 +206,19 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl CRITICAL HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(4)
@@ -227,7 +227,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(2, 'test_eventhandler.pl CRITICAL HARD', 'command')
         self.assert_actions_match(3, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(4)
 
@@ -255,28 +255,28 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("SOFT", svc.state_type)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl WARNING SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl CRITICAL HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(3)
@@ -284,7 +284,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(1, 'test_eventhandler.pl CRITICAL HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
@@ -312,28 +312,28 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("SOFT", svc.state_type)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(3)
@@ -341,7 +341,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(3)
 
@@ -370,28 +370,28 @@ class TestEventhandler(AlignakTest):
         svc.enable_notifications = False
         svc.notification_interval = 0
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("SOFT", svc.state_type)
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'test_eventhandler.pl CRITICAL SOFT', 'command')
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
         self.assert_actions_count(2)
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(3)
@@ -399,7 +399,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(1, 'test_eventhandler.pl WARNING HARD', 'command')
         self.assert_actions_match(2, 'test_eventhandler.pl CRITICAL HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
         self.assert_actions_count(4)
@@ -408,6 +408,6 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(2, 'test_eventhandler.pl CRITICAL HARD', 'command')
         self.assert_actions_match(3, 'test_eventhandler.pl OK HARD', 'command')
 
-        self.scheduler_loop_new(1, [[svc, 0, 'OK']])
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assert_actions_count(4)

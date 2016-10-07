@@ -55,7 +55,7 @@ class TestSchedulerCleanQueue(AlignakTest):
         # Define clean queue each time for the test
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('clean_queues', 1000)
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
         brok_limit = 5 * (len(self.schedulers['scheduler-master'].sched.hosts) +
                           len(self.schedulers['scheduler-master'].sched.services))
@@ -63,13 +63,13 @@ class TestSchedulerCleanQueue(AlignakTest):
         self.assertLess(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
 
         for _ in xrange(0, 10):
-            self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
             time.sleep(0.1)
-            self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+            self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
             time.sleep(0.1)
         self.assertGreater(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('clean_queues', 1)
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
         self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
 
     def test_clean_checks(self):
@@ -98,7 +98,7 @@ class TestSchedulerCleanQueue(AlignakTest):
 
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('delete_zombie_checks', 1000)
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
         check_limit = 5 * (len(self.schedulers['scheduler-master'].sched.hosts) +
                            len(self.schedulers['scheduler-master'].sched.services))
@@ -118,7 +118,7 @@ class TestSchedulerCleanQueue(AlignakTest):
             self.schedulers['scheduler-master'].sched.add_check(chk)
             time.sleep(0.1)
         self.assertGreater(len(self.schedulers['scheduler-master'].sched.checks), check_limit)
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
         self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.checks), check_limit)
 
     def test_clean_actions(self):
@@ -144,7 +144,7 @@ class TestSchedulerCleanQueue(AlignakTest):
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('clean_queues', 1000)
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('delete_zombie_actions', 1000)
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
         action_limit = 5 * (len(self.schedulers['scheduler-master'].sched.hosts) +
                             len(self.schedulers['scheduler-master'].sched.services))
@@ -152,11 +152,11 @@ class TestSchedulerCleanQueue(AlignakTest):
         self.assertLess(len(self.schedulers['scheduler-master'].sched.actions), action_limit)
 
         for _ in xrange(0, 10):
-            self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
             time.sleep(0.1)
-            self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+            self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
             time.sleep(0.1)
         self.assertGreater(len(self.schedulers['scheduler-master'].sched.actions), action_limit)
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('clean_queues', 1)
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
         self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.actions), action_limit)

@@ -45,16 +45,16 @@ class TestHostsvcLastStateChange(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
         self.assertEqual(host.last_state_change, 0)
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
         self.assertEqual(host.last_state_change, 0)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
         after = time.time()
         time.sleep(0.2)
         self.assertNotEqual(host.last_state_change, 0)
@@ -62,12 +62,12 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertLess(host.last_state_change, after)
         reference_time = host.last_state_change
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.2)
         self.assertEqual(host.last_state_change, reference_time)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
         self.assertNotEqual(host.last_state_change, reference_time)
         self.assertGreater(host.last_state_change, before)
@@ -96,26 +96,26 @@ class TestHostsvcLastStateChange(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertFalse(host.problem_has_been_acknowledged)
         self.assert_actions_count(0)
 
-        self.scheduler_loop_new(1, [[host_router, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
         self.assertEqual("DOWN", host_router.state)
         self.assertEqual("SOFT", host_router.state_type)
         self.assertEqual("UP", host.state)
         self.assertEqual("HARD", host.state_type)
 
-        self.scheduler_loop_new(1, [[host_router, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
         self.assertEqual("DOWN", host_router.state)
         self.assertEqual("SOFT", host_router.state_type)
         self.assertEqual("UP", host.state)
         self.assertEqual("HARD", host.state_type)
 
-        self.scheduler_loop_new(1, [[host_router, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
         self.assertEqual("DOWN", host_router.state)
         self.assertEqual("HARD", host_router.state_type)
@@ -123,7 +123,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertEqual("HARD", host.state_type)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
         after = time.time()
         time.sleep(0.2)
         self.assertEqual("DOWN", host_router.state)
@@ -136,14 +136,14 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertLess(host.last_state_change, after)
         reference_time = host.last_state_change
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.2)
         self.assertEqual("UNREACHABLE", host.state)
         self.assertEqual("UNREACHABLE", host.last_state)
         self.assertEqual(host.last_state_change, reference_time)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[host, 0, 'UP']])
+        self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
         self.assertNotEqual(host.last_state_change, reference_time)
         self.assertGreater(host.last_state_change, before)
@@ -167,12 +167,12 @@ class TestHostsvcLastStateChange(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        self.scheduler_loop_new(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.2)
         self.assertEqual(svc.last_state_change, 0)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         after = time.time()
         time.sleep(0.2)
         self.assertNotEqual(svc.last_state_change, 0)
@@ -180,12 +180,12 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertLess(svc.last_state_change, after)
         reference_time = svc.last_state_change
 
-        self.scheduler_loop_new(1, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.2)
         self.assertEqual(svc.last_state_change, reference_time)
 
         before = time.time()
-        self.scheduler_loop_new(1, [[svc, 0, 'UP']])
+        self.scheduler_loop(1, [[svc, 0, 'UP']])
         time.sleep(0.2)
         self.assertNotEqual(svc.last_state_change, reference_time)
         self.assertGreater(svc.last_state_change, before)
