@@ -151,6 +151,9 @@ class Scheduler(object):  # pylint: disable=R0902
             18: ('check_for_expire_acknowledge', self.check_for_expire_acknowledge, 1),
             19: ('send_broks_to_modules', self.send_broks_to_modules, 1),
             20: ('get_objects_from_from_queues', self.get_objects_from_from_queues, 1),
+            # If change the number of get_latency_average_percentile in recurrent_works, change it
+            # in the function get_latency_average_percentile()
+            21: ('get_latency_average_percentile', self.get_latency_average_percentile, 10),
         }
 
         # stats part
@@ -158,6 +161,13 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_actions_send = 0
         self.nb_broks_send = 0
         self.nb_check_received = 0
+        self.stats = {
+            'latency': {
+                'avg': 0.0,
+                'min': 0.0,
+                'max': 0.0
+            }
+        }
 
         # Log init
         # pylint: disable=E1101
@@ -1579,7 +1589,6 @@ class Scheduler(object):  # pylint: disable=R0902
             self.put_results(self.waiting_results.get())
 
         # Then we consume them
-        # print "**********Consume*********"
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
                 item = self.find_item_by_id(chk.ref)
@@ -1729,6 +1738,8 @@ class Scheduler(object):  # pylint: disable=R0902
         """Iter over all hosts and services and call schedule method
         (schedule next check)
 
+        :param elems: None or list of host / services to schedule
+        :type elems: None | list
         :return: None
         """
         if not elems:
@@ -1846,6 +1857,22 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         return self.sched_daemon.get_objects_from_from_queues()
 
+    def get_latency_average_percentile(self):
+        """
+        Get a overview of the latencies with just a 95 percentile + min/max values
+
+        :return: None
+        """
+        (_, _, time_interval) = self.recurrent_works[21]
+        last_time = time.time() - time_interval
+        latencies = [s.latency for s in self.services if s.last_chk > last_time]
+        lat_avg, lat_min, lat_max = average_percentile(latencies)
+        if lat_avg is not None:
+            self.stats['latency']['avg'] = lat_avg
+            self.stats['latency']['min'] = lat_min
+            self.stats['latency']['max'] = lat_max
+            logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
+
     def get_checks_status_counts(self, checks=None):
         """ Compute the counts of the different checks status and
         return it as a defaultdict(int) with the keys being the different
@@ -1919,13 +1946,7 @@ class Scheduler(object):  # pylint: disable=R0902
         res = self.sched_daemon.get_stats_struct()
         res.update({'name': self.instance_name, 'type': 'scheduler'})
 
-        # Get a overview of the latencies with just
-        # a 95 percentile view, but lso min/max values
-        latencies = [s.latency for s in self.services]
-        lat_avg, lat_min, lat_max = average_percentile(latencies)
-        res['latency'] = (0.0, 0.0, 0.0)
-        if lat_avg:
-            res['latency'] = {'avg': lat_avg, 'min': lat_min, 'max': lat_max}
+        res['latency'] = self.stats['latency']
 
         res['hosts'] = len(self.hosts)
         res['services'] = len(self.services)
@@ -1949,10 +1970,12 @@ class Scheduler(object):  # pylint: disable=R0902
             metrics.append('scheduler.%s.%s %d %d' % (
                 self.instance_name, what, len(getattr(self, what)), now))
 
-        if lat_min:
-            metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name, lat_min, now))
-            metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name, lat_avg, now))
-            metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name, lat_max, now))
+        metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name,
+                                                           res['latency']['min'], now))
+        metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name,
+                                                           res['latency']['avg'], now))
+        metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name,
+                                                           res['latency']['max'], now))
 
         all_commands = {}
         # compute some stats
@@ -2097,13 +2120,6 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Checks: total %s, scheduled %s,"
                          "inpoller %s, zombies %s, notifications %s",
                          len(self.checks), nb_scheduled, nb_inpoller, nb_zombies, nb_notifications)
-
-            # Get a overview of the latencies with just
-            # a 95 percentile view, but lso min/max values
-            latencies = [s.latency for s in self.services]
-            lat_avg, lat_min, lat_max = average_percentile(latencies)
-            if lat_avg is not None:
-                logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
 
             # print "Notifications:", nb_notifications
             now = time.time()
