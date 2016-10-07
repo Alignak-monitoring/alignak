@@ -55,7 +55,7 @@ class TestStats(AlignakTest):
         svc5 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_5")
 
-        self.scheduler_loop_new(1, [[svc0, 0, 'OK'], [svc1, 0, 'OK'], [svc2, 0, 'OK'],
+        self.scheduler_loop(1, [[svc0, 0, 'OK'], [svc1, 0, 'OK'], [svc2, 0, 'OK'],
                                     [svc3, 0, 'OK'], [svc4, 0, 'OK'], [svc5, 0, 'OK']])
 
         now = time.time()

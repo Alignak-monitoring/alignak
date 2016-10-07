@@ -53,7 +53,7 @@ class TestBrokCheckResult(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
 
-        self.scheduler_loop_new(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []

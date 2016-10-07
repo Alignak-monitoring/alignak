@@ -272,50 +272,9 @@ class AlignakTest(unittest.TestCase):
         check.status = 'waitconsume'
         self.schedulers['scheduler-master'].sched.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items, reset_checks=True):
+    def scheduler_loop(self, count, items):
         """
         Manage scheduler checks
-
-        !!!!!!!!!! This function is to be replaced by the scheduler_loop_new !!!!!!!!!!
-
-
-        @verified
-        :param count: number of checks to pass
-        :type count: int
-        :param items: list of list [[object, exist_status, output]]
-        :type items: list
-        :return: None
-        """
-        if reset_checks:
-            self.schedulers['scheduler-master'].sched.checks = {}
-        for num in range(count):
-            for item in items:
-                (obj, exit_status, output) = item
-                obj.next_chk = time.time()
-                chk = obj.launch_check(obj.next_chk,
-                                       self.schedulers['scheduler-master'].sched.hosts,
-                                       self.schedulers['scheduler-master'].sched.services,
-                                       self.schedulers['scheduler-master'].sched.timeperiods,
-                                       self.schedulers['scheduler-master'].sched.macromodulations,
-                                       self.schedulers['scheduler-master'].sched.checkmodulations,
-                                       self.schedulers['scheduler-master'].sched.checks,
-                                       force=False)
-                self.schedulers['scheduler-master'].sched.add_check(chk)
-                # update the check to add the result
-                chk.set_type_active()
-                chk.output = output
-                chk.exit_status = exit_status
-                self.schedulers['scheduler-master'].sched.waiting_results.put(chk)
-            for i in self.schedulers['scheduler-master'].sched.recurrent_works:
-                (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
-                if nb_ticks == 1:
-                    fun()
-
-    def scheduler_loop_new(self, count, items):
-        """
-        Manage scheduler checks
-
-        !!!!!!!!!! This function will replace the scheduler_loop !!!!!!!!!!
 
         @verified
 
@@ -356,35 +315,6 @@ class AlignakTest(unittest.TestCase):
             (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
             if nb_ticks == 1:
                 fun()
-
-    def old_scheduler_loop(self, count, reflist, do_sleep=False, sleep_time=61, verbose=True,
-                           nointernal=False):
-        for ref in reflist:
-            (obj, exit_status, output) = ref
-            obj.checks_in_progress = []
-        for loop in range(1, count + 1):
-            if verbose is True:
-                print "processing check", loop
-            for ref in reflist:
-                (obj, exit_status, output) = ref
-                obj.update_in_checking()
-                self.fake_check(obj, exit_status, output)
-            if not nointernal:
-                self.schedulers['scheduler-master'].sched.manage_internal_checks()
-
-            self.schedulers['scheduler-master'].sched.consume_results()
-            self.schedulers['scheduler-master'].sched.get_new_actions()
-            self.schedulers['scheduler-master'].sched.get_new_broks()
-            self.schedulers['scheduler-master'].sched.scatter_master_notifications()
-            self.worker_loop(verbose)
-            for ref in reflist:
-                (obj, exit_status, output) = ref
-                obj.checks_in_progress = []
-                obj.update_in_checking()
-            self.schedulers['scheduler-master'].sched.update_downtimes_and_comments()
-            #time.sleep(ref.retry_interval * 60 + 1)
-            if do_sleep:
-                time.sleep(sleep_time)
 
     def worker_loop(self, verbose=True):
         self.schedulers['scheduler-master'].sched.delete_zombie_checks()
