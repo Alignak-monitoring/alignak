@@ -57,7 +57,7 @@ from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import naglog_result
+from alignak.log import make_monitoring_log
 from alignak.commandcall import CommandCall
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -319,8 +319,11 @@ class Contact(Item):
 
         :return: None
         """
-        naglog_result('info', "CONTACT DOWNTIME ALERT: %s;STARTED; Contact has "
-                      "entered a period of scheduled downtime" % self.get_name())
+        brok = make_monitoring_log(
+            'info', "CONTACT DOWNTIME ALERT: %s;STARTED; "
+                    "Contact has entered a period of scheduled downtime" % self.get_name()
+        )
+        self.broks.append(brok)
 
     def raise_exit_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)
@@ -331,8 +334,11 @@ class Contact(Item):
 
         :return: None
         """
-        naglog_result('info', "CONTACT DOWNTIME ALERT: %s;STOPPED; Contact has "
-                      "exited from a period of scheduled downtime" % self.get_name())
+        brok = make_monitoring_log(
+            'info', "CONTACT DOWNTIME ALERT: %s;STOPPED; "
+                    "Contact has exited from a period of scheduled downtime" % self.get_name()
+        )
+        self.broks.append(brok)
 
     def raise_cancel_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)
@@ -343,8 +349,11 @@ class Contact(Item):
 
         :return: None
         """
-        naglog_result('info', "CONTACT DOWNTIME ALERT: %s;CANCELLED; Scheduled "
-                      "downtime for contact has been cancelled." % self.get_name())
+        brok = make_monitoring_log(
+            'info', "CONTACT DOWNTIME ALERT: %s;CANCELLED; "
+                    "Scheduled downtime for contact has been cancelled." % self.get_name()
+        )
+        self.broks.append(brok)
 
 
 class Contacts(CommandCallItems):

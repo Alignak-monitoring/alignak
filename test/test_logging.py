@@ -48,10 +48,11 @@ Test alignak.logging
 import time
 import logging
 import unittest
-import alignak.log
+import os.path
+from datetime import datetime
 
 from logging import DEBUG, INFO, WARNING
-from alignak.log import naglog_result, HUMAN_TIMESTAMP_LOG
+from alignak.log import setup_logger, DEFAULT_FORMATTER_NAMED
 
 from alignak_test import AlignakTest, CollectorHandler
 
@@ -61,21 +62,15 @@ class TestLogging(AlignakTest):
     def setUp(self):
         # By default get alignak logger and setup to Info level and add collector
         self.logger = logging.getLogger("alignak")
+        self.logger.handlers = []
+
         # Add collector for test purpose.
         collector_h = CollectorHandler()
-        collector_h.setFormatter(self.logger.handlers[0].formatter)  # Need to copy format
+        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
         self.logger.addHandler(collector_h)
-        self.logger.setLevel('INFO')
+        # self.assertEqual(len(self.logger.handlers), 1)
 
-    def test_setting_and_unsetting_human_timestamp_format(self):
-        # :hack: alignak.log.human_timestamp_log is a global variable
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
-        self.logger.set_human_format(True)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
-        self.logger.set_human_format(False)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
-        self.logger.set_human_format(True)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
+        self.logger.setLevel(INFO)
 
     def test_default_logger_values(self):
         self.assertEqual(self.logger.level, INFO)
@@ -100,21 +95,87 @@ class TestLogging(AlignakTest):
         self.assert_any_log_match("This message will be collected")
         self.assert_no_log_match("This message won't be collected")
 
+    def test_log_config_console(self):
+        """
+        Default logger setup is to update alignak root logger and add a console handler
+
+        :return:
+        """
+        # No console handler
+        my_logger = setup_logger(None, log_console=False)
+        self.assertEqual(my_logger, self.logger)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(my_logger.name, "alignak")
+        self.assertEqual(len(my_logger.handlers), 1)
+
+        # With console handler
+        my_logger = setup_logger(None)
+        self.assertEqual(my_logger, self.logger)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(my_logger.name, "alignak")
+        self.assertEqual(len(my_logger.handlers), 2)
+
+        # Only append one console handler but update the logger level if required
+        my_logger = setup_logger(None, level=DEBUG)
+        self.assertEqual(my_logger.level, DEBUG)
+        self.assertEqual(len(my_logger.handlers), 2)
+        # Back to INFO (default level value)
+        my_logger = setup_logger(None, log_console=True)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(len(my_logger.handlers), 2)
+
+        msg = "test message"
+        self.logger.info(msg)
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
+
+    def test_log_config_human_date(self):
+        """
+        Default logger setup uses a timestamp date format, a human date can be used instead
+
+        :return:
+        """
+        # With console handler and human date
+        my_logger = setup_logger(None, human_log=True, human_date_format=u'%Y-%m-%d %H:%M:%S')
+        self.assertEqual(my_logger, self.logger)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(my_logger.name, "alignak")
+        self.assertEqual(len(my_logger.handlers), 2)
+
+    def test_log_config_file(self):
+        """
+        Logger setup allows to update alignak root logger with a timed rotating file handler
+
+        :return:
+        """
+        my_logger = setup_logger(None, log_file='./test.log')
+        self.assertEqual(my_logger, self.logger)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(my_logger.name, "alignak")
+        self.assertEqual(len(my_logger.handlers), 3)
+        self.assertTrue(os.path.exists('./test.log'))
+
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file='./test.log')
+        self.assertEqual(my_logger, self.logger)
+        self.assertEqual(my_logger.level, INFO)
+        self.assertEqual(my_logger.name, "alignak")
+        self.assertEqual(len(my_logger.handlers), 3)
+
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file=os.path.abspath('./test.log'))
+        self.assertEqual(len(my_logger.handlers), 3)
+
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file=os.path.abspath('./test2.log'))
+        self.assertEqual(len(my_logger.handlers), 4)
+        self.assertTrue(os.path.exists('./test2.log'))
+
     def test_log_format(self):
         msg = "Message"
         self.logger.info(msg)
         self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
-        naglog_result("info", msg)
-        self.assert_any_log_match('\[[0-9]*\] %s' % msg)
-        naglog_result("info", msg + "2")
-        self.assert_no_log_match('\[[0-9]*\] INFO: \[%s\] %s2' % (self.logger.name, msg))
-        self.logger.set_human_format(True)
-        self.logger.info(msg + "3")
-        logs = self.get_log_match('\[.*\] INFO: \[%s\] %s3' % (self.logger.name, msg))
-        human_time = logs[0].split(']')[0][1:]
-        # Will raise a ValueError if strptime fails
-        self.assertIsNotNone(time.strptime(human_time, '%a %b %d %H:%M:%S %Y'))
-        self.logger.set_human_format(False)
+
+
 
 if __name__ == '__main__':
     unittest.main()

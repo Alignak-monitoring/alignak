@@ -119,8 +119,7 @@ from alignak.objects.receiverlink import ReceiverLink, ReceiverLinks
 from alignak.objects.pollerlink import PollerLink, PollerLinks
 from alignak.graph import Graph
 from alignak.property import (UnusedProp, BoolProp, IntegerProp, CharProp,
-                              StringProp, LogLevelProp, ListProp, ToGuessProp)
-from alignak.daemon import get_cur_user, get_cur_group
+                              StringProp, ListProp, ToGuessProp)
 from alignak.util import jsonify_r
 
 
@@ -155,27 +154,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
     #  in Alignak
     # *usage_text: if present, will print it to explain why it's no more useful
     properties = {
+        # Used for the PREFIX macro
+        # Alignak prefix does not axist as for Nagios meaning.
+        # It is better to set this value as an empty string rather than an meaningless information!
         'prefix':
-            StringProp(default='/usr/local/alignak/'),
+            StringProp(default=''),
 
-        'workdir':
-            StringProp(default='/var/run/alignak/'),
+        # Used for the MAINCONFIGFILE macro
+        'main_config_file':
+            StringProp(default='/usr/local/etc/alignak/alignak.cfg'),
 
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
-
-        'use_local_log':
-            BoolProp(default=True),
-
-        'log_level':
-            LogLevelProp(default='WARNING'),
-
-
-        'local_log':
-            StringProp(default='/var/log/alignak/arbiterd.log'),
-
-        'log_file':
-            UnusedProp(text=NO_LONGER_USED),
 
         'object_cache_file':
             UnusedProp(text=NO_LONGER_USED),
@@ -195,12 +185,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'status_update_interval':
             UnusedProp(text=NO_LONGER_USED),
 
-        'alignak_user':
-            StringProp(default=get_cur_user()),
-
-        'alignak_group':
-            StringProp(default=get_cur_group()),
-
         'enable_notifications':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
@@ -219,11 +203,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'enable_event_handlers':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
+        # Inner simple log self created module parameter
         'log_rotation_method':
             CharProp(default='d'),
 
+        # Inner simple log self created module parameter
         'log_archive_path':
             StringProp(default='/usr/local/alignak/var/archives'),
+
         'check_external_commands':
             BoolProp(default=True),
 
@@ -245,13 +232,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'bare_update_checks':
             UnusedProp(text=None),
 
-        'lock_file':
-            StringProp(default='/var/run/alignak/arbiterd.pid'),
-
         'retain_state_information':
             UnusedProp(text='sorry, retain state information will not be implemented '
                             'because it is useless.'),
 
+        # Inner status.dat self created module parameters
         'state_retention_file':
             StringProp(default=''),
 
@@ -282,9 +267,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'retained_contact_service_attribute_mask':
             UnusedProp(text=NOT_INTERESTING),
 
+        # Inner syslog self created module parameters
         'use_syslog':
             BoolProp(default=False),
 
+        # Monitoring logs configuration
         'log_notifications':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
@@ -364,24 +351,28 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_aggressive_host_checking':
             BoolProp(default=False, class_inherit=[(Host, None)]),
 
+        # Todo: not used anywhere in the source code
         'translate_passive_host_checks':
             BoolProp(managed=False, default=True),
 
         'passive_host_checks_are_soft':
             BoolProp(managed=False, default=True),
 
+        # Todo: not used anywhere in the source code
         'enable_predictive_host_dependency_checks':
             BoolProp(managed=False,
                      default=True,
                      class_inherit=[(Host, 'enable_predictive_dependency_checks')]),
 
+        # Todo: not used anywhere in the source code
         'enable_predictive_service_dependency_checks':
             BoolProp(managed=False, default=True),
 
+        # Todo: not used anywhere in the source code
         'cached_host_check_horizon':
             IntegerProp(default=0, class_inherit=[(Host, 'cached_check_horizon')]),
 
-
+        # Todo: not used anywhere in the source code
         'cached_service_check_horizon':
             IntegerProp(default=0, class_inherit=[(Service, 'cached_check_horizon')]),
 
@@ -413,6 +404,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'high_host_flap_threshold':
             IntegerProp(default=30, class_inherit=[(Host, 'global_high_flap_threshold')]),
 
+        # Todo: not used anywhere in the source code
         'soft_state_dependencies':
             BoolProp(managed=False, default=False),
 
@@ -440,6 +432,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'perfdata_timeout':
             IntegerProp(default=5, class_inherit=[(Host, None), (Service, None)]),
 
+        # Todo: Is it still of any interest to keep this Nagios distributed feature?
         'obsess_over_services':
             BoolProp(default=False, class_inherit=[(Service, 'obsess_over')]),
 
@@ -461,6 +454,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'service_perfdata_command':
             StringProp(default='', class_inherit=[(Service, 'perfdata_command')]),
 
+        # Inner perfdata self created module parameters
         'host_perfdata_file':
             StringProp(default='', class_inherit=[(Host, 'perfdata_file')]),
 
@@ -494,9 +488,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'service_perfdata_file_processing_command':
             StringProp(managed=False, default=None),
 
+        # Todo: not used anywhere in the source code
         'check_for_orphaned_services':
             BoolProp(default=True, class_inherit=[(Service, 'check_for_orphaned')]),
 
+        # Todo: not used anywhere in the source code
         'check_for_orphaned_hosts':
             BoolProp(default=True, class_inherit=[(Host, 'check_for_orphaned')]),
 
@@ -523,6 +519,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_embedded_perl_implicitly':
             BoolProp(managed=False, default=False),
 
+        # Todo: not used anywhere in the source code
         'date_format':
             StringProp(managed=False, default=None),
 
@@ -572,14 +569,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'modified_attributes':
             IntegerProp(default=0L),
-        # '$USERn$: {'required':False, 'default':''} # Add at run in __init__
-
-        # ALIGNAK SPECIFIC
-        'idontcareaboutsecurity':
-            BoolProp(default=False),
-
-        'daemon_enabled':
-            BoolProp(default=True),  # Put to 0 to disable the arbiter to run
 
         'daemon_thread_pool_size':
             IntegerProp(default=8),
@@ -609,29 +598,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'resource_macros_names':
             ListProp(default=[]),
 
-        # SSL PART
-        # global boolean for know if we use ssl or not
-        'use_ssl':
-            BoolProp(default=False,
-                     class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                    (BrokerLink, None), (PollerLink, None),
-                                    (ReceiverLink, None), (ArbiterLink, None)]),
-        'ca_cert':
-            StringProp(default='etc/certs/ca.pem'),
-
-        'server_cert':
-            StringProp(default='etc/certs/server.cert'),
-
-        'server_key':
-            StringProp(default='etc/certs/server.key'),
-
-        'hard_ssl_name_check':
-            BoolProp(default=False),
-
-        # Log format
-        'human_timestamp_log':
-            BoolProp(default=False),
-
         'runners_timeout':
             IntegerProp(default=3600),
 
@@ -641,20 +607,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'pack_distribution_file':
             StringProp(default='pack_distribution.dat'),
 
-        # WEBUI part
-        'webui_lock_file':
-            StringProp(default='webui.pid'),
-
-        'webui_port':
-            IntegerProp(default=8080),
-
-        'webui_host':
-            StringProp(default='0.0.0.0'),
-
-        # Large env tweacks
+        # Large env tweaks
         'use_multiprocesses_serializer':
             BoolProp(default=False),
 
+        # Todo: should remove this, as it is not used anymore...
         # About alignak.io part
         'api_key':
             StringProp(default='',
@@ -695,7 +652,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     macros = {
         'PREFIX':               'prefix',
-        'MAINCONFIGFILE':       '',
+        'MAINCONFIGFILE':       'main_config_file',
         'STATUSDATAFILE':       '',
         'COMMENTDATAFILE':      '',
         'DOWNTIMEDATAFILE':     '',
@@ -976,6 +933,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 buf = file_d.readlines()
                 file_d.close()
                 self.config_base_dir = os.path.dirname(c_file)
+                # Update macro used properties
+                self.main_config_file = os.path.abspath(c_file)
             except IOError, exp:
                 msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
                 self.add_error(msg)

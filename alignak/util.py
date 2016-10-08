@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
 except AttributeError, exp:
-    logger.error('Encoding detection error= %s', exp)
+    logger.error('Encoding detection error for stdout = %s', exp)
     SAFE_STDOUT = False
 
 
@@ -1323,18 +1323,19 @@ def parse_daemon_args(arbiter=False):
     """
     parser = argparse.ArgumentParser(version="%(prog)s " + VERSION)
     if arbiter:
-        parser.add_argument('-c', '--config', action='append', dest="config_files",
-                            help='Configuration file(s),'
-                                 'multiple -c can be used, they will be concatenated')
+        parser.add_argument('-a', '--arbiter', action='append', required=True,
+                            dest="monitoring_files",
+                            help='Monitored configuration file(s),'
+                                 'multiple -a can be used, and they will be concatenated. ')
         parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
                             help="Verify config file and exit")
         parser.add_argument("-n", "--config-name", dest="config_name",
                             default='arbiter-master',
                             help="Use name of arbiter defined in the configuration files "
                                  "(default arbiter-master)")
-    else:
-        parser.add_argument('-c', '--config', dest="config_file", required=True,
-                            help='Config file')
+
+    parser.add_argument('-c', '--config', dest="config_file",
+                        help='Daemon configuration file')
     parser.add_argument('-d', '--daemon', dest="is_daemon", action='store_true',
                         help='Run as a daemon')
     parser.add_argument('-r', '--replace', dest="do_replace", action='store_true',

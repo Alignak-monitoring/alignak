@@ -19,24 +19,23 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
 import subprocess
-import json
 from time import sleep
 import requests
 import shutil
 
 from alignak_test import unittest
+from alignak_test import AlignakTest
 
-from alignak.misc.serialization import unserialize
 from alignak.http.generic_interface import GenericInterface
 from alignak.http.receiver_interface import ReceiverInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
-from alignak.check import Check
 
 
-class fullTest(unittest.TestCase):
+class fullTest(AlignakTest):
     def _get_subproc_data(self, name):
         try:
             print("Try to end %s" % name)
@@ -51,6 +50,9 @@ class fullTest(unittest.TestCase):
         data['rc'] = self.procs[name].returncode
         return data
 
+    def setUp(self):
+        self.procs = {}
+
     def tearDown(self):
         for name, proc in self.procs.items():
             if proc:
@@ -62,11 +64,17 @@ class fullTest(unittest.TestCase):
 
         # copy etc config files in test/cfg/full and change folder in files for run and log of
         # alignak
-        shutil.copytree('../etc', 'cfg/full')
-        files = ['cfg/full/daemons/brokerd.ini', 'cfg/full/daemons/pollerd.ini',
+        if os.path.exists('./cfg/full'):
+            shutil.rmtree('./cfg/full')
+        shutil.copytree('../etc', './cfg/full')
+        files = ['cfg/full/daemons/arbiterd.ini',
+                 'cfg/full/daemons/brokerd.ini', 'cfg/full/daemons/pollerd.ini',
                  'cfg/full/daemons/reactionnerd.ini', 'cfg/full/daemons/receiverd.ini',
                  'cfg/full/daemons/schedulerd.ini', 'cfg/full/alignak.cfg']
-        replacements = {'/usr/local/var/run/alignak': '/tmp', '/usr/local/var/log/alignak': '/tmp'}
+        replacements = {
+            '/usr/local/var/run/alignak': '/tmp',
+            '/usr/local/var/log/alignak': '/tmp'
+        }
         for filename in files:
             lines = []
             with open(filename) as infile:
@@ -88,10 +96,13 @@ class fullTest(unittest.TestCase):
                          }
 
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            args = ["../alignak/bin/alignak_%s.py" %daemon, "-c", "cfg/full/daemons/%sd.ini" % daemon]
+            args = ["../alignak/bin/alignak_%s.py" %daemon,
+                    "-c", "cfg/full/daemons/%sd.ini" % daemon]
             self.procs[daemon] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-c", "cfg/full/alignak.cfg"]
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-c", "cfg/full/daemons/arbiterd.ini",
+                "-a", "cfg/full/alignak.cfg"]
         self.procs['arbiter'] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         sleep(8)
@@ -280,7 +291,3 @@ class fullTest(unittest.TestCase):
     #    :return:
     #    """
     #    print('to')
-
-
-if __name__ == '__main__':
-    unittest.main()

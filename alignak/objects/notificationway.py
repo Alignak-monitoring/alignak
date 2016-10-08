@@ -71,6 +71,8 @@ class NotificationWay(Item):
 
     properties = Item.properties.copy()
     properties.update({
+        'uuid':
+            StringProp(default='', fill_brok=['full_status']),
         'notificationway_name':
             StringProp(fill_brok=['full_status']),
         'host_notifications_enabled':

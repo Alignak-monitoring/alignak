@@ -467,9 +467,7 @@ class Broker(BaseSatellite):
             self.statsd_prefix = g_conf['statsd_prefix']
             self.statsd_enabled = g_conf['statsd_enabled']
 
-            # We got a name so we can update the logger and the stats global objects
-            # pylint: disable=E1101
-            logger.load_obj(self, name)
+            # We got a name so we can update the stats global objects
             statsmgr.register(self, name, 'broker',
                               api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
                               statsd_host=self.statsd_host, statsd_port=self.statsd_port,
@@ -857,22 +855,22 @@ class Broker(BaseSatellite):
         try:
             self.setup_alignak_logger()
 
-            logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
-
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
+
+            logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
+
             self.do_daemon_init_and_start()
+
             self.load_modules_manager()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
             if not self.new_conf:
                 return
-
             self.setup_new_conf()
 
-            # Do the modules part, we have our modules in self.modules
-            # REF: doc/broker-modules.png (1)
+            # Restore retention data
             self.hook_point('load_retention')
 
             # Now the main loop

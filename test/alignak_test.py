@@ -42,6 +42,7 @@ import logging
 from logging import Handler
 
 import alignak
+from alignak.log import DEFAULT_FORMATTER_NAMED, ROOT_LOGGER_NAME
 from alignak.objects.config import Config
 from alignak.objects.command import Command
 from alignak.objects.module import Module
@@ -176,28 +177,30 @@ class AlignakTest(unittest.TestCase):
         self.configuration_warnings = []
         self.configuration_errors = []
         self.logger = logging.getLogger("alignak")
+
         # Add collector for test purpose.
         collector_h = CollectorHandler()
-        collector_h.setFormatter(self.logger.handlers[0].formatter)  # Need to copy format
+        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
         self.logger.addHandler(collector_h)
 
-        self.arbiter = Arbiter([configuration_file], False, False, False, False,
+        # Initialize the Arbiter with no daemon configuration file
+        self.arbiter = Arbiter(None, [configuration_file], False, False, False, False,
                               '/tmp/arbiter.log', 'arbiter-master')
 
         try:
             # The following is copy paste from setup_alignak_logger
             # The only difference is that keep logger at INFO level to gather messages
             # This is needed to assert later on logs we received.
-            self.logger.setLevel('INFO')
+            self.logger.setLevel(logging.INFO)
             # Force the debug level if the daemon is said to start with such level
             if self.arbiter.debug:
-                self.logger.setLevel('DEBUG')
+                self.logger.setLevel(logging.DEBUG)
 
             # Log will be broks
-            for line in self.arbiter.get_header():
+            for line in self.arbiter.get_header('arbiter'):
                 self.logger.info(line)
 
-            self.arbiter.load_config_file()
+            self.arbiter.load_monitoring_config_file()
 
             # If this assertion does not match, then there is a bug in the arbiter :)
             self.assertTrue(self.arbiter.conf.conf_is_correct)
@@ -315,6 +318,7 @@ class AlignakTest(unittest.TestCase):
             (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
             if nb_ticks == 1:
                 fun()
+        self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def worker_loop(self, verbose=True):
         self.schedulers['scheduler-master'].sched.delete_zombie_checks()

@@ -61,7 +61,6 @@ This module provide Arbiter class used to run a arbiter daemon
 """
 import logging
 import sys
-import os
 import time
 import traceback
 import socket
@@ -76,24 +75,36 @@ from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
-from alignak.property import BoolProp
+from alignak.property import BoolProp, PathProp, IntegerProp
 from alignak.http.arbiter_interface import ArbiterInterface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Arbiter(Daemon):  # pylint: disable=R0902
-    """Arbiter class. Referenced as "app" in most Interface
-
     """
+    Arbiter class. Referenced as "app" in most Interface
 
-    def __init__(self, config_files, is_daemon, do_replace, verify_only, debug,
+    Class to manage the Arbiter daemon.
+    The Arbiter is the one that rules them all...
+    """
+    properties = Daemon.properties.copy()
+    properties.update({
+        'pidfile':
+            PathProp(default='arbiterd.pid'),
+        'port':
+            IntegerProp(default=7770),
+        'local_log':
+            PathProp(default='arbiterd.log'),
+    })
+
+    def __init__(self, config_file, monitoring_files, is_daemon, do_replace, verify_only, debug,
                  debug_file, config_name, analyse=None):
 
-        super(Arbiter, self).__init__('arbiter', config_files[0], is_daemon, do_replace,
+        super(Arbiter, self).__init__('arbiter', config_file, is_daemon, do_replace,
                                       debug, debug_file)
 
-        self.config_files = config_files
+        self.config_files = monitoring_files
         self.verify_only = verify_only
         self.analyse = analyse
         self.config_name = config_name
@@ -210,7 +221,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # the attribute name to get these differs for schedulers and arbiters
         return daemon_type + 's'
 
-    def load_config_file(self):  # pylint: disable=R0915
+    def load_monitoring_config_file(self):  # pylint: disable=R0915
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
@@ -226,14 +237,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
+        if self.verify_only:
+            # Force the global logger at INFO level
+            alignak_logger = logging.getLogger("alignak")
+            alignak_logger.setLevel(logging.INFO)
+            logger.info("Arbiter is in configuration check mode")
+            logger.info("-----")
+
         logger.info("Loading configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)
         logger.info("Loaded configuration files, state: %s", self.conf.conf_is_correct)
-
-        # TODO: why is it here?
-        logger.debug("Opening local log file")
 
         # First we need to get arbiters and modules
         # so we can ask them for objects
@@ -277,8 +292,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                      "with the value '%s'."
                      " Thanks." % (self.config_name, socket.gethostname()))
 
-        logger.info("My own modules: " + ','.join([m.get_name() for m in self.myself.modules]))
-
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
         # we request the instances without them being *started*
@@ -293,15 +306,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # (example modules: glpi, mongodb, dummy_arbiter)
         self.load_modules_configuration_objects(raw_objects)
 
-        # Resume standard operations ###
+        # Resume standard operations
         self.conf.create_objects(raw_objects)
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
-            err = "Problems encountered while processing the configuration files."
-            logger.error(err)
-            self.conf.show_errors()
-            sys.exit(err)
+            sys.exit("***> One or more problems was encountered "
+                     "while processing the config files...")
 
         # Manage all post-conf modules
         self.hook_point('early_configuration')
@@ -374,7 +385,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #    sys.exit("Configuration is incorrect, sorry, I bail out")
 
         # REF: doc/alignak-conf-dispatching.png (2)
-        logger.info("Cutting the hosts and services into parts")
+        logger.info("Splitting hosts and services into parts")
         self.confs = self.conf.cut_into_parts()
 
         # The conf can be incorrect here if the cut into parts see errors like
@@ -393,6 +404,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Exit if we are just here for config checking
         if self.verify_only:
+            logger.info("Arbiter checked the configuration")
             sys.exit(0)
 
         if self.analyse:
@@ -400,32 +412,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             sys.exit(0)
 
         # Some properties need to be "flatten" (put in strings)
-        # before being send, like realms for hosts for example
+        # before being sent, like realms for hosts for example
         # BEWARE: after the cutting part, because we stringify some properties
         self.conf.prepare_for_sending()
 
-        # Ok, here we must check if we go on or not.
-        # TODO: check OK or not
-        self.log_level = self.conf.log_level
-        self.use_local_log = self.conf.use_local_log
-        self.local_log = self.conf.local_log
-        self.pidfile = os.path.abspath(self.conf.lock_file)
-        self.idontcareaboutsecurity = self.conf.idontcareaboutsecurity
-        self.user = self.conf.alignak_user
-        self.group = self.conf.alignak_group
-        self.daemon_enabled = self.conf.daemon_enabled
-        self.daemon_thread_pool_size = self.conf.daemon_thread_pool_size
+        # Ignore daemon configuration parameters (port, log, ...) in the monitoring configuration
+        # It's better to use daemon default parameters rather than host found in the monitoring
+        # configuration...
 
         self.accept_passive_unknown_check_results = BoolProp.pythonize(
             getattr(self.myself, 'accept_passive_unknown_check_results', '0')
         )
-
-        # If the user sets a workdir, lets use it. If not, use the
-        # pidfile directory
-        if self.conf.workdir == '':
-            self.workdir = os.path.abspath(os.path.dirname(self.pidfile))
-        else:
-            self.workdir = self.conf.workdir
 
         #  We need to set self.host & self.port to be used by do_daemon_init_and_start
         self.host = self.myself.address
@@ -518,7 +515,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         try:
+            # Configure the logger
             self.setup_alignak_logger()
+
+            # Load monitoring configuration files
+            self.load_monitoring_config_file()
+
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
             self.do_daemon_init_and_start()
@@ -651,7 +653,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         for timeperiod in self.conf.timeperiods:
-            timeperiod.check_and_log_activation_change()
+            brok = timeperiod.check_and_log_activation_change()
+            if brok:
+                self.add(brok)
 
     def run(self):
         """Run Arbiter daemon ::
@@ -669,9 +673,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if arb.get_name() in ['Default-Arbiter', self.config_name]:
                 self.myself = arb
 
-        if self.conf.human_timestamp_log:
-            # pylint: disable=E1101
-            logger.set_human_format()
         logger.info("Begin to dispatch configurations to satellites")
         self.dispatcher = Dispatcher(self.conf, self.myself)
         self.dispatcher.check_alive()

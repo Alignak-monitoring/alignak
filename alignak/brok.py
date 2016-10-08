@@ -58,6 +58,24 @@ from alignak.misc.serialization import serialize, unserialize, AlignakClassLooku
 class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
+
+    Broks types:
+    - log
+    - monitoring_log
+
+    - notification_raise
+    - downtime_raise
+    - initial_host_status, initial_service_status, initial_contact_status
+    - initial_broks_done
+
+    - update_host_status, update_service_status, initial_contact_status
+    - host_check_result, service_check_result
+    - host_next_schedule, service_next_scheduler
+    - host_snapshot, service_snapshot
+    - unknown_host_check_result, unknown_service_check_result
+
+    - program_status
+    - clean_all_my_instance_id
     """
     my_type = 'brok'
 

@@ -176,8 +176,8 @@ def fix_alignak_cfg(config):
             print(line)
 
     # Handle daemons ini files
-    for ini_file in ["brokerd.ini", "schedulerd.ini", "pollerd.ini",
-                     "reactionnerd.ini", "receiverd.ini"]:
+    for ini_file in ["arbiterd.ini", "brokerd.ini", "schedulerd.ini",
+                     "pollerd.ini", "reactionnerd.ini", "receiverd.ini"]:
         # Prepare pattern for ini files
         daemon_name = ini_file.strip(".ini")
         default_paths['lock_file'] = '/var/run/alignak/%s.pid' % daemon_name

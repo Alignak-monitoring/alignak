@@ -81,7 +81,7 @@ from alignak.util import (
     is_complex_expr,
     KeyValueSyntaxError)
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
-from alignak.log import naglog_result
+from alignak.log import make_monitoring_log
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -599,10 +599,14 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical', 'SERVICE ALERT: %s;%s;%s;%s;%d;%s'
-                                  % (self.host_name, self.get_name(),
-                                     self.state, self.state_type,
-                                     self.attempt, self.output))
+        brok = make_monitoring_log(
+            'critical', 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
 
     def raise_initial_state(self):
         """Raise SERVICE HOST ALERT entry (info level)
@@ -613,9 +617,14 @@ class Service(SchedulingItem):
         :return: None
         """
         if self.__class__.log_initial_states:
-            naglog_result('info', 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s'
-                                  % (self.host_name, self.get_name(),
-                                     self.state, self.state_type, self.attempt, self.output))
+            brok = make_monitoring_log(
+                'info', 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
+                    self.host_name, self.get_name(),
+                    self.state, self.state_type,
+                    self.attempt, self.output
+                )
+            )
+            self.broks.append(brok)
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
         """Raise freshness alert entry (warning level)
@@ -656,10 +665,14 @@ class Service(SchedulingItem):
         else:
             state = self.state
         if self.__class__.log_notifications:
-            naglog_result('critical', "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s"
-                                      % (contact.get_name(),
-                                         host_ref.get_name(), self.get_name(), state,
-                                         command.get_name(), self.output))
+            brok = make_monitoring_log(
+                'critical', "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
+                    contact.get_name(),
+                    host_ref.get_name(), self.get_name(), state,
+                    command.get_name(), self.output
+                )
+            )
+            self.broks.append(brok)
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
@@ -672,10 +685,14 @@ class Service(SchedulingItem):
         :return: None
         """
         if self.__class__.log_event_handlers:
-            naglog_result('critical', "SERVICE EVENT HANDLER: %s;%s;%s;%s;%s;%s"
-                                      % (self.host_name, self.get_name(),
-                                         self.state, self.state_type,
-                                         self.attempt, command.get_name()))
+            brok = make_monitoring_log(
+                'critical', "SERVICE EVENT HANDLER: %s;%s;%s;%s;%s;%s" % (
+                    self.host_name, self.get_name(),
+                    self.state, self.state_type,
+                    self.attempt, command.get_name()
+                )
+            )
+            self.broks.append(brok)
 
     def raise_snapshot_log_entry(self, command):
         """Raise SERVICE SNAPSHOT entry (critical level)
@@ -688,9 +705,14 @@ class Service(SchedulingItem):
         :return: None
         """
         if self.__class__.log_event_handlers:
-            naglog_result('critical', "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s"
-                          % (self.host_name, self.get_name(),
-                             self.state, self.state_type, self.attempt, command.get_name()))
+            brok = make_monitoring_log(
+                'critical', "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s" % (
+                    self.host_name, self.get_name(),
+                    self.state, self.state_type,
+                    self.attempt, command.get_name()
+                )
+            )
+            self.broks.append(brok)
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT START entry (critical level)
@@ -705,11 +727,13 @@ class Service(SchedulingItem):
         :param threshold: threshold (percent) to trigger this log entry
         :return: None
         """
-        naglog_result('critical', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
-                                  "Service appears to have started flapping "
-                                  "(%.1f%% change >= %.1f%% threshold)"
-                                  % (self.host_name, self.get_name(),
-                                     change_ratio, threshold))
+        brok = make_monitoring_log(
+            'critical', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
+                        "Service appears to have started flapping "
+                        "(%.1f%% change >= %.1f%% threshold)" %
+                        (self.host_name, self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT STOPPED entry (critical level)
@@ -726,11 +750,13 @@ class Service(SchedulingItem):
         :type threshold: float
         :return: None
         """
-        naglog_result('critical', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
-                                  "Service appears to have stopped flapping "
-                                  "(%.1f%% change < %.1f%% threshold)"
-                                  % (self.host_name, self.get_name(),
-                                     change_ratio, threshold))
+        brok = make_monitoring_log(
+            'critical', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
+                        "Service appears to have stopped flapping "
+                        "(%.1f%% change < %.1f%% threshold)" %
+                        (self.host_name, self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_no_next_check_log_entry(self):
         """Raise no scheduled check entry (warning level)
@@ -754,9 +780,12 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
-                                  "Service has entered a period of scheduled "
-                                  "downtime" % (self.host_name, self.get_name()))
+        brok = make_monitoring_log(
+            'critical', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
+                        "Service has entered a period of scheduled downtime" %
+                        (self.host_name, self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_exit_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
@@ -767,9 +796,12 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
-                                  "has exited from a period of scheduled downtime"
-                      % (self.host_name, self.get_name()))
+        brok = make_monitoring_log(
+            'critical', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
+                        "has exited from a period of scheduled downtime" %
+                        (self.host_name, self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_cancel_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
@@ -780,10 +812,12 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        naglog_result(
+        brok = make_monitoring_log(
             'critical', "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
-                        "Scheduled downtime for service has been cancelled."
-            % (self.host_name, self.get_name()))
+                        "Scheduled downtime for service has been cancelled." %
+                        (self.host_name, self.get_name())
+        )
+        self.broks.append(brok)
 
     def manage_stalking(self, check):
         """Check if the service need stalking or not (immediate recheck)

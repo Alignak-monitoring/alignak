@@ -130,7 +130,7 @@ from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
 from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
-from alignak.log import naglog_result
+from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -340,7 +340,7 @@ class Timeperiod(Item):
         0: when timeperiod end
         1: when timeperiod start
 
-        :return: None
+        :return: None or a brok if TP changed
         """
         now = int(time.time())
 
@@ -361,10 +361,11 @@ class Timeperiod(Item):
                 _to = 1
 
             # Now raise the log
-            naglog_result(
-                'info', 'TIMEPERIOD TRANSITION: %s;%d;%d'
-                % (self.get_name(), _from, _to)
+            brok = make_monitoring_log(
+                'info', 'TIMEPERIOD TRANSITION: %s;%d;%d' % (self.get_name(), _from, _to)
             )
+            return brok
+        return None
 
     def clean_cache(self):
         """

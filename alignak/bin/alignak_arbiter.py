@@ -65,8 +65,8 @@ def main():
     """
     args = parse_daemon_args(True)
 
-    if not args.config_files:
-        print "Requires at least one config file (option -c/--config"
+    if not args.monitoring_files:
+        print "Requires at least one monitoring configuration file (option -a/--arbiter)"
         sys.exit(2)
 
     # Protect for windows multiprocessing that will RELAUNCH all
@@ -76,7 +76,6 @@ def main():
         if not daemon.need_config_reload:
             break
         daemon = None
-
 
 if __name__ == '__main__':
     main()

@@ -60,6 +60,9 @@ LIB=$LIB$
 
 
 ### ARBITER PART ###
+# location of the arbiter daemon configuration
+ARBITERCFG="$ETC/daemons/arbiterd.ini"
+
 # location of the alignak configuration file
 # Please update $ETC$ instead of this one.
 ALIGNAKCFG="$ETC/alignak.cfg"
