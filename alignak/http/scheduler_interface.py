@@ -107,6 +107,11 @@ class SchedulerInterface(GenericInterface):
         # do it for it
         if bname not in self.app.sched.brokers:
             self.fill_initial_broks(bname)
+        elif not self.app.sched.brokers[bname]['initialized']:
+            self.fill_initial_broks(bname)
+
+        if bname not in self.app.sched.brokers:
+            return {}
 
         # Now get the broks for this specific broker
         res = self.app.sched.get_broks(bname)
@@ -128,12 +133,12 @@ class SchedulerInterface(GenericInterface):
         TODO: Maybe we should check_last time we did it to prevent DDoS
         """
         with self.app.conf_lock:
-            if bname not in self.app.brokers:
-                logger.info("A new broker just connected : %s", bname)
-                self.app.sched.brokers[bname] = {'broks': {}, 'has_full_broks': False}
+            if bname not in self.app.sched.brokers:
+                return
             env = self.app.sched.brokers[bname]
             if not env['has_full_broks']:
-                env['broks'].clear()
+                logger.info("A new broker just connected : %s", bname)
+                # env['broks'].clear()
                 self.app.sched.fill_initial_broks(bname, with_logs=True)
 
     @cherrypy.expose

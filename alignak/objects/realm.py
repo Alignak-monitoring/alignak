@@ -87,8 +87,6 @@ class Realm(Itemgroup):
             ListProp(default=[], split_on_coma=True),
         'default':
             BoolProp(default=False),
-        'broker_complete_links':
-            BoolProp(default=False),
     })
 
     running_properties = Item.running_properties.copy()
@@ -391,17 +389,18 @@ class Realm(Itemgroup):
                 cfg = receiver.give_satellite_cfg()
                 broker.cfg['receivers'][receiver.uuid] = cfg
 
-    def get_satellites_links_for_scheduler(self, pollers, reactionners):
-        """Get a configuration dict with pollers and reactionners data for scheduler
+    def get_satellites_links_for_scheduler(self, pollers, reactionners, brokers):
+        """Get a configuration dict with pollers, reactionners and brokers data for scheduler
 
-        :return: dict containing pollers and reactionners config (key is satellite id)
+        :return: dict containing pollers, reactionners and brokers config (key is satellite id)
         :rtype: dict
         """
 
         # First we create/void theses links
         cfg = {
             'pollers': {},
-            'reactionners': {}
+            'reactionners': {},
+            'brokers': {},
         }
 
         # First our own level
@@ -414,6 +413,11 @@ class Realm(Itemgroup):
             reactionner = reactionners[reactionner_id]
             config = reactionner.give_satellite_cfg()
             cfg['reactionners'][reactionner.uuid] = config
+
+        for broker_id in self.brokers:
+            broker = brokers[broker_id]
+            config = broker.give_satellite_cfg()
+            cfg['brokers'][broker.uuid] = config
 
         return cfg
 

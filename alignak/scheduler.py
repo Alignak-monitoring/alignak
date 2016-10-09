@@ -289,17 +289,22 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.debug("Changing the tick to %d for the function %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
 
-    def load_satellites(self, pollers, reactionners):
-        """Setter for pollers and reactionners attributes
+    def load_satellites(self, pollers, reactionners, brokers):
+        """Setter for pollers, reactionners and brokers attributes
 
         :param pollers: pollers value to set
         :type pollers:
         :param reactionners: reactionners value to set
         :type reactionners:
+        :param brokers: brokers value to set
+        :type brokers:
         :return: None
         """
         self.pollers = pollers
         self.reactionners = reactionners
+        for broker in brokers.values():
+            self.brokers[broker['name']] = {'broks': {}, 'has_full_broks': False,
+                                            'initialized': False}
 
     def die(self):
         """Set must_run attribute to False
@@ -394,21 +399,13 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # For brok, we TAG brok with our instance_id
         brok.instance_id = self.instance_id
-        # Maybe it's just for one broker
         if bname:
-            broks = self.brokers[bname]['broks']
-            broks[brok.uuid] = brok
+            # it's just for one broker
+            self.brokers[bname]['broks'][brok.uuid] = brok
         else:
-            # If there are known brokers, give it to them
-            if len(self.brokers) > 0:
-                # Or maybe it's for all
-                for bname in self.brokers:
-                    broks = self.brokers[bname]['broks']
-                    broks[brok.uuid] = brok
-            else:  # no brokers? maybe at startup for logs
-                # we will put in global queue, that the first broker
-                # connection will get all
-                self.broks[brok.uuid] = brok
+            # add brok to all brokers
+            for name in self.brokers:
+                self.brokers[name]['broks'][brok.uuid] = brok
 
     def add_notification(self, notif):
         """Add a notification into actions list
@@ -1517,6 +1514,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         logger.info("[%s] Created %d initial Broks for broker %s",
                     self.instance_name, len(self.brokers[bname]['broks']), bname)
+        self.brokers[bname]['initialized'] = True
 
     def get_and_register_program_status_brok(self):
         """Create and add a program_status brok

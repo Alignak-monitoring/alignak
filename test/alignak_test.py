@@ -272,7 +272,7 @@ class AlignakTest(unittest.TestCase):
         check.status = 'waitconsume'
         self.schedulers['scheduler-master'].sched.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items):
+    def scheduler_loop(self, count, items, mysched=None):
         """
         Manage scheduler checks
 
@@ -282,25 +282,30 @@ class AlignakTest(unittest.TestCase):
         :type count: int
         :param items: list of list [[object, exist_status, output]]
         :type items: list
+        :param mysched: The scheduler
+        :type mysched: None | object
         :return: None
         """
+        if mysched is None:
+            mysched = self.schedulers['scheduler-master']
+
         for num in range(count):
             for item in items:
                 (obj, exit_status, output) = item
                 if len(obj.checks_in_progress) == 0:
-                    for i in self.schedulers['scheduler-master'].sched.recurrent_works:
-                        (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
+                    for i in mysched.sched.recurrent_works:
+                        (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
                         if nb_ticks == 1:
                             fun()
                 self.assertGreater(len(obj.checks_in_progress), 0)
-                chk = self.schedulers['scheduler-master'].sched.checks[obj.checks_in_progress[0]]
+                chk = mysched.sched.checks[obj.checks_in_progress[0]]
                 chk.set_type_active()
                 chk.output = output
                 chk.exit_status = exit_status
-                self.schedulers['scheduler-master'].sched.waiting_results.put(chk)
+                mysched.sched.waiting_results.put(chk)
 
-            for i in self.schedulers['scheduler-master'].sched.recurrent_works:
-                (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
+            for i in mysched.sched.recurrent_works:
+                (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
 
