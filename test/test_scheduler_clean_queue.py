@@ -60,17 +60,17 @@ class TestSchedulerCleanQueue(AlignakTest):
         brok_limit = 5 * (len(self.schedulers['scheduler-master'].sched.hosts) +
                           len(self.schedulers['scheduler-master'].sched.services))
         brok_limit += 1
-        self.assertLess(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
+        self.assertLess(len(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']), brok_limit)
 
         for _ in xrange(0, 10):
             self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
             time.sleep(0.1)
             self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
             time.sleep(0.1)
-        self.assertGreater(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
+        self.assertGreater(len(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']), brok_limit)
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('clean_queues', 1)
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
-        self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.broks), brok_limit)
+        self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']), brok_limit)
 
     def test_clean_checks(self):
         """
