@@ -154,3 +154,52 @@ class TestMultibroker(AlignakTest):
 
             self.assertEqual(2, len(broker_conf['conf']['schedulers']))
             self.assertEqual(2, len(broker2_conf['conf']['schedulers']))
+
+
+    def test_multibroker_multisched_realms(self):
+        """
+        Test with realms / sub-realms
+
+        All + sub (north + south):
+          * broker-master
+          * poller-masterAll
+
+
+        All:
+          * scheduler-master
+          * poller-master
+
+
+        North:
+           * scheduler-masterN
+           * broker-masterN
+
+
+        South:
+           * scheduler-masterS
+
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_multi_broker_multi_sched_realms.cfg')
+
+        # test right brokers sent to right schedulers
+        smaster = self.schedulers['scheduler-master']
+        smaster_n = self.schedulers['scheduler-masterN']
+        smaster_s = self.schedulers['scheduler-masterS']
+
+        self.assertEqual(smaster.sched.brokers.keys(), ['broker-master'])
+        self.assertItemsEqual(smaster_n.sched.brokers.keys(), ['broker-master', 'broker-masterN'])
+        self.assertEqual(smaster_s.sched.brokers.keys(), ['broker-master'])
+
+        brokermaster = None
+        for sat in self.arbiter.dispatcher.satellites:
+            if getattr(sat, 'broker_name', '') == 'broker-master':
+                brokermaster = sat
+
+        self.assertIsNotNone(brokermaster)
+        self.assertItemsEqual([smaster.sched.conf.uuid, smaster_n.sched.conf.uuid,
+                               smaster_s.sched.conf.uuid], brokermaster.cfg['schedulers'])
+
+        pass
