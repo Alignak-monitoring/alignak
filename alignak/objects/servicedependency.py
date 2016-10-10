@@ -180,7 +180,7 @@ class Servicedependencies(Items):
                 self.configuration_errors.append(err)
                 continue
             hnames = []
-            hnames.extend([m.strip() for m in hostgroup.members])
+            hnames.extend([m.strip() for m in hostgroup.get_hosts()])
             for hname in hnames:
                 for dep_sname in dep_snames:
                     for sname in snames:
@@ -228,7 +228,7 @@ class Servicedependencies(Items):
                               " unknown hostgroup_name '%s'" % hg_name
                         hostgroup.configuration_errors.append(err)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.members])
+                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if not hasattr(servicedep, 'host_name'):
                 servicedep.host_name = ''
@@ -257,7 +257,7 @@ class Servicedependencies(Items):
                               "unknown dependent_hostgroup_name '%s'" % hg_name
                         hostgroup.configuration_errors.append(err)
                         continue
-                    dep_hnames.extend([m.strip() for m in hostgroup.members])
+                    dep_hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if not hasattr(servicedep, 'dependent_host_name'):
                 servicedep.dependent_host_name = getattr(servicedep, 'host_name', '')

@@ -154,7 +154,7 @@ class Hostdependencies(Items):
                               "an unknown dependent_hostgroup_name '%s'" % dephg_name
                         hostdep.configuration_errors.append(err)
                         continue
-                    dephnames.extend([m.strip() for m in dephg.members])
+                    dephnames.extend([m.strip() for m in dephg.get_hosts()])
 
             if hasattr(hostdep, 'dependent_host_name'):
                 dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
@@ -170,7 +170,7 @@ class Hostdependencies(Items):
                               " an unknown hostgroup_name '%s'" % hg_name
                         hostdep.configuration_errors.append(err)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.members])
+                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if hasattr(hostdep, 'host_name'):
                 hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
