@@ -22,7 +22,6 @@
 This file test load the new conf on each module
 """
 
-import sys
 from alignak_test import AlignakTest
 from alignak.daemons.schedulerdaemon import Alignak as schedulerdaemon
 from alignak.daemons.receiverdaemon import Receiver as receiverdaemon
@@ -43,8 +42,8 @@ class TestSetupNewConf(AlignakTest):
 
         :return: None
         """
-        # Configuration received by scheduler, so give to scheduler to load it
-        sys.path.append('cfg/setup_new_conf/modules/schedulerexample.py')
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
         sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False,
                                 '/tmp/scheduler.log')
@@ -53,13 +52,13 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(sched, 'modules'):
             self.assertEqual(0, len(sched.modules))
 
-        conf_dict = open('cfg/setup_new_conf/scheduler_new_conf.dict', 'r').read()
-        sched.new_conf = eval(conf_dict)
+        for scheduler in self.arbiter.dispatcher.schedulers:
+            sched.new_conf = scheduler.conf_package
         sched.setup_new_conf()
         self.assertEqual(1, len(sched.modules))
-        self.assertEqual(sched.modules[0].module_alias, 'schedulerexample')
-        self.assertEqual(sched.modules[0].myvar, 'tataouine')
-        self.assertEqual(10, len(sched.conf.hosts))
+        self.assertEqual(sched.modules[0].module_alias, 'Example')
+        self.assertEqual(sched.modules[0].option_3, 'foobar')
+        self.assertEqual(2, len(sched.conf.hosts))
 
     def test_conf_receiver(self):
         """
@@ -67,7 +66,8 @@ class TestSetupNewConf(AlignakTest):
 
         :return: None
         """
-        sys.path.append('cfg/setup_new_conf/modules/receiverexample.py')
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
         receiv = receiverdaemon('cfg/setup_new_conf/daemons/receiverd.ini', False, False, False,
                                 '/tmp/receiver.log')
@@ -76,14 +76,15 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(receiv, 'modules'):
             self.assertEqual(0, len(receiv.modules))
 
-        conf_dict = open('cfg/setup_new_conf/receiver_new_conf.dict', 'r').read()
-        receiv.new_conf = eval(conf_dict)
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'receiver':
+                receiv.new_conf = satellite.cfg
         receiv.setup_new_conf()
         self.assertEqual(1, len(receiv.modules))
-        self.assertEqual(receiv.modules[0].module_alias, 'receiverexample')
-        self.assertEqual(receiv.modules[0].myvar, 'coruscant')
+        self.assertEqual(receiv.modules[0].module_alias, 'Example')
+        self.assertEqual(receiv.modules[0].option_3, 'foobar')
         # check get hosts
-        self.assertGreater(len(receiv.host_assoc), 2)
+        self.assertEqual(len(receiv.host_assoc), 2)
 
     def test_conf_poller(self):
         """
@@ -91,7 +92,8 @@ class TestSetupNewConf(AlignakTest):
 
         :return: None
         """
-        sys.path.append('cfg/setup_new_conf/modules/pollerexample.py')
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
         poller = pollerdaemon('cfg/setup_new_conf/daemons/pollerd.ini', False, False, False,
                               '/tmp/poller.log')
@@ -100,12 +102,13 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(poller, 'modules'):
             self.assertEqual(0, len(poller.modules))
 
-        conf_dict = open('cfg/setup_new_conf/poller_new_conf.dict', 'r').read()
-        poller.new_conf = eval(conf_dict)
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'poller':
+                poller.new_conf = satellite.cfg
         poller.setup_new_conf()
         self.assertEqual(1, len(poller.new_modules_conf))
-        self.assertEqual(poller.new_modules_conf[0].module_alias, 'pollerexample')
-        self.assertEqual(poller.new_modules_conf[0].myvar, 'dagobah')
+        self.assertEqual(poller.new_modules_conf[0].module_alias, 'Example')
+        self.assertEqual(poller.new_modules_conf[0].option_3, 'foobar')
 
     def test_conf_broker(self):
         """
@@ -113,7 +116,8 @@ class TestSetupNewConf(AlignakTest):
 
         :return: None
         """
-        sys.path.append('cfg/setup_new_conf/modules/brokerexample.py')
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
         broker = brokerdaemon('cfg/setup_new_conf/daemons/brokerd.ini', False, False, False,
                               '/tmp/broker.log')
@@ -122,12 +126,13 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(broker, 'modules'):
             self.assertEqual(0, len(broker.modules))
 
-        conf_dict = open('cfg/setup_new_conf/broker_new_conf.dict', 'r').read()
-        broker.new_conf = eval(conf_dict)
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'broker':
+                broker.new_conf = satellite.cfg
         broker.setup_new_conf()
         self.assertEqual(1, len(broker.modules))
-        self.assertEqual(broker.modules[0].module_alias, 'brokerexample')
-        self.assertEqual(broker.modules[0].myvar, 'hoth')
+        self.assertEqual(broker.modules[0].module_alias, 'Example')
+        self.assertEqual(broker.modules[0].option_3, 'foobar')
 
     def test_conf_reactionner(self):
         """
@@ -135,7 +140,8 @@ class TestSetupNewConf(AlignakTest):
 
         :return: None
         """
-        sys.path.append('cfg/setup_new_conf/modules/reactionnerexample.py')
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
 
         reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False,
                                  False, '/tmp/reactionner.log')
@@ -144,9 +150,10 @@ class TestSetupNewConf(AlignakTest):
         if hasattr(reac, 'modules'):
             self.assertEqual(0, len(reac.modules))
 
-        conf_dict = open('cfg/setup_new_conf/reactionner_new_conf.dict', 'r').read()
-        reac.new_conf = eval(conf_dict)
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'reactionner':
+                reac.new_conf = satellite.cfg
         reac.setup_new_conf()
         self.assertEqual(1, len(reac.new_modules_conf))
-        self.assertEqual(reac.new_modules_conf[0].module_alias, 'reactionnerexample')
-        self.assertEqual(reac.new_modules_conf[0].myvar, 'naboo')
+        self.assertEqual(reac.new_modules_conf[0].module_alias, 'Example')
+        self.assertEqual(reac.new_modules_conf[0].option_3, 'foobar')

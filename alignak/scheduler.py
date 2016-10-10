@@ -1840,9 +1840,10 @@ class Scheduler(object):  # pylint: disable=R0902
         for mod in self.sched_daemon.modules_manager.get_external_instances():
             logger.debug("Look for sending to module %s", mod.get_name())
             queue = mod.to_q
-            to_send = [b for b in broks.values() if mod.want_brok(b)]
-            queue.put(to_send)
-            nb_sent += len(to_send)
+            if queue is not None:
+                to_send = [b for b in broks.values() if mod.want_brok(b)]
+                queue.put(to_send)
+                nb_sent += len(to_send)
 
         # No more need to send them
         for brok in broks.values():
