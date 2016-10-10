@@ -57,7 +57,7 @@ import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
-from alignak.property import StringProp
+from alignak.property import StringProp, ListProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -71,14 +71,16 @@ class Hostgroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':           StringProp(default='', fill_brok=['full_status']),
-        'hostgroup_name': StringProp(fill_brok=['full_status']),
-        'alias':          StringProp(fill_brok=['full_status']),
-        'notes':          StringProp(default='', fill_brok=['full_status']),
-        'notes_url':      StringProp(default='', fill_brok=['full_status']),
-        'action_url':     StringProp(default='', fill_brok=['full_status']),
-        'realm':          StringProp(default='', fill_brok=['full_status'],
-                                     conf_send_preparation=get_obj_name),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'hostgroup_name':       StringProp(fill_brok=['full_status']),
+        'alias':                StringProp(fill_brok=['full_status']),
+        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True),
+        'notes':                StringProp(default='', fill_brok=['full_status']),
+        'notes_url':            StringProp(default='', fill_brok=['full_status']),
+        'action_url':           StringProp(default='', fill_brok=['full_status']),
+        'realm':                StringProp(default='', fill_brok=['full_status'],
+                                           conf_send_preparation=get_obj_name),
     })
 
     macros = {
@@ -112,18 +114,13 @@ class Hostgroup(Itemgroup):
 
     def get_hostgroup_members(self):
         """
-        Get hostgroup members
+        Get list of groups members of this hostgroup
 
         :return: list of hosts
         :rtype: list
         """
-        # TODO: consistency : a Hostgroup instance should always
-        # have its hostgroup_members attribute defined, even if the empty list
         if hasattr(self, 'hostgroup_members'):
-            # consistency: any Hostgroup instance's hostgroup_members attribute
-            # should already be decoded/parsed:
-            # this should already be in its list form.
-            return [m.strip() for m in self.hostgroup_members.split(',')]
+            return self.hostgroup_members
         else:
             return []
 
@@ -305,7 +302,7 @@ class Hostgroups(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
+        # We do not want a same hostgroup to be exploded again and again
         # so we tag it
         for tmp_hg in self.items.values():
             tmp_hg.already_explode = False

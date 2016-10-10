@@ -127,6 +127,9 @@ class Itemgroup(Item):
         :type member: str
         :return: None
         """
+        # Avoid empty elements in lists ...
+        if not member:
+            return
         add_fun = list.extend if isinstance(member, list) else list.append
         if not hasattr(self, "members"):
             self.members = []

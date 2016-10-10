@@ -52,7 +52,7 @@ This module provide Servicegroup and Servicegroups classes used to group service
 """
 import logging
 
-from alignak.property import StringProp
+from alignak.property import StringProp, ListProp
 from .itemgroup import Itemgroup, Itemgroups
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -67,13 +67,14 @@ class Servicegroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':              StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_name': StringProp(fill_brok=['full_status']),
-        'alias':             StringProp(fill_brok=['full_status']),
-        'notes':             StringProp(default='', fill_brok=['full_status']),
-        'notes_url':         StringProp(default='', fill_brok=['full_status']),
-        'action_url':        StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_members': StringProp(default='', fill_brok=['full_status']),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_name':    StringProp(fill_brok=['full_status']),
+        'alias':                StringProp(fill_brok=['full_status']),
+        'servicegroup_members': ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True),
+        'notes':                StringProp(default='', fill_brok=['full_status']),
+        'notes_url':            StringProp(default='', fill_brok=['full_status']),
+        'action_url':           StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
@@ -98,7 +99,7 @@ class Servicegroup(Itemgroup):
 
     def get_name(self):
         """
-        Get the name of the servicegroup
+        Get list of groups members of this servicegroup
 
         :return: the servicegroup name string
         :rtype: str
@@ -109,12 +110,11 @@ class Servicegroup(Itemgroup):
         """
         Get list of members of this servicegroup
 
-        :return: list of services (members)
+        :return: list of services
         :rtype: list | str
         """
-        # TODO: a Servicegroup instance should always have its servicegroup_members defined.
         if hasattr(self, 'servicegroup_members'):
-            return [m.strip() for m in self.servicegroup_members.split(',')]
+            return self.servicegroup_members
         else:
             return []
 
@@ -255,22 +255,22 @@ class Servicegroups(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
+        # We do not want a same service group to be exploded again and again
         # so we tag it
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             servicegroup.already_explode = False
 
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             if hasattr(servicegroup, 'servicegroup_members') and not \
                     servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
-                for sg2 in self:
+                for sg2 in self.items.values():
                     sg2.rec_tag = False
                 servicegroup.get_services_by_explosion(self)
 
         # We clean the tags
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             try:
                 del servicegroup.rec_tag
             except AttributeError:

@@ -57,7 +57,7 @@ This module provide Contactgroup and Contactgroups class used to manage contact 
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import StringProp
+from alignak.property import StringProp, ListProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -73,6 +73,8 @@ class Contactgroup(Itemgroup):
         'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'contactgroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
+        'contactgroup_members': ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True)
     })
 
     macros = {
@@ -103,18 +105,13 @@ class Contactgroup(Itemgroup):
 
     def get_contactgroup_members(self):
         """
-        Get contactgroup members
+        Get list of groups members of this contactgroup
 
-        :return: list of hosts
+        :return: list of contacts
         :rtype: list
         """
-        # TODO: imho a Contactgroup instance should always have defined
-        # its contactgroup_members attribute, even if it's empty / the empty list.
         if hasattr(self, 'contactgroup_members'):
-            # more over: it should already be in the list form,
-            # not anymore in the "bare" string from as read
-            # from configuration (files or db or whatever)
-            return [m.strip() for m in self.contactgroup_members.split(',')]
+            return self.contactgroup_members
         else:
             return []
 
