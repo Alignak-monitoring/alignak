@@ -25,7 +25,6 @@ This file test the multibroker in schedulers
 """
 
 import requests_mock
-from alignak.macroresolver import MacroResolver
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak_test import AlignakTest
 
@@ -118,11 +117,8 @@ class TestMultibroker(AlignakTest):
         host2 = mysched2.sched.hosts.find_by_name("test_host_1")
         host2.checks_in_progress = []
 
-        m = MacroResolver()
         # create broks in each scheduler
-        m.init(mysched1.conf)
         self.scheduler_loop(1, [[host1, 0, 'UP'], [svc1, 0, 'OK']], mysched1)
-        m.init(mysched2.conf)
         self.scheduler_loop(1, [[host2, 0, 'UP']], mysched2)
 
         self.assertEqual(2, len(mysched1.sched.brokers))

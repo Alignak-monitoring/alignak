@@ -289,6 +289,9 @@ class AlignakTest(unittest.TestCase):
         if mysched is None:
             mysched = self.schedulers['scheduler-master']
 
+        macroresolver = MacroResolver()
+        macroresolver.init(mysched.conf)
+
         for num in range(count):
             for item in items:
                 (obj, exit_status, output) = item
