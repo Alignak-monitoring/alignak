@@ -647,12 +647,10 @@ class Daemon(object):  # pylint: disable=R0902
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, fake=False):
+    def do_daemon_init_and_start(self):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-        :param fake: use for test to do not launch runonly feature, like the stats reaper thread.
-        :type fake: bool
         :return: None
         """
         self.change_to_user_group()
@@ -672,11 +670,6 @@ class Daemon(object):  # pylint: disable=R0902
         logger.info("Creating manager ..")
         self.manager = self._create_manager()
         logger.info("done.")
-
-        # We can start our stats thread but after the double fork() call and if we are not in
-        # a test launch (time.time() is hooked and will do BIG problems there)
-        if not fake:
-            statsmgr.launch_reaper_thread()
 
         logger.info("Now starting http_daemon thread..")
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')

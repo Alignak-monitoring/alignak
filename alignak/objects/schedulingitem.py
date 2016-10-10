@@ -2635,11 +2635,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = 'Host assumed to be UP'
+            logger.info("Executing internal host UP command")
         # Echo is just putting the same state again
         elif check.command == '_echo':
             state = self.state
             check.execution_time = 0
             check.output = self.output
+            logger.info("Executing internal echo command")
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state
