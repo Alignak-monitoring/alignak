@@ -253,15 +253,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 else:
                     logger.info("I am a spare Arbiter: %s", arb.get_name())
                 # export this data to our statsmgr object :)
-                api_key = getattr(self.conf, 'api_key', '')
-                secret = getattr(self.conf, 'secret', '')
-                http_proxy = getattr(self.conf, 'http_proxy', '')
                 statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
                 statsd_port = getattr(self.conf, 'statsd_port', 8125)
                 statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
                 statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
-                statsmgr.register(self, arb.get_name(), 'arbiter',
-                                  api_key=api_key, secret=secret, http_proxy=http_proxy,
+                statsmgr.register(arb.get_name(), 'arbiter',
                                   statsd_host=statsd_host, statsd_port=statsd_port,
                                   statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 

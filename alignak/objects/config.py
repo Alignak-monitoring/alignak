@@ -655,24 +655,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_multiprocesses_serializer':
             BoolProp(default=False),
 
-        # About alignak.io part
-        'api_key':
-            StringProp(default='',
-                       class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                      (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None), (ArbiterLink, None)]),
-        'secret':
-            StringProp(default='',
-                       class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                      (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None), (ArbiterLink, None)]),
-        'http_proxy':
-            StringProp(default='',
-                       class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                      (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None), (ArbiterLink, None)]),
-
-        # and local statsd one
+        # Local statsd daemon for collecting Alignak internal statistics
         'statsd_host':
             StringProp(default='localhost',
                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
