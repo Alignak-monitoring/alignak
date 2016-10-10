@@ -508,9 +508,6 @@ class SatelliteLink(Item):
                 self.cfg['global'][prop] = getattr(self, prop)
         cls = self.__class__
         # Also add global values
-        self.cfg['global']['api_key'] = cls.api_key
-        self.cfg['global']['secret'] = cls.secret
-        self.cfg['global']['http_proxy'] = cls.http_proxy
         self.cfg['global']['statsd_host'] = cls.statsd_host
         self.cfg['global']['statsd_port'] = cls.statsd_port
         self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
@@ -552,9 +549,7 @@ class SatelliteLink(Item):
                 'active': True,
                 'passive': self.passive,
                 'poller_tags': getattr(self, 'poller_tags', []),
-                'reactionner_tags': getattr(self, 'reactionner_tags', []),
-                'api_key': self.__class__.api_key,
-                'secret':  self.__class__.secret,
+                'reactionner_tags': getattr(self, 'reactionner_tags', [])
                 }
 
 
