@@ -225,7 +225,7 @@ class Stats(object):
         try:
             from Crypto.Cipher import AES
         except ImportError:
-            logger.error('Cannot find python lib crypto: stats export is not available')
+            logger.warning('Cannot find python lib crypto: stats export is not available')
             AES = None  # pylint: disable=C0103
 
         while True:
