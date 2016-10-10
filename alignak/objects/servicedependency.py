@@ -209,14 +209,18 @@ class Servicedependencies(Items):
         servicedeps = self.items.keys()
         for s_id in servicedeps:
             servicedep = self.items[s_id]
-            # Have we to explode the hostgroup into many service?
-            if bool(getattr(servicedep, 'explode_hostgroup', 0)) and \
-               hasattr(servicedep, 'hostgroup_name'):
+
+            # First case: we only have to propagate the services dependencies to the all the hosts of some hostgroups
+            # Either a specific property is defined (Shinken) or no dependent hosts groups
+            # is defined
+            if bool(getattr(servicedep, 'explode_hostgroup', 0)) or \
+                    (hasattr(servicedep, 'hostgroup_name') and
+                         not hasattr(servicedep, 'dependent_hostgroup_name')):
                 self.explode_hostgroup(servicedep, hostgroups)
                 srvdep_to_remove.append(s_id)
                 continue
 
-            # Get the list of all FATHER hosts and service deps
+            # Get the list of all FATHER hosts and service dependenciess
             hnames = []
             if hasattr(servicedep, 'hostgroup_name'):
                 hg_names = [n.strip() for n in servicedep.hostgroup_name.split(',')]
@@ -245,7 +249,7 @@ class Servicedependencies(Items):
                     and hasattr(servicedep, 'hostgroup_name'):
                 servicedep.dependent_hostgroup_name = servicedep.hostgroup_name
 
-            # Now the dep part (the sons)
+            # Now the dependent part (the sons)
             dep_hnames = []
             if hasattr(servicedep, 'dependent_hostgroup_name'):
                 hg_names = [n.strip() for n in servicedep.dependent_hostgroup_name.split(',')]
@@ -408,7 +412,7 @@ class Servicedependencies(Items):
                     services[servicedep.dependent_service_description].get_name())
 
     def is_correct(self):
-        """Check if this object configuration is correct ::
+        """Check if this servicedependency configuration is correct ::
 
         * Check our own specific properties
         * Call our parent class is_correct checker
