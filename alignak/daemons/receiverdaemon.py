@@ -217,12 +217,12 @@ class Receiver(Satellite):
             self.statsd_prefix = conf['global']['statsd_prefix']
             self.statsd_enabled = conf['global']['statsd_enabled']
 
+            # We got a name so we can update the stats global objects
             statsmgr.register(self, self.name, 'receiver',
                               api_key=self.api_key, secret=self.secret, http_proxy=self.http_proxy,
                               statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                               statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-            # pylint: disable=E1101
-            logger.load_obj(self, name)
+
             self.direct_routing = conf['global']['direct_routing']
             self.accept_passive_unknown_check_results = \
                 conf['global']['accept_passive_unknown_check_results']
@@ -396,8 +396,6 @@ class Receiver(Satellite):
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
 
-            logger.info("[Receiver] Using working directory: %s", os.path.abspath(self.workdir))
-
             self.do_daemon_init_and_start()
 
             self.load_modules_manager()
@@ -406,11 +404,7 @@ class Receiver(Satellite):
             self.wait_for_initial_conf()
             if not self.new_conf:
                 return
-
             self.setup_new_conf()
-
-            # Do the modules part, we have our modules in self.modules
-            # REF: doc/receiver-modules.png (1)
 
             # Now the main loop
             self.do_mainloop()

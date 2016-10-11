@@ -56,5 +56,6 @@ echo "Launching Arbiter (which reads configuration and dispatches it) " \
     "in debug mode to the file $DEBUG_PATH"
 
 "$BIN"/alignak_arbiter.py -d \
-    -c "$ETC"/alignak.cfg  -c "$ETC"/sample.cfg -c "$ETC"/dev.cfg\
+     -c "$ETC"/daemons/arbiterd.ini\
+     -a "$ETC"/alignak.cfg  -a "$ETC"/sample/sample.cfg\
     --debug "$DEBUG_PATH" -p /tmp/arbiter.profile

@@ -126,6 +126,7 @@ except ImportError, exp:  # Like in nt system
         """
         return []
 
+from alignak.log import logger, setup_logger, get_logger_fds
 from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
@@ -146,12 +147,11 @@ UMASK = 027
 
 
 class InvalidPidFile(Exception):
-    """Exception raise when a pid file is invalid"""
+    """Exception raised when a pid file is invalid"""
     pass
 
 
-DEFAULT_WORK_DIR = '/var/run/alignak/'
-DEFAULT_LIB_DIR = '/var/lib/alignak/'
+DEFAULT_WORK_DIR = './'
 
 
 class Daemon(object):  # pylint: disable=R0902
@@ -167,22 +167,50 @@ class Daemon(object):  # pylint: disable=R0902
         #  os.path.join( os.getcwd(), sys.argv[0] )
         #
         # as returned once the daemon is started.
-        'workdir':       PathProp(default=DEFAULT_WORK_DIR),
-        'host':          StringProp(default='0.0.0.0'),
-        'user':          StringProp(default=get_cur_user()),
-        'group':         StringProp(default=get_cur_group()),
-        'use_ssl':       BoolProp(default=False),
-        'server_key':     StringProp(default='etc/certs/server.key'),
-        'ca_cert':       StringProp(default='etc/certs/ca.pem'),
-        'server_cert':   StringProp(default='etc/certs/server.cert'),
-        'use_local_log': BoolProp(default=True),
-        'log_level':     LogLevelProp(default='WARNING'),
-        'hard_ssl_name_check':    BoolProp(default=False),
-        'idontcareaboutsecurity': BoolProp(default=False),
-        'daemon_enabled': BoolProp(default=True),
-        'spare':         BoolProp(default=False),
-        'max_queue_size': IntegerProp(default=0),
-        'daemon_thread_pool_size': IntegerProp(default=8),
+        'workdir':
+            PathProp(default=DEFAULT_WORK_DIR),
+        'host':
+            StringProp(default='0.0.0.0'),
+        'user':
+            StringProp(default=get_cur_user()),
+        'group':
+            StringProp(default=get_cur_group()),
+        'use_ssl':
+            BoolProp(default=False),
+        'server_key':
+            StringProp(default='etc/certs/server.key'),
+        'ca_cert':
+            StringProp(default='etc/certs/ca.pem'),
+        'server_cert':
+            StringProp(default='etc/certs/server.cert'),
+        'use_local_log':
+            BoolProp(default=True),
+        'human_timestamp_log':
+            BoolProp(default=True),
+        'human_date_format':
+            StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
+        'log_level':
+            LogLevelProp(default='INFO'),
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=7),
+        'local_log':
+            StringProp(default='/usr/local/var/log/arbiter.log'),
+        'hard_ssl_name_check':
+            BoolProp(default=False),
+        'idontcareaboutsecurity':
+            BoolProp(default=False),
+        'daemon_enabled':
+            BoolProp(default=True),
+        'spare':
+            BoolProp(default=False),
+        'max_queue_size':
+            IntegerProp(default=0),
+        'daemon_thread_pool_size':
+            IntegerProp(default=8),
     }
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
@@ -198,6 +226,12 @@ class Daemon(object):  # pylint: disable=R0902
         self.interrupted = False
         self.pidfile = None
 
+        if self.debug:
+            print("Daemon %s is in debug mode" % self.name)
+
+        if self.is_daemon:
+            print("Daemon %s is in daemon mode" % self.name)
+
         # Track time
         now = time.time()
         self.program_start = now
@@ -207,13 +241,7 @@ class Daemon(object):  # pylint: disable=R0902
         self.http_thread = None
         self.http_daemon = None
 
-        # Log init
-        # self.log = logger
-        # self.log.load_obj(self)
-        # pylint: disable=E1101
-        logger.load_obj(self)
-
-        self.new_conf = None  # used by controller to push conf
+        self.new_conf = None
         self.cur_conf = None
         self.conf_lock = threading.RLock()
         self.lock = threading.RLock()
@@ -227,8 +255,8 @@ class Daemon(object):  # pylint: disable=R0902
         # Flag to reload configuration
         self.need_config_reload = False
 
-        # Keep a trace of the local_log file desc if needed
-        self.local_log_fd = None
+        # Keep a trace of the file descriptors allocated by the logger
+        self.local_log_fds = None
 
         # Put in queue some debug output we will raise
         # when we will be in daemon
@@ -241,6 +269,11 @@ class Daemon(object):  # pylint: disable=R0902
         os.umask(UMASK)
         self.set_exit_handler()
 
+        # Fill the properties
+        properties = self.__class__.properties
+        for prop, entry in properties.items():
+            setattr(self, prop, entry.pythonize(entry.default))
+
     # At least, lose the local log file if needed
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -251,14 +284,14 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.info("%s : Doing stop ..", self)
+        logger.info("Stopping %s...", self.name)
 
         if self.http_daemon:
-            logger.info("Shutting down http_daemon ..")
+            logger.info("Shutting down http_daemon...")
             self.http_daemon.request_stop()
 
         if self.http_thread:
-            logger.info("Joining http_thread ..")
+            logger.info("Joining http_thread...")
             # Add a timeout to join so that we can manually quit
             self.http_thread.join(timeout=15)
             if self.http_thread.is_alive():
@@ -273,7 +306,7 @@ class Daemon(object):  # pylint: disable=R0902
             self.http_daemon = None
 
         if self.manager:
-            logger.info("Shutting down manager ..")
+            logger.info("Shutting down manager...")
             self.manager.shutdown()
             self.manager = None
 
@@ -285,10 +318,8 @@ class Daemon(object):  # pylint: disable=R0902
             if not hasattr(self, 'sched'):
                 self.hook_point('save_retention')
             # And we quit
-            logger.info('Stopping all modules')
+            logger.info('Stopping all modules...')
             self.modules_manager.stop_all()
-
-        logger.info("%s : All stop done.", self)
 
     def request_stop(self):
         """Remove pid and stop daemon
@@ -297,8 +328,8 @@ class Daemon(object):  # pylint: disable=R0902
         """
         self.unlink()
         self.do_stop()
-        # Brok facilities are no longer available simply print the message to STDOUT
-        print("Stopping daemon. Exiting")
+
+        logger.info("Stopped %s.", self.name)
         sys.exit(0)
 
     def look_for_early_exit(self):
@@ -327,12 +358,14 @@ class Daemon(object):  # pylint: disable=R0902
             self.do_loop_turn()
             # If ask us to dump memory, do it
             if self.need_dump_memory:
+                logger.debug('Dumping memory')
                 self.dump_memory()
                 self.need_dump_memory = False
             if self.need_objects_dump:
                 logger.debug('Dumping objects')
                 self.need_objects_dump = False
             if self.need_config_reload:
+                logger.debug('Ask for configuration reloading')
                 return
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
@@ -344,9 +377,14 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
+        logger.info("Loading modules...")
+
         self.modules_manager.load_and_init(mod_confs)
-        logger.info("I correctly loaded the modules: [%s]",
-                    ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        if self.modules_manager.instances:
+            logger.info("I correctly loaded my modules: [%s]",
+                        ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        else:
+            logger.info("I do not have any module")
 
     def add(self, elt):
         """ Abstract method for adding brok
@@ -366,7 +404,7 @@ class Daemon(object):  # pylint: disable=R0902
         :return: None
         TODO: Clean this
         """
-        logger.info("I dump my memory, it can take a minute")
+        logger.info("I dump my memory, it can take a while")
         try:
             from guppy import hpy
             heap = hpy()
@@ -377,8 +415,12 @@ class Daemon(object):  # pylint: disable=R0902
     def load_config_file(self):
         """Parse config file and ensure full path in variables
 
+        Note: do not use logger into this function because it is not yet initialized ;)
+
         :return: None
         """
+        print("Loading daemon configuration file (%s)..." % self.config_file)
+
         self.parse_config_file()
         if self.config_file is not None:
             # Some paths can be relatives. We must have a full path by taking
@@ -398,12 +440,14 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
+        logger.info("Changing working directory to: %s", self.workdir)
         self.workdir = os.path.abspath(self.workdir)
         try:
             os.chdir(self.workdir)
         except Exception, exp:
             raise InvalidWorkDir(exp)
         self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
+        logger.info("Using working directory: %s", os.path.abspath(self.workdir))
 
     def unlink(self):
         """Remove the daemon's pid file
@@ -415,21 +459,6 @@ class Daemon(object):  # pylint: disable=R0902
             os.unlink(self.pidfile)
         except OSError, exp:
             logger.error("Got an error unlinking our pidfile: %s", exp)
-
-    def register_local_log(self):
-        """Open local log file for logging purpose
-
-        :return: None
-        """
-        # The arbiter doesn't have such attribute
-        if hasattr(self, 'use_local_log') and self.use_local_log:
-            try:
-                # self.local_log_fd = self.log.register_local_log(self.local_log)
-                self.local_log_fd = logger.register_local_log(self.local_log)
-            except IOError, exp:
-                logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
-                sys.exit(2)
-            logger.info("Using the local log file '%s'", self.local_log)
 
     @staticmethod
     def check_shm():
@@ -476,7 +505,7 @@ class Daemon(object):  # pylint: disable=R0902
         """
         # TODO: other daemon run on nt
         if os.name == 'nt':
-            logger.warning("The parallel daemon check is not available on nt")
+            logger.warning("The parallel daemon check is not available on Windows")
             self.__open_pidfile(write=True)
             return
 
@@ -551,6 +580,7 @@ class Daemon(object):  # pylint: disable=R0902
         # Iterate through and close all file descriptors.
         for file_d in range(0, maxfd):
             if file_d in skip_close_fds:
+                logger.debug("Do not close fd: %s", file_d)
                 continue
             try:
                 os.close(file_d)
@@ -566,6 +596,8 @@ class Daemon(object):  # pylint: disable=R0902
         :type skip_close_fds: list
         :return: None
         """
+        logger.info("Daemonizing...")
+
         if skip_close_fds is None:
             skip_close_fds = tuple()
 
@@ -576,7 +608,7 @@ class Daemon(object):  # pylint: disable=R0902
             fdtemp = os.open(REDIRECT_TO, os.O_RDWR)
 
         # We close all fd but what we need:
-        self.close_fds(skip_close_fds + (self.fpid.fileno(), fdtemp))
+        self.close_fds(skip_close_fds + [self.fpid.fileno(), fdtemp])
 
         os.dup2(fdtemp, 1)  # standard output (1)
         os.dup2(fdtemp, 2)  # standard error (2)
@@ -660,28 +692,29 @@ class Daemon(object):  # pylint: disable=R0902
         self.check_parallel_run()
         self.setup_communication_daemon()
 
-        # Then start to log all in the local file if asked so
-        self.register_local_log()
         if self.is_daemon:
             # Do not close the local_log file too if it's open
-            if self.local_log_fd:
-                self.daemonize(skip_close_fds=(self.local_log_fd,))
+            if self.local_log_fds:
+                self.daemonize(skip_close_fds=self.local_log_fds)
+            else:
+                self.daemonize()
         else:
             self.write_pid()
 
-        logger.info("Creating manager ..")
+        logger.info("Creating manager...")
         self.manager = self._create_manager()
-        logger.info("done.")
+        logger.info("Created")
 
         # We can start our stats thread but after the double fork() call and if we are not in
         # a test launch (time.time() is hooked and will do BIG problems there)
         if not fake:
             statsmgr.launch_reaper_thread()
 
-        logger.info("Now starting http_daemon thread..")
+        logger.info("Starting HTTP daemon thread...")
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
         self.http_thread.daemon = True
         self.http_thread.start()
+        logger.info("HTTP daemon thread started")
 
     def setup_communication_daemon(self):
         """ Setup HTTP server daemon to listen
@@ -843,6 +876,8 @@ class Daemon(object):  # pylint: disable=R0902
         If some properties need a pythonization, we do it.
         Also put default value in the properties if some are missing in the config_file
 
+        TODO: @mohierf: why not doing this directly in load_config_file?
+
         :return: None
         """
         properties = self.__class__.properties
@@ -857,14 +892,15 @@ class Daemon(object):  # pylint: disable=R0902
                     if key in properties:
                         value = properties[key].pythonize(value)
                     setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError, err:
+            except ConfigParser.InterpolationMissingOptionError as err:
                 err = str(err)
                 wrong_variable = err.split('\n')[3].split(':')[1].strip()
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
                              wrong_variable, self.config_file)
                 sys.exit(2)
         else:
-            logger.warning("No config file specified, use defaults parameters")
+            print("No daemon configuration file specified, using defaults parameters")
+
         # Now fill all defaults where missing parameters
         for prop, entry in properties.items():
             if not hasattr(self, prop):
@@ -872,8 +908,11 @@ class Daemon(object):  # pylint: disable=R0902
                 setattr(self, prop, value)
 
     def relative_paths_to_full(self, reference_path):
-        """Set a full path from a relative one with che config file as reference
+        """Set a full path from a relative one with the config file as reference
         TODO: This should be done in pythonize method of Properties.
+        TODO: @mohierf: why not doing this directly in load_config_file?
+        TODO: No property defined for the daemons is a ConfigPathProp ... ;)
+        This function is completely unuseful as is !!!
 
         :param reference_path: reference path for reading full path
         :type reference_path: str
@@ -886,10 +925,8 @@ class Daemon(object):  # pylint: disable=R0902
                 path = getattr(self, prop)
                 if not os.path.isabs(path):
                     new_path = os.path.join(reference_path, path)
-                    # print "DBG: changing", entry, "from", path, "to", new_path
                     path = new_path
                 setattr(self, prop, path)
-                # print "Setting %s for %s" % (path, prop)
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Manage signals caught by the daemon
@@ -940,23 +977,25 @@ class Daemon(object):  # pylint: disable=R0902
         setproctitle("alignak-%s" % self.name)
 
     @staticmethod
-    def get_header():
+    def get_header(daemon_name):
         """Get the log file header
 
-        :return: A string list containing project name, version, licence etc.
+        :param daemon_name: the daemon name to include in the header
+        :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
         """
-        return ["Alignak %s" % VERSION,
-                "Copyright (c) 2015-2015:",
+        return ["Alignak %s - %s daemon" % (VERSION, daemon_name),
+                "Copyright (c) 2015-2016:",
                 "Alignak Team",
-                "License: AGPL"]
+                "License: AGPL",
+                "-----"]
 
     def print_header(self):
         """Log headers generated in get_header()
 
         :return: None
         """
-        for line in self.get_header():
+        for line in self.get_header(self.name):
             logger.info(line)
 
     def http_daemon_thread(self):
@@ -964,7 +1003,7 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.info("HTTP main thread: I'm running")
+        logger.info("HTTP main thread running")
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
         # so "no_lock" calls can always be directly answer without having a "locked" version to
         # finish
@@ -973,6 +1012,7 @@ class Daemon(object):  # pylint: disable=R0902
         except Exception, exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             raise exp
+        logger.info("HTTP main thread running")
 
     def handle_requests(self, timeout, suppl_socks=None):
         """ Wait up to timeout to handle the requests.
@@ -1126,8 +1166,12 @@ class Daemon(object):  # pylint: disable=R0902
         :rtype: dict
 
         """
-        res = {'metrics': [], 'version': VERSION, 'name': '', 'type': '', 'modules':
-               {'internal': {}, 'external': {}}}
+        res = {
+            'metrics': [], 'version': VERSION, 'name': self.name, 'type': '',
+            'modules': {
+                'internal': {}, 'external': {}
+            }
+        }
         modules = res['modules']
 
         # first get data for all internal modules
@@ -1155,8 +1199,9 @@ class Daemon(object):  # pylint: disable=R0902
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new ticket including"
+        logger.critical("If you think this is a bug, create a new ticket including "
                         "details mentioned in the README")
+        logger.critical("-----")
         logger.critical("Back trace of the error: %s", trace)
 
     def get_objects_from_from_queues(self):
@@ -1181,24 +1226,50 @@ class Daemon(object):  # pylint: disable=R0902
         return had_some_objects
 
     def setup_alignak_logger(self):
-        """ Setup alignak logger.
-        - Set log level
-        - Log Alignak headers
-        - Load config file
+        """ Setup alignak logger:
+        - load the daemon configuration file
+        - configure the global daemon handler (root logger)
+        - log the daemon Alignak header
+        - log the damon configuration parameters
 
         :return:
         :rtype:
         """
-        # Setting log level
-        alignak_logger = logging.getLogger("alignak")
-        alignak_logger.setLevel('INFO')
-        # Force the debug level if the daemon is said to start with such level
-        if self.debug:
-            alignak_logger.setLevel('DEBUG')
-
-        # Log will be broks
-        for line in self.get_header():
-            logger.info(line)
-
+        # Load the daemon configuration file
         self.load_config_file()
-        alignak_logger.setLevel(self.log_level)
+
+        # Force the debug level if the daemon is said to start with such level
+        log_level = self.log_level
+        if self.debug:
+            log_level = 'DEBUG'
+
+        # Set the human timestamp log if required
+        human_log_format = getattr(self, 'human_timestamp_log', False)
+
+        # Register local log file if required
+        if getattr(self, 'use_local_log', False):
+            try:
+                # pylint: disable=E1101
+                setup_logger(None, level=log_level, human_log=human_log_format,
+                             log_console=True, log_file=self.local_log,
+                             when=self.log_rotation_when, interval=self.log_rotation_interval,
+                             backup_count=self.log_rotation_count,
+                             human_date_format=self.human_date_format)
+            except IOError, exp:
+                logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
+                sys.exit(2)
+            logger.debug("Using the local log file '%s'", self.local_log)
+            self.local_log_fds = get_logger_fds(None)
+        else:
+            setup_logger(None, level=log_level, human_log=human_log_format,
+                         log_console=True, log_file=None)
+            logger.warning("No local log file")
+
+        logger.debug("Alignak daemon logger configured")
+
+        # Log daemon header
+        self.print_header()
+
+        logger.info("My configuration: ")
+        for prop, _ in self.properties.items():
+            logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))

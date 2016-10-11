@@ -73,7 +73,7 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 from alignak.autoslots import AutoSlots
 from alignak.util import format_t_into_dhms_format
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
-from alignak.log import naglog_result
+from alignak.log import make_monitoring_log
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -335,8 +335,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         groupname = ''
         for hostgroup_id in self.hostgroups:
             hostgroup = hostgroups[hostgroup_id]
-            # naglog_result('info', 'get_groupname : %s %s %s' % (hg.uuid, hg.alias, hg.get_name()))
-            # groupname = "%s [%s]" % (hg.alias, hg.get_name())
             groupname = "%s" % (hostgroup.alias)
         return groupname
 
@@ -349,7 +347,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         groupnames = ''
         for hostgroup_id in self.hostgroups:
             hostgroup = hostgroups[hostgroup_id]
-            # naglog_result('info', 'get_groupnames : %s' % (hg.get_name()))
             if groupnames == '':
                 groupnames = hostgroup.get_name()
             else:
@@ -577,10 +574,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        naglog_result('critical',
-                      'HOST ALERT: %s;%s;%s;%d;%s' % (self.get_name(),
-                                                      self.state, self.state_type,
-                                                      self.attempt, self.output))
+        brok = make_monitoring_log(
+            'critical', 'HOST ALERT: %s;%s;%s;%d;%s' % (
+                self.get_name(), self.state, self.state_type, self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
 
     def raise_initial_state(self):
         """Raise CURRENT HOST ALERT entry (info level)
@@ -590,10 +589,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         if self.__class__.log_initial_states:
-            naglog_result('info',
-                          'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (self.get_name(),
-                                                                  self.state, self.state_type,
-                                                                  self.attempt, self.output))
+            brok = make_monitoring_log(
+                'info', 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
+                    self.get_name(), self.state, self.state_type, self.attempt, self.output
+                )
+            )
+            self.broks.append(brok)
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
         """Raise freshness alert entry (warning level)
@@ -633,10 +634,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         else:
             state = self.state
         if self.__class__.log_notifications:
-            naglog_result('critical',
-                          "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (contact.get_name(),
-                                                                 self.get_name(), state,
-                                                                 command.get_name(), self.output))
+            brok = make_monitoring_log(
+                'critical', "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (
+                    contact.get_name(), self.get_name(), state, command.get_name(), self.output
+                )
+            )
+            self.broks.append(brok)
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)
@@ -649,10 +652,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         if self.__class__.log_event_handlers:
-            naglog_result('critical',
-                          "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (self.get_name(),
-                                                                  self.state, self.state_type,
-                                                                  self.attempt, command.get_name()))
+            brok = make_monitoring_log(
+                'critical', "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (
+                    self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
+                )
+            )
+            self.broks.append(brok)
 
     def raise_snapshot_log_entry(self, command):
         """Raise HOST SNAPSHOT entry (critical level)
@@ -665,10 +670,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         if self.__class__.log_event_handlers:
-            naglog_result('critical',
-                          "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (self.get_name(),
-                                                             self.state, self.state_type,
-                                                             self.attempt, command.get_name()))
+            brok = make_monitoring_log(
+                'critical', "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (
+                    self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
+                )
+            )
+            self.broks.append(brok)
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise HOST FLAPPING ALERT START entry (critical level)
@@ -685,11 +692,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type threshold: float
         :return: None
         """
-        naglog_result('critical',
-                      "HOST FLAPPING ALERT: %s;STARTED; "
-                      "Host appears to have started flapping "
-                      "(%.1f%% change >= %.1f%% threshold)"
-                      % (self.get_name(), change_ratio, threshold))
+        brok = make_monitoring_log(
+            'critical', "HOST FLAPPING ALERT: %s;STARTED; "
+                        "Host appears to have started flapping "
+                        "(%.1f%% change >= %.1f%% threshold)" %
+                        (self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
         """Raise HOST FLAPPING ALERT STOPPED entry (critical level)
@@ -706,11 +715,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type threshold: float
         :return: None
         """
-        naglog_result('critical',
-                      "HOST FLAPPING ALERT: %s;STOPPED; "
-                      "Host appears to have stopped flapping "
-                      "(%.1f%% change < %.1f%% threshold)"
-                      % (self.get_name(), change_ratio, threshold))
+        brok = make_monitoring_log(
+            'critical', "HOST FLAPPING ALERT: %s;STOPPED; "
+                        "Host appears to have stopped flapping "
+                        "(%.1f%% change < %.1f%% threshold)" %
+                        (self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_no_next_check_log_entry(self):
         """Raise no scheduled check entry (warning level)
@@ -734,10 +745,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;STARTED; "
-                      "Host has entered a period of scheduled downtime"
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'critical', "HOST DOWNTIME ALERT: %s;STARTED; "
+                        "Host has entered a period of scheduled downtime" % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_exit_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
@@ -748,10 +760,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;STOPPED; Host has "
-                      "exited from a period of scheduled downtime"
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'critical', "HOST DOWNTIME ALERT: %s;STOPPED; "
+                        "Host has exited from a period of scheduled downtime" % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_cancel_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
@@ -762,10 +775,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;CANCELLED; "
-                      "Scheduled downtime for host has been cancelled."
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'critical', "HOST DOWNTIME ALERT: %s;CANCELLED; "
+                        "Scheduled downtime for host has been cancelled." % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def manage_stalking(self, check):
         """Check if the host need stalking or not (immediate recheck)

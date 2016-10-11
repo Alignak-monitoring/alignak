@@ -60,7 +60,6 @@ import uuid
 import cStringIO
 import logging
 
-from alignak.log import BrokHandler
 from alignak.misc.common import setproctitle
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -111,10 +110,11 @@ class Worker(object):
     @staticmethod
     def _prework(real_work, *args):
         """Simply drop the BrokHandler before doing the real_work"""
-        for handler in list(logger.handlers):
-            if isinstance(handler, BrokHandler):
-                logger.info("Cleaning BrokHandler %r from logger.handlers..", handler)
-                logger.removeHandler(handler)
+        # # No more necessary thanks to the new logger
+        # for handler in list(logger.handlers):
+        #     if isinstance(handler, BrokHandler):
+        #         logger.info("Cleaning BrokHandler %r from logger.handlers..", handler)
+        #         logger.removeHandler(handler)
         real_work(*args)
 
     def is_mortal(self):

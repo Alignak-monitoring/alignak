@@ -74,6 +74,31 @@ class TestConfig(AlignakTest):
         link = self.arbiter.conf.receivers.find_by_name('receiver-master')
         self.assertIsNotNone(link)
 
+    def test_config_conf_inner_properties(self):
+        """
+        Default configuration has no loading problems ... and inner default proerties are
+        correctly values
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        # Arbiter configuration is correct
+        self.assertTrue(self.arbiter.conf.conf_is_correct)
+
+        # Configuration inner properties are valued
+        self.assertEqual(self.arbiter.conf.prefix, '')
+        self.assertEqual(self.arbiter.conf.main_config_file,
+                         os.path.abspath('cfg/cfg_default.cfg'))
+        self.assertEqual(self.arbiter.conf.config_base_dir, 'cfg')
+
     def test_config_ok_no_declared_daemons(self):
         """
         Default configuration has no loading problems ... but no daemons are defined

@@ -260,11 +260,6 @@ class Alignak(BaseSatellite):
             self.override_conf = override_conf
             self.modules = unserialize(modules, True)
             self.satellites = satellites
-            # self.pollers = self.app.pollers
-
-            if self.conf.human_timestamp_log:
-                # pylint: disable=E1101
-                logger.set_human_format()
 
             # Now We create our pollers, reactionners and brokers
             for sat_type in ['pollers', 'reactionners', 'brokers']:
@@ -287,6 +282,7 @@ class Alignak(BaseSatellite):
                     sats[sat_id]['uri'] = uri
                     sats[sat_id]['last_connection'] = 0
                     setattr(self, sat_type, sats)
+                logger.info("We have our %s: %s ", sat_type, satellites[sat_type])
 
             # First mix conf and override_conf to have our definitive conf
             for prop in self.override_conf:
@@ -333,7 +329,7 @@ class Alignak(BaseSatellite):
             # activate it if necessary
             self.sched.load_external_command(ecm)
 
-            # External command need the sched because he can raise checks
+            # External command needs the sched because it can raise checks and broks
             ecm.load_scheduler(self.sched)
 
             # We clear our schedulers managed (it's us :) )
@@ -363,12 +359,17 @@ class Alignak(BaseSatellite):
         """
         try:
             self.setup_alignak_logger()
+
+            # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
+
             self.do_daemon_init_and_start()
+
             self.load_modules_manager()
 
             self.uri = self.http_daemon.uri
-            logger.info("[scheduler] General interface is at: %s", self.uri)
+            logger.info("[Scheduler] General interface is at: %s", self.uri)
+
             self.do_mainloop()
         except Exception:
             self.print_unrecoverable(traceback.format_exc())

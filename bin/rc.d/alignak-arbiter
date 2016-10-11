@@ -11,10 +11,11 @@
 name="alignak_arbiter"
 rcvar="alignak_arbiter_enable"
 
+alignak_arbiter_daemonfile="/usr/local/etc/alignak/daemons/arbiterd.ini"
 alignak_arbiter_configfile="/usr/local/etc/alignak/alignak.cfg"
 command="/usr/local/bin/alignak-arbiter"
 command_interpreter="/usr/local/bin/python2.7"
-command_args="-d -c ${alignak_arbiter_configfile} > /dev/null 2>&1"
+command_args="-d -c ${alignak_arbiter_daemonfile} -a ${alignak_arbiter_configfile} > /dev/null 2>&1"
 pidfile="/var/run/alignak/arbiterd.pid"
 
 restart_precmd="alignak_checkconfig"
@@ -29,7 +30,7 @@ load_rc_config "${name}"
 
 alignak_checkconfig() {
 	echo -n "Performing sanity check on alignak configuration: "
-	${command} -v -c ${alignak_arbiter_configfile} >/dev/null 2>&1
+	${command} -V -a ${alignak_arbiter_configfile} >/dev/null 2>&1
 	if [ $? -ne 0 ]; then
 		echo "FAILED"
 		return 1

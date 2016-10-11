@@ -70,7 +70,7 @@ from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.commandcall import CommandCall
-from alignak.log import naglog_result
+from alignak.log import make_monitoring_log
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
@@ -450,6 +450,10 @@ class ExternalCommandManager:
     }
 
     def __init__(self, conf, mode):
+        self.sched = None
+        self.arbiter = None
+        self.receiver = None
+
         self.mode = mode
         if conf:
             self.conf = conf
@@ -497,6 +501,20 @@ class ExternalCommandManager:
         :return: None
         """
         self.receiver = receiver
+
+    def send_a_brok(self, brok):
+        """Send a brok to our daemon according to our current configuration
+
+        :param brok: brok to be sent
+        :type: Brok
+        :return:
+        """
+        if self.arbiter:
+            self.arbiter.add(brok)
+        elif self.sched:
+            self.sched.add(brok)
+        else:
+            logger.critical("External command Brok could not be sent to any daemon!")
 
     def open(self):
         """Create if necessary and open a pipe
@@ -569,7 +587,12 @@ class ExternalCommandManager:
         if self.mode == 'dispatcher' and self.conf.log_external_commands:
             # Fix #1263
             # logger.info('EXTERNAL COMMAND: ' + command.rstrip())
-            naglog_result('info', 'EXTERNAL COMMAND: ' + command.rstrip())
+            # I am a command dispatcher, notifies to my arbiter
+            brok = make_monitoring_log(
+                'info', 'EXTERNAL COMMAND: ' + command.rstrip()
+            )
+            # Send a brok to our arbiter else to our scheduler
+            self.send_a_brok(brok)
         res = self.get_command_and_args(command, excmd)
 
         # If we are a receiver, bail out here
@@ -2699,11 +2722,14 @@ class ExternalCommandManager:
         """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
-            naglog_result(
+            brok = make_monitoring_log(
                 'info', 'PASSIVE HOST CHECK: %s;%d;%s'
                 % (host.get_name().decode('utf8', 'ignore'),
                    status_code, plugin_output.decode('utf8', 'ignore'))
             )
+            # Send a brok to our arbiter else to our scheduler
+            self.send_a_brok(brok)
+
         now = time.time()
         cls = host.__class__
         # If globally disable OR locally, do not launch
@@ -2762,10 +2788,16 @@ class ExternalCommandManager:
         """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
-            naglog_result('info', 'PASSIVE SERVICE CHECK: %s;%s;%d;%s'
-                          % (self.hosts[service.host].get_name().decode('utf8', 'ignore'),
-                             service.get_name().decode('utf8', 'ignore'),
-                             return_code, plugin_output.decode('utf8', 'ignore')))
+            brok = make_monitoring_log(
+                'info', 'PASSIVE SERVICE CHECK: %s;%s;%d;%s' % (
+                    self.hosts[service.host].get_name().decode('utf8', 'ignore'),
+                    service.get_name().decode('utf8', 'ignore'),
+                    return_code, plugin_output.decode('utf8', 'ignore')
+                )
+            )
+            # Send a brok to our arbiter else to our scheduler
+            self.send_a_brok(brok)
+
         now = time.time()
         cls = service.__class__
         # If globally disable OR locally, do not launch
@@ -2871,7 +2903,9 @@ class ExternalCommandManager:
                          e_handler.exit_status, e_handler.output)
             return
         # Ok here the command succeed, we can now wait our death
-        naglog_result('info', "%s" % (e_handler.output))
+        brok = make_monitoring_log('info', "%s" % (e_handler.output))
+        # Send a brok to our arbiter else to our scheduler
+        self.send_a_brok(brok)
 
     def reload_config(self):
         """Reload Alignak configuration
@@ -2902,7 +2936,9 @@ class ExternalCommandManager:
                          e_handler.exit_status, e_handler.output)
             return
         # Ok here the command succeed, we can now wait our death
-        naglog_result('info', "%s" % (e_handler.output))
+        brok = make_monitoring_log('info', "%s" % (e_handler.output))
+        # Send a brok to our arbiter else to our scheduler
+        self.send_a_brok(brok)
 
     def save_state_information(self):
         """DOES NOTHING (What it is supposed to do?)

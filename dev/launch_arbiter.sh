@@ -47,9 +47,5 @@ DIR="$(cd $(dirname "$0"); pwd)"
 BIN="$DIR"/../alignak/bin
 ETC="$DIR"/../etc
 
-# Need to change directory to .../var because arbiter doesn't have a
-# default 'workdir' "properties" attribute:.
-cd "$DIR/../var"
-
 echo "Launching Arbiter (which reads configuration and dispatches it)"
-"$BIN"/alignak_arbiter.py -d -c "$ETC"/alignak.cfg
+"$BIN"/alignak_arbiter.py -d -c "$ETC"/daemons/arbiterd.ini -a "$ETC"/alignak.cfg

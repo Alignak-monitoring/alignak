@@ -169,10 +169,6 @@ class Scheduler(object):  # pylint: disable=R0902
             }
         }
 
-        # Log init
-        # pylint: disable=E1101
-        logger.load_obj(self)
-
         self.instance_id = 0  # Temporary set. Will be erase later
 
         # Ours queues
@@ -991,6 +987,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: True if  now - last_connection < 5, False otherwise
         :rtype: bool
         """
+        # Never connected
+        if 'last_connection' not in elt:
+            return False
+
         now = time.time()
         last_connection = elt['last_connection']
         if now - last_connection < 5:
@@ -1010,7 +1010,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # Get good links tab for looping..
         links = self.get_links_from_type(s_type)
         if links is None:
-            logger.debug("Unknown '%s' type for connection!", s_type)
+            logger.critical("Unknown '%s' type for connection!", s_type)
             return
 
         # We want only to initiate connections to the passive
@@ -1060,6 +1060,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         # We loop for our passive pollers or reactionners
+        # Todo: only do this if there is some actions to push!
         for poll in self.pollers.values():
             if not poll['passive']:
                 continue
@@ -1088,6 +1089,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # TODO:factorize
         # We loop for our passive reactionners
+        # Todo: only do this if there is some actions to push!
         for poll in self.reactionners.values():
             if not poll['passive']:
                 continue

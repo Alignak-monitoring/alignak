@@ -270,17 +270,17 @@ do_start() {
     }
     [ "$DEBUG" = 1 ] && DEBUGCMD="--debug "$(getdebugfile "$mod")
     # Arbiter alignak.cfg, and the other OTHERd.ini
+    modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
+    modinifile=$(eval echo ${modINI})
     if [ "$mod" != "arbiter" ]; then
-        modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
-        modinifile=$(eval echo ${modINI})
         output=$($modfilepath -d -c "${modinifile}" $DEBUGCMD 2>&1)
         rc=$?
     else
         if ! test "$ALIGNAKSPECIFICCFG"
         then
-            output=$($modfilepath -d -c "$ALIGNAKCFG" $DEBUGCMD 2>&1)
+            output=$($modfilepath -d -c "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1)
         else
-            output=$($modfilepath -d -c "$ALIGNAKCFG" -c "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1)
+            output=$($modfilepath -d -c "${modinifile}" -a "$ALIGNAKCFG" -a "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1)
         fi
         rc=$?
     fi
@@ -363,12 +363,24 @@ do_stop() {
 # does the config check
 #
 do_check() {
+    echo  "Checking configuration..."
     [ "$DEBUG" = 1 ] && DEBUGCMD="--debug $VAR/${mod}-debug.log"
+
+    modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
+    modinifile=$(eval echo ${modINI})
+
     if ! test "$ALIGNAKSPECIFICCFG"
     then
-       $BIN/alignak-arbiter -V -c "$ALIGNAKCFG" $DEBUGCMD 2>&1
+       $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1
     else
-       $BIN/alignak-arbiter -V -c "$ALIGNAKCFG" -c "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
+       $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" -a "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
+    fi
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        echo "$startoutput"
+        echo_failure
     fi
     return $?
 }
@@ -383,18 +395,6 @@ do_start_() {
     if [ $rc -eq 0 ]; then
         log_warning_msg "Already running"
         return
-    fi
-    if test "$1" = "arbiter"
-    then
-        # arbiter is special:
-        # it doesn't actually declare a "workdir" properties in its config
-        # so we have explicitely to cd to the "VAR" directory.
-        # so that the default pidfile ( == nagios lock_file) which is now "arbiterd.pid"
-        # will be created at the correct place.
-        cd "$VAR"
-        # TODO: check if other possibility wouldn't be better:
-        # declare a "workdir" properties for the arbiter module definition.. in alignak-specific.cfg.
-        # but if the lock_file path is absolute then this 'cd' isn't required.
     fi
     startoutput=$(do_start "$1")
     rc=$?
@@ -429,7 +429,6 @@ do_stop_() {
 
 do_restart_() {
     mod="$1"
-    echo "Restarting $mod"
     if [ "$mod" = "arbiter" ]; then
         do_check_ "$mod"
         checkrc=$?
@@ -437,6 +436,7 @@ do_restart_() {
            return 1
         fi
     fi
+    echo "Restarting $mod"
     stopoutput=$(do_stop "$mod")
     startoutput=$(do_start "$mod")
     rc=$?
@@ -455,21 +455,29 @@ do_force_reload_() {
 
 do_reload_() {
     mod="$1"
-    echo "Reloading $mod"
     if [ "$mod" = "arbiter" ]; then
+        do_status_ $mod
+        checkrc=$?
+        if [ $checkrc -ne 0 ]; then
+           echo "Cannot request reload if process is not running."
+           return 1
+        fi
         do_check_ "$mod"
         checkrc=$?
         if [ $checkrc -ne 0 ]; then
            return 1
         fi
         pid=$(getmodpid "$mod")
-        # send SIGHUP signal to reload configuration
-        kill -1 $pid
-        rc=$?
+        if [ "$pid" != "" ]; then
+            # send SIGHUP signal to reload configuration
+            kill -1 $pid
+            rc=$?
+        fi
     else
         # if not the arbiter module, reload == restart
         do_restart_ $mod
     fi
+    echo "Reloading $mod"
     if [ $rc -eq 0 ]; then
         echo_success
     else
