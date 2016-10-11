@@ -463,13 +463,7 @@ class Dispatcher:
                         'skip_initial_broks': sched.skip_initial_broks,
                         'accept_passive_unknown_check_results':
                             sched.accept_passive_unknown_check_results,
-                        # shinken.io part
-                        'api_key': self.conf.api_key,
-                        'secret': self.conf.secret,
-                        'http_proxy': self.conf.http_proxy,
-                        # statsd one too because OlivierHA love statsd
-                        # and after some years of effort he manages to make me
-                        # understand the powerfulness of metrics :)
+                        # local statsd
                         'statsd_host': self.conf.statsd_host,
                         'statsd_port': self.conf.statsd_port,
                         'statsd_prefix': self.conf.statsd_prefix,
