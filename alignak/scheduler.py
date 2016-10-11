@@ -181,7 +181,6 @@ class Scheduler(object):  # pylint: disable=R0902
         self.downtimes = {}
         self.contact_downtimes = {}
         self.comments = {}
-        self.broks = {}
 
         # Some flags
         self.has_full_broks = False  # have a initial_broks in broks queue?
@@ -210,7 +209,7 @@ class Scheduler(object):  # pylint: disable=R0902
             self.waiting_results.queue.clear()
         for obj in self.checks, self.actions, self.downtimes,\
                 self.contact_downtimes, self.comments,\
-                self.broks, self.brokers:
+                self.brokers:
             obj.clear()
 
     def iter_hosts_and_services(self):
@@ -289,17 +288,22 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.debug("Changing the tick to %d for the function %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
 
-    def load_satellites(self, pollers, reactionners):
-        """Setter for pollers and reactionners attributes
+    def load_satellites(self, pollers, reactionners, brokers):
+        """Setter for pollers, reactionners and brokers attributes
 
         :param pollers: pollers value to set
         :type pollers:
         :param reactionners: reactionners value to set
         :type reactionners:
+        :param brokers: brokers value to set
+        :type brokers:
         :return: None
         """
         self.pollers = pollers
         self.reactionners = reactionners
+        for broker in brokers.values():
+            self.brokers[broker['name']] = {'broks': {}, 'has_full_broks': False,
+                                            'initialized': False}
 
     def die(self):
         """Set must_run attribute to False
@@ -329,7 +333,11 @@ class Scheduler(object):  # pylint: disable=R0902
                     (act.__class__.my_type.upper(), act.uuid, act.status,
                      act.t_to_go, act.reactionner_tag, act.command, act.worker)
                 file_h.write(string)
-            for brok in self.broks.values():
+            broks = {}
+            for broker in self.brokers.values():
+                for brok_uuid in broker['broks']:
+                    broks[brok_uuid] = broker['broks'][brok_uuid]
+            for brok in broks.values():
                 string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
             file_h.close()
@@ -394,21 +402,13 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # For brok, we TAG brok with our instance_id
         brok.instance_id = self.instance_id
-        # Maybe it's just for one broker
         if bname:
-            broks = self.brokers[bname]['broks']
-            broks[brok.uuid] = brok
+            # it's just for one broker
+            self.brokers[bname]['broks'][brok.uuid] = brok
         else:
-            # If there are known brokers, give it to them
-            if len(self.brokers) > 0:
-                # Or maybe it's for all
-                for bname in self.brokers:
-                    broks = self.brokers[bname]['broks']
-                    broks[brok.uuid] = brok
-            else:  # no brokers? maybe at startup for logs
-                # we will put in global queue, that the first broker
-                # connection will get all
-                self.broks[brok.uuid] = brok
+            # add brok to all brokers
+            for name in self.brokers:
+                self.brokers[name]['broks'][brok.uuid] = brok
 
     def add_notification(self, notif):
         """Add a notification into actions list
@@ -491,7 +491,7 @@ class Scheduler(object):  # pylint: disable=R0902
     def add(self, elt):
         """Generic function to add objects into scheduler internal lists::
 
-        Brok -> self.broks
+        Brok -> self.brokers
         Check -> self.checks
         Notification -> self.actions
         Downtime -> self.downtimes
@@ -596,21 +596,17 @@ class Scheduler(object):  # pylint: disable=R0902
             nb_checks_drops = 0
 
         # For broks and actions, it's more simple
-        # or broks, manage global but also all brokers queue
-        b_lists = [self.broks]
-        for elem in self.brokers.values():
-            b_lists.append(elem['broks'])
-        for broks in b_lists:
-            if len(broks) > max_broks:
-                logger.debug("I have to del some broks (%d)..., sorry", len(broks))
-                to_del_broks = [c for c in broks.values()]
+        # or broks, manage global but also all brokers
+        nb_broks_drops = 0
+        for broker in self.brokers.values():
+            if len(broker['broks']) > max_broks:
+                logger.debug("I have to del some broks (%d)..., sorry", len(broker['broks']))
+                to_del_broks = [c for c in broker['broks'].values()]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
-                nb_broks_drops = len(to_del_broks)
+                nb_broks_drops += len(to_del_broks)
                 for brok in to_del_broks:
-                    del broks[brok.uuid]
-            else:
-                nb_broks_drops = 0
+                    del broker['broks'][brok.uuid]
 
         if len(self.actions) > max_actions:
             logger.debug("I have to del some actions (%d)..., sorry", len(self.actions))
@@ -1217,19 +1213,16 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :param bname: broker name to send broks
         :type bname: str
-        :return: list of brok for this broker
-        :rtype: list[alignak.brok.Brok]
+        :greturn: dict of brok for this broker
+        :rtype: dict[alignak.brok.Brok]
         """
-        # If we are here, we are sure the broker entry exists
-        res = self.brokers[bname]['broks']
-        # They are gone, we keep none!
-        self.brokers[bname]['broks'] = {}
+        to_send = [b for b in self.brokers[bname]['broks'].values()
+                   if getattr(b, 'sent_to_sched_externals', False)]
 
-        # Also put in the result the possible first log broks if so
-        res.update(self.broks)
-        # and clean the global broks too now
-        self.broks.clear()
-
+        res = {}
+        for brok in to_send:
+            res[brok.uuid] = brok
+            del self.brokers[bname]['broks'][brok.uuid]
         return res
 
     def reset_topology_change_flag(self):
@@ -1517,6 +1510,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
         logger.info("[%s] Created %d initial Broks for broker %s",
                     self.instance_name, len(self.brokers[bname]['broks']), bname)
+        self.brokers[bname]['initialized'] = True
+        self.send_broks_to_modules()
 
     def get_and_register_program_status_brok(self):
         """Create and add a program_status brok
@@ -1836,17 +1831,25 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         t00 = time.time()
         nb_sent = 0
+        broks = {}
+        for broker in self.brokers.values():
+            for brok in broker['broks'].values():
+                if not getattr(brok, 'sent_to_sched_externals', False):
+                    broks[brok.uuid] = brok
+
         for mod in self.sched_daemon.modules_manager.get_external_instances():
             logger.debug("Look for sending to module %s", mod.get_name())
             queue = mod.to_q
-            to_send = [b for b in self.broks.values()
-                       if not getattr(b, 'sent_to_sched_externals', False) and mod.want_brok(b)]
-            queue.put(to_send)
-            nb_sent += len(to_send)
+            if queue is not None:
+                to_send = [b for b in broks.values() if mod.want_brok(b)]
+                queue.put(to_send)
+                nb_sent += len(to_send)
 
         # No more need to send them
-        for brok in self.broks.values():
-            brok.sent_to_sched_externals = True
+        for brok in broks.values():
+            for broker in self.brokers.values():
+                if brok.uuid in broker['broks']:
+                    broker['broks'][brok.uuid].sent_to_sched_externals = True
         logger.debug("Time to send %s broks (after %d secs)", nb_sent, time.time() - t00)
 
     def get_objects_from_from_queues(self):

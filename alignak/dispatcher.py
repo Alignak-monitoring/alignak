@@ -451,7 +451,8 @@ class Dispatcher:
                     # We give this configuration a new 'flavor'
                     conf.push_flavor = random.randint(1, 1000000)
                     satellites = realm.get_satellites_links_for_scheduler(self.pollers,
-                                                                          self.reactionners)
+                                                                          self.reactionners,
+                                                                          self.brokers)
                     conf_package = {
                         'conf': realm.serialized_confs[conf.uuid],
                         'override_conf': sched.get_override_configuration(),
@@ -533,22 +534,6 @@ class Dispatcher:
             if sat.alive and sat.reachable:
                 satellites.append(sat)
 
-        # If we got a broker, we make the list to pop a new
-        # item first for each scheduler, so it will smooth the load
-        # But the spare must stay at the end ;)
-        # WARNING : skip this if we are in a complete broker link realm
-        # if sat_type == "broker" and not realm.broker_complete_links:
-        #     nospare = [s for s in satellites if not s.spare]
-        #     # Should look over the list, not over
-        #     if len(nospare) != 0:
-        #         idx = i % len(nospare)
-        #         spares = [s for s in satellites if s.spare]
-        #         new_satellites = nospare[idx:]
-        #         new_satellites.extend([sat for sat in nospare[: -idx + 1]
-        #                                if sat in new_satellites])
-        #         satellites = new_satellites
-        #         satellites.extend(spares)
-
         satellite_string = "[%s] Dispatching %s satellite with order: " % (
             realm.get_name(), sat_type)
         for sat in satellites:
@@ -580,11 +565,6 @@ class Dispatcher:
 
             nb_cfg_prepared += 1
             realm.to_satellites_managed_by[sat_type][conf_uuid].append(sat)
-
-            # If we got a broker, the conf_id must be sent to only ONE
-            # broker in a classic realm.
-            if sat_type == "broker" and not realm.broker_complete_links:
-                break
 
         # I've got enough satellite, the next ones are considered spares
         if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):

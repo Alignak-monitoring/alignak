@@ -1167,16 +1167,17 @@ class Daemon(object):  # pylint: disable=R0902
         """
         had_some_objects = False
         for queue in self.modules_manager.get_external_from_queues():
-            while True:
-                try:
-                    obj = queue.get(block=False)
-                except (Empty, IOError, EOFError) as err:
-                    if not isinstance(err, Empty):
-                        logger.error("An external module queue got a problem '%s'", str(exp))
-                    break
-                else:
-                    had_some_objects = True
-                    self.add(obj)
+            if queue is not None:
+                while True:
+                    try:
+                        obj = queue.get(block=False)
+                    except (Empty, IOError, EOFError) as err:
+                        if not isinstance(err, Empty):
+                            logger.error("An external module queue got a problem '%s'", str(exp))
+                        break
+                    else:
+                        had_some_objects = True
+                        self.add(obj)
         return had_some_objects
 
     def setup_alignak_logger(self):

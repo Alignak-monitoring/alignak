@@ -69,7 +69,7 @@ class SatelliteLink(Item):
         'check_interval':  IntegerProp(default=60, fill_brok=['full_status']),
         'max_check_attempts': IntegerProp(default=3, fill_brok=['full_status']),
         'spare':              BoolProp(default=False, fill_brok=['full_status']),
-        'manage_sub_realms':  BoolProp(default=True, fill_brok=['full_status']),
+        'manage_sub_realms':  BoolProp(default=False, fill_brok=['full_status']),
         'manage_arbiters':    BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'modules':            ListProp(default=[''], to_send=True, split_on_coma=True),
         'polling_interval':   IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
@@ -595,6 +595,10 @@ class SatelliteLinks(Items):
             if realm is not None:
                 satlink.realm = realm.uuid
                 getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
+                # case SatelliteLink has manage_sub_realms
+                if getattr(satlink, 'manage_sub_realms', False):
+                    for r_uuid in realm.realm_members:
+                        getattr(realms[r_uuid], '%ss' % satlink.my_type).append(satlink.uuid)
             else:
                 err = "The %s %s got a unknown realm '%s'" % \
                       (satlink.__class__.my_type, satlink.get_name(), r_name)

@@ -266,8 +266,8 @@ class Alignak(BaseSatellite):
                 # pylint: disable=E1101
                 logger.set_human_format()
 
-            # Now We create our pollers and reactionners
-            for sat_type in ['pollers', 'reactionners']:
+            # Now We create our pollers, reactionners and brokers
+            for sat_type in ['pollers', 'reactionners', 'brokers']:
                 for sat_id in satellites[sat_type]:
                     # Must look if we already have it
                     sats = getattr(self, sat_type)
@@ -310,7 +310,7 @@ class Alignak(BaseSatellite):
             # we give sched it's conf
             self.sched.reset()
             self.sched.load_conf(self.conf)
-            self.sched.load_satellites(self.pollers, self.reactionners)
+            self.sched.load_satellites(self.pollers, self.reactionners, self.brokers)
 
             # We must update our Config dict macro with good value
             # from the config parameters
