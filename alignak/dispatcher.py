@@ -330,13 +330,13 @@ class Dispatcher:
             # We can put it idle, no active and wait_new_conf
             if len(id_to_delete) == len(cfg_ids):
                 satellite.active = False
-                logger.info("I ask %s to wait a new conf", satellite.get_name())
+                logger.info("I ask %s to wait for a new conf", satellite.get_name())
                 satellite.wait_new_conf()
             else:
                 # It is not fully idle, just less cfg
                 for r_id in id_to_delete:
-                    logger.info("I ask to remove configuration N%d from %s",
-                                r_id, satellite.get_name())
+                    logger.info("I ask %s to remove configuration %d",
+                                satellite.get_name(), r_id)
                     satellite.remove_from_conf(id)
 
     def get_scheduler_ordered_list(self, realm):
@@ -408,11 +408,11 @@ class Dispatcher:
 
             nb_conf = len(conf_to_dispatch)
             if nb_conf > 0:
-                logger.info('[%s] Prepare dispatching this realm', realm.get_name())
+                logger.info('[%s] Prepare dispatching for this realm', realm.get_name())
                 logger.info('[%s] Prepare dispatching %d/%d configurations',
                             realm.get_name(), nb_conf, len(realm.confs))
-                logger.info('[%s] Schedulers order: %s', realm.get_name(),
-                            ','.join([s.get_name() for s in scheds]))
+                logger.info('[%s] Dispatching schedulers ordered as: %s',
+                            realm.get_name(), ','.join([s.get_name() for s in scheds]))
 
             # prepare conf only for alive schedulers
             scheds = [s for s in scheds if s.alive]
@@ -441,10 +441,10 @@ class Dispatcher:
                             realm.to_satellites_managed_by[sat_type][cfg_id] = []
                         break
 
-                    logger.info('[%s] Prepare conf %s to scheduler %s',
+                    logger.info('[%s] Preparing configuration %s for the scheduler %s',
                                 realm.get_name(), conf.uuid, sched.get_name())
                     if not sched.need_conf:
-                        logger.info('[%s] The scheduler %s do not need conf, sorry',
+                        logger.info('[%s] The scheduler %s do not need any configuration, sorry',
                                     realm.get_name(), sched.get_name())
                         continue
 
@@ -502,7 +502,7 @@ class Dispatcher:
             logger.warning("All schedulers configurations are not dispatched, %d are missing",
                            nb_missed)
         else:
-            logger.info("OK, all schedulers configurations are dispatched :)")
+            logger.info("All schedulers configurations are dispatched :)")
 
         # Sched without conf in a dispatch ok are set to no need_conf
         # so they do not raise dispatch where no use
@@ -528,7 +528,7 @@ class Dispatcher:
             if sat.alive and sat.reachable:
                 satellites.append(sat)
 
-        satellite_string = "[%s] Dispatching %s satellite with order: " % (
+        satellite_string = "[%s] Dispatching %s satellites ordered as: " % (
             realm.get_name(), sat_type)
         for sat in satellites:
             satellite_string += '%s (spare:%s), ' % (
@@ -562,7 +562,7 @@ class Dispatcher:
 
         # I've got enough satellite, the next ones are considered spares
         if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
-            logger.info("[%s] OK, no more %s sent need", realm.get_name(), sat_type)
+            logger.info("[%s] OK, no more %s needed", realm.get_name(), sat_type)
             realm.to_satellites_need_dispatch[sat_type][conf_uuid] = False
 
     def dispatch(self):
@@ -578,29 +578,29 @@ class Dispatcher:
             if scheduler.is_sent:
                 continue
             t01 = time.time()
+            logger.info('Sending configuration to scheduler %s', scheduler.get_name())
             is_sent = scheduler.put_conf(scheduler.conf_package)
             logger.debug("Conf is sent in %d", time.time() - t01)
             if not is_sent:
-                logger.warning('[%s] Configuration send error to scheduler %s',
-                               scheduler.realm, scheduler.get_name())
+                logger.warning('Configuration sending error to scheduler %s', scheduler.get_name())
                 self.dispatch_ok = False
             else:
-                logger.info('[%s] Configuration send to scheduler %s',
-                            scheduler.realm, scheduler.get_name())
+                logger.info('Configuration sent to scheduler %s',
+                            scheduler.get_name())
                 scheduler.is_sent = True
         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
             for satellite in self.satellites:
                 if satellite.get_my_type() == sat_type:
                     if satellite.is_sent:
                         continue
-                    logger.info('[%s] Trying to send configuration to %s %s',
-                                satellite.get_name(), sat_type, satellite.get_name())
+                    logger.info('Sending configuration to %s %s', sat_type, satellite.get_name())
                     is_sent = satellite.put_conf(satellite.cfg)
                     satellite.is_sent = is_sent
                     if not is_sent:
+                        logger.warning('Configuration sending error to %s %s',
+                                       sat_type, satellite.get_name())
                         self.dispatch_ok = False
                         continue
                     satellite.active = True
 
-                    logger.info('Configuration sent to %s %s',
-                                sat_type, satellite.get_name())
+                    logger.info('Configuration sent to %s %s', sat_type, satellite.get_name())

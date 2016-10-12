@@ -95,11 +95,10 @@ class BaseModule(object):
     def __init__(self, mod_conf):
         """Instantiate a new module.
         There can be many instance of the same type.
-        'mod_conf' is module configuration object
-        for this new module instance.
+        'mod_conf' is the module configuration object for this new module instance.
         """
         self.myconf = mod_conf
-        self.name = mod_conf.get_name()
+        self.alias = mod_conf.get_name()
         # We can have sub modules
         self.modules = getattr(mod_conf, 'modules', [])
         self.props = mod_conf.properties.copy()
@@ -189,7 +188,7 @@ class BaseModule(object):
         try:
             self._main()
         except Exception as exp:
-            logger.error('[%s] %s', self.name, traceback.format_exc())
+            logger.error('[%s] %s', self.alias, traceback.format_exc())
             raise exp
 
     def start(self, http_daemon=None):  # pylint: disable=W0613
@@ -206,7 +205,7 @@ class BaseModule(object):
         if not self.is_external:
             return
         self.stop_process()
-        logger.info("Starting external process for instance %s", self.name)
+        logger.info("Starting external process for module %s", self.alias)
         proc = Process(target=self.start_module, args=())
 
         # Under windows we should not call start() on an object that got
@@ -221,7 +220,7 @@ class BaseModule(object):
         # We save the process data AFTER the fork()
         self.process = proc
         self.properties['process'] = proc  # TODO: temporary
-        logger.info("%s is now started ; pid=%d", self.name, proc.pid)
+        logger.info("%s is now started (pid=%d)", self.alias, proc.pid)
 
     def kill(self):
         """Sometime terminate() is not enough, we must "help"
@@ -246,12 +245,13 @@ class BaseModule(object):
         :return: None
         """
         if self.process:
-            logger.info("I'm stopping module %r (pid=%s)",
+            logger.info("I'm stopping module %r (pid=%d)",
                         self.get_name(), self.process.pid)
             self.process.terminate()
-            self.process.join(timeout=1)
+            # Wait for 10 seconds before killing the process abruptly
+            self.process.join(timeout=10)
             if self.process.is_alive():
-                logger.warning("%r is still alive normal kill, I help it to die",
+                logger.warning("%r is still alive after normal kill, I help it to die",
                                self.get_name())
                 self.kill()
                 self.process.join(1)
@@ -267,7 +267,7 @@ class BaseModule(object):
         :return: module name
         :rtype: str
         """
-        return self.name
+        return self.alias
 
     def has(self, prop):
         """The classic has: do we have a prop or not?
@@ -358,7 +358,7 @@ class BaseModule(object):
     def set_proctitle(self, name):
         """Wrapper for setproctitle method
 
-        :param name: module name
+        :param name: module alias
         :type name: str
         :return: None
         """
@@ -377,14 +377,16 @@ class BaseModule(object):
 
         :return: None
         """
-        self.set_proctitle(self.name)
-
+        self.set_proctitle(self.alias)
         self.set_signal_handler()
-        logger.info("[%s[%d]]: Now running..", self.name, os.getpid())
+
+        logger.info("Process for module %s is now running (pid=%d)", self.alias, os.getpid())
+
         # Will block here!
         self.main()
         self.do_stop()
-        logger.info("[%s]: exiting now..", self.name)
+
+        logger.info("Process for module %s is now exiting (pid=%d)", self.alias, os.getpid())
 
     # TODO: apparently some modules would uses "work" as the main method??
     work = _main

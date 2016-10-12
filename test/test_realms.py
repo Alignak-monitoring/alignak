@@ -72,7 +72,7 @@ class TestRealms(AlignakTest):
         # The following log line is not available in the test catched log, because too early
         # in the configuration load process
         # self.assert_any_log_match("WARNING: [Alignak] No realms defined, I add one as Default")
-        self.assert_any_log_match(re.escape("Prepare dispatching this realm"))
+        self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         # Only one realm in the configuration
         self.assertEqual(len(self.arbiter.conf.realms), 1)

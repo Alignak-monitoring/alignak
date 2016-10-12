@@ -264,7 +264,7 @@ class Daemon(object):  # pylint: disable=R0902
 
         # We will initialize the Manager() when we load modules
         # and be really forked()
-        self.manager = None
+        self.sync_manager = None
 
         os.umask(UMASK)
         self.set_exit_handler()
@@ -305,10 +305,10 @@ class Daemon(object):  # pylint: disable=R0902
         if self.http_daemon:
             self.http_daemon = None
 
-        if self.manager:
+        if self.sync_manager:
             logger.info("Shutting down manager...")
-            self.manager.shutdown()
-            self.manager = None
+            self.sync_manager.shutdown()
+            self.sync_manager = None
 
         # Maybe the modules manager is not even created!
         if getattr(self, 'modules_manager', None):
@@ -372,14 +372,15 @@ class Daemon(object):  # pylint: disable=R0902
                 break
         self.request_stop()
 
-    def do_load_modules(self, mod_confs):
+    def do_load_modules(self, modules):
         """Wrapper for calling load_and_init method of modules_manager attribute
 
+        :param modules: list of modules that should be loaded by the daemon
         :return: None
         """
         logger.info("Loading modules...")
 
-        self.modules_manager.load_and_init(mod_confs)
+        self.modules_manager.load_and_init(modules)
         if self.modules_manager.instances:
             logger.info("I correctly loaded my modules: [%s]",
                         ','.join([inst.get_name() for inst in self.modules_manager.instances]))
@@ -432,7 +433,7 @@ class Daemon(object):  # pylint: disable=R0902
 
         :return: None
         """
-        self.modules_manager = ModulesManager(self.name, self.manager,
+        self.modules_manager = ModulesManager(self.name, self.sync_manager,
                                               max_queue_size=getattr(self, 'max_queue_size', 0))
 
     def change_to_workdir(self):
@@ -699,11 +700,11 @@ class Daemon(object):  # pylint: disable=R0902
         else:
             self.write_pid()
 
-        logger.info("Creating manager...")
-        self.manager = self._create_manager()
+        logger.info("Creating synchronization manager...")
+        self.sync_manager = self._create_manager()
         logger.info("Created")
 
-        logger.info("Now starting http_daemon thread..")
+        logger.info("Starting http_daemon thread..")
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
         self.http_thread.daemon = True
         self.http_thread.start()

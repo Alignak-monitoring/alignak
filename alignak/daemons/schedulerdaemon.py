@@ -261,6 +261,8 @@ class Alignak(BaseSatellite):
 
             # Now We create our pollers, reactionners and brokers
             for sat_type in ['pollers', 'reactionners', 'brokers']:
+                if sat_type not in satellites:
+                    continue
                 for sat_id in satellites[sat_type]:
                     # Must look if we already have it
                     sats = getattr(self, sat_type)
@@ -280,7 +282,10 @@ class Alignak(BaseSatellite):
                     sats[sat_id]['uri'] = uri
                     sats[sat_id]['last_connection'] = 0
                     setattr(self, sat_type, sats)
-                logger.info("We have our %s: %s ", sat_type, satellites[sat_type])
+                logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
+                logger.info("We have our %s:", sat_type)
+                for daemon in satellites[sat_type].values():
+                    logger.info(" - %s ", daemon['name'])
 
             # First mix conf and override_conf to have our definitive conf
             for prop in self.override_conf:
@@ -292,10 +297,6 @@ class Alignak(BaseSatellite):
                 os.environ['TZ'] = self.conf.use_timezone
                 time.tzset()
 
-            if len(self.modules) != 0:
-                logger.debug("I've got %s modules", str(self.modules))
-
-            # TODO: if scheduler had previous modules instantiated it must clean them!
             self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")

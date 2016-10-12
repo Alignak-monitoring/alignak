@@ -427,7 +427,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         # create the input queue of this worker
         try:
-            queue = self.manager.Queue()
+            queue = self.sync_manager.Queue()
         # If we got no /dev/shm on linux-based system, we can got problem here.
         # Must raise with a good message
         except OSError, exp:
@@ -867,7 +867,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # We can open the Queue for fork AFTER
         self.q_by_mod['fork'] = {}
 
-        self.returns_queue = self.manager.Queue()
+        self.returns_queue = self.sync_manager.Queue()
 
         # For multiprocess things, we should not have
         # socket timeouts.
@@ -955,6 +955,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     # And then we connect to it :)
                     self.pynag_con_init(sched_id)
 
+            logger.debug("We have our schedulers: %s", self.schedulers)
+            logger.info("We have our schedulers:")
+            for daemon in self.schedulers.values():
+                logger.info(" - %s ", daemon['name'])
+
             # Now the limit part, 0 mean: number of cpu of this machine :)
             # if not available, use 4 (modern hardware)
             self.max_workers = g_conf['max_workers']
@@ -988,8 +993,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.info("[%s] Setting our timezone to %s", self.name, use_timezone)
                 os.environ['TZ'] = use_timezone
                 time.tzset()
-
-            logger.info("We have our schedulers: %s", str(self.schedulers))
 
             # Now manage modules
             # TODO: check how to better handle this with modules_manager..
