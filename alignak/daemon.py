@@ -126,7 +126,7 @@ except ImportError, exp:  # Like in nt system
         """
         return []
 
-from alignak.log import logger, setup_logger, get_logger_fds
+from alignak.log import setup_logger, get_logger_fds
 from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
