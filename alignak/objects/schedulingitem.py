@@ -1072,7 +1072,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         * dep.last_state_update < now - cls.cached_check_horizon (check of dependency is "old")
 
         :param ref_check: Check we want to get dependency from
-        :type ref_check:
+        :type ref_check: alignak.check.Check
         :param hosts: hosts objects, used for almost every operation
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used for almost every operation
@@ -1286,13 +1286,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.in_checking = (len(self.checks_in_progress) != 0)
 
     def remove_in_progress_notification(self, notif):
-        """Remove a notification and mark them as zombie
+        """
+        Remove a "master" notification and mark them as zombie
 
         :param notif: the notification to remove
         :type notif:
         :return: None
         """
-        if notif.uuid in self.notifications_in_progress:
+        if notif.uuid in self.notifications_in_progress and notif.command == 'VOID':
             notif.status = 'zombie'
             del self.notifications_in_progress[notif.uuid]
 
@@ -1423,7 +1424,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.actions.append(event_h)
 
     def check_for_flexible_downtime(self, timeperiods, downtimes, hosts, services):
-        """Enter in a dowtime if necessary and raise start notification
+        """Enter in a downtime if necessary and raise start notification
         When a non Ok state occurs we try to raise a flexible downtime.
 
         :param timeperiods: Timeperiods objects, used for downtime period
