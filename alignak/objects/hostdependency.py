@@ -261,6 +261,9 @@ class Hostdependencies(Items):
                     getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
 
+            if hostdep.host_name not in hosts or hostdep.dependent_host_name not in hosts:
+                continue
+
             hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
                                      hostdep.notification_failure_criteria,
                                      getattr(hostdep, 'dependency_period', ''),
