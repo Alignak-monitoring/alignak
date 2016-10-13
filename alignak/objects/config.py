@@ -827,11 +827,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for elt in params:
             elts = elt.split('=', 1)
             if len(elts) == 1:  # error, there is no = !
-                self.conf_is_correct = False
-                logger.error("[config] the parameter %s is malformed! (no = sign)", elts[0])
+                self.add_error("the parameter %s is malformed! (no = sign)" % elts[0])
             elif elts[1] == '':
-                self.conf_is_correct = False
-                logger.error("[config] the parameter %s is malformed! (no value after =)", elts[0])
+                self.add_error("the parameter %s is malformed! (no value after =)" % elts[0])
             else:
                 clean_p[elts[0]] = elts[1]
 
@@ -2078,15 +2076,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.conf_is_correct
         )
         valid = self.conf_is_correct
-        self.configuration_errors = []
-        self.configuration_warnings = []
 
         # Globally unmanaged parameters
         if not self.read_config_silent:
             logger.info('Checking global parameters...')
         if not self.check_error_on_hard_unmanaged_parameters():
             valid = False
-            logger.error("Check global parameters failed")
+            self.add_error("Check global parameters failed")
 
         for obj in ['hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
                     'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
