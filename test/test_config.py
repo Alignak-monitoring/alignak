@@ -350,6 +350,31 @@ class TestConfig(AlignakTest):
             )
         )
 
+    def test_broken_configuration_2(self):
+        """
+        Configuration is not correct because of a non-existing path
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/alignak_broken_2.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        # Error messages
+        self.assertEqual(len(self.configuration_errors), 2)
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[config] cannot open config dir 'cfg/config/not-existing-dir' for reading"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[config] cannot open config file 'cfg/config/resource.cfg' for reading: "
+                "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
+            )
+        )
+
     def test_bad_timeperiod(self):
         """
         This test bad timeperiod

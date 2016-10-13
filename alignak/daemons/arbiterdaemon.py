@@ -248,7 +248,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # REF: doc/alignak-conf-dispatching.png (1)
         buf = self.conf.read_config(self.config_files)
         raw_objects = self.conf.read_config_buf(buf)
-        logger.info("Loaded configuration files, state: %s", self.conf.conf_is_correct)
+        # Maybe conf is already invalid
+        if not self.conf.conf_is_correct:
+            err = "***> One or more problems was encountered while processing the config files..."
+            logger.error(err)
+            self.conf.show_errors()
+            sys.exit(err)
+
+        logger.info("Correctly loaded configuration files")
 
         # First we need to get arbiters and modules
         # so we can ask them for objects
@@ -307,8 +314,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
-            sys.exit("***> One or more problems was encountered "
-                     "while processing the config files...")
+            err = "***> One or more problems was encountered while processing the config files..."
+            logger.error(err)
+            self.conf.show_errors()
+            sys.exit(err)
 
         # Manage all post-conf modules
         self.hook_point('early_configuration')
