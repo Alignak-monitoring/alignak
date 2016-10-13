@@ -434,16 +434,9 @@ class Item(AlignakObject):
                 self.configuration_errors.append(msg)
                 state = False
 
-        # Log all previously sawn warnings
-        if self.configuration_warnings:
-            for msg in self.configuration_warnings:
-                logger.warning("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
-
         # Raise all previously sawn errors
         if self.configuration_errors:
             state = False
-            for msg in self.configuration_errors:
-                logger.error("*** CFG *** [%s::%s] %s", self.my_type, self.get_name(), msg)
 
         return state
 
