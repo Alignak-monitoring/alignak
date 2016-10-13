@@ -225,6 +225,8 @@ class Receiver(Satellite):
 
             g_conf = conf['global']
 
+            logger.debug("[%s] Sending us configuration %s", self.name, conf)
+
             # If we've got something in the schedulers, we do not want it anymore
             self.host_assoc = {}
             for sched_id in conf['schedulers']:
@@ -274,12 +276,14 @@ class Receiver(Satellite):
                     # And then we connect to it :)
                     self.pynag_con_init(sched_id)
 
-            logger.debug("[%s] Sending us configuration %s", self.name, conf)
+            logger.debug("We have our schedulers: %s", self.schedulers)
+            logger.info("We have our schedulers:")
+            for daemon in self.schedulers.values():
+                logger.info(" - %s ", daemon['name'])
 
             if not self.have_modules:
-                self.modules = mods = conf['global']['modules']
+                self.modules = conf['global']['modules']
                 self.have_modules = True
-                logger.info("We received modules %s ", mods)
 
                 self.do_load_modules(self.modules)
                 # and start external modules too

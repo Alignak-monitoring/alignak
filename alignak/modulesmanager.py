@@ -62,15 +62,17 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ModulesManager(object):
-    """This class is use to manage modules and call callback"""
+    """This class is used to manage modules and call callback"""
 
-    def __init__(self, modules_type, manager, max_queue_size=0):
+    def __init__(self, modules_type, sync_manager, max_queue_size=0):
         self.modules_type = modules_type
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
         self.max_queue_size = max_queue_size
-        self.manager = manager
+        self.sync_manager = sync_manager
+
+        logger.warning("Created a module manager for '%s'", self.modules_type)
 
     def set_modules(self, modules):
         """Setter for modules and allowed_type attributes
@@ -91,56 +93,73 @@ class ModulesManager(object):
         """
         self.max_queue_size = max_queue_size
 
-    def load_and_init(self, mod_confs):
-        """Import, instantiate & "init" the modules we have been requested
+    def load_and_init(self, modules):
+        """Import, instantiate & "init" the modules we manage
 
+        :param modules: list of the managed modules
         :return: None
         """
-        self.load(mod_confs)
+        self.load(modules)
         self.get_instances()
 
     @staticmethod
-    def find_module_properties_and_get_instance(module, mod_name):
+    def find_module_properties_and_get_instance(python_module, mod_name):
         """
         Get properties and get_instance of a module
 
-        :param module: module object
-        :type module: object
+        :param python_module: module object
+        :type python_module: object
         :param mod_name: Name of the module
         :type mod_name: str
         :return: None
         """
-        # Simple way to test if we have the required attributes
-        try:
-            module.properties   # pylint:disable=W0104
-            module.get_instance  # pylint:disable=W0104
-        except AttributeError:
-            pass
-        else:
-            # good module style
-            return
-        submod = importlib.import_module('.module', mod_name)
-        # old style:
-        module.properties = submod.properties
-        module.get_instance = submod.get_instance
+        logger.debug("Check Python module %s: %s, %s / %s",
+                     mod_name, python_module,
+                     getattr(python_module, 'properties'),
+                     getattr(python_module, 'get_instance'))
 
-    def load(self, mod_confs):
+        if hasattr(python_module, 'properties'):
+            logger.debug("Module %s defines its 'properties' as: %s",
+                         mod_name, getattr(python_module, 'properties'))
+        else:
+            logger.warning("Module %s is missing a 'properties' dictionary", mod_name)
+            raise AttributeError
+
+        if hasattr(python_module, 'get_instance') and \
+                callable(getattr(python_module, 'get_instance')):
+            logger.debug("Module %s defines its 'get_instance' as: %s",
+                         mod_name, getattr(python_module, 'get_instance'))
+        else:
+            logger.warning("Module %s is missing a 'get_instance' function", mod_name)
+            raise AttributeError
+
+        return
+
+    def load(self, modules):
+        """Load Python modules and check their usability
+
+        :param modules: list of the modules that must be loaded
+        :return:
         """
-        Try to import the requested modules ; put the imported modules in self.imported_modules.
-        """
-        # Now we want to find in theses modules the ones we are looking for
-        del self.modules_assoc[:]
-        for mod_conf in mod_confs:
+        self.modules_assoc = []
+        for module in modules:
+            logger.info("Importing Python module '%s' for %s",
+                        module.python_name, module.module_alias)
             try:
-                module = importlib.import_module(mod_conf.python_name)
-                self.find_module_properties_and_get_instance(module, mod_conf.python_name)
-                self.modules_assoc.append((mod_conf, module))
-            except ImportError:
-                logger.warning("Module %s (%s) can't be loaded, not found", mod_conf.python_name,
-                               mod_conf.module_alias)
-            except AttributeError:
+                python_module = importlib.import_module(module.python_name)
+                self.find_module_properties_and_get_instance(python_module, module.python_name)
+                self.modules_assoc.append((module, python_module))
+            except ImportError as exp:
+                logger.warning("Module %s (%s) can't be loaded, Python importation error",
+                               module.python_name, module.module_alias)
+                logger.exception("Exception: %s", exp)
+            except AttributeError as exp:
                 logger.warning("Module %s (%s) can't be loaded because attributes errors",
-                               mod_conf.python_name, mod_conf.module_alias)
+                               module.python_name, module.module_alias)
+                logger.exception("Exception: %s", exp)
+            else:
+                logger.info("Loaded Python module '%s' (%s)",
+                            module.python_name, module.module_alias)
 
     def try_instance_init(self, inst, late_start=False):
         """Try to "init" the given module instance.
@@ -164,7 +183,7 @@ class ModulesManager(object):
 
             # If it's an external, create/update Queues()
             if inst.is_external:
-                inst.create_queues(self.manager)
+                inst.create_queues(self.sync_manager)
 
             inst.init()
         except Exception, err:  # pylint: disable=W0703
@@ -209,6 +228,7 @@ class ModulesManager(object):
         :rtype: list
         """
         self.clear_instances()
+
         for (mod_conf, module) in self.modules_assoc:
             mod_conf.properties = module.properties.copy()
             try:
@@ -263,11 +283,11 @@ class ModulesManager(object):
         """
         # External instances need to be close before (process + queues)
         if inst.is_external:
-            logger.debug("Ask stop process for %s", inst.get_name())
+            logger.info("Request external process to stop for %s", inst.get_name())
             inst.stop_process()
-            logger.debug("Stop process done")
+            logger.info("External process stopped.")
 
-        inst.clear_queues(self.manager)
+        inst.clear_queues(self.sync_manager)
 
         # Then do not listen anymore about it
         self.instances.remove(inst)
@@ -285,7 +305,7 @@ class ModulesManager(object):
                     logger.error("The external module %s goes down unexpectedly!", inst.get_name())
                     logger.info("Setting the module %s to restart", inst.get_name())
                     # We clean its queues, they are no more useful
-                    inst.clear_queues(self.manager)
+                    inst.clear_queues(self.sync_manager)
                     self.to_restart.append(inst)
                     # Ok, no need to look at queue size now
                     continue
@@ -306,7 +326,7 @@ class ModulesManager(object):
                                  inst.get_name(), queue_size, self.max_queue_size)
                     logger.info("Setting the module %s to restart", inst.get_name())
                     # We clean its queues, they are no more useful
-                    inst.clear_queues(self.manager)
+                    inst.clear_queues(self.sync_manager)
                     self.to_restart.append(inst)
 
     def try_to_restart_deads(self):

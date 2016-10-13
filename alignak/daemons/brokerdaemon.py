@@ -471,6 +471,7 @@ class Broker(BaseSatellite):
                               statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 
             logger.debug("[%s] Sending us configuration %s", self.name, conf)
+
             # If we've got something in the schedulers, we do not
             # want it anymore
             # self.schedulers.clear()
@@ -509,7 +510,10 @@ class Broker(BaseSatellite):
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
-            logger.info("We have our schedulers: %s ", self.schedulers)
+            logger.debug("We have our schedulers: %s", self.schedulers)
+            logger.info("We have our schedulers:")
+            for daemon in self.schedulers.values():
+                logger.info(" - %s ", daemon['name'])
 
             # Now get arbiter
             for arb_id in conf['arbiters']:
@@ -540,7 +544,10 @@ class Broker(BaseSatellite):
 
                 # We do not connect to the arbiter. Connection hangs
 
-            logger.info("We have our arbiters: %s ", self.arbiters)
+            logger.debug("We have our arbiters: %s ", self.arbiters)
+            logger.info("We have our arbiters:")
+            for daemon in self.arbiters.values():
+                logger.info(" - %s ", daemon['name'])
 
             # Now for pollers
             for pol_id in conf['pollers']:
@@ -572,10 +579,10 @@ class Broker(BaseSatellite):
                 self.pollers[pol_id]['running_id'] = running_id
                 self.pollers[pol_id]['last_connection'] = 0
 
-    #                    #And we connect to it
-    #                    self.app.pynag_con_init(pol_id, 'poller')
-
-            logger.info("We have our pollers: %s", self.pollers)
+            logger.debug("We have our pollers: %s", self.pollers)
+            logger.info("We have our pollers:")
+            for daemon in self.pollers.values():
+                logger.info(" - %s ", daemon['name'])
 
             # Now reactionners
             for rea_id in conf['reactionners']:
@@ -607,10 +614,10 @@ class Broker(BaseSatellite):
                 self.reactionners[rea_id]['running_id'] = running_id
                 self.reactionners[rea_id]['last_connection'] = 0
 
-    #                    #And we connect to it
-    #                    self.app.pynag_con_init(rea_id, 'reactionner')
-
-            logger.info("We have our reactionners: %s", self.reactionners)
+            logger.debug("We have our reactionners: %s", self.reactionners)
+            logger.info("We have our reactionners:")
+            for daemon in self.reactionners.values():
+                logger.info(" - %s ", daemon['name'])
 
             # Now receivers
             for rec_id in conf['receivers']:
@@ -642,10 +649,14 @@ class Broker(BaseSatellite):
                 self.receivers[rec_id]['running_id'] = running_id
                 self.receivers[rec_id]['last_connection'] = 0
 
+            logger.debug("We have our receivers: %s", self.receivers)
+            logger.info("We have our receivers:")
+            for daemon in self.receivers.values():
+                logger.info(" - %s ", daemon['name'])
+
             if not self.have_modules:
-                self.modules = mods = conf['global']['modules']
+                self.modules = conf['global']['modules']
                 self.have_modules = True
-                logger.info("We received modules %s ", mods)
 
                 # Ok now start, or restart them!
                 # Set modules, init them and start external ones
