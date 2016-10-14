@@ -28,6 +28,7 @@ pip install --upgrade pip
 
 # install prog AND tests requirements :
 pip install -e .
+pip install alignak-setup
 pip install -r test/requirements.txt
 
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
