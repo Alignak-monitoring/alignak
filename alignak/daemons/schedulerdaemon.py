@@ -63,6 +63,7 @@ from multiprocessing import process
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
+from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
 from alignak.http.scheduler_interface import SchedulerInterface
@@ -334,6 +335,10 @@ class Alignak(BaseSatellite):
             # We clear our schedulers managed (it's us :) )
             # and set ourselves in it
             self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
+
+            # Create brok new conf
+            brok = Brok({'type': 'new_conf', 'data': {}})
+            self.sched.add_brok(brok)
 
     def what_i_managed(self):
         """Get my managed dict (instance id and push_flavor)
