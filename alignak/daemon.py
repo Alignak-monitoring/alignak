@@ -380,12 +380,21 @@ class Daemon(object):  # pylint: disable=R0902
         """
         logger.info("Loading modules...")
 
-        self.modules_manager.load_and_init(modules)
-        if self.modules_manager.instances:
-            logger.info("I correctly loaded my modules: [%s]",
-                        ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        loading_result = self.modules_manager.load_and_init(modules)
+        if loading_result:
+            if self.modules_manager.instances:
+                logger.info("I correctly loaded my modules: [%s]",
+                            ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+            else:
+                logger.info("I do not have any module")
         else:
-            logger.info("I do not have any module")
+            logger.error("Errors were encountered when checking and loading modules:")
+            for msg in self.modules_manager.configuration_errors:
+                logger.error(msg)
+
+        if len(self.modules_manager.configuration_warnings):
+            for msg in self.modules_manager.configuration_warning:
+                logger.warning(msg)
 
     def add(self, elt):
         """ Abstract method for adding brok

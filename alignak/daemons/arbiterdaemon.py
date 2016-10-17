@@ -252,10 +252,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if not self.conf.conf_is_correct:
             err = "***> One or more problems was encountered while processing the config files..."
             logger.error(err)
+            # Display found warnings and errors
             self.conf.show_errors()
             sys.exit(err)
 
-        logger.info("Correctly loaded configuration files")
+        logger.info("I correctly loaded the configuration files")
 
         # First we need to get arbiters and modules
         # so we can ask them for objects
@@ -316,6 +317,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if not self.conf.conf_is_correct:
             err = "***> One or more problems was encountered while processing the config files..."
             logger.error(err)
+            # Display found warnings and errors
             self.conf.show_errors()
             sys.exit(err)
 
@@ -379,25 +381,30 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Manage all post-conf modules
         self.hook_point('late_configuration')
 
-        # Correct conf?
+        # Configuration is correct?
         self.conf.is_correct()
 
-        # Maybe some elements where not wrong, so we must clean if possible
+        # Maybe some elements were not wrong, so we must clean if possible
         self.conf.clean()
 
-        # If the conf is not correct, we must get out now
-        # if not self.conf.conf_is_correct:
-        #    sys.exit("Configuration is incorrect, sorry, I bail out")
+        # If the conf is not correct, we must get out now (do not try to split the configuration)
+        if not self.conf.conf_is_correct:
+            err = "Configuration is incorrect, sorry, I bail out"
+            logger.error(err)
+            # Display found warnings and errors
+            self.conf.show_errors()
+            sys.exit(err)
 
         # REF: doc/alignak-conf-dispatching.png (2)
         logger.info("Splitting hosts and services into parts")
         self.confs = self.conf.cut_into_parts()
 
         # The conf can be incorrect here if the cut into parts see errors like
-        # a realm with hosts and not schedulers for it
+        # a realm with hosts and no schedulers for it
         if not self.conf.conf_is_correct:
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
+            # Display found warnings and errors
             self.conf.show_errors()
             sys.exit(err)
 
@@ -410,6 +417,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Exit if we are just here for config checking
         if self.verify_only:
             logger.info("Arbiter checked the configuration")
+            # Display found warnings and errors
+            self.conf.show_errors()
             sys.exit(0)
 
         if self.analyse:
@@ -434,6 +443,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.port = self.myself.port
 
         logger.info("Configuration Loaded")
+
+        # Still a last configuration check because some things may have changed when
+        # we prepared the configuration for sending
+        if not self.conf.conf_is_correct:
+            err = "Configuration is incorrect, sorry, I bail out"
+            logger.error(err)
+            # Display found warnings and errors
+            self.conf.show_errors()
+            sys.exit(err)
+
+        # Display found warnings and errors
+        self.conf.show_errors()
 
     def load_modules_configuration_objects(self, raw_objects):
         """Load configuration objects from arbiter modules

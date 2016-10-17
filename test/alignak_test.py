@@ -171,7 +171,10 @@ class AlignakTest(unittest.TestCase):
         """
         self.broks = {}
         self.schedulers = {}
-        self.brokers = []
+        self.brokers = {}
+        self.pollers = {}
+        self.receivers = {}
+        self.reactionners = {}
         self.arbiter = None
         self.conf_is_correct = False
         self.configuration_warnings = []
@@ -218,23 +221,39 @@ class AlignakTest(unittest.TestCase):
                 print(" - %s" % msg)
             raise
 
-        for broker in self.arbiter.conf.brokers:
-            self.brokers.append(broker)
-
         for arb in self.arbiter.conf.arbiters:
             if arb.get_name() == self.arbiter.config_name:
                 self.arbiter.myself = arb
         self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
         self.arbiter.dispatcher.prepare_dispatch()
 
+        # Build schedulers dictionary with the schedulers involved in the configuration
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched = Alignak([], False, False, True, '/tmp/scheduler.log')
-            # logger.setLevel('DEBUG')
             sched.load_modules_manager()
             sched.new_conf = scheduler.conf_package
             if sched.new_conf:
                 sched.setup_new_conf()
             self.schedulers[scheduler.scheduler_name] = sched
+
+        # Build pollers dictionary with the pollers involved in the configuration
+        for poller in self.arbiter.dispatcher.pollers:
+            self.pollers[poller.poller_name] = poller
+
+        # Build receivers dictionary with the receivers involved in the configuration
+        for receiver in self.arbiter.dispatcher.receivers:
+            self.receivers[receiver.receiver_name] = receiver
+
+        # Build reactionners dictionary with the reactionners involved in the configuration
+        for reactionner in self.arbiter.dispatcher.reactionners:
+            self.reactionners[reactionner.reactionner_name] = reactionner
+
+        # Build brokers dictionary with the brokers involved in the configuration
+        for broker in self.arbiter.dispatcher.brokers:
+            self.brokers[broker.broker_name] = broker
+
+        # No current need of such a dictionary for the other daemons types...
+        # but it may be easiy completed!
 
     def add(self, b):
         if isinstance(b, Brok):

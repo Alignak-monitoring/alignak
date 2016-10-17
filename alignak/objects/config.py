@@ -167,6 +167,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
 
+        # Inner objects cache file for Nagios CGI
         'object_cache_file':
             UnusedProp(text=NO_LONGER_USED),
 
@@ -179,6 +180,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'temp_file':
             UnusedProp(text='Temporary files are not used in the alignak architecture. Skipping'),
 
+        # Inner retention self created module parameter
         'status_file':
             UnusedProp(text=NO_LONGER_USED),
 
@@ -203,23 +205,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'enable_event_handlers':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
-        # Inner simple log self created module parameter
+        # Inner log self created module parameter
+        'log_file':
+            UnusedProp(text=NO_LONGER_USED),
         'log_rotation_method':
             CharProp(default='d'),
-
-        # Inner simple log self created module parameter
         'log_archive_path':
-            StringProp(default='/usr/local/alignak/var/archives'),
+            StringProp(default='/usr/local/alignak/var/log/archives'),
 
+        # Inner external commands self created module parameter
         'check_external_commands':
             BoolProp(default=True),
-
         'command_check_interval':
             UnusedProp(text='another value than look always the file is useless, so we fix it.'),
-
         'command_file':
             StringProp(default=''),
-
         'external_command_buffer_slots':
             UnusedProp(text='We do not limit the external command slot.'),
 
@@ -1217,9 +1217,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                'spare': '0'})
             self.arbiters = ArbiterLinks([arb])
 
-        # Should look at hacking command_file module first
-        self.hack_old_nagios_parameters_for_arbiter()
-
         # First fill default
         self.arbiters.fill_default()
         self.modules.fill_default()
@@ -1775,41 +1772,41 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                  'manage_arbiters': '1'})
             self.brokers = BrokerLinks([broker])
 
-    def got_broker_module_type_defined(self, python_name):
+    def got_broker_module_type_defined(self, module_type):
         """Check if a module type is defined in one of the brokers
 
-        :param python_name: python name of module to search
-        :type python_name: str
+        :param module_type: module type to search for
+        :type module_type: str
         :return: True if mod_type is found else False
         :rtype: bool
         """
         for broker in self.brokers:
             for module in broker.modules:
-                if hasattr(module, 'python_name') and module.python_name == python_name:
+                if module.is_a_module(module_type):
                     return True
         return False
 
-    def got_scheduler_module_type_defined(self, python_name):
+    def got_scheduler_module_type_defined(self, module_type):
         """Check if a module type is defined in one of the schedulers
 
-        :param python_name: python name of module to search
-        :type python_name: str
+        :param module_type: module type to search for
+        :type module_type: str
         :return: True if mod_type is found else False
         :rtype: bool
         TODO: Factorize it with got_broker_module_type_defined
         """
         for scheduler in self.schedulers:
             for module in scheduler.modules:
-                if hasattr(module, 'python_name') and module.python_name == python_name:
+                if module.is_a_module(module_type):
                     return True
         return False
 
-    def got_arbiter_module_type_defined(self, python_name):
+    def got_arbiter_module_type_defined(self, module_type):
         """Check if a module type is defined in one of the arbiters
         Also check the module_alias
 
-        :param python_name: python name of module to search
-        :type python_name: str
+        :param module_type: module type to search for
+        :type module_type: str
         :return: True if mod_type is found else False
         :rtype: bool
         TODO: Factorize it with got_broker_module_type_defined:
@@ -1822,7 +1819,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # Ok, now look in modules...
                 for mod in self.modules:
                     # try to see if this module is the good type
-                    if getattr(mod, 'python_name', '').strip() == python_name.strip():
+                    if getattr(mod, 'python_name', '').strip() == module_type.strip():
                         # if so, the good name?
                         if getattr(mod, 'module_alias', '').strip() == module:
                             return True
@@ -1866,152 +1863,124 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 bp_item.child_dependencies.add(item.uuid)
 
     def hack_old_nagios_parameters(self):
-        """ Create some 'modules' from all nagios parameters if they are set and
-        the modules are not created
+        """ Check if modules exist for some of the old Nagios parameters.
+
+        If no module of the required type is present, it alerts the user that the parameters will
+        be ignored and the functions will be disabled, else it encourages the user to set the
+        correct parameters in the installed modules.
 
         :return: None
         """
-        # We list all modules we will add to brokers
-        mod_to_add = []
-        mod_to_add_to_schedulers = []
-
         # For status_dat
-        if (hasattr(self, 'status_file') and
-                self.status_file != '' and
-                hasattr(self, 'object_cache_file')):
-            # Ok, the user put such a value, we must look
-            # if he forget to put a module for Brokers
-            got_status_dat_module = self.got_broker_module_type_defined('status_dat')
-
-            # We need to create the module on the fly?
-            if not got_status_dat_module:
-                data = {'object_cache_file': self.object_cache_file,
-                        'status_file': self.status_file,
-                        'module_alias': 'Status-Dat-Autogenerated',
-                        'python_name': 'status_dat'}
-                mod = Module(data)
-                mod.status_update_interval = getattr(self, 'status_update_interval', 15)
-                mod_to_add.append(mod)
+        if hasattr(self, 'status_file') and self.status_file != '' and \
+                hasattr(self, 'object_cache_file') and self.object_cache_file != '':
+            # Ok, the user wants retention, search for such a module
+            if not self.got_broker_module_type_defined('retention'):
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
+                      "external module such as 'retention' but I did not found one!" % \
+                      ('status_file', self.status_file,
+                       'object_cache_file', self.object_cache_file)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'retention' module " \
+                      "as expected." % \
+                      ('status_file', self.status_file,
+                       'object_cache_file', self.object_cache_file)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
         # Now the log_file
         if hasattr(self, 'log_file') and self.log_file != '':
-            # Ok, the user put such a value, we must look
-            # if he forget to put a module for Brokers
-            got_simple_log_module = self.got_broker_module_type_defined('simple_log')
-
-            # We need to create the module on the fly?
-            if not got_simple_log_module:
-                data = {'python_name': 'simple_log', 'path': self.log_file,
-                        'archive_path': self.log_archive_path,
-                        'module_alias': 'Simple-log-Autogenerated'}
-                mod = Module(data)
-                mod_to_add.append(mod)
+            # Ok, the user wants some monitoring logs
+            if not self.got_broker_module_type_defined('logs'):
+                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
+                      "such as 'logs' but I did not found one!" % \
+                      ('log_file', self.log_file)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'logs' module " \
+                      "as expected." % \
+                      ('log_file', self.log_file)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
         # Now the syslog facility
-        if self.use_syslog:
+        if hasattr(self, 'use_syslog') and self.use_syslog:
             # Ok, the user want a syslog logging, why not after all
-            got_syslog_module = self.got_broker_module_type_defined('syslog')
+            if not self.got_broker_module_type_defined('logs'):
+                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
+                      "such as 'logs' but I did not found one!" % \
+                      ('use_syslog', self.use_syslog)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'logs' module " \
+                      "as expected." % \
+                      ('use_syslog', self.use_syslog)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
-            # We need to create the module on the fly?
-            if not got_syslog_module:
-                data = {'python_name': 'syslog',
-                        'module_alias': 'Syslog-Autogenerated'}
-                mod = Module(data)
-                mod_to_add.append(mod)
-
-        # Now the service_perfdata module
-        if self.service_perfdata_file != '':
-            # Ok, we've got a path for a service perfdata file
-            got_service_perfdata_module = self.got_broker_module_type_defined('service_perfdata')
-
-            # We need to create the module on the fly?
-            if not got_service_perfdata_module:
-                data = {'python_name': 'service_perfdata',
-                        'module_alias': 'Service-Perfdata-Autogenerated',
-                        'path': self.service_perfdata_file,
-                        'mode': self.service_perfdata_file_mode,
-                        'template': self.service_perfdata_file_template}
-                mod = Module(data)
-                mod_to_add.append(mod)
+        # Now the host_perfdata or service_perfdata module
+        if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file != '' or \
+                hasattr(self, 'host_perfdata_file') and self.host_perfdata_file != '':
+            # Ok, the user wants performance data, search for such a module
+            if not self.got_broker_module_type_defined('perfdata'):
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
+                      "external module such as 'retention' but I did not found one!" % \
+                      ('host_perfdata_file', self.host_perfdata_file,
+                       'service_perfdata_file', self.service_perfdata_file)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'retention' module " \
+                      "as expected." % \
+                      ('host_perfdata_file', self.host_perfdata_file,
+                       'service_perfdata_file', self.service_perfdata_file)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
         # Now the old retention file module
-        if self.state_retention_file != '' and self.retention_update_interval != 0:
-            # Ok, we've got a old retention file
-            got_retention_file_module = \
-                self.got_scheduler_module_type_defined('nagios_retention_file')
+        if hasattr(self, 'state_retention_file') and self.state_retention_file != '' and \
+                hasattr(self, 'retention_update_interval') and self.retention_update_interval != 0:
+            # Ok, the user wants livestate data retention, search for such a module
+            if not self.got_scheduler_module_type_defined('retention'):
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
+                      "external module such as 'retention' but I did not found one!" % \
+                      ('state_retention_file', self.state_retention_file,
+                       'retention_update_interval', self.retention_update_interval)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'retention' module " \
+                      "as expected." % \
+                      ('state_retention_file', self.state_retention_file,
+                       'retention_update_interval', self.retention_update_interval)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
-            # We need to create the module on the fly?
-            if not got_retention_file_module:
-                data = {'python_name': 'nagios_retention_file',
-                        'module_alias': 'Nagios-Retention-File-Autogenerated',
-                        'path': self.state_retention_file}
-                mod = Module(data)
-                mod_to_add_to_schedulers.append(mod)
-
-        # Now the host_perfdata module
-        if self.host_perfdata_file != '':
-            # Ok, we've got a path for a host perfdata file
-            got_host_perfdata_module = self.got_broker_module_type_defined('host_perfdata')
-
-            # We need to create the module on the fly?
-            if not got_host_perfdata_module:
-                data = {'python_name': 'host_perfdata',
-                        'module_alias': 'Host-Perfdata-Autogenerated',
-                        'path': self.host_perfdata_file, 'mode': self.host_perfdata_file_mode,
-                        'template': self.host_perfdata_file_template}
-                mod = Module(data)
-                mod_to_add.append(mod)
-
-        # We add them to the brokers if we need it
-        if mod_to_add != []:
-            logger.warning("I autogenerated some Broker modules, please look at your configuration")
-            for module in mod_to_add:
-                logger.warning("The module %s is autogenerated", module.module_alias)
-                for broker in self.brokers:
-                    broker.modules.append(module)
-
-        # Then for schedulers
-        if mod_to_add_to_schedulers != []:
-            logger.warning("I autogenerated some Scheduler modules, "
-                           "please look at your configuration")
-            for module in mod_to_add_to_schedulers:
-                logger.warning("The module %s is autogenerated", module.module_alias)
-                for scheduler in self.schedulers:
-                    scheduler.modules.append(module)
-
-    def hack_old_nagios_parameters_for_arbiter(self):
-        """ Create some 'modules' from all nagios parameters if they are set and
-        the modules are not created
-        This one is only for arbiter
-
-        :return: None
-        TODO: Factorize with hack_old_nagios_parameters"""
-        # We list all modules we will add to arbiters
-        mod_to_add = []
-
-        # For command_file
-        if getattr(self, 'command_file', '') != '':
-            # Ok, the user put such a value, we must look
-            # if he forget to put a module for arbiters
-            got_named_pipe_module = self.got_arbiter_module_type_defined('named_pipe')
-
-            # We need to create the module on the fly?
-            if not got_named_pipe_module:
-                data = {'command_file': self.command_file,
-                        'module_alias': 'NamedPipe-Autogenerated',
-                        'python_name': 'named_pipe'}
-                mod = Module(data)
-                mod_to_add.append((mod, data))
-
-        # We add them to the brokers if we need it
-        if mod_to_add != []:
-            logger.warning("I autogenerated some Arbiter modules, "
-                           "please look at your configuration")
-            for (mod, data) in mod_to_add:
-                logger.warning("Module %s was autogenerated", data['module_alias'])
-                for arb in self.arbiters:
-                    arb.modules = getattr(arb, 'modules', []) + [data['module_alias']]
-                self.modules.add_item(mod)
+        # Now the command_file
+        if hasattr(self, 'command_file') and self.command_file != '':
+            # Ok, the user wants external commands file, search for such a module
+            if not self.got_arbiter_module_type_defined('external_commands'):
+                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
+                      "such as 'logs' but I did not found one!" % \
+                      ('command_file', self.command_file)
+                logger.error(msg)
+                self.configuration_errors.append(msg)
+            else:
+                msg = "Your configuration parameters '%s = %s' are deprecated " \
+                      "and will be ignored. Please configure your external 'logs' module " \
+                      "as expected." % \
+                      ('command_file', self.command_file)
+                logger.warning(msg)
+                self.configuration_warnings.append(msg)
 
     def propagate_timezone_option(self):
         """Set our timezone value and give it too to unset satellites
@@ -2196,6 +2165,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_error(err)
             valid = False
 
+        if self.configuration_errors and len(self.configuration_errors):
+            valid = False
+            logger.error("********** Configuration errors:")
+            for msg in self.configuration_errors:
+                logger.error(msg)
+
+        # If configuration error messages exist, then the configuration is not valid
         self.conf_is_correct = valid
 
     def explode_global_conf(self):
@@ -2246,11 +2222,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return:  None
         """
-        if self.configuration_warnings:
+        if self.configuration_warnings and len(self.configuration_warnings):
             logger.info("Configuration warnings:")
             for msg in self.configuration_warnings:
                 logger.info(msg)
-        if self.configuration_errors:
+        if self.configuration_errors and len(self.configuration_errors):
             logger.info("Configuration errors:")
             for msg in self.configuration_errors:
                 logger.info(msg)

@@ -58,6 +58,9 @@ import importlib
 
 from alignak.basemodule import BaseModule
 
+# Initialization test period
+MODULE_INIT_PERIOD = 5
+
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
@@ -72,7 +75,13 @@ class ModulesManager(object):
         self.max_queue_size = max_queue_size
         self.sync_manager = sync_manager
 
-        logger.warning("Created a module manager for '%s'", self.modules_type)
+        # By default the modules configuration is correct and the
+        # warnings and errors lists are empty
+        self.configuration_is_correct = True
+        self.configuration_warnings = []
+        self.configuration_errors = []
+
+        logger.debug("Created a module manager for '%s'", self.modules_type)
 
     def set_modules(self, modules):
         """Setter for modules and allowed_type attributes
@@ -102,38 +111,7 @@ class ModulesManager(object):
         self.load(modules)
         self.get_instances()
 
-    @staticmethod
-    def find_module_properties_and_get_instance(python_module, mod_name):
-        """
-        Get properties and get_instance of a module
-
-        :param python_module: module object
-        :type python_module: object
-        :param mod_name: Name of the module
-        :type mod_name: str
-        :return: None
-        """
-        logger.debug("Check Python module %s: %s, %s / %s",
-                     mod_name, python_module,
-                     getattr(python_module, 'properties'),
-                     getattr(python_module, 'get_instance'))
-
-        if hasattr(python_module, 'properties'):
-            logger.debug("Module %s defines its 'properties' as: %s",
-                         mod_name, getattr(python_module, 'properties'))
-        else:
-            logger.warning("Module %s is missing a 'properties' dictionary", mod_name)
-            raise AttributeError
-
-        if hasattr(python_module, 'get_instance') and \
-                callable(getattr(python_module, 'get_instance')):
-            logger.debug("Module %s defines its 'get_instance' as: %s",
-                         mod_name, getattr(python_module, 'get_instance'))
-        else:
-            logger.warning("Module %s is missing a 'get_instance' function", mod_name)
-            raise AttributeError
-
-        return
+        return len(self.configuration_errors) == 0
 
     def load(self, modules):
         """Load Python modules and check their usability
@@ -143,58 +121,85 @@ class ModulesManager(object):
         """
         self.modules_assoc = []
         for module in modules:
-            logger.info("Importing Python module '%s' for %s",
+            logger.info("Importing Python module '%s' for %s...",
                         module.python_name, module.module_alias)
             try:
                 python_module = importlib.import_module(module.python_name)
-                self.find_module_properties_and_get_instance(python_module, module.python_name)
+
+                # Check existing module properties
+                # Todo: check all mandatory properties
+                if not hasattr(python_module, 'properties'):
+                    self.configuration_errors.append(
+                        "Module %s is missing a 'properties' dictionary" % module.python_name
+                    )
+                    raise AttributeError
+                logger.info("Module properties: %s", getattr(python_module, 'properties'))
+
+                # Check existing module get_instance method
+                if not hasattr(python_module, 'get_instance') or \
+                        not callable(getattr(python_module, 'get_instance')):
+                    self.configuration_errors.append(
+                        "Module %s is missing a 'get_instance' function" % module.python_name
+                    )
+                    raise AttributeError
+
                 self.modules_assoc.append((module, python_module))
+                logger.info("Imported '%s' for %s", module.python_name, module.module_alias)
             except ImportError as exp:
-                logger.warning("Module %s (%s) can't be loaded, Python importation error",
-                               module.python_name, module.module_alias)
-                logger.exception("Exception: %s", exp)
-            except AttributeError as exp:
-                logger.warning("Module %s (%s) can't be loaded because attributes errors",
-                               module.python_name, module.module_alias)
-                logger.exception("Exception: %s", exp)
+                self.configuration_errors.append(
+                    "Module %s (%s) can't be loaded, Python importation error: %s" %
+                    (module.python_name, module.module_alias, str(exp))
+                )
+            except AttributeError:
+                self.configuration_errors.append(
+                    "Module %s (%s) can't be loaded, module configuration" %
+                    (module.python_name, module.module_alias)
+                )
             else:
                 logger.info("Loaded Python module '%s' (%s)",
                             module.python_name, module.module_alias)
 
-    def try_instance_init(self, inst, late_start=False):
-        """Try to "init" the given module instance.
+    def try_instance_init(self, instance, late_start=False):
+        """Try to "initialize" the given module instance.
 
-        :param inst: instance to init
-        :type inst: object
+        :param instance: instance to init
+        :type instance: object
         :param late_start: If late_start, don't look for last_init_try
         :type late_start: bool
         :return: True on successful init. False if instance init method raised any Exception.
         :rtype: bool
         """
+        result = False
         try:
-            logger.info("Trying to init module: %s", inst.get_name())
-            inst.init_try += 1
+            logger.info("Trying to initialize module: %s", instance.get_name())
+            instance.init_try += 1
             # Maybe it's a retry
-            if not late_start and inst.init_try > 1:
-                # Do not try until 5 sec, or it's too loopy
-                if inst.last_init_try > time.time() - 5:
+            if not late_start and instance.init_try > 1:
+                # Do not try until too frequently, or it's too loopy
+                if instance.last_init_try > time.time() - MODULE_INIT_PERIOD:
                     return False
-            inst.last_init_try = time.time()
+            instance.last_init_try = time.time()
 
-            # If it's an external, create/update Queues()
-            if inst.is_external:
-                inst.create_queues(self.sync_manager)
+            # If it's an external module, create/update Queues()
+            if instance.is_external:
+                instance.create_queues(self.sync_manager)
 
-            inst.init()
-        except Exception, err:  # pylint: disable=W0703
-            logger.error("The instance %s raised an exception %s, I remove it!",
-                         inst.get_name(), str(err))
+            # The module instance init function says if initialization is ok
+            result = instance.init()
+        except Exception as exp:  # pylint: disable=W0703
+            self.configuration_errors.append(
+                "The module instance %s raised an exception on initialization: %s, I remove it!" %
+                (instance.get_name(), str(exp))
+            )
+            logger.error("The instance %s raised an exception on initialization: %s, I remove it!",
+                         instance.get_name(), str(exp))
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
-            logger.error("Back trace of this remove: %s", output.getvalue())
+            logger.error("Traceback of the exception: %s", output.getvalue())
             output.close()
             return False
-        return True
+
+        return result
 
     def clear_instances(self, insts=None):
         """Request to "remove" the given instances list or all if not provided
@@ -232,25 +237,39 @@ class ModulesManager(object):
         for (mod_conf, module) in self.modules_assoc:
             mod_conf.properties = module.properties.copy()
             try:
-                inst = module.get_instance(mod_conf)
-                if not isinstance(inst, BaseModule):
-                    raise TypeError('Returned instance is not of type BaseModule (%s) !'
-                                    % type(inst))
-            except Exception as err:  # pylint: disable=W0703
-                logger.error("The module %s raised an exception %s, I remove it! traceback=%s",
-                             mod_conf.get_name(), err, traceback.format_exc())
-            else:
-                # Give the module the data to which module it is load from
-                inst.set_loaded_into(self.modules_type)
-                self.instances.append(inst)
+                instance = module.get_instance(mod_conf)
+                if not isinstance(instance, BaseModule):
+                    self.configuration_errors.append(
+                        "Module %s instance is not a BaseModule instance: %s" %
+                        (module.module_alias, type(instance))
+                    )
 
-        for inst in self.instances:
-            # External are not init now, but only when they are started
-            if not inst.is_external and not self.try_instance_init(inst):
+                if instance.modules and len(instance.modules) > 0:
+                    self.configuration_warnings.append(
+                        "Module %s instance defines some sub-modules. "
+                        "This feature is not currently supported" % (module.module_alias)
+                    )
+                    raise AttributeError
+            except Exception as exp:  # pylint: disable=W0703
+                logger.error("The module %s raised an exception on loading, I remove it!",
+                             mod_conf.get_name())
+                logger.exception("Exception: %s", exp)
+                self.configuration_errors.append(
+                    "The module %s raised an exception on loading: %s, I remove it!" %
+                    (module.module_alias, str(exp))
+                )
+            else:
+                # Give the module the data to which daemon/module it is loaded into
+                instance.set_loaded_into(self.modules_type)
+                self.instances.append(instance)
+
+        for instance in self.instances:
+            # External instances are not initialized now, but only when they are started
+            if not instance.is_external and not self.try_instance_init(instance):
                 # If the init failed, we put in in the restart queue
-                logger.warning("The module '%s' failed to init, I will try to restart it later",
-                               inst.get_name())
-                self.to_restart.append(inst)
+                logger.warning("The module '%s' failed to initialize, "
+                               "I will try to restart it later", instance.get_name())
+                self.to_restart.append(instance)
 
         return self.instances
 
@@ -293,16 +312,16 @@ class ModulesManager(object):
         self.instances.remove(inst)
 
     def check_alive_instances(self):
-        """Check alive isntances.
-        If not, log error and  try to restart it
+        """Check alive instances.
+        If not, log error and try to restart it
 
         :return: None
         """
         # Only for external
         for inst in self.instances:
             if inst not in self.to_restart:
-                if inst.is_external and not inst.process.is_alive():
-                    logger.error("The external module %s goes down unexpectedly!", inst.get_name())
+                if inst.is_external and inst.process is not None and not inst.process.is_alive():
+                    logger.error("The external module %s died unexpectedly!", inst.get_name())
                     logger.info("Setting the module %s to restart", inst.get_name())
                     # We clean its queues, they are no more useful
                     inst.clear_queues(self.sync_manager)

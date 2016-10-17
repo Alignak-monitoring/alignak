@@ -70,6 +70,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 # pylint: disable=C0103
 properties = {
     # name of the module type ; to distinguish between them:
+    # retention, logs, configuration, livestate, ...
     'type': None,
 
     # is the module "external" (external means here a daemon module)?
@@ -99,6 +100,7 @@ class BaseModule(object):
         """
         self.myconf = mod_conf
         self.alias = mod_conf.get_name()
+        # Todo: disabled feature
         # We can have sub modules
         self.modules = getattr(mod_conf, 'modules', [])
         self.props = mod_conf.properties.copy()
@@ -119,14 +121,15 @@ class BaseModule(object):
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
-    def init(self):
+    def init(self):  # pylint: disable=R0201
         """Handle this module "post" init ; just before it'll be started.
         Like just open necessaries file(s), database(s),
         or whatever the module will need.
 
-        :return: None
+        :return: True / False according to initialization succeeds or not
+        :rtype: bool
         """
-        pass
+        return True
 
     def set_loaded_into(self, daemon_name):
         """Setter for loaded_into attribute
@@ -205,7 +208,7 @@ class BaseModule(object):
         if not self.is_external:
             return
         self.stop_process()
-        logger.info("Starting external process for module %s", self.alias)
+        logger.info("Starting external process for module %s...", self.alias)
         proc = Process(target=self.start_module, args=())
 
         # Under windows we should not call start() on an object that got
@@ -229,6 +232,8 @@ class BaseModule(object):
         :return: None
         """
 
+        logger.info("Killing external module (pid=%d) for module %s...",
+                    self.process.pid, self.alias)
         if os.name == 'nt':
             self.process.terminate()
         else:
@@ -238,6 +243,7 @@ class BaseModule(object):
             # You do not let me another choice guy...
             if self.process.is_alive():
                 os.kill(self.process.pid, signal.SIGKILL)
+            logger.info("External module killed")
 
     def stop_process(self):
         """Request the module process to stop and release it

@@ -10,6 +10,7 @@ pylint==1.5.4
 pep8==1.5.7
 pep257
 freezegun
--e git+https://github.com/Alignak-monitoring/alignak-module-example.git@saved#egg=alignak-module-example
+alignak_setup
+-e git+https://github.com/Alignak-monitoring/alignak-module-example.git#egg=alignak-module-example
 ordereddict==1.1
 requests_mock
