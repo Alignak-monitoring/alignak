@@ -76,6 +76,8 @@ class Brok(object):
 
     - program_status
     - clean_all_my_instance_id
+
+    - new_conf
     """
     my_type = 'brok'
 
