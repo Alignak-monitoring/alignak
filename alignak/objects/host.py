@@ -567,15 +567,38 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             last_time_non_up = 0
         return last_time_non_up
 
+    def raise_check_result(self):
+        """Raise ACTIVE CHECK RESULT entry
+        Example : "ACTIVE HOST CHECK: server;DOWN;HARD;1;I don't know what to say..."
+
+        :return: None
+        """
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        brok = make_monitoring_log(
+            log_level, 'ACTIVE HOST CHECK: %s;%s;%s;%d;%s' % (
+                self.get_name(), self.state, self.state_type, self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
+
     def raise_alert_log_entry(self):
-        """Raise HOST ALERT entry (critical level)
+        """Raise HOST ALERT entry
         Format is : "HOST ALERT: *get_name()*;*state*;*state_type*;*attempt*;*output*"
         Example : "HOST ALERT: server;DOWN;HARD;1;I don't know what to say..."
 
         :return: None
         """
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
         brok = make_monitoring_log(
-            'critical', 'HOST ALERT: %s;%s;%s;%d;%s' % (
+            log_level, 'HOST ALERT: %s;%s;%s;%d;%s' % (
                 self.get_name(), self.state, self.state_type, self.attempt, self.output
             )
         )
@@ -588,9 +611,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
         if self.__class__.log_initial_states:
             brok = make_monitoring_log(
-                'info', 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
+                log_level, 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
                     self.get_name(), self.state, self.state_type, self.attempt, self.output
                 )
             )
@@ -626,6 +654,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
+        if not self.__class__.log_notifications:
+            return
+
+        log_level = 'info'
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
                           'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
@@ -633,13 +665,17 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
-        if self.__class__.log_notifications:
-            brok = make_monitoring_log(
-                'critical', "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (
-                    contact.get_name(), self.get_name(), state, command.get_name(), self.output
-                )
+            if self.state == 'UNREACHABLE':
+                log_level = 'warning'
+            if self.state == 'DOWN':
+                log_level = 'error'
+
+        brok = make_monitoring_log(
+            log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (
+                contact.get_name(), self.get_name(), state, command.get_name(), self.output
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)
@@ -651,13 +687,20 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            brok = make_monitoring_log(
-                'critical', "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (
-                    self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
-                )
+        if not self.__class__.log_event_handlers:
+            return
+
+        log_level = 'info'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (
+                self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_snapshot_log_entry(self, command):
         """Raise HOST SNAPSHOT entry (critical level)
@@ -669,13 +712,20 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            brok = make_monitoring_log(
-                'critical', "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (
-                    self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
-                )
+        if not self.__class__.log_snapshots:
+            return
+
+        log_level = 'info'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (
+                self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise HOST FLAPPING ALERT START entry (critical level)
@@ -692,11 +742,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type threshold: float
         :return: None
         """
+        if not self.__class__.log_flappings:
+            return
+
         brok = make_monitoring_log(
-            'critical', "HOST FLAPPING ALERT: %s;STARTED; "
-                        "Host appears to have started flapping "
-                        "(%.1f%% change >= %.1f%% threshold)" %
-                        (self.get_name(), change_ratio, threshold)
+            'info', "HOST FLAPPING ALERT: %s;STARTED; Host appears to have started flapping "
+                    "(%.1f%% change >= %.1f%% threshold)" %
+                    (self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -715,11 +767,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type threshold: float
         :return: None
         """
+        if not self.__class__.log_flappings:
+            return
+
         brok = make_monitoring_log(
-            'critical', "HOST FLAPPING ALERT: %s;STOPPED; "
-                        "Host appears to have stopped flapping "
-                        "(%.1f%% change < %.1f%% threshold)" %
-                        (self.get_name(), change_ratio, threshold)
+            'info', "HOST FLAPPING ALERT: %s;STOPPED; Host appears to have stopped flapping "
+                    "(%.1f%% change < %.1f%% threshold)" %
+                    (self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -746,8 +800,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "HOST DOWNTIME ALERT: %s;STARTED; "
-                        "Host has entered a period of scheduled downtime" % (self.get_name())
+            'info', "HOST DOWNTIME ALERT: %s;STARTED; "
+                    "Host has entered a period of scheduled downtime" % (self.get_name())
         )
         self.broks.append(brok)
 
@@ -761,8 +815,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "HOST DOWNTIME ALERT: %s;STOPPED; "
-                        "Host has exited from a period of scheduled downtime" % (self.get_name())
+            'info', "HOST DOWNTIME ALERT: %s;STOPPED; "
+                    "Host has exited from a period of scheduled downtime" % (self.get_name())
         )
         self.broks.append(brok)
 
@@ -776,8 +830,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "HOST DOWNTIME ALERT: %s;CANCELLED; "
-                        "Scheduled downtime for host has been cancelled." % (self.get_name())
+            'info', "HOST DOWNTIME ALERT: %s;CANCELLED; "
+                    "Scheduled downtime for host has been cancelled." % (self.get_name())
         )
         self.broks.append(brok)
 

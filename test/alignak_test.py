@@ -252,9 +252,6 @@ class AlignakTest(unittest.TestCase):
         for broker in self.arbiter.dispatcher.brokers:
             self.brokers[broker.broker_name] = broker
 
-        # No current need of such a dictionary for the other daemons types...
-        # but it may be easiy completed!
-
     def add(self, b):
         if isinstance(b, Brok):
             self.broks[b.uuid] = b
@@ -337,6 +334,8 @@ class AlignakTest(unittest.TestCase):
     def external_command_loop(self):
         """
         Execute the scheduler actions for external commands.
+
+        Yes, why not, but the scheduler si not an ECM 'dispatcher' but an 'applyer' ...
 
         @verified
         :return:

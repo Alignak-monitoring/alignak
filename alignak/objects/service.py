@@ -599,16 +599,41 @@ class Service(SchedulingItem):
             last_time_non_ok = min(non_ok_times)
         return last_time_non_ok
 
+    def raise_check_result(self):
+        """Raise ACTIVE CHECK RESULT entry
+        Example : "ACTIVE SERVICE CHECK: server;DOWN;HARD;1;I don't know what to say..."
+
+        :return: None
+        """
+        log_level = 'info'
+        if self.state == 'WARNING':
+            log_level = 'warning'
+        if self.state == 'CRITICAL':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%s;%d;%s' % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
+
     def raise_alert_log_entry(self):
-        """Raise SERVICE ALERT entry (critical level)
+        """Raise SERVICE ALERT entry
         Format is : "SERVICE ALERT: *host.get_name()*;*get_name()*;*state*;*state_type*;*attempt*
                     ;*output*"
         Example : "SERVICE ALERT: server;Load;DOWN;HARD;1;I don't know what to say..."
 
         :return: None
         """
+        log_level = 'info'
+        if self.state == 'WARNING':
+            log_level = 'warning'
+        if self.state == 'CRITICAL':
+            log_level = 'error'
         brok = make_monitoring_log(
-            'critical', 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
+            log_level, 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
                 self.host_name, self.get_name(),
                 self.state, self.state_type,
                 self.attempt, self.output
@@ -624,9 +649,14 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        log_level = 'info'
+        if self.state == 'WARNING':
+            log_level = 'warning'
+        if self.state == 'CRITICAL':
+            log_level = 'error'
         if self.__class__.log_initial_states:
             brok = make_monitoring_log(
-                'info', 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
+                log_level, 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
                     self.host_name, self.get_name(),
                     self.state, self.state_type,
                     self.attempt, self.output
@@ -665,6 +695,10 @@ class Service(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
+        if not self.__class__.log_notifications:
+            return
+
+        log_level = 'info'
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
                           'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
@@ -672,15 +706,19 @@ class Service(SchedulingItem):
             state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
-        if self.__class__.log_notifications:
-            brok = make_monitoring_log(
-                'critical', "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
-                    contact.get_name(),
-                    host_ref.get_name(), self.get_name(), state,
-                    command.get_name(), self.output
-                )
+            if self.state == 'WARNING':
+                log_level = 'warning'
+            if self.state == 'CRITICAL':
+                log_level = 'error'
+
+        brok = make_monitoring_log(
+            log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
+                contact.get_name(),
+                host_ref.get_name(), self.get_name(), state,
+                command.get_name(), self.output
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
@@ -692,15 +730,22 @@ class Service(SchedulingItem):
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            brok = make_monitoring_log(
-                'critical', "SERVICE EVENT HANDLER: %s;%s;%s;%s;%s;%s" % (
-                    self.host_name, self.get_name(),
-                    self.state, self.state_type,
-                    self.attempt, command.get_name()
-                )
+        if not self.__class__.log_event_handlers:
+            return
+
+        log_level = 'info'
+        if self.state == 'WARNING':
+            log_level = 'warning'
+        if self.state == 'CRITICAL':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "SERVICE EVENT HANDLER: %s;%s;%s;%s;%s;%s" % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, command.get_name()
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_snapshot_log_entry(self, command):
         """Raise SERVICE SNAPSHOT entry (critical level)
@@ -712,15 +757,22 @@ class Service(SchedulingItem):
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            brok = make_monitoring_log(
-                'critical', "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s" % (
-                    self.host_name, self.get_name(),
-                    self.state, self.state_type,
-                    self.attempt, command.get_name()
-                )
+        if not self.__class__.log_snapshots:
+            return
+
+        log_level = 'info'
+        if self.state == 'WARNING':
+            log_level = 'warning'
+        if self.state == 'CRITICAL':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "SERVICE SNAPSHOT: %s;%s;%s;%s;%s;%s" % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, command.get_name()
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise SERVICE FLAPPING ALERT START entry (critical level)
@@ -735,11 +787,14 @@ class Service(SchedulingItem):
         :param threshold: threshold (percent) to trigger this log entry
         :return: None
         """
+        if not self.__class__.log_flappings:
+            return
+
         brok = make_monitoring_log(
-            'critical', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
-                        "Service appears to have started flapping "
-                        "(%.1f%% change >= %.1f%% threshold)" %
-                        (self.host_name, self.get_name(), change_ratio, threshold)
+            'info', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
+                    "Service appears to have started flapping "
+                    "(%.1f%% change >= %.1f%% threshold)" %
+                    (self.host_name, self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -758,11 +813,14 @@ class Service(SchedulingItem):
         :type threshold: float
         :return: None
         """
+        if not self.__class__.log_flappings:
+            return
+
         brok = make_monitoring_log(
-            'critical', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
-                        "Service appears to have stopped flapping "
-                        "(%.1f%% change < %.1f%% threshold)" %
-                        (self.host_name, self.get_name(), change_ratio, threshold)
+            'info', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
+                    "Service appears to have stopped flapping "
+                    "(%.1f%% change < %.1f%% threshold)" %
+                    (self.host_name, self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -789,9 +847,9 @@ class Service(SchedulingItem):
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
-                        "Service has entered a period of scheduled downtime" %
-                        (self.host_name, self.get_name())
+            'info', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
+                    "Service has entered a period of scheduled downtime" %
+                    (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -805,9 +863,9 @@ class Service(SchedulingItem):
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
-                        "has exited from a period of scheduled downtime" %
-                        (self.host_name, self.get_name())
+            'info', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
+                    "has exited from a period of scheduled downtime" %
+                    (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -821,9 +879,9 @@ class Service(SchedulingItem):
         :return: None
         """
         brok = make_monitoring_log(
-            'critical', "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
-                        "Scheduled downtime for service has been cancelled." %
-                        (self.host_name, self.get_name())
+            'info', "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
+                    "Scheduled downtime for service has been cancelled." %
+                    (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
