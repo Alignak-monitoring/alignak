@@ -114,4 +114,4 @@ class Comment(AlignakObject):
         self.fill_default()
 
     def __str__(self):
-        return "Comment id=%d %s" % (self.uuid, self.comment)
+        return "Comment id=%s %s" % (self.uuid, self.comment)

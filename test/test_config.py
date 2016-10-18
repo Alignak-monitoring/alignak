@@ -25,6 +25,7 @@ This file contains the test for the Alignak configuration checks
 import os
 import re
 import time
+import unittest2
 from alignak_test import AlignakTest
 
 
@@ -576,6 +577,21 @@ class TestConfig(AlignakTest):
             r"Error while pythonizing parameter \'check_interval\': "
             r"invalid literal for float\(\): 1,555"
         )
+
+    def test_config_contacts(self):
+        """
+        Test contacts
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        contact = self.schedulers['scheduler-master'].sched.contacts.find_by_name('test_contact')
+        self.assertEqual(contact.contact_name, 'test_contact')
+        self.assertEqual(contact.email, 'nobody@localhost')
+        self.assertEqual(contact.customs, {u'_VAR2': u'text', u'_VAR1': u'10'})
 
     def test_config_hosts(self):
         """

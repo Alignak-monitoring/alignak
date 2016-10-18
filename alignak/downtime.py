@@ -252,7 +252,7 @@ class Downtime(AlignakObject):
         item.in_scheduled_downtime_during_last_check = True
         return res
 
-    def cancel(self, timeperiods, hosts, services, comments):
+    def cancel(self, timeperiods, hosts, services, comments=None):
         """Remove ref in scheduled downtime and raise downtime log entry (cancel)
 
         :param hosts: hosts objects to get item ref
@@ -275,7 +275,8 @@ class Downtime(AlignakObject):
         if item.scheduled_downtime_depth == 0:
             item.raise_cancel_downtime_log_entry()
             item.in_scheduled_downtime = False
-        self.del_automatic_comment(comments)
+        if comments:
+            self.del_automatic_comment(comments)
         self.can_be_deleted = True
         item.in_scheduled_downtime_during_last_check = True
         # Nagios does not notify on canceled downtimes

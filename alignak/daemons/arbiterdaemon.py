@@ -119,8 +119,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.external_commands_manager = None
         self.external_commands = []
 
-        self.fifo = None
-
         # Used to work out if we must still be alive or not
         self.must_run = True
 
@@ -197,26 +195,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for sat in tab:
                 brok = sat.get_initial_status_brok()
                 self.add(brok)
-
-    def set_external_commands_manager(self, ecm, commands_file=None):
-        """Set our external_commands_manager property to the external command manager
-        and fifo attribute to a new fifo fd
-
-        If the fifo parameter is nont None, it must contain the commands file name and this
-        function will require to open this commands file to the ECM
-
-        Note: This function was never called previously (probably to avoid opening a FIFO ...)
-
-        :param ecm: External command manager to set
-        :type ecm: alignak.external_command.ExternalCommandManager
-        :param commands_file: commands file name to get opened by the ECM
-        :type commands_file: str
-        :return: None
-        TODO: Is fifo useful?
-        """
-        self.external_commands_manager = ecm
-        if commands_file:
-            self.fifo = ecm.open(commands_file)
 
     @staticmethod
     def get_daemon_links(daemon_type):
