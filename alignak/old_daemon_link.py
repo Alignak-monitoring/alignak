@@ -25,7 +25,7 @@ import inspect
 import warnings
 
 
-def deprecation(msg, stacklevel=4):
+def deprecation(msg, stacklevel=4):  # pragma: no cover, deprecated
     """Raise deprecation warning with message and level
 
     :param msg: message to print
@@ -37,7 +37,8 @@ def deprecation(msg, stacklevel=4):
     warnings.warn(msg, DeprecationWarning, stacklevel=stacklevel)
 
 
-def make_deprecated_daemon_link(new_module):
+# pragma: no cover, deprecated
+def make_deprecated_daemon_link(new_module):  # pragma: no cover, deprecated
     """Import daemon link from the new location and raise deprecation
 
     :param new_module: new link to replace the old one

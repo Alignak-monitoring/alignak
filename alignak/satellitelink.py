@@ -19,7 +19,6 @@
 
 """alignak.satellitelink is deprecated. Please use alignak.objects.satellitelink now."""
 
-
 from alignak.old_daemon_link import make_deprecated_daemon_link
 
 from alignak.objects import satellitelink
