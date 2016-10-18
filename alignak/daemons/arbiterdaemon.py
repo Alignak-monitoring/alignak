@@ -115,7 +115,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         self.nb_broks_send = 0
 
-        # Now tab for external_commands
+        # Now an external commands manager and a list for the external_commands
+        self.external_commands_manager = None
         self.external_commands = []
 
         self.fifo = None
@@ -197,17 +198,25 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 brok = sat.get_initial_status_brok()
                 self.add(brok)
 
-    def load_external_command(self, ecm):
-        """Set external_command attribute to the external command manager
+    def set_external_commands_manager(self, ecm, commands_file=None):
+        """Set our external_commands_manager property to the external command manager
         and fifo attribute to a new fifo fd
+
+        If the fifo parameter is nont None, it must contain the commands file name and this
+        function will require to open this commands file to the ECM
+
+        Note: This function was never called previously (probably to avoid opening a FIFO ...)
 
         :param ecm: External command manager to set
         :type ecm: alignak.external_command.ExternalCommandManager
+        :param commands_file: commands file name to get opened by the ECM
+        :type commands_file: str
         :return: None
         TODO: Is fifo useful?
         """
-        self.external_command = ecm
-        self.fifo = ecm.open()
+        self.external_commands_manager = ecm
+        if commands_file:
+            self.fifo = ecm.open(commands_file)
 
     @staticmethod
     def get_daemon_links(daemon_type):
@@ -662,7 +671,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now get all external commands and put them into the
         # good schedulers
         for ext_cmd in self.external_commands:
-            self.external_command.resolve_command(ext_cmd)
+            self.external_commands_manager.resolve_command(ext_cmd)
 
         # Now for all alive schedulers, send the commands
         for sched in self.conf.schedulers:
@@ -710,13 +719,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now we can get all initial broks for our satellites
         self.get_initial_broks_from_satellitelinks()
 
-        suppl_socks = None
-
-        # Now create the external commander. It's just here to dispatch
-        # the commands to schedulers
-        ecm = ExternalCommandManager(self.conf, 'dispatcher')
-        ecm.load_arbiter(self)
-        self.external_command = ecm
+        # Now create the external commands manager
+        # We are a dispatcher: our role is to dispatch commands to the schedulers
+        self.external_commands_manager = ExternalCommandManager(self.conf, 'dispatcher', self)
+        # Update External Commands Manager
+        self.external_commands_manager.accept_passive_unknown_check_results = \
+            self.accept_passive_unknown_check_results
 
         logger.debug("Run baby, run...")
         timeout = 1.0
@@ -725,7 +733,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # This is basically sleep(timeout) and returns 0, [], int
             # We could only paste here only the code "used" but it could be
             # harder to maintain.
-            _ = self.handle_requests(timeout, suppl_socks)
+            _ = self.handle_requests(timeout)
 
             # Timeout
             timeout = 1.0  # reset the timeout value

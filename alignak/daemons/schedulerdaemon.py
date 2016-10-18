@@ -81,9 +81,12 @@ class Alignak(BaseSatellite):
 
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='schedulerd.pid'),
-        'port':      IntegerProp(default=7768),
-        'local_log': PathProp(default='schedulerd.log'),
+        'pidfile':
+            PathProp(default='schedulerd.pid'),
+        'port':
+            IntegerProp(default=7768),
+        'local_log':
+            PathProp(default='schedulerd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
@@ -320,17 +323,15 @@ class Alignak(BaseSatellite):
             # self.conf.dump()
             # self.conf.quick_debug()
 
-            # Now create the external commander
-            # it's a applyer: it role is not to dispatch commands,
-            # but to apply them
-            ecm = ExternalCommandManager(self.conf, 'applyer')
+            # Now create the external commands manager
+            # We are an applyer: our role is not to dispatch commands, but to apply them
+            ecm = ExternalCommandManager(self.conf, 'applyer', self.sched)
 
-            # Scheduler need to know about external command to
-            # activate it if necessary
-            self.sched.load_external_command(ecm)
-
-            # External command needs the sched because it can raise checks and broks
-            ecm.load_scheduler(self.sched)
+            # Scheduler needs to know about this external command manager to use it if necessary
+            self.sched.set_external_commands_manager(ecm)
+            # Update External Commands Manager
+            self.sched.external_commands_manager.accept_passive_unknown_check_results = \
+                self.sched.conf.accept_passive_unknown_check_results
 
             # We clear our schedulers managed (it's us :) )
             # and set ourselves in it

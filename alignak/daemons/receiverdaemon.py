@@ -76,9 +76,12 @@ class Receiver(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='receiverd.pid'),
-        'port':      IntegerProp(default=7773),
-        'local_log': PathProp(default='receiverd.log'),
+        'pidfile':
+            PathProp(default='receiverd.pid'),
+        'port':
+            IntegerProp(default=7773),
+        'local_log':
+            PathProp(default='receiverd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
@@ -96,8 +99,8 @@ class Receiver(Satellite):
         # Modules are load one time
         self.have_modules = False
 
-        # Can have a queue of external_commands give by modules
-        # will be taken by arbiter to process
+        # Now an external commands manager and a list for the external_commands
+        self.external_commands_manager = None
         self.external_commands = []
         # and the unprocessed one, a buffer
         self.unprocessed_external_commands = []
@@ -108,11 +111,9 @@ class Receiver(Satellite):
 
         self.http_interface = ReceiverInterface(self)
 
-        # Now create the external commander. It's just here to dispatch
-        # the commands to schedulers
-        ecm = ExternalCommandManager(None, 'receiver')
-        ecm.load_receiver(self)
-        self.external_command = ecm
+        # Now create the external commands manager
+        # We are a receiver: our role is to get and dispatch commands to the schedulers
+        self.external_commands_manager = ExternalCommandManager(None, 'receiver', self)
 
     def add(self, elt):
         """Add an object to the receiver one
@@ -222,6 +223,9 @@ class Receiver(Satellite):
             self.direct_routing = conf['global']['direct_routing']
             self.accept_passive_unknown_check_results = \
                 conf['global']['accept_passive_unknown_check_results']
+            # Update External Commands Manager
+            self.external_commands_manager.accept_passive_unknown_check_results = \
+                conf['global']['accept_passive_unknown_check_results']
 
             g_conf = conf['global']
 
@@ -312,15 +316,18 @@ class Receiver(Satellite):
 
         commands_to_process = self.unprocessed_external_commands
         self.unprocessed_external_commands = []
+        logger.warning("Commands: %s", commands_to_process)
 
         # Now get all external commands and put them into the
         # good schedulers
         for ext_cmd in commands_to_process:
-            self.external_command.resolve_command(ext_cmd)
+            self.external_commands_manager.resolve_command(ext_cmd)
+            logger.warning("Resolved command: %s", ext_cmd)
 
         # Now for all alive schedulers, send the commands
         for sched_id in self.schedulers:
             sched = self.schedulers[sched_id]
+            logger.warning("Scheduler: %s", sched)
             extcmds = sched['external_commands']
             cmds = [extcmd.cmd_line for extcmd in extcmds]
             con = sched.get('con', None)
@@ -332,7 +339,7 @@ class Receiver(Satellite):
 
             # If there are commands and the scheduler is alive
             if len(cmds) > 0 and con:
-                logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
+                logger.warning("Sending %d commands to scheduler %s", len(cmds), sched)
                 try:
                     # con.run_external_commands(cmds)
                     con.post('run_external_commands', {'cmds': cmds})
