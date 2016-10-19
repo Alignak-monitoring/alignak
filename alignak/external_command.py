@@ -584,7 +584,8 @@ class ExternalCommandManager:
         command = command.strip()
 
         # Only log if we are in the Arbiter
-        if self.conf and self.conf.log_external_commands:
+        # Todo: check if it is the best solution?
+        if self.mode == 'dispatcher' and self.conf.log_external_commands:
             # I am a command dispatcher, notifies to my arbiter
             brok = make_monitoring_log(
                 'info', 'EXTERNAL COMMAND: ' + command.rstrip()
@@ -2917,7 +2918,7 @@ class ExternalCommandManager:
                          e_handler.exit_status, e_handler.output)
             log_level = 'error'
 
-        if self.conf.log_external_commands:
+        if self.mode == 'dispatcher' and self.conf.log_external_commands:
             # The command failed, make a monitoring log to inform
             brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
             # Send a brok to our arbiter else to our scheduler
@@ -2954,7 +2955,7 @@ class ExternalCommandManager:
                          e_handler.exit_status, e_handler.output)
             log_level = 'error'
 
-        if self.conf.log_external_commands:
+        if self.mode == 'dispatcher' and self.conf.log_external_commands:
             # The command failed, make a monitoring log to inform
             brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
             # Send a brok to our arbiter else to our scheduler
