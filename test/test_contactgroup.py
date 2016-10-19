@@ -48,14 +48,15 @@ class TestContactGroup(AlignakTest):
 
     def test_look_for_alias(self):
         """
-        Default configuration has no loading problems ... as of it contactgroups are parsed correctly
+        Default configuration has no loading problems ... as of it contactgroups are parsed
+        correctly
         :return: None
         """
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_groups_with_no_alias.cfg')
         self.assertTrue(self.schedulers['Default-Scheduler'].conf.conf_is_correct)
 
-        #  Found a contactgroup named NOALIAS
+        #  Find a contactgroup named NOALIAS
         cg = self.schedulers['Default-Scheduler'].sched.contactgroups.find_by_name("NOALIAS")
         self.assertIsInstance(cg, Contactgroup)
         self.assertEqual(cg.get_name(), "NOALIAS")
@@ -72,16 +73,32 @@ class TestContactGroup(AlignakTest):
         self.assertTrue(self.schedulers['scheduler-master'].conf.conf_is_correct)
 
         #  Found a contactgroup named allhosts_and_groups
-        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name("allcontacts_and_groups")
+        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name(
+            "allcontacts_and_groups"
+        )
         self.assertIsInstance(cg, Contactgroup)
         self.assertEqual(cg.get_name(), "allcontacts_and_groups")
 
         self.assertEqual(
-            len(self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name("allcontacts_and_groups")),
+            len(self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name(
+                "allcontacts_and_groups"
+            )),
             2
         )
 
         self.assertEqual(len(cg.get_contacts()), 2)
+        for cid in cg.get_contacts():
+            contact = self.schedulers['scheduler-master'].sched.contacts[cid]
+            print(contact)
+            if contact.get_name() == "test_contact":
+                self.assertEqual(contact.get_groupname(), "another_contact_test")
+                self.assertEqual(contact.get_groupnames(), "another_contact_test")
+            # This should match but there is a problem currently
+            # Todo: fix this cross reference between contacts and contactgroups
+            # Ongoing PR ...
+            # if contact.get_name() == "test_contact_2":
+            #     self.assertEqual(contact.get_groupname(), "allcontacts_and_groups")
+            #     self.assertEqual(contact.get_groupnames(), "allcontacts_and_groups")
 
         self.assertEqual(len(cg.get_contactgroup_members()), 1)
 
