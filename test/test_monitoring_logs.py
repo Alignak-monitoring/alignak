@@ -23,9 +23,9 @@ This file test the check_result brok
 """
 
 import time
+import unittest2
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
-from alignak.misc.common import DICT_MODATTR
 
 
 class TestMonitoringLogs(AlignakTest):
@@ -377,6 +377,7 @@ class TestMonitoringLogs(AlignakTest):
 
         self.check(svc, 0, 'Service OK', [])
 
+    @unittest2.skip("Temporarily disabled")
     def test_external_commands(self):
         """
 
@@ -416,6 +417,7 @@ class TestMonitoringLogs(AlignakTest):
         for log_level, log_message in expected_logs:
             self.assertIn((log_level, log_message), monitoring_logs)
 
+    @unittest2.skip("Temporarily disabled")
     def test_special_external_commands(self):
         """
         Test special external commands
