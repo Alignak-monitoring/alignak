@@ -1643,7 +1643,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if chk.status == 'waitconsume' and chk.depend_on_me == []:
             chk.status = 'zombie'
 
-        # Use to know if notif is raise or not
+        # Use to know if notif is raised or not
         no_action = False
 
         # C was waitdep, but now all dep are resolved, so check for deps
@@ -2769,9 +2769,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem(comments)
 
+    def raise_check_result(self):
+        """Raise ACTIVE CHECK RESULT entry
+        Function defined in inherited objects (Host and Service)
+
+        :return: None
+        """
+        pass
+
     def raise_alert_log_entry(self):
-        """Raise ALERT entry (critical level)
-        It's defined in right objects (Host and Service)
+        """Raise ALERT entry
+        Function defined in inherited objects (Host and Service)
 
         :return: None
         """

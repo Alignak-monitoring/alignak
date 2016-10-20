@@ -164,4 +164,5 @@ def make_monitoring_log(level, message):
     :param message: message to insert into the monitoring log
     :return:
     """
+    logger.info("Monitoring log: %s / %s", level, message)
     return Brok({'type': 'monitoring_log', 'data': {'level': level, 'message': message}})

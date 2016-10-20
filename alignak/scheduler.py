@@ -126,8 +126,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # now get the news actions (checks, notif) raised
             4: ('get_new_actions', self.get_new_actions, 1),
-            5: ('get_new_broks', self.get_new_broks, 1),  # and broks
-            6: ('scatter_master_notifications', self.scatter_master_notifications, 1),
+            5: ('scatter_master_notifications', self.scatter_master_notifications, 1),
+            6: ('get_new_broks', self.get_new_broks, 1),  # and broks
             7: ('delete_zombie_checks', self.delete_zombie_checks, 1),
             8: ('delete_zombie_actions', self.delete_zombie_actions, 1),
             9: ('clean_caches', self.clean_caches, 1),
@@ -1597,6 +1597,9 @@ class Scheduler(object):  # pylint: disable=R0902
                                               self.downtimes, self.comments)
                 for dep in depchks:
                     self.add(dep)
+
+                if self.conf.log_active_checks and chk.check_type == 0:
+                    item.raise_check_result()
 
         # All 'finished' checks (no more dep) raise checks they depends on
         for chk in self.checks.values():

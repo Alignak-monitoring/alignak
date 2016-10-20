@@ -284,6 +284,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'log_event_handlers':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
+        'log_snapshots':
+            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+
+        'log_flappings':
+            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+
         'log_initial_states':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
@@ -293,6 +299,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'log_passive_checks':
             BoolProp(default=True),
 
+        'log_active_checks':
+            BoolProp(default=True),
+
+        # Event handlers
         'global_host_event_handler':
             StringProp(default='', class_inherit=[(Host, 'global_event_handler')]),
 

@@ -584,9 +584,8 @@ class ExternalCommandManager:
         command = command.strip()
 
         # Only log if we are in the Arbiter
+        # Todo: check if it is the best solution?
         if self.mode == 'dispatcher' and self.conf.log_external_commands:
-            # Fix #1263
-            # logger.info('EXTERNAL COMMAND: ' + command.rstrip())
             # I am a command dispatcher, notifies to my arbiter
             brok = make_monitoring_log(
                 'info', 'EXTERNAL COMMAND: ' + command.rstrip()
@@ -710,7 +709,7 @@ class ExternalCommandManager:
                 # sched.run_external_command(command)
                 sched.external_commands.append(command)
 
-    def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0915,R0912
+    def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0914,R0915,R0912
         """Parse command and get args
 
         :param command: command line to parse
@@ -723,7 +722,6 @@ class ExternalCommandManager:
 
         :rtype: dict | None
         """
-        # safe_print("Trying to resolve", command)
         command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
         try:
@@ -731,13 +729,27 @@ class ExternalCommandManager:
             timestamp = timestamp[1:-1]
             c_name = c_name.lower()
             self.current_timestamp = to_int(timestamp)
-        except (ValueError, IndexError):
-            logger.debug("Malformed command '%s'", command)
+        except (ValueError, IndexError) as exp:
+            logger.warning("Malformed command '%s'", command)
+            logger.exception("Malformed command exception: %s", exp)
+
+            if self.conf and self.conf.log_external_commands:
+                # The command failed, make a monitoring log to inform
+                brok = make_monitoring_log('error',
+                                           "Malformed command: '%s'" % command)
+                # Send a brok to our arbiter else to our scheduler
+                self.send_a_brok(brok)
             return None
 
-        # safe_print("Get command name", c_name)
         if c_name not in ExternalCommandManager.commands:
-            logger.debug("Command '%s' is not recognized, sorry", c_name)
+            logger.warning("External command '%s' is not recognized, sorry", c_name)
+
+            if self.conf and self.conf.log_external_commands:
+                # The command failed, make a monitoring log to inform
+                brok = make_monitoring_log('error',
+                                           "Command '%s' is not recognized, sorry" % command)
+                # Send a brok to our arbiter else to our scheduler
+                self.send_a_brok(brok)
             return None
 
         # Split again based on the number of args we expect. We cannot split
@@ -761,10 +773,6 @@ class ExternalCommandManager:
                 logger.debug("Command '%s' is a global one, we resent it to all schedulers", c_name)
                 return {'global': True, 'cmd': command}
 
-        # print "Is global?", c_name, entry['global']
-        # print "Mode:", self.mode
-        # print "This command have arguments:", entry['args'], len(entry['args'])
-
         args = []
         i = 1
         in_service = False
@@ -780,7 +788,6 @@ class ExternalCommandManager:
 
                 if not in_service:
                     type_searched = entry['args'][i - 1]
-                    # safe_print("Search for a arg", type_searched)
 
                     if type_searched == 'host':
                         if self.mode == 'dispatcher' or self.mode == 'receiver':
@@ -858,7 +865,6 @@ class ExternalCommandManager:
                         self.search_host_and_dispatch(tmp_host, command, extcmd)
                         return None
 
-                    # safe_print("Got service full", tmp_host, srv_name)
                     serv = self.services.find_srv_by_name_and_hostname(tmp_host, srv_name)
                     if serv is not None:
                         args.append(serv)
@@ -870,17 +876,15 @@ class ExternalCommandManager:
                             "A command was received for service '%s' on host '%s', "
                             "but the service could not be found!", srv_name, tmp_host)
 
-        except IndexError:
-            logger.debug("Sorry, the arguments are not corrects")
+        except IndexError as exp:
+            logger.warning("Sorry, the arguments for the command '%s' are not correct")
+            logger.exception("Arguments parsing exception: %s", exp)
             return None
-        # safe_print('Finally got ARGS:', args)
         if len(args) == len(entry['args']):
-            # safe_print("OK, we can call the command", c_name, "with", args)
             return {'global': False, 'c_name': c_name, 'args': args}
-            # f = getattr(self, c_name)
-            # apply(f, args)
         else:
-            logger.debug("Sorry, the arguments are not corrects (%s)", str(args))
+            logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
+                           command, (args))
             return None
 
     @staticmethod
@@ -962,7 +966,7 @@ class ExternalCommandManager:
         """
         data = {
             'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 2,
-            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  service.uuid
+            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref': service.uuid
         }
         comm = Comment(data)
         service.add_comment(comm.uuid)
@@ -986,7 +990,7 @@ class ExternalCommandManager:
         """
         data = {
             'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 1,
-            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref':  host.uuid
+            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref': host.uuid
         }
         comm = Comment(data)
         host.add_comment(comm.uuid)
@@ -1446,7 +1450,6 @@ class ExternalCommandManager:
                 "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
                 "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED"]:
             if changes & DICT_MODATTR[modattr].value:
-                logger.info("[CHANGE_SVC_MODATTR] Reset %s", modattr)
                 setattr(service, DICT_MODATTR[modattr].attribute, not
                         getattr(service, DICT_MODATTR[modattr].attribute))
 
@@ -2722,8 +2725,13 @@ class ExternalCommandManager:
         """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
+            log_level = 'info'
+            if status_code == 1:  # DOWN
+                log_level = 'error'
+            if status_code == 2:  # UNREACHABLE
+                log_level = 'warning'
             brok = make_monitoring_log(
-                'info', 'PASSIVE HOST CHECK: %s;%d;%s'
+                log_level, 'PASSIVE HOST CHECK: %s;%d;%s'
                 % (host.get_name().decode('utf8', 'ignore'),
                    status_code, plugin_output.decode('utf8', 'ignore'))
             )
@@ -2788,8 +2796,13 @@ class ExternalCommandManager:
         """
         # raise a PASSIVE check only if needed
         if self.conf.log_passive_checks:
+            log_level = 'info'
+            if return_code == 1:  # WARNING
+                log_level = 'warning'
+            if return_code == 2:  # CRITICAL
+                log_level = 'error'
             brok = make_monitoring_log(
-                'info', 'PASSIVE SERVICE CHECK: %s;%s;%d;%s' % (
+                log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s' % (
                     self.hosts[service.host].get_name().decode('utf8', 'ignore'),
                     service.get_name().decode('utf8', 'ignore'),
                     return_code, plugin_output.decode('utf8', 'ignore')
@@ -2897,15 +2910,19 @@ class ExternalCommandManager:
         # And wait for the command to finish
         while e_handler.status not in ('done', 'timeout'):
             e_handler.check_finished(64000)
+
+        log_level = 'info'
         if e_handler.status == 'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot restart Alignak : the 'restart-alignak' command failed with"
                          " the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)
-            return
-        # Ok here the command succeed, we can now wait our death
-        brok = make_monitoring_log('info', "%s" % (e_handler.output))
-        # Send a brok to our arbiter else to our scheduler
-        self.send_a_brok(brok)
+            log_level = 'error'
+
+        if self.mode == 'dispatcher' and self.conf.log_external_commands:
+            # The command failed, make a monitoring log to inform
+            brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
+            # Send a brok to our arbiter else to our scheduler
+            self.send_a_brok(brok)
 
     def reload_config(self):
         """Reload Alignak configuration
@@ -2930,15 +2947,19 @@ class ExternalCommandManager:
         # And wait for the command to finish
         while e_handler.status not in ('done', 'timeout'):
             e_handler.check_finished(64000)
+
+        log_level = 'info'
         if e_handler.status == 'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot reload Alignak configuration: the 'reload-alignak' command failed"
                          " with the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)
-            return
-        # Ok here the command succeed, we can now wait our death
-        brok = make_monitoring_log('info', "%s" % (e_handler.output))
-        # Send a brok to our arbiter else to our scheduler
-        self.send_a_brok(brok)
+            log_level = 'error'
+
+        if self.mode == 'dispatcher' and self.conf.log_external_commands:
+            # The command failed, make a monitoring log to inform
+            brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
+            # Send a brok to our arbiter else to our scheduler
+            self.send_a_brok(brok)
 
     def save_state_information(self):
         """DOES NOTHING (What it is supposed to do?)
