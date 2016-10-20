@@ -290,7 +290,7 @@ class TestNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Caritical HARD, must have 1 '
+        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
                                                              'notification')
         self.assert_actions_count(2)
         self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
@@ -428,7 +428,7 @@ class TestNotifications(AlignakTest):
 
     def test_notifications_ack(self):
         """
-        Test notifications not send when add an acknowledge
+        Test notifications not sent when add an acknowledge
 
         :return: None
         """
@@ -494,7 +494,7 @@ class TestNotifications(AlignakTest):
 
     def test_notifications_downtime(self):
         """
-        Test notifications not send when add a downtime
+        Test notifications not sent when add a downtime
 
         :return: None
         """
@@ -550,3 +550,68 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'serviceoutput OK', 'command')
         self.assert_actions_match(0, 'notificationtype DOWNTIMESTART', 'command')
+
+    def test_notifications_unreachable_host(self):
+        """
+        Test notifications for unreachable host
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        router = self._scheduler.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.event_handler_enabled = False
+        self.assertEqual([u'd', u'u', u'r', u'f', u's'], router.notification_options)
+
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+        self.assertEqual([u'd', u'u', u'r', u'f', u's'], host.notification_options)
+
+        self.scheduler_loop(1, [[router, 0, 'UP'], [host, 0, 'UP']])
+        time.sleep(0.1)
+        self.assertEqual(0, router.state_id)
+        self.assertEqual(0, router.current_notification_number)
+        self.assert_actions_count(0)
+        self.assertEqual(0, host.state_id)
+        self.assertEqual(0, host.current_notification_number)
+        self.assert_actions_count(0)
+
+        # Router goes DOWN,
+        self.scheduler_loop(1, [[router, 2, 'DOWN'], [host, 0, 'UP']])
+        time.sleep(0.1)
+        self.assertEqual(1, router.state_id)
+        self.assertEqual("SOFT", router.state_type)
+        self.assertEqual(0, host.state_id)
+        self.assertEqual("HARD", host.state_type)
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[router, 2, 'DOWN'], [host, 0, 'UP']])
+        time.sleep(0.1)
+        self.assertEqual(1, router.state_id)
+        self.assertEqual("SOFT", router.state_type)
+        self.assertEqual(0, host.state_id)
+        self.assertEqual("HARD", host.state_type)
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[router, 2, 'DOWN'], [host, 0, 'UP']])
+        time.sleep(0.1)
+        self.assertEqual(1, router.state_id)
+        self.assertEqual("HARD", router.state_type)
+        # Todo: host state should be unreachable, no?
+        # Wait for dependencies problems to be fixed to confirm !!!
+        self.assertEqual(2, host.state_id)
+        self.assertEqual("HARD", host.state_type)
+
+        # Get a notification for router DOWN
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'notification', 'is_a')
+        self.assert_actions_match(0, 'VOID', 'command')
+        self.assert_actions_match(1, 'notification', 'is_a')
+        self.assert_actions_match(1, 'PROBLEM', 'type')
+        self.assert_actions_match(1, 'test_router_0', 'command')
+        self.assert_actions_match(1, 'notifier', 'command')
