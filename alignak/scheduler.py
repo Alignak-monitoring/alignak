@@ -178,6 +178,9 @@ class Scheduler(object):  # pylint: disable=R0902
         self.contact_downtimes = {}
         self.comments = {}
 
+        # Our external commands manager
+        self.external_commands_manager = None
+
         # Some flags
         self.has_full_broks = False  # have a initial_broks in broks queue?
         self.need_dump_memory = False  # set by signal 1
@@ -356,14 +359,14 @@ class Scheduler(object):  # pylint: disable=R0902
         except (OSError, IndexError), exp:
             logger.error("Error in writing the dump file %s : %s", path, str(exp))
 
-    def load_external_command(self, ecm):
-        """Setter for external_command attribute
+    def set_external_commands_manager(self, ecm):
+        """Setter for external_command_manager attribute
 
         :param ecm: new value
         :type ecm: alignak.external_command.ExternalCommandManager
         :return: None
         """
-        self.external_command = ecm
+        self.external_commands_manager = ecm
 
     def run_external_commands(self, cmds):
         """Run external commands Arbiter/Receiver sent
@@ -384,7 +387,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         logger.debug("scheduler resolves command '%s'", command)
         ext_cmd = ExternalCommand(command)
-        self.external_command.resolve_command(ext_cmd)
+        self.external_commands_manager.resolve_command(ext_cmd)
 
     def add_brok(self, brok, bname=None):
         """Add a brok into brokers list
@@ -482,7 +485,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type ext_cmd: alignak.external_command.ExternalCommand
         :return: None
         """
-        self.external_command.resolve_command(ext_cmd)
+        self.external_commands_manager.resolve_command(ext_cmd)
 
     def add(self, elt):
         """Generic function to add objects into scheduler internal lists::

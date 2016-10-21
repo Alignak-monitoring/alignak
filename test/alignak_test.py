@@ -343,6 +343,7 @@ class AlignakTest(unittest.TestCase):
         for i in self.schedulers['scheduler-master'].sched.recurrent_works:
             (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
             if nb_ticks == 1:
+                print(fun)
                 fun()
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
