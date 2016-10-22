@@ -57,6 +57,7 @@
 Used to process command sent by users
 
 """
+# pylint: disable=unused-argument
 # pylint: disable=C0302
 # pylint: disable=R0904
 import logging
@@ -64,7 +65,6 @@ import time
 import re
 
 from alignak.util import to_int, to_bool, split_semicolon
-from alignak.objects.pollerlink import PollerLink
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
@@ -163,9 +163,11 @@ class ExternalCommandManager:
             {'global': False, 'args': ['host', 'to_int']},
         'delay_svc_notification':
             {'global': False, 'args': ['service', 'to_int']},
+        'del_all_contact_downtimes':
+            {'global': False, 'args': ['contact']},
         'del_all_host_comments':
             {'global': False, 'args': ['host']},
-        'del_all_host_unacknowledge_problem':
+        'del_all_host_downtimes':
             {'global': False, 'args': ['host']},
         'del_all_svc_comments':
             {'global': False, 'args': ['service']},
@@ -534,15 +536,16 @@ class ExternalCommandManager:
         # Strip and get utf8 only strings
         command = command.strip()
 
-        # Only log if we are in the Arbiter
-        # Todo: check if it is the best solution?
-        if self.mode == 'dispatcher' and self.conf.log_external_commands:
-            # I am a command dispatcher, notifies to my arbiter
-            brok = make_monitoring_log(
-                'info', 'EXTERNAL COMMAND: ' + command.rstrip()
-            )
-            # Send a brok to our arbiter else to our scheduler
-            self.send_an_element(brok)
+        # # Only log if we are in the Arbiter
+        # # Todo: check if it is the best solution?
+        # # Should be better to log when the command is parsed !
+        # if self.mode == 'dispatcher' and self.conf.log_external_commands:
+        #     # I am a command dispatcher, notifies to my arbiter
+        #     brok = make_monitoring_log(
+        #         'info', 'EXTERNAL COMMAND: ' + command.rstrip()
+        #     )
+        #     # Send a brok to our daemon
+        #     self.send_an_element(brok)
         res = self.get_command_and_args(command, excmd)
 
         # If we are a receiver, bail out here
@@ -550,6 +553,14 @@ class ExternalCommandManager:
             return
 
         if res is not None:
+            if self.mode == 'applyer' and self.conf.log_external_commands:
+                # I am a command dispatcher, notifies to my arbiter
+                brok = make_monitoring_log(
+                    'info', 'EXTERNAL COMMAND: ' + command.rstrip()
+                )
+                # Send a brok to our daemon
+                self.send_an_element(brok)
+
             is_global = res['global']
             if not is_global:
                 c_name = res['c_name']
@@ -803,7 +814,7 @@ class ExternalCommandManager:
                             args.append(servicegroup)
 
                     elif type_searched == 'contact_group':
-                        contactgroup = self.contact_groups.find_by_name(val)
+                        contactgroup = self.contactgroups.find_by_name(val)
                         if contactgroup is not None:
                             args.append(contactgroup)
 
@@ -846,12 +857,28 @@ class ExternalCommandManager:
         except IndexError as exp:
             logger.warning("Sorry, the arguments for the command '%s' are not correct")
             logger.exception("Arguments parsing exception: %s", exp)
+
+            if self.conf and self.conf.log_external_commands:
+                # The command failed, make a monitoring log to inform
+                brok = make_monitoring_log('error',
+                                           "Arguments are not correct for the command: '%s'" %
+                                           command)
+                # Send a brok to our arbiter else to our scheduler
+                self.send_an_element(brok)
         else:
             if len(args) == len(entry['args']):
                 return {'global': False, 'c_name': c_name, 'args': args}
 
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
                            command, (args))
+
+            if self.conf and self.conf.log_external_commands:
+                # The command failed, make a monitoring log to inform
+                brok = make_monitoring_log('error',
+                                           "Arguments are not correct for the command: '%s'" %
+                                           command)
+                # Send a brok to our arbiter else to our scheduler
+                self.send_an_element(brok)
         return None
 
     @staticmethod
@@ -1155,7 +1182,14 @@ class ExternalCommandManager:
         :return: None
         TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         """
-        pass
+        logger.warning("The external command 'CHANGE_GLOBAL_HOST_EVENT_HANDLER' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'CHANGE_GLOBAL_HOST_EVENT_HANDLER: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def change_global_svc_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global service event handler)
@@ -1168,7 +1202,14 @@ class ExternalCommandManager:
         :return: None
         TODO: DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         """
-        pass
+        logger.warning("The external command 'CHANGE_GLOBAL_SVC_EVENT_HANDLER' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'CHANGE_GLOBAL_SVC_EVENT_HANDLER: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def change_host_check_command(self, host, check_command):
         """Modify host check command
@@ -1220,12 +1261,35 @@ class ExternalCommandManager:
         host.event_handler = CommandCall(data)
         self.daemon.get_and_register_status_brok(host)
 
-    @staticmethod
-    def change_host_modattr(host, value):
+    def change_host_modattr(self, host, value):
         """Change host modified attributes
         Format of the line that triggers function call::
 
         CHANGE_HOST_MODATTR;<host_name>;<value>
+
+        For boolean attributes, toggles the service attribute state (enable/disable)
+        For non boolean attribute, only indicates that the corresponding attribute is to be saved
+        in the retention.
+
+        Value can be:
+        MODATTR_NONE                            0
+        MODATTR_NOTIFICATIONS_ENABLED           1
+        MODATTR_ACTIVE_CHECKS_ENABLED           2
+        MODATTR_PASSIVE_CHECKS_ENABLED          4
+        MODATTR_EVENT_HANDLER_ENABLED           8
+        MODATTR_FLAP_DETECTION_ENABLED          16
+        MODATTR_FAILURE_PREDICTION_ENABLED      32
+        MODATTR_PERFORMANCE_DATA_ENABLED        64
+        MODATTR_OBSESSIVE_HANDLER_ENABLED       128
+        MODATTR_EVENT_HANDLER_COMMAND           256
+        MODATTR_CHECK_COMMAND                   512
+        MODATTR_NORMAL_CHECK_INTERVAL           1024
+        MODATTR_RETRY_CHECK_INTERVAL            2048
+        MODATTR_MAX_CHECK_ATTEMPTS              4096
+        MODATTR_FRESHNESS_CHECKS_ENABLED        8192
+        MODATTR_CHECK_TIMEPERIOD                16384
+        MODATTR_CUSTOM_VARIABLE                 32768
+        MODATTR_NOTIFICATION_TIMEPERIOD         65536
 
         :param host: host to edit
         :type host: alignak.objects.host.Host
@@ -1233,7 +1297,29 @@ class ExternalCommandManager:
         :type value: str
         :return: None
         """
-        host.modified_attributes = long(value)
+        # We need to change each of the needed attributes.
+        previous_value = host.modified_attributes
+        changes = long(value)
+
+        # For all boolean and non boolean attributes
+        for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
+                        "MODATTR_PASSIVE_CHECKS_ENABLED", "MODATTR_EVENT_HANDLER_ENABLED",
+                        "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
+                        "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_EVENT_HANDLER_COMMAND", "MODATTR_CHECK_COMMAND",
+                        "MODATTR_NORMAL_CHECK_INTERVAL", "MODATTR_RETRY_CHECK_INTERVAL",
+                        "MODATTR_MAX_CHECK_ATTEMPTS", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_CHECK_TIMEPERIOD", "MODATTR_CUSTOM_VARIABLE",
+                        "MODATTR_NOTIFICATION_TIMEPERIOD"]:
+            if changes & DICT_MODATTR[modattr].value:
+                # Toggle the concerned service attribute
+                setattr(host, DICT_MODATTR[modattr].attribute, not
+                        getattr(host, DICT_MODATTR[modattr].attribute))
+
+        host.modified_attributes = previous_value ^ changes
+
+        # And we need to push the information to the scheduler.
+        self.daemon.get_and_register_status_brok(host)
 
     def change_max_host_check_attempts(self, host, check_attempts):
         """Modify max host check attempt
@@ -1289,7 +1375,10 @@ class ExternalCommandManager:
         # If there were no regular checks (interval=0), then schedule
         # a check immediately.
         if old_interval == 0 and host.checks_enabled:
-            host.schedule(force=False, force_time=int(time.time()))
+            host.schedule(self.daemon.hosts, self.daemon.services,
+                          self.daemon.timeperiods, self.daemon.macromodulations,
+                          self.daemon.checkmodulations, self.daemon.checks,
+                          force=False, force_time=int(time.time()))
         self.daemon.get_and_register_status_brok(host)
 
     def change_normal_svc_check_interval(self, service, check_interval):
@@ -1310,7 +1399,10 @@ class ExternalCommandManager:
         # If there were no regular checks (interval=0), then schedule
         # a check immediately.
         if old_interval == 0 and service.checks_enabled:
-            service.schedule(force=False, force_time=int(time.time()))
+            service.schedule(self.daemon.hosts, self.daemon.services,
+                             self.daemon.timeperiods, self.daemon.macromodulations,
+                             self.daemon.checkmodulations, self.daemon.checks,
+                             force=False, force_time=int(time.time()))
         self.daemon.get_and_register_status_brok(service)
 
     def change_retry_host_check_interval(self, host, check_interval):
@@ -1401,35 +1493,56 @@ class ExternalCommandManager:
 
         CHANGE_SVC_MODATTR;<host_name>;<service_description>;<value>
 
+        For boolean attributes, toggles the service attribute state (enable/disable)
+        For non boolean attribute, only indicates that the corresponding attribute is to be saved
+        in the retention.
+
+        Value can be:
+        MODATTR_NONE                            0
+        MODATTR_NOTIFICATIONS_ENABLED           1
+        MODATTR_ACTIVE_CHECKS_ENABLED           2
+        MODATTR_PASSIVE_CHECKS_ENABLED          4
+        MODATTR_EVENT_HANDLER_ENABLED           8
+        MODATTR_FLAP_DETECTION_ENABLED          16
+        MODATTR_FAILURE_PREDICTION_ENABLED      32
+        MODATTR_PERFORMANCE_DATA_ENABLED        64
+        MODATTR_OBSESSIVE_HANDLER_ENABLED       128
+        MODATTR_EVENT_HANDLER_COMMAND           256
+        MODATTR_CHECK_COMMAND                   512
+        MODATTR_NORMAL_CHECK_INTERVAL           1024
+        MODATTR_RETRY_CHECK_INTERVAL            2048
+        MODATTR_MAX_CHECK_ATTEMPTS              4096
+        MODATTR_FRESHNESS_CHECKS_ENABLED        8192
+        MODATTR_CHECK_TIMEPERIOD                16384
+        MODATTR_CUSTOM_VARIABLE                 32768
+        MODATTR_NOTIFICATION_TIMEPERIOD         65536
+
         :param service: service to edit
         :type service: alignak.objects.service.Service
-        :param value: new value to set
+        :param value: new value to set / unset
         :type value: str
         :return: None
         """
-        # This is not enough.
-        # We need to also change each of the needed attributes.
+        # We need to change each of the needed attributes.
         previous_value = service.modified_attributes
-        future_value = long(value)
-        changes = future_value ^ previous_value
+        changes = long(value)
 
-        for modattr in [
-                "MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
-                "MODATTR_PASSIVE_CHECKS_ENABLED", "MODATTR_EVENT_HANDLER_ENABLED",
-                "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
-                "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED"]:
+        # For all boolean and non boolean attributes
+        for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
+                        "MODATTR_PASSIVE_CHECKS_ENABLED", "MODATTR_EVENT_HANDLER_ENABLED",
+                        "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
+                        "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_EVENT_HANDLER_COMMAND", "MODATTR_CHECK_COMMAND",
+                        "MODATTR_NORMAL_CHECK_INTERVAL", "MODATTR_RETRY_CHECK_INTERVAL",
+                        "MODATTR_MAX_CHECK_ATTEMPTS", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_CHECK_TIMEPERIOD", "MODATTR_CUSTOM_VARIABLE",
+                        "MODATTR_NOTIFICATION_TIMEPERIOD"]:
             if changes & DICT_MODATTR[modattr].value:
+                # Toggle the concerned service attribute
                 setattr(service, DICT_MODATTR[modattr].attribute, not
                         getattr(service, DICT_MODATTR[modattr].attribute))
 
-        # TODO : Handle not boolean attributes.
-        # ["MODATTR_EVENT_HANDLER_COMMAND",
-        # "MODATTR_CHECK_COMMAND", "MODATTR_NORMAL_CHECK_INTERVAL",
-        # "MODATTR_RETRY_CHECK_INTERVAL",
-        # "MODATTR_MAX_CHECK_ATTEMPTS", "MODATTR_FRESHNESS_CHECKS_ENABLED",
-        # "MODATTR_CHECK_TIMEPERIOD", "MODATTR_CUSTOM_VARIABLE", "MODATTR_NOTIFICATION_TIMEPERIOD"]
-
-        service.modified_attributes = future_value
+        service.modified_attributes = previous_value ^ changes
 
         # And we need to push the information to the scheduler.
         self.daemon.get_and_register_status_brok(service)
@@ -1481,6 +1594,19 @@ class ExternalCommandManager:
         service.first_notification_delay = notification_time
         self.daemon.get_and_register_status_brok(service)
 
+    def del_all_contact_downtimes(self, contact):
+        """Delete all contact downtimes
+        Format of the line that triggers function call::
+
+        DEL_ALL_CONTACT_DOWNTIMES;<contact_name>
+
+        :param contact: contact to edit
+        :type contact: alignak.objects.contact.Contact
+        :return: None
+        """
+        for downtime in contact.downtimes:
+            self.del_contact_downtime(downtime)
+
     def del_all_host_comments(self, host):
         """Delete all host comments
         Format of the line that triggers function call::
@@ -1491,8 +1617,8 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for comm in host.comments:
-            self.del_host_comment(comm.uuid)
+        for comment in host.comments:
+            self.del_host_comment(comment)
 
     def del_all_host_downtimes(self, host):
         """Delete all host downtimes
@@ -1517,8 +1643,8 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        for comm in service.comments:
-            self.del_svc_comment(comm.uuid)
+        for comment in service.comments:
+            self.del_svc_comment(comment)
 
     def del_all_svc_downtimes(self, service):
         """Delete all service downtime
@@ -1545,6 +1671,11 @@ class ExternalCommandManager:
         """
         if downtime_id in self.daemon.contact_downtimes:
             self.daemon.contact_downtimes[downtime_id].cancel(self.daemon.contacts)
+        else:
+            brok = make_monitoring_log('warning',
+                                       'DEL_CONTACT_DOWNTIME: downtime_id id: %s does not exist '
+                                       'and cannot be deleted.' % downtime_id)
+            self.send_an_element(brok)
 
     def del_host_comment(self, comment_id):
         """Delete a host comment
@@ -1558,6 +1689,11 @@ class ExternalCommandManager:
         """
         if comment_id in self.daemon.comments:
             self.daemon.comments[comment_id].can_be_deleted = True
+        else:
+            brok = make_monitoring_log('warning',
+                                       'DEL_HOST_COMMENT: comment id: %s does not exist '
+                                       'and cannot be deleted.' % comment_id)
+            self.send_an_element(brok)
 
     def del_host_downtime(self, downtime_id):
         """Delete a host downtime
@@ -1572,6 +1708,11 @@ class ExternalCommandManager:
         if downtime_id in self.daemon.downtimes:
             self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods, self.daemon.hosts,
                                                       self.daemon.services)
+        else:
+            brok = make_monitoring_log('warning',
+                                       'DEL_HOST_DOWNTIME: downtime_id id: %s does not exist '
+                                       'and cannot be deleted.' % downtime_id)
+            self.send_an_element(brok)
 
     def del_svc_comment(self, comment_id):
         """Delete a service comment
@@ -1585,6 +1726,11 @@ class ExternalCommandManager:
         """
         if comment_id in self.daemon.comments:
             self.daemon.comments[comment_id].can_be_deleted = True
+        else:
+            brok = make_monitoring_log('warning',
+                                       'DEL_SVC_COMMENT: comment id: %s does not exist '
+                                       'and cannot be deleted.' % comment_id)
+            self.send_an_element(brok)
 
     def del_svc_downtime(self, downtime_id):
         """Delete a service downtime
@@ -1599,6 +1745,11 @@ class ExternalCommandManager:
         if downtime_id in self.daemon.downtimes:
             self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods, self.daemon.hosts,
                                                       self.daemon.services, self.daemon.comments)
+        else:
+            brok = make_monitoring_log('warning',
+                                       'DEL_SVC_DOWNTIME: downtime_id id: %s does not exist '
+                                       'and cannot be deleted.' % downtime_id)
+            self.send_an_element(brok)
 
     def disable_all_notifications_beyond_host(self, host):
         """DOES NOTHING (should disable notification beyond a host)
@@ -1611,7 +1762,14 @@ class ExternalCommandManager:
         :return: None
         TODO: Implement it
         """
-        pass
+        logger.warning("The external command 'DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def disable_contactgroup_host_notifications(self, contactgroup):
         """Disable host notifications for a contactgroup
@@ -1623,8 +1781,8 @@ class ExternalCommandManager:
         :type contactgroup: alignak.objects.contactgroup.Contactgroup
         :return: None
         """
-        for contact in contactgroup:
-            self.disable_contact_host_notifications(contact)
+        for contact_id in contactgroup.get_contacts():
+            self.disable_contact_host_notifications(self.daemon.contacts[contact_id])
 
     def disable_contactgroup_svc_notifications(self, contactgroup):
         """Disable service notifications for a contactgroup
@@ -1636,8 +1794,8 @@ class ExternalCommandManager:
         :type contactgroup: alignak.objects.contactgroup.Contactgroup
         :return: None
         """
-        for contact in contactgroup:
-            self.disable_contact_svc_notifications(contact)
+        for contact_id in contactgroup.get_contacts():
+            self.disable_contact_svc_notifications(self.daemon.contacts[contact_id])
 
     def disable_contact_host_notifications(self, contact):
         """Disable host notifications for a contact
@@ -1683,21 +1841,6 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.daemon.get_and_register_update_program_status_brok()
 
-    def disable_failure_prediction(self):
-        """Disable failure prediction (globally)
-        Format of the line that triggers function call::
-
-        DISABLE_FAILURE_PREDICTION
-
-        :return: None
-        """
-        if self.conf.enable_failure_prediction:
-            self.conf.modified_attributes |= \
-                DICT_MODATTR["MODATTR_FAILURE_PREDICTION_ENABLED"].value
-            self.conf.enable_failure_prediction = False
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
     def disable_flap_detection(self):
         """Disable flap detection (globally)
         Format of the line that triggers function call::
@@ -1733,8 +1876,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.disable_host_check(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.disable_host_check(self.daemon.hosts[host_id])
 
     def disable_hostgroup_host_notifications(self, hostgroup):
         """Disable host notifications for a hostgroup
@@ -1746,8 +1890,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.disable_host_notifications(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.disable_host_notifications(self.daemon.hosts[host_id])
 
     def disable_hostgroup_passive_host_checks(self, hostgroup):
         """Disable host passive checks for a hostgroup
@@ -1759,8 +1904,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.disable_passive_host_checks(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.disable_passive_host_checks(self.daemon.hosts[host_id])
 
     def disable_hostgroup_passive_svc_checks(self, hostgroup):
         """Disable service passive checks for a hostgroup
@@ -1772,9 +1918,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.disable_passive_svc_checks(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.disable_passive_svc_checks(self.daemon.services[service_id])
 
     def disable_hostgroup_svc_checks(self, hostgroup):
         """Disable service checks for a hostgroup
@@ -1786,9 +1934,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.disable_svc_check(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.disable_svc_check(self.daemon.services[service_id])
 
     def disable_hostgroup_svc_notifications(self, hostgroup):
         """Disable service notifications for a hostgroup
@@ -1800,9 +1950,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.disable_svc_notifications(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.disable_svc_notifications(self.daemon.services[service_id])
 
     def disable_host_and_child_notifications(self, host):
         """DOES NOTHING (Should disable host notifications and its child)
@@ -1814,7 +1966,14 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        pass
+        logger.warning("The external command 'DISABLE_HOST_AND_CHILD_NOTIFICATIONS' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'DISABLE_HOST_AND_CHILD_NOTIFICATIONS: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def disable_host_check(self, host):
         """Disable checks for a host
@@ -1904,8 +2063,10 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for serv in host.services:
-            self.disable_svc_check(serv)
+        for service_id in host.services:
+            if service_id in self.daemon.services:
+                self.disable_svc_check(self.daemon.services[service_id])
+                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
 
     def disable_host_svc_notifications(self, host):
         """Disable services notifications for a host
@@ -1917,9 +2078,10 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for serv in host.services:
-            self.disable_svc_notifications(serv)
-            self.daemon.get_and_register_status_brok(serv)
+        for service_id in host.services:
+            if service_id in self.daemon.services:
+                self.disable_svc_notifications(self.daemon.services[service_id])
+                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
 
     def disable_notifications(self):
         """Disable notifications (globally)
@@ -1989,8 +2151,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_host_check(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.disable_host_check(self.daemon.hosts[host_id])
 
     def disable_servicegroup_host_notifications(self, servicegroup):
         """Disable host notifications for a servicegroup
@@ -2002,8 +2166,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_host_notifications(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.disable_host_notifications(self.daemon.hosts[host_id])
 
     def disable_servicegroup_passive_host_checks(self, servicegroup):
         """Disable passive host checks for a servicegroup
@@ -2015,8 +2181,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_passive_host_checks(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.disable_passive_host_checks(self.daemon.hosts[host_id])
 
     def disable_servicegroup_passive_svc_checks(self, servicegroup):
         """Disable passive service checks for a servicegroup
@@ -2028,8 +2196,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_passive_svc_checks(service)
+        for service_id in servicegroup.get_services():
+            self.disable_passive_svc_checks(self.daemon.services[service_id])
 
     def disable_servicegroup_svc_checks(self, servicegroup):
         """Disable service checks for a servicegroup
@@ -2041,8 +2209,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_svc_check(service)
+        for service_id in servicegroup.get_services():
+            self.disable_svc_check(self.daemon.services[service_id])
 
     def disable_servicegroup_svc_notifications(self, servicegroup):
         """Disable service notifications for a servicegroup
@@ -2054,8 +2222,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.disable_svc_notifications(service)
+        for service_id in servicegroup.get_services():
+            self.disable_svc_notifications(self.daemon.services[service_id])
 
     def disable_service_flap_detection(self, service):
         """Disable flap detection for a service
@@ -2158,7 +2326,14 @@ class ExternalCommandManager:
         :return: None
         TODO: Implement it
         """
-        pass
+        logger.warning("The external command 'ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def enable_contactgroup_host_notifications(self, contactgroup):
         """Enable host notifications for a contactgroup
@@ -2170,8 +2345,8 @@ class ExternalCommandManager:
         :type contactgroup: alignak.objects.contactgroup.Contactgroup
         :return: None
         """
-        for contact in contactgroup:
-            self.enable_contact_host_notifications(contact)
+        for contact_id in contactgroup.get_contacts():
+            self.enable_contact_host_notifications(self.daemon.contacts[contact_id])
 
     def enable_contactgroup_svc_notifications(self, contactgroup):
         """Enable service notifications for a contactgroup
@@ -2183,8 +2358,8 @@ class ExternalCommandManager:
         :type contactgroup: alignak.objects.contactgroup.Contactgroup
         :return: None
         """
-        for contact in contactgroup:
-            self.enable_contact_svc_notifications(contact)
+        for contact_id in contactgroup.get_contacts():
+            self.enable_contact_svc_notifications(self.daemon.contacts[contact_id])
 
     def enable_contact_host_notifications(self, contact):
         """Enable host notifications for a contact
@@ -2230,21 +2405,6 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.daemon.get_and_register_update_program_status_brok()
 
-    def enable_failure_prediction(self):
-        """Enable failure prediction (globally)
-        Format of the line that triggers function call::
-
-        ENABLE_FAILURE_PREDICTION
-
-        :return: None
-        """
-        if not self.conf.enable_failure_prediction:
-            self.conf.modified_attributes |= \
-                DICT_MODATTR["MODATTR_FAILURE_PREDICTION_ENABLED"].value
-            self.conf.enable_failure_prediction = True
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
     def enable_flap_detection(self):
         """Enable flap detection (globally)
         Format of the line that triggers function call::
@@ -2269,8 +2429,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.enable_host_check(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.enable_host_check(self.daemon.hosts[host_id])
 
     def enable_hostgroup_host_notifications(self, hostgroup):
         """Enable host notifications for a hostgroup
@@ -2282,8 +2443,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.enable_host_notifications(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.enable_host_notifications(self.daemon.hosts[host_id])
 
     def enable_hostgroup_passive_host_checks(self, hostgroup):
         """Enable host passive checks for a hostgroup
@@ -2295,8 +2457,9 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            self.enable_passive_host_checks(host)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                self.enable_passive_host_checks(self.daemon.hosts[host_id])
 
     def enable_hostgroup_passive_svc_checks(self, hostgroup):
         """Enable service passive checks for a hostgroup
@@ -2308,9 +2471,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.enable_passive_svc_checks(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.enable_passive_svc_checks(self.daemon.services[service_id])
 
     def enable_hostgroup_svc_checks(self, hostgroup):
         """Enable service checks for a hostgroup
@@ -2322,9 +2487,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.enable_svc_check(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.enable_svc_check(self.daemon.services[service_id])
 
     def enable_hostgroup_svc_notifications(self, hostgroup):
         """Enable service notifications for a hostgroup
@@ -2336,9 +2503,11 @@ class ExternalCommandManager:
         :type hostgroup: alignak.objects.hostgroup.Hostgroup
         :return: None
         """
-        for host in hostgroup:
-            for service in host.services:
-                self.enable_svc_notifications(service)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                for service_id in self.daemon.hosts[host_id].services:
+                    if service_id in self.daemon.services:
+                        self.enable_svc_notifications(self.daemon.services[service_id])
 
     def enable_host_and_child_notifications(self, host):
         """DOES NOTHING (Should enable host notifications and its child)
@@ -2350,7 +2519,14 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        pass
+        logger.warning("The external command 'ENABLE_HOST_AND_CHILD_NOTIFICATIONS' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'ENABLE_HOST_AND_CHILD_NOTIFICATIONS: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def enable_host_check(self, host):
         """Enable checks for a host
@@ -2436,8 +2612,10 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for serv in host.services:
-            self.enable_svc_check(serv)
+        for service_id in host.services:
+            if service_id in self.daemon.services:
+                self.enable_svc_check(self.daemon.services[service_id])
+                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
 
     def enable_host_svc_notifications(self, host):
         """Enable services notifications for a host
@@ -2449,9 +2627,10 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for serv in host.services:
-            self.enable_svc_notifications(serv)
-            self.daemon.get_and_register_status_brok(serv)
+        for service_id in host.services:
+            if service_id in self.daemon.services:
+                self.enable_svc_notifications(self.daemon.services[service_id])
+                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
 
     def enable_notifications(self):
         """Enable notifications (globally)
@@ -2521,8 +2700,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_host_check(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.enable_host_check(self.daemon.hosts[host_id])
 
     def enable_servicegroup_host_notifications(self, servicegroup):
         """Enable host notifications for a servicegroup
@@ -2534,8 +2715,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_host_notifications(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.enable_host_notifications(self.daemon.hosts[host_id])
 
     def enable_servicegroup_passive_host_checks(self, servicegroup):
         """Enable passive host checks for a servicegroup
@@ -2547,8 +2730,10 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_passive_host_checks(service.host)
+        for service_id in servicegroup.get_services():
+            if service_id in self.daemon.services:
+                host_id = self.daemon.services[service_id].host
+                self.enable_passive_host_checks(self.daemon.hosts[host_id])
 
     def enable_servicegroup_passive_svc_checks(self, servicegroup):
         """Enable passive service checks for a servicegroup
@@ -2560,8 +2745,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_passive_svc_checks(service)
+        for service_id in servicegroup.get_services():
+            self.enable_passive_svc_checks(self.daemon.services[service_id])
 
     def enable_servicegroup_svc_checks(self, servicegroup):
         """Enable service checks for a servicegroup
@@ -2573,8 +2758,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_svc_check(service)
+        for service_id in servicegroup.get_services():
+            self.enable_svc_check(self.daemon.services[service_id])
 
     def enable_servicegroup_svc_notifications(self, servicegroup):
         """Enable service notifications for a servicegroup
@@ -2586,8 +2771,8 @@ class ExternalCommandManager:
         :type servicegroup: alignak.objects.servicegroup.Servicegroup
         :return: None
         """
-        for service in servicegroup:
-            self.enable_svc_notifications(service)
+        for service_id in servicegroup.get_services():
+            self.enable_svc_notifications(self.daemon.services[service_id])
 
     def enable_service_freshness_checks(self):
         """Enable service freshness checks (globally)
@@ -2675,7 +2860,14 @@ class ExternalCommandManager:
         :type delete:
         :return: None
         """
-        pass
+        logger.warning("The external command 'PROCESS_FILE' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'PROCESS_FILE: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def process_host_check_result(self, host, status_code, plugin_output):
         """Process host check result
@@ -2812,7 +3004,7 @@ class ExternalCommandManager:
         """Process service output
         Format of the line that triggers function call::
 
-        PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<plugin_output>
+        PROCESS_SERVICE_OUTPUT;<host_name>;<service_description>;<plugin_output>
 
         :param service: service to process check to
         :type service: alignak.objects.service.Service
@@ -2830,7 +3022,14 @@ class ExternalCommandManager:
 
         :return: None
         """
-        pass
+        logger.warning("The external command 'READ_STATE_INFORMATION' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'READ_STATE_INFORMATION: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def remove_host_acknowledgement(self, host):
         """Remove an acknowledgment on a host
@@ -2934,7 +3133,14 @@ class ExternalCommandManager:
 
         :return: None
         """
-        pass
+        logger.warning("The external command 'SAVE_STATE_INFORMATION' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SAVE_STATE_INFORMATION: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def schedule_and_propagate_host_downtime(self, host, start_time, end_time,
                                              fixed, trigger_id, duration, author, comment):
@@ -2946,7 +3152,14 @@ class ExternalCommandManager:
 
         :return: None
         """
-        pass
+        logger.warning("The external command 'SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def schedule_and_propagate_triggered_host_downtime(self, host, start_time, end_time, fixed,
                                                        trigger_id, duration, author, comment):
@@ -2958,7 +3171,14 @@ class ExternalCommandManager:
 
         :return: None
         """
-        pass
+        logger.warning("The external command 'SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def schedule_contact_downtime(self, contact, start_time, end_time, author, comment):
         """Schedule contact downtime
@@ -2997,7 +3217,10 @@ class ExternalCommandManager:
         :type check_time: int
         :return: None
         """
-        host.schedule(force=True, force_time=check_time)
+        host.schedule(self.daemon.hosts, self.daemon.services,
+                      self.daemon.timeperiods, self.daemon.macromodulations,
+                      self.daemon.checkmodulations, self.daemon.checks,
+                      force=True, force_time=check_time)
         self.daemon.get_and_register_status_brok(host)
 
     def schedule_forced_host_svc_checks(self, host, check_time):
@@ -3012,9 +3235,10 @@ class ExternalCommandManager:
         :type check_time: int
         :return: None
         """
-        for serv in host.services:
-            self.schedule_forced_svc_check(serv, check_time)
-            self.daemon.get_and_register_status_brok(serv)
+        for service_id in host.services:
+            service = self.daemon.services[service_id]
+            self.schedule_forced_svc_check(service, check_time)
+            self.daemon.get_and_register_status_brok(service)
 
     def schedule_forced_svc_check(self, service, check_time):
         """Schedule a forced check on a service
@@ -3028,7 +3252,10 @@ class ExternalCommandManager:
         :type check_time: int
         :return: None
         """
-        service.schedule(force=True, force_time=check_time)
+        service.schedule(self.daemon.hosts, self.daemon.services,
+                         self.daemon.timeperiods, self.daemon.macromodulations,
+                         self.daemon.checkmodulations, self.daemon.checks,
+                         force=True, force_time=check_time)
         self.daemon.get_and_register_status_brok(service)
 
     def schedule_hostgroup_host_downtime(self, hostgroup, start_time, end_time, fixed,
@@ -3057,9 +3284,11 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        for host in hostgroup:
-            self.schedule_host_downtime(host, start_time, end_time, fixed,
-                                        trigger_id, duration, author, comment)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                host = self.daemon.hosts[host_id]
+                self.schedule_host_downtime(host, start_time, end_time, fixed,
+                                            trigger_id, duration, author, comment)
 
     def schedule_hostgroup_svc_downtime(self, hostgroup, start_time, end_time, fixed,
                                         trigger_id, duration, author, comment):
@@ -3087,10 +3316,13 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        for host in hostgroup:
-            for serv in host.services:
-                self.schedule_svc_downtime(serv, start_time, end_time, fixed,
-                                           trigger_id, duration, author, comment)
+        for host_id in hostgroup.get_hosts():
+            if host_id in self.daemon.hosts:
+                host = self.daemon.hosts[host_id]
+                for service_id in host.services:
+                    service = self.daemon.services[service_id]
+                    self.schedule_svc_downtime(service, start_time, end_time, fixed,
+                                               trigger_id, duration, author, comment)
 
     def schedule_host_check(self, host, check_time):
         """Schedule a check on a host
@@ -3104,7 +3336,10 @@ class ExternalCommandManager:
         :type check_time:
         :return: None
         """
-        host.schedule(force=False, force_time=check_time)
+        host.schedule(self.daemon.hosts, self.daemon.services,
+                      self.daemon.timeperiods, self.daemon.macromodulations,
+                      self.daemon.checkmodulations, self.daemon.checks,
+                      force=False, force_time=check_time)
         self.daemon.get_and_register_status_brok(host)
 
     def schedule_host_downtime(self, host, start_time, end_time, fixed,
@@ -3156,9 +3391,10 @@ class ExternalCommandManager:
         :type check_time:
         :return: None
         """
-        for serv in host.services:
-            self.schedule_svc_check(serv, check_time)
-            self.daemon.get_and_register_status_brok(serv)
+        for service_id in host.services:
+            service = self.daemon.services[service_id]
+            self.schedule_svc_check(service, check_time)
+            self.daemon.get_and_register_status_brok(service)
 
     def schedule_host_svc_downtime(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
@@ -3262,7 +3498,10 @@ class ExternalCommandManager:
         :type check_time:
         :return: None
         """
-        service.schedule(force=False, force_time=check_time)
+        service.schedule(self.daemon.hosts, self.daemon.services,
+                         self.daemon.timeperiods, self.daemon.macromodulations,
+                         self.daemon.checkmodulations, self.daemon.checks,
+                         force=False, force_time=check_time)
         self.daemon.get_and_register_status_brok(service)
 
     def schedule_svc_downtime(self, service, start_time, end_time, fixed,
@@ -3318,7 +3557,14 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        pass
+        logger.warning("The external command 'SEND_CUSTOM_HOST_NOTIFICATION' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SEND_CUSTOM_HOST_NOTIFICATION: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def send_custom_svc_notification(self, service, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
@@ -3336,7 +3582,14 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        pass
+        logger.warning("The external command 'SEND_CUSTOM_SVC_NOTIFICATION' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SEND_CUSTOM_SVC_NOTIFICATION: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def set_host_notification_number(self, host, notification_number):
         """DOES NOTHING (Should set host notification number)
@@ -3350,7 +3603,14 @@ class ExternalCommandManager:
         :type notification_number:
         :return: None
         """
-        pass
+        logger.warning("The external command 'SET_HOST_NOTIFICATION_NUMBER' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SET_HOST_NOTIFICATION_NUMBER: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def set_svc_notification_number(self, service, notification_number):
         """DOES NOTHING (Should set host notification number)
@@ -3364,7 +3624,14 @@ class ExternalCommandManager:
         :type notification_number:
         :return: None
         """
-        pass
+        logger.warning("The external command 'SET_SVC_NOTIFICATION_NUMBER' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SET_SVC_NOTIFICATION_NUMBER: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def shutdown_program(self):
         """DOES NOTHING (Should shutdown Alignak)
@@ -3374,7 +3641,14 @@ class ExternalCommandManager:
 
         :return: None
         """
-        pass
+        logger.warning("The external command 'SHUTDOWN_PROGRAM' "
+                       "is not currently implemented in Alignak. If you really need it, "
+                       "request for its implementation in the project repository: "
+                       "https://github.com/Alignak-monitoring/alignak")
+        brok = make_monitoring_log('warning',
+                                   'SHUTDOWN_PROGRAM: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
 
     def start_accepting_passive_host_checks(self):
         """Enable passive host check submission (globally)
@@ -3629,104 +3903,3 @@ class ExternalCommandManager:
         """
         host.get_event_handlers(self.hosts, self.daemon.macromodulations, self.daemon.timeperiods,
                                 externalcmd=True)
-
-    def add_simple_host_dependency(self, son, father):
-        """Add a host dependency between son and father
-        Format of the line that triggers function call::
-
-        ADD_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
-
-        :param son: son of dependency
-        :type son: alignak.objects.host.Host
-        :param father: father of dependency
-        :type father: alignak.objects.host.Host
-        :return: None
-        """
-        if not son.is_linked_with_host(father.uuid):
-            logger.debug("Doing simple link between %s and %s", son.get_name(), father.get_name())
-            # Flag them so the modules will know that a topology change
-            # happened
-            son.topology_change = True
-            father.topology_change = True
-            # Now do the work
-            # Add a dep link between the son and the father
-            self.daemon.hosts.add_act_dependency(son.uuid, father.uuid, ['w', 'u', 'd'], None, True)
-            self.daemon.get_and_register_status_brok(son)
-            self.daemon.get_and_register_status_brok(father)
-
-    def del_host_dependency(self, son, father):
-        """Delete a host dependency between son and father
-        Format of the line that triggers function call::
-
-        DEL_SIMPLE_HOST_DEPENDENCY;<host_name>;<host_name>
-
-        :param son: son of dependency
-        :type son: alignak.objects.host.Host
-        :param father: father of dependency
-        :type father: alignak.objects.host.Host
-        :return: None
-        """
-        if son.is_linked_with_host(father.uuid):
-            logger.debug("Removing simple link between %s and %s",
-                         son.get_name(), father.get_name())
-            # Flag them so the modules will know that a topology change
-            # happened
-            son.topology_change = True
-            father.topology_change = True
-            # Now do the work
-            self.daemon.hosts.del_act_dependency(son.uuid, father.uuid)
-            self.daemon.get_and_register_status_brok(son)
-            self.daemon.get_and_register_status_brok(father)
-
-    def add_simple_poller(self, realm_name, poller_name, address, port):
-        """Add a poller
-        Format of the line that triggers function call::
-
-        ADD_SIMPLE_POLLER;realm_name;poller_name;address;port
-
-        TODO: this needs to be tested thoroughly!
-
-        :param realm_name: realm for the new poller
-        :type realm_name: str
-        :param poller_name: new poller name
-        :type poller_name: str
-        :param address: new poller address
-        :type address: str
-        :param port: new poller port
-        :type port: int
-        :return: None
-        """
-        logger.debug("I need to add the poller (%s, %s, %s, %s)",
-                     realm_name, poller_name, address, port)
-
-        # First we check if we are a dispatcher
-        if self.mode != 'dispatcher':
-            logger.warning("Sorry, adding a poller is not allowed for me!")
-            return
-
-        # Then we look for the realm
-        realm = self.conf.realms.find_by_name(realm_name)
-        if realm is None:
-            logger.warning("Sorry, the realm %s is unknown", realm_name)
-            return
-
-        logger.debug("We found the realm: %s", str(realm))
-        # TODO: backport this in the config class?
-        # We create the PollerLink object
-        params = {'poller_name': poller_name, 'address': address, 'port': port}
-        poll = PollerLink(params)
-        poll.fill_default()
-        poll.prepare_for_conf()
-        parameters = {'max_plugins_output_length': self.conf.max_plugins_output_length}
-        poll.add_global_conf_parameters(parameters)
-
-        self.daemon.conf.pollers[poll.uuid] = poll
-        self.daemon.dispatcher.elements.append(poll)
-        self.daemon.dispatcher.satellites.append(poll)
-        realm.pollers.append(poll.uuid)
-        realm.count_pollers(self.daemon.conf.pollers)
-        self.daemon.conf.realms.fill_potential_satellites_by_type('pollers', realm,
-                                                                  self.daemon.conf.pollers)
-        logger.info("Poller %s added", poller_name)
-        logger.debug("Potential %s", str(realm.get_potential_satellites_by_type('poller')))
-        # Todo: make a monitoring log for this?

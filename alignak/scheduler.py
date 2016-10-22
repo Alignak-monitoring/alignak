@@ -661,7 +661,8 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         if dt_id in self.downtimes:
             downtime = self.downtimes[dt_id]
-            self.find_item_by_id(downtime.ref).del_downtime(dt_id, self.downtimes)
+            ref = self.find_item_by_id(downtime.ref)
+            ref.del_downtime(dt_id, self.downtimes)
             del self.downtimes[dt_id]
 
     def del_contact_downtime(self, dt_id):
@@ -1703,6 +1704,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # which were marked for deletion (mostly by dt.exit())
         for downtime in self.downtimes.values():
             if downtime.can_be_deleted is True:
+                logger.error("Downtime to delete: %s", downtime.__dict__)
                 ref = self.find_item_by_id(downtime.ref)
                 self.del_downtime(downtime.uuid)
                 broks.append(ref.get_update_status_brok())

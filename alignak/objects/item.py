@@ -145,7 +145,7 @@ class Item(AlignakObject):
                     # If it's a string, directly use this
                     if isinstance(macro, basestring):
                         val = macro
-                    # aa list for a custom macro is not managed (conceptually invalid)
+                    # a list for a custom macro is not managed (conceptually invalid)
                     # so take the first defined
                     elif isinstance(macro, list) and len(macro) > 0:
                         val = macro[0]
@@ -496,10 +496,10 @@ class Item(AlignakObject):
         :return: None
         """
         d_to_del = None
-        for downtime_id in self.downtimes:
-            if downtime_id == downtime_id:
-                downtime = downtimes[downtime_id]
-                d_to_del = downtime_id
+        for d_id in self.downtimes:
+            if d_id == downtime_id:
+                downtime = downtimes[d_id]
+                d_to_del = d_id
                 downtime.can_be_deleted = True
         if d_to_del is not None:
             self.downtimes.remove(d_to_del)

@@ -71,41 +71,77 @@ class Contact(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'contact_name':     StringProp(fill_brok=['full_status']),
-        'alias':            StringProp(default='none', fill_brok=['full_status']),
-        'contactgroups':    ListProp(default=[], fill_brok=['full_status']),
-        'host_notifications_enabled': BoolProp(default=True, fill_brok=['full_status']),
-        'service_notifications_enabled': BoolProp(default=True, fill_brok=['full_status']),
-        'host_notification_period': StringProp(default='', fill_brok=['full_status']),
-        'service_notification_period': StringProp(default='', fill_brok=['full_status']),
-        'host_notification_options': ListProp(default=[''], fill_brok=['full_status'],
-                                              split_on_coma=True),
-        'service_notification_options': ListProp(default=[''], fill_brok=['full_status'],
-                                                 split_on_coma=True),
+        'contact_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(default='none', fill_brok=['full_status']),
+        'contactgroups':
+            ListProp(default=[], fill_brok=['full_status']),
+        'host_notifications_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'service_notifications_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'host_notification_period':
+            StringProp(default='', fill_brok=['full_status']),
+        'service_notification_period':
+            StringProp(default='', fill_brok=['full_status']),
+        'host_notification_options':
+            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+        'service_notification_options':
+            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
         # To be consistent with notificationway object attributes
-        'host_notification_commands': ListProp(default=[], fill_brok=['full_status']),
-        'service_notification_commands': ListProp(default=[], fill_brok=['full_status']),
-        'min_business_impact':    IntegerProp(default=0, fill_brok=['full_status']),
-        'email':            StringProp(default='none', fill_brok=['full_status']),
-        'pager':            StringProp(default='none', fill_brok=['full_status']),
-        'address1':         StringProp(default='none', fill_brok=['full_status']),
-        'address2':         StringProp(default='none', fill_brok=['full_status']),
-        'address3':        StringProp(default='none', fill_brok=['full_status']),
-        'address4':         StringProp(default='none', fill_brok=['full_status']),
-        'address5':         StringProp(default='none', fill_brok=['full_status']),
-        'address6':         StringProp(default='none', fill_brok=['full_status']),
-        'can_submit_commands': BoolProp(default=False, fill_brok=['full_status']),
-        'is_admin':         BoolProp(default=False, fill_brok=['full_status']),
-        'expert':           BoolProp(default=False, fill_brok=['full_status']),
-        'retain_status_information': BoolProp(default=True, fill_brok=['full_status']),
-        'notificationways': ListProp(default=[], fill_brok=['full_status']),
-        'password':        StringProp(default='NOPASSWORDSET', fill_brok=['full_status']),
+        'host_notification_commands':
+            ListProp(default=[], fill_brok=['full_status']),
+        'service_notification_commands':
+            ListProp(default=[], fill_brok=['full_status']),
+        'min_business_impact':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'email':
+            StringProp(default='none', fill_brok=['full_status']),
+        'pager':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address1':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address2':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address3':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address4':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address5':
+            StringProp(default='none', fill_brok=['full_status']),
+        'address6':
+            StringProp(default='none', fill_brok=['full_status']),
+        'can_submit_commands':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'is_admin':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'expert':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'retain_status_information':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'notificationways':
+            ListProp(default=[], fill_brok=['full_status']),
+        'password':
+            StringProp(default='NOPASSWORDSET', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
-        'modified_attributes': IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
-        'downtimes': StringProp(default=[], fill_brok=['full_status'], retention=True),
+        'modified_attributes':
+            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+        'modified_host_attributes':
+            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+        'modified_service_attributes':
+            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+        'in_scheduled_downtime':
+            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+        'broks':
+            ListProp(default=[]),  # and here broks raised
+        'downtimes':
+            StringProp(default=[], fill_brok=['full_status'], retention=True),
+        'customs':
+            StringProp(default={}, fill_brok=['full_status']),
     })
 
     # This tab is used to transform old parameters name into new ones
@@ -202,11 +238,13 @@ class Contact(Item):
         if not self.service_notifications_enabled:
             return False
 
-        # If we are in downtime, we do nto want notification
+        # If we are in downtime, we do not want notification
         for downtime_id in self.downtimes:
             downtime = downtimes[downtime_id]
             if downtime.is_in_effect:
+                self.in_scheduled_downtime = True
                 return False
+        self.in_scheduled_downtime = False
 
         # Now the rest is for sub notificationways. If one is OK, we are ok
         # We will filter in another phase
@@ -240,10 +278,12 @@ class Contact(Item):
         if not self.host_notifications_enabled:
             return False
 
-        # If we are in downtime, we do nto want notification
+        # If we are in downtime, we do not want notification
         for downtime in self.downtimes:
             if downtime.is_in_effect:
+                self.in_scheduled_downtime = True
                 return False
+        self.in_scheduled_downtime = False
 
         # Now it's all for sub notificationways. If one is OK, we are OK
         # We will filter in another phase
