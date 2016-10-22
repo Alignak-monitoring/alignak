@@ -65,7 +65,7 @@ from alignak.misc.common import setproctitle
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Worker(object):
+class Worker(object):  # pragma: no cover, not with unit tests
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
     (self.s) (slave)

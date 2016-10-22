@@ -100,7 +100,8 @@ try:
         :rtype: list
         """
         return getgrall()
-except ImportError, exp:  # Like in nt system
+except ImportError, exp:  # pragma: no cover, not for unit tests...
+    # Like in Windows system
     # temporary workaround:
     def get_cur_user():
         """Fake getpwuid
@@ -154,7 +155,8 @@ class InvalidPidFile(Exception):
 DEFAULT_WORK_DIR = './'
 
 
-class Daemon(object):  # pylint: disable=R0902
+# pylint: disable=R0902
+class Daemon(object):  # pragma: no cover, not for unit tests...
     """Class providing daemon level call for Alignak
         TODO: Consider clean this code and use standard libs
     """
@@ -1228,7 +1230,7 @@ class Daemon(object):  # pylint: disable=R0902
                         self.add(obj)
         return had_some_objects
 
-    def setup_alignak_logger(self):
+    def setup_alignak_logger(self):  # pragma: no cover, not for unit tests...
         """ Setup alignak logger:
         - load the daemon configuration file
         - configure the global daemon handler (root logger)
