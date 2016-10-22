@@ -75,7 +75,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertIsNotNone(router)
 
         # Get service
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # ignore the host which we depend of
         svc.event_handler_enabled = False
@@ -116,6 +117,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
         self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is UP', host.output)
 
@@ -123,9 +125,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;1;Host is Unreachable' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        # Considerd as UP
-        # TODO: to be explained!!!
-        self.assertEqual('UP', host.state)
+        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
+        self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is Unreachable', host.output)
 
         # Receive passive host check Up
@@ -207,6 +208,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # ---------------------------------------------
         # With timestamp in the past (- 30 seconds)
         # The check is accepted
+        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
         past = int(time.time() - 30)
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
@@ -257,10 +259,6 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.external_command_loop()
         self.assertEqual('DOWN', router.state)
         self.assertEqual('Router is Down', router.output)
-        # TODO: to be confirmed ... host should be unreachable because of its dependency with router
-        # self.assertEqual('DOWN', host.state)
-        # self.assertEqual('Router is Down', router.output)
-        # self.assertEqual(router.last_chk, past)
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
@@ -317,19 +315,19 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Passive checks for hosts
         # ---------------------------------------------
         # Receive passive host check Down
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP' % time.time()
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is DOWN' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
         self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is UP', host.output)
+        self.assertEqual('Host is DOWN', host.output)
 
         # Receive passive host check Unreachable
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;1;Host is Unreachable' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        # Considerd as UP
-        # TODO: to be explained!!!
-        self.assertEqual('UP', host.state)
+        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
+        self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is Unreachable', host.output)
 
         # Receive passive host check Up
@@ -365,6 +363,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
         self.assertEqual('WARNING', svc.state)
         self.assertEqual('Service is WARNING', svc.output)
         self.assertEqual(False, svc.problem_has_been_acknowledged)
@@ -387,6 +386,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
         self.assertEqual('CRITICAL', svc.state)
         self.assertEqual('Service is CRITICAL', svc.output)
         self.assertEqual(False, svc.problem_has_been_acknowledged)
@@ -743,6 +743,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
         self.assertEqual('WARNING', svc.state)
         self.assertEqual('Service is WARNING', svc.output)
         self.assertEqual(False, svc.problem_has_been_acknowledged)
@@ -772,6 +773,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
         self.assertEqual('CRITICAL', svc.state)
         self.assertEqual('Service is CRITICAL', svc.output)
         self.assertEqual(False, svc.problem_has_been_acknowledged)

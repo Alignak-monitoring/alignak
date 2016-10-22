@@ -297,7 +297,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
         'is_flapping':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        #  dependencies for actions like notif of event handler,
+        #  dependencies for actions like notification or event handler,
         # so AFTER check return
         'act_depend_of':
             ListProp(default=[]),
@@ -728,7 +728,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # and they should be cool to register them so I've got
         # my impacts list
         impacts = list(self.impacts)
-        for (impact_id, status, _, timeperiod_id, _) in self.act_depend_of_me:
+        for (impact_id, status, timeperiod_id, _) in self.act_depend_of_me:
             # Check if the status is ok for impact
             if impact_id in hosts:
                 impact = hosts[impact_id]
@@ -902,7 +902,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.source_problems.append(prob.uuid)
             # we should send this problem to all potential impact that
             # depend on us
-            for (impact_id, status, _, timeperiod_id, _) in self.act_depend_of_me:
+            for (impact_id, status, timeperiod_id, _) in self.act_depend_of_me:
                 # Check if the status is ok for impact
                 if impact_id in hosts:
                     impact = hosts[impact_id]
@@ -948,8 +948,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         brok = self.get_update_status_brok()
         self.broks.append(brok)
 
-    def is_no_action_dependent(self, hosts, services):
-        """Check if dependencies states (logic or network) match dependencies statuses
+    def is_enable_action_dependent(self, hosts, services):
+        """
+        Check if dependencies states match dependencies statuses
         This basically means that a dependency is in a bad state and
         it can explain this object state.
 
@@ -957,74 +958,53 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects,  used to get object in act_depend_of
         :type services: alignak.objects.service.Services
-        :return: True if one of the logical dep matches the status or
-                 all network dep match the status. False otherwise
+        :return: True if all dependencies matches the status, false otherwise
         :rtype: bool
         """
-        # Use to know if notif is raise or not
-        # no_action = False
-        parent_is_down = []
-        # So if one logic is Raise, is dep
-        # is one network is no ok, is not dep
-        # at the end, raise no dep
-        for (dep_id, status, n_type, _, _) in self.act_depend_of:
-            # For logic_dep, only one state raise put no action
-            if dep_id in hosts:
-                dep = hosts[dep_id]
+        # Use to know if notification is raise or not
+        enable_notif = False
+        for (dep_id, status, _, _) in self.act_depend_of:
+            if 'n' in status:
+                enable_notif = True
             else:
-                dep = services[dep_id]
-            if n_type == 'logic_dep':
-                for stat in status:
-                    if dep.is_state(stat):
-                        return True
-            # more complicated: if none of the states are match, the host is down
-            # so -> network_dep
-            else:
+                if dep_id in hosts:
+                    dep = hosts[dep_id]
+                else:
+                    dep = services[dep_id]
                 p_is_down = False
                 dep_match = [dep.is_state(stat) for stat in status]
                 # check if the parent match a case, so he is down
                 if True in dep_match:
                     p_is_down = True
-                parent_is_down.append(p_is_down)
-        # if a parent is not down, no dep can explain the pb
-        if False in parent_is_down:
-            return False
-        else:  # every parents are dead, so... It's not my fault :)
-            return True
+                if not p_is_down:
+                    enable_notif = True
+        return enable_notif
 
     def check_and_set_unreachability(self, hosts, services):
-        """Check if all network dependencies are down and set this object
-        as unreachable if so.
+        """
+        Check if all dependencies are down, if yes set this object
+        as unreachable.
 
         :param hosts: hosts objects, used to get object in act_depend_of
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects,  used to get object in act_depend_of
         :type services: alignak.objects.service.Services
         :return: None
-        TODO: factorize with previous check?
         """
         parent_is_down = []
-        # We must have all parents raised to be unreachable
-        for (dep_id, status, n_type, _, _) in self.act_depend_of:
-            # For logic_dep, only one state raise put no action
+        for (dep_id, _, _, _) in self.act_depend_of:
             if dep_id in hosts:
                 dep = hosts[dep_id]
             else:
                 dep = services[dep_id]
-            if n_type == 'network_dep':
-                p_is_down = False
-                dep_match = [dep.is_state(s) for s in status]
-                if True in dep_match:  # the parent match a case, so he is down
-                    p_is_down = True
-                parent_is_down.append(p_is_down)
-
-        # if a parent is not down, no dep can explain the pb
-        # or if we don't have any parents
-        if len(parent_is_down) == 0 or False in parent_is_down:
+            if dep.state in ['d', 'DOWN', 'c', 'CRITICAL', 'u', 'UNKNOWN', 'x', 'UNREACHABLE']:
+                parent_is_down.append(True)
+            else:
+                parent_is_down.append(False)
+        if False in parent_is_down:
             return
-        else:  # every parents are dead, so... It's not my fault :)
-            self.set_unreachable()
-            return
+        # all parents down
+        self.set_unreachable()
 
     def do_i_raise_dependency(self, status, inherit_parents, hosts, services, timeperiods):
         """Check if this object or one of its dependency state (chk dependencies) match the status
@@ -1112,32 +1092,40 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param checks: checks dict, used to get checks_in_progress for the object
         :type checks: dict
-        :return: Checks that depend on ref_check
-        :rtype: list[alignak.objects.check.Check]
+        :return: check created and check in_checking
+        :rtype: dict
         """
         now = time.time()
         cls = self.__class__
         new_checks = []
-        for (dep_id, _, _, timeperiod_id, _) in self.act_depend_of:
+        checking_checks = []
+        for (dep_id, _, timeperiod_id, _) in self.act_depend_of:
             if dep_id in hosts:
-                dep = hosts[dep_id]
+                dep_item = hosts[dep_id]
             else:
-                dep = services[dep_id]
+                dep_item = services[dep_id]
             timeperiod = timeperiods[timeperiod_id]
-            # If the dep timeperiod is not valid, do not raise the dep,
+            # If the dep_item timeperiod is not valid, do not raise the dep,
             # None=everytime
             if timeperiod is None or timeperiod.is_time_valid(now):
                 # if the update is 'fresh', do not raise dep,
                 # cached_check_horizon = cached_service_check_horizon for service
-                if dep.last_state_update < now - cls.cached_check_horizon:
-                    # Do not launch check if dependency is a passively checked item
-                    if dep.active_checks_enabled:
-                        chk = dep.launch_check(now, hosts, services, timeperiods,
-                                               macromodulations, checkmodulations, checks,
-                                               ref_check, dependent=True)
-                        if chk is not None:
-                            new_checks.append(chk)
-        return new_checks
+                if dep_item.last_state_update < now - cls.cached_check_horizon:
+                    # Do not launch the check if it depends on a passive check of if a check
+                    # is yet planned
+                    if dep_item.active_checks_enabled:
+                        if not dep_item.in_checking:
+                            newchk = dep_item.launch_check(now, hosts, services, timeperiods,
+                                                           macromodulations, checkmodulations,
+                                                           checks, ref_check, dependent=True)
+                            if newchk is not None:
+                                new_checks.append(newchk)
+                        else:
+                            if len(dep_item.checks_in_progress) > 0:
+                                check_uuid = dep_item.checks_in_progress[0]
+                                checks[check_uuid].depend_on_me.append(ref_check)
+                                checking_checks.append(check_uuid)
+        return {'new': new_checks, 'checking': checking_checks}
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                  checks, force=False, force_time=None):
@@ -1560,20 +1548,30 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
 
+        # ============ MANAGE THE CHECK ============ #
+
+        # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
+        # necessary the check of dependent items and nothing else ;)
+        if chk.exit_status != 0 and chk.status == 'waitconsume' and len(self.act_depend_of) != 0:
+            chk.status = 'waitdep'
+            # Make sure the check know about his dep
+            # C is my check, and he wants dependencies
+            deps_checks = self.raise_dependencies_check(chk, hosts, services, timeperiods,
+                                                        macromodulations, checkmodulations,
+                                                        checks)
+            # Get checks_id of dep
+            for check in deps_checks['new']:
+                chk.depend_on.append(check.uuid)
+            for check_uuid in deps_checks['checking']:
+                chk.depend_on.append(check_uuid)
+            # we must wait dependent check checked and consumed
+            return deps_checks['new']
+
         # Protect against bad type output
         # if str, go in unicode
         if isinstance(chk.output, str):
             chk.output = chk.output.decode('utf8', 'ignore')
             chk.long_output = chk.long_output.decode('utf8', 'ignore')
-
-        # Same for current output
-        # TODO: remove in future version, this is need only for
-        # migration from old shinken version, that got output as str
-        # and not unicode
-        # if str, go in unicode
-        if isinstance(self.output, str):
-            self.output = self.output.decode('utf8', 'ignore')
-            self.long_output = self.long_output.decode('utf8', 'ignore')
 
         if isinstance(chk.perf_data, str):
             chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
@@ -1581,6 +1579,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # We check for stalking if necessary
         # so if check is here
         self.manage_stalking(chk)
+
+        # ============ UPDATE ITEM INFORMATION ============ #
 
         # Latency can be <0 is we get a check from the retention file
         # so if <0, set 0
@@ -1597,18 +1597,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.u_time = chk.u_time
         self.s_time = chk.s_time
         self.last_chk = int(chk.check_time)
-
-        # Get output and forgot bad UTF8 values for simple str ones
-        # (we can get already unicode with external commands)
         self.output = chk.output
         self.long_output = chk.long_output
-
-        # Set the check result type also in the host/service
-        # 0 = result came from an active check
-        # 1 = result came from a passive check
-        self.check_type = chk.check_type
-
-        # Get the perf_data only if we want it in the configuration
+        self.check_type = chk.check_type  # 0 => Active check, 1 => passive check
         if self.__class__.process_performance_data and self.process_perf_data:
             self.last_perf_data = self.perf_data
             self.perf_data = chk.perf_data
@@ -1619,39 +1610,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if resultmod is not None:
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
-        # By design modulation: if we got a host, we should look at the
-        # use_aggressive_host_checking flag we should module 1 (warning return):
-        # 1 & aggressive => DOWN/2
-        # 1 & !aggressive => UP/0
-        cls = self.__class__
         if chk.exit_status == 1 and self.__class__.my_type == 'host':
-            if cls.use_aggressive_host_checking:
-                chk.exit_status = 2
-            else:
-                chk.exit_status = 0
-
-        # If we got a bad result on a normal check, and we have dep,
-        # we raise dep checks
-        # put the actual check in waitdep and we return all new checks
-        deps_checks = []
-        if chk.exit_status != 0 and chk.status == 'waitconsume' and len(self.act_depend_of) != 0:
-            chk.status = 'waitdep'
-            # Make sure the check know about his dep
-            # C is my check, and he wants dependencies
-            deps_checks = self.raise_dependencies_check(chk, hosts, services, timeperiods,
-                                                        macromodulations, checkmodulations, checks)
-            for check in deps_checks:
-                # Get checks_id of dep
-                chk.depend_on.append(check.uuid)
-            # Ok, no more need because checks are not
-            # take by host/service, and not returned
-
-        # remember how we was before this check
-        self.last_state_type = self.state_type
+            chk.exit_status = 2
 
         self.set_state_from_exit_status(chk.exit_status, notif_period, hosts, services)
 
-        # Set return_code to exit_status to fill the value in broks
+        self.last_state_type = self.state_type
         self.return_code = chk.exit_status
 
         # we change the state, do whatever we are or not in
@@ -1661,33 +1625,27 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # The check is consumed, update the in_checking properties
         self.remove_in_progress_check(chk.uuid)
 
-        # C is a check and someone wait for it
-        if chk.status == 'waitconsume' and chk.depend_on_me != []:
-            chk.status = 'havetoresolvedep'
+        # Used to know if a notification is raised or not
+        enable_action = True
 
-        # if finish, check need to be set to a zombie state to be removed
-        # it can be change if necessary before return, like for dependencies
-        if chk.status == 'waitconsume' and chk.depend_on_me == []:
-            chk.status = 'zombie'
-
-        # Use to know if notif is raised or not
-        no_action = False
-
-        # C was waitdep, but now all dep are resolved, so check for deps
         if chk.status == 'waitdep':
+            # Check dependencies
+            enable_action = self.is_enable_action_dependent(hosts, services)
+            # If all dependencies not ok, define item as UNREACHABLE
+            self.check_and_set_unreachability(hosts, services)
+
+        if chk.status in ['waitconsume', 'waitdep']:
+            # check waiting consume or waiting result of dependencies
             if chk.depend_on_me != []:
+                # one or more checks wait this check  (dependency)
                 chk.status = 'havetoresolvedep'
             else:
+                # the check go in zombie state to be removed later
                 chk.status = 'zombie'
-            # Check deps
-            no_action = self.is_no_action_dependent(hosts, services)
-            # We recheck just for network_dep. Maybe we are just unreachable
-            # and we need to override the state_id
-            self.check_and_set_unreachability(hosts, services)
-        # OK following a previous OK. perfect if we were not in SOFT
+
+        # from UP/OK/PENDING
+        # to UP/OK
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
-            # print "Case 1 (OK following a previous OK):
-            # code:%s last_state:%s" % (c.exit_status, self.last_state)
             self.unacknowledge_problem(comments)
             # action in return can be notification or other checks (dependencies)
             if (self.state_type == 'SOFT') and self.last_state != 'PENDING':
@@ -1699,35 +1657,32 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.attempt = 1
                 self.state_type = 'HARD'
 
-        # OK following a NON-OK.
+        # from WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
+        # to UP/OK
         elif chk.exit_status == 0 and self.last_state not in (ok_up, 'PENDING'):
             self.unacknowledge_problem(comments)
-            # print "Case 2 (OK following a NON-OK):
-            #  code:%s last_state:%s" % (c.exit_status, self.last_state)
             if self.state_type == 'SOFT':
-                # OK following a NON-OK still in SOFT state
+                # previous check in SOFT
                 if not chk.is_dependent():
                     self.add_attempt()
                 self.raise_alert_log_entry()
                 # Eventhandler gets OK;SOFT;++attempt, no notification needed
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
-                # Internally it is a hard OK
+                # Now we are UP/OK HARD
                 self.state_type = 'HARD'
                 self.attempt = 1
             elif self.state_type == 'HARD':
-                # OK following a HARD NON-OK
+                # previous check in HARD
                 self.raise_alert_log_entry()
                 # Eventhandler and notifications get OK;HARD;maxattempts
                 # Ok, so current notifications are not needed, we 'zombie' them
                 self.remove_in_progress_notifications()
-                if not no_action:
+                if enable_action:
                     self.create_notifications('RECOVERY', notif_period, hosts, services)
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
-                # Internally it is a hard OK
-                self.state_type = 'HARD'
+                # We stay in HARD
                 self.attempt = 1
 
-                # self.update_hard_unknown_phase_state()
                 # I'm no more a problem if I was one
                 self.no_more_a_problem(hosts, services, timeperiods, bi_modulations)
 
@@ -1744,36 +1699,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.raise_alert_log_entry()
             self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
             self.remove_in_progress_notifications()
-            if not no_action:
+            if enable_action:
                 self.create_notifications('PROBLEM', notif_period, hosts, services)
             # Ok, event handlers here too
             self.get_event_handlers(hosts, macromodulations, timeperiods)
 
             # PROBLEM/IMPACT
             # I'm a problem only if I'm the root problem,
-            # so not no_action:
-            if not no_action:
+            if enable_action:
                 self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
-        # NON-OK follows OK. Everything was fine, but now trouble is ahead
+        # from UP/OK
+        # to WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
         elif chk.exit_status != 0 and self.last_state in (ok_up, 'PENDING'):
-            # print "Case 4: NON-OK follows OK: code:%s last_state:%s" %
-            #  (c.exit_status, self.last_state)
             if self.is_max_attempts():
-                # if max_attempts == 1 we're already in deep trouble
+                # Now we are in HARD
                 self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.remove_in_progress_notifications()
                 self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
-                if not no_action:
+                if enable_action:
                     self.create_notifications('PROBLEM', notif_period, hosts, services)
                 # Oh? This is the typical go for a event handler :)
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                 # PROBLEM/IMPACT
                 # I'm a problem only if I'm the root problem,
-                # so not no_action:
-                if not no_action:
+                if enable_action:
                     self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
             else:
@@ -1784,12 +1736,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.raise_alert_log_entry()
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
-        # If no OK in a no OK: if hard, still hard, if soft,
-        # check at self.max_check_attempts
-        # when we go in hard, we send notification
+        # from WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
+        # to WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
         elif chk.exit_status != 0 and self.last_state != ok_up:
-            # print "Case 5 (no OK in a no OK): code:%s last_state:%s state_type:%s" %
-            # (c.exit_status, self.last_state,self.state_type)
             if self.state_type == 'SOFT':
                 if not chk.is_dependent():
                     self.add_attempt()
@@ -1798,20 +1747,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     self.state_type = 'HARD'
                     self.raise_alert_log_entry()
                     self.remove_in_progress_notifications()
-                    # There is a request in the Nagios trac to enter downtimes
-                    # on soft states which does make sense. If this becomes
-                    # the default behavior, just move the following line
-                    # into the else-branch below.
                     self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
-                    if not no_action:
+                    if enable_action:
                         self.create_notifications('PROBLEM', notif_period, hosts, services)
                     # So event handlers here too
                     self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                     # PROBLEM/IMPACT
                     # I'm a problem only if I'm the root problem,
-                    # so not no_action:
-                    if not no_action:
+                    if enable_action:
                         self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
                 else:
@@ -1831,7 +1775,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         self.unacknowledge_problem_if_not_sticky(comments)
                         self.raise_alert_log_entry()
                         self.remove_in_progress_notifications()
-                        if not no_action:
+                        if enable_action:
                             self.create_notifications('PROBLEM', notif_period, hosts, services)
                         self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1840,7 +1784,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # the status is still critical and notifications
                     # are possible again. send an alert immediately
                     self.remove_in_progress_notifications()
-                    if not no_action:
+                    if enable_action:
                         self.create_notifications('PROBLEM', notif_period, hosts, services)
 
                 # PROBLEM/IMPACT
@@ -1848,8 +1792,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # was detected as we may have a non OK state restored from
                 # retention data. This way, we rebuild problem/impact hierarchy.
                 # I'm a problem only if I'm the root problem,
-                # so not no_action:
-                if not no_action:
+                if enable_action:
                     self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
         self.update_hard_unknown_phase_state()
@@ -1888,7 +1831,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
         self.get_snapshot(hosts, macromodulations, timeperiods)
-        return deps_checks
+        return []
 
     def update_event_and_problem_id(self):
         """Update current_event_id and current_problem_id
@@ -2922,7 +2865,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
-        pass
+        cls = self.__class__
+        if cls.enable_problem_impacts_states_change:
+            # Track the old state (problem occured before a new check)
+            self.state_before_impact = self.state
+            self.state_id_before_impact = self.state_id
+            # This flag will know if we override the impact state
+            self.state_changed_since_impact = False
+            self.state = 'UNREACHABLE'  # exit code UNDETERMINED
+            self.state_id = 4
 
     def unset_impact_state(self):
         """Unset impact, only if impact state change is set in configuration
@@ -2943,12 +2894,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         pass
 
     def set_unreachable(self):
-        """
-        Set unreachable
+        """Set unreachable: all our parents (dependencies) are not ok
+        Unreachable is different from down/critical
 
-        :return: None
+        :return:None
         """
-        pass
+        now = time.time()
+        self.state_id = 4
+        self.state = 'UNREACHABLE'
+        self.last_time_unreachable = int(now)
 
     def manage_stalking(self, check):
         """Check if the item need stalking or not (immediate recheck)
@@ -3147,11 +3101,14 @@ class SchedulingItems(CommandCallItems):
         :type inherits_parents: bool
         :return:
         """
-        son = self[son_id]
+        if son_id in self:
+            son = self[son_id]
+        else:
+            msg = "Dependency son (%s) unknown, configuration error" % son_id
+            self.configuration_errors.append(msg)
         parent = self[parent_id]
-        son.act_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
-                                  inherits_parents))
-        parent.act_depend_of_me.append((son_id, notif_failure_criteria, 'logic_dep', dep_period,
+        son.act_depend_of.append((parent_id, notif_failure_criteria, dep_period, inherits_parents))
+        parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,
                                         inherits_parents))
 
         # TODO: Is it necessary? We already have this info in act_depend_* attributes
@@ -3171,17 +3128,17 @@ class SchedulingItems(CommandCallItems):
         parent = self[parent_id]
         to_del = []
         # First we remove in my list
-        for (host, status, n_type, timeperiod, inherits_parent) in son.act_depend_of:
+        for (host, status, timeperiod, inherits_parent) in son.act_depend_of:
             if host == parent_id:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+                to_del.append((host, status, timeperiod, inherits_parent))
         for tup in to_del:
             son.act_depend_of.remove(tup)
 
         # And now in the father part
         to_del = []
-        for (host, status, n_type, timeperiod, inherits_parent) in parent.act_depend_of_me:
+        for (host, status, timeperiod, inherits_parent) in parent.act_depend_of_me:
             if host == son_id:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
+                to_del.append((host, status, timeperiod, inherits_parent))
         for tup in to_del:
             parent.act_depend_of_me.remove(tup)
 

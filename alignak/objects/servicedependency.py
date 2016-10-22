@@ -210,12 +210,13 @@ class Servicedependencies(Items):
         for s_id in servicedeps:
             servicedep = self.items[s_id]
 
-            # First case: we only have to propagate the services dependencies to the all the hosts of some hostgroups
+            # First case: we only have to propagate the services dependencies to the all the hosts
+            # of some hostgroups
             # Either a specific property is defined (Shinken) or no dependent hosts groups
             # is defined
             if bool(getattr(servicedep, 'explode_hostgroup', 0)) or \
                     (hasattr(servicedep, 'hostgroup_name') and
-                         not hasattr(servicedep, 'dependent_hostgroup_name')):
+                        not hasattr(servicedep, 'dependent_hostgroup_name')):
                 self.explode_hostgroup(servicedep, hostgroups)
                 srvdep_to_remove.append(s_id)
                 continue

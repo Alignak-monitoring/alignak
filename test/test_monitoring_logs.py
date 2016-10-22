@@ -83,11 +83,6 @@ class TestMonitoringLogs(AlignakTest):
         self.check(host, 0, 'Host is UP',
                    [(u'info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
 
-        # Because the use_aggressive_host_checking option is not enabled, Alignak considers
-        # 1 as an UP state. Disabled the option will make the host DOWN or UNREACHABLE
-        self.check(host, 1, 'Host is DOWN',
-                   [(u'info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is DOWN')])
-
         # Host goes DOWN / SOFT
         self.check(host, 2, 'Host is DOWN',
                    [(u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN'),
@@ -278,10 +273,6 @@ class TestMonitoringLogs(AlignakTest):
         self.check(host, 0, 'Host is UP', [])
 
         self.check(host, 0, 'Host is UP', [])
-
-        # Because the use_aggressive_host_checking option is not enabled, Alignak considers
-        # 1 as an UP state. Disabled the option will make the host DOWN or UNREACHABLE
-        self.check(host, 1, 'Host is DOWN', [])
 
         # Host goes DOWN / SOFT
         self.check(host, 2, 'Host is DOWN',
