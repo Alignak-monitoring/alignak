@@ -297,10 +297,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
 
         'log_passive_checks':
-            BoolProp(default=True),
+            BoolProp(default=False),
 
         'log_active_checks':
-            BoolProp(default=True),
+            BoolProp(default=False),
 
         # Event handlers
         'global_host_event_handler':
