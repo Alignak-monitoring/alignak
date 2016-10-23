@@ -213,6 +213,7 @@ class Service(SchedulingItem):
         'SERVICEPERFDATA':        'perf_data',
         'LASTSERVICEPERFDATA':    'last_perf_data',
         'SERVICECHECKCOMMAND':    'get_check_command',
+        'SERVICESNAPSHOTCOMMAND': 'get_snapshot_command',
         'SERVICEACKAUTHOR':       'get_ack_author_name',
         'SERVICEACKAUTHORNAME':   'get_ack_author_name',
         'SERVICEACKAUTHORALIAS':  'get_ack_author_name',
@@ -1008,6 +1009,14 @@ class Service(SchedulingItem):
         TODO: Move to util or SchedulingItem class
         """
         return self.check_command.get_name()
+
+    def get_snapshot_command(self):
+        """Wrapper to get the name of the snapshot_command attribute
+
+        :return: snapshot_command name
+        :rtype: str
+        """
+        return self.snapshot_command.get_name()
 
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
                                         n_type, t_wished=None):

@@ -64,11 +64,13 @@ import logging
 import time
 import re
 
+# pylint: disable=wildcard-import,unused-wildcard-import
+# This import, despite not used, is necessary to include all Alignak objects modules
+from alignak.objects import *
 from alignak.util import to_int, to_bool, split_semicolon
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
-from alignak.commandcall import CommandCall
 from alignak.log import make_monitoring_log
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
@@ -135,6 +137,8 @@ class ExternalCommandManager:
             {'global': False, 'args': ['host', 'time_period']},
         'change_host_event_handler':
             {'global': False, 'args': ['host', 'command']},
+        'change_host_snapshot_command':
+            {'global': False, 'args': ['host', 'command']},
         'change_host_modattr':
             {'global': False, 'args': ['host', 'to_int']},
         'change_max_host_check_attempts':
@@ -154,6 +158,8 @@ class ExternalCommandManager:
         'change_svc_check_timeperiod':
             {'global': False, 'args': ['service', 'time_period']},
         'change_svc_event_handler':
+            {'global': False, 'args': ['service', 'command']},
+        'change_svc_snapshot_command':
             {'global': False, 'args': ['service', 'command']},
         'change_svc_modattr':
             {'global': False, 'args': ['service', 'to_int']},
@@ -1225,7 +1231,7 @@ class ExternalCommandManager:
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         data = {"commands": self.commands, "call": check_command, "poller_tag": host.poller_tag}
-        host.check_command = CommandCall(data)
+        host.change_check_command(data)
         self.daemon.get_and_register_status_brok(host)
 
     def change_host_check_timeperiod(self, host, timeperiod):
@@ -1258,7 +1264,24 @@ class ExternalCommandManager:
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": event_handler_command}
-        host.event_handler = CommandCall(data)
+        host.change_event_handler(data)
+        self.daemon.get_and_register_status_brok(host)
+
+    def change_host_snapshot_command(self, host, snapshot_command):
+        """Modify host snapshot command
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_SNAPSHOT_COMMAND;<host_name>;<event_handler_command>
+
+        :param host: host to modify snapshot command
+        :type host: alignak.objects.host.Host
+        :param snapshot_command: snapshot command command line
+        :type snapshot_command:
+        :return: None
+        """
+        host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        data = {"commands": self.commands, "call": snapshot_command}
+        host.change_snapshot_command(data)
         self.daemon.get_and_register_status_brok(host)
 
     def change_host_modattr(self, host, value):
@@ -1451,7 +1474,7 @@ class ExternalCommandManager:
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         data = {"commands": self.commands, "call": check_command, "poller_tag": service.poller_tag}
-        service.check_command = CommandCall(data)
+        service.change_check_command(data)
         self.daemon.get_and_register_status_brok(service)
 
     def change_svc_check_timeperiod(self, service, check_timeperiod):
@@ -1484,7 +1507,24 @@ class ExternalCommandManager:
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": event_handler_command}
-        service.event_handler = CommandCall(data)
+        service.change_event_handler(data)
+        self.daemon.get_and_register_status_brok(service)
+
+    def change_svc_snapshot_command(self, service, snapshot_command):
+        """Modify host snapshot command
+        Format of the line that triggers function call::
+
+        CHANGE_HOST_SNAPSHOT_COMMAND;<host_name>;<event_handler_command>
+
+        :param service: service to modify snapshot command
+        :type service: alignak.objects.service.Service
+        :param snapshot_command: snapshot command command line
+        :type snapshot_command:
+        :return: None
+        """
+        service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
+        data = {"commands": self.commands, "call": snapshot_command}
+        service.change_snapshot_command(data)
         self.daemon.get_and_register_status_brok(service)
 
     def change_svc_modattr(self, service, value):

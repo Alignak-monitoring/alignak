@@ -47,9 +47,8 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The objects package contains definition classes of the different objects
+The objects package contains the definition of the classes for the different objects
  that can be declared in configuration files.
-
  """
 
 

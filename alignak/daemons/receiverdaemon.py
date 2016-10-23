@@ -314,20 +314,22 @@ class Receiver(Satellite):
             self.unprocessed_external_commands = []
             return
 
+        if not self.unprocessed_external_commands:
+            return
+
         commands_to_process = self.unprocessed_external_commands
         self.unprocessed_external_commands = []
-        logger.warning("Commands: %s", commands_to_process)
+        logger.debug("Commands: %s", commands_to_process)
 
         # Now get all external commands and put them into the
         # good schedulers
         for ext_cmd in commands_to_process:
             self.external_commands_manager.resolve_command(ext_cmd)
-            logger.warning("Resolved command: %s", ext_cmd)
+            logger.debug("Resolved command: %s", ext_cmd)
 
         # Now for all alive schedulers, send the commands
         for sched_id in self.schedulers:
             sched = self.schedulers[sched_id]
-            logger.warning("Scheduler: %s", sched)
             extcmds = sched['external_commands']
             cmds = [extcmd.cmd_line for extcmd in extcmds]
             con = sched.get('con', None)

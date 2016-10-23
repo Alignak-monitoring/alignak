@@ -66,12 +66,14 @@ import logging
 
 from multiprocessing import active_children
 
+# pylint: disable=wildcard-import,unused-wildcard-import
+# This import, despite not used, is necessary to include all Alignak objects modules
+from alignak.objects import *
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp
 from alignak.util import sort_by_ids
 from alignak.stats import statsmgr
-from alignak.external_command import ExternalCommand
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.broker_interface import BrokerInterface
 
@@ -143,7 +145,6 @@ class Broker(BaseSatellite):
             self.broks_internal_raised.append(elt)
             return
         elif cls_type == 'externalcommand':
-            logger.debug("Queuing an external command '%s'", str(ExternalCommand.__dict__))
             self.external_commands.append(elt)
         # Maybe we got a Message from the modules, it's way to ask something
         # like from now a full data from a scheduler for example.
