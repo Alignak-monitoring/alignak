@@ -3,7 +3,19 @@ sudo: true
 python:
   - "2.6"
   - "2.7"
-  
+
+env:
+  - TEST_SUITE=unit
+  - TEST_SUITE=codingstandard
+  - TEST_SUITE=virtualenv
+
+matrix:
+  exclude:
+  - python: "2.6"
+    env: TEST_SUITE=codingstandard
+  - python: "2.6"
+    env: TEST_SUITE=virtualenv
+
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
 install:
@@ -14,25 +26,15 @@ install:
 script:
   - cd test
   - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
-  - nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
-  - coverage combine
   - cd ..
-  - pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
-  - unset PYTHONWARNINGS
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then find -iname '*.pyc' -exec rm -rf {} \; && travis_wait pylint --rcfile=.pylintrc -r no alignak; fi
-  - export PYTHONWARNINGS=all
-  - pep257 --select=D300 alignak
-  - cd test
-  - (pkill -6 -f "alignak_-" || :)
-  - python full_tst.py
-  - cd ..
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_virtualenv_setup.sh; fi
+  - travis_wait 30 ./.travis/$TEST_SUITE.sh
+
 # specific call to launch coverage data into coveralls.io
 after_success:
   # to get coverage data with relative paths and not absolute we have to
   # execute coveralls from the base directory of the project,
   # so we need to move the .coverage file here :
-  mv test/.coverage . && coveralls --rcfile=test/.coveragerc
+  - if [[ $TEST_SUITE == 'unit' ]]; then mv test/.coverage . && coveralls --rcfile=test/.coveragerc; fi
 
 notifications:
   webhooks:

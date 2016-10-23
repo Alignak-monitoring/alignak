@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -e
 
 STOP_ON_FAILURE=0
 SKIP_PERMISSION=0
