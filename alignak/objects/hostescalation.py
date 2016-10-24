@@ -113,7 +113,3 @@ class Hostescalations(Items):
                     creation_dict[prop] = getattr(esca, prop)
             escalation = Escalation(creation_dict)
             escalations.add_escalation(escalation)
-
-        # print "All escalations"
-        # for es in escalations:
-        #    print es

@@ -109,12 +109,12 @@ class Worker(object):  # pragma: no cover, not with unit tests
 
     @staticmethod
     def _prework(real_work, *args):
-        """Simply drop the BrokHandler before doing the real_work"""
-        # # No more necessary thanks to the new logger
-        # for handler in list(logger.handlers):
-        #     if isinstance(handler, BrokHandler):
-        #         logger.info("Cleaning BrokHandler %r from logger.handlers..", handler)
-        #         logger.removeHandler(handler)
+        """
+        Do the job...
+        :param real_work: function to execute
+        :param args: arguments
+        :return:
+        """
         real_work(*args)
 
     def is_mortal(self):
@@ -229,11 +229,9 @@ class Worker(object):  # pragma: no cover, not with unit tests
         """
         try:
             while len(self.checks) < self.processes_by_worker:
-                # print "I", self.uuid, "wait for a message"
                 msg = self.slave_q.get(block=False)
                 if msg is not None:
                     self.checks.append(msg.get_data())
-                # print "I", self.uuid, "I've got a message!"
         except Empty:
             if len(self.checks) == 0:
                 self._idletime += 1
@@ -259,7 +257,8 @@ class Worker(object):  # pragma: no cover, not with unit tests
                 # action launching
                 if res == 'toomanyopenfiles':
                     # We should die as soon as we return all checks
-                    logger.error("[%d] I am dying Too many open files %s ... ", self.uuid, chk)
+                    logger.error("[%d] I am dying because of too many open files %s ... ",
+                                 self.uuid, chk)
                     self.i_am_dying = True
 
     def manage_finished_checks(self):
@@ -335,7 +334,7 @@ class Worker(object):  # pragma: no cover, not with unit tests
         except Exception:
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
-            logger.error("Worker '%d' exit with an unmanaged exception : %slave_q",
+            logger.error("Worker '%d' exit with an unmanaged exception : %s",
                          self.uuid, output.getvalue())
             output.close()
             # Ok I die now
@@ -393,7 +392,7 @@ class Worker(object):  # pragma: no cover, not with unit tests
             # worker because we were too weak to manage our job :(
             if len(self.checks) == 0 and self.i_am_dying:
                 logger.warning("[%d] I DIE because I cannot do my job as I should"
-                               "(too many open files?)... forgot me please.", self.uuid)
+                               "(too many open files?)... forget me please.", self.uuid)
                 break
 
             # Manage a possible time change (our avant will be change with the diff)

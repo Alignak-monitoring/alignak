@@ -59,6 +59,8 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(sched.modules[0].module_alias, 'Example')
         self.assertEqual(sched.modules[0].option_3, 'foobar')
         self.assertEqual(2, len(sched.conf.hosts))
+        # Stop launched modules
+        sched.modules_manager.stop_all()
 
     def test_conf_receiver(self):
         """
@@ -85,6 +87,9 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(receiv.modules[0].option_3, 'foobar')
         # check get hosts
         self.assertEqual(len(receiv.host_assoc), 2)
+        # Stop launched modules
+        receiv.modules_manager.stop_all()
+
 
     def test_conf_poller(self):
         """
@@ -109,6 +114,8 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(1, len(poller.new_modules_conf))
         self.assertEqual(poller.new_modules_conf[0].module_alias, 'Example')
         self.assertEqual(poller.new_modules_conf[0].option_3, 'foobar')
+        # Stop launched modules
+        poller.modules_manager.stop_all()
 
     def test_conf_broker(self):
         """
@@ -133,6 +140,8 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(1, len(broker.modules))
         self.assertEqual(broker.modules[0].module_alias, 'Example')
         self.assertEqual(broker.modules[0].option_3, 'foobar')
+        # Stop launched modules
+        broker.modules_manager.stop_all()
 
     def test_conf_reactionner(self):
         """
@@ -157,3 +166,5 @@ class TestSetupNewConf(AlignakTest):
         self.assertEqual(1, len(reac.new_modules_conf))
         self.assertEqual(reac.new_modules_conf[0].module_alias, 'Example')
         self.assertEqual(reac.new_modules_conf[0].option_3, 'foobar')
+        # Stop launched modules
+        reac.modules_manager.stop_all()

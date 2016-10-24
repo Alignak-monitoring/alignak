@@ -209,7 +209,7 @@ class TestModules(AlignakTest):
         modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
         self.assertListEqual(modules, ['Example'])
 
-    @unittest.skip("To make a test with Travis")
+    # @unittest.skip("To make a test with Travis")
     def test_modulemanager(self):
         """
         Test if the module manager manages correctly all the modules

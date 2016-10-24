@@ -279,7 +279,6 @@ class MacroResolver(Borg):
 
             # We can get out if we do not have macros this loop
             still_got_macros = (len(macros) != 0)
-            # print "Still go macros:", still_got_macros
 
             # Put in the macros the type of macro for all macros
             self._get_type_of_macro(macros, data)
@@ -342,7 +341,6 @@ class MacroResolver(Borg):
         # We now replace the big dirty token we made by only a simple $
         c_line = c_line.replace("DOUBLEDOLLAR", "$")
 
-        # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
     def resolve_command(self, com, data, macromodulations, timeperiods):
@@ -440,14 +438,12 @@ class MacroResolver(Borg):
         :return: macro value
         :rtype: str
         """
-        # print "\nResolving macro", macro
         elts = macro.split(':')
         nb_parts = len(elts)
         macro_name = elts[0]
         # Len 3 == service, 2 = all others types...
         if nb_parts == 3:
             val = ''
-            # print "Got a Service on demand asking...", elts
             (host_name, service_description) = (elts[1], elts[2])
             # host_name can be void, so it's the host in data
             # that is important. We use our self.host_class to
@@ -462,7 +458,6 @@ class MacroResolver(Borg):
                 cls = serv.__class__
                 prop = cls.macros[macro_name]
                 val = self._get_value_from_element(serv, prop)
-                # print "Got val:", val
                 return val
         # Ok, service was easy, now hard part
         else:
