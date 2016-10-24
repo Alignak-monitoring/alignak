@@ -375,6 +375,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type cmds: list
         :return: None
         """
+        logger.debug("Scheduler '%s' got %d commands", self.instance_name, len(cmds))
         for command in cmds:
             self.run_external_command(command)
 
@@ -385,7 +386,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type command: str
         :return: None
         """
-        logger.debug("scheduler resolves command '%s'", command)
+        logger.debug("Scheduler '%s' resolves command '%s'", self.instance_name, command)
         ext_cmd = ExternalCommand(command)
         self.external_commands_manager.resolve_command(ext_cmd)
 
