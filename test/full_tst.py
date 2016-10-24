@@ -283,11 +283,5 @@ class fullTest(AlignakTest):
         #[ok]   get_raw_stats
 
 
-    #def test_daemons_inputs(self):
-    #    """
-    #    We test alignak function have connection.get('xx').
-    #    This will test if get and use data are ok
-
-    #    :return:
-    #    """
-    #    print('to')
+if __name__ == '__main__':
+    unittest.main()
