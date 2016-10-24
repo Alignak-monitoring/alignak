@@ -218,6 +218,22 @@ class Contact(Item):
         except AttributeError:
             return 'UnnamedContact'
 
+    def get_groupname(self):
+        """
+        Get the first group name whose contact belongs to
+        :return: group name
+        :rtype: str
+        """
+        return self.contactgroups[0]
+
+    def get_groupnames(self):
+        """
+        Get all the groups name whose contact belongs to
+        :return: comma separated list of the groups names
+        :rtype: str
+        """
+        return ', '.join(self.contactgroups)
+
     def want_service_notification(self, notifways, timeperiods, downtimes,
                                   timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
