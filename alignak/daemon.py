@@ -923,7 +923,6 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
         :type reference_path: str
         :return: None
         """
-        # print "Create relative paths with", reference_path
         properties = self.__class__.properties
         for prop, entry in properties.items():
             if isinstance(entry, ConfigPathProp):
@@ -1274,6 +1273,11 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
 
         # Log daemon header
         self.print_header()
+
+        if os.environ.get('COVERAGE_PROCESS_START'):
+            logger.info("**********************")
+            logger.info("* Code coverage test *")
+            logger.info("**********************")
 
         logger.info("My configuration: ")
         for prop, _ in self.properties.items():

@@ -190,10 +190,14 @@ for pyenv in "root" "virtualenv"; do
         echo "TEST SETUP for ${install_type} ${pyenv}"
         echo "============================================"
 
+        echo "Installing alignak_setup..."
         $SUDO pip install alignak_setup 2>&1 1>/dev/null
+        echo "Installing test requirements..."
         $SUDO pip install -r test/requirements.txt 2>&1 1>/dev/null
+        echo "Installing alignak..."
         $SUDO python setup.py $install_type 2>&1 >/dev/null
 
+        echo "Running test..."
         test_setup "test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
 
         if [[ $? -ne 0 ]];then

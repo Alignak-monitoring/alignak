@@ -78,7 +78,6 @@ class ComplexExpressionNode(object):
         """
         # If it's a leaf, we just need to dump a set with the content of the node
         if self.leaf:
-            # print "Is a leaf", self.content
             if not self.content:
                 return set()
 
@@ -88,26 +87,19 @@ class ComplexExpressionNode(object):
         not_nodes = [s for s in self.sons if s.not_value]
         positiv_nodes = [s for s in self.sons if not s.not_value]  # ok a not not is hard to read..
 
-        # print "Not nodes", not_nodes
-        # print "Positiv nodes", positiv_nodes
-
         # By default we are using a OR rule
         if not self.operand:
             self.operand = '|'
 
         res = set()
 
-        # print "Will now merge all of this", self.operand
-
         # The operand will change the positiv loop only
         i = 0
         for node in positiv_nodes:
             node_members = node.resolve_elements()
             if self.operand == '|':
-                # print "OR rule", node_members
                 res = res.union(node_members)
             elif self.operand == '&':
-                # print "AND RULE", node_members
                 # The first elements of an AND rule should be used
                 if i == 0:
                     res = node_members
@@ -161,7 +153,6 @@ class ComplexExpressionFactory(object):
         :type: alignak.complexexpression.ComplexExpressionNode
         """
         pattern = pattern.strip()
-        # print "eval_cor_pattern::", pattern
         complex_node = False
 
         # Look if it's a complex pattern (with rule) or
@@ -171,7 +162,6 @@ class ComplexExpressionFactory(object):
                 complex_node = True
 
         node = ComplexExpressionNode()
-        # print "Is so complex?", complex_node, pattern, node
 
         # if it's a single expression like !linux or production
         # (where "linux" and "production" are hostgroup names)
@@ -196,19 +186,15 @@ class ComplexExpressionFactory(object):
         tmp = ''
         stacked_par = 0
         for char in pattern:
-            # print "MATCHING", c
             if char == ',' or char == '|':
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
-                    # print ", in a par, just staking it"
                     tmp += char
                 else:
                     # Oh we got a real cut in an expression, if so, cut it
-                    # print "REAL , for cutting"
                     tmp = tmp.strip()
                     node.operand = '|'
                     if tmp != '':
-                        # print "Will analyse the current str", tmp
                         son = self.eval_cor_pattern(tmp)
                         node.sons.append(son)
                     tmp = ''
@@ -216,22 +202,18 @@ class ComplexExpressionFactory(object):
             elif char == '&' or char == '+':
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
-                    # print " & in a par, just staking it"
                     tmp += char
                 else:
                     # Oh we got a real cut in an expression, if so, cut it
-                    # print "REAL & for cutting"
                     tmp = tmp.strip()
                     node.operand = '&'
                     if tmp != '':
-                        # print "Will analyse the current str", tmp
                         son = self.eval_cor_pattern(tmp)
                         node.sons.append(son)
                     tmp = ''
 
             elif char == '(':
                 stacked_par += 1
-                # print "INCREASING STACK TO", stacked_par
 
                 in_par = True
                 tmp = tmp.strip()
@@ -246,12 +228,8 @@ class ComplexExpressionFactory(object):
                 # but not if it's the first one so
                 if stacked_par > 1:
                     tmp += char
-                    # o = self.eval_cor_pattern(tmp)
-                    # print "1( I've %s got new sons" % pattern , o
-                    # node.sons.append(o)
 
             elif char == ')':
-                # print "Need closing a sub expression?", tmp
                 stacked_par -= 1
 
                 if stacked_par < 0:
@@ -260,7 +238,6 @@ class ComplexExpressionFactory(object):
                     continue
 
                 if stacked_par == 0:
-                    # print "THIS is closing a sub compress expression", tmp
                     tmp = tmp.strip()
                     son = self.eval_cor_pattern(tmp)
                     node.sons.append(son)
@@ -278,13 +255,9 @@ class ComplexExpressionFactory(object):
         # Be sure to manage the trainling part when the line is done
         tmp = tmp.strip()
         if tmp != '':
-            # print "Managing trainling part", tmp
             son = self.eval_cor_pattern(tmp)
-            # print "4end I've %s got new sons" % pattern , o
             node.sons.append(son)
 
-        # print "End, tmp", tmp
-        # print "R %s:" % pattern, node
         return node
 
     def find_object(self, pattern):
@@ -305,8 +278,6 @@ class ComplexExpressionFactory(object):
             return obj, error
 
         # Ok a more classic way
-
-        # print "GRPS", self.grps
 
         if self.ctx == 'hostgroups':
             # Ok try to find this hostgroup

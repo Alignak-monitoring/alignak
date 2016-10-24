@@ -473,7 +473,6 @@ class Item(AlignakObject):
         for prop in properties:
             if hasattr(self, prop):
                 val = getattr(self, prop)
-                # print prop, ":", v
                 res[prop] = val
         return res
 
@@ -1508,21 +1507,14 @@ class Items(object):
         # Maybe exp is a list, like numerous hostgroups entries in a service, link them
         if isinstance(expr, list):
             expr = '|'.join(expr)
-        # print "\n"*10, "looking for expression", expr
         if look_in == 'hostgroups':
             node = ComplexExpressionFactory(look_in, hostgroups, hosts)
         else:  # templates
             node = ComplexExpressionFactory(look_in, hosts, hosts)
         expr_tree = node.eval_cor_pattern(expr)
 
-        # print "RES of ComplexExpressionFactory"
-        # print expr_tree
-
-        # print "Try to resolve the Tree"
         set_res = expr_tree.resolve_elements()
-        # print "R2d2 final is", set_res
 
-        # HOOK DBG
         return list(set_res)
 
     @staticmethod

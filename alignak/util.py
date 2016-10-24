@@ -75,39 +75,6 @@ except AttributeError, exp:
 
 
 # ########## Strings #############
-def safe_print(*args):
-    """Try to print strings, but if there is an utf8 error, go in simple ascii mode
-    (Like if the terminal do not have en_US.UTF8 as LANG for example)
-
-    :param args: args to print
-    :type args:
-    :return: None
-    """
-    lst = []
-    for arg in args:
-        # If we got an str, go in unicode, and if we cannot print
-        # utf8, go in ascii mode
-        if isinstance(arg, str):
-            if SAFE_STDOUT:
-                string = unicode(arg, 'utf8', errors='ignore')
-            else:
-                string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
-                    decode('ascii', 'replace')
-            lst.append(string)
-        # Same for unicode, but skip the unicode pass
-        elif isinstance(arg, unicode):
-            if SAFE_STDOUT:
-                string = arg
-            else:
-                string = arg.encode('ascii', 'replace')
-            lst.append(string)
-        # Other types can be directly convert in unicode
-        else:
-            lst.append(unicode(arg))
-    # Ok, now print it :)
-    print u' '.join(lst)
-
-
 def split_semicolon(line, maxsplit=None):
     r"""Split a line on semicolons characters but not on the escaped semicolons
 
@@ -212,7 +179,6 @@ def jsonify_r(obj):
                         lst.append(getattr(subval, o_type + '_name'))
                     else:
                         pass
-                        # print "CANNOT MANAGE OBJECT", _t, type(_t), t
                 res[prop] = lst
             else:
                 o_type = getattr(val.__class__, 'my_type', '')
@@ -224,13 +190,10 @@ def jsonify_r(obj):
                     continue
                 if o_type and hasattr(val, o_type + '_name'):
                     res[prop] = getattr(val, o_type + '_name')
-                # else:
-                #    print "CANNOT MANAGE OBJECT", v, type(v), t
     return res
 
+
 # ################################## TIME ##################################
-
-
 def get_end_of_day(year, month_id, day):
     """Get the timestamp of the end (local) of a specific day
 
@@ -475,9 +438,10 @@ def to_best_int_float(val):
     return flt
 
 
-# bool('0') = true, so...
 def to_bool(val):
     """Convert value to bool
+    Because:
+    # bool('0') = true, so...
 
     :param val: value to convert
     :type val:
@@ -544,7 +508,7 @@ def from_float_to_int(val):
 # ref is the item like a service, and value
 # if the value to preprocess
 
-def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
+def to_list_string_of_names(ref, tab):  # pylint: disable=unused-argument
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
@@ -557,7 +521,7 @@ def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
     return ",".join([e.get_name() for e in tab])
 
 
-def from_set_to_list(ref, tab):  # pylint: disable=W0613
+def from_set_to_list(ref, tab):  # pylint: disable=unused-argument
     """Convert set into a list of element name
 
     :param ref: Not used
@@ -570,7 +534,7 @@ def from_set_to_list(ref, tab):  # pylint: disable=W0613
     return list(tab)
 
 
-def to_name_if_possible(ref, value):  # pylint: disable=W0613
+def to_name_if_possible(ref, value):  # pylint: disable=unused-argument
     """Try to get value name (call get_name method)
 
     :param ref: Not used
@@ -585,7 +549,7 @@ def to_name_if_possible(ref, value):  # pylint: disable=W0613
     return ''
 
 
-def to_hostnames_list(ref, tab):  # pylint: disable=W0613
+def to_hostnames_list(ref, tab):  # pylint: disable=unused-argument
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
@@ -602,7 +566,7 @@ def to_hostnames_list(ref, tab):  # pylint: disable=W0613
     return res
 
 
-def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=W0613
+def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=unused-argument
     """create a dict with 2 lists::
 
     * services: all services of the tab
@@ -641,7 +605,7 @@ def get_obj_name(obj):
     return obj.get_name()
 
 
-def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
+def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=unused-argument
     """Get value name (call get_name) if not a string
 
     :param obj: Not used
@@ -718,26 +682,6 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
-def scheduler_no_spare_first(x00, y00):
-    """Compare two satellite link based on spare attribute(scheduler usually)
-
-    :param x00: first link to compare
-    :type x00:
-    :param y00: second link to compare
-    :type y00:
-    :return: x00 > y00 (1) if x00.spare and not y00.spare,
-             x00 == y00 (0) if both spare,
-             x00 < y00 (-1) else
-    :rtype: int
-    """
-    if x00.spare and not y00.spare:
-        return 1
-    elif x00.spare and y00.spare:
-        return 0
-    else:
-        return -1
-
-
 def alive_then_spare_then_deads(sat1, sat2):
     """Compare two satellite link
     based on alive attribute then spare attribute
@@ -834,7 +778,6 @@ def strip_and_uniq(tab):
 
 
 # ################### Pattern change application (mainly for host) #######
-
 class KeyValueSyntaxError(ValueError):
     """Syntax error on a duplicate_foreach value"""
 
@@ -941,43 +884,12 @@ def generate_key_value_sequences(entry, default_value):
         raise KeyValueSyntaxError('At least one key must be present')
 
 
-# ############################## Files management #######################
-
-def expect_file_dirs(root, path):
-    """We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
-    /tmp/toto/toto2/ will really exists so we can copy it. Try to make if  needed
-
-    :param root: root directory
-    :type root: str
-    :param path: path to verify
-    :type path: str
-    :return: True on success, False otherwise
-    :rtype: bool
-    """
-    dirs = os.path.normpath(path).split('/')
-    dirs = [d for d in dirs if d != '']
-    # We will create all directory until the last one
-    # so we are doing a mkdir -p .....
-    # TODO: and windows????
-    tmp_dir = root
-    for directory in dirs:
-        path = os.path.join(tmp_dir, directory)
-        logger.info('Verify the existence of file %s', path)
-        if not os.path.exists(path):
-            try:
-                os.mkdir(path)
-            except OSError:
-                return False
-        tmp_dir = path
-    return True
-
-
 # ####################### Services/hosts search filters  #######################
 # Filters used in services or hosts find_by_filter method
 # Return callback functions which are passed host or service instances, and
 # should return a boolean value that indicates if the instance matched the
 # filter
-def filter_any(name):  # pylint: disable=W0613
+def filter_any(name):  # pylint: disable=unused-argument
     """Filter for host
     Filter nothing
 
@@ -987,14 +899,14 @@ def filter_any(name):  # pylint: disable=W0613
     :rtype: bool
     """
 
-    def inner_filter(items):  # pylint: disable=W0613
+    def inner_filter(items):  # pylint: disable=unused-argument
         """Inner filter for host. Accept all"""
         return True
 
     return inner_filter
 
 
-def filter_none(name):  # pylint: disable=W0613
+def filter_none(name):  # pylint: disable=unused-argument
     """Filter for host
     Filter all
 
@@ -1004,7 +916,7 @@ def filter_none(name):  # pylint: disable=W0613
     :rtype: bool
     """
 
-    def inner_filter(items):  # pylint: disable=W0613
+    def inner_filter(items):  # pylint: disable=unused-argument
         """Inner filter for host. Accept nothing"""
         return False
 
@@ -1312,6 +1224,7 @@ def is_complex_expr(expr):
     return False
 
 
+# ####################### Command line arguments parsing #######################
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 

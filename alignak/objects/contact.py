@@ -494,7 +494,6 @@ class Contacts(CommandCallItems):
                     setattr(contact, param, contact.properties[param].default)
 
             if need_notificationway:
-                # print "Create notif way with", params
                 cname = getattr(contact, 'contact_name', getattr(contact, 'alias', ''))
                 nw_name = cname + '_inner_notificationway'
                 notificationways.new_inner_member(nw_name, params)

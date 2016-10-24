@@ -527,6 +527,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(managed=False, default=False),
 
         # Todo: not used anywhere in the source code
+        # Should be used to format the macros date
         'date_format':
             StringProp(managed=False, default=None),
 
@@ -1228,7 +1229,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.arbiters.fill_default()
         self.modules.fill_default()
 
-        # print "****************** Linkify ******************"
         self.arbiters.linkify(self.modules)
         self.modules.linkify()
 
@@ -1291,7 +1291,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.linkify_one_command_with_commands(self.commands, 'global_host_event_handler')
         self.linkify_one_command_with_commands(self.commands, 'global_service_event_handler')
 
-        # print "Hosts"
         # link hosts with timeperiods and commands
         self.hosts.linkify(self.timeperiods, self.commands,
                            self.contacts, self.realms,
@@ -1304,11 +1303,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.hostsextinfo.merge(self.hosts)
 
         # Do the simplify AFTER explode groups
-        # print "Hostgroups"
         # link hostgroups with hosts
         self.hostgroups.linkify(self.hosts, self.realms)
 
-        # print "Services"
         # link services with other objects
         self.services.linkify(self.hosts, self.commands,
                               self.timeperiods, self.contacts,
@@ -1320,7 +1317,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         self.servicesextinfo.merge(self.services)
 
-        # print "Service groups"
         # link servicegroups members with services
         self.servicegroups.linkify(self.hosts, self.services)
 
@@ -1333,39 +1329,30 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Link with timeperiods
         self.macromodulations.linkify(self.timeperiods)
 
-        # print "Contactgroups"
         # link contacgroups with contacts
         self.contactgroups.linkify(self.contacts)
 
-        # print "Contacts"
         # link contacts with timeperiods and commands
         self.contacts.linkify(self.commands, self.notificationways)
 
-        # print "Timeperiods"
         # link timeperiods with timeperiods (exclude part)
         self.timeperiods.linkify()
 
-        # print "Servicedependency"
         self.servicedependencies.linkify(self.hosts, self.services,
                                          self.timeperiods)
 
-        # print "Hostdependency"
         self.hostdependencies.linkify(self.hosts, self.timeperiods)
-        # print "Resultmodulations"
+
         self.resultmodulations.linkify(self.timeperiods)
 
         self.businessimpactmodulations.linkify(self.timeperiods)
 
-        # print "Escalations"
         self.escalations.linkify(self.timeperiods, self.contacts,
                                  self.services, self.hosts)
 
-        # print "Realms"
         self.realms.linkify()
 
-        # print "Schedulers and satellites"
         # Link all links with realms
-        # self.arbiters.linkify(self.modules)
         self.schedulers.linkify(self.realms, self.modules)
         self.brokers.linkify(self.realms, self.modules)
         self.receivers.linkify(self.realms, self.modules)
@@ -1574,32 +1561,24 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         # first elements, after groups
-        # print "Contacts"
         self.contacts.explode(self.contactgroups, self.notificationways)
-        # print "Contactgroups"
+
         self.contactgroups.explode()
 
-        # print "Hosts"
         self.hosts.explode(self.hostgroups, self.contactgroups, self.triggers)
 
-        # print "Hostgroups"
         self.hostgroups.explode()
 
-        # print "Services"
-        # print "Initially got nb of services: %d" % len(self.services.items)
         self.services.explode(self.hosts, self.hostgroups, self.contactgroups,
                               self.servicegroups, self.servicedependencies,
                               self.triggers)
-        # print "finally got nb of services: %d" % len(self.services.items)
-        # print "Servicegroups"
+
         self.servicegroups.explode()
 
-        # print "Timeperiods"
         self.timeperiods.explode()
 
         self.hostdependencies.explode(self.hostgroups)
 
-        # print "Servicedependency"
         self.servicedependencies.explode(self.hostgroups)
 
         # Serviceescalations hostescalations will create new escalations
@@ -1609,7 +1588,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                  self.contactgroups)
 
         # Now the architecture part
-        # print "Realms"
         self.realms.explode()
 
     def apply_dependencies(self):
@@ -1639,15 +1617,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         # inheritance properties by template
-        # print "Hosts"
         self.hosts.apply_inheritance()
-        # print "Contacts"
         self.contacts.apply_inheritance()
-        # print "Services"
         self.services.apply_inheritance()
-        # print "Servicedependencies"
         self.servicedependencies.apply_inheritance()
-        # print "Hostdependencies"
         self.hostdependencies.apply_inheritance()
         # Also timeperiods
         self.timeperiods.apply_inheritance()
@@ -1667,7 +1640,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return:None
         """
-        # print "Services"
         self.services.apply_implicit_inheritance(self.hosts)
 
     def fill_default(self):
@@ -2362,7 +2334,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Count the numbers of elements in all the realms, to compare it the total number of hosts
         nb_elements_all_realms = 0
         for realm in self.realms:
-            # print "Load balancing realm", r.get_name()
             packs = {}
             # create round-robin iterator for id of cfg
             # So dispatching is load balanced in a realm
@@ -2418,28 +2389,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 old_pack = -1
                 for elt_id in pack:
                     elt = self.hosts[elt_id]
-                    # print 'Look for host', elt.get_name(), 'in assoc'
                     old_i = assoc.get(elt.get_name(), -1)
-                    # print 'Founded in ASSOC: ', elt.get_name(),old_i
+
                     # Maybe it's a new, if so, don't count it
                     if old_i == -1:
                         continue
                     # Maybe it is the first we look at, if so, take it's value
                     if old_pack == -1 and old_i != -1:
-                        # print 'First value set', elt.get_name(), old_i
                         old_pack = old_i
                         valid_value = True
                         continue
                     if old_i == old_pack:
-                        # print 'I found a match between elements', old_i
                         valid_value = True
                     if old_i != old_pack:
-                        # print 'Outch found a change sorry', old_i, old_pack
                         valid_value = False
-                # print 'Is valid?', elt.get_name(), valid_value, old_pack
+
                 # If it's a valid sub pack and the pack id really exist, use it!
                 if valid_value and old_pack in packindices:
-                    # print 'Use a old id for pack', old_pack, [h.get_name() for h in pack]
                     i = old_pack
                 else:
                     if isinstance(i, int):
@@ -2475,7 +2441,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return:None
         """
-        # print "Scheduler configured:", self.schedulers
         # I do not care about alive or not. User must have set a spare if need it
         nb_parts = sum(1 for s in self.schedulers
                        if not s.spare)
@@ -2489,7 +2454,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # theses configurations)
         self.confs = {}
         for i in xrange(0, nb_parts):
-            # print "Create Conf:", i, '/', nb_parts -1
             cur_conf = self.confs[i] = Config()
 
             # Now we copy all properties of conf into the new ones
@@ -2497,7 +2461,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if entry.managed and not isinstance(entry, UnusedProp):
                     val = getattr(self, prop)
                     setattr(cur_conf, prop, val)
-                    # print "Copy", prop, val
 
             # we need a deepcopy because each conf
             # will have new hostgroups
@@ -2559,9 +2522,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # We've nearly have hosts and services. Now we want REALS hosts (Class)
         # And we want groups too
-        # print "Finishing packs"
         for i in self.confs:
-            # print "Finishing pack Nb:", i
             cfg = self.confs[i]
 
             # Fill host groups
