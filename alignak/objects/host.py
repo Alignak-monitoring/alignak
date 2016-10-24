@@ -222,6 +222,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTPERFDATA':      'perf_data',
         'LASTHOSTPERFDATA':  'last_perf_data',
         'HOSTCHECKCOMMAND':  'get_check_command',
+        'HOSTSNAPSHOTCOMMAND': 'get_snapshot_command',
         'HOSTACKAUTHOR':     'get_ack_author_name',
         'HOSTACKAUTHORNAME': 'get_ack_author_name',
         'HOSTACKAUTHORALIAS': 'get_ack_author_name',
@@ -1110,6 +1111,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: str
         """
         return self.check_command.get_name()
+
+    def get_snapshot_command(self):
+        """Wrapper to get the name of the snapshot_command attribute
+
+        :return: snapshot_command name
+        :rtype: str
+        """
+        return self.snapshot_command.get_name()
 
     def get_short_status(self):
         """Get the short status of this host

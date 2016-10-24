@@ -483,6 +483,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         return res
 
+    def change_check_command(self, command_params):
+        """
+
+        :param command_params: command parameters
+        :type command_params: dict
+        :return:
+        """
+        setattr(self, 'check_command', CommandCall(command_params))
+
+    def change_event_handler(self, command_params):
+        """
+
+        :param command_params: command parameters
+        :type command_params: dict
+        :return:
+        """
+        setattr(self, 'event_handler', CommandCall(command_params))
+
+    def change_snapshot_command(self, command_params):
+        """
+
+        :param command_params: command parameters
+        :type command_params: dict
+        :return:
+        """
+        setattr(self, 'snapshot_command', CommandCall(command_params))
+
     def linkify_with_triggers(self, triggers):
         """
         Link with triggers

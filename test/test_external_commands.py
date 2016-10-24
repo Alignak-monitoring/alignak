@@ -333,6 +333,15 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(256, host.modified_attributes)
 
         #  ---
+        # External command: change snapshot command
+        host.modified_attributes = 0
+        excmd = '[%d] CHANGE_HOST_SNAPSHOT_COMMAND;test_host_0;check-host-alive' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        self.assertEqual(host.get_snapshot_command(), "check-host-alive")
+        self.assertEqual(256, host.modified_attributes)
+
+        #  ---
         # External command: max host check attempts
         host.modified_attributes = 0
         excmd = '[%d] CHANGE_MAX_HOST_CHECK_ATTEMPTS;test_host_0;5' % time.time()
@@ -460,6 +469,15 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual(svc.get_check_command(), "check-host-alive")
+        self.assertEqual(256, svc.modified_attributes)
+
+        #  ---
+        # External command: change snapshot command
+        svc.modified_attributes = 0
+        excmd = '[%d] CHANGE_SVC_SNAPSHOT_COMMAND;test_host_0;test_ok_0;check-host-alive' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        self.assertEqual(svc.get_snapshot_command(), "check-host-alive")
         self.assertEqual(256, svc.modified_attributes)
 
         #  ---
