@@ -341,7 +341,7 @@ class Receiver(Satellite):
 
             # If there are commands and the scheduler is alive
             if len(cmds) > 0 and con:
-                logger.warning("Sending %d commands to scheduler %s", len(cmds), sched)
+                logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
                 try:
                     # con.run_external_commands(cmds)
                     con.post('run_external_commands', {'cmds': cmds})
