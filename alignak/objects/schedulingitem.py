@@ -989,8 +989,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # if a parent is not down, no dep can explain the pb
         if False in parent_is_down:
             return False
-        else:  # every parents are dead, so... It's not my fault :)
-            return True
+        else:
+            # every parents are dead, so... It's not my fault,
+            # unless I want to know about it anyway :)
+            if hasattr(self, 'notification_options'):
+                if 'u' in self.notification_options:
+                    return False
+                else:
+                    return True
+            else:
+                return True
 
     def check_and_set_unreachability(self, hosts, services):
         """Check if all network dependencies are down and set this object
