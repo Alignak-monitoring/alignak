@@ -124,6 +124,7 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         before = time.time()
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         after = time.time()
         time.sleep(0.2)
         self.assertEqual("DOWN", host_router.state)
@@ -137,6 +138,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         reference_time = host.last_state_change
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.2)
         self.assertEqual("UNREACHABLE", host.state)
         self.assertEqual("UNREACHABLE", host.last_state)

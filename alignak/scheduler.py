@@ -1606,27 +1606,33 @@ class Scheduler(object):  # pylint: disable=R0902
                 if self.conf.log_active_checks and chk.check_type == 0:
                     item.raise_check_result()
 
-        # All 'finished' checks (no more dep) raise checks they depends on
-        for chk in self.checks.values():
-            if chk.status == 'havetoresolvedep':
-                for dependent_checks in chk.depend_on_me:
-                    # Ok, now dependent will no more wait c
-                    dependent_checks.depend_on.remove(chk.uuid)
-                # REMOVE OLD DEP CHECK -> zombie
-                chk.status = 'zombie'
+        # loop to resolv dependencies
+        have_resolved_checks = True
+        while have_resolved_checks:
+            have_resolved_checks = False
+            # All 'finished' checks (no more dep) raise checks they depends on
+            for chk in self.checks.values():
+                if chk.status == 'havetoresolvedep':
+                    for dependent_checks in chk.depend_on_me:
+                        # Ok, now dependent will no more wait
+                        dependent_checks.depend_on.remove(chk.uuid)
+                        have_resolved_checks = True
+                    # REMOVE OLD DEP CHECK -> zombie
+                    chk.status = 'zombie'
 
-        # Now, reinteger dep checks
-        for chk in self.checks.values():
-            if chk.status == 'waitdep' and len(chk.depend_on) == 0:
-                item = self.find_item_by_id(chk.ref)
-                notif_period = self.timeperiods.items.get(item.notification_period, None)
-                depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
-                                              self.timeperiods, self.macromodulations,
-                                              self.checkmodulations, self.businessimpactmodulations,
-                                              self.resultmodulations, self.triggers, self.checks,
-                                              self.downtimes, self.comments)
-                for dep in depchks:
-                    self.add(dep)
+            # Now, reinteger dep checks
+            for chk in self.checks.values():
+                if chk.status == 'waitdep' and len(chk.depend_on) == 0:
+                    item = self.find_item_by_id(chk.ref)
+                    notif_period = self.timeperiods.items.get(item.notification_period, None)
+                    depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
+                                                  self.timeperiods, self.macromodulations,
+                                                  self.checkmodulations,
+                                                  self.businessimpactmodulations,
+                                                  self.resultmodulations, self.triggers,
+                                                  self.checks, self.downtimes, self.comments)
+                    for dep in depchks:
+                        self.add(dep)
 
     def delete_zombie_checks(self):
         """Remove checks that have a zombie status (usually timeouts)

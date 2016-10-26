@@ -123,9 +123,10 @@ class Service(SchedulingItem):
         'obsess_over_service':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
-            ListProp(default=['o', 'w', 'c', 'u'], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=['o', 'w', 'c', 'u', 'x'], fill_brok=['full_status'],
+                     split_on_coma=True),
         'notification_options':
-            ListProp(default=['w', 'u', 'c', 'r', 'f', 's'],
+            ListProp(default=['w', 'u', 'c', 'r', 'f', 's', 'x'],
                      fill_brok=['full_status'], split_on_coma=True),
         'parallelize_check':
             BoolProp(default=True, fill_brok=['full_status']),
@@ -152,7 +153,7 @@ class Service(SchedulingItem):
         'aggregation':
             StringProp(default='', fill_brok=['full_status']),
         'snapshot_criteria':
-            ListProp(default=['w', 'c', 'u'], fill_brok=['full_status'], merging='join'),
+            ListProp(default=['w', 'c', 'u', 'x'], fill_brok=['full_status'], merging='join'),
     })
 
     # properties used in the running state
@@ -255,6 +256,8 @@ class Service(SchedulingItem):
             self.state = 'UNKNOWN'
         elif self.initial_state == 'c':
             self.state = 'CRITICAL'
+        elif self.initial_state == 'x':
+            self.state = 'UNREACHABLE'
 
     def __repr__(self):
         return '<Service host_name=%r desc=%r name=%r use=%r />' % (
@@ -486,23 +489,6 @@ class Service(SchedulingItem):
 #                                 |___/
 ####
 
-    def set_impact_state(self):
-        """We just go an impact, so we go unreachable
-        But only if we enable this state change in the conf
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change:
-            # Keep a trace of the old state (problem came back before
-            # a new checks)
-            self.state_before_impact = self.state
-            self.state_id_before_impact = self.state_id
-            # this flag will know if we override the impact state
-            self.state_changed_since_impact = False
-            self.state = 'UNKNOWN'  # exit code UNDETERMINED
-            self.state_id = 3
-
     def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, WARNING, CRITICAL or UNKNOWN
         with the status of a check. Also update last_state
@@ -566,7 +552,7 @@ class Service(SchedulingItem):
     def is_state(self, status):
         """Return if status match the current service status
 
-        :param status: status to compare ( "o", "c", "w", "u"). Usually comes from config files
+        :param status: status to compare ( "o", "c", "w", "u", "x"). Usually comes from config files
         :type status: str
         :return: True if status <=> self.status, otherwise False
         :rtype: bool
@@ -581,6 +567,8 @@ class Service(SchedulingItem):
         elif status == 'w' and self.state == 'WARNING':
             return True
         elif status == 'u' and self.state == 'UNKNOWN':
+            return True
+        elif status == 'x' and self.state == 'UNREACHABLE':
             return True
         return False
 
@@ -607,9 +595,9 @@ class Service(SchedulingItem):
         :return: None
         """
         log_level = 'info'
-        if self.state == 'WARNING':
+        if self.state in ['WARNING', 'UNREACHABLE']:
             log_level = 'warning'
-        if self.state == 'CRITICAL':
+        elif self.state == 'CRITICAL':
             log_level = 'error'
         brok = make_monitoring_log(
             log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%s;%d;%s' % (
@@ -1018,6 +1006,7 @@ class Service(SchedulingItem):
         """
         return self.snapshot_command.get_name()
 
+    # pylint: disable=R0916
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
                                         n_type, t_wished=None):
         """Check if a notification is blocked by the service.
@@ -1071,8 +1060,9 @@ class Service(SchedulingItem):
             self.state == 'UNKNOWN' and 'u' not in self.notification_options or
             self.state == 'WARNING' and 'w' not in self.notification_options or
             self.state == 'CRITICAL' and 'c' not in self.notification_options or
-            self.state == 'OK' and 'r' not in self.notification_options
-        ):
+            self.state == 'OK' and 'r' not in self.notification_options or
+            self.state == 'UNREACHABLE' and 'x' not in self.notification_options
+        ):  # pylint: disable=R0911
             return True
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
@@ -1129,6 +1119,7 @@ class Service(SchedulingItem):
             1: "W",
             2: "C",
             3: "U",
+            4: "N",
         }
         if self.got_business_rule:
             return mapping.get(self.business_rule.get_state(), "n/a")
@@ -1149,6 +1140,7 @@ class Service(SchedulingItem):
                 1: "WARNING",
                 2: "CRITICAL",
                 3: "UNKNOWN",
+                4: "UNREACHABLE",
             }
             return mapping.get(self.business_rule.get_state(), "n/a")
         else:
@@ -1472,15 +1464,15 @@ class Services(SchedulingItems):
         for service in self:
             if service.host and service.host_dependency_enabled:
                 host = hosts[service.host]
-                service.act_depend_of.append(
-                    (service.host, ['d', 'u', 's', 'f'], 'network_dep', '', True)
-                )
-                host.act_depend_of_me.append(
-                    (service.uuid, ['d', 'u', 's', 'f'], 'network_dep', '', True)
-                )
-
-                host.child_dependencies.add(service.uuid)
-                service.parent_dependencies.add(service.host)
+                if host.active_checks_enabled:
+                    service.act_depend_of.append(
+                        (service.host, ['d', 'x', 's', 'f'], '', True)
+                    )
+                    host.act_depend_of_me.append(
+                        (service.uuid, ['d', 'x', 's', 'f'], '', True)
+                    )
+                    host.child_dependencies.add(service.uuid)
+                    service.parent_dependencies.add(service.host)
 
     def clean(self):
         """Remove services without host object linked to

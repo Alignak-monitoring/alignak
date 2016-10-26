@@ -388,11 +388,11 @@ class AlignakTest(unittest.TestCase):
         actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
         for a in actions:
             if a.is_a == 'notification':
-                item = self.scheduler.sched.find_item_by_id(a.ref)
+                item = self.schedulers['scheduler-master'].sched.find_item_by_id(a.ref)
                 if item.my_type == "host":
                     ref = "host: %s" % item.get_name()
                 else:
-                    hst = self.scheduler.sched.find_item_by_id(item.host)
+                    hst = self.schedulers['scheduler-master'].sched.find_item_by_id(item.host)
                     ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
                 print "NOTIFICATION %s %s %s %s %s" % (a.uuid, ref, a.type,
                                                        time.asctime(time.localtime(a.t_to_go)),
@@ -407,8 +407,8 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         print "--- checks <<<--------------------------------"
-
-        for check in self.schedulers['scheduler-master'].sched.checks.values():
+        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
+        for check in checks:
             print("- %s" % check)
         print "--- checks >>>--------------------------------"
 

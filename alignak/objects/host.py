@@ -127,10 +127,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'obsess_over_host':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
-            ListProp(default=['o', 'd', 'u'], fill_brok=['full_status'],
+            ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
         'notification_options':
-            ListProp(default=['d', 'u', 'r', 'f'], fill_brok=['full_status'],
+            ListProp(default=['d', 'x', 'r', 'f'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
         'vrml_image':
             StringProp(default='', fill_brok=['full_status']),
@@ -155,7 +155,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'service_includes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
         'snapshot_criteria':
-            ListProp(default=['d', 'u'], fill_brok=['full_status'], merging='join'),
+            ListProp(default=['d', 'x'], fill_brok=['full_status'], merging='join'),
     })
 
     # properties set only for running purpose
@@ -261,6 +261,24 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 #                        |___/
 ######
 
+    @staticmethod
+    def convert_conf_for_unreachable(params):
+        """
+        The 'u' state for UNREACHABLE has been rewritten in 'x' in:
+        * flap_detection_options
+        * notification_options
+        * snapshot_criteria
+
+        So convert value from config file to keep compatibility with Nagios
+
+        :param params: parameters of the host before put in properties
+        :type params: dict
+        :return: None
+        """
+        for prop in ['flap_detection_options', 'notification_options', 'snapshot_criteria']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
         and define state with initial_state
@@ -273,7 +291,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.alias = self.host_name
         if self.initial_state == 'd':
             self.state = 'DOWN'
-        elif self.initial_state == 'u':
+        elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
@@ -393,7 +411,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: True if other in act_depend_of list, otherwise False
         :rtype: bool
         """
-        for (host, _, _, _, _) in self.act_depend_of:
+        for (host, _, _, _) in self.act_depend_of:
             if host == other:
                 return True
         return False
@@ -458,34 +476,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 #                                 |___/
 ####
 
-    def set_unreachable(self):
-        """Set unreachable: all our parents are down
-        Unreachable is different from down even if the state id is the same
-
-        :return:None
-        """
-        now = time.time()
-        self.state_id = 2
-        self.state = 'UNREACHABLE'
-        self.last_time_unreachable = int(now)
-
-    def set_impact_state(self):
-        """We just go an impact, so we go unreachable
-        But only if we enable this state change in the conf
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change:
-            # Keep a trace of the old state (problem came back before
-            # a new checks)
-            self.state_before_impact = self.state
-            self.state_id_before_impact = self.state_id
-            # This flag will know if we override the impact state
-            self.state_changed_since_impact = False
-            self.state = 'UNREACHABLE'  # exit code UNDETERMINED
-            self.state_id = 2
-
     def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, DOWN, or UNDETERMINED
         with the status of a check. Also update last_state
@@ -540,7 +530,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     def is_state(self, status):
         """Return if status match the current host status
 
-        :param status: status to compare ( "o", "d", "u"). Usually comes from config files
+        :param status: status to compare ( "o", "d", "x"). Usually comes from config files
         :type status: str
         :return: True if status <=> self.status, otherwise False
         :rtype: bool
@@ -552,7 +542,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             return True
         elif status == 'd' and self.state == 'DOWN':
             return True
-        elif status == 'u' and self.state == 'UNREACHABLE':
+        elif status == 'x' and self.state == 'UNREACHABLE':
             return True
         return False
 
@@ -577,7 +567,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         log_level = 'info'
         if self.state == 'DOWN':
             log_level = 'error'
-        if self.state == 'UNREACHABLE':
+        elif self.state == 'UNREACHABLE':
             log_level = 'warning'
         brok = make_monitoring_log(
             log_level, 'ACTIVE HOST CHECK: %s;%s;%s;%d;%s' % (
@@ -853,8 +843,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 need_stalk = True
             elif check.exit_status == 2 and 'd' in self.stalking_options:
                 need_stalk = True
-            elif check.exit_status == 3 and 'u' in self.stalking_options:
-                need_stalk = True
             if check.output != self.output:
                 need_stalk = False
         if need_stalk:
@@ -973,7 +961,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if n_type in ('PROBLEM', 'RECOVERY') and (
                 self.state == 'DOWN' and 'd' not in self.notification_options or
                 self.state == 'UP' and 'r' not in self.notification_options or
-                self.state == 'UNREACHABLE' and 'u' not in self.notification_options):
+                self.state == 'UNREACHABLE' and 'x' not in self.notification_options):
             return True
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options) or \
@@ -1129,7 +1117,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         mapping = {
             0: "U",
             1: "D",
-            2: "N",
+            4: "N",
         }
         if self.got_business_rule:
             return mapping.get(self.business_rule.get_state(), "n/a")
@@ -1146,7 +1134,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             mapping = {
                 0: "UP",
                 1: "DOWN",
-                2: "UNREACHABLE",
+                4: "UNREACHABLE",
             }
             return mapping.get(self.business_rule.get_state(), "n/a")
         else:
@@ -1250,8 +1238,9 @@ class Hosts(SchedulingItems):
                 if o_parent is not None:
                     new_parents.append(o_parent.uuid)
                 else:
-                    err = "the parent '%s' on host '%s' is unknown!" % (parent, host.get_name())
-                    self.configuration_warnings.append(err)
+                    err = "the parent '%s' for the host '%s' is unknown!" % (parent,
+                                                                             host.get_name())
+                    self.configuration_errors.append(err)
             # print "Me,", h.host_name, "define my parents", new_parents
             # We find the id, we replace the names
             host.parents = new_parents
@@ -1352,17 +1341,16 @@ class Hosts(SchedulingItems):
                 if parent_id is None:
                     continue
                 parent = self[parent_id]
-                # Add parent in the list
-                host.act_depend_of.append((parent_id, ['d', 'u', 's', 'f'],
-                                           'network_dep', '', True))
+                if parent.active_checks_enabled:
+                    # Add parent in the list
+                    host.act_depend_of.append((parent_id, ['d', 'x', 's', 'f'], '', True))
 
-                # Add child in the parent
-                parent.act_depend_of_me.append((host.uuid, ['d', 'u', 's', 'f'],
-                                                'network_dep', '', True))
+                    # Add child in the parent
+                    parent.act_depend_of_me.append((host.uuid, ['d', 'x', 's', 'f'], '', True))
 
-                # And add the parent/child dep filling too, for broking
-                parent.child_dependencies.add(host.uuid)
-                host.parent_dependencies.add(parent_id)
+                    # And add the parent/child dep filling too, for broking
+                    parent.child_dependencies.add(host.uuid)
+                    host.parent_dependencies.add(parent_id)
 
     def find_hosts_that_use_template(self, tpl_name):
         """Find hosts that use the template defined in argument tpl_name

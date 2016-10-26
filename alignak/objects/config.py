@@ -358,9 +358,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'auto_rescheduling_window':
             IntegerProp(managed=False, default=180),
 
-        'use_aggressive_host_checking':
-            BoolProp(default=False, class_inherit=[(Host, None)]),
-
         # Todo: not used anywhere in the source code
         'translate_passive_host_checks':
             BoolProp(managed=False, default=True),
@@ -1865,8 +1862,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         item.business_rule_service_notification_options:
                     bp_item.notification_options = item.business_rule_service_notification_options
 
-                bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w'],
-                                                 'business_dep', '', True))
+                bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w', 'x'],
+                                                 '', True))
 
                 # TODO: Is it necessary? We already have this info in act_depend_* attributes
                 item.parent_dependencies.add(bp_item.uuid)
@@ -2267,7 +2264,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if parent:
                     links.add((parent, host.uuid))
             # Add the others dependencies
-            for (dep, _, _, _, _) in host.act_depend_of:
+            for (dep, _, _, _) in host.act_depend_of:
                 links.add((dep, host.uuid))
             for (dep, _, _, _, _) in host.chk_depend_of:
                 links.add((dep, host.uuid))
@@ -2275,7 +2272,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # For services: they are link with their own host but we need
         # To have the hosts of service dep in the same pack too
         for serv in self.services:
-            for (dep_id, _, _, _, _) in serv.act_depend_of:
+            for (dep_id, _, _, _) in serv.act_depend_of:
                 if dep_id in self.services:
                     dep = self.services[dep_id]
                 else:

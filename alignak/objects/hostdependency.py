@@ -90,6 +90,15 @@ class Hostdependency(Item):
         'dependency_period':             StringProp(default='')
     })
 
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['execution_failure_criteria', 'notification_failure_criteria']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Hostdependency, self).__init__(params, parsing=parsing)
+
     def get_name(self):
         """Get name based on dependent_host_name and host_name attributes
         Each attribute is substituted by 'unknown' if attribute does not exist
