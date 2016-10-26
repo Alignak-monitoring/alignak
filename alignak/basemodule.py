@@ -326,6 +326,7 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
+        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
         self.interrupted = True
 
     def set_signal_handler(self, sigs=None):

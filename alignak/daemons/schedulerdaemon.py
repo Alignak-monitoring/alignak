@@ -58,8 +58,6 @@ import time
 import traceback
 import logging
 
-from multiprocessing import process
-
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
@@ -197,7 +195,7 @@ class Alignak(BaseSatellite):
         :return: None
         TODO: Refactor with Daemon one
         """
-        logger.warning("%s > Received a SIGNAL %s", process.current_process(), sig)
+        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
             self.sched.need_dump_memory = True
