@@ -50,11 +50,13 @@
 #
 # This file is used to test reading and processing of config files
 #
+import re
 import time
 import unittest2 as unittest
 from alignak_test import AlignakTest, time_hacker
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize
+from alignak.external_command import ExternalCommand
 
 
 class TestExternalCommands(AlignakTest):
@@ -76,6 +78,141 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(len(self.configuration_warnings), 0)
 
         time_hacker.set_real_time()
+
+    def test__command_syntax(self):
+        """
+        External command parsing - named as test__ to be the first executed test :)
+        :return:
+        """
+        # Our scheduler
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        # Our broker
+        self._broker = self._scheduler.brokers['broker-master']
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        now = int(time.time())
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Lowercase command is allowed
+        excmd = '[%d] command' % (now)
+        ext_cmd = ExternalCommand(excmd)
+        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        # Resolve command result is None because the command is not recognized
+        self.assertIsNone(res)
+        self.assert_any_log_match(
+            re.escape("WARNING: [alignak.external_command] External command 'command' "
+                      "is not recognized, sorry")
+        )
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Lowercase command is allowed
+        excmd = '[%d] shutdown_program' % (now)
+        ext_cmd = ExternalCommand(excmd)
+        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        # Resolve command result is not None because the command is recognized
+        self.assertIsNotNone(res)
+        self.assert_any_log_match(
+            re.escape("WARNING: [alignak.external_command] The external command "
+                      "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
+        )
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # # Command must have a timestamp
+        # excmd = 'command'
+        # ext_cmd = ExternalCommand(excmd)
+        # res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        # # Resolve command result is None because the command is mal formed
+        # self.assertIsNone(res)
+        # self.assert_any_log_match(
+        #     re.escape(
+        #         "WARNING: [alignak.external_command] Malformed command 'command'")
+        # )
+
+        # Command may not have a timestamp
+        excmd = 'shutdown_program'
+        ext_cmd = ExternalCommand(excmd)
+        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        # Resolve command result is not None because the command is recognized
+        self.assertIsNotNone(res)
+        self.assert_any_log_match(
+            re.escape("WARNING: [alignak.external_command] The external command "
+                      "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
+        )
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Timestamp must be an integer
+        excmd = '[fake] shutdown_program'
+        ext_cmd = ExternalCommand(excmd)
+        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        # Resolve command result is not None because the command is recognized
+        self.assertIsNone(res)
+        self.assert_any_log_match(
+            re.escape("WARNING: [alignak.external_command] Malformed command "
+                      "'[fake] shutdown_program'")
+        )
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Malformed command
+        excmd = '[%d] MALFORMED COMMAND' % now
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # We get an 'monitoring_log' brok for logging to the monitoring logs...
+        broks = [b for b in self._broker['broks'].values()
+                 if b.type == 'monitoring_log']
+        self.assertEqual(len(broks), 1)
+        # ...but no logs
+        self.assert_any_log_match("Malformed command")
+        self.assert_any_log_match('MALFORMED COMMAND')
+        self.assert_any_log_match("Malformed command exception: too many values to unpack")
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Malformed command
+        excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1' % now
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # We get an 'monitoring_log' brok for logging to the monitoring logs...
+        broks = [b for b in self._broker['broks'].values()
+                 if b.type == 'monitoring_log']
+        self.assertEqual(len(broks), 1)
+        # ...but no logs
+        self.assert_any_log_match("Sorry, the arguments for the command")
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Unknown command
+        excmd = '[%d] UNKNOWN_COMMAND' % now
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # We get an 'monitoring_log' brok for logging to the monitoring logs...
+        broks = [b for b in self._broker['broks'].values()
+                 if b.type == 'monitoring_log']
+        self.assertEqual(len(broks), 1)
+        # ...but no logs
+        self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
 
     def test_change_and_reset_host_modattr(self):
         """
@@ -1050,7 +1187,7 @@ class TestExternalCommands(AlignakTest):
         self.assertIsNotNone(contact)
         self.assertEqual(contact.contact_name, "test_contact")
 
-        now= int(time.time())
+        now = int(time.time())
 
         #  ---
         # External command: add a contact downtime
@@ -1093,7 +1230,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete a contact downtime (unknown downtime)
-        excmd = '[%d] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % time.time()
+        excmd = '[%d] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -1104,7 +1241,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host downtime
-        excmd = '[%d] DEL_CONTACT_DOWNTIME;%s' % (time.time(), contact.downtimes[0])
+        excmd = '[%d] DEL_CONTACT_DOWNTIME;%s' % (now, contact.downtimes[0])
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -1115,7 +1252,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete all host downtime
-        excmd = '[%d] DEL_ALL_CONTACT_DOWNTIMES;test_contact' % time.time()
+        excmd = '[%d] DEL_ALL_CONTACT_DOWNTIMES;test_contact' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.assertEqual(len(contact.downtimes), 0)
@@ -1894,64 +2031,6 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         self.assertFalse(self._scheduler.external_commands_manager.conf.obsess_over_services)
         self.assertEqual(self._scheduler.external_commands_manager.conf.modified_attributes, 128)
-
-    def test_unknown_bad_command(self):
-        """
-        Test if unknown commands are detected and banned
-        :return:
-        """
-        # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
-
-        # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
-
-        # Clear logs and broks
-        self.clear_logs()
-        self._broker['broks'] = {}
-
-        # Malformed command
-        excmd = '[%d] MALFORMED COMMAND' % int(time.time())
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        self.assertEqual(len(broks), 1)
-        # ...but no logs
-        self.assert_any_log_match("Malformed command")
-        self.assert_any_log_match('MALFORMED COMMAND')
-        self.assert_any_log_match("Malformed command exception: too many values to unpack")
-
-        # Clear logs and broks
-        self.clear_logs()
-        self._broker['broks'] = {}
-
-        # Malformed command
-        excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        self.assertEqual(len(broks), 1)
-        # ...but no logs
-        self.assert_any_log_match("Sorry, the arguments for the command")
-
-        # Clear logs and broks
-        self.clear_logs()
-        self._broker['broks'] = {}
-
-        # Unknown command
-        excmd = '[%d] UNKNOWN_COMMAND' % int(time.time())
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        self.assertEqual(len(broks), 1)
-        # ...but no logs
-        self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
 
     def test_special_commands(self):
         """
