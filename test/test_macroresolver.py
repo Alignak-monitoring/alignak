@@ -52,7 +52,6 @@
 from alignak_test import *
 from alignak.macroresolver import MacroResolver
 from alignak.commandcall import CommandCall
-from alignak.objects import Command
 
 
 class TestMacroResolver(AlignakTest):
@@ -109,7 +108,6 @@ class TestMacroResolver(AlignakTest):
         print com
         self.assertEqual('plugins/nothing 2', com)
 
-    @unittest.skip("#352: realm_name is always empty for an host")
     def test_special_macros_realm(self):
         """
         Call the resolver with a special macro HOSTREALM
@@ -123,8 +121,8 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$HOSTREALM$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self.schedulers['scheduler-master'].sched.macromodulations, self.schedulers['scheduler-master'].sched.timeperiods)
-        print com
-        self.assertEqual('plugins/nothing Default', com)
+        # Macro raised the default realm (All)
+        self.assertEqual('plugins/nothing All', com)
 
     # For output macro we want to delete all illegal macro caracter
     def test_illegal_macro_output_chars(self):
@@ -153,7 +151,6 @@ class TestMacroResolver(AlignakTest):
         data.append(self.arbiter.conf)
 
         env = mr.get_env_macros(data)
-        print "Env:", env        
         self.assertNotEqual(env, {})
         self.assertEqual('test_host_0', env['NAGIOS_HOSTNAME'])
         self.assertEqual('0.0', env['NAGIOS_SERVICEPERCENTCHANGE'])
@@ -272,7 +269,6 @@ class TestMacroResolver(AlignakTest):
                                  self.schedulers['scheduler-master'].sched.timeperiods)
         self.assertEqual('plugins/nothing you should not pass', com)
 
-    @unittest.skip("Seems to be broken...")
     def test_custom_macros(self):
         """
         Test on-demand macros with custom variables

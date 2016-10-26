@@ -59,6 +59,7 @@ len(host.services)
 
 import re
 import time
+import warnings
 
 from alignak.borg import Borg
 
@@ -67,31 +68,55 @@ class MacroResolver(Borg):
     """MacroResolver class is used to resolve macros (in command call). See above for details"""
 
     my_type = 'macroresolver'
+
     # Global macros
     macros = {
-        'TOTALHOSTSUP':         '_get_total_hosts_up',
-        'TOTALHOSTSDOWN':       '_get_total_hosts_down',
-        'TOTALHOSTSUNREACHABLE': '_get_total_hosts_unreachable',
-        'TOTALHOSTSDOWNUNHANDLED': '_get_total_hosts_unhandled',
-        'TOTALHOSTSUNREACHABLEUNHANDLED': '_get_total_hosts_unreachable_unhandled',
-        'TOTALHOSTPROBLEMS':    '_get_total_host_problems',
-        'TOTALHOSTPROBLEMSUNHANDLED': '_get_total_host_problems_unhandled',
-        'TOTALSERVICESOK':      '_get_total_service_ok',
-        'TOTALSERVICESWARNING': '_get_total_services_warning',
-        'TOTALSERVICESCRITICAL': '_get_total_services_critical',
-        'TOTALSERVICESUNKNOWN': '_get_total_services_unknown',
-        'TOTALSERVICESWARNINGUNHANDLED': '_get_total_services_warning_unhandled',
-        'TOTALSERVICESCRITICALUNHANDLED': '_get_total_services_critical_unhandled',
-        'TOTALSERVICESUNKNOWNUNHANDLED': '_get_total_services_unknown_unhandled',
-        'TOTALSERVICEPROBLEMS': '_get_total_service_problems',
-        'TOTALSERVICEPROBLEMSUNHANDLED': '_get_total_service_problems_unhandled',
-        'LONGDATETIME':         '_get_long_date_time',
-        'SHORTDATETIME':        '_get_short_date_time',
-        'DATE':                 '_get_date',
-        'TIME':                 '_get_time',
-        'TIMET':                '_get_timet',
-        'PROCESSSTARTTIME':     '_get_process_start_time',
-        'EVENTSTARTTIME':       '_get_events_start_time',
+        'TOTALHOSTSUP':
+            '_get_total_hosts_up',
+        'TOTALHOSTSDOWN':
+            '_get_total_hosts_down',
+        'TOTALHOSTSUNREACHABLE':
+            '_get_total_hosts_unreachable',
+        'TOTALHOSTSDOWNUNHANDLED':
+            '_get_total_hosts_unhandled',
+        'TOTALHOSTSUNREACHABLEUNHANDLED':
+            '_get_total_hosts_unreachable_unhandled',
+        'TOTALHOSTPROBLEMS':
+            '_get_total_host_problems',
+        'TOTALHOSTPROBLEMSUNHANDLED':
+            '_get_total_host_problems_unhandled',
+        'TOTALSERVICESOK':
+            '_get_total_service_ok',
+        'TOTALSERVICESWARNING':
+            '_get_total_services_warning',
+        'TOTALSERVICESCRITICAL':
+            '_get_total_services_critical',
+        'TOTALSERVICESUNKNOWN':
+            '_get_total_services_unknown',
+        'TOTALSERVICESWARNINGUNHANDLED':
+            '_get_total_services_warning_unhandled',
+        'TOTALSERVICESCRITICALUNHANDLED':
+            '_get_total_services_critical_unhandled',
+        'TOTALSERVICESUNKNOWNUNHANDLED':
+            '_get_total_services_unknown_unhandled',
+        'TOTALSERVICEPROBLEMS':
+            '_get_total_service_problems',
+        'TOTALSERVICEPROBLEMSUNHANDLED':
+            '_get_total_service_problems_unhandled',
+        'LONGDATETIME':
+            '_get_long_date_time',
+        'SHORTDATETIME':
+            '_get_short_date_time',
+        'DATE':
+            '_get_date',
+        'TIME':
+            '_get_time',
+        'TIMET':
+            '_get_timet',
+        'PROCESSSTARTTIME':
+            '_get_process_start_time',
+        'EVENTSTARTTIME':
+            '_get_events_start_time',
     }
 
     output_macros = [
@@ -133,9 +158,6 @@ class MacroResolver(Borg):
         self.contactgroups = conf.contactgroups
         self.lists_on_demand.append(self.contactgroups)
         self.illegal_macro_output_chars = conf.illegal_macro_output_chars
-
-        # Try cache :)
-        # self.cache = {}
 
     @staticmethod
     def _get_macros(chain):
@@ -194,13 +216,16 @@ class MacroResolver(Borg):
             else:
                 return unicode(value)
         except AttributeError:
-            # Return no value
-            return ''
+            # Raise a warning and return a strange value when macro cannot be resolved
+            warnings.warn(
+                'Error when getting the property value for a macro: %s',
+                DeprecationWarning, stacklevel=2)
+            return 'XxX'
         except UnicodeError:
             if isinstance(value, str):
                 return unicode(value, 'utf8', errors='ignore')
             else:
-                return ''
+                return 'XxX'
 
     def _delete_unwanted_caracters(self, chain):
         """Remove not wanted char from chain
@@ -279,7 +304,6 @@ class MacroResolver(Borg):
 
             # We can get out if we do not have macros this loop
             still_got_macros = (len(macros) != 0)
-            # print "Still go macros:", still_got_macros
 
             # Put in the macros the type of macro for all macros
             self._get_type_of_macro(macros, data)
@@ -289,7 +313,7 @@ class MacroResolver(Borg):
                 if macros[macro]['type'] == 'ARGN' and args is not None:
                     macros[macro]['val'] = self._resolve_argn(macro, args)
                     macros[macro]['type'] = 'resolved'
-                # If class, get value from properties
+                # If object type, get value from a property
                 if macros[macro]['type'] == 'object':
                     obj = macros[macro]['object']
                     for elt in data:
@@ -302,18 +326,22 @@ class MacroResolver(Borg):
                         if macro in self.output_macros:
                             macros[macro]['val'] = \
                                 self._delete_unwanted_caracters(macros[macro]['val'])
+                # If custom type, get value from an object custom variables
                 if macros[macro]['type'] == 'CUSTOM':
                     cls_type = macros[macro]['class']
-                    # Beware : only cut the first _HOST value, so the macro name can have it on it..
+                    # Beware : only cut the first _HOST or _SERVICE or _CONTACT value,
+                    # so the macro name can have it on it..
                     macro_name = re.split('_' + cls_type, macro, 1)[1].upper()
                     # Ok, we've got the macro like MAC_ADDRESS for _HOSTMAC_ADDRESS
                     # Now we get the element in data that have the type HOST
                     # and we check if it got the custom value
                     for elt in data:
-                        if elt is None or elt.__class__.my_type.upper() != cls_type:
+                        if not elt or elt.__class__.my_type.upper() != cls_type:
                             continue
-                        if '_' + macro_name in elt.customs:
-                            macros[macro]['val'] = elt.customs['_' + macro_name]
+                        if not getattr(elt, 'customs'):
+                            continue
+                        if macro_name in elt.customs:
+                            macros[macro]['val'] = elt.customs[macro_name]
                         # Then look on the macromodulations, in reverse order, so
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
@@ -325,10 +353,11 @@ class MacroResolver(Borg):
                             if '_' + macro_name in macromod.customs and \
                                     macromod.is_active(timeperiods):
                                 macros[macro]['val'] = macromod.customs['_' + macro_name]
+                # If on-demand type, get value from an dynamic provided data objects
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
 
-            # We resolved all we can, now replace the macro in the command call
+            # We resolved all we can, now replace the macros in the command call
             for macro in macros:
                 c_line = c_line.replace('$' + macro + '$', macros[macro]['val'])
 
@@ -342,7 +371,6 @@ class MacroResolver(Borg):
         # We now replace the big dirty token we made by only a simple $
         c_line = c_line.replace("DOUBLEDOLLAR", "$")
 
-        # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
     def resolve_command(self, com, data, macromodulations, timeperiods):
@@ -440,14 +468,12 @@ class MacroResolver(Borg):
         :return: macro value
         :rtype: str
         """
-        # print "\nResolving macro", macro
         elts = macro.split(':')
         nb_parts = len(elts)
         macro_name = elts[0]
         # Len 3 == service, 2 = all others types...
         if nb_parts == 3:
             val = ''
-            # print "Got a Service on demand asking...", elts
             (host_name, service_description) = (elts[1], elts[2])
             # host_name can be void, so it's the host in data
             # that is important. We use our self.host_class to
@@ -462,7 +488,6 @@ class MacroResolver(Borg):
                 cls = serv.__class__
                 prop = cls.macros[macro_name]
                 val = self._get_value_from_element(serv, prop)
-                # print "Got val:", val
                 return val
         # Ok, service was easy, now hard part
         else:
