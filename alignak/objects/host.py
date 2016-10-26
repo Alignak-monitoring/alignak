@@ -276,9 +276,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
 
-
-        pass
-
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
         and define state with initial_state
