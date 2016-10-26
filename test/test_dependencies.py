@@ -382,6 +382,21 @@ class TestDependencies(AlignakTest):
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_P")
         self.assertEqual(0, len(host1.act_depend_of))
 
+    def test_c_options_x(self):
+        # TODO David
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+
+        self.assertTrue(self.conf_is_correct)
+        self.assertEqual(len(self.configuration_errors), 0)
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_A")
+        host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_B")
+        self.assertEqual(1, len(host1.act_depend_of))
+        self.assertEqual(host0.uuid, host1.act_depend_of[0][0])
+        self.assertEqual(['d', 'x'], host1.act_depend_of[0][1])
+
     def test_c_notright1(self):
         """
         Test that the arbiter raises an error when have an orphan dependency in config files

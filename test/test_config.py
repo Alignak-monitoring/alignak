@@ -688,3 +688,40 @@ class TestConfig(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_4')
         self.assertEqual('OK', svc.state)
+
+
+    def test_host_unreachable_values(self):
+        """
+        Test unreachable value in:
+        * flap_detection_options
+        * notification_options
+        * snapshot_criteria
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/host_unreachable.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        # No error messages
+        self.assertEqual(len(self.configuration_errors), 0)
+        # No warning messages
+        self.assertEqual(len(self.configuration_warnings), 0)
+
+        host0 = self.arbiter.conf.hosts.find_by_name('host_A')
+        host1 = self.arbiter.conf.hosts.find_by_name('host_B')
+        self.assertEqual(['d', 'x', 'r', 'f', 's'], host0.notification_options)
+        self.assertEqual(['o', 'd', 'x'], host0.flap_detection_options)
+        self.assertEqual(['d', 'x'], host0.snapshot_criteria)
+
+        self.assertEqual(1, len(host0.act_depend_of_me))
+        self.assertEqual(['d', 'x'], host0.act_depend_of_me[0][1])
+
+        self.assertEqual(1, len(host0.chk_depend_of_me))
+        self.assertEqual(['x'], host0.chk_depend_of_me[0][1])
+
+        self.assertEqual(1, len(host1.act_depend_of))
+        self.assertEqual(['d', 'x'], host1.act_depend_of[0][1])
+
+        self.assertEqual(1, len(host1.chk_depend_of))
+        self.assertEqual(['x'], host1.chk_depend_of[0][1])

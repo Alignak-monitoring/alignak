@@ -261,6 +261,24 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 #                        |___/
 ######
 
+    def convert_conf_for_unreachable(self, params):
+        """
+        The 'u' state for UNREACHABLE has been rewriten in 'x' in:
+        * flap_detection_options
+        * notification_options
+        * snapshot_criteria
+
+        So convert value from config file to keep compatibility with Nagios
+
+        :return:
+        """
+        for prop in ['flap_detection_options', 'notification_options', 'snapshot_criteria']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+
+
+        pass
+
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
         and define state with initial_state
