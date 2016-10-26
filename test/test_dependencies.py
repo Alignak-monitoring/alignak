@@ -383,7 +383,11 @@ class TestDependencies(AlignakTest):
         self.assertEqual(0, len(host1.act_depend_of))
 
     def test_c_options_x(self):
-        # TODO David
+        """
+        Test conf for 'x' (UNREACHABLE) in act_depend_of
+
+        :return:
+        """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
 
