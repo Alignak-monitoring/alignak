@@ -63,39 +63,63 @@ class SatelliteLink(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'address':         StringProp(default='localhost', fill_brok=['full_status']),
-        'timeout':         IntegerProp(default=3, fill_brok=['full_status']),
-        'data_timeout':    IntegerProp(default=120, fill_brok=['full_status']),
-        'check_interval':  IntegerProp(default=60, fill_brok=['full_status']),
-        'max_check_attempts': IntegerProp(default=3, fill_brok=['full_status']),
-        'spare':              BoolProp(default=False, fill_brok=['full_status']),
-        'manage_sub_realms':  BoolProp(default=False, fill_brok=['full_status']),
-        'manage_arbiters':    BoolProp(default=False, fill_brok=['full_status'], to_send=True),
-        'modules':            ListProp(default=[''], to_send=True, split_on_coma=True),
-        'polling_interval':   IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
-        'use_timezone':       StringProp(default='NOTSET', to_send=True),
-        'realm':              StringProp(default='', fill_brok=['full_status'],
-                                         brok_transformation=get_obj_name_two_args_and_void),
-        'satellitemap':       DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
-        'use_ssl':             BoolProp(default=False, fill_brok=['full_status']),
-        'hard_ssl_name_check': BoolProp(default=True, fill_brok=['full_status']),
-        'passive':             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        'address':
+            StringProp(default='localhost', fill_brok=['full_status']),
+        'timeout':
+            IntegerProp(default=3, fill_brok=['full_status']),
+        'data_timeout':
+            IntegerProp(default=120, fill_brok=['full_status']),
+        'check_interval':
+            IntegerProp(default=60, fill_brok=['full_status']),
+        'max_check_attempts':
+            IntegerProp(default=3, fill_brok=['full_status']),
+        'spare':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'manage_sub_realms':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'manage_arbiters':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        'modules':
+            ListProp(default=[''], to_send=True, split_on_coma=True),
+        'polling_interval':
+            IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+        'use_timezone':
+            StringProp(default='NOTSET', to_send=True),
+        'realm':
+            StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=get_obj_name_two_args_and_void),
+        'satellitemap':
+            DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
+        'use_ssl':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'hard_ssl_name_check':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'passive':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
-        'con':                  StringProp(default=None),
-        'alive':                BoolProp(default=True, fill_brok=['full_status']),
-        'broks':                StringProp(default=[]),
+        'con':
+            StringProp(default=None),
+        'alive':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'broks':
+            StringProp(default=[]),
 
         # the number of failed attempt
-        'attempt':              StringProp(default=0, fill_brok=['full_status']),
+        'attempt':
+            StringProp(default=0, fill_brok=['full_status']),
 
         # can be network ask or not (dead or check in timeout or error)
-        'reachable': BoolProp(default=True, fill_brok=['full_status']),
-        'last_check': IntegerProp(default=0, fill_brok=['full_status']),
-        'managed_confs': StringProp(default={}),
-        'is_sent': BoolProp(default=False),
+        'reachable':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'last_check':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'managed_confs':
+            StringProp(default={}),
+        'is_sent':
+            BoolProp(default=False),
     })
 
     def __init__(self, *args, **kwargs):

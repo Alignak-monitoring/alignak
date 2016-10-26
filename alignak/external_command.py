@@ -829,7 +829,6 @@ class ExternalCommandManager:
                     elif type_searched == 'service':
                         in_service = True
                         tmp_host = elt.strip()
-                        # safe_print("TMP HOST", tmp_host)
                         if tmp_host[-1] == '\n':
                             tmp_host = tmp_host[:-1]
                         if self.mode == 'dispatcher':

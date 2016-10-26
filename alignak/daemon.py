@@ -945,7 +945,7 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
         :type frame:
         :return: None
         """
-        logger.debug("I'm process %d and I received signal %s", os.getpid(), str(sig))
+        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
@@ -1017,7 +1017,7 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
         except Exception, exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             raise exp
-        logger.info("HTTP main thread running")
+        logger.info("HTTP main thread exiting")
 
     def handle_requests(self, timeout, suppl_socks=None):
         """ Wait up to timeout to handle the requests.
