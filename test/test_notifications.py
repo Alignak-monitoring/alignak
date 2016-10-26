@@ -428,7 +428,7 @@ class TestNotifications(AlignakTest):
 
     def test_notifications_ack(self):
         """
-        Test notifications not send when add an acknowledge
+        Test notifications not sent when adding an acknowledge
 
         :return: None
         """
@@ -464,9 +464,10 @@ class TestNotifications(AlignakTest):
         self.assertEqual("HARD", svc.state_type)
         self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
                                                              'notification')
+        self.show_actions()
         self.assert_actions_count(2)
 
-        now = time.time()
+        now = int(time.time())
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(now, svc.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
@@ -476,6 +477,7 @@ class TestNotifications(AlignakTest):
         self.assertEqual("HARD", svc.state_type)
         self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
                                                              'notification')
+        self.show_actions()
         self.assert_actions_count(2)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
@@ -519,7 +521,7 @@ class TestNotifications(AlignakTest):
         self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
         self.assert_actions_count(0)
 
-        now = time.time()
+        now = int(time.time())
         cmd = "[{0}] SCHEDULE_SVC_DOWNTIME;{1};{2};{3};{4};{5};{6};{7};{8};{9}\n".\
             format(now, svc.host_name, svc.service_description, now, (now + 1000), 1, 0, 0,
                    'darth vader', 'add downtime for maintenance')

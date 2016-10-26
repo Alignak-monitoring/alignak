@@ -530,52 +530,44 @@ class ExternalCommandManager:
 
         :param excmd: external command to handle
         :type excmd: alignak.external_command.ExternalCommand
-        :return: None
+        :return: result of command parsing. None for an invalid command.
         """
         # Maybe the command is invalid. Bailout
         try:
             command = excmd.cmd_line
-        except AttributeError, exp:
-            logger.debug("resolve_command:: error with command %s: %s", excmd, exp)
-            return
+        except AttributeError as exp:
+            logger.warning("resolve_command, error with command %s", excmd)
+            logger.exception("Exception: %s", exp)
+            return None
 
-        # Strip and get utf8 only strings
-        command = command.strip()
-
-        # # Only log if we are in the Arbiter
-        # # Todo: check if it is the best solution?
-        # # Should be better to log when the command is parsed !
-        # if self.mode == 'dispatcher' and self.conf.log_external_commands:
-        #     # I am a command dispatcher, notifies to my arbiter
-        #     brok = make_monitoring_log(
-        #         'info', 'EXTERNAL COMMAND: ' + command.rstrip()
-        #     )
-        #     # Send a brok to our daemon
-        #     self.send_an_element(brok)
-        res = self.get_command_and_args(command, excmd)
+        # Parse command
+        res = self.get_command_and_args(command.strip(), excmd)
+        if res is None:
+            return res
 
         # If we are a receiver, bail out here
         if self.mode == 'receiver':
-            return
+            return res
 
-        if res is not None:
-            if self.mode == 'applyer' and self.conf.log_external_commands:
-                # I am a command dispatcher, notifies to my arbiter
-                brok = make_monitoring_log(
-                    'info', 'EXTERNAL COMMAND: ' + command.rstrip()
-                )
-                # Send a brok to our daemon
-                self.send_an_element(brok)
+        if self.mode == 'applyer' and self.conf.log_external_commands:
+            # I am a command dispatcher, notifies to my arbiter
+            brok = make_monitoring_log(
+                'info', 'EXTERNAL COMMAND: ' + command.rstrip()
+            )
+            # Send a brok to our daemon
+            self.send_an_element(brok)
 
-            is_global = res['global']
-            if not is_global:
-                c_name = res['c_name']
-                args = res['args']
-                logger.debug("Got commands %s %s", c_name, str(args))
-                getattr(self, c_name)(*args)
-            else:
-                command = res['cmd']
-                self.dispatch_global_command(command)
+        is_global = res['global']
+        if not is_global:
+            c_name = res['c_name']
+            args = res['args']
+            logger.debug("Got commands %s %s", c_name, str(args))
+            getattr(self, c_name)(*args)
+        else:
+            command = res['cmd']
+            self.dispatch_global_command(command)
+
+        return res
 
     def search_host_and_dispatch(self, host_name, command, extcmd):
         """Try to dispatch a command for a specific host (so specific scheduler)
@@ -690,14 +682,43 @@ class ExternalCommandManager:
 
         :rtype: dict | None
         """
-        command = command.rstrip()
         elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
+
         try:
-            timestamp, c_name = elts[0].split(' ')
+            timestamp, c_name = elts[0].split()
+        except ValueError as exp:
+            splitted_command = elts[0].split()
+            if len(splitted_command) == 1:
+                # Assume no timestamp and only a command
+                timestamp = "[%s]" % int(time.time())
+                logger.warning("Missing timestamp in command '%s', using %s as a timestamp.",
+                               elts[0], timestamp)
+                c_name = elts[0].split()[0]
+            else:
+                logger.warning("Malformed command '%s'", command)
+                logger.exception("Malformed command exception: %s", exp)
+
+                if self.conf and self.conf.log_external_commands:
+                    # The command failed, make a monitoring log to inform
+                    brok = make_monitoring_log('error',
+                                               "Malformed command: '%s'" % command)
+                    # Send a brok to our arbiter else to our scheduler
+                    self.send_an_element(brok)
+                return None
+
+        c_name = c_name.lower()
+
+        # Is timestamp already an integer value?
+        try:
+            timestamp = int(timestamp)
+        except ValueError as exp:
+            # Else, remove enclosing characters: [], (), {}, ...
             timestamp = timestamp[1:-1]
-            c_name = c_name.lower()
-            self.current_timestamp = to_int(timestamp)
-        except (ValueError, IndexError) as exp:
+
+        # Finally, check that the timestamp is really a timestamp
+        try:
+            self.current_timestamp = int(timestamp)
+        except ValueError as exp:
             logger.warning("Malformed command '%s'", command)
             logger.exception("Malformed command exception: %s", exp)
 
