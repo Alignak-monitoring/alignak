@@ -261,16 +261,19 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 #                        |___/
 ######
 
-    def convert_conf_for_unreachable(self, params):
+    @staticmethod
+    def convert_conf_for_unreachable(params):
         """
-        The 'u' state for UNREACHABLE has been rewriten in 'x' in:
+        The 'u' state for UNREACHABLE has been rewritten in 'x' in:
         * flap_detection_options
         * notification_options
         * snapshot_criteria
 
         So convert value from config file to keep compatibility with Nagios
 
-        :return:
+        :param params: parameters of the host before put in properties
+        :type params: dict
+        :return: None
         """
         for prop in ['flap_detection_options', 'notification_options', 'snapshot_criteria']:
             if prop in params:
