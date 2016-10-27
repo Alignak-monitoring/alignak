@@ -25,6 +25,7 @@ This file test the SSL on daemons
 import subprocess
 from time import sleep
 import requests
+import shutil
 from alignak_test import AlignakTest
 
 
@@ -50,6 +51,8 @@ class TestSsl(AlignakTest):
         # openssl genrsa -passout pass:wazabi -out certificate_test.key 2048
         # openssl req -new -x509 -days 3650 -key certificate_test.key -out certificate_test.csr
         # openssl dhparam -out dhparams.pem 2048
+        shutil.copytree('certificate_test*', '/tmp/')
+        shutil.copytree('dhparams.pem', '/tmp/')
         self.procs = {}
 
     def tearDown(self):
