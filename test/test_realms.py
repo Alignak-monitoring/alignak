@@ -97,7 +97,7 @@ class TestRealms(AlignakTest):
         self.assertEqual(len(hosts), 2)
         for host in hosts:
             self.assertEqual(host.realm, default_realm.uuid)
-            self.assertEqual(host.get_realm(), default_realm.get_name())
+            self.assertEqual(host.realm_name, default_realm.get_name())
 
     def test_no_broker_in_realm_warning(self):
         """

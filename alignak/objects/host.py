@@ -105,7 +105,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # *no_slots: do not take this property for __slots__
     #  Only for the initial call
     # conf_send_preparation: if set, will pass the property to this function. It's used to "flatten"
-    #  some dangerous properties like realms that are too 'linked' to be send like that.
+    #  some dangerous properties like realms that are too 'linked' to be sent like that.
     # brok_transformation: if set, will call the function with the value of the property
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = SchedulingItem.properties.copy()
@@ -116,6 +116,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(fill_brok=['full_status']),
         'address':
             StringProp(fill_brok=['full_status']),
+        'address6':
+            StringProp(fill_brok=['full_status'], default=''),
         'parents':
             ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
@@ -174,6 +176,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # no brok ,to much links
         'services':
             StringProp(default=[]),
+        'realm_name':
+            StringProp(default=''),
         'got_default_realm':
             BoolProp(default=False),
 
@@ -230,7 +234,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTACTIONURL':     'action_url',
         'HOSTNOTESURL':      'notes_url',
         'HOSTNOTES':         'notes',
-        'HOSTREALM':         'get_realm',
+        'HOSTREALM':         'realm_name',
         'TOTALHOSTSERVICES': 'get_total_services',
         'TOTALHOSTSERVICESOK': ('get_total_services_ok', 'services'),
         'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', 'services'),
@@ -238,9 +242,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', 'services'),
         'HOSTBUSINESSIMPACT':  'business_impact',
     })
+    # Todo: really unuseful ... should be removed, but let's discuss!
+    # Currently, this breaks the macro resolver because the corresponding properties do not exit!
     # Manage ADDRESSX macros by adding them dynamically
-    for i in range(32):
-        macros['HOSTADDRESS%d' % i] = 'address%d' % i
+    # for i in range(32):
+    #     macros['HOSTADDRESS%d' % i] = 'address%d' % i
 
     # This tab is used to transform old parameters name into new ones
     # so from Nagios2 format, to Nagios3 ones.
@@ -396,13 +402,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.tags
 
-    def get_realm(self):
-        """Accessor to realm attribute
-        :return: realm object of host
-        :rtype: alignak.objects.realm.Realm
-        """
-        return self.realm_name
-
+    # def get_realm_name(self):
+    #     """Accessor to realm attribute
+    #     :return: realm object of host
+    #     :rtype: alignak.objects.realm.Realm
+    #     """
+    #     return self.realm_name
+    #
     def is_linked_with_host(self, other):
         """Check if other is in act_depend_of host attribute
 
@@ -1274,7 +1280,7 @@ class Hosts(SchedulingItems):
     def linkify_h_by_hg(self, hostgroups):
         """Link hosts with hostgroups
 
-        :param hostgroups: realms object to link with
+        :param hostgroups: hostgroups object to link with
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
