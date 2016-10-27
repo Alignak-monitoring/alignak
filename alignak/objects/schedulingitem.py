@@ -523,7 +523,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         # Get our trigger string and trigger names in the same list
         self.triggers.extend([self.trigger_name])
-        # print "I am linking my triggers", self.get_full_name(), self.triggers
+
         new_triggers = []
         for tname in self.triggers:
             if tname == '':
@@ -791,8 +791,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             impactmod = bi_modulations[impactmod_id]
             period = timeperiods[impactmod.modulation_period]
             if period is None or period.is_time_valid(now):
-                # print "My self", self.get_name(), "go from crit",
-                # self.business_impact, "to crit", cm.business_impact
                 self.business_impact = impactmod.business_impact
                 in_modulation = True
                 # We apply the first available, that's all
@@ -1370,13 +1368,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         reac_tag = event_handler.reactionner_tag
         event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
                                'ref': self.uuid, 'reactionner_tag': reac_tag})
-        # print "DBG: Event handler call created"
-        # print "DBG: ",e.__dict__
         self.raise_event_handler_log_entry(event_handler)
 
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
-        print "ACTION %s APP IN %s" % (self.get_name(), event_h)
 
     def get_snapshot(self, hosts, macromodulations, timeperiods):
         """
@@ -1692,7 +1687,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Volatile part
         # Only for service
         elif chk.exit_status != 0 and getattr(self, 'is_volatile', False):
-            # print "Case 3 (volatile only)"
             # There are no repeated attempts, so the first non-ok results
             # in a hard state
             self.attempt = 1
@@ -1772,7 +1766,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # not restart notifications)
                 if self.state != self.last_state:
                     self.update_hard_unknown_phase_state()
-                    # print self.last_state, self.last_state_type, self.state_type, self.state
                     if not self.in_hard_unknown_reach_phase and not \
                             self.was_in_hard_unknown_reach_phase:
                         self.unacknowledge_problem_if_not_sticky(comments)
@@ -2432,7 +2425,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # If it's bp_rule, we got a rule :)
         if base_cmd == 'bp_rule':
-            # print "Got rule", elts, cmd
             self.got_business_rule = True
             rule = ''
             if len(elts) >= 2:
@@ -2457,7 +2449,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 fact = DependencyNodeFactory(self)
                 node = fact.eval_cor_pattern(rule, hosts, services,
                                              hostgroups, servicegroups, running)
-                # print "got node", node
                 self.processed_business_rule = rule
                 self.business_rule = node
 
@@ -2586,7 +2577,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type check: alignak.objects.check.Check
         :return: None
         """
-        # print "DBG, ask me to manage a check!"
         if check.command.startswith('bp_'):
             try:
                 # Re evaluate the business rule to take into account macro
@@ -2617,7 +2607,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state
-        # print "DBG, setting state", state
 
     def eval_triggers(self, triggers):
         """Launch triggers

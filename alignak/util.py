@@ -212,7 +212,6 @@ def jsonify_r(obj):
                         lst.append(getattr(subval, o_type + '_name'))
                     else:
                         pass
-                        # print "CANNOT MANAGE OBJECT", _t, type(_t), t
                 res[prop] = lst
             else:
                 o_type = getattr(val.__class__, 'my_type', '')
@@ -224,13 +223,10 @@ def jsonify_r(obj):
                     continue
                 if o_type and hasattr(val, o_type + '_name'):
                     res[prop] = getattr(val, o_type + '_name')
-                # else:
-                #    print "CANNOT MANAGE OBJECT", v, type(v), t
     return res
 
+
 # ################################## TIME ##################################
-
-
 def get_end_of_day(year, month_id, day):
     """Get the timestamp of the end (local) of a specific day
 
@@ -475,9 +471,10 @@ def to_best_int_float(val):
     return flt
 
 
-# bool('0') = true, so...
 def to_bool(val):
     """Convert value to bool
+    Because:
+    # bool('0') = true, so...
 
     :param val: value to convert
     :type val:
@@ -834,7 +831,6 @@ def strip_and_uniq(tab):
 
 
 # ################### Pattern change application (mainly for host) #######
-
 class KeyValueSyntaxError(ValueError):
     """Syntax error on a duplicate_foreach value"""
 
@@ -1312,6 +1308,7 @@ def is_complex_expr(expr):
     return False
 
 
+# ####################### Command line arguments parsing #######################
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 

@@ -111,12 +111,12 @@ class Worker(object):
 
     @staticmethod
     def _prework(real_work, *args):
-        """Simply drop the BrokHandler before doing the real_work"""
-        # # No more necessary thanks to the new logger
-        # for handler in list(logger.handlers):
-        #     if isinstance(handler, BrokHandler):
-        #         logger.info("Cleaning BrokHandler %r from logger.handlers..", handler)
-        #         logger.removeHandler(handler)
+        """
+        Do the job...
+        :param real_work: function to execute
+        :param args: arguments
+        :return:
+        """
         real_work(*args)
 
     def is_mortal(self):
@@ -231,11 +231,9 @@ class Worker(object):
         """
         try:
             while len(self.checks) < self.processes_by_worker:
-                # print "I", self.uuid, "wait for a message"
                 msg = self.slave_q.get(block=False)
                 if msg is not None:
                     self.checks.append(msg.get_data())
-                # print "I", self.uuid, "I've got a message!"
         except Empty:
             if len(self.checks) == 0:
                 self._idletime += 1
