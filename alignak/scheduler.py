@@ -588,7 +588,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 for dependent_checks in chk.depend_on_me:
                     dependent_checks.depend_on.remove(chk.uuid)
                 for c_temp in chk.depend_on:
-                    c_temp.depen_on_me.remove(chk)
+                    c_temp.depend_on_me.remove(chk)
                 del self.checks[c_id]  # Final Bye bye ...
         else:
             nb_checks_drops = 0
