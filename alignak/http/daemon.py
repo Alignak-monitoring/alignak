@@ -46,46 +46,49 @@ from alignak.http.cherrypy_extend import zlib_processor
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Pyopenssl(pyOpenSSLAdapter):
-    """
-    Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
-    """
-
-    def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
+try:
+    class Pyopenssl(pyOpenSSLAdapter):
         """
-        Add init because need get the dhparam
-
-        :param certificate:
-        :param private_key:
-        :param certificate_chain:
-        :param dhparam:
+        Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
         """
-        super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
-        self.dhparam = dhparam
 
-    def get_context(self):
-        """Return an SSL.Context from self attributes."""
-        c = SSL.Context(SSL.SSLv23_METHOD)
+        def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
+            """
+            Add init because need get the dhparam
 
-        # override:
-        ciphers = (
-            'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
-            'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
-            '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
-        )
-        c.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
-                      SSL.OP_NO_SSLv3)
-        c.set_cipher_list(ciphers)
-        if self.dhparam is not None:
-            c.load_tmp_dh(self.dhparam)
-            c.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
-        # end override
+            :param certificate:
+            :param private_key:
+            :param certificate_chain:
+            :param dhparam:
+            """
+            super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
+            self.dhparam = dhparam
 
-        c.use_privatekey_file(self.private_key)
-        if self.certificate_chain:
-            c.load_verify_locations(self.certificate_chain)
-        c.use_certificate_file(self.certificate)
-        return c
+        def get_context(self):
+            """Return an SSL.Context from self attributes."""
+            cont = SSL.Context(SSL.SSLv23_METHOD)
+
+            # override:
+            ciphers = (
+                'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
+                'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
+                '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
+            )
+            cont.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
+                             SSL.OP_NO_SSLv3)
+            cont.set_cipher_list(ciphers)
+            if self.dhparam is not None:
+                cont.load_tmp_dh(self.dhparam)
+                cont.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
+            # end override
+
+                cont.use_privatekey_file(self.private_key)
+            if self.certificate_chain:
+                cont.load_verify_locations(self.certificate_chain)
+            cont.use_certificate_file(self.certificate)
+            return cont
+except TypeError:
+    logger.info("pyopenssl not installed")
 
 
 class InvalidWorkDir(Exception):
