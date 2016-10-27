@@ -86,7 +86,6 @@ class Metric:  # pylint: disable=R0903
         self.name = self.value = self.uom = \
             self.warning = self.critical = self.min = self.max = None
         string = string.strip()
-        # print "Analysis string", string
         matches = METRIC_PATTERN.match(string)
         if matches:
             # Get the name but remove all ' in it
@@ -97,10 +96,6 @@ class Metric:  # pylint: disable=R0903
             self.critical = guess_int_or_float(matches.group(5))
             self.min = guess_int_or_float(matches.group(6))
             self.max = guess_int_or_float(matches.group(7))
-            # print 'Name', self.name
-            # print "Value", self.value
-            # print "Res", r
-            # print r.groups()
             if self.uom == '%':
                 self.min = 0
                 self.max = 100

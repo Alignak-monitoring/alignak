@@ -256,9 +256,7 @@ class GenericInterface(object):  # pragma: no cover, not with unit tests
         :rtype: str
         """
         with self.app.lock:
-            # print "A scheduler ask me the returns", sched_id
             ret = self.app.get_return_for_passive(int(sched_id))
-            # print "Send mack", len(ret), "returns"
             return serialize(ret, True)
 
     @cherrypy.expose

@@ -191,7 +191,6 @@ class SatelliteLink(Item):
 
         try:
             self.con.post('put_conf', {'conf': conf}, wait='long')
-            print "PUT CONF SUCCESS", self.get_name()
             return True
         except HTTPEXCEPTIONS, exp:
             self.con = None
@@ -366,7 +365,6 @@ class SatelliteLink(Item):
                 res = self.con.get('have_conf')
             else:
                 res = self.con.get('have_conf', {'magic_hash': magic_hash})
-            print "have_conf RAW CALL", res, type(res)
             if not isinstance(res, bool):
                 return False
             return res
@@ -415,12 +413,9 @@ class SatelliteLink(Item):
 
         try:
             tab = self.con.get('what_i_managed')
-            print "[%s] What I managed raw value is %s" % (self.get_name(), tab)
 
             # Protect against bad return
             if not isinstance(tab, dict):
-                print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
-                      self.get_name(), tab
                 self.con = None
                 self.managed_confs = {}
                 return

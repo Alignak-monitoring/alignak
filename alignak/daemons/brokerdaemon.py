@@ -263,9 +263,7 @@ class Broker(BaseSatellite):
         # Ok, we can now update it
         links[s_id]['last_connection'] = time.time()
 
-        # DBG: print "Init connection with", links[s_id]['uri']
         running_id = links[s_id]['running_id']
-        # DBG: print "Running id before connection", running_id
         uri = links[s_id]['uri']
         try:
             con = links[s_id]['con'] = HTTPClient(uri=uri,
@@ -850,8 +848,6 @@ class Broker(BaseSatellite):
                 end = time.time()
                 self.timeout = self.timeout - (end - begin)
             self.timeout = 1.0
-
-            # print "get new broks watch new conf 1: end", len(self.broks)
 
         # Say to modules it's a new tick :)
         self.hook_point('tick')

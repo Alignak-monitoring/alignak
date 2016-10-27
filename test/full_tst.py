@@ -60,6 +60,8 @@ class fullTest(AlignakTest):
 
     def test_daemons_outputs(self):
 
+        os.environ['COVERAGE_PROCESS_START'] = '.coverage.rc'
+
         req = requests.Session()
 
         # copy etc config files in test/cfg/full and change folder in files for run and log of
@@ -73,7 +75,9 @@ class fullTest(AlignakTest):
                  'cfg/full/daemons/schedulerd.ini', 'cfg/full/alignak.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp'
+            '/usr/local/var/log/alignak': '/tmp',
+            '%(workdir)s': '/tmp',
+            '%(logdir)s': '/tmp'
         }
         for filename in files:
             lines = []
@@ -87,13 +91,10 @@ class fullTest(AlignakTest):
                     outfile.write(line)
 
         self.procs = {}
-        satellite_map = {'arbiter': '7770',
-                         'scheduler': '7768',
-                         'broker': '7772',
-                         'poller': '7771',
-                         'reactionner': '7769',
-                         'receiver': '7773'
-                         }
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
 
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             args = ["../alignak/bin/alignak_%s.py" %daemon,
@@ -114,6 +115,11 @@ class fullTest(AlignakTest):
                 print(proc.stdout.read())
                 print(proc.stderr.read())
             self.assertIsNone(ret, "Daemon %s not started!" % name)
+
+        print("Testing pid files and log files...")
+        for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon))
+            self.assertTrue(os.path.exists('/tmp/%sd.pid' % daemon))
 
         print("Testing get_satellite_list")
         raw_data = req.get("http://localhost:%s/get_satellite_list" % satellite_map['arbiter'])
@@ -227,61 +233,4 @@ class fullTest(AlignakTest):
             data = raw_data.json()
             self.assertIsInstance(data, list, "Data is not a list!")
 
-
         print("Done testing")
-        #os.kill(self.arb_proc.pid, signal.SIGHUP)  # This should log with debug level the Relaod Conf
-        #os.kill(self.arb_proc.pid, signal.SIGINT)  # This should kill the proc
-        #data = self._get_subproc_data()
-        #self.assertRegexpMatches(data['out'], "Reloading configuration")
-
-        # total list
-        # arbiter
-        #   have_conf
-        #   put_conf
-        #   do_not_run
-        #   wait_new_conf
-        #[ok]   get_satellite_list
-        #[ok]   what_i_managed
-        #[ok]   get_all_states
-        #   get_objects_properties
-        #
-        # broker
-        #   push_broks
-        #   get_raw_stats
-        #
-        # receiver
-        #[ok]   get_raw_stats
-        #   push_host_names
-        #
-        # scheduler
-        #   get_checks
-        #   put_results
-        #[ok]   get_broks
-        #[ok]   fill_initial_broks
-        #[ok]   get_raw_stats
-        #   run_external_commands
-        #   put_conf
-        #   wait_new_conf
-        # generic
-        #   index
-        #[ok]   ping
-        #   get_start_time
-        #[ok]   get_running_id
-        #   put_conf
-        #   have_conf
-        #   set_log_level
-        #[ok]   get_log_level
-        #[ok]   api
-        #   api_full
-        #   remove_from_conf
-        #[ok]   what_i_managed
-        #   wait_new_conf
-        #[ok]   get_external_commands
-        #   push_actions (post)
-        #[ok]   get_returns
-        #[ok]   get_broks
-        #[ok]   get_raw_stats
-
-
-if __name__ == '__main__':
-    unittest.main()

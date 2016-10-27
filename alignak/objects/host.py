@@ -297,6 +297,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.alias = self.host_name
         if self.initial_state == 'd':
             self.state = 'DOWN'
+        elif self.initial_state == 'u':
+            self.state = 'UNREACHABLE'
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
 

@@ -138,7 +138,6 @@ class ArbiterLink(SatelliteLink):
         if self.con is None:
             self.create_connection()
         try:
-            print properties
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
             return res
         except HTTPEXCEPTIONS:

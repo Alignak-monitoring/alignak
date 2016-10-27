@@ -150,7 +150,6 @@ class Dispatcher:
         """
         now = time.time()
         for elt in self.elements:
-            # print "Updating elements", elt.get_name(), elt.__dict__
             elt.update_infos(now)
 
             # Not alive needs new need_conf
@@ -292,7 +291,6 @@ class Dispatcher:
                 # If element has a conf, I do not care, it's a good dispatch
                 # If dead: I do not ask it something, it won't respond..
                 if elt.conf is None and elt.reachable:
-                    # print "Ask", elt.get_name() , 'if it got conf'
                     if elt.have_conf():
                         logger.warning("The element %s have a conf and should "
                                        "not have one! I ask it to idle now",
@@ -301,8 +299,6 @@ class Dispatcher:
                         elt.wait_new_conf()
                         # I do not care about order not send or not. If not,
                         # The next loop will resent it
-                    # else:
-                    #    print "No conf"
 
         # I ask satellites which sched_id they manage. If I do not agree, I ask
         # them to remove it
@@ -317,7 +313,6 @@ class Dispatcher:
                 continue
             id_to_delete = []
             for cfg_id in cfg_ids:
-                # DBG print sat_type, ":", satellite.get_name(), "manage cfg id:", cfg_id
                 # Ok, we search for realms that have the conf
                 for realm in self.realms:
                     if cfg_id in realm.confs:
