@@ -90,15 +90,16 @@ EVENT_TYPES = {
     'DOWNTIME': {
         # ex: "[1279250211] HOST DOWNTIME ALERT:
         # maast64;STARTED; Host has entered a period of scheduled downtime"
-        'pattern': r'^\[([0-9]{10})\] (HOST|SERVICE) (DOWNTIME) ALERT: '
-        r'([^\;]*);(STARTED|STOPPED|CANCELLED);(.*)',
+        'pattern': r'^\[([0-9]{10})] (HOST|SERVICE) (DOWNTIME) ALERT: '
+        r'([^\;]*);(?:([^\;]*);)?([^\;]*);([^\;]*)',
         'properties': [
             'time',
-            'downtime_type',  # '(SERVICE or could be 'HOST')
-            'event_type',  # 'DOWNTIME'
-            'hostname',  # 'maast64'
-            'state',  # 'STARTED'
-            'output',  # 'Host has entered a period of scheduled downtime'
+            'downtime_type',  # 'SERVICE' or 'HOST'
+            'event_type',  # 'FLAPPING'
+            'hostname',  # The hostname
+            'service_desc',  # The service description or None
+            'state',  # 'STOPPED' or 'STARTED'
+            'output',  # 'Service appears to have started flapping (24% change >= 20.0% threshold)'
         ]
     },
     'FLAPPING': {
@@ -126,6 +127,8 @@ EVENT_TYPES = {
 class LogEvent:  # pylint: disable=R0903
     """Class for parsing event logs
     Populates self.data with the log type's properties
+
+    TODO: check that this class is still used somewhere
     """
 
     def __init__(self, log):
