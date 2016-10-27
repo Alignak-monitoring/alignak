@@ -73,7 +73,8 @@ class Pyopenssl(pyOpenSSLAdapter):
             'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
             '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
         )
-        c.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
+        c.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
+                      SSL.OP_NO_SSLv3)
         c.set_cipher_list(ciphers)
         if self.dhparam is not None:
             c.load_tmp_dh(self.dhparam)

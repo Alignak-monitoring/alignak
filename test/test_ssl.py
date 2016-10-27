@@ -28,7 +28,7 @@ import requests
 from alignak_test import AlignakTest
 
 
-class TestSSL(AlignakTest):
+class TestSsl(AlignakTest):
     """
     This class test the SSL on daemons
     """
@@ -57,7 +57,7 @@ class TestSSL(AlignakTest):
             if proc:
                 self._get_subproc_data(name)  # so to terminate / wait it..
 
-    def test_ssl(self):
+    def test_ssl_satellites(self):
         """
         Test satellites with SSL certificate
 
