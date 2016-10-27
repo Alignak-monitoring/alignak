@@ -33,7 +33,7 @@ from cherrypy.wsgiserver import CherryPyWSGIServer
 from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_multipart_form_data
 
 try:
-    from OpenSSL import SSL
+    from OpenSSL import SSL, crypto
     from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
 except ImportError:
     SSL = None
@@ -44,6 +44,47 @@ except ImportError:
 from alignak.http.cherrypy_extend import zlib_processor
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
+
+class Pyopenssl(pyOpenSSLAdapter):
+    """
+    Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
+    """
+
+    def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
+        """
+        Add init because need get the dhparam
+
+        :param certificate:
+        :param private_key:
+        :param certificate_chain:
+        :param dhparam:
+        """
+        super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
+        self.dhparam = dhparam
+
+    def get_context(self):
+        """Return an SSL.Context from self attributes."""
+        c = SSL.Context(SSL.SSLv23_METHOD)
+
+        # override:
+        ciphers = (
+            'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
+            'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
+            '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
+        )
+        c.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3)
+        c.set_cipher_list(ciphers)
+        if self.dhparam is not None:
+            c.load_tmp_dh(self.dhparam)
+            c.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
+        # end override
+
+        c.use_privatekey_file(self.private_key)
+        if self.certificate_chain:
+            c.load_verify_locations(self.certificate_chain)
+        c.use_certificate_file(self.certificate)
+        return c
 
 
 class InvalidWorkDir(Exception):
@@ -61,7 +102,7 @@ class HTTPDaemon(object):
     It uses CherryPyWSGIServer and daemon http_interface as Application
     """
     def __init__(self, host, port, http_interface, use_ssl, ca_cert,
-                 ssl_key, ssl_cert, daemon_thread_pool_size):
+                 ssl_key, ssl_cert, server_dh, daemon_thread_pool_size):
         """
         Initialize HTTP daemon
 
@@ -114,30 +155,13 @@ class HTTPDaemon(object):
         if getattr(logger, 'level') != logging.DEBUG:
             cherrypy.log.screen = False
 
+        if use_ssl:
+            CherryPyWSGIServer.ssl_adapter = Pyopenssl(ssl_cert, ssl_key, ca_cert, server_dh)
+
         self.srv = CherryPyWSGIServer((host, port),
                                       cherrypy.Application(http_interface, "/", config),
                                       numthreads=daemon_thread_pool_size, shutdown_timeout=1,
                                       request_queue_size=30)
-        if SSL and pyOpenSSLAdapter and use_ssl:
-            adapter = pyOpenSSLAdapter(ssl_cert, ssl_key, ca_cert)
-            context = adapter.get_context()
-            # SSLV2 is deprecated since 2011 by RFC 6176
-            # SSLV3, TLSV1 and TLSV1.1 have POODLE weakness (harder to exploit on TLS)
-            # So for now (until a new TLS version) we only have TLSv1.2 left
-
-            # WE also remove compression because of BREACH weakness
-            context.set_options(SSL.OP_NO_SSLv2 | SSL.OP_NO_SSLv3 |
-                                SSL.OP_NO_TLSv1 | SSL.OP_NO_TLSv1_1 |
-                                SSL.OP_NO_COMPRESSION)
-
-            # All excluded algorithm beyond are known to be weak.
-            context.set_cipher_list('DEFAULT:!DSS:!PSK:!SRP:!3DES:!RC4:!DES:!IDEA:!RC2:!NULL')
-
-            adapter.context = context
-            self.srv.ssl_adapter = adapter
-        if use_ssl:
-            self.srv.ssl_certificate = ssl_cert
-            self.srv.ssl_private_key = ssl_key
 
     def run(self):
         """Wrapper to start http daemon server
