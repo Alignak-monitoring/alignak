@@ -41,8 +41,7 @@ class TestDataranges(AlignakTest):
     """
 
     def test_get_start_of_day(self):
-        """
-        Test function get_start_of_day and return the timestamp of begin of day
+        """ Test function get_start_of_day and return the timestamp of begin of day
 
         :return: None
         """
@@ -52,8 +51,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual(start, timestamp)
 
     def test_get_end_of_day(self):
-        """
-        Test function get_end_of_day and return the timestamp of end of day
+        """ Test function get_end_of_day and return the timestamp of end of day
 
         :return: None
         """
@@ -63,8 +61,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual(start, timestamp)
 
     def test_find_day_by_weekday_offset(self):
-        """
-        Test function find_day_by_weekday_offset to get day number.
+        """ Test function find_day_by_weekday_offset to get day number.
         In this case, 1 = thuesday and -1 = last thuesday of July 2010, so it's the 27 july 2010
 
         :return: None
@@ -73,8 +70,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual(27, ret)
 
     def test_find_day_by_offset(self):
-        """
-        Test function find_day_by_offset to get the day with offset.
+        """ Test function find_day_by_offset to get the day with offset.
         In this case, the last day number of july, so the 31th
 
         :return: None
@@ -86,8 +82,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual(10, ret)
 
     def test_calendardaterange_start_end_time(self):
-        """
-        Test CalendarDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test CalendarDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -128,8 +123,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_start_end_time(self):
-        """
-        Test StandardDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test StandardDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -166,8 +160,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthweekdaydaterange_start_end_time(self):
-        """
-        Test MonthWeekDayDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test MonthWeekDayDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -211,8 +204,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdatedaterange_start_end_time(self):
-        """
-        Test MonthDateDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test MonthDateDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -252,8 +244,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
-        """
-        Test WeekDayDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test WeekDayDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -294,8 +285,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time(self):
-        """
-        Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range
+        """ Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range
 
         :return: None
         """
@@ -337,8 +327,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_monthdaydaterange_start_end_time_negative(self):
-        """
-        Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range with
+        """ Test MonthDayDaterange.get_start_and_end_time to get start and end date of date range with
         negative values
 
         :return: None
@@ -385,8 +374,7 @@ class TestDataranges(AlignakTest):
                 self.assertEqual(data[date_now]['end'], ret[1])
 
     def test_standarddaterange_is_correct(self):
-        """
-        Test if time from next wednesday morning to next wednesday night is correct
+        """ Test if time from next wednesday morning to next wednesday night is correct
 
         :return: None
         """
@@ -394,8 +382,7 @@ class TestDataranges(AlignakTest):
         self.assertTrue(caldate.is_correct())
 
     def test_monthweekdaydaterange_is_correct(self):
-        """
-        Test if time from next wednesday morning to next wednesday night is correct
+        """ Test if time from next wednesday morning to next wednesday night is correct
 
         :return: None
         """
@@ -406,8 +393,7 @@ class TestDataranges(AlignakTest):
         self.assertTrue(caldate.is_correct())
 
     def test_resolve_daterange_case1(self):
-        """
-        Test resolve daterange, case 1
+        """ Test resolve daterange, case 1
 
         :return: None
         """
@@ -429,8 +415,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case2(self):
-        """
-        Test resolve daterange, case 2
+        """ Test resolve daterange, case 2
 
         :return: None
         """
@@ -452,8 +437,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case3(self):
-        """
-        Test resolve daterange, case 3
+        """ Test resolve daterange, case 3
 
         :return: None
         """
@@ -475,8 +459,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case4(self):
-        """
-        Test resolve daterange, case 4
+        """ Test resolve daterange, case 4
 
         :return: None
         """
@@ -498,8 +481,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case5(self):
-        """
-        Test resolve daterange, case 5
+        """ Test resolve daterange, case 5
 
         :return: None
         """
@@ -521,8 +503,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case6(self):
-        """
-        Test resolve daterange, case 6
+        """ Test resolve daterange, case 6
 
         :return: None
         """
@@ -544,8 +525,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case7(self):
-        """
-        Test resolve daterange, case 7
+        """ Test resolve daterange, case 7
 
         :return: None
         """
@@ -567,8 +547,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case8(self):
-        """
-        Test resolve daterange, case 8
+        """ Test resolve daterange, case 8
 
         :return: None
         """
@@ -590,8 +569,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case9(self):
-        """
-        Test resolve daterange, case 9
+        """ Test resolve daterange, case 9
 
         :return: None
         """
@@ -613,8 +591,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case10(self):
-        """
-        Test resolve daterange, case 10
+        """ Test resolve daterange, case 10
 
         :return: None
         """
@@ -636,8 +613,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case11(self):
-        """
-        Test resolve daterange, case 11
+        """ Test resolve daterange, case 11
 
         :return: None
         """
@@ -659,8 +635,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case12(self):
-        """
-        Test resolve daterange, case 12
+        """ Test resolve daterange, case 12
 
         :return: None
         """
@@ -682,8 +657,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case13(self):
-        """
-        Test resolve daterange, case 13
+        """ Test resolve daterange, case 13
 
         :return: None
         """
@@ -705,8 +679,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case14(self):
-        """
-        Test resolve daterange, case 14
+        """ Test resolve daterange, case 14
 
         :return: None
         """
@@ -728,8 +701,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case15(self):
-        """
-        Test resolve daterange, case 15
+        """ Test resolve daterange, case 15
 
         :return: None
         """
@@ -751,8 +723,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case16(self):
-        """
-        Test resolve daterange, case 16
+        """ Test resolve daterange, case 16
 
         :return: None
         """
@@ -774,8 +745,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case17(self):
-        """
-        Test resolve daterange, case 17
+        """ Test resolve daterange, case 17
 
         :return: None
         """
@@ -797,8 +767,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case18(self):
-        """
-        Test resolve daterange, case 18
+        """ Test resolve daterange, case 18
 
         :return: None
         """
@@ -820,8 +789,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case19(self):
-        """
-        Test resolve daterange, case 19
+        """ Test resolve daterange, case 19
 
         :return: None
         """
@@ -843,8 +811,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case20(self):
-        """
-        Test resolve daterange, case 20
+        """ Test resolve daterange, case 20
 
         :return: None
         """
@@ -866,8 +833,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case21(self):
-        """
-        Test resolve daterange, case 21
+        """ Test resolve daterange, case 21
 
         :return: None
         """
@@ -889,8 +855,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case22(self):
-        """
-        Test resolve daterange, case 22
+        """ Test resolve daterange, case 22
 
         :return: None
         """
@@ -912,8 +877,7 @@ class TestDataranges(AlignakTest):
         self.assertEqual('00:00-24:00', timeperiod.dateranges[0].other)
 
     def test_resolve_daterange_case23(self):
-        """
-        Test resolve daterange, case 23
+        """ Test resolve daterange, case 23
 
         :return: None
         """

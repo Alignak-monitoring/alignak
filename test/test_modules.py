@@ -53,7 +53,6 @@ Test Alignak modules manager
 
 import re
 import time
-import unittest2 as unittest
 from alignak_test import AlignakTest, time_hacker
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
@@ -65,10 +64,7 @@ class TestModules(AlignakTest):
     """
 
     def test_module_loading(self):
-        """
-        Test arbiter, broker, ... auto-generated modules
-
-        Alignak module loading
+        """ Test arbiter, broker, ... detecting configured modules
 
         :return:
         """
@@ -121,7 +117,8 @@ class TestModules(AlignakTest):
         ))
 
     def test_missing_module_detection(self):
-        """
+        """ Detect missing module configuration
+
         Alignak configuration parser detects that some modules are required because some
         specific parameters are included in the configuration files. If the modules are not
         present in the configuration, it logs warning message to alert the user about this!
@@ -176,7 +173,8 @@ class TestModules(AlignakTest):
         )
 
     def test_module_on_module(self):
-        """
+        """ No module configuration for modules
+
         Check that the feature is detected as disabled
         :return:
         """
@@ -209,9 +207,10 @@ class TestModules(AlignakTest):
         modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
         self.assertListEqual(modules, ['Example'])
 
-    @unittest.skip("To make a test with Travis")
+    # @unittest.skip("To make a test with Travis")
     def test_modulemanager(self):
-        """
+        """ Module manager manages its modules
+
         Test if the module manager manages correctly all the modules
         :return:
         """
@@ -229,7 +228,7 @@ class TestModules(AlignakTest):
         })
 
         # Create the modules manager for a daemon type
-        self.modulemanager = ModulesManager('broker', None)
+        self.modulemanager = ModulesManager('receiver', None)
 
         # Load an initialize the modules:
         #  - load python module
@@ -256,6 +255,7 @@ class TestModules(AlignakTest):
         ))
 
         my_module = self.modulemanager.instances[0]
+        self.assertTrue(my_module.is_external)
 
         # Get list of not external modules
         self.assertListEqual([], self.modulemanager.get_internal_instances())

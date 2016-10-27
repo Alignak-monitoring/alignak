@@ -34,8 +34,8 @@ class TestStats(AlignakTest):
     This class test the stats
     """
 
-    def test_ok_critical_ok(self):
-        """
+    def test_average_latency(self):
+        """ Test average latency
 
         :return: None
         """

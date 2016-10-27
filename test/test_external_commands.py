@@ -80,9 +80,8 @@ class TestExternalCommands(AlignakTest):
         time_hacker.set_real_time()
 
     def test__command_syntax(self):
-        """
-        External command parsing - named as test__ to be the first executed test :)
-        :return:
+        """ External command parsing - named as test__ to be the first executed test :)
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -215,9 +214,8 @@ class TestExternalCommands(AlignakTest):
         self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
 
     def test_change_and_reset_host_modattr(self):
-        """
-        Change and reset modified attributes for an host
-        :return:
+        """ Change and reset modified attributes for an host
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -279,9 +277,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(0, host.modified_attributes)
 
     def test_change_and_reset_service_modattr(self):
-        """
-        Change and reset modified attributes for a service
-        :return:
+        """  Change and reset modified attributes for a service
+        :return: None 
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -343,9 +340,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(0, svc.modified_attributes)
 
     def test_change_and_reset_contact_modattr(self):
-        """
-        Change and reset modified attributes for a contact
-        :return:
+        """  Change an Noned reset modified attributes for a contact
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -403,9 +399,9 @@ class TestExternalCommands(AlignakTest):
         # Note that the value is simply stored and not controled in any way ...
 
     def test_change_host_attributes(self):
-        """
+        """ Change host attributes
 
-        :return:
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -526,7 +522,7 @@ class TestExternalCommands(AlignakTest):
     def test_change_service_attributes(self):
         """
 
-        :return:
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -663,9 +659,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(svc.first_notification_delay, 10)
 
     def test_change_contact_attributes(self):
-        """
-        Change contact attributes
-        :return:
+        """ Change contact attributes
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -721,9 +716,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(32768, contact.modified_attributes)
 
     def test_host_comments(self):
-        """
-        Test the comments for hosts
-        :return:
+        """ Test the comments for hosts
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -831,9 +825,8 @@ class TestExternalCommands(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_service_comments(self):
-        """
-        Test the comments for services
-        :return:
+        """ Test the comments for services
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -941,9 +934,8 @@ class TestExternalCommands(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_host_downtimes(self):
-        """
-        Test the downtime for hosts
-        :return:
+        """ Test the downtime for hosts
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1056,9 +1048,8 @@ class TestExternalCommands(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_service_downtimes(self):
-        """
-        Test the downtime for hosts
-        :return:
+        """ Test the downtime for hosts
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1171,9 +1162,8 @@ class TestExternalCommands(AlignakTest):
 
     # @unittest.skip("Bug when raising contact downtimes!")
     def test_contact_downtimes(self):
-        """
-        Test the downtime for hosts
-        :return:
+        """ Test the downtime for hosts
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1282,9 +1272,8 @@ class TestExternalCommands(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_contactgroup(self):
-        """
-        Test the commands for contacts groups
-        :return:
+        """ Test the commands for contacts groups
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1327,9 +1316,8 @@ class TestExternalCommands(AlignakTest):
             self.assertTrue(self._scheduler.contacts[contact_id].service_notifications_enabled)
 
     def test_hostgroup(self):
-        """
-        Test the commands for hosts groups
-        :return:
+        """ Test the commands for hosts groups
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1487,9 +1475,8 @@ class TestExternalCommands(AlignakTest):
                 self.assertEqual(downtime.trigger_id, "0")
 
     def test_host(self):
-        """
-        Test the commands for hosts
-        :return:
+        """ Test the commands for hosts
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1629,9 +1616,8 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
 
     def test_global_host_commands(self):
-        """
-        Test global hosts commands
-        :return:
+        """ Test global hosts commands
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1650,9 +1636,8 @@ class TestExternalCommands(AlignakTest):
         self.assertTrue(self._scheduler.external_commands_manager.conf.check_host_freshness)
 
     def test_servicegroup(self):
-        """
-        Test the commands for hosts groups
-        :return:
+        """ Test the commands for hosts groups
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1757,9 +1742,8 @@ class TestExternalCommands(AlignakTest):
             self.assertTrue(self._scheduler.services[service_id].notifications_enabled)
 
     def test_service(self):
-        """
-        Test the commands for services
-        :return:
+        """ Test the commands for services
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1867,9 +1851,8 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
 
     def test_global_service_commands(self):
-        """
-        Test global hosts commands
-        :return:
+        """ Test global hosts commands
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -1888,9 +1871,8 @@ class TestExternalCommands(AlignakTest):
         self.assertTrue(self._scheduler.external_commands_manager.conf.check_service_freshness)
 
     def test_global_commands(self):
-        """
-        Test global hosts commands
-        :return:
+        """ Test global hosts commands
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -2033,9 +2015,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(self._scheduler.external_commands_manager.conf.modified_attributes, 128)
 
     def test_special_commands(self):
-        """
-        Test the special external commands
-        :return:
+        """ Test the special external commands
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched
@@ -2101,9 +2082,8 @@ class TestExternalCommands(AlignakTest):
         # add_simple_poller
 
     def test_not_implemented(self):
-        """
-        Test the not implemented external commands
-        :return:
+        """ Test the not implemented external commands
+        :return: None
         """
         # Our scheduler
         self._scheduler = self.schedulers['scheduler-master'].sched

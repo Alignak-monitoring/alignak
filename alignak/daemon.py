@@ -1275,6 +1275,11 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
         # Log daemon header
         self.print_header()
 
+        if os.environ.get('COVERAGE_PROCESS_START'):
+            logger.info("**********************")
+            logger.info("* Code coverage test *")
+            logger.info("**********************")
+
         logger.info("My configuration: ")
         for prop, _ in self.properties.items():
             logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))

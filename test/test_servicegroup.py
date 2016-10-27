@@ -37,7 +37,8 @@ class TestServiceGroup(AlignakTest):
     """
 
     def test_servicegroup(self):
-        """
+        """ Default configuration service groups
+
         Default configuration has no loading problems ... as of it servicegroups are parsed
         correctly
         :return: None
@@ -47,7 +48,8 @@ class TestServiceGroup(AlignakTest):
         self.assertTrue(self.schedulers['scheduler-master'].conf.conf_is_correct)
 
     def test_look_for_alias(self):
-        """
+        """ Services groups alias
+
         Default configuration has no loading problems ... as of it servicegroups are parsed correctly
         :return: None
         """
@@ -62,8 +64,7 @@ class TestServiceGroup(AlignakTest):
         self.assertEqual(sg.alias, "NOALIAS")
 
     def test_servicegroup_members(self):
-        """
-        Test if members are linked from group
+        """ Test if members are linked from group
 
         :return: None
         """
@@ -86,8 +87,8 @@ class TestServiceGroup(AlignakTest):
         self.assertEqual(len(sg.get_servicegroup_members()), 4)
 
     def test_members_servicegroup(self):
-        """
-        Test if group is linked from the member
+        """ Test if group is linked from the member
+
         :return: None
         """
         self.print_header()
@@ -131,8 +132,8 @@ class TestServiceGroup(AlignakTest):
             ])
 
     def test_servicegroup_with_no_service(self):
-        """
-        Allow servicegroups with no hosts
+        """ Allow servicegroups with no services
+
         :return: None
         """
         self.print_header()
@@ -156,8 +157,8 @@ class TestServiceGroup(AlignakTest):
         self.assertEqual(len(sg.get_services()), 0)
 
     def test_servicegroup_with_space(self):
-        """
-        Test that servicegroups can have a name with spaces
+        """ Test that servicegroups can have a name with spaces
+
         :return: None
         """
         self.print_header()
@@ -196,8 +197,8 @@ class TestServiceGroup(AlignakTest):
         )
 
     def test_servicegroups_generated(self):
-        """
-        Test that servicegroups can have a name with spaces
+        """ Test that servicegroups can be built from service definition
+
         :return: None
         """
         self.print_header()

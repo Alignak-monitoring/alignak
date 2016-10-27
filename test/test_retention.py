@@ -32,8 +32,7 @@ class Testretention(AlignakTest):
     """
 
     def test_scheduler_get_retention(self):
-        """
-        Test get retention data for save
+        """ Test get data for retention save
 
         :return: None
         """
@@ -67,8 +66,7 @@ class Testretention(AlignakTest):
         self.assertEqual(len(retention['services']), 1)
 
     def test_scheduler_load_retention(self):
-        """
-        Test get retention data for save
+        """ Test restore retention data
 
         :return: None
         """

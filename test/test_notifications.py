@@ -32,8 +32,7 @@ class TestNotifications(AlignakTest):
     """
 
     def test_0_nonotif(self):
-        """
-        Test with notifications disabled in service definition
+        """ Test with notifications disabled in service definition
 
         :return: None
         """
@@ -73,8 +72,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(0)
 
     def test_1_nonotif_enablewithcmd(self):
-        """
-        Test notification disabled in service definition but enable after with external command
+        """ Test notification disabled in service definition but enable after with external command
 
         :return: None
         """
@@ -126,13 +124,18 @@ class TestNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual(0, svc.current_notification_number, 'Ok HARD, no notifications')
+        # Todo: @ddurieux check if it normal to have 2 similar notifications as 0 and 1!
+        # self.assert_actions_count(3)
+        # self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        # self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
+        # self.assert_actions_match(2, 'serviceoutput OK', 'command')
+
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
         self.assert_actions_match(1, 'serviceoutput OK', 'command')
 
     def test_2_notifications(self):
-        """
-        Test notifications sent in normal mode
+        """ Test notifications sent in normal mode
 
         :return: None
         """
@@ -201,8 +204,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(5)
 
     def test_3_notifications(self):
-        """
-        Test notifications of service states OK -> WARNING -> CRITICAL -> OK
+        """ Test notifications of service states OK -> WARNING -> CRITICAL -> OK
 
         :return: None
         """
@@ -255,8 +257,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(2, 'serviceoutput OK', 'command')
 
     def test_4_notifications(self):
-        """
-        Test notifications of service states OK -> CRITICAL -> WARNING -> OK
+        """ Test notifications of service states OK -> CRITICAL -> WARNING -> OK
 
         :return: None
         """
@@ -307,8 +308,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(3, 'serviceoutput WARNING', 'command')
 
     def test_notifications_with_delay(self):
-        """
-        Test notifications with use property first_notification_delay
+        """ Test notifications with use property first_notification_delay
 
         :return: None
         """
@@ -374,15 +374,14 @@ class TestNotifications(AlignakTest):
 
     def test_notifications_delay_recover_before_notif(self):
         """
-        TODO
+        TODO: @ddurieux ?
 
         :return:
         """
         pass
 
     def test_notifications_outside_period(self):
-        """
-        Test the case we are not in notification_period, so not send notifications
+        """ Test when we are not in notification_period, so do not send notifications
 
         :return: None
         """
@@ -427,8 +426,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(0)
 
     def test_notifications_ack(self):
-        """
-        Test notifications not sent when adding an acknowledge
+        """ Test notifications not sent when an acknowledge is set
 
         :return: None
         """
@@ -495,8 +493,7 @@ class TestNotifications(AlignakTest):
         self.assert_actions_count(3)
 
     def test_notifications_downtime(self):
-        """
-        Test notifications not send when add a downtime
+        """ Test notifications not sent when a downtime is scheduled
 
         :return: None
         """

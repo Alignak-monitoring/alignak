@@ -59,6 +59,10 @@ class fullTest(AlignakTest):
                 self._get_subproc_data(name)  # so to terminate / wait it..
 
     def test_daemons_outputs(self):
+        """ Running all the Alignak daemons to check their correct launch
+
+        :return:
+        """
 
         os.environ['COVERAGE_PROCESS_START'] = '.coverage.rc'
 
@@ -235,58 +239,6 @@ class fullTest(AlignakTest):
 
 
         print("Done testing")
-        #os.kill(self.arb_proc.pid, signal.SIGHUP)  # This should log with debug level the Relaod Conf
-        #os.kill(self.arb_proc.pid, signal.SIGINT)  # This should kill the proc
-        #data = self._get_subproc_data()
-        #self.assertRegexpMatches(data['out'], "Reloading configuration")
-
-        # total list
-        # arbiter
-        #   have_conf
-        #   put_conf
-        #   do_not_run
-        #   wait_new_conf
-        #[ok]   get_satellite_list
-        #[ok]   what_i_managed
-        #[ok]   get_all_states
-        #   get_objects_properties
-        #
-        # broker
-        #   push_broks
-        #   get_raw_stats
-        #
-        # receiver
-        #[ok]   get_raw_stats
-        #   push_host_names
-        #
-        # scheduler
-        #   get_checks
-        #   put_results
-        #[ok]   get_broks
-        #[ok]   fill_initial_broks
-        #[ok]   get_raw_stats
-        #   run_external_commands
-        #   put_conf
-        #   wait_new_conf
-        # generic
-        #   index
-        #[ok]   ping
-        #   get_start_time
-        #[ok]   get_running_id
-        #   put_conf
-        #   have_conf
-        #   set_log_level
-        #[ok]   get_log_level
-        #[ok]   api
-        #   api_full
-        #   remove_from_conf
-        #[ok]   what_i_managed
-        #   wait_new_conf
-        #[ok]   get_external_commands
-        #   push_actions (post)
-        #[ok]   get_returns
-        #[ok]   get_broks
-        #[ok]   get_raw_stats
 
 
 if __name__ == '__main__':

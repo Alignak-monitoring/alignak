@@ -32,8 +32,7 @@ class TestSchedulerCleanQueue(AlignakTest):
     """
 
     def test_clean_broks(self):
-        """
-        Test clean broks in scheduler
+        """ Test clean broks in scheduler
 
         :return: None
         """
@@ -73,8 +72,7 @@ class TestSchedulerCleanQueue(AlignakTest):
         self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']), brok_limit)
 
     def test_clean_checks(self):
-        """
-        Test clean checks in scheduler
+        """ Test clean checks in scheduler
 
         :return: None
         """
@@ -122,8 +120,7 @@ class TestSchedulerCleanQueue(AlignakTest):
         self.assertLessEqual(len(self.schedulers['scheduler-master'].sched.checks), check_limit)
 
     def test_clean_actions(self):
-        """
-        Test clean actions in scheduler (like notifications)
+        """ Test clean actions in scheduler (like notifications)
 
         :return: None
         """

@@ -32,9 +32,8 @@ class TestBrokCheckResult(AlignakTest):
     This class test the check_result brok
     """
 
-    def test_conf_dependencies(self):
-        """
-        Test dependencies right loaded from config files
+    def test_brok_checks_results(self):
+        """Test broks checks results
 
         :return: None
         """

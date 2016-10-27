@@ -369,11 +369,16 @@ class ModulesManager(object):
     def get_internal_instances(self, phase=None):
         """Get a list of internal instances (in a specific phase)
 
+        If phase is None, return all internal instances whtever the phase
+
         :param phase: phase to filter (never used)
         :type phase:
         :return: internal instances list
         :rtype: list
         """
+        if phase is None:
+            return [inst for inst in self.instances if not inst.is_external]
+
         return [inst
                 for inst in self.instances
                 if not inst.is_external and phase in inst.phases and
@@ -382,11 +387,16 @@ class ModulesManager(object):
     def get_external_instances(self, phase=None):
         """Get a list of external instances (in a specific phase)
 
+        If phase is None, return all external instances whtever the phase
+
         :param phase: phase to filter (never used)
         :type phase:
         :return: external instances list
         :rtype: list
         """
+        if phase is None:
+            return [inst for inst in self.instances if inst.is_external]
+
         return [inst
                 for inst in self.instances
                 if inst.is_external and phase in inst.phases and

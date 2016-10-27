@@ -56,6 +56,8 @@ from alignak.misc.perfdata import Metric, PerfDatas
 class TestPerfdataParing(AlignakTest):
 
     def test_perfdata_parsing(self):
+        """ Test parsing performance data
+        """
         self.print_header()
 
         s = 'ramused=1009MB;;;0;1982 swapused=540MB;;;0;3827 memused=1550MB;2973;3964;0;5810'

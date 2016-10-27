@@ -37,8 +37,7 @@ class TestContactGroup(AlignakTest):
     """
 
     def test_contactgroup(self):
-        """
-        Default configuration has no loading problems ... as of it contactgroups are parsed
+        """ Default configuration has no loading problems ... as of it contactgroups are parsed
         correctly
         :return: None
         """
@@ -47,8 +46,7 @@ class TestContactGroup(AlignakTest):
         self.assertTrue(self.schedulers['scheduler-master'].conf.conf_is_correct)
 
     def test_look_for_alias(self):
-        """
-        Default configuration has no loading problems ... as of it contactgroups are parsed
+        """ Default configuration has no loading problems ... as of it contactgroups are parsed
         correctly
         :return: None
         """
@@ -63,8 +61,7 @@ class TestContactGroup(AlignakTest):
         self.assertEqual(cg.alias, "NOALIAS")
 
     def test_contactgroup_members(self):
-        """
-        Test if members are linked from group
+        """ Test if members are linked from group
 
         :return: None
         """
@@ -103,8 +100,7 @@ class TestContactGroup(AlignakTest):
         self.assertEqual(len(cg.get_contactgroup_members()), 1)
 
     def test_members_contactgroup(self):
-        """
-        Test if group is linked from the member
+        """ Test if group is linked from the member
         :return: None
         """
         self.print_header()
@@ -148,8 +144,7 @@ class TestContactGroup(AlignakTest):
             ])
 
     def test_contactgroup_with_no_contact(self):
-        """
-        Allow contactgroups with no hosts
+        """ Allow contactgroups with no hosts
         :return: None
         """
         self.print_header()
@@ -185,8 +180,7 @@ class TestContactGroup(AlignakTest):
         self.assertEqual(len(cg.get_contacts()), 0)
 
     def test_contactgroup_with_space(self):
-        """
-        Test that contactgroups can have a name with spaces
+        """ Test that contactgroups can have a name with spaces
         :return: None
         """
         self.print_header()
@@ -226,8 +220,7 @@ class TestContactGroup(AlignakTest):
             print "->", self.schedulers['scheduler-master'].sched.contacts[c].get_name()
 
     def test_contactgroups_plus_inheritance(self):
-        """
-        Test that contactgroups correclty manage inheritance
+        """ Test that contactgroups correclty manage inheritance
         :return: None
         """
         self.print_header()

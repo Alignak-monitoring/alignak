@@ -73,6 +73,10 @@ class TestLogging(AlignakTest):
         self.logger.setLevel(INFO)
 
     def test_default_logger_values(self):
+        """ Test default logger values
+
+        :return:
+        """
         self.assertEqual(self.logger.level, INFO)
         self.assertEqual(self.logger.name, "alignak")
         test_logger = logging.getLogger("alignak.test.name")
@@ -80,15 +84,27 @@ class TestLogging(AlignakTest):
         self.assertEqual(test_logger.parent, self.logger)
 
     def test_drop_low_level_msg(self):
+        """ Drop low level messages
+
+        :return:
+        """
         self.logger.debug("This message will not be emitted")
         self.assert_no_log_match("This message will not be emitted")
 
     def test_change_level_and_get_msg(self):
+        """ Test change log level
+
+        :return:
+        """
         self.logger.setLevel(DEBUG)
         self.logger.debug("This message is emitted in DEBUG")
         self.assert_any_log_match("This message is emitted in DEBUG")
 
     def test_log_and_change_level(self):
+        """ Test change log level 2
+
+        :return:
+        """
         self.logger.info("This message will be collected")
         self.logger.setLevel(WARNING)
         self.logger.info("This message won't be collected")
@@ -96,8 +112,7 @@ class TestLogging(AlignakTest):
         self.assert_no_log_match("This message won't be collected")
 
     def test_log_config_console(self):
-        """
-        Default logger setup is to update alignak root logger and add a console handler
+        """ Default logger setup updates root logger and adds a console handler
 
         :return:
         """
@@ -129,8 +144,7 @@ class TestLogging(AlignakTest):
         self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
 
     def test_log_config_human_date(self):
-        """
-        Default logger setup uses a timestamp date format, a human date can be used instead
+        """ Default logger setup uses a timestamp date format, a human date can be used instead
 
         :return:
         """
@@ -142,8 +156,7 @@ class TestLogging(AlignakTest):
         self.assertEqual(len(my_logger.handlers), 2)
 
     def test_log_config_file(self):
-        """
-        Logger setup allows to update alignak root logger with a timed rotating file handler
+        """ Logger setup allows to update alignak root logger with a timed rotating file handler
 
         :return:
         """
@@ -171,10 +184,13 @@ class TestLogging(AlignakTest):
         self.assertTrue(os.path.exists('./test2.log'))
 
     def test_log_format(self):
+        """ Log string format
+
+        :return:
+        """
         msg = "Message"
         self.logger.info(msg)
         self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
-
 
 
 if __name__ == '__main__':
