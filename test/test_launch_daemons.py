@@ -237,9 +237,4 @@ class fullTest(AlignakTest):
             data = raw_data.json()
             self.assertIsInstance(data, list, "Data is not a list!")
 
-
         print("Done testing")
-
-
-if __name__ == '__main__':
-    unittest.main()

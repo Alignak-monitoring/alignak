@@ -1636,7 +1636,8 @@ class TestExternalCommands(AlignakTest):
         self.assertTrue(self._scheduler.external_commands_manager.conf.check_host_freshness)
 
     def test_servicegroup(self):
-        """ Test the commands for hosts groups
+        """
+        Test the commands for hosts groups
         :return: None
         """
         # Our scheduler
@@ -1742,7 +1743,8 @@ class TestExternalCommands(AlignakTest):
             self.assertTrue(self._scheduler.services[service_id].notifications_enabled)
 
     def test_service(self):
-        """ Test the commands for services
+        """
+        Test the commands for services
         :return: None
         """
         # Our scheduler
@@ -1851,7 +1853,8 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
 
     def test_global_service_commands(self):
-        """ Test global hosts commands
+        """
+        Test global hosts commands
         :return: None
         """
         # Our scheduler
@@ -1871,7 +1874,8 @@ class TestExternalCommands(AlignakTest):
         self.assertTrue(self._scheduler.external_commands_manager.conf.check_service_freshness)
 
     def test_global_commands(self):
-        """ Test global hosts commands
+        """
+        Test global hosts commands
         :return: None
         """
         # Our scheduler
@@ -2015,7 +2019,8 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(self._scheduler.external_commands_manager.conf.modified_attributes, 128)
 
     def test_special_commands(self):
-        """ Test the special external commands
+        """
+        Test the special external commands
         :return: None
         """
         # Our scheduler
