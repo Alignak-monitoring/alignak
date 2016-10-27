@@ -56,7 +56,6 @@ macros solving, sorting, parsing, file handling, filters.
 import time
 import re
 import sys
-import os
 import json
 import argparse
 import logging

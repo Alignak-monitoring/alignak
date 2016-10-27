@@ -691,7 +691,6 @@ class TestConfig(AlignakTest):
             'test_host_0', 'test_service_4')
         self.assertEqual('OK', svc.state)
 
-
     def test_host_unreachable_values(self):
         """
         Test unreachable value in:
