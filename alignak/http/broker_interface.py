@@ -22,7 +22,7 @@ from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import unserialize
 
 
-class BrokerInterface(GenericInterface):  # pragma: no cover, not with unit tests
+class BrokerInterface(GenericInterface):
     """This class provides specific HTTP functions for Broker."""
 
     @cherrypy.expose

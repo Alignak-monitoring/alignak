@@ -2645,7 +2645,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                          "schedulers",
                          "realms",
                          ):
-            objs = [jsonify_r(i) for i in getattr(self, category)]
+            try:
+                objs = [jsonify_r(i) for i in getattr(self, category)]
+            except AttributeError:
+                logger.warning("Dumping configuration, '%s' not present in the configuration",
+                               category)
+                continue
+
             container = getattr(self, category)
             if category == "services":
                 objs = sorted(objs, key=lambda o: "%s/%s" %

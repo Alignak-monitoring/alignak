@@ -156,7 +156,7 @@ DEFAULT_WORK_DIR = './'
 
 
 # pylint: disable=R0902
-class Daemon(object):  # pragma: no cover, not for unit tests...
+class Daemon(object):
     """Class providing daemon level call for Alignak
         TODO: Consider clean this code and use standard libs
     """
@@ -216,6 +216,28 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
     }
 
     def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
+        """
+
+        :param name:
+        :param config_file:
+        :param is_daemon:
+        :param do_replace:
+        :param debug:
+        :param debug_file:
+        """
+        try:
+            if os.environ.get('COVERAGE_PROCESS_START'):
+                print("***")
+                print("* Executing daemon test with code coverage enabled")
+                if 'coverage' not in sys.modules:
+                    print("* coverage module is not loaded! Trying to import coverage module...")
+                    import coverage
+                    coverage.process_startup()
+                    print("* coverage process started.")
+                print("***")
+        except Exception as exp:
+            print("Exception: %s", str(exp))
+            sys.exit(3)
 
         self.check_shm()
 
@@ -1230,7 +1252,7 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
                         self.add(obj)
         return had_some_objects
 
-    def setup_alignak_logger(self):  # pragma: no cover, not for unit tests...
+    def setup_alignak_logger(self):
         """ Setup alignak logger:
         - load the daemon configuration file
         - configure the global daemon handler (root logger)
@@ -1274,11 +1296,6 @@ class Daemon(object):  # pragma: no cover, not for unit tests...
 
         # Log daemon header
         self.print_header()
-
-        if os.environ.get('COVERAGE_PROCESS_START'):
-            logger.info("**********************")
-            logger.info("* Code coverage test *")
-            logger.info("**********************")
 
         logger.info("My configuration: ")
         for prop, _ in self.properties.items():

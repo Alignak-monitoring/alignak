@@ -28,7 +28,7 @@ from alignak.misc.serialization import serialize, unserialize
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class SchedulerInterface(GenericInterface):  # pragma: no cover, not with unit tests
+class SchedulerInterface(GenericInterface):
     """This module provide a specific HTTP interface for a Scheduler."""
 
     @cherrypy.expose

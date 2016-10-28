@@ -29,7 +29,7 @@ from alignak.util import jsonify_r
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class ArbiterInterface(GenericInterface):  # pragma: no cover, not with unit tests
+class ArbiterInterface(GenericInterface):
     """Interface for HA Arbiter. The Slave/Master arbiter can get /push conf
 
     """

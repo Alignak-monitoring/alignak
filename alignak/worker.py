@@ -65,7 +65,7 @@ from alignak.misc.common import setproctitle
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Worker(object):  # pragma: no cover, not with unit tests
+class Worker(object):
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
     (self.s) (slave)
@@ -86,6 +86,8 @@ class Worker(object):  # pragma: no cover, not with unit tests
                  loaded_into='unknown', http_daemon=None):
         self.uuid = uuid.uuid4().hex
 
+        self.interrupted = False
+
         self._mortal = mortal
         self._idletime = 0
         self._timeout = timeout
@@ -100,7 +102,7 @@ class Worker(object):  # pragma: no cover, not with unit tests
         self.returns_queue = returns_queue
         self.max_plugins_output_length = max_plugins_output_length
         self.i_am_dying = False
-        # Keep a trace where the worker is launch from (poller or reactionner?)
+        # Keep a trace where the worker is launched from (poller or reactionner?)
         self.loaded_into = loaded_into
         if os.name != 'nt':
             self.http_daemon = http_daemon
@@ -238,9 +240,15 @@ class Worker(object):  # pragma: no cover, not with unit tests
             if len(self.checks) == 0:
                 self._idletime += 1
                 time.sleep(1)
+        # Maybe the Queue() has been deleted by our master ?
+        except EOFError:
+            logger.warning("[%s] My queue is no more available", self.uuid)
+            self.interrupted = True
+            return
         # Maybe the Queue() is not available, if so, just return
         # get back to work :)
         except IOError:
+            logger.warning("[%s] My queue is not available", self.uuid)
             return
 
     def launch_new_checks(self):
@@ -255,11 +263,11 @@ class Worker(object):  # pragma: no cover, not with unit tests
             if chk.status == 'queue':
                 self._idletime = 0
                 res = chk.execute()
-                # Maybe we got a true big problem in the
-                # action launching
+                # Maybe we got a true big problem in the action launching
                 if res == 'toomanyopenfiles':
                     # We should die as soon as we return all checks
-                    logger.error("[%d] I am dying Too many open files %s ... ", self.uuid, chk)
+                    logger.error("[%s] I am dying because of too many open files %s ... ",
+                                 self.uuid, chk)
                     self.i_am_dying = True
 
     def manage_finished_checks(self):
@@ -285,7 +293,7 @@ class Worker(object):  # pragma: no cover, not with unit tests
                 try:
                     self.returns_queue.put(action)
                 except IOError, exp:
-                    logger.error("[%d] Exiting: %s", self.uuid, exp)
+                    logger.error("[%s] Exiting: %s", self.uuid, exp)
                     sys.exit(2)
 
         # Little sleep
@@ -335,7 +343,7 @@ class Worker(object):  # pragma: no cover, not with unit tests
         except Exception:
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
-            logger.error("Worker '%d' exit with an unmanaged exception : %slave_q",
+            logger.error("[%s] exit with an unmanaged exception : %s",
                          self.uuid, output.getvalue())
             output.close()
             # Ok I die now
@@ -380,20 +388,26 @@ class Worker(object):  # pragma: no cover, not with unit tests
             self.manage_finished_checks()
 
             # Now get order from master
+            # Todo: does our master reaaly send this kind of message? Not found it anywhere!
             try:
                 cmsg = control_q.get(block=False)
                 if cmsg.get_type() == 'Die':
-                    logger.debug("[%d] Dad say we are dying...", self.uuid)
+                    logger.warning("[%s] Dad say we are dying...", self.uuid)
                     break
             except Exception:  # pylint: disable=W0703
                 pass
+
+            # Maybe we ask us to die, if so, do it :)
+            if self.interrupted:
+                logger.warning("[%s] I die because someone asked ;)", self.uuid)
+                break
 
             # Look if we are dying, and if we finish all current checks
             # if so, we really die, our master poller will launch a new
             # worker because we were too weak to manage our job :(
             if len(self.checks) == 0 and self.i_am_dying:
-                logger.warning("[%d] I DIE because I cannot do my job as I should"
-                               "(too many open files?)... forgot me please.", self.uuid)
+                logger.warning("[%s] I die because I cannot do my job as I should "
+                               "(too many open files?)... forgive me please.", self.uuid)
                 break
 
             # Manage a possible time change (our avant will be change with the diff)
