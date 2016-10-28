@@ -235,7 +235,7 @@ class Daemon(object):
                     coverage.process_startup()
                     print("* coverage process started.")
                 print("***")
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             print("Exception: %s", str(exp))
             sys.exit(3)
 
