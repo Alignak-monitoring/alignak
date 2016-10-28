@@ -61,14 +61,14 @@ class TestSsl(AlignakTest):
         except ImportError:
             self.ssl_installed = False
             print "Install pyopenssl"
-            subprocess.call(["pip", "install", "--upgrade", "pyopenssl"], shell=True)
+            subprocess.call("pip install pyopenssl", shell=True)
 
     def tearDown(self):
         for name, proc in self.procs.items():
             if proc:
                 self._get_subproc_data(name)  # so to terminate / wait it..
         if not self.ssl_installed:
-            subprocess.call(["pip", "uninstall", "pyopenssl"], shell=True)
+            subprocess.call("pip uninstall pyopenssl", shell=True)
 
     def test_ssl_satellites(self):
         """
