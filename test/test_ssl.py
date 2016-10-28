@@ -51,8 +51,9 @@ class TestSsl(AlignakTest):
         # openssl genrsa -passout pass:wazabi -out certificate_test.key 2048
         # openssl req -new -x509 -days 3650 -key certificate_test.key -out certificate_test.csr
         # openssl dhparam -out dhparams.pem 2048
-        shutil.copytree('certificate_test*', '/tmp/')
-        shutil.copytree('dhparams.pem', '/tmp/')
+        shutil.copy('cfg/ssl/certificate_test.csr', '/tmp/')
+        shutil.copy('cfg/ssl/certificate_test.key', '/tmp/')
+        shutil.copy('cfg/ssl/dhparams.pem', '/tmp/')
         self.procs = {}
         self.ssl_installed = True
         try:
