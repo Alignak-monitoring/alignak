@@ -575,16 +575,16 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/host_config_all.cfg')
         self.assertTrue(self.conf_is_correct)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_000')
         self.assertEqual('DOWN', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_1')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_001')
         self.assertEqual('UNREACHABLE', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_2')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_002')
         self.assertEqual('UP', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_3')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_003')
         self.assertEqual('UP', host.state)
 
     def test_config_hosts_names(self):
