@@ -283,6 +283,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if 'initial_state' in params and params['initial_state'] == 'u':
             params['initial_state'] = 'x'
 
+        if 'freshness_state' in params and params['freshness_state'] == 'u':
+            params['freshness_state'] = 'x'
+
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
         and define state with initial_state
