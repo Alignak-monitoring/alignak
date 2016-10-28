@@ -216,10 +216,12 @@ class MacroResolver(Borg):
             else:
                 return unicode(value)
         except AttributeError:
-            # Raise a warning and return a strange value when macro cannot be resolved
-            warnings.warn(
-                'Error when getting the property value for a macro: %s',
-                DeprecationWarning, stacklevel=2)
+            # Todo: there is too much macros that are not resolved that this log is spamming :/
+            # # Raise a warning and return a strange value when macro cannot be resolved
+            # warnings.warn(
+            #     'Error when getting the property value for a macro: %s',
+            #     MacroWarning, stacklevel=2)
+            # Return a strange value when macro cannot be resolved
             return 'XxX'
         except UnicodeError:
             if isinstance(value, str):
