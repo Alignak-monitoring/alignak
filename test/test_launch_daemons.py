@@ -166,7 +166,7 @@ class fullTest(AlignakTest):
             print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
 
         # Let the daemons start ...
-        sleep(3)
+        sleep(5)
 
         print("Testing pid files and log files...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
@@ -183,7 +183,7 @@ class fullTest(AlignakTest):
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
 
-        sleep(3)
+        sleep(5)
 
         name = 'arbiter'
         print("Testing Arbiter start %s" % name)
