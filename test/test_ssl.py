@@ -56,18 +56,18 @@ class TestSsl(AlignakTest):
         self.procs = {}
         self.ssl_installed = True
         try:
-            from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
+            from OpenSSL import SSL
         except ImportError:
             self.ssl_installed = False
             print "Install pyopenssl"
-            subprocess.call(["pip", "install", "--upgrade", "pyopenssl"])
+            subprocess.call(["sudo", "pip", "install", "--upgrade", "pyopenssl"])
 
     def tearDown(self):
         for name, proc in self.procs.items():
             if proc:
                 self._get_subproc_data(name)  # so to terminate / wait it..
         if not self.ssl_installed:
-            subprocess.call(["pip", "uninstall", "pyopenssl"])
+            subprocess.call(["sudo", "pip", "uninstall", "pyopenssl"])
 
     def test_ssl_satellites(self):
         """
