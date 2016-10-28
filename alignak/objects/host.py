@@ -276,7 +276,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         for prop in ['flap_detection_options', 'notification_options',
-                     'snapshot_criteria']:
+                     'snapshot_criteria', 'stalking_options']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
 
