@@ -55,6 +55,7 @@ import os
 import tempfile
 import shutil
 
+from alignak_test import AlignakTest
 from alignak_tst_utils import get_free_port
 from alignak_test import unittest
 
@@ -63,6 +64,7 @@ from alignak.daemons.pollerdaemon import Poller
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.reactionnerdaemon import Reactionner
+from alignak.daemons.receiverdaemon import Receiver
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.http.daemon import PortNotFree
 import time
@@ -89,11 +91,12 @@ except ImportError, exp:  # Like in nt system
 
 
 daemons_config = {
-    Broker:       "etc/core/daemons/brokerd.ini",
-    Poller:       "etc/core/daemons/pollerd.ini",
-    Reactionner:  "etc/core/daemons/reactionnerd.ini",
-    Alignak:      "etc/core/daemons/schedulerd.ini",
-    Arbiter:    ["etc/core/alignak.cfg"]
+    Broker: "cfg/daemons/brokerd.ini",
+    Poller: "cfg/daemons/pollerd.ini",
+    Reactionner: "cfg/daemons/reactionnerd.ini",
+    Receiver: "cfg/daemons/receiverd.ini",
+    Alignak:  "cfg/daemons/schedulerd.ini",
+    Arbiter: "cfg/daemons/arbiterd.ini"
 }
 
 #############################################################################
@@ -102,10 +105,6 @@ class template_Daemon_Bad_Start():
 
     @classmethod
     def setUpClass(cls):
-        #time_hacker.set_real_time()  # just to be sure..
-        # the daemons startup code does actually a `chrdir`,
-        # in Daemon.change_to_workdir,
-        # so in order to be always safe, let's save the cwd when we are setup,
         # we'll chdir() to it in tearDown..
         cls._launch_dir = os.getcwd()
 
@@ -125,9 +124,13 @@ class template_Daemon_Bad_Start():
         cls = self.daemon_cls
         return cls(daemons_config[cls], False, True, False, None)
 
-    def get_daemon(self):
+    def get_daemon(self, free_port=True):
+        """
 
-        #alignak_log.local_log = None  # otherwise get some "trashs" logs..
+        :param free_port: get a free port (True) or use the configuration defined port (False)
+        :return:
+        """
+
         d = self.create_daemon()
 
         # configuration is actually "relative" :
@@ -137,20 +140,61 @@ class template_Daemon_Bad_Start():
         os.chdir(self._launch_dir)
 
         d.load_config_file()
-        d.port = get_free_port()
-        d.pidfile = "pidfile"
+        # Do not use the port in the configuration file, but get a free port
+        if free_port:
+            d.port = get_free_port()
+        # d.pidfile = "pidfile"
         self.get_login_and_group(d)
         return d
 
     def start_daemon(self, daemon):
-        daemon.do_daemon_init_and_start(fake=True)
+        """
+        Start the daemon
+        :param daemon:
+        :return:
+        """
+        daemon.do_daemon_init_and_start()
+
+    def stop_daemon(self, daemon):
+        """
+        Stop the daemon
+        :param daemon:
+        :return:
+        """
+        # Do not call request_stop because it sys.exit ... and this stops the test!
+        # daemon.request_stop()
+        # Instead call the same code hereunder:
+        daemon.unlink()
+        daemon.do_stop()
+
+    def test_config_and_start_and_stop(self):
+        """ Test configuration loaded, daemon started and stopped
+
+        :return:
+        """
+        print("Testing configuration loaded...")
+        d = self.get_daemon(free_port=False)
+        print("Daemon configuration: %s" % d.__dict__)
+        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
+        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+
+        self.start_daemon(d)
+        self.assertTrue(os.path.exists(d.pidfile))
+
+        time.sleep(2)
+
+        self.stop_daemon(d)
+        self.assertFalse(os.path.exists(d.pidfile))
 
     def test_bad_piddir(self):
+        """ Test bad PID directory
+
+        :return:
+        """
         print("Testing bad pidfile ...")
         d = self.get_daemon()
         d.workdir = tempfile.mkdtemp()
         d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
-
 
         with self.assertRaises(InvalidPidFile):
             self.start_daemon(d)
@@ -159,14 +203,25 @@ class template_Daemon_Bad_Start():
         shutil.rmtree(d.workdir)
 
     def test_bad_workdir(self):
+        """ Test bad working directory
+
+        :return:
+        """
         print("Testing bad workdir ... mypid=%d" % (os.getpid()))
         d = self.get_daemon()
         d.workdir = '/DONOTEXISTS'
+
         with self.assertRaises(InvalidWorkDir):
             self.start_daemon(d)
         d.do_stop()
 
+    # @unittest.skip("Currently not correctly implemented ... to be refactored!")
+    # Seems that catching an exception occuring in a detached thred is not that easy :/P
     def test_port_not_free(self):
+        """ Test HTTP port not free
+
+        :return:
+        """
         print("Testing port not free ... mypid=%d" % (os.getpid()))
         d1 = self.get_daemon()
 
@@ -175,29 +230,27 @@ class template_Daemon_Bad_Start():
         d1.host = "127.0.0.1"  # Force all interfaces
 
         self.start_daemon(d1)
+        time.sleep(1)
+
         # so that second daemon will not see first started one:
         todel = os.path.join(temp, d1.pidfile)
         os.unlink(todel)
 
         d2 = self.get_daemon()
+
         d2.workdir = d1.workdir
         d2.host = "127.0.0.1"  # Force all interfaces
         d2.port = d1.http_daemon.port
 
-        with self.assertRaises(PortNotFree):
-            # Do start by hand because we don't want to run the thread.
-            # PortNotFree will occur here not in the thread.
-            d2.change_to_user_group()
-            d2.change_to_workdir()
-            d2.check_parallel_run()
-            d2.setup_communication_daemon()
-            d2.http_daemon_thread()
+        # Bad parameters
+        # Do start by hand because we don't want to run the thread.
+        # PortNotFree will occur here not in the thread.
+        d2.change_to_user_group()
+        d2.change_to_workdir()
+        d2.check_parallel_run()
+        self.assertFalse(d2.setup_communication_daemon())
 
-
-        d2.http_daemon.srv.ready = False
-        time.sleep(1)
-        d2.http_daemon.srv.requests.stop()
-        d2.do_stop()
+        self.assertFalse(os.path.exists(d2.pidfile))
 
         d1.http_daemon.srv.ready = False
         time.sleep(1)
@@ -208,32 +261,33 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Receiver_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+    daemon_cls = Receiver
 
+
+class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Arbiter
 
     def create_daemon(self):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        return cls(daemons_config[cls], False, True, False, False, None, '')
+        return cls(daemons_config[cls], "cfg/daemons/alignak.cfg",
+                   False, True, False, False, None, 'arbiter-master', None)
 
 #############################################################################
-
-if __name__ == '__main__':
-    unittest.main()
