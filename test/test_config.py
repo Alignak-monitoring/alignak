@@ -474,18 +474,16 @@ class TestConfig(AlignakTest):
         )
         self.assert_any_cfg_log_match(
             re.escape(
-                "Error: Hosts exist in the realm <Realm \"name\"=u'Realm2' /> "
-                "but no poller in this realm"
+                "Error: Hosts exist in the realm Realm2 but no poller in this realm"
             )
         )
         self.assert_any_cfg_log_match(
             re.escape(
-                "Error: Hosts exist in the realm <Realm \"name\"=u'Realm1' /> "
-                "but no poller in this realm"
+                "Error: Hosts exist in the realm Realm1 but no poller in this realm"
             )
         )
         self.assert_any_cfg_log_match(
-            "Error: Hosts exist in the realm None but no poller in this realm"
+            "Error: Hosts exist in the realm All but no poller in this realm"
         )
         self.assert_any_cfg_log_match(
             "Error : More than one realm are set to the default realm"

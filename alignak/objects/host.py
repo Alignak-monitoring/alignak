@@ -275,7 +275,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type params: dict
         :return: None
         """
-        for prop in ['flap_detection_options', 'notification_options', 'snapshot_criteria']:
+        for prop in ['flap_detection_options', 'notification_options',
+                     'snapshot_criteria', 'initial_state']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
 
@@ -291,7 +292,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.alias = self.host_name
         if self.initial_state == 'd':
             self.state = 'DOWN'
-        elif self.initial_state in ['u', 'x']:
+        elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
