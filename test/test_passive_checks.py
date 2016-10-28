@@ -83,7 +83,7 @@ class TestPassiveChecks(AlignakTest):
             "test_host_A", "test_ok_4")
 
         self.assertEqual("d", host_a.freshness_state)
-        self.assertEqual("u", host_b.freshness_state)
+        self.assertEqual("x", host_b.freshness_state)
         self.assertEqual("o", host_c.freshness_state)
         self.assertEqual("d", host_d.freshness_state)
 
