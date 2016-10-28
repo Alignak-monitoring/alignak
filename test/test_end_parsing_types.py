@@ -61,8 +61,7 @@ class TestEndParsingType(AlignakTest):
     """
 
     def check_object_property(self, obj, prop):
-        """
-        Check the property of an object
+        """ Check the property of an object
 
         :param obj: object reference
         :type obj: object
@@ -91,8 +90,7 @@ class TestEndParsingType(AlignakTest):
 
     @staticmethod
     def map_type(obj):
-        """
-        Detect type of a property
+        """ Detect type of a property
 
         :param obj: get type of object
         :type obj: object
@@ -132,8 +130,7 @@ class TestEndParsingType(AlignakTest):
             return basestring
 
     def check_objects_from(self, container):
-        """
-        Check properties of an alignak item
+        """ Check properties of an alignak item
 
         :param container: object / alignak item
         :type container: object
@@ -145,8 +142,7 @@ class TestEndParsingType(AlignakTest):
                 self.check_object_property(obj, prop)
 
     def test_types(self):  # pylint: disable=R0912
-        """
-        Test properties types
+        """ Test properties types
 
         :return: None
         """

@@ -35,8 +35,7 @@ class TestConfig(AlignakTest):
     """
 
     def test_config_ok(self):
-        """
-        Default configuration has no loading problems ...
+        """ Default configuration has no loading problems ...
 
         :return: None
         """
@@ -76,8 +75,7 @@ class TestConfig(AlignakTest):
         self.assertIsNotNone(link)
 
     def test_config_conf_inner_properties(self):
-        """
-        Default configuration has no loading problems ... and inner default proerties are
+        """ Default configuration has no loading problems ... and inner default proerties are
         correctly values
 
         :return: None
@@ -101,8 +99,7 @@ class TestConfig(AlignakTest):
         self.assertEqual(self.arbiter.conf.config_base_dir, 'cfg')
 
     def test_config_ok_no_declared_daemons(self):
-        """
-        Default configuration has no loading problems ... but no daemons are defined
+        """ Default configuration has no loading problems ... but no daemons are defined
         The arbiter will create default daemons except for the receiver.
 
         :return: None
@@ -142,8 +139,7 @@ class TestConfig(AlignakTest):
         self.assertIsNone(link)
 
     def test_symlinks(self):
-        """
-        Test a configuration with symlinks to files
+        """ Test a configuration with symlinks to files
 
         :return: None
         """
@@ -158,8 +154,7 @@ class TestConfig(AlignakTest):
         self.assertIsNotNone(svc)
 
     def test_define_syntax(self):
-        """
-        Define syntax si correctly check: spaces, multi-lines, white-spaces
+        """ Test that define{} syntax is correctly checked: spaces, multi-lines, white-spaces
         do not raise any error ...
 
         :return: None
@@ -177,7 +172,7 @@ class TestConfig(AlignakTest):
         self.assertIsNotNone(host)
 
     def test_definition_order(self):
-        """
+        """ Test element definition order
         An element (host, service, ...) can be defined several times then the definition_order
         will be used to choose which definition is the to be used one...
 
@@ -202,7 +197,8 @@ class TestConfig(AlignakTest):
         self.assertEqual(1, svc.definition_order)
 
     def test_service_not_hostname(self):
-        """
+        """ Test the 'not hostname' syntax
+
         The service test_ok_0 is applied with a host_group on "test_host_0","test_host_1"
         but have a host_name with !"test_host_1" so it will only be attached to "test_host_0"
 
@@ -228,7 +224,7 @@ class TestConfig(AlignakTest):
         self.assertIsNone(svc_not)
 
     def test_service_inheritance(self):
-        """
+        """ Test services inheritance
         Services are attached to hosts thanks to template inheritance
 
         SSH services are created from a template and attached to an host
@@ -260,8 +256,7 @@ class TestConfig(AlignakTest):
         self.assertEqual('check_ssh', svc.check_command.command.command_name)
 
     def test_service_with_no_host(self):
-        """
-        A service not linked to any host raises an error
+        """ A service not linked to any host raises an error
 
         :return: None
         """
@@ -292,7 +287,8 @@ class TestConfig(AlignakTest):
                       self.configuration_errors)
 
     def test_bad_template_use_itself(self):
-        """
+        """ Detect a template that uses itself as a template
+
         This test host use template but template is itself
 
         :return: None
@@ -307,8 +303,7 @@ class TestConfig(AlignakTest):
                       self.configuration_errors)
 
     def test_use_undefined_template(self):
-        """
-        This test unknown template for host and service
+        """ Test unknown template detection for host and service
 
         :return: None
         """
@@ -325,8 +320,7 @@ class TestConfig(AlignakTest):
                       self.configuration_warnings)
 
     def test_broken_configuration(self):
-        """
-        Configuration is not correct because of a wrong relative path in the main config file
+        """ Configuration is not correct because of a wrong relative path in the main config file
 
         :return: None
         """
@@ -352,8 +346,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_broken_configuration_2(self):
-        """
-        Configuration is not correct because of a non-existing path
+        """ Configuration is not correct because of a non-existing path
 
         :return: None
         """
@@ -377,8 +370,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_bad_timeperiod(self):
-        """
-        This test bad timeperiod
+        """ Test bad timeperiod configuration
 
         :return: None
         """
@@ -406,8 +398,7 @@ class TestConfig(AlignakTest):
         self.assertEqual(False, timeperiod.is_correct())
 
     def test_bad_contact(self):
-        """
-        This test a service with an unknown contact
+        """ Test a service with an unknown contact
 
         :return: None
         """
@@ -431,8 +422,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_bad_notification_period(self):
-        """
-        Config is not correct because of an unknown notification_period in a service
+        """ Configuration is not correct because of an unknown notification_period in a service
 
         :return: None
         """
@@ -452,8 +442,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_bad_realm_conf(self):
-        """
-        Config is not correct because of an unknown realm member in realm and
+        """ Configuration is not correct because of an unknown realm member in realm and
         an unknown realm in a host
 
         :return: None
@@ -472,35 +461,36 @@ class TestConfig(AlignakTest):
             r"the host test_host_realm3 got an invalid realm \(Realm3\)!"
         )
         self.assert_any_cfg_log_match(
+            r"hosts configuration is incorrect!"
+        )
+        self.assert_any_cfg_log_match(
             "Configuration in realm::Realm1 is incorrect; from: cfg/config/realm_bad_member.cfg:5"
         )
         self.assert_any_cfg_log_match(
             r"\[realm::Realm1\] as realm, got unknown member 'UNKNOWNREALM'"
         )
         self.assert_any_cfg_log_match(
+            "realms configuration is incorrect!"
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "Error: Hosts exist in the realm Realm2 but no poller in this realm"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "Error: Hosts exist in the realm Realm1 but no poller in this realm"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            "Error: Hosts exist in the realm All but no poller in this realm"
+        )
+        self.assert_any_cfg_log_match(
             "Error : More than one realm are set to the default realm"
-        )
-        self.assert_any_cfg_log_match(
-            "Error: the realm configuration of yours hosts is not good because there is more "
-            r"than one realm in one pack \(host relations\):"
-        )
-        self.assert_any_cfg_log_match(
-            "the host test_host_realm2 is in the realm Realm2"
-        )
-        self.assert_any_cfg_log_match(
-            "the host test_host_realm1 is in the realm Realm1"
-        )
-        self.assert_any_cfg_log_match(
-            "the host test_host_realm3 do not have a realm"
-        )
-        self.assert_any_cfg_log_match(
-            "There are 6 hosts defined, and 3 hosts dispatched in the realms. "
-            "Some hosts have been ignored"
         )
 
     def test_business_rules_bad_realm_conf(self):
-        """
-        Config is not correct because of bad configuration in business rules realms
+        """ Configuration is not correct because of a bad configuration in business rules realms
 
         :return: None
         """
@@ -522,24 +512,9 @@ class TestConfig(AlignakTest):
             r"Business_rule \'test_host_realm1/Test bad host BP rules\' "
             "got hosts from another realm: Realm2"
         )
-        self.assert_any_cfg_log_match(
-            "Error: the realm configuration of yours hosts is not good because there is more "
-            r"than one realm in one pack \(host relations\):"
-        )
-        self.assert_any_cfg_log_match(
-            "the host test_host_realm2 is in the realm Realm2"
-        )
-        self.assert_any_cfg_log_match(
-            "the host test_host_realm1 is in the realm Realm1"
-        )
-        self.assert_any_cfg_log_match(
-            "There are 4 hosts defined, and 2 hosts dispatched in the realms. "
-            "Some hosts have been ignored"
-        )
 
     def test_bad_satellite_realm_conf(self):
-        """
-        Config is not correct because load a broker conf with unknown realm
+        """ Configuration is not correct because a broker conf has an unknown realm
 
         :return: None
         """
@@ -558,8 +533,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_bad_service_interval(self):
-        """
-        Config is not correct because have a bad check_interval in service
+        """ Configuration is not correct because of a bad check_interval in service
 
         :return: None
         """
@@ -579,8 +553,7 @@ class TestConfig(AlignakTest):
         )
 
     def test_config_contacts(self):
-        """
-        Test contacts
+        """ Test contacts configuration
 
         :return: None
         """
@@ -594,8 +567,7 @@ class TestConfig(AlignakTest):
         self.assertEqual(contact.customs, {u'_VAR2': u'text', u'_VAR1': u'10'})
 
     def test_config_hosts(self):
-        """
-        Test hosts initial states
+        """ Test hosts initial states
 
         :return: None
         """
@@ -603,21 +575,20 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/host_config_all.cfg')
         self.assertTrue(self.conf_is_correct)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_000')
         self.assertEqual('DOWN', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_1')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_001')
         self.assertEqual('UNREACHABLE', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_2')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_002')
         self.assertEqual('UP', host.state)
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_3')
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_003')
         self.assertEqual('UP', host.state)
 
     def test_config_hosts_names(self):
-        """
-        Test hosts allowed hosts names:
+        """ Test hosts allowed hosts names:
             - Check that it is allowed to have a host with the "__ANTI-VIRG__"
             substring in its hostname
             - Check that the semicolon is a comment delimiter
@@ -661,8 +632,7 @@ class TestConfig(AlignakTest):
         self.assertEqual('DOWN', host.state)
 
     def test_config_services(self):
-        """
-        Test services initial states
+        """ Test services initial states
         :return: None
         """
 
@@ -689,10 +659,8 @@ class TestConfig(AlignakTest):
             'test_host_0', 'test_service_4')
         self.assertEqual('OK', svc.state)
 
-
     def test_host_unreachable_values(self):
-        """
-        Test unreachable value in:
+        """ Test unreachable value in:
         * flap_detection_options
         * notification_options
         * snapshot_criteria
@@ -713,6 +681,8 @@ class TestConfig(AlignakTest):
         self.assertEqual(['d', 'x', 'r', 'f', 's'], host0.notification_options)
         self.assertEqual(['o', 'd', 'x'], host0.flap_detection_options)
         self.assertEqual(['d', 'x'], host0.snapshot_criteria)
+        # self.assertEqual('x', host0.initial_state)
+        # self.assertEqual('x', host0.freshness_state)
 
         self.assertEqual(1, len(host0.act_depend_of_me))
         self.assertEqual(['d', 'x'], host0.act_depend_of_me[0][1])

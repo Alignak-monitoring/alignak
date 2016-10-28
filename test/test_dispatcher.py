@@ -34,8 +34,7 @@ class TestDispatcher(AlignakTest):
     """
 
     def test_simple(self):
-        """
-        Simple test
+        """ Simple test
 
         have one realm and:
         * 1 scheduler
@@ -62,8 +61,7 @@ class TestDispatcher(AlignakTest):
         self.assertEqual(6, len(self.schedulers['scheduler-master'].sched.hosts))
 
     def test_simple_multi_schedulers(self):
-        """
-        Simple test (one realm) but with multiple schedulers:
+        """ Simple test (one realm) but with multiple schedulers:
         * 2 scheduler
         * 1 poller
         * 1 receiver
@@ -89,8 +87,7 @@ class TestDispatcher(AlignakTest):
         self.assertEqual(3, len(self.schedulers['scheduler-master2'].sched.hosts))
 
     def test_simple_multi_pollers(self):
-        """
-        Simple test (one realm) but with multiple pollers:
+        """ Simple test (one realm) but with multiple pollers:
         * 1 scheduler
         * 2 poller
         * 1 receiver
@@ -113,8 +110,7 @@ class TestDispatcher(AlignakTest):
                              'must have 1 scheduler in {0}'.format(satellite.get_name()))
 
     def test_realms(self):
-        """
-        Test with 2 realms.
+        """ Test with 2 realms.
         realm 1:
         * 1 scheduler
         * 1 poller
@@ -149,8 +145,7 @@ class TestDispatcher(AlignakTest):
         #                      'must have 1 scheduler in {0}'.format(satellite.get_name()))
 
     def test_realms_with_sub(self):
-        """
-        Test with 2 realms but some satellites are sub_realms:
+        """ Test with 2 realms but some satellites are sub_realms:
             * All -> realm2
             * realm3
 
@@ -199,8 +194,7 @@ class TestDispatcher(AlignakTest):
                                  'must have 1 scheduler in {0}'.format(satellite.get_name()))
 
     def test_realms_with_sub_multi_scheduler(self):
-        """
-        Test with 2 realms but some satellites are sub_realms + multi schedulers
+        """ Test with 2 realms but some satellites are sub_realms + multi schedulers
         realm 1:
         * 2 scheduler
         * 1 receiver
@@ -219,8 +213,7 @@ class TestDispatcher(AlignakTest):
         pass
 
     def test_simple_scheduler_spare(self):
-        """
-        Test simple but with spare of scheduler
+        """ Test simple but with spare of scheduler
 
         :return: None
         """
@@ -391,8 +384,7 @@ class TestDispatcher(AlignakTest):
                 self.assertEqual('scheduler-master', scheduler['name'])
 
     def test_arbiter_spare(self):
-        """
-        Test with arbiter spare
+        """ Test with arbiter spare
 
         :return: None
         """

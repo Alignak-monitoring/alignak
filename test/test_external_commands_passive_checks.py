@@ -31,7 +31,7 @@ from alignak.daemons.receiverdaemon import Receiver
 
 class TestExternalCommandsPassiveChecks(AlignakTest):
     """
-    This class tests the external commands
+    This class tests the external commands for passive checks
     """
     def setUp(self):
         """
@@ -50,8 +50,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         time_hacker.set_real_time()
 
     def test_passive_checks_active_passive(self):
-        """
-        Test passive host/service checks as external commands
+        """ Test passive host/service checks as external commands
 
         Hosts and services are active/passive checks enabled
         :return:
@@ -278,8 +277,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertEqual(False, router.problem_has_been_acknowledged)
 
     def test_passive_checks_only_passively_checked(self):
-        """
-        Test passive host/service checks as external commands
+        """ Test passive host/service checks as external commands
 
         Hosts and services are only passive checks enabled
         :return:
@@ -486,8 +484,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertEqual(False, router.problem_has_been_acknowledged)
 
     def test_unknown_check_result_command_scheduler(self):
-        """
-        Unknown check results commands managed by the scheduler
+        """ Unknown check results commands managed by the scheduler
         :return:
         """
         # Our scheduler
@@ -612,8 +609,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
             'but the host could not be found!')
 
     def test_unknown_check_result_command_receiver(self):
-        """
-        Unknown check results commands managed by the receiver
+        """ Unknown check results commands managed by the receiver
         :return:
         """
         # Our scheduler
@@ -671,8 +667,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
                                   'but the host could not be found!')
 
     def test_unknown_check_result_brok(self):
-        """
-        Unknown check results commands in broks
+        """ Unknown check results commands in broks
         :return:
         """
         # unknown_host_check_result_brok
@@ -705,8 +700,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertEqual(expected, result)
 
     def test_services_acknowledge(self):
-        """
-        Test services acknowledge
+        """ Test services acknowledge
         :return:
         """
         # Get host
@@ -795,8 +789,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertEqual(False, svc.problem_has_been_acknowledged)
 
     def test_hosts_checks(self):
-        """
-        Test hosts checks
+        """ Test hosts checks
         :return:
         """
         # Get host
@@ -945,8 +938,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assertEqual(False, host.problem_has_been_acknowledged)
 
     def test_hosts_acknowledge(self):
-        """
-        Test hosts acknowledge
+        """ Test hosts acknowledge
         :return:
         """
         # Get host

@@ -56,7 +56,7 @@ class TestRealms(AlignakTest):
     """
 
     def test_no_defined_realm(self):
-        """
+        """ Test configuration with no definde realm
         Load a configuration with no realm defined:
         - Alignak defines a default realm
         - All hosts with no realm defined are in this default realm
@@ -100,7 +100,7 @@ class TestRealms(AlignakTest):
             self.assertEqual(host.realm_name, default_realm.get_name())
 
     def test_no_broker_in_realm_warning(self):
-        """
+        """ Test missing broker in realm
         Test realms on each host
 
         :return: None
@@ -122,7 +122,7 @@ class TestRealms(AlignakTest):
         self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_receivers))
 
     def test_realm_host_assignation(self):
-        """
+        """ Test host realm assignation
         Test realms on each host
 
         :return: None
@@ -155,7 +155,8 @@ class TestRealms(AlignakTest):
         self.assertIsNone(test_host_realm1)
 
     def test_realm_hostgroup_assignation(self):
-        """
+        """ Test realm hostgroup assignation
+
         Check realm and hostgroup
 
         :return: None
@@ -229,8 +230,7 @@ class TestRealms(AlignakTest):
         self.assertIsNotNone(hostgroup_realm2)
 
     def test_sub_realms_assignations(self):
-        """
-        Test realm / sub-realm for broker
+        """ Test realm / sub-realm for broker
 
         :return: None
         """

@@ -56,7 +56,7 @@ class PortNotFree(Exception):
     pass
 
 
-class HTTPDaemon(object):  # pragma: no cover, not with unit tests
+class HTTPDaemon(object):
     """HTTP Server class. Mostly based on Cherrypy
     It uses CherryPyWSGIServer and daemon http_interface as Application
     """

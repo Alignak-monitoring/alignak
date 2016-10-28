@@ -58,7 +58,6 @@ from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
 
 
-# pragma: no cover, not testable in unit tests
 def main():
     """Parse args and run main daemon function
 

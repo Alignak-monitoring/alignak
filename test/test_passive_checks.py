@@ -32,8 +32,8 @@ class TestPassiveChecks(AlignakTest):
     """
 
     def test_0_start_freshness_on_start_alignak(self):
-        """
-        When start alignak, freshness period begin too instead are stale and so in end of freshness
+        """ When alignak starts, freshness period also begins
+        instead are stale and so in end of freshness
 
         :return: None
         """
@@ -55,8 +55,7 @@ class TestPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
 
     def test_1_freshness_state(self):
-        """
-        Test property right defined in item (host or service)
+        """ Test property correctly defined in item (host or service)
 
         :return: None
         """
@@ -84,7 +83,7 @@ class TestPassiveChecks(AlignakTest):
             "test_host_A", "test_ok_4")
 
         self.assertEqual("d", host_a.freshness_state)
-        self.assertEqual("u", host_b.freshness_state)
+        self.assertEqual("x", host_b.freshness_state)
         self.assertEqual("o", host_c.freshness_state)
         self.assertEqual("d", host_d.freshness_state)
 
@@ -95,7 +94,8 @@ class TestPassiveChecks(AlignakTest):
         self.assertEqual("u", svc4.freshness_state)
 
     def test_2_freshness_expiration(self):
-        """
+        """ When freshness period expires, set freshness state and output
+
         Test in end of freshness, item get the state of freshness_state and have output
         'Freshness period expired' and no check planned to check item (host / service)
 

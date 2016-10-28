@@ -17,16 +17,15 @@ matrix:
     env: TEST_SUITE=virtualenv
 
 # command to install dependencies
-# some are only used for travis/coveralls so we are installing them here only
 install:
+  # some are only used for travis/coveralls so we are installing them here only
   - ./test/setup_test.sh
+
 # command to run tests
-# notice: the nose-cov is used because it is compatible with --processes, but produce a .coverage by process
-# so we must combine them in the end
 script:
-  - cd test
-  - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
-  - cd ..
+  # so to help eventual debug: know what exact versions are in use can be rather useful.
+  - pip freeze
+  # run test suite (wait no more than 30 minutes)
   - travis_wait 30 ./.travis/$TEST_SUITE.sh
 
 # specific call to launch coverage data into coveralls.io

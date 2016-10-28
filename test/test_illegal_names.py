@@ -58,8 +58,7 @@ class TestConfig(AlignakTest):
     # setUp is inherited from AlignakTest
 
     def test_illegal_character_in_names(self):
-        """
-        Test illegal characters in host_name
+        """ Test illegal characters in host_name
 
         :return: None
         """

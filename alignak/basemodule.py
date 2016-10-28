@@ -110,7 +110,7 @@ class BaseModule(object):
         self.is_external = self.props.get('external', False)
         # though a module defined with no phase is quite useless .
         self.phases = self.props.get('phases', [])
-        self.phases.append(None)
+        # self.phases.append(None)
         # the queue the module will receive data to manage
         self.to_q = None
         # the queue the module will put its result data

@@ -35,8 +35,7 @@ class TestEventhandler(AlignakTest):
     """
 
     def test_ok_critical_ok(self):
-        """
-        Test scenario 1:
+        """ Test event handler scenario 1:
         * check OK              OK HARD
         * check CRITICAL x4     CRITICAL SOFT x1 then CRITICAL HARD
         * check OK x2           OK HARD
@@ -92,8 +91,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_count(3)
 
     def test_ok_warning_ok(self):
-        """
-        Test scenario 2:
+        """ Test event handler scenario 2:
         * check OK              OK HARD
         * check WARNING x4      WARNING SOFT x1 then WARNING HARD
         * check OK x2           OK HARD
@@ -149,8 +147,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_count(3)
 
     def test_ok_warning_critical_ok(self):
-        """
-        Test scenario 3:
+        """ Test event handler scenario 3:
         * check OK              OK HARD
         * check WARNING x4      WARNING SOFT x1 then WARNING HARD
         * check CRITICAL x4     CRITICAL HARD
@@ -232,8 +229,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_count(4)
 
     def test_ok_warning_s_critical_h_ok(self):
-        """
-        Test scenario 4:
+        """ Test event handler scenario 4:
         * check OK              OK HARD
         * check WARNING         WARNING SOFT
         * check CRITICAL x2     CRITICAL HARD
@@ -289,8 +285,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_count(3)
 
     def test_ok_critical_s_warning_h_ok(self):
-        """
-        Test scenario 5:
+        """ Test event handler scenario 5:
         * check OK              OK HARD
         * check CRITICAL        CRITICAL SOFT
         * check WARNING x2      WARNING HARD
@@ -346,8 +341,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_count(3)
 
     def test_ok_critical_s_warning_h_warning_h_ok(self):
-        """
-        Test scenario 6:
+        """ Test event handler scenario 6:
         * check OK              OK HARD
         * check CRITICAL        CRITICAL SOFT
         * check WARNING x2      WARNING HARD

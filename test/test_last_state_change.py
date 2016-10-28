@@ -32,8 +32,7 @@ class TestHostsvcLastStateChange(AlignakTest):
     """
 
     def test_host(self):
-        """
-        Test the last_state_change of host
+        """ Test the last_state_change of host
 
         :return: None
         """
@@ -73,8 +72,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertGreater(host.last_state_change, before)
 
     def test_host_unreachable(self):
-        """
-        Test last_state_change in unreachable mode (in host)
+        """ Test last_state_change in unreachable mode (in host)
 
         :return: None
         """
@@ -151,8 +149,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         self.assertGreater(host.last_state_change, before)
 
     def test_service(self):
-        """
-        Test the last_state_change of service
+        """ Test the last_state_change of service
 
         :return: None
         """

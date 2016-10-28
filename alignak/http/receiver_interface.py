@@ -22,7 +22,7 @@ import cherrypy
 from alignak.http.generic_interface import GenericInterface
 
 
-class ReceiverInterface(GenericInterface):  # pragma: no cover, not with unit tests
+class ReceiverInterface(GenericInterface):
     """This class provides specific HTTP functions for Receiver."""
 
     @cherrypy.expose

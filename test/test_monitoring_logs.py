@@ -57,8 +57,7 @@ class TestMonitoringLogs(AlignakTest):
         time.sleep(0.1)
 
     def test_logs_hosts(self):
-        """
-        Test logs for active / passive checks
+        """ Test logs for active / passive checks for hosts
 
         :return: None
         """
@@ -125,8 +124,7 @@ class TestMonitoringLogs(AlignakTest):
                    [(u'info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
 
     def test_logs_services(self):
-        """
-        Test logs for active / passive checks
+        """ Test logs for active / passive checks for hosts
 
         :return: None
         """
@@ -251,8 +249,7 @@ class TestMonitoringLogs(AlignakTest):
                    [(u'info', u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service OK')])
 
     def test_logs_hosts_disabled(self):
-        """
-        Test logs for active / passive checks
+        """ Test disabled logs for active / passive checks for hosts
 
         :return: None
         """
@@ -300,8 +297,7 @@ class TestMonitoringLogs(AlignakTest):
         self.check(host, 0, 'Host is UP', [])
 
     def test_logs_services_disabled(self):
-        """
-        Test logs for active / passive checks
+        """ Test disabled logs for active / passive checks for services
 
         :return: None
         """
@@ -368,7 +364,7 @@ class TestMonitoringLogs(AlignakTest):
         self.check(svc, 0, 'Service OK', [])
 
     def test_external_commands(self):
-        """
+        """ Test logs for external commands
 
         :return:
         """
@@ -407,8 +403,7 @@ class TestMonitoringLogs(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_special_external_commands(self):
-        """
-        Test special external commands
+        """ Test logs for special external commands
         :return:
         """
         self.print_header()

@@ -281,9 +281,18 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type params: dict
         :return: None
         """
-        for prop in ['flap_detection_options', 'notification_options', 'snapshot_criteria']:
+        for prop in ['flap_detection_options', 'notification_options',
+                     'snapshot_criteria', 'stalking_options']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
+
+        if 'initial_state' in params and \
+                (params['initial_state'] == 'u' or params['initial_state'] == ['u']):
+            params['initial_state'] = 'x'
+
+        if 'freshness_state' in params and \
+                (params['freshness_state'] == 'u' or params['freshness_state'] == ['u']):
+            params['freshness_state'] = 'x'
 
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set

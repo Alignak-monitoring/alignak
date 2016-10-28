@@ -31,7 +31,7 @@ from alignak.misc.serialization import serialize
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class GenericInterface(object):  # pragma: no cover, not with unit tests
+class GenericInterface(object):
     """Interface for inter satellites communications"""
 
     def __init__(self, app):

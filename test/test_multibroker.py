@@ -33,10 +33,8 @@ class TestMultibroker(AlignakTest):
     """
     This class test the multibroker in schedulers
     """
-
     def test_multibroker_onesched(self):
-        """
-        Test with 2 brokers and 1 scheduler
+        """ Test with 2 brokers and 1 scheduler
 
         :return: None
         """
@@ -87,8 +85,7 @@ class TestMultibroker(AlignakTest):
                               mysched.sched.brokers['broker-master2']['broks'].keys())
 
     def test_multibroker_multisched(self):
-        """
-        Test with 2 brokers and 2 schedulers
+        """ Test with 2 brokers and 2 schedulers
 
         :return: None
         """
@@ -155,10 +152,8 @@ class TestMultibroker(AlignakTest):
             self.assertEqual(2, len(broker_conf['conf']['schedulers']))
             self.assertEqual(2, len(broker2_conf['conf']['schedulers']))
 
-
     def test_multibroker_multisched_realms(self):
-        """
-        Test with realms / sub-realms
+        """ Test with realms / sub-realms
 
         All + sub (north + south):
           * broker-master

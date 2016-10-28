@@ -2125,9 +2125,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         if not hosts_realms.issubset(pollers_realms):
             for realm in hosts_realms.difference(pollers_realms):
-                logger.error("Hosts exist in the realm %s but no poller in this realm", realm)
+                logger.error("Hosts exist in the realm %s but no poller in this realm",
+                             realm.realm_name if realm else 'unknown')
                 self.add_error("Error: Hosts exist in the realm %s but no poller "
-                               "in this realm" % realm)
+                               "in this realm" % (realm.realm_name if realm else 'All'))
                 valid = False
 
         if not hosts_tag.issubset(pollers_tag):
@@ -2645,7 +2646,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                          "schedulers",
                          "realms",
                          ):
-            objs = [jsonify_r(i) for i in getattr(self, category)]
+            try:
+                objs = [jsonify_r(i) for i in getattr(self, category)]
+            except AttributeError:
+                logger.warning("Dumping configuration, '%s' not present in the configuration",
+                               category)
+                continue
+
             container = getattr(self, category)
             if category == "services":
                 objs = sorted(objs, key=lambda o: "%s/%s" %

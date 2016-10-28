@@ -3,10 +3,13 @@
 set -ev
 
 cd test
-nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
-coverage combine
+# Delete previously existing coverage results
+coverage erase
 
-(pkill -6 -f "alignak_-" || :)
-python full_tst.py
+# Run all the unit tests
+nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
+
+# Combine coverage files
+coverage combine
 cd ..
 

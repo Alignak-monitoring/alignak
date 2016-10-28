@@ -35,8 +35,7 @@ class TestUnserialize(unittest.TestCase):
     """
 
     def test_unserialize_notif(self):
-        """
-        Test unserialize notifications
+        """ Test unserialize notifications
 
         :return: None
         """
@@ -174,8 +173,7 @@ class TestUnserialize(unittest.TestCase):
         self.assertTrue(True)
 
     def test_unserialize_check(self):
-        """
-        Test unserialize checks
+        """ Test unserialize checks
 
         :return: None
         """
