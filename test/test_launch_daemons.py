@@ -52,7 +52,7 @@ class fullTest(AlignakTest):
 
     def setUp(self):
         # Set environment variable to ask code Coverage collection
-        os.environ['COVERAGE_PROCESS_START'] = '.coverage.rc'
+        os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
 
         self.procs = {}
 
