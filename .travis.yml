@@ -33,7 +33,7 @@ after_success:
   # to get coverage data with relative paths and not absolute we have to
   # execute coveralls from the base directory of the project,
   # so we need to move the .coverage file here :
-  - if [[ $TEST_SUITE == 'unit' ]]; then mv test/.coverage . && coveralls --rcfile=test/.coveragerc; fi
+  - if [[ $TEST_SUITE == 'unit' ]]; then mv test/.coverage . && coveralls -v --rcfile=test/.coveragerc; fi
 
 notifications:
   webhooks:
