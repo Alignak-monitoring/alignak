@@ -148,7 +148,11 @@ def get_logger_fds(logger_):
 
     fds = []
     for handler in logger_.handlers:
-        fds.append(handler.stream.fileno())
+        try:
+            fds.append(handler.stream.fileno())
+        except AttributeError:
+            # If a log handler do not have a stream...
+            pass
 
     return fds
 

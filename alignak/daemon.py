@@ -93,7 +93,7 @@ try:
         """
         return getgrgid(os.getgid()).gr_name
 
-    def get_all_groups():
+    def get_all_groups():  # pragma: no cover, not used in the testing environment...
         """Wrapper for getgrall
 
         :return: all groups
@@ -128,7 +128,7 @@ except ImportError, exp:  # pragma: no cover, not for unit tests...
         return []
 
 from alignak.log import setup_logger, get_logger_fds
-from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
+from alignak.http.daemon import HTTPDaemon, InvalidWorkDir, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
@@ -345,7 +345,7 @@ class Daemon(object):
             logger.info('Stopping all modules...')
             self.modules_manager.stop_all()
 
-    def request_stop(self):
+    def request_stop(self):  # pragma: no cover, not used during test because of sys.exit !
         """Remove pid and stop daemon
 
         :return: None
@@ -432,34 +432,20 @@ class Daemon(object):
 
     @staticmethod
     def dump_memory():
-        """Try to dump memory
+        """ Try to dump memory
         Does not really work :/
 
         :return: None
         TODO: Clean this
         """
-        logger.info("I dump my memory, it can take a while")
         try:
             from guppy import hpy
+
+            logger.info("I dump my memory, it can take a while")
             heap = hpy()
             logger.info(heap.heap())
         except ImportError:
             logger.warning('I do not have the module guppy for memory dump, please install it')
-
-    def load_config_file(self):
-        """Parse config file and ensure full path in variables
-
-        Note: do not use logger into this function because it is not yet initialized ;)
-
-        :return: None
-        """
-        print("Loading daemon configuration file (%s)..." % self.config_file)
-
-        self.parse_config_file()
-        if self.config_file is not None:
-            # Some paths can be relatives. We must have a full path by taking
-            # the config file by reference
-            self.relative_paths_to_full(os.path.dirname(self.config_file))
 
     def load_modules_manager(self):
         """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
@@ -717,12 +703,13 @@ class Daemon(object):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-        :return: None
+        :return: False if the HTTP daemon can not be initialized, else True
         """
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
-        self.setup_communication_daemon()
+        if not self.setup_communication_daemon():
+            return False
 
         if self.is_daemon:
             # Do not close the local_log file too if it's open
@@ -743,11 +730,13 @@ class Daemon(object):
         self.http_thread.start()
         logger.info("HTTP daemon thread started")
 
+        return True
+
     def setup_communication_daemon(self):
         """ Setup HTTP server daemon to listen
         for incoming HTTP requests from other Alignak daemons
 
-        :return: None
+        :return: True if initialization is ok, else False
         """
         if hasattr(self, 'use_ssl'):  # "common" daemon
             ssl_conf = self
@@ -778,9 +767,16 @@ class Daemon(object):
 
         # Let's create the HTTPDaemon, it will be exec after
         # pylint: disable=E1101
-        self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
-                                      use_ssl, ca_cert, ssl_key,
-                                      ssl_cert, self.daemon_thread_pool_size)
+        try:
+            self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
+                                          use_ssl, ca_cert, ssl_key,
+                                          ssl_cert, self.daemon_thread_pool_size)
+        except PortNotFree as exp:
+            logger.error('The HTTP daemon port is not free...')
+            logger.exception('The HTTP daemon port is not free: %s', exp)
+            return False
+
+        return True
 
     @staticmethod
     def get_socks_activity(socks, timeout):
@@ -882,6 +878,7 @@ class Daemon(object):
                 logger.warning('Cannot call the additional groups setting with initgroups (%s)',
                                err.strerror)
         elif hasattr(os, 'setgroups'):
+            # Else try to call the setgroups if it exists...
             groups = [gid] + \
                      [group.gr_gid for group in get_all_groups() if self.user in group.gr_mem]
             try:
@@ -898,15 +895,19 @@ class Daemon(object):
                          self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
 
-    def parse_config_file(self):
-        """Parse self.config_file and get all properties in it.
-        If some properties need a pythonization, we do it.
-        Also put default value in the properties if some are missing in the config_file
+    def load_config_file(self):
+        """ Parse daemon configuration file
 
-        TODO: @mohierf: why not doing this directly in load_config_file?
+        Parse self.config_file and get all its variables.
+        If some properties need a pythonization, do it.
+        Use default values for the properties if some are missing in the config_file
+        Ensure full path in variables
 
         :return: None
         """
+        # Note: do not use logger into this function because it is not yet initialized ;)
+        print("Loading daemon configuration file (%s)..." % self.config_file)
+
         properties = self.__class__.properties
         if self.config_file is not None:
             config = ConfigParser.ConfigParser()
@@ -925,6 +926,10 @@ class Daemon(object):
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
                              wrong_variable, self.config_file)
                 sys.exit(2)
+
+            # Some paths can be relative. We must have a full path having for reference the
+            # configuration file
+            self.relative_paths_to_full(os.path.dirname(self.config_file))
         else:
             print("No daemon configuration file specified, using defaults parameters")
 
@@ -1003,27 +1008,17 @@ class Daemon(object):
         """
         setproctitle("alignak-%s" % self.name)
 
-    @staticmethod
-    def get_header(daemon_name):
-        """Get the log file header
+    def get_header(self):
+        """ Get the log file header
 
-        :param daemon_name: the daemon name to include in the header
         :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
         """
-        return ["Alignak %s - %s daemon" % (VERSION, daemon_name),
-                "Copyright (c) 2015-2016:",
-                "Alignak Team",
+        return ["-----",
+                "Alignak %s - %s daemon" % (VERSION, self.name),
+                "Copyright (c) 2015-2016: Alignak Team",
                 "License: AGPL",
                 "-----"]
-
-    def print_header(self):
-        """Log headers generated in get_header()
-
-        :return: None
-        """
-        for line in self.get_header(self.name):
-            logger.info(line)
 
     def http_daemon_thread(self):
         """Main function of the http daemon thread will loop forever unless we stop the root daemon
@@ -1036,7 +1031,11 @@ class Daemon(object):
         # finish
         try:
             self.http_daemon.run()
-        except Exception, exp:  # pylint: disable=W0703
+        except PortNotFree as exp:
+            print("Exception: %s" % str(exp))
+            logger.exception('The HTTP daemon port is not free: %s', exp)
+            raise exp
+        except Exception as exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             raise exp
         logger.info("HTTP main thread exiting")
@@ -1180,15 +1179,16 @@ class Daemon(object):
 
         :return: A dict with the following structure
         ::
-
-           { 'metrics': [],
-             'version': VERSION,
-             'name': '',
-             'modules':
-                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
-                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                        ]
-           }
+            {
+                'metrics': [],
+                'version': VERSION,
+                'name': '',
+                'type': '',
+                'modules': {
+                    'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                    'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                }
+            }
 
         :rtype: dict
 
@@ -1226,8 +1226,8 @@ class Daemon(object):
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new ticket including "
-                        "details mentioned in the README")
+        logger.critical("If you think this is a bug, create a new issue including as much "
+                        "details as possible (version, configuration, ...")
         logger.critical("-----")
         logger.critical("Back trace of the error: %s", trace)
 
@@ -1252,18 +1252,21 @@ class Daemon(object):
                         self.add(obj)
         return had_some_objects
 
-    def setup_alignak_logger(self):
+    def setup_alignak_logger(self, reload_configuration=True):
         """ Setup alignak logger:
         - load the daemon configuration file
         - configure the global daemon handler (root logger)
         - log the daemon Alignak header
         - log the damon configuration parameters
 
-        :return:
-        :rtype:
+        :param reload_configuration: Load configuration file if True,
+        else it uses current parameters
+        :type: bool
+        :return: None
         """
-        # Load the daemon configuration file
-        self.load_config_file()
+        if reload_configuration:
+            # Load the daemon configuration file
+            self.load_config_file()
 
         # Force the debug level if the daemon is said to start with such level
         log_level = self.log_level
@@ -1295,7 +1298,8 @@ class Daemon(object):
         logger.debug("Alignak daemon logger configured")
 
         # Log daemon header
-        self.print_header()
+        for line in self.get_header():
+            logger.info(line)
 
         logger.info("My configuration: ")
         for prop, _ in self.properties.items():

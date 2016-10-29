@@ -52,20 +52,23 @@
 from __future__ import print_function
 
 import os
+import time
 import tempfile
 import shutil
 
-from alignak_tst_utils import get_free_port
-from alignak_test import unittest
+import logging
 
+from alignak_test import AlignakTest
+from alignak_tst_utils import get_free_port
+
+from alignak.version import VERSION
 from alignak.daemon import InvalidPidFile, InvalidWorkDir
 from alignak.daemons.pollerdaemon import Poller
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.reactionnerdaemon import Reactionner
+from alignak.daemons.receiverdaemon import Receiver
 from alignak.daemons.arbiterdaemon import Arbiter
-from alignak.http.daemon import PortNotFree
-import time
 
 try:
     import pwd, grp
@@ -88,12 +91,15 @@ except ImportError, exp:  # Like in nt system
         return os.getlogin()
 
 
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
 daemons_config = {
-    Broker:       "etc/core/daemons/brokerd.ini",
-    Poller:       "etc/core/daemons/pollerd.ini",
-    Reactionner:  "etc/core/daemons/reactionnerd.ini",
-    Alignak:      "etc/core/daemons/schedulerd.ini",
-    Arbiter:    ["etc/core/alignak.cfg"]
+    Broker: "cfg/daemons/brokerd.ini",
+    Poller: "cfg/daemons/pollerd.ini",
+    Reactionner: "cfg/daemons/reactionnerd.ini",
+    Receiver: "cfg/daemons/receiverd.ini",
+    Alignak:  "cfg/daemons/schedulerd.ini",
+    Arbiter: "cfg/daemons/arbiterd.ini"
 }
 
 #############################################################################
@@ -102,10 +108,6 @@ class template_Daemon_Bad_Start():
 
     @classmethod
     def setUpClass(cls):
-        #time_hacker.set_real_time()  # just to be sure..
-        # the daemons startup code does actually a `chrdir`,
-        # in Daemon.change_to_workdir,
-        # so in order to be always safe, let's save the cwd when we are setup,
         # we'll chdir() to it in tearDown..
         cls._launch_dir = os.getcwd()
 
@@ -125,32 +127,84 @@ class template_Daemon_Bad_Start():
         cls = self.daemon_cls
         return cls(daemons_config[cls], False, True, False, None)
 
-    def get_daemon(self):
+    def get_daemon(self, free_port=True):
+        """
 
-        #alignak_log.local_log = None  # otherwise get some "trashs" logs..
+        :param free_port: get a free port (True) or use the configuration defined port (False)
+        :return:
+        """
+
         d = self.create_daemon()
 
-        # configuration is actually "relative" :
+        # configuration may be "relative" :
         # some config file reference others with a relative path (from THIS_DIR).
         # so any time we load it we have to make sure we are back at THIS_DIR:
         # THIS_DIR should also be equal to self._launch_dir, so use that:
         os.chdir(self._launch_dir)
 
         d.load_config_file()
-        d.port = get_free_port()
-        d.pidfile = "pidfile"
+        # Do not use the port in the configuration file, but get a free port
+        if free_port:
+            d.port = get_free_port()
         self.get_login_and_group(d)
         return d
 
     def start_daemon(self, daemon):
-        daemon.do_daemon_init_and_start(fake=True)
+        """
+        Start the daemon
+        :param daemon:
+        :return:
+        """
+        daemon.do_daemon_init_and_start()
+
+    def stop_daemon(self, daemon):
+        """
+        Stop the daemon
+        :param daemon:
+        :return:
+        """
+        # Do not call request_stop because it sys.exit ... and this stops the test!
+        # daemon.request_stop()
+        # Instead call the same code hereunder:
+        daemon.unlink()
+        daemon.do_stop()
+
+    def test_config_and_start_and_stop(self):
+        """ Test configuration loaded, daemon started and stopped
+
+        :return:
+        """
+        self.print_header()
+
+        d = self.get_daemon(free_port=False)
+        print("Daemon configuration: %s" % d.__dict__)
+        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
+        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        self.assertTrue(os.path.exists(d.pidfile))
+
+        time.sleep(2)
+
+        # Stop the daemon
+        self.stop_daemon(d)
+        self.assertFalse(os.path.exists(d.pidfile))
 
     def test_bad_piddir(self):
-        print("Testing bad pidfile ...")
+        """ Test bad PID directory
+
+        :return:
+        """
+        self.print_header()
+
         d = self.get_daemon()
         d.workdir = tempfile.mkdtemp()
         d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
-
 
         with self.assertRaises(InvalidPidFile):
             self.start_daemon(d)
@@ -159,46 +213,108 @@ class template_Daemon_Bad_Start():
         shutil.rmtree(d.workdir)
 
     def test_bad_workdir(self):
-        print("Testing bad workdir ... mypid=%d" % (os.getpid()))
+        """ Test bad working directory
+
+        :return:
+        """
+        self.print_header()
+
         d = self.get_daemon()
         d.workdir = '/DONOTEXISTS'
+
         with self.assertRaises(InvalidWorkDir):
             self.start_daemon(d)
         d.do_stop()
 
+    def test_logger(self):
+        """ Test logger setup
+
+        :return:
+        """
+        self.print_header()
+
+        d = self.get_daemon()
+        print("Daemon configuration: %s" % d.__dict__)
+        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
+        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+
+        # Update log file information
+        d.logdir = os.path.abspath('.')
+        d.local_log = os.path.abspath('./test.log')
+
+        # Do not reload the configuration file (avoid replacing modified properties for the test...)
+        d.setup_alignak_logger(reload_configuration=False)
+
+        # Log file exists...
+        self.assertTrue(os.path.exists(d.local_log))
+
+        with open(d.local_log) as f:
+            content = f.readlines()
+        print(content)
+
+    def test_daemon_header(self):
+        """ Test daemon header
+
+        :return:
+        """
+        self.print_header()
+
+        d = self.get_daemon()
+        expected_result = [
+            "-----",
+            "Alignak %s - %s daemon" % (VERSION, d.name),
+            "Copyright (c) 2015-2016: Alignak Team",
+            "License: AGPL",
+            "-----"
+        ]
+        self.assertEqual(d.get_header(), expected_result)
+
+    def test_trace_unrecoverable(self):
+        """ Test unrecoverable trace
+
+        :return:
+        """
+        self.print_header()
+
+        self.daemon_cls.print_unrecoverable("test")
+
     def test_port_not_free(self):
+        """ Test HTTP port not free detection
+
+        :return:
+        """
+        self.print_header()
+
         print("Testing port not free ... mypid=%d" % (os.getpid()))
         d1 = self.get_daemon()
 
-        temp = tempfile.mkdtemp()
-        d1.workdir = temp
+        d1.workdir = tempfile.mkdtemp()
+        d1.pidfile = os.path.join(d1.workdir, "daemon.pid")
         d1.host = "127.0.0.1"  # Force all interfaces
 
         self.start_daemon(d1)
+        time.sleep(1)
+        print("PID file: %s" % d1.pidfile)
+        self.assertTrue(os.path.exists(d1.pidfile))
+
         # so that second daemon will not see first started one:
-        todel = os.path.join(temp, d1.pidfile)
-        os.unlink(todel)
+        os.unlink(d1.pidfile)
 
         d2 = self.get_daemon()
+
         d2.workdir = d1.workdir
+        d2.pidfile = d1.pidfile
         d2.host = "127.0.0.1"  # Force all interfaces
         d2.port = d1.http_daemon.port
 
-        with self.assertRaises(PortNotFree):
-            # Do start by hand because we don't want to run the thread.
-            # PortNotFree will occur here not in the thread.
-            d2.change_to_user_group()
-            d2.change_to_workdir()
-            d2.check_parallel_run()
-            d2.setup_communication_daemon()
-            d2.http_daemon_thread()
+        # Do start by hand because we don't want to run the thread.
+        # PortNotFree will occur when setting up the HTTP communication daemon
+        d2.change_to_user_group()
+        d2.change_to_workdir()
+        d2.check_parallel_run()
+        self.assertFalse(d2.setup_communication_daemon())
 
-
-        d2.http_daemon.srv.ready = False
-        time.sleep(1)
-        d2.http_daemon.srv.requests.stop()
-        d2.do_stop()
-
+        # Stop the first daemon
         d1.http_daemon.srv.ready = False
         time.sleep(1)
         d1.http_daemon.srv.requests.stop()
@@ -208,32 +324,33 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, unittest.TestCase):
+class Test_Receiver_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+    daemon_cls = Receiver
 
+
+class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
     daemon_cls = Arbiter
 
     def create_daemon(self):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        return cls(daemons_config[cls], False, True, False, False, None, '')
+        return cls(daemons_config[cls], "cfg/daemons/alignak.cfg",
+                   False, True, False, False, None, 'arbiter-master', None)
 
 #############################################################################
-
-if __name__ == '__main__':
-    unittest.main()

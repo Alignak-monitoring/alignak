@@ -200,7 +200,7 @@ class AlignakTest(unittest.TestCase):
                 self.logger.setLevel(logging.DEBUG)
 
             # Log will be broks
-            for line in self.arbiter.get_header('arbiter'):
+            for line in self.arbiter.get_header():
                 self.logger.info(line)
 
             self.arbiter.load_monitoring_config_file()

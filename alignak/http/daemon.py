@@ -62,16 +62,36 @@ class HTTPDaemon(object):
     """
     def __init__(self, host, port, http_interface, use_ssl, ca_cert,
                  ssl_key, ssl_cert, daemon_thread_pool_size):
+        """
+        Initialize HTTP daemon
+
+        :param host: host address
+        :param port: listening port
+        :param http_interface:
+        :param use_ssl:
+        :param ca_cert:
+        :param ssl_key:
+        :param ssl_cert:
+        :param daemon_thread_pool_size:
+        """
+        # Port = 0 means "I don't want HTTP server"
+        if port == 0:
+            return
+
+        sock = socket.socket()
+        try:
+            sock.bind((host, port))
+        except socket.error as exp:
+            msg = "Error: Sorry, the port %s/%d is not free: %s" % (host, port, str(exp))
+            raise PortNotFree(msg)
+        else:
+            sock.close()
+
         self.port = port
         self.host = host
         self.srv = None
-        # Port = 0 means "I don't want HTTP server"
-        if self.port == 0:
-            return
 
         self.use_ssl = use_ssl
-
-        self.srv = None
 
         protocol = 'http'
         if use_ssl:
