@@ -234,6 +234,9 @@ class Alignak(BaseSatellite):
             satellites = new_c['satellites']
             instance_name = new_c['instance_name']
 
+            # Ok now we can save the retention data
+            self.sched.update_retention_file(forced=True)
+
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(instance_name, 'scheduler',
                               statsd_host=new_c['statsd_host'], statsd_port=new_c['statsd_port'],
@@ -334,6 +337,9 @@ class Alignak(BaseSatellite):
             # We clear our schedulers managed (it's us :) )
             # and set ourselves in it
             self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
+
+            # Ok now we can load the retention data
+            self.sched.retention_load()
 
             # Create brok new conf
             brok = Brok({'type': 'new_conf', 'data': {}})
