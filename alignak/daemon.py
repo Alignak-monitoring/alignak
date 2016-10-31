@@ -182,7 +182,9 @@ class Daemon(object):
         'server_key':
             StringProp(default='etc/certs/server.key'),
         'ca_cert':
-            StringProp(default='etc/certs/ca.pem'),
+            StringProp(default=''),
+        'server_dh':
+            StringProp(default=''),
         'server_cert':
             StringProp(default='etc/certs/server.cert'),
         'use_local_log':
@@ -744,7 +746,7 @@ class Daemon(object):
             ssl_conf = self.conf     # arbiter daemon..
 
         use_ssl = ssl_conf.use_ssl
-        ca_cert = ssl_cert = ssl_key = ''
+        ca_cert = ssl_cert = ssl_key = server_dh = None
 
         # The SSL part
         if use_ssl:
@@ -753,8 +755,15 @@ class Daemon(object):
                 logger.error('Error : the SSL certificate %s is missing (server_cert).'
                              'Please fix it in your configuration', ssl_cert)
                 sys.exit(2)
-            ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
-            logger.info("Using ssl ca cert file: %s", ca_cert)
+
+            if str(ssl_conf.server_dh) != '':
+                server_dh = os.path.abspath(str(ssl_conf.server_dh))
+                logger.info("Using ssl dh cert file: %s", server_dh)
+
+            if str(ssl_conf.ca_cert) != '':
+                ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
+                logger.info("Using ssl ca cert file: %s", ca_cert)
+
             ssl_key = os.path.abspath(str(ssl_conf.server_key))
             if not os.path.exists(ssl_key):
                 logger.error('Error : the SSL key %s is missing (server_key).'
@@ -770,7 +779,7 @@ class Daemon(object):
         try:
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                           use_ssl, ca_cert, ssl_key,
-                                          ssl_cert, self.daemon_thread_pool_size)
+                                          ssl_cert, server_dh, self.daemon_thread_pool_size)
         except PortNotFree as exp:
             logger.error('The HTTP daemon port is not free...')
             logger.exception('The HTTP daemon port is not free: %s', exp)

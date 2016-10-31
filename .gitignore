@@ -48,6 +48,7 @@ docs/tools/pages/
 test/tmp/.cov*
 
 test/cfg/full
+test/cfg/run_test_launch_daemons
 
 # Pbr
 pbr-*.egg/
