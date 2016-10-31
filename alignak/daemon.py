@@ -704,6 +704,7 @@ class Daemon(object):
 
         :return: False if the HTTP daemon can not be initialized, else True
         """
+        self.set_proctitle()
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
@@ -719,7 +720,6 @@ class Daemon(object):
         else:
             self.write_pid()
 
-        self.set_proctitle()
         logger.info("Creating synchronization manager...")
         self.sync_manager = self._create_manager()
         logger.info("Created")
