@@ -2,6 +2,6 @@
 # configuration files
 
 # To generate new keys:
-openssl req -new -nodes -out server-req.pem -keyout private/server-key.pem -config /etc/ssl/openssl.cnf
-openssl ca -config openssl.conf -out server-cert.pem -infiles server-req.pem
-
+openssl dhparam -out server.pem 2048
+openssl genrsa -passout pass:the_password_you_want -out server.key 2048
+openssl req -new -x509 -days 3650 -key certificate_test.key -out server.csr

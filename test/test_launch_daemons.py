@@ -66,14 +66,11 @@ class fullTest(AlignakTest):
         """
         self._run_daemons_and_test_api(ssl=False)
 
-    @unittest.skip("Not yet implemented! @ddurieux: up to you for this part ;)")
     def test_daemons_outputs_ssl(self):
-        """ Running all the Alignak daemons - no SSL
+        """ Running all the Alignak daemons - with SSL
 
-        :return:
+        :return: None
         """
-        # Build certificates
-        # Todo
 
         self._run_daemons_and_test_api(ssl=True)
 
@@ -96,25 +93,34 @@ class fullTest(AlignakTest):
                  'cfg/run_test_launch_daemons/daemons/reactionnerd.ini',
                  'cfg/run_test_launch_daemons/daemons/receiverd.ini',
                  'cfg/run_test_launch_daemons/daemons/schedulerd.ini',
-                 'cfg/run_test_launch_daemons/alignak.cfg']
+                 'cfg/run_test_launch_daemons/alignak.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/broker-master.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/poller-master.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/reactionner-master.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/receiver-master.cfg',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/scheduler-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
             '%(workdir)s': '/tmp',
             '%(logdir)s': '/tmp',
-            '%(etcdir)': './cfg/run_test_launch_daemons'
+            '%(etcdir)s': '/tmp'
         }
         if ssl:
-            # Todo get certificates and copy them to the configuration
-            # shutil.copytree('../etc', './cfg/run_test_launch_daemons/arbiter/certs')
-
+            shutil.copy('./cfg/ssl/server.csr', '/tmp/')
+            shutil.copy('./cfg/ssl/server.key', '/tmp/')
+            shutil.copy('./cfg/ssl/server.pem', '/tmp/')
             # Set daemons configuration to use SSL
+            print replacements
             replacements.update({
                 'use_ssl=0': 'use_ssl=1',
-                '#ca_cert=': 'ca_cert=',
                 '#server_cert=': 'server_cert=',
                 '#server_key=': 'server_key=',
-                '#hard_ssl_name_check=0': 'hard_ssl_name_check=0'
+                '#server_dh=': 'server_dh=',
+                '#hard_ssl_name_check=0': 'hard_ssl_name_check=0',
+                'certs/': '',
+                'use_ssl	                0': 'use_ssl	                1'
             })
         for filename in files:
             lines = []
@@ -207,14 +213,25 @@ class fullTest(AlignakTest):
         # Let the arbiter build and dispatch its configuration
         sleep(5)
 
+        http = 'http'
+        if ssl:
+            http = 'https'
+
         print("Testing ping")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/ping" % port)
+            raw_data = req.get("%s://localhost:%s/ping" % (http, port), verify=False)
             data = raw_data.json()
             self.assertEqual(data, 'pong', "Daemon %s  did not ping back!" % name)
 
+        print("Testing ping with satellite SSL and client not SSL")
+        if ssl:
+            for name, port in satellite_map.items():
+                raw_data = req.get("http://localhost:%s/ping" % port)
+                self.assertEqual('The client sent a plain HTTP request, but this server only speaks HTTPS on this port.', raw_data.text)
+
         print("Testing get_satellite_list")
-        raw_data = req.get("http://localhost:%s/get_satellite_list" % satellite_map['arbiter'])
+        raw_data = req.get("%s://localhost:%s/get_satellite_list" % (http,
+                                                                     satellite_map['arbiter']), verify=False)
         expected_data ={"reactionner": ["reactionner-master"],
                         "broker": ["broker-master"],
                         "arbiter": ["arbiter-master"],
@@ -228,7 +245,7 @@ class fullTest(AlignakTest):
 
         print("Testing have_conf")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            raw_data = req.get("http://localhost:%s/have_conf" % satellite_map[daemon])
+            raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
             data = raw_data.json()
             self.assertTrue(data, "Daemon %s has no conf!" % daemon)
             # TODO: test with magic_hash
@@ -241,7 +258,7 @@ class fullTest(AlignakTest):
                              'reactionner': GenericInterface,
                              'receiver': ReceiverInterface}
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/api" % port)
+            raw_data = req.get("%s://localhost:%s/api" % (http, port), verify=False)
             data = raw_data.json()
             expected_data = set(name_to_interface[name](None).api())
             self.assertIsInstance(data, list, "Data is not a list!")
@@ -261,7 +278,7 @@ class fullTest(AlignakTest):
 
         print("Testing get_raw_stats")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/get_raw_stats" % port)
+            raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
             data = raw_data.json()
             if name == 'broker':
                 self.assertIsInstance(data, list, "Data is not a list!")
@@ -270,7 +287,7 @@ class fullTest(AlignakTest):
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/what_i_managed" % port)
+            raw_data = req.get("%s://localhost:%s/what_i_managed" % (http, port), verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, dict, "Data is not a dict!")
             if name != 'arbiter':
@@ -278,44 +295,46 @@ class fullTest(AlignakTest):
 
         print("Testing get_external_commands")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/get_external_commands" % port)
+            raw_data = req.get("%s://localhost:%s/get_external_commands" % (http, port), verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, list, "Data is not a list!")
 
         print("Testing get_log_level")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/get_log_level" % port)
+            raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, unicode, "Data is not an unicode!")
             # TODO: seems level get not same tham defined in *d.ini files
 
         print("Testing get_all_states")
-        raw_data = req.get("http://localhost:%s/get_all_states" % satellite_map['arbiter'])
+        raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
         data = raw_data.json()
         self.assertIsInstance(data, dict, "Data is not a dict!")
+        for name, _ in satellite_map.items():
+            self.assertTrue(data[name][0]['alive'])
 
         print("Testing get_running_id")
         for name, port in satellite_map.items():
-            raw_data = req.get("http://localhost:%s/get_running_id" % port)
+            raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, unicode, "Data is not an unicode!")
 
         print("Testing fill_initial_broks")
-        raw_data = req.get("http://localhost:%s/fill_initial_broks" % satellite_map['scheduler'], params={'bname': 'broker-master'})
+        raw_data = req.get("%s://localhost:%s/fill_initial_broks" % (http, satellite_map['scheduler']), params={'bname': 'broker-master'}, verify=False)
         data = raw_data.json()
         self.assertIsNone(data, "Data must be None!")
 
         print("Testing get_broks")
         for name in ['scheduler', 'poller']:
-            raw_data = req.get("http://localhost:%s/get_broks" % satellite_map[name],
-                               params={'bname': 'broker-master'})
+            raw_data = req.get("%s://localhost:%s/get_broks" % (http, satellite_map[name]),
+                               params={'bname': 'broker-master'}, verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, dict, "Data is not a dict!")
 
         print("Testing get_returns")
         # get_return requested by scheduler to poller daemons
         for name in ['reactionner', 'receiver', 'poller']:
-            raw_data = req.get("http://localhost:%s/get_returns" % satellite_map[name], params={'sched_id': 0})
+            raw_data = req.get("%s://localhost:%s/get_returns" % (http, satellite_map[name]), params={'sched_id': 0}, verify=False)
             data = raw_data.json()
             self.assertIsInstance(data, list, "Data is not a list!")
 

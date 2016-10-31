@@ -123,14 +123,11 @@ class HTTPDaemon(object):
         if port == 0:
             return
 
-        sock = socket.socket()
-        try:
-            sock.bind((host, port))
-        except socket.error as exp:
-            msg = "Error: Sorry, the port %s/%d is not free: %s" % (host, port, str(exp))
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((host, port))
+        if result == 0:
+            msg = "Error: Sorry, the port %s/%d is not free" % (host, port)
             raise PortNotFree(msg)
-        else:
-            sock.close()
 
         self.port = port
         self.host = host
