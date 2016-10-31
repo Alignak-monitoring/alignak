@@ -72,6 +72,10 @@ import time
 import traceback
 import threading
 
+# pylint: disable=wildcard-import,unused-wildcard-import
+# This import, despite not used, is necessary to include all Alignak objects modules
+from alignak.objects import *
+
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.generic_interface import GenericInterface
 
@@ -215,6 +219,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # round robin queue ic
         self.rr_qid = 0
+
+        # Modules are loaded one time
+        self.have_modules = False
 
     def pynag_con_init(self, _id):
         """Wrapped function for do_pynag_con_init
@@ -995,16 +1002,18 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 time.tzset()
 
             # Now manage modules
-            # TODO: check how to better handle this with modules_manager..
-            mods = unserialize(g_conf['modules'], True)
-            self.new_modules_conf = []
-            for module in mods:
-                # If we already got it, bypass
-                if module.python_name not in self.q_by_mod:
-                    logger.debug("Add module object %s", str(module))
-                    self.new_modules_conf.append(module)
-                    logger.info("[%s] Got module: %s ", self.name, module.python_name)
-                    self.q_by_mod[module.python_name] = {}
+            if not self.have_modules:
+                self.have_modules = True
+                # TODO: check how to better handle this with modules_manager..
+                mods = unserialize(g_conf['modules'], True)
+                self.new_modules_conf = []
+                for module in mods:
+                    # If we already got it, bypass
+                    if module.python_name not in self.q_by_mod:
+                        logger.debug("Add module object %s", str(module))
+                        self.new_modules_conf.append(module)
+                        logger.info("[%s] Got module: %s ", self.name, module.python_name)
+                        self.q_by_mod[module.python_name] = {}
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
