@@ -72,10 +72,6 @@ import time
 import traceback
 import threading
 
-# pylint: disable=wildcard-import,unused-wildcard-import
-# This import, despite not used, is necessary to include all Alignak objects modules
-from alignak.objects import *
-
 from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.http.generic_interface import GenericInterface
 
@@ -422,6 +418,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :param module_name: the module name related to the worker
                             default is "fork" for no module
+                            Indeed, it is actually the module 'python_name'
         :type module_name: str
         :param mortal: make the Worker mortal or not. Default True
         :type mortal: bool
