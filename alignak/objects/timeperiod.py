@@ -252,7 +252,6 @@ class Timeperiod(Item):
         for prop in properties:
             if hasattr(self, prop):
                 val = getattr(self, prop)
-                print prop, ":", val
                 res[prop] = val
         # Now the unresolved one. The only way to get ride of same key things is to put
         # directly the full value as the key
@@ -436,7 +435,6 @@ class Timeperiod(Item):
                             still_loop = False
 
             if local_min is None:
-                # print "Looking for next valid date"
                 exc_mins = []
                 if s_dr_mins != []:
                     for timeperiod in self.exclude:
@@ -487,57 +485,24 @@ class Timeperiod(Item):
         res = None
         # Loop for all minutes...
         while still_loop:
-            # print "Invalid loop with", time.asctime(time.localtime(local_min))
-
             dr_mins = []
             # val_valids = []
             # val_inval = []
             # But maybe we can find a better solution with next invalid of standard dateranges
-            # print self.get_name(),
             # "After valid of exclude, local_min =", time.asctime(time.localtime(local_min))
             for daterange in self.dateranges:
-                # print self.get_name(),
                 # "Search a next invalid from DR", time.asctime(time.localtime(local_min))
-                # print dr.__dict__
                 next_t = daterange.get_next_invalid_time_from_t(local_min)
 
-                # print self.get_name(), "Dr", dr.__dict__,
                 # "give me next invalid", time.asctime(time.localtime(m))
                 if next_t is not None:
                     # But maybe it's invalid for this dr, but valid for other ones.
                     # if not self.is_time_valid(m):
-                    #     print "Final: Got a next invalid at", time.asctime(time.localtime(m))
                     dr_mins.append(next_t)
-                    # if not self.is_time_valid(m):
-                    #    val_inval.append(m)
-                    # else:
-                    #    val_valids.append(m)
-                    #    print "Add a m", time.asctime(time.localtime(m))
-                    # else:
-                    #     print dr.__dict__
-                    #     print "FUCK bad result\n\n\n"
-            # print "Inval"
-            # for v in val_inval:
-            #    print "\timestamp", time.asctime(time.localtime(v))
-            # print "Valid"
-            # for v in val_valids:
-            #    print "\timestamp", time.asctime(time.localtime(v))
 
             if dr_mins != []:
                 local_min = min(dr_mins)
-                # Take the minimum valid as lower for next search
-                # local_min_valid = 0
-                # if val_valids != []:
-                #    local_min_valid = min(val_valids)
-                # if local_min_valid != 0:
-                #    local_min = local_min_valid
-                # else:
-                #    local_min = min(dr_mins)
-                # print "UPDATE After dr: found invalid local min:",
-                #  time.asctime(time.localtime(local_min)),
-                #  "is valid", self.is_time_valid(local_min)
 
-            # print self.get_name(),
             # 'Invalid: local min', local_min #time.asctime(time.localtime(local_min))
             # We do not loop unless the local_min is not valid
             if not self.is_time_valid(local_min):
@@ -551,12 +516,10 @@ class Timeperiod(Item):
                 # after one year, stop.
                 if local_min > original_t + 3600 * 24 * 366 + 1:  # 60*24*366 + 1:
                     still_loop = False
-            # print "Loop?", still_loop
             # if we've got a real value, we check it with the exclude
             if local_min is not None:
                 # Now check if local_min is not valid
                 for timeperiod in self.exclude:
-                    # print self.get_name(),
                     # "we check for invalid",
                     # time.asctime(time.localtime(local_min)), 'with tp', tp.name
                     if timeperiod.is_time_valid(local_min):
@@ -573,7 +536,6 @@ class Timeperiod(Item):
                 if res is None or local_min < res:
                     res = local_min
 
-        # print "Finished Return the next invalid", time.asctime(time.localtime(local_min))
         # Ok, we update the cache...
         self.invalid_cache[original_t] = local_min
         return local_min
@@ -655,7 +617,6 @@ class Timeperiod(Item):
             r'(\d{4})-(\d{2})-(\d{2}) - (\d{4})-(\d{2})-(\d{2}) / (\d+)[\s\t]*([0-9:, -]+)', entry
         )
         if res is not None:
-            # print "Good catch 1"
             (syear, smon, smday, eyear, emon, emday, skip_interval, other) = res.groups()
             data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
                     'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
@@ -666,7 +627,6 @@ class Timeperiod(Item):
 
         res = re.search(r'(\d{4})-(\d{2})-(\d{2}) / (\d+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 2"
             (syear, smon, smday, skip_interval, other) = res.groups()
             eyear = syear
             emon = smon
@@ -682,7 +642,6 @@ class Timeperiod(Item):
             r'(\d{4})-(\d{2})-(\d{2}) - (\d{4})-(\d{2})-(\d{2})[\s\t]*([0-9:, -]+)', entry
         )
         if res is not None:
-            # print "Good catch 3"
             (syear, smon, smday, eyear, emon, emday, other) = res.groups()
             data = {'syear': syear, 'smon': smon, 'smday': smday, 'swday': 0,
                     'swday_offset': 0, 'eyear': eyear, 'emon': emon, 'emday': emday,
@@ -693,7 +652,6 @@ class Timeperiod(Item):
 
         res = re.search(r'(\d{4})-(\d{2})-(\d{2})[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 4"
             (syear, smon, smday, other) = res.groups()
             eyear = syear
             emon = smon
@@ -710,7 +668,6 @@ class Timeperiod(Item):
             entry
         )
         if res is not None:
-            # print "Good catch 5"
             (swday, swday_offset, smon, ewday,
              ewday_offset, emon, skip_interval, other) = res.groups()
             smon_id = Daterange.get_month_id(smon)
@@ -726,7 +683,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 6"
             (t00, smday, t01, emday, skip_interval, other) = res.groups()
             if t00 in Daterange.weekdays and t01 in Daterange.weekdays:
                 swday = Daterange.get_weekday_id(t00)
@@ -756,7 +712,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+) / (\d+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 7"
             (t00, smday, emday, skip_interval, other) = res.groups()
             if t00 in Daterange.weekdays:
                 swday = Daterange.get_weekday_id(t00)
@@ -788,7 +743,6 @@ class Timeperiod(Item):
             r'([a-z]*) ([\d-]+) ([a-z]*) - ([a-z]*) ([\d-]+) ([a-z]*) [\s\t]*([0-9:, -]+)', entry
         )
         if res is not None:
-            # print "Good catch 8"
             (swday, swday_offset, smon, ewday, ewday_offset, emon, other) = res.groups()
             smon_id = Daterange.get_month_id(smon)
             emon_id = Daterange.get_month_id(emon)
@@ -803,7 +757,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 9"
             (t00, smday, emday, other) = res.groups()
             if t00 in Daterange.weekdays:
                 swday = Daterange.get_weekday_id(t00)
@@ -835,7 +788,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*) ([\d-]+) - ([a-z]*) ([\d-]+)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 10"
             (t00, smday, t01, emday, other) = res.groups()
             if t00 in Daterange.weekdays and t01 in Daterange.weekdays:
                 swday = Daterange.get_weekday_id(t00)
@@ -867,7 +819,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*) ([\d-]+) ([a-z]*)[\s\t]*([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 11"
             (t00, t02, t01, other) = res.groups()
             if t00 in Daterange.weekdays and t01 in Daterange.months:
                 swday = Daterange.get_weekday_id(t00)
@@ -882,7 +833,6 @@ class Timeperiod(Item):
                 dateranges.append(MonthWeekDayDaterange(data))
                 return
             if not t01:
-                # print "Good catch 12"
                 if t00 in Daterange.weekdays:
                     swday = Daterange.get_weekday_id(t00)
                     swday_offset = t02
@@ -915,7 +865,6 @@ class Timeperiod(Item):
 
         res = re.search(r'([a-z]*)[\s\t]+([0-9:, -]+)', entry)
         if res is not None:
-            # print "Good catch 13"
             (t00, other) = res.groups()
             if t00 in Daterange.weekdays:
                 day = t00
@@ -955,7 +904,6 @@ class Timeperiod(Item):
         if hasattr(self, 'exclude') and self.exclude != []:
             logger.debug("[timeentry::%s] have excluded %s", self.get_name(), self.exclude)
             excluded_tps = self.exclude
-            # print "I will exclude from:", excluded_tps
             for tp_name in excluded_tps:
                 timepriod = timeperiods.find_by_name(tp_name.strip())
                 if timepriod is not None:

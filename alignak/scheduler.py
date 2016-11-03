@@ -446,7 +446,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type action: alignak.eventhandler.EventHandler
         :return: None
         """
-        # print "Add an event Handler", elt.uuid
         self.actions[action.uuid] = action
 
     def add_downtime(self, downtime):
@@ -505,7 +504,6 @@ class Scheduler(object):  # pylint: disable=R0902
             return
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
-            # print("found action for %s: %s" % (elt.__class__.__name__, f.__name__))
             fun(self, elt)
         else:
             logger.warning(
@@ -590,7 +588,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 for dependent_checks in chk.depend_on_me:
                     dependent_checks.depend_on.remove(chk.uuid)
                 for c_temp in chk.depend_on:
-                    c_temp.depen_on_me.remove(chk)
+                    c_temp.depend_on_me.remove(chk)
                 del self.checks[c_id]  # Final Bye bye ...
         else:
             nb_checks_drops = 0
@@ -711,7 +709,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 new = elt.business_impact
                 # Ok, the business_impact change, we can update the broks
                 if new != was:
-                    # print "The elements", i.get_name(), "change it's business_impact value"
                     self.get_and_register_status_brok(elt)
 
         # When all impacts and classic elements are updated,
@@ -727,8 +724,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Maybe one of the impacts change it's business_impact to a high value
                 # and so ask for the problem to raise too
                 if new != was:
-                    # print "The elements", i.get_name(),
-                    # print "change it's business_impact value from", was, "to", new
                     self.get_and_register_status_brok(elt)
 
     def scatter_master_notifications(self):
@@ -1639,7 +1634,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        # print "**********Delete zombies checks****"
         id_to_del = []
         for chk in self.checks.values():
             if chk.status == 'zombie':
@@ -1654,7 +1648,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        # print "**********Delete zombies actions****"
         id_to_del = []
         for act in self.actions.values():
             if act.status == 'zombie':
@@ -2088,7 +2081,6 @@ class Scheduler(object):  # pylint: disable=R0902
         self.load_one_min = Load(initial_value=1)
         logger.debug("First loop at %d", time.time())
         while self.must_run:
-            # print "Loop"
             # Before answer to brokers, we send our broks to modules
             # Ok, go to send our broks to our external modules
             # self.send_broks_to_modules()
@@ -2141,7 +2133,6 @@ class Scheduler(object):  # pylint: disable=R0902
                          "inpoller %s, zombies %s, notifications %s",
                          len(self.checks), nb_scheduled, nb_inpoller, nb_zombies, nb_notifications)
 
-            # print "Notifications:", nb_notifications
             now = time.time()
 
             if self.nb_checks_send != 0:
