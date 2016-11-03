@@ -415,6 +415,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :param module_name: the module name related to the worker
                             default is "fork" for no module
+                            Indeed, it is actually the module 'python_name'
         :type module_name: str
         :param mortal: make the Worker mortal or not. Default True
         :type mortal: bool
@@ -881,7 +882,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         with self.conf_lock:
             conf = self.new_conf
-            logger.debug("[%s] Sending us a configuration %s", self.name, conf)
+            logger.debug("Sending us a configuration %s", conf)
             self.new_conf = None
             self.cur_conf = conf
             g_conf = conf['global']
@@ -914,7 +915,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             self.passive = g_conf['passive']
             if self.passive:
-                logger.info("[%s] Passive mode enabled.", self.name)
+                logger.info("Passive mode enabled.")
 
             # If we've got something in the schedulers, we do not want it anymore
             for sched_id in conf['schedulers']:
@@ -922,8 +923,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
                 if old_sched_id:
-                    logger.info("[%s] We already got the conf %s (%s)",
-                                self.name, old_sched_id, name)
+                    logger.info("We already got the conf %s (%s)", old_sched_id, name)
                     wait_homerun = self.schedulers[old_sched_id]['wait_homerun']
                     actions = self.schedulers[old_sched_id]['actions']
                     del self.schedulers[old_sched_id]
@@ -968,14 +968,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     self.max_workers = cpu_count()
                 except NotImplementedError:
                     self.max_workers = 4
-            logger.info("[%s] Using max workers: %s", self.name, self.max_workers)
+            logger.info("Using max workers: %s", self.max_workers)
             self.min_workers = g_conf['min_workers']
             if self.min_workers == 0:
                 try:
                     self.min_workers = cpu_count()
                 except NotImplementedError:
                     self.min_workers = 4
-            logger.info("[%s] Using min workers: %s", self.name, self.min_workers)
+            logger.info("Using min workers: %s", self.min_workers)
 
             self.processes_by_worker = g_conf['processes_by_worker']
             self.polling_interval = g_conf['polling_interval']
@@ -990,7 +990,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # Set our giving timezone from arbiter
             use_timezone = g_conf['use_timezone']
             if use_timezone != 'NOTSET':
-                logger.info("[%s] Setting our timezone to %s", self.name, use_timezone)
+                logger.info("Setting our timezone to %s", use_timezone)
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
@@ -1003,7 +1003,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 if module.python_name not in self.q_by_mod:
                     logger.debug("Add module object %s", str(module))
                     self.new_modules_conf.append(module)
-                    logger.info("[%s] Got module: %s ", self.name, module.python_name)
+                    logger.info("Got module: %s ", module.python_name)
                     self.q_by_mod[module.python_name] = {}
 
     def get_stats_struct(self):

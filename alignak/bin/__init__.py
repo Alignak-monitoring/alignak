@@ -54,6 +54,7 @@ from alignak.check import Check
 from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
+from alignak.objects.module import Module
 from ._deprecated_VERSION import DeprecatedAlignakBin
 
 
