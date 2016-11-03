@@ -439,8 +439,8 @@ def to_best_int_float(val):
 
 def to_bool(val):
     """Convert value to bool
-    Because:
-    # bool('0') = true, so...
+
+    Because bool('0') = true, so...
 
     :param val: value to convert
     :type val:
