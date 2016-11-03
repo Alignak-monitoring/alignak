@@ -88,6 +88,8 @@ class SatelliteLink(Item):
         'realm':
             StringProp(default='', fill_brok=['full_status'],
                        brok_transformation=get_obj_name_two_args_and_void),
+        'realm_name':
+            StringProp(default=''),
         'satellitemap':
             DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
         'use_ssl':
@@ -613,6 +615,7 @@ class SatelliteLinks(Items):
             # Check if what we get is OK or not
             if realm is not None:
                 satlink.realm = realm.uuid
+                satlink.realm_name = realm.get_name()
                 getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
                 # case SatelliteLink has manage_sub_realms
                 if getattr(satlink, 'manage_sub_realms', False):

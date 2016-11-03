@@ -1749,6 +1749,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 for elt in lst:
                     if not hasattr(elt, 'realm'):
                         elt.realm = 'All'
+                        elt.realm_name = 'All'
                         logger.info("Tagging %s with realm %s", elt.get_name(), default.get_name())
 
     def fill_default_satellites(self):
