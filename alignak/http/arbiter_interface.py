@@ -163,8 +163,8 @@ class ArbiterInterface(GenericInterface):
                         if not hasattr(daemon, prop):
                             continue
                         val = getattr(daemon, prop)
-                        if prop == "realm" and hasattr(val, "realm_name"):
-                            env[prop] = val.realm_name
+                        if prop == "realm":
+                            continue
                         # give a try to a json able object
                         try:
                             json.dumps(val)

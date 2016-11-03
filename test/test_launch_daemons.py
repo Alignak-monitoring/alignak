@@ -326,6 +326,7 @@ class fullTest(AlignakTest):
             for daemon in daemons:
                 print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
                 self.assertTrue(daemon['alive'])
+                self.assertFalse('realm' in daemon)
                 self.assertTrue('realm_name' in daemon)
 
         print("Testing get_running_id")
