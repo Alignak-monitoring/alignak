@@ -320,8 +320,14 @@ class fullTest(AlignakTest):
         raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
         data = raw_data.json()
         self.assertIsInstance(data, dict, "Data is not a dict!")
-        for name, _ in satellite_map.items():
-            self.assertTrue(data[name][0]['alive'])
+        for daemon_type in data:
+            daemons = data[daemon_type]
+            print("Got Alignak state for: %ss / %d instances" % (daemon_type, len(daemons)))
+            for daemon in daemons:
+                print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
+                self.assertTrue(daemon['alive'])
+                self.assertFalse('realm' in daemon)
+                self.assertTrue('realm_name' in daemon)
 
         print("Testing get_running_id")
         for name, port in satellite_map.items():
