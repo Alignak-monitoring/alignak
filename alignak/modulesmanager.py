@@ -256,7 +256,7 @@ class ModulesManager(object):
                 logger.exception("Exception: %s", exp)
                 self.configuration_errors.append(
                     "The module %s raised an exception on loading: %s, I remove it!" %
-                    (module.module_alias, str(exp))
+                    (mod_conf.get_name(), str(exp))
                 )
             else:
                 # Give the module the data to which daemon/module it is loaded into
