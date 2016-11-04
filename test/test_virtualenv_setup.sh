@@ -2,7 +2,7 @@
 
 set -e
 
-STOP_ON_FAILURE=0
+STOP_ON_FAILURE=1
 SKIP_PERMISSION=0
 SUFFIX_TESTFILE=""
 
@@ -115,23 +115,37 @@ function setup_virtualenv(){
 }
 
 function test_setup(){
-error_found=0
 for raw_file in $(awk '{print $2}' $1); do
-
     file=$(echo "$raw_file" | sed  -e "s:VIRTUALENVPATH:$VIRTUALENVPATH:g" \
                                    -e "s:PYTHONVERSION:$PYTHONVERSION:g" \
                                    -e "s:ALIGNAKVERSION:$ALIGNAKVERSION:g"\
                                    -e "s:SHORTPYVERSION:$SHORTPYVERSION:g")
+    echo "testing file/directory: $file"
+    if [ ! -f $file ]; then
+        if [ ! -d $file ]; then
+            echo " *** $file does not exist (not a file nor a directory)!"
+
+            if [[ $STOP_ON_FAILURE -eq 1 ]];then
+                return 1
+            else
+                errors_found_test=$((errors_found_test+1))
+                continue
+            fi
+        fi
+    fi
+
     exp_chmod=$(grep "$raw_file$" $1| cut -d " " -f 1 )
     if [[ "$exp_chmod" == "" ]]; then
         echo "Can't find file in conf after sed - RAWFILE:$raw_file, FILE:$file"
     fi
 
     cur_chmod=$(stat -c "%a" $file 2>> /tmp/stat.failure)
+#    echo " -> file $file chmod: $cur_chmod"
     if [[ $? -ne 0 ]];then
+        echo " -> here!!!"
         tail -1 /tmp/stat.failure
 
-        if [[ $error_found -eq 0 ]]; then
+        if [[ $errors_found_test -eq 0 ]]; then
             get_first_existing_path $file
             sudo updatedb
             locate -i alignak | grep -v "monitoring"
@@ -140,7 +154,7 @@ for raw_file in $(awk '{print $2}' $1); do
         if [[ $STOP_ON_FAILURE -eq 1 ]];then
             return 1
         else
-            error_found=1
+            errors_found_test=$((errors_found_test+1))
             continue
         fi
     fi
@@ -151,17 +165,18 @@ for raw_file in $(awk '{print $2}' $1); do
         cur_chmod=$(ignore_sticky_or_setid $cur_chmod)
 
         if [[ "$exp_chmod" != "$cur_chmod" ]]; then
-            echo "Right error on file $file - expected: $exp_chmod, found: $cur_chmod"
+            echo " -> rights error on file $file - expected: $exp_chmod, found: $cur_chmod"
             if [[ $STOP_ON_FAILURE -eq 1 ]]; then
                 return 1
             else
-                error_found=1
+                errors_found_test=$((errors_found_test+1))
             fi
         fi
     fi
-done 
+#    echo "tested: $file"
+done
 
-return $error_found
+echo "Errors found: $errors_found"
 }
 
 #TODO
@@ -169,7 +184,7 @@ return $error_found
 
 error_found_global=0
 ALIGNAKVERSION=$(get_alignak_version_formatted)
-SUDO="sudo"
+SUDO="sudo -H"
 
 for pyenv in "root" "virtualenv"; do
     for install_type in "install" "develop"; do
@@ -178,8 +193,11 @@ for pyenv in "root" "virtualenv"; do
             SUDO=""
         fi
 
+        echo "Alignak version: $ALIGNAKVERSION"
         PYTHONVERSION=$(get_python_version_formatted)
+        echo "Python version: $PYTHONVERSION"
         SHORTPYVERSION=$(echo $PYTHONVERSION | sed "s:thon::g")
+        echo "Python short version: $PYTHONVERSION"
 
         if [[ ! -e ./test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE} ]]; then
             echo "Test not supported for python setup.py $install_type $pyenv with suffix : ${SUFFIX_TESTFILE}"
@@ -195,12 +213,13 @@ for pyenv in "root" "virtualenv"; do
         echo "Installing test requirements..."
         $SUDO pip install -r test/requirements.txt 2>&1 1>/dev/null
         echo "Installing alignak..."
-        $SUDO python setup.py $install_type 2>&1 >/dev/null
+        $SUDO python setup.py $install_type
 
-        echo "Running test..."
+        echo "Running setup test..."
+        errors_found_test=0
         test_setup "test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
-
-        if [[ $? -ne 0 ]];then
+        echo "Errors found: $errors_found_test"
+        if [[ $errors_found_test -ne 0 ]];then
             echo "**********"
             echo "***** An error occurred during ${install_type} ${pyenv} *****"
             echo "**********"

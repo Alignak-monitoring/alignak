@@ -31,7 +31,10 @@ pip install -e .
 pip install alignak-setup
 pip install -r test/requirements.txt
 
+pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info)))")
+echo "Python version: $pyversion"
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
+echo "Python short version: $pyversion"
 if test -e "test/requirements.py${pyversion}.txt"
 then
     pip install -r "test/requirements.py${pyversion}.txt"
