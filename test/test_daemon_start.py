@@ -252,7 +252,6 @@ class template_Daemon_Start():
         with open(d.local_log) as f:
             content = f.readlines()
         print(content)
-        assert False
 
     def test_daemon_header(self):
         """ Test daemon header
