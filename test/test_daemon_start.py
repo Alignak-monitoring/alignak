@@ -46,7 +46,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This file is used to test reading and processing of config files
+# This file is used to test the Alignak daemons start
 #
 
 from __future__ import print_function
@@ -101,10 +101,11 @@ daemons_config = {
     Alignak:  "cfg/daemons/schedulerd.ini",
     Arbiter: "cfg/daemons/arbiterd.ini"
 }
+alignak_config = "cfg/daemons/alignak.cfg"
 
 #############################################################################
 
-class template_Daemon_Bad_Start():
+class template_Daemon_Start():
 
     @classmethod
     def setUpClass(cls):
@@ -123,18 +124,19 @@ class template_Daemon_Bad_Start():
             # so bypass it and keep default value
             return
 
-    def create_daemon(self):
+    def create_daemon(self, is_daemon=False, do_replace=False):
         cls = self.daemon_cls
-        return cls(daemons_config[cls], False, True, False, None)
+        # is_daemon, do_replace, debug, debug_file
+        return cls(daemons_config[cls], is_daemon, do_replace, False, None)
 
-    def get_daemon(self, free_port=True):
+    def get_daemon(self, is_daemon=False, do_replace=False, free_port=True):
         """
 
         :param free_port: get a free port (True) or use the configuration defined port (False)
         :return:
         """
 
-        d = self.create_daemon()
+        d = self.create_daemon(is_daemon, do_replace)
 
         # configuration may be "relative" :
         # some config file reference others with a relative path (from THIS_DIR).
@@ -176,7 +178,8 @@ class template_Daemon_Bad_Start():
         """
         self.print_header()
 
-        d = self.get_daemon(free_port=False)
+        # Start normally
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
         print("Daemon configuration: %s" % d.__dict__)
         self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
         self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
@@ -192,6 +195,26 @@ class template_Daemon_Bad_Start():
         time.sleep(2)
 
         # Stop the daemon
+        self.stop_daemon(d)
+        self.assertFalse(os.path.exists(d.pidfile))
+
+        # Start as a daemon
+        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
+        print("Daemon configuration: %s" % d.__dict__)
+        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
+        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        self.assertTrue(os.path.exists(d.pidfile))
+
+        time.sleep(2)
+
+        #  Stop the daemon
         self.stop_daemon(d)
         self.assertFalse(os.path.exists(d.pidfile))
 
@@ -324,33 +347,33 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Broker__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Scheduler__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Poller__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Reactionner__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Receiver_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Receiver__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Receiver
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Arbiter__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Arbiter
 
-    def create_daemon(self):
+    def create_daemon(self, is_daemon=False, do_replace=False):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        return cls(daemons_config[cls], "cfg/daemons/alignak.cfg",
+        return cls(daemons_config[cls], alignak_config,
                    False, True, False, False, None, 'arbiter-master', None)
 
 #############################################################################

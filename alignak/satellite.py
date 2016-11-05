@@ -83,6 +83,7 @@ from alignak.load import Load
 from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.check import Check  # pylint: disable=W0611
+from alignak.objects.module import Module  # pylint: disable=W0611
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -445,8 +446,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             target = None
         else:
             for module in self.modules_manager.instances:
-                if module.properties['type'] == module_name:
-                    # First, see if the module is a 'worker' one or not
+                # First, see if the module name matches...
+                if module.get_name() == module_name:
+                    # ... and then if is a 'worker' module one or not
                     if not module.properties.get('worker_capable', False):
                         raise NotWorkerMod
                     target = module.work
@@ -1000,11 +1002,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             self.new_modules_conf = []
             for module in mods:
                 # If we already got it, bypass
-                if module.python_name not in self.q_by_mod:
+                if module.get_name() not in self.q_by_mod:
+                    logger.info("Add module object: %s", module)
                     logger.debug("Add module object %s", str(module))
                     self.new_modules_conf.append(module)
-                    logger.info("Got module: %s ", module.python_name)
-                    self.q_by_mod[module.python_name] = {}
+                    logger.info("Got module: %s ", module.get_name())
+                    self.q_by_mod[module.get_name()] = {}
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
