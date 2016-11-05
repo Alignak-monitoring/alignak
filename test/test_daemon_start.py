@@ -46,7 +46,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This file is used to test reading and processing of config files
+# This file is used to test the Alignak daemons start
 #
 
 from __future__ import print_function
@@ -101,10 +101,11 @@ daemons_config = {
     Alignak:  "cfg/daemons/schedulerd.ini",
     Arbiter: "cfg/daemons/arbiterd.ini"
 }
+alignak_config = "cfg/daemons/alignak.cfg"
 
 #############################################################################
 
-class template_Daemon_Bad_Start():
+class template_Daemon_Start():
 
     @classmethod
     def setUpClass(cls):
@@ -251,6 +252,7 @@ class template_Daemon_Bad_Start():
         with open(d.local_log) as f:
             content = f.readlines()
         print(content)
+        assert False
 
     def test_daemon_header(self):
         """ Test daemon header
@@ -324,33 +326,33 @@ class template_Daemon_Bad_Start():
 
 #############################################################################
 
-class Test_Broker_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Broker__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Scheduler__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Alignak
 
 
-class Test_Poller_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Poller__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Reactionner__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Receiver_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Receiver__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Receiver
 
 
-class Test_Arbiter_Bad_Start(template_Daemon_Bad_Start, AlignakTest):
+class Test_Arbiter__Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Arbiter
 
     def create_daemon(self):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        return cls(daemons_config[cls], "cfg/daemons/alignak.cfg",
+        return cls(daemons_config[cls], alignak_config,
                    False, True, False, False, None, 'arbiter-master', None)
 
 #############################################################################
