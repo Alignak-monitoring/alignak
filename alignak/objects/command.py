@@ -61,8 +61,8 @@ from alignak.autoslots import AutoSlots
 class Command(Item):
     """
     Class to manage a command
-    A command is an external command the poller module run to
-    see if something is ok or not
+    A command is an external command that a poller module runs to
+    check if something is ok or not
     """
     __metaclass__ = AutoSlots
 
