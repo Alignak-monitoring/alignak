@@ -1161,6 +1161,7 @@ class Daemon(object):
                 except Exception as exp:  # pylint: disable=W0703
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
+                    logger.exception('Exception %s', exp)
                     self.modules_manager.set_to_restart(inst)
         statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
 
