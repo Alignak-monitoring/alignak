@@ -45,9 +45,8 @@ docs/tools/pages/
 
 
 # test and coverage
-test/tmp/.cov*
+test/.cov*
 
-test/cfg/full
 test/cfg/run_test_launch_daemons
 
 # Pbr
