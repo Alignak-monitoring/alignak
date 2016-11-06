@@ -260,19 +260,28 @@ class AlignakTest(unittest.TestCase):
             self.schedulers['scheduler-master'].run_external_command(b.cmd_line)
 
     def fake_check(self, ref, exit_status, output="OK"):
-        # print "fake", ref
-        now = time.time()
-        check = ref.schedule(self.schedulers['scheduler-master'].sched.hosts, self.schedulers['scheduler-master'].sched.services, self.schedulers['scheduler-master'].sched.timeperiods,
-                             self.schedulers['scheduler-master'].sched.macromodulations, self.schedulers['scheduler-master'].sched.checkmodulations,
-                             self.schedulers['scheduler-master'].sched.checks, force=True)
-        # now checks are schedule and we get them in
-        # the action queue
-        # check = ref.actions.pop()
-        self.schedulers['scheduler-master'].sched.add(check)  # check is now in sched.checks[]
-        # check = self.schedulers['scheduler-master'].sched.checks[ref.checks_in_progress[0]]
+        """
+        Simulate a check execution and result
+        :param ref: host/service concerned by the check
+        :param exit_status: check exit status code (0, 1, ...).
+               If set to None, the check is simply scheduled but not "executed"
+        :param output: check output (output + perf data)
+        :return:
+        """
 
-        # Allows to force check scheduling without setting its status nor
-        # output. Useful for manual business rules rescheduling, for instance.
+        now = time.time()
+        check = ref.schedule(self.schedulers['scheduler-master'].sched.hosts,
+                             self.schedulers['scheduler-master'].sched.services,
+                             self.schedulers['scheduler-master'].sched.timeperiods,
+                             self.schedulers['scheduler-master'].sched.macromodulations,
+                             self.schedulers['scheduler-master'].sched.checkmodulations,
+                             self.schedulers['scheduler-master'].sched.checks,
+                             force=True, force_time=None)
+        # now the check is scheduled and we get it in the action queue
+        self.schedulers['scheduler-master'].sched.add(check)  # check is now in sched.checks[]
+
+        # Allows to force check scheduling without setting its status nor output.
+        # Useful for manual business rules rescheduling, for instance.
         if exit_status is None:
             return
 
@@ -285,10 +294,13 @@ class AlignakTest(unittest.TestCase):
         # is a valid value in the future
         ref.next_chk = now - 0.5
 
-        check.get_outputs(output, 9000)
+        # Max plugin output is default to 8192
+        check.get_outputs(output, 8192)
         check.exit_status = exit_status
         check.execution_time = 0.001
         check.status = 'waitconsume'
+
+        # Put the check result in the waiting results for the scheduler ...
         self.schedulers['scheduler-master'].sched.waiting_results.put(check)
 
     def scheduler_loop(self, count, items, mysched=None):
