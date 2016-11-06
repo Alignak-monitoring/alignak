@@ -43,7 +43,7 @@ class TestMultibroker(AlignakTest):
 
         mysched = self.schedulers['scheduler-master']
 
-        self.assertEqual(2, len(mysched.sched.brokers))
+        assert 2 == len(mysched.sched.brokers)
 
         # create broks
         host = mysched.sched.hosts.find_by_name("test_host_0")
@@ -54,25 +54,25 @@ class TestMultibroker(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        self.assertEqual(2, len(mysched.sched.brokers))
+        assert 2 == len(mysched.sched.brokers)
         bmaster = len(mysched.sched.brokers['broker-master']['broks'])
         bmaster2 = len(mysched.sched.brokers['broker-master2']['broks'])
 
         sched_interface = SchedulerInterface(mysched)
         # Test broker-master connect to scheduler
         res = sched_interface.get_broks('broker-master')
-        self.assertGreater((bmaster + 2), len(mysched.sched.brokers['broker-master']['broks']))
-        self.assertEqual(0, len(mysched.sched.brokers['broker-master']['broks']))
+        assert (bmaster + 2) > len(mysched.sched.brokers['broker-master']['broks'])
+        assert 0 == len(mysched.sched.brokers['broker-master']['broks'])
 
         # Test broker-master2 connect to scheduler
         res = sched_interface.get_broks('broker-master2')
-        self.assertGreater((bmaster2 + 2), len(mysched.sched.brokers['broker-master2']['broks']))
-        self.assertEqual(0, len(mysched.sched.brokers['broker-master2']['broks']))
+        assert (bmaster2 + 2) > len(mysched.sched.brokers['broker-master2']['broks'])
+        assert 0 == len(mysched.sched.brokers['broker-master2']['broks'])
 
         # Test broker-master3 connect to scheduler (broker unknown)
         res = sched_interface.get_broks('broker-master3')
-        self.assertEqual({}, res)
-        self.assertEqual(2, len(mysched.sched.brokers))
+        assert {} == res
+        assert 2 == len(mysched.sched.brokers)
 
         # Re-get broks
         res = sched_interface.get_broks('broker-master')
@@ -80,7 +80,7 @@ class TestMultibroker(AlignakTest):
 
         # new broks
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        self.assertGreater(len(mysched.sched.brokers['broker-master']['broks']), 1)
+        assert len(mysched.sched.brokers['broker-master']['broks']) > 1
         self.assertItemsEqual(mysched.sched.brokers['broker-master']['broks'].keys(),
                               mysched.sched.brokers['broker-master2']['broks'].keys())
 
@@ -92,7 +92,7 @@ class TestMultibroker(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_multi_broker_multi_scheduler.cfg')
 
-        self.assertEqual(2, len(self.schedulers))
+        assert 2 == len(self.schedulers)
         mysched1 = self.schedulers['scheduler-master']
         mysched2 = self.schedulers['scheduler-master2']
 
@@ -118,8 +118,8 @@ class TestMultibroker(AlignakTest):
         self.scheduler_loop(1, [[host1, 0, 'UP'], [svc1, 0, 'OK']], mysched1)
         self.scheduler_loop(1, [[host2, 0, 'UP']], mysched2)
 
-        self.assertEqual(2, len(mysched1.sched.brokers))
-        self.assertEqual(2, len(mysched2.sched.brokers))
+        assert 2 == len(mysched1.sched.brokers)
+        assert 2 == len(mysched2.sched.brokers)
 
         sched1bmaster = len(mysched1.sched.brokers['broker-master']['broks'])
         sched1bmaster2 = len(mysched1.sched.brokers['broker-master2']['broks'])
@@ -127,11 +127,11 @@ class TestMultibroker(AlignakTest):
         sched2bmaster = len(mysched1.sched.brokers['broker-master']['broks'])
         sched2bmaster2 = len(mysched1.sched.brokers['broker-master2']['broks'])
 
-        self.assertGreater(sched1bmaster, 2)
-        self.assertGreater(sched2bmaster, 2)
+        assert sched1bmaster > 2
+        assert sched2bmaster > 2
 
-        self.assertEqual(sched1bmaster, sched1bmaster2)
-        self.assertEqual(sched2bmaster, sched2bmaster2)
+        assert sched1bmaster == sched1bmaster2
+        assert sched2bmaster == sched2bmaster2
 
         # check dispatcher send right info to brokers
         with requests_mock.mock() as mockreq:
@@ -149,8 +149,8 @@ class TestMultibroker(AlignakTest):
                 elif hist.url == 'http://localhost:10772/put_conf':
                     broker2_conf = hist.json()
 
-            self.assertEqual(2, len(broker_conf['conf']['schedulers']))
-            self.assertEqual(2, len(broker2_conf['conf']['schedulers']))
+            assert 2 == len(broker_conf['conf']['schedulers'])
+            assert 2 == len(broker2_conf['conf']['schedulers'])
 
     def test_multibroker_multisched_realms(self):
         """ Test with realms / sub-realms
@@ -184,16 +184,16 @@ class TestMultibroker(AlignakTest):
         smaster_n = self.schedulers['scheduler-masterN']
         smaster_s = self.schedulers['scheduler-masterS']
 
-        self.assertEqual(smaster.sched.brokers.keys(), ['broker-master'])
+        assert smaster.sched.brokers.keys() == ['broker-master']
         self.assertItemsEqual(smaster_n.sched.brokers.keys(), ['broker-master', 'broker-masterN'])
-        self.assertEqual(smaster_s.sched.brokers.keys(), ['broker-master'])
+        assert smaster_s.sched.brokers.keys() == ['broker-master']
 
         brokermaster = None
         for sat in self.arbiter.dispatcher.satellites:
             if getattr(sat, 'broker_name', '') == 'broker-master':
                 brokermaster = sat
 
-        self.assertIsNotNone(brokermaster)
+        assert brokermaster is not None
         self.assertItemsEqual([smaster.sched.conf.uuid, smaster_n.sched.conf.uuid,
                                smaster_s.sched.conf.uuid], brokermaster.cfg['schedulers'])
 

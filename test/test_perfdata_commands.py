@@ -63,7 +63,7 @@ class TestPerfdataCommands(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_perfdata_commands.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
     def test_service_perfdata_command(self):
         """
@@ -88,7 +88,7 @@ class TestPerfdataCommands(AlignakTest):
         # initialize host/service state
         #--------------------------------------------------------------
         # Check we have a real command, not only a string
-        self.assertIsInstance(svc.__class__.perfdata_command, CommandCall)
+        assert isinstance(svc.__class__.perfdata_command, CommandCall)
 
         # Get a service check with perfdata
         self.scheduler_loop(1, [[svc, 0, 'OK | percent=99%']])
@@ -131,7 +131,7 @@ class TestPerfdataCommands(AlignakTest):
         # initialize host/service state
         #--------------------------------------------------------------
         # Check we have a real command, not only a string
-        self.assertIsInstance(host.perfdata_command, CommandCall)
+        assert isinstance(host.perfdata_command, CommandCall)
 
         # Get a host check with perfdata
         self.scheduler_loop(1, [[host, 0, 'UP | percent=99%']])
@@ -174,7 +174,7 @@ class TestPerfdataCommands(AlignakTest):
         # initialize host/service state
         #--------------------------------------------------------------
         # Check we have a real command, not only a string
-        self.assertIsInstance(svc.perfdata_command, CommandCall)
+        assert isinstance(svc.perfdata_command, CommandCall)
 
         # Get a service check with perfdata
         output = """  DISK OK - free space: / 3326 MB (56%);    |   /=2643MB;5948;5958;0;5968
@@ -190,24 +190,24 @@ class TestPerfdataCommands(AlignakTest):
         # Consume simulated check
         self.scheduler_loop(1, [])
 
-        self.assertIsInstance(svc, SchedulingItem)
+        assert isinstance(svc, SchedulingItem)
         print "Actions", self._sched.actions
         print 'Output', svc.output
         print 'Long output', svc.long_output
         print 'Performance data', svc.perf_data
 
         # Note that the check output is stripped
-        self.assertEqual(svc.output, u'DISK OK - free space: / 3326 MB (56%);')
+        assert svc.output == u'DISK OK - free space: / 3326 MB (56%);'
         # The check long output is also stripped
-        self.assertEqual(svc.long_output, u'/ 15272 MB (77%);\n'
-                                          u'/boot 68 MB (69%);\n'
-                                          u'/home 69357 MB (27%);\n'
-                                          u'/var/log 819 MB (84%);')
+        assert svc.long_output == u'/ 15272 MB (77%);\n' \
+                                          u'/boot 68 MB (69%);\n' \
+                                          u'/home 69357 MB (27%);\n' \
+                                          u'/var/log 819 MB (84%);'
         # And the performance data are also stripped
-        self.assertEqual(svc.perf_data, u'/=2643MB;5948;5958;0;5968 '
-                                        u'/boot=68MB;88;93;0;98 '
-                                        u'/home=69357MB;253404;253409;0;253414 '
-                                        u'/var/log=818MB;970;975;0;980')
+        assert svc.perf_data == u'/=2643MB;5948;5958;0;5968 ' \
+                                        u'/boot=68MB;88;93;0;98 ' \
+                                        u'/home=69357MB;253404;253409;0;253414 ' \
+                                        u'/var/log=818MB;970;975;0;980'
 
         # The event handler is raised to be launched
         self.assert_actions_count(1)

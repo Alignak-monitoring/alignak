@@ -16,9 +16,10 @@ matrix:
   - python: "2.6"
     env: TEST_SUITE=virtualenv
 
-# command to install dependencies
 install:
+  # Remove python warnings
   - unset PYTHONWARNINGS
+  # command to install dependencies
   # some are only used for travis/coveralls so we are installing them here only
   - ./test/setup_test.sh
 
@@ -31,10 +32,7 @@ script:
 
 # specific call to launch coverage data into coveralls.io
 after_success:
-  # to get coverage data with relative paths and not absolute we have to
-  # execute coveralls from the base directory of the project,
-  # so we need to move the .coverage file here :
-  - echo "Python version: $TRAVIS_PYTHON_VERSION"
+  # Send coverage report only for the Python 2.7 unit tests
   - if [[ $TEST_SUITE == 'unit' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./.travis/report_coveralls.sh; fi
 
 notifications:

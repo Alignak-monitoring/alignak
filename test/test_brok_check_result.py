@@ -62,13 +62,13 @@ class TestBrokCheckResult(AlignakTest):
             elif brok.type == 'service_check_result':
                 service_check_results.append(brok)
 
-        self.assertEqual(len(host_check_results), 1)
-        self.assertEqual(len(service_check_results), 1)
+        assert len(host_check_results) == 1
+        assert len(service_check_results) == 1
 
         hdata = unserialize(host_check_results[0].data)
-        self.assertEqual(hdata['state'], 'DOWN')
-        self.assertEqual(hdata['state_type'], 'SOFT')
+        assert hdata['state'] == 'DOWN'
+        assert hdata['state_type'] == 'SOFT'
 
         sdata = unserialize(service_check_results[0].data)
-        self.assertEqual(sdata['state'], 'OK')
-        self.assertEqual(sdata['state_type'], 'HARD')
+        assert sdata['state'] == 'OK'
+        assert sdata['state_type'] == 'HARD'

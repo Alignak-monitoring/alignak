@@ -59,7 +59,7 @@ class TestFlapping(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_flapping.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
         self._broker = self._sched.brokers['broker-master']
@@ -72,10 +72,10 @@ class TestFlapping(AlignakTest):
         # Get the hosts and services"
         host = self._sched.hosts.find_by_name("test_host_0")
         host.act_depend_of = []
-        self.assertTrue(host.flap_detection_enabled)
+        assert host.flap_detection_enabled
         router = self._sched.hosts.find_by_name("test_router_0")
         router.act_depend_of = []
-        self.assertTrue(router.flap_detection_enabled)
+        assert router.flap_detection_enabled
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.event_handler_enabled = False
         svc.act_depend_of = []
@@ -87,28 +87,28 @@ class TestFlapping(AlignakTest):
             [router, 0, 'UP | rtt=10'],
             [svc, 0, 'OK']
         ])
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
-        self.assertEqual('UP', router.state)
-        self.assertEqual('HARD', router.state_type)
-        self.assertEqual('OK', svc.state)
-        self.assertEqual('HARD', svc.state_type)
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
+        assert 'UP' == router.state
+        assert 'HARD' == router.state_type
+        assert 'OK' == svc.state
+        assert 'HARD' == svc.state_type
 
-        self.assertEqual(25, svc.low_flap_threshold)
+        assert 25 == svc.low_flap_threshold
 
         # Set the service as a problem
         self.scheduler_loop(3, [
             [svc, 2, 'Crit']
         ])
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual('HARD', svc.state_type)
+        assert 'CRITICAL' == svc.state
+        assert 'HARD' == svc.state_type
         # Ok, now go in flap!
         for i in xrange(1, 10):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
             self.scheduler_loop(1, [[svc, 2, 'Crit']])
 
         # Should be in flapping state now
-        self.assertTrue(svc.is_flapping)
+        assert svc.is_flapping
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
@@ -148,18 +148,18 @@ class TestFlapping(AlignakTest):
             (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
         ]
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
         # Now we put it as back :)
         # 10 is not enouth to get back as normal
         for i in xrange(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-        self.assertTrue(svc.is_flapping)
+        assert svc.is_flapping
 
         # 10 others can be good (near 4.1 %)
         for i in xrange(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-        self.assertFalse(svc.is_flapping)
+        assert not svc.is_flapping
 
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
@@ -207,7 +207,7 @@ class TestFlapping(AlignakTest):
                       u'FLAPPINGSTOP (OK);notify-service;Ok')
         ]
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
 
 if __name__ == '__main__':

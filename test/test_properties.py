@@ -53,6 +53,7 @@ import alignak
 from alignak.property import NONE_OBJECT
 
 from alignak_test import AlignakTest, unittest
+import pytest
 
 
 
@@ -64,26 +65,26 @@ class PropertyTests:
 
     def test_no_default_value(self):
         p = self.prop_class()
-        self.assertIs(p.default, NONE_OBJECT)
-        self.assertFalse(p.has_default)
-        self.assertTrue(p.required)
+        assert p.default is NONE_OBJECT
+        assert not p.has_default
+        assert p.required
 
     def test_default_value(self):
         default_value = object()
         p = self.prop_class(default=default_value)
-        self.assertIs(p.default, default_value)
-        self.assertTrue(p.has_default)
-        self.assertFalse(p.required)
+        assert p.default is default_value
+        assert p.has_default
+        assert not p.required
 
     def test_fill_brok(self):
         p = self.prop_class()
-        self.assertNotIn('full_status', p.fill_brok)
+        assert 'full_status' not in p.fill_brok
         p = self.prop_class(default='0', fill_brok=['full_status'])
-        self.assertIn('full_status', p.fill_brok)
+        assert 'full_status' in p.fill_brok
 
     def test_unused(self):
         p = self.prop_class()
-        self.assertFalse(p.unused)
+        assert not p.unused
 
 
 #AlignakTest
@@ -96,17 +97,17 @@ class TestBoolProp(PropertyTests, AlignakTest):
     def test_pythonize(self):
         p = self.prop_class()
         # allowed strings for `True`
-        self.assertEqual(p.pythonize("1"), True)
-        self.assertEqual(p.pythonize("yes"), True)
-        self.assertEqual(p.pythonize("true"), True)
-        self.assertEqual(p.pythonize("on"), True)
-        self.assertEqual(p.pythonize(["off", "on"]), True)
+        assert p.pythonize("1") == True
+        assert p.pythonize("yes") == True
+        assert p.pythonize("true") == True
+        assert p.pythonize("on") == True
+        assert p.pythonize(["off", "on"]) == True
         # allowed strings for `False`
-        self.assertEqual(p.pythonize("0"), False)
-        self.assertEqual(p.pythonize("no"), False)
-        self.assertEqual(p.pythonize("false"), False)
-        self.assertEqual(p.pythonize("off"), False)
-        self.assertEqual(p.pythonize(["on", "off"]), False)
+        assert p.pythonize("0") == False
+        assert p.pythonize("no") == False
+        assert p.pythonize("false") == False
+        assert p.pythonize("off") == False
+        assert p.pythonize(["on", "off"]) == False
 
 
 
@@ -117,10 +118,10 @@ class TestIntegerProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("1"), 1)
-        self.assertEqual(p.pythonize("0"), 0)
-        self.assertEqual(p.pythonize("1000.33"), 1000)
-        self.assertEqual(p.pythonize(["2000.66", "1000.33"]), 1000)
+        assert p.pythonize("1") == 1
+        assert p.pythonize("0") == 0
+        assert p.pythonize("1000.33") == 1000
+        assert p.pythonize(["2000.66", "1000.33"]) == 1000
 
 
 class TestFloatProp(PropertyTests, AlignakTest):
@@ -130,10 +131,10 @@ class TestFloatProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("1"), 1.0)
-        self.assertEqual(p.pythonize("0"), 0.0)
-        self.assertEqual(p.pythonize("1000.33"), 1000.33)
-        self.assertEqual(p.pythonize(["2000.66", "1000.33"]), 1000.33)
+        assert p.pythonize("1") == 1.0
+        assert p.pythonize("0") == 0.0
+        assert p.pythonize("1000.33") == 1000.33
+        assert p.pythonize(["2000.66", "1000.33"]) == 1000.33
 
 
 class TestStringProp(PropertyTests, AlignakTest):
@@ -143,11 +144,11 @@ class TestStringProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("1"), "1")
-        self.assertEqual(p.pythonize("yes"), "yes")
-        self.assertEqual(p.pythonize("0"), "0")
-        self.assertEqual(p.pythonize("no"), "no")
-        self.assertEqual(p.pythonize(["yes", "no"]), "no")
+        assert p.pythonize("1") == "1"
+        assert p.pythonize("yes") == "yes"
+        assert p.pythonize("0") == "0"
+        assert p.pythonize("no") == "no"
+        assert p.pythonize(["yes", "no"]) == "no"
 
 
 class TestCharProp(PropertyTests, AlignakTest):
@@ -157,9 +158,9 @@ class TestCharProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("c"), "c")
-        self.assertEqual(p.pythonize("cxxxx"), "c")
-        self.assertEqual(p.pythonize(["bxxxx", "cxxxx"]), "c")
+        assert p.pythonize("c") == "c"
+        assert p.pythonize("cxxxx") == "c"
+        assert p.pythonize(["bxxxx", "cxxxx"]) == "c"
         # this raises IndexError. is this intented?
         ## self.assertEqual(p.pythonize(""), "")
 
@@ -189,17 +190,17 @@ class TestListProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize(""), [])
-        self.assertEqual(p.pythonize("1,2,3"), ["1", "2", "3"])
+        assert p.pythonize("") == []
+        assert p.pythonize("1,2,3") == ["1", "2", "3"]
         # Default is to split on coma for list also.
-        self.assertEquals(p.pythonize(["1,2,3", "4,5,6"]), ["1","2","3", "4","5","6"])
+        assert p.pythonize(["1,2,3", "4,5,6"]) == ["1","2","3", "4","5","6"]
 
     def test_pythonize_nosplit(self):
         p = self.prop_class(split_on_coma=False)
-        self.assertEqual(p.pythonize(""), [])
-        self.assertEqual(p.pythonize("1,2,3"), ["1,2,3"])
+        assert p.pythonize("") == []
+        assert p.pythonize("1,2,3") == ["1,2,3"]
         # Default is to split on coma for list also.
-        self.assertEquals(p.pythonize(["1,2,3", "4,5,6"]), ["1,2,3", "4,5,6"])
+        assert p.pythonize(["1,2,3", "4,5,6"]) == ["1,2,3", "4,5,6"]
 
 
 
@@ -210,16 +211,16 @@ class TestLogLevelProp(PropertyTests, AlignakTest):
 
     def test_pythonize(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("NOTSET"), 0)
-        self.assertEqual(p.pythonize("DEBUG"), 10)
-        self.assertEqual(p.pythonize("INFO"), 20)
-        self.assertEqual(p.pythonize("WARN"), 30)
-        self.assertEqual(p.pythonize("WARNING"), 30)
-        self.assertEqual(p.pythonize("ERROR"), 40)
+        assert p.pythonize("NOTSET") == 0
+        assert p.pythonize("DEBUG") == 10
+        assert p.pythonize("INFO") == 20
+        assert p.pythonize("WARN") == 30
+        assert p.pythonize("WARNING") == 30
+        assert p.pythonize("ERROR") == 40
         ## 'FATAL' is not defined in std-module `logging._levelNames`
         #self.assertEqual(p.pythonize("FATAL"), 50)
-        self.assertEqual(p.pythonize("CRITICAL"), 50)
-        self.assertEqual(p.pythonize(["NOTSET", "CRITICAL"]), 50)
+        assert p.pythonize("CRITICAL") == 50
+        assert p.pythonize(["NOTSET", "CRITICAL"]) == 50
 
 
 ## :todo: fix DictProp error if no `elts_prop` are passed
@@ -240,40 +241,44 @@ class TestAddrProp(PropertyTests, AlignakTest):
 
     def test_pythonize_with_IPv4_addr(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("192.168.10.11:445"),
+        assert p.pythonize("192.168.10.11:445") == \
                          {'address': "192.168.10.11",
-                          'port': 445})
+                          'port': 445}
         # no colon, no port
-        self.assertEqual(p.pythonize("192.168.10.11"),
-                         {'address': "192.168.10.11"})
+        assert p.pythonize("192.168.10.11") == \
+                         {'address': "192.168.10.11"}
         # colon but no port number
-        self.assertRaises(ValueError, p.pythonize, "192.168.10.11:")
+        with pytest.raises(ValueError):
+            p.pythonize("192.168.10.11:")
         # only colon, no addr, no port number
-        self.assertRaises(ValueError, p.pythonize, ":")
+        with pytest.raises(ValueError):
+            p.pythonize(":")
         # no address, only port number
-        self.assertEqual(p.pythonize(":445"),
+        assert p.pythonize(":445") == \
                          {'address': "",
-                          'port': 445})
+                          'port': 445}
 
     def test_pythonize_with_hostname(self):
         p = self.prop_class()
-        self.assertEqual(p.pythonize("host_123:445"),
+        assert p.pythonize("host_123:445") == \
                          {'address': "host_123",
-                          'port': 445})
+                          'port': 445}
         # no colon, no port
-        self.assertEqual(p.pythonize("host_123"),
-                         {'address': "host_123"})
+        assert p.pythonize("host_123") == \
+                         {'address': "host_123"}
         # colon but no port number
-        self.assertRaises(ValueError, p.pythonize, "host_123:")
+        with pytest.raises(ValueError):
+            p.pythonize("host_123:")
         # only colon, no addr, no port number
-        self.assertRaises(ValueError, p.pythonize, ":")
+        with pytest.raises(ValueError):
+            p.pythonize(":")
         # no address, only port number
-        self.assertEqual(p.pythonize(":445"),
+        assert p.pythonize(":445") == \
                          {'address': "",
-                          'port': 445})
-        self.assertEqual(p.pythonize([":444", ":445"]),
+                          'port': 445}
+        assert p.pythonize([":444", ":445"]) == \
                          {'address': "",
-                          'port': 445})
+                          'port': 445}
 
     # :fixme: IPv6 addresses are no tested since they are not parsed
     # correcly

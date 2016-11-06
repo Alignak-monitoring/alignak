@@ -110,7 +110,7 @@ class DaemonsStartTest(AlignakTest):
         sleep(5)
 
         ret = arbiter.poll()
-        self.assertIsNotNone(ret, "Arbiter is still running!")
+        assert ret is not None, "Arbiter is still running!"
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
         for line in iter(arbiter.stderr.readline, b''):
@@ -166,7 +166,7 @@ class DaemonsStartTest(AlignakTest):
         sleep(5)
 
         ret = arbiter.poll()
-        self.assertIsNotNone(ret, "Arbiter still running!")
+        assert ret is not None, "Arbiter still running!"
         print("*** Arbiter exited on start!")
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
@@ -283,7 +283,7 @@ class DaemonsStartTest(AlignakTest):
                     print(">>> " + line.rstrip())
                 for line in iter(proc.stderr.readline, b''):
                     print(">>> " + line.rstrip())
-            self.assertIsNone(ret, "Daemon %s not started!" % name)
+            assert ret is None, "Daemon %s not started!" % name
             print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
 
         # Let the daemons start ...
@@ -291,8 +291,8 @@ class DaemonsStartTest(AlignakTest):
 
         print("Testing pid files and log files...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            self.assertTrue(os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon)
-            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon)
+            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         sleep(1)
 
@@ -315,15 +315,15 @@ class DaemonsStartTest(AlignakTest):
                 print(">>> " + line.rstrip())
             for line in iter(self.procs[name].stderr.readline, b''):
                 print(">>> " + line.rstrip())
-        self.assertIsNone(ret, "Daemon %s not started!" % name)
+        assert ret is None, "Daemon %s not started!" % name
         print("%s running (pid=%d)" % (name, self.procs[name].pid))
 
         sleep(1)
 
         print("Testing pid files and log files...")
         for daemon in ['arbiter']:
-            self.assertTrue(os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon)
-            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon)
+            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         # Let the arbiter build and dispatch its configuration
         sleep(5)
@@ -336,14 +336,14 @@ class DaemonsStartTest(AlignakTest):
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/ping" % (http, port), verify=False)
             data = raw_data.json()
-            self.assertEqual(data, 'pong', "Daemon %s  did not ping back!" % name)
+            assert data == 'pong', "Daemon %s  did not ping back!" % name
 
         print("Testing ping with satellite SSL and client not SSL")
         if ssl:
             for name, port in satellite_map.items():
                 raw_data = req.get("http://localhost:%s/ping" % port)
-                self.assertEqual('The client sent a plain HTTP request, but this server '
-                                 'only speaks HTTPS on this port.', raw_data.text)
+                assert 'The client sent a plain HTTP request, but this server ' \
+                                 'only speaks HTTPS on this port.' == raw_data.text
 
         print("Testing get_satellite_list")
         raw_data = req.get("%s://localhost:%s/get_satellite_list" %
@@ -355,15 +355,15 @@ class DaemonsStartTest(AlignakTest):
                         "receiver": ["receiver-master"],
                         "poller": ["poller-master"]}
         data = raw_data.json()
-        self.assertIsInstance(data, dict, "Data is not a dict!")
+        assert isinstance(data, dict), "Data is not a dict!"
         for k, v in expected_data.iteritems():
-            self.assertEqual(set(data[k]), set(v))
+            assert set(data[k]) == set(v)
 
         print("Testing have_conf")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
             data = raw_data.json()
-            self.assertTrue(data, "Daemon %s has no conf!" % daemon)
+            assert data, "Daemon %s has no conf!" % daemon
             # TODO: test with magic_hash
 
         print("Testing do_not_run")
@@ -381,8 +381,8 @@ class DaemonsStartTest(AlignakTest):
             raw_data = req.get("%s://localhost:%s/api" % (http, port), verify=False)
             data = raw_data.json()
             expected_data = set(name_to_interface[name](None).api())
-            self.assertIsInstance(data, list, "Data is not a list!")
-            self.assertEqual(set(data), expected_data, "Daemon %s has a bad API!" % name)
+            assert isinstance(data, list), "Data is not a list!"
+            assert set(data) == expected_data, "Daemon %s has a bad API!" % name
 
         print("Testing api_full")
         name_to_interface = {'arbiter': ArbiterInterface,
@@ -412,68 +412,68 @@ class DaemonsStartTest(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
             data = raw_data.json()
             if name == 'broker':
-                self.assertIsInstance(data, list, "Data is not a list!")
+                assert isinstance(data, list), "Data is not a list!"
             else:
-                self.assertIsInstance(data, dict, "Data is not a dict!")
+                assert isinstance(data, dict), "Data is not a dict!"
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/what_i_managed" % (http, port), verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, dict, "Data is not a dict!")
+            assert isinstance(data, dict), "Data is not a dict!"
             if name != 'arbiter':
-                self.assertEqual(1, len(data), "The dict must have 1 key/value!")
+                assert 1 == len(data), "The dict must have 1 key/value!"
 
         print("Testing get_external_commands")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_external_commands" % (http, port), verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, list, "Data is not a list!")
+            assert isinstance(data, list), "Data is not a list!"
 
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, unicode, "Data is not an unicode!")
+            assert isinstance(data, unicode), "Data is not an unicode!"
             # TODO: seems level get not same tham defined in *d.ini files
 
         print("Testing get_all_states")
         raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
         data = raw_data.json()
-        self.assertIsInstance(data, dict, "Data is not a dict!")
+        assert isinstance(data, dict), "Data is not a dict!"
         for daemon_type in data:
             daemons = data[daemon_type]
             print("Got Alignak state for: %ss / %d instances" % (daemon_type, len(daemons)))
             for daemon in daemons:
                 print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
-                self.assertTrue(daemon['alive'])
-                self.assertFalse('realm' in daemon)
-                self.assertTrue('realm_name' in daemon)
+                assert daemon['alive']
+                assert not ('realm' in daemon)
+                assert 'realm_name' in daemon
 
         print("Testing get_running_id")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, unicode, "Data is not an unicode!")
+            assert isinstance(data, unicode), "Data is not an unicode!"
 
         print("Testing fill_initial_broks")
         raw_data = req.get("%s://localhost:%s/fill_initial_broks" % (http, satellite_map['scheduler']), params={'bname': 'broker-master'}, verify=False)
         data = raw_data.json()
-        self.assertIsNone(data, "Data must be None!")
+        assert data is None, "Data must be None!"
 
         print("Testing get_broks")
         for name in ['scheduler', 'poller']:
             raw_data = req.get("%s://localhost:%s/get_broks" % (http, satellite_map[name]),
                                params={'bname': 'broker-master'}, verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, dict, "Data is not a dict!")
+            assert isinstance(data, dict), "Data is not a dict!"
 
         print("Testing get_returns")
         # get_return requested by scheduler to poller daemons
         for name in ['reactionner', 'receiver', 'poller']:
             raw_data = req.get("%s://localhost:%s/get_returns" % (http, satellite_map[name]), params={'sched_id': 0}, verify=False)
             data = raw_data.json()
-            self.assertIsInstance(data, list, "Data is not a list!")
+            assert isinstance(data, list), "Data is not a list!"
 
         print("Testing signals")
         for name, proc in self.procs.items():

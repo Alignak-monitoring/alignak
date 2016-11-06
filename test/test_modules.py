@@ -56,6 +56,7 @@ import time
 from alignak_test import AlignakTest, time_hacker
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
+import pytest
 
 
 class TestModules(AlignakTest):
@@ -70,32 +71,32 @@ class TestModules(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('./cfg/cfg_default.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self.show_configuration_logs()
 
         # No arbiter modules created
         modules = [m.module_alias for m in self.arbiter.myself.modules]
-        self.assertListEqual(modules, [])
+        assert modules == []
 
         # The only existing broker module is Example declared in the configuration
         modules = [m.module_alias for m in self.brokers['broker-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing poller module is Example declared in the configuration
         modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing receiver module is Example declared in the configuration
         modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing reactionner module is Example declared in the configuration
         modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # No scheduler modules created
         modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # Loading module logs
         self.assert_any_log_match(re.escape(
@@ -126,9 +127,9 @@ class TestModules(AlignakTest):
         :return:
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/modules/alignak_modules_nagios_parameters.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         # Log missing module
@@ -180,32 +181,32 @@ class TestModules(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self.show_configuration_logs()
 
         # No arbiter modules created
         modules = [m.module_alias for m in self.arbiter.myself.modules]
-        self.assertListEqual(modules, [])
+        assert modules == []
 
         # The only existing broker module is Example declared in the configuration
         modules = [m.module_alias for m in self.brokers['broker-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing poller module is Example declared in the configuration
         modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing receiver module is Example declared in the configuration
         modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # The only existing reactionner module is Example declared in the configuration
         modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
         # No scheduler modules created
         modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
-        self.assertListEqual(modules, ['Example'])
+        assert modules == ['Example']
 
     def test_modulemanager(self):
         """ Module manager manages its modules
@@ -215,7 +216,7 @@ class TestModules(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         time_hacker.set_real_time()
 
@@ -254,17 +255,17 @@ class TestModules(AlignakTest):
         ))
 
         my_module = self.modulemanager.instances[0]
-        self.assertTrue(my_module.is_external)
+        assert my_module.is_external
 
         # Get list of not external modules
-        self.assertListEqual([], self.modulemanager.get_internal_instances())
+        assert [] == self.modulemanager.get_internal_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            self.assertListEqual([], self.modulemanager.get_internal_instances(phase))
+            assert [] == self.modulemanager.get_internal_instances(phase)
 
         # Get list of external modules
-        self.assertListEqual([my_module], self.modulemanager.get_external_instances())
+        assert [my_module] == self.modulemanager.get_external_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            self.assertListEqual([my_module], self.modulemanager.get_external_instances(phase))
+            assert [my_module] == self.modulemanager.get_external_instances(phase)
 
         # Start external modules
         self.modulemanager.start_external_instances()
@@ -281,14 +282,14 @@ class TestModules(AlignakTest):
         ))
 
         # Check alive
-        self.assertIsNotNone(my_module.process)
-        self.assertTrue(my_module.process.is_alive())
+        assert my_module.process is not None
+        assert my_module.process.is_alive()
 
         # Kill the external module (normal stop is .stop_process)
         my_module.kill()
         time.sleep(0.1)
         # Should be dead (not normally stopped...) but we still know a process for this module!
-        self.assertIsNotNone(my_module.process)
+        assert my_module.process is not None
 
         # Stopping module logs
         self.assert_any_log_match(re.escape(
@@ -307,7 +308,7 @@ class TestModules(AlignakTest):
         # In fact it's too early, so it won't do it
 
         # Here the inst should still be dead
-        self.assertFalse(my_module.process.is_alive())
+        assert not my_module.process.is_alive()
 
         # So we lie
         my_module.last_init_try = -5
@@ -317,28 +318,28 @@ class TestModules(AlignakTest):
         # In fact it's too early, so it won't do it
 
         # Here the inst should be alive again
-        self.assertTrue(my_module.process.is_alive())
+        assert my_module.process.is_alive()
 
         # should be nothing more in to_restart of
         # the module manager
-        self.assertEqual([], self.modulemanager.to_restart)
+        assert [] == self.modulemanager.to_restart
 
         # Now we look for time restart so we kill it again
         my_module.kill()
         time.sleep(0.2)
-        self.assertFalse(my_module.process.is_alive())
+        assert not my_module.process.is_alive()
 
         # Should be too early
         self.modulemanager.check_alive_instances()
         self.modulemanager.try_to_restart_deads()
-        self.assertFalse(my_module.process.is_alive())
+        assert not my_module.process.is_alive()
         # We lie for the test again
         my_module.last_init_try = -5
         self.modulemanager.check_alive_instances()
         self.modulemanager.try_to_restart_deads()
 
         # Here the inst should be alive again
-        self.assertTrue(my_module.process.is_alive())
+        assert my_module.process.is_alive()
 
         # And we clear all now
         self.modulemanager.stop_all()

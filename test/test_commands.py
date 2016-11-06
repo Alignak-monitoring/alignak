@@ -70,19 +70,19 @@ class TestCommand(AlignakTest):
         c = Command()
         # No command_name nor command_line attribute exist!
         # Todo: __init__ may raise an exception because of this, no?
-        self.assertIsNone(getattr(c, 'command_name', None))
-        self.assertIsNone(getattr(c, 'command_line', None))
+        assert getattr(c, 'command_name', None) is None
+        assert getattr(c, 'command_line', None) is None
 
-        self.assertEqual(c.poller_tag, 'None')
-        self.assertEqual(c.reactionner_tag, 'None')
-        self.assertEqual(c.timeout, -1)
-        self.assertEqual(c.module_type, 'fork')
-        self.assertEqual(c.enable_environment_macros, False)
+        assert c.poller_tag == 'None'
+        assert c.reactionner_tag == 'None'
+        assert c.timeout == -1
+        assert c.module_type == 'fork'
+        assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
-        self.assertEqual('initial_command_status', b.type)
-        self.assertNotIn('command_name', b.data)
-        self.assertNotIn('command_line', b.data)
+        assert 'initial_command_status' == b.type
+        assert 'command_name' not in b.data
+        assert 'command_line' not in b.data
 
     def test_command_internal(self):
         """ Test internal command
@@ -97,21 +97,21 @@ class TestCommand(AlignakTest):
         }
         c = Command(t)
 
-        self.assertEqual(c.command_name, '_internal_host_up')
-        self.assertEqual(c.get_name(), '_internal_host_up')
-        self.assertEqual(c.command_line, '_internal_host_up')
+        assert c.command_name == '_internal_host_up'
+        assert c.get_name() == '_internal_host_up'
+        assert c.command_line == '_internal_host_up'
 
-        self.assertEqual(c.poller_tag, 'None')
-        self.assertEqual(c.reactionner_tag, 'None')
-        self.assertEqual(c.timeout, -1)
+        assert c.poller_tag == 'None'
+        assert c.reactionner_tag == 'None'
+        assert c.timeout == -1
         # Module type is the command name without the '_' prefix
-        self.assertEqual(c.module_type, 'internal_host_up')
-        self.assertEqual(c.enable_environment_macros, False)
+        assert c.module_type == 'internal_host_up'
+        assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
-        self.assertEqual('initial_command_status', b.type)
-        self.assertIn('command_name', b.data)
-        self.assertIn('command_line', b.data)
+        assert 'initial_command_status' == b.type
+        assert 'command_name' in b.data
+        assert 'command_line' in b.data
 
     def test_command_build(self):
         """ Test command build
@@ -129,20 +129,20 @@ class TestCommand(AlignakTest):
         }
         c = Command(t)
 
-        self.assertEqual(c.command_name, 'check_command_test')
-        self.assertEqual(c.get_name(), 'check_command_test')
-        self.assertEqual(c.command_line, '/tmp/dummy_command.sh $ARG1$ $ARG2$')
+        assert c.command_name == 'check_command_test'
+        assert c.get_name() == 'check_command_test'
+        assert c.command_line == '/tmp/dummy_command.sh $ARG1$ $ARG2$'
 
-        self.assertEqual(c.poller_tag, 'DMZ')
-        self.assertEqual(c.reactionner_tag, 'REAC')
-        self.assertEqual(c.timeout, -1)
-        self.assertEqual(c.module_type, 'nrpe-booster')
-        self.assertEqual(c.enable_environment_macros, False)
+        assert c.poller_tag == 'DMZ'
+        assert c.reactionner_tag == 'REAC'
+        assert c.timeout == -1
+        assert c.module_type == 'nrpe-booster'
+        assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
-        self.assertEqual('initial_command_status', b.type)
-        self.assertIn('command_name', b.data)
-        self.assertIn('command_line', b.data)
+        assert 'initial_command_status' == b.type
+        assert 'command_name' in b.data
+        assert 'command_line' in b.data
 
     def test_commands_pack(self):
         """ Test commands pack build
@@ -164,10 +164,10 @@ class TestCommand(AlignakTest):
         cs = Commands([c])
         dummy_call = "check_command_test!titi!toto"
         cc = CommandCall({"commands": cs, "call": dummy_call})
-        self.assertEqual(True, cc.is_valid())
-        self.assertEqual(c, cc.command)
-        self.assertEqual('DMZ', cc.poller_tag)
-        self.assertEqual('REAC', cc.reactionner_tag)
+        assert True == cc.is_valid()
+        assert c == cc.command
+        assert 'DMZ' == cc.poller_tag
+        assert 'REAC' == cc.reactionner_tag
 
 if __name__ == '__main__':
     unittest.main()

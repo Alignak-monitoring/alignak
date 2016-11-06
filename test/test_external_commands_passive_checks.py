@@ -39,13 +39,13 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_external_commands.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
         self.show_configuration_logs()
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         time_hacker.set_real_time()
 
@@ -62,7 +62,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
-        self.assertIsNotNone(host)
+        assert host is not None
 
         # Get dependent host
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
@@ -71,7 +71,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
-        self.assertIsNotNone(router)
+        assert router is not None
 
         # Get service
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
@@ -81,7 +81,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
-        self.assertIsNotNone(svc)
+        assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         # Active checks to set an initial state
@@ -96,8 +96,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
 
         self.scheduler_loop(1, [[svc, 2, 'Service is CRITICAL | value1=0 value2=0']])
         self.assert_checks_count(2)
@@ -107,8 +107,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(0, 'hostname test_router_0', 'command')
         self.assert_checks_match(1, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual('SOFT', svc.state_type)
+        assert 'CRITICAL' == svc.state
+        assert 'SOFT' == svc.state_type
 
         # Passive checks for hosts
         # ---------------------------------------------
@@ -117,23 +117,23 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[router, 0, 'Host is UP']])
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is UP', host.output)
+        assert 'DOWN' == host.state
+        assert 'Host is UP' == host.output
 
         # Receive passive host check Unreachable
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;1;Host is Unreachable' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[router, 0, 'Host is UP']])
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is Unreachable', host.output)
+        assert 'DOWN' == host.state
+        assert 'Host is Unreachable' == host.output
 
         # Receive passive host check Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
 
         # Passive checks with performance data
         # ---------------------------------------------
@@ -141,9 +141,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP|rtt=9999' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
-        self.assertEqual('rtt=9999', host.perf_data)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
+        assert 'rtt=9999' == host.perf_data
 
         # Now with full-blown performance data. Here we have to watch out:
         # Is a ";" a separator for the external command or is it
@@ -151,9 +151,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
-        self.assertEqual('rtt=9999;5;10;0;10000', host.perf_data)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
+        assert 'rtt=9999;5;10;0;10000' == host.perf_data
 
         # Passive checks for services
         # ---------------------------------------------
@@ -161,47 +161,47 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual('Service is WARNING', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert 'Service is WARNING' == svc.output
+        assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Remove acknowledge service
         excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert False == svc.problem_has_been_acknowledged
 
         # Receive passive service check Critical
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual('Service is CRITICAL', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert 'Service is CRITICAL' == svc.output
+        assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Service is going ok ...
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is OK' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('OK', svc.state)
-        self.assertEqual('Service is OK', svc.output)
+        assert 'OK' == svc.state
+        assert 'Service is OK' == svc.output
         # Acknowledge disappeared because service went OK
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert False == svc.problem_has_been_acknowledged
 
         # Passive checks for hosts - special case
         # ---------------------------------------------
@@ -214,8 +214,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         # Router did not changed state!
-        self.assertEqual('UP', router.state)
-        self.assertEqual('Router is UP', router.output)
+        assert 'UP' == router.state
+        assert 'Router is UP' == router.output
         router_last_check = router.last_chk
 
         # With timestamp in the past (- 1 seconds)
@@ -226,58 +226,58 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         # Router changed state!
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
-        self.assertEqual(router.last_chk, past)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
+        assert router.last_chk == past
 
         # Now with crappy characters, like é
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy character  èàçé   and spaces|rtt=9999' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(u'Output contains crappy character  èàçé   and spaces', router.output)
-        self.assertEqual('rtt=9999', router.perf_data)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert u'Output contains crappy character  èàçé   and spaces' == router.output
+        assert 'rtt=9999' == router.perf_data
+        assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Remove acknowledge router
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert False == router.problem_has_been_acknowledged
 
         # Router is Down
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Router is now Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;0;Router is Up' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', router.state)
-        self.assertEqual('Router is Up', router.output)
+        assert 'UP' == router.state
+        assert 'Router is Up' == router.output
         # Acknowledge disappeared because host went OK
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert False == router.problem_has_been_acknowledged
 
     def test_passive_checks_only_passively_checked(self):
         """ Test passive host/service checks as external commands
@@ -292,7 +292,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
-        self.assertIsNotNone(host)
+        assert host is not None
 
         # Get dependent host
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
@@ -301,7 +301,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
-        self.assertIsNotNone(router)
+        assert router is not None
 
         # Get service
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -309,7 +309,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
-        self.assertIsNotNone(svc)
+        assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
 
@@ -320,24 +320,24 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[router, 0, 'Host is UP']])
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is DOWN', host.output)
+        assert 'DOWN' == host.state
+        assert 'Host is DOWN' == host.output
 
         # Receive passive host check Unreachable
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;1;Host is Unreachable' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[router, 0, 'Router is UP']])
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual('Host is Unreachable', host.output)
+        assert 'DOWN' == host.state
+        assert 'Host is Unreachable' == host.output
         router_last_check = router.last_chk
 
         # Receive passive host check Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
 
         # Passive checks with performance data
         # ---------------------------------------------
@@ -345,9 +345,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP|rtt=9999' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
-        self.assertEqual('rtt=9999', host.perf_data)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
+        assert 'rtt=9999' == host.perf_data
 
         # Now with full-blown performance data. Here we have to watch out:
         # Is a ";" a separator for the external command or is it
@@ -355,9 +355,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', host.state)
-        self.assertEqual('Host is UP', host.output)
-        self.assertEqual('rtt=9999;5;10;0;10000', host.perf_data)
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
+        assert 'rtt=9999;5;10;0;10000' == host.perf_data
 
         # Passive checks for services
         # ---------------------------------------------
@@ -366,49 +366,49 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual('Service is WARNING', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert 'Service is WARNING' == svc.output
+        assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Remove acknowledge service
         excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert False == svc.problem_has_been_acknowledged
 
         # Receive passive service check Critical
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual('Service is CRITICAL', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert 'Service is CRITICAL' == svc.output
+        assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Service is going ok ...
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is OK|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('OK', svc.state)
-        self.assertEqual('Service is OK', svc.output)
-        self.assertEqual('rtt=9999;5;10;0;10000', svc.perf_data)
+        assert 'OK' == svc.state
+        assert 'Service is OK' == svc.output
+        assert 'rtt=9999;5;10;0;10000' == svc.perf_data
         # Acknowledge disappeared because service went OK
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert False == svc.problem_has_been_acknowledged
 
         # Passive checks for hosts - special case
         # ---------------------------------------------
@@ -418,8 +418,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', router.state)
-        self.assertEqual('Router is UP', router.output)
+        assert 'UP' == router.state
+        assert 'Router is UP' == router.output
 
         # With timestamp in the past (- 1 seconds)
         # The check is accepted because it is equal or after the last host check
@@ -428,9 +428,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
-        self.assertEqual(router.last_chk, past)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
+        assert router.last_chk == past
 
         # With timestamp in the past (- 3600 seconds)
         # The check is not be accepted
@@ -439,42 +439,42 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         # Router do not change state!
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
-        self.assertEqual(router.last_chk, past)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
+        assert router.last_chk == past
 
         # Now with crappy characters, like é
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy ' \
                 'character  èàçé   and spaces|rtt=9999' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(u'Output contains crappy character  èàçé   and spaces', router.output)
-        self.assertEqual('rtt=9999', router.perf_data)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert u'Output contains crappy character  èàçé   and spaces' == router.output
+        assert 'rtt=9999' == router.perf_data
+        assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Remove acknowledge router
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert False == router.problem_has_been_acknowledged
 
         # Router is Down
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
         # TODO: to be confirmed ... host should be unreachable because of its dependency with router
         # self.assertEqual('DOWN', host.state)
         # self.assertEqual('Router is Down', router.output)
@@ -485,17 +485,17 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Router is now Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;0;Router is Up' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', router.state)
-        self.assertEqual('Router is Up', router.output)
+        assert 'UP' == router.state
+        assert 'Router is Up' == router.output
         # Acknowledge disappeared because host went OK
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert False == router.problem_has_been_acknowledged
 
     def test_unknown_check_result_command_scheduler(self):
         """ Unknown check results commands managed by the scheduler
@@ -524,9 +524,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # We get an 'unknown_service_check_result'...
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_service_check_result']
-        self.assertTrue(len(broks) == 1)
+        assert len(broks) == 1
         # ...but no logs
-        self.assertEqual(0, self.count_logs())
+        assert 0 == self.count_logs()
 
         # Clear logs and broks
         self.clear_logs()
@@ -539,9 +539,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # We get an 'unknown_service_check_result'...
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_service_check_result']
-        self.assertTrue(len(broks) == 1)
+        assert len(broks) == 1
         # ...but no logs
-        self.assertEqual(0, self.count_logs())
+        assert 0 == self.count_logs()
 
         # Clear logs and broks
         self.clear_logs()
@@ -553,9 +553,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # A brok...
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_host_check_result']
-        self.assertTrue(len(broks) == 1)
+        assert len(broks) == 1
         # ...but no logs
-        self.assertEqual(0, self.count_logs())
+        assert 0 == self.count_logs()
 
         # ----- second part
         # Our scheduler External Commands Manager DOES NOT ACCEPT unknown passive checks...
@@ -576,7 +576,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
             print (b)
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_service_check_result']
-        self.assertTrue(len(broks) == 0)
+        assert len(broks) == 0
 
         # ...but a log
         self.show_logs()
@@ -595,7 +595,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # No brok...
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_service_check_result']
-        self.assertTrue(len(broks) == 0)
+        assert len(broks) == 0
 
         # ...but a log
         self.show_logs()
@@ -614,7 +614,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # No brok...
         broks = [b for b in self._broker['broks'].values()
                  if b.type == 'unknown_host_check_result']
-        self.assertTrue(len(broks) == 0)
+        assert len(broks) == 0
 
         # ...but a log
         self.show_logs()
@@ -651,7 +651,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # A brok...
         broks = [b for b in self._receiver.broks.values()
                  if b.type == 'unknown_service_check_result']
-        self.assertEqual(len(broks), 1)
+        assert len(broks) == 1
         # ...but no logs!
         self.show_logs()
         self.assert_no_log_match('Passive check result was received for host .*, '
@@ -674,7 +674,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # No brok...
         broks = [b for b in self._receiver.broks.values()
                  if b.type == 'unknown_service_check_result']
-        self.assertEqual(len(broks), 0)
+        assert len(broks) == 0
         # ...but a log
         self.show_logs()
         self.assert_any_log_match('Passive check result was received for host .*, '
@@ -689,21 +689,21 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
                     'output': 'Host is UP', 'perf_data': None}
         result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        self.assertEqual(expected, result)
+        assert expected == result
 
         # unknown_host_check_result_brok with perfdata
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP|rtt=9999'
         expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
                     'output': 'Host is UP', 'perf_data': 'rtt=9999'}
         result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        self.assertEqual(expected, result)
+        assert expected == result
 
         # unknown_service_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;host-checked;0;Everything OK'
         expected = {'time_stamp': 1234567890, 'return_code': '0', 'host_name': 'host-checked',
                     'output': 'Everything OK', 'perf_data': None}
         result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        self.assertEqual(expected, result)
+        assert expected == result
 
         # unknown_service_check_result_brok with perfdata
         excmd = '[1234567890] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING|rtt=9999;5;10;0;10000'
@@ -711,7 +711,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
                     'service_description': 'test_ok_0', 'return_code': '1',
                     'output': 'Service is WARNING', 'perf_data': 'rtt=9999;5;10;0;10000'}
         result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        self.assertEqual(expected, result)
+        assert expected == result
 
     def test_services_acknowledge(self):
         """ Test services acknowledge
@@ -724,7 +724,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
-        self.assertIsNotNone(host)
+        assert host is not None
     
         # Get dependent host
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
@@ -733,7 +733,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
-        self.assertIsNotNone(router)
+        assert router is not None
 
         # Get service
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
@@ -742,7 +742,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
-        self.assertIsNotNone(svc)
+        assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
     
         # Passive checks for services
@@ -752,55 +752,55 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual('Service is WARNING', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert 'Service is WARNING' == svc.output
+        assert False == svc.problem_has_been_acknowledged
     
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Add a comment
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert True == svc.problem_has_been_acknowledged
 
         # Remove acknowledge service
         excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('WARNING', svc.state)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'WARNING' == svc.state
+        assert False == svc.problem_has_been_acknowledged
     
         # Receive passive service check Critical
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual('Service is CRITICAL', svc.output)
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert 'Service is CRITICAL' == svc.output
+        assert False == svc.problem_has_been_acknowledged
     
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('CRITICAL', svc.state)
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert 'CRITICAL' == svc.state
+        assert True == svc.problem_has_been_acknowledged
     
         # Service is going ok ...
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is OK' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('OK', svc.state)
-        self.assertEqual('Service is OK', svc.output)
+        assert 'OK' == svc.state
+        assert 'Service is OK' == svc.output
         # Acknowledge disappeared because service went OK
-        self.assertEqual(False, svc.problem_has_been_acknowledged)
+        assert False == svc.problem_has_been_acknowledged
 
     def test_hosts_checks(self):
         """ Test hosts checks
@@ -812,14 +812,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.act_depend_of = []  # ignore the router which we depend of
         host.event_handler_enabled = False
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
-        self.assertIsNotNone(host)
+        assert host is not None
 
         # Get dependent host
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.event_handler_enabled = False
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
-        self.assertIsNotNone(router)
+        assert router is not None
 
         # Get service
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
@@ -828,7 +828,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
-        self.assertIsNotNone(svc)
+        assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         # Passive checks for hosts - active only checks
@@ -850,9 +850,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(0, 'hostname test_router_0', 'command')
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual(u'Host is DOWN', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'DOWN' == host.state
+        assert u'Host is DOWN' == host.output
+        assert False == host.problem_has_been_acknowledged
 
         # Host is UP
         # Set active host as DOWN
@@ -867,9 +867,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(0, 'hostname test_router_0', 'command')
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
-        self.assertEqual('UP', host.state)
-        self.assertEqual(u'Host is UP', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'UP' == host.state
+        assert u'Host is UP' == host.output
+        assert False == host.problem_has_been_acknowledged
 
         # Passive checks for hosts - active/passive checks
         # ------------------------------------------------
@@ -889,9 +889,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual(u'Host is DOWN', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'DOWN' == host.state
+        assert u'Host is DOWN' == host.output
+        assert False == host.problem_has_been_acknowledged
 
         # Host is UP
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % int(time.time())
@@ -905,9 +905,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('UP', host.state)
-        self.assertEqual(u'Host is UP', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'UP' == host.state
+        assert u'Host is UP' == host.output
+        assert False == host.problem_has_been_acknowledged
 
         # Passive checks for hosts - passive only checks
         # ------------------------------------------------
@@ -932,9 +932,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('DOWN', host.state)
-        self.assertEqual(u'Host is DOWN', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'DOWN' == host.state
+        assert u'Host is DOWN' == host.output
+        assert False == host.problem_has_been_acknowledged
 
         # Host is UP
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % int(time.time())
@@ -947,9 +947,9 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('UP', host.state)
-        self.assertEqual(u'Host is UP', host.output)
-        self.assertEqual(False, host.problem_has_been_acknowledged)
+        assert 'UP' == host.state
+        assert u'Host is UP' == host.output
+        assert False == host.problem_has_been_acknowledged
 
     def test_hosts_acknowledge(self):
         """ Test hosts acknowledge
@@ -962,7 +962,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
         print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
-        self.assertIsNotNone(host)
+        assert host is not None
 
         # Get dependent host
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
@@ -971,7 +971,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
-        self.assertIsNotNone(router)
+        assert router is not None
 
         # Get service
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
@@ -980,7 +980,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
-        self.assertIsNotNone(svc)
+        assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         # Passive checks for hosts - special case
@@ -996,71 +996,71 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
         self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(u'Host is DOWN', router.output)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert u'Host is DOWN' == router.output
+        assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
     
         # Remove acknowledge router
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert False == router.problem_has_been_acknowledged
 
         # Host is DOWN
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Host is DOWN' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(u'Host is DOWN', router.output)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert u'Host is DOWN' == router.output
+        assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Remove acknowledge router
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert False == router.problem_has_been_acknowledged
 
         # Router is Down
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
+        assert 'DOWN' == router.state
+        assert 'Router is Down' == router.output
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual(True, router.problem_has_been_acknowledged)
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
 
         # Router is now Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;0;Router is Up' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('UP', router.state)
-        self.assertEqual('Router is Up', router.output)
+        assert 'UP' == router.state
+        assert 'Router is Up' == router.output
         # Acknowledge disappeared because host went OK
-        self.assertEqual(False, router.problem_has_been_acknowledged)
+        assert False == router.problem_has_been_acknowledged
 

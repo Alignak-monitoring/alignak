@@ -49,17 +49,20 @@
 
 import re
 from alignak_test import unittest, AlignakTest
+import pytest
 
 
 class TestPropertyOverride(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_property_override.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self._sched = self.schedulers['scheduler-master'].sched
         
     def test_service_property_override(self):
         """ Property override """
+        self.print_header()
+
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc")
         svc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc")
         svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
@@ -77,51 +80,53 @@ class TestPropertyOverride(AlignakTest):
         svc22 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc2")
 
         # Checks we got the objects we need
-        self.assertIsNot(svc1, None)
-        self.assertIsNot(svc2, None)
-        self.assertIsNot(svc1proc1, None)
-        self.assertIsNot(svc1proc2, None)
-        self.assertIsNot(svc2proc1, None)
-        self.assertIsNot(svc2proc2, None)
-        self.assertIsNot(tp24x7, None)
-        self.assertIsNot(tptest, None)
-        self.assertIsNot(cgtest, None)
-        self.assertIsNot(cgadm, None)
-        self.assertIsNot(cmdsvc, None)
-        self.assertIsNot(cmdtest, None)
-        self.assertIsNot(svc12, None)
-        self.assertIsNot(svc22, None)
+        assert svc1 is not None
+        assert svc2 is not None
+        assert svc1proc1 is not None
+        assert svc1proc2 is not None
+        assert svc2proc1 is not None
+        assert svc2proc2 is not None
+        assert tp24x7 is not None
+        assert tptest is not None
+        assert cgtest is not None
+        assert cgadm is not None
+        assert cmdsvc is not None
+        assert cmdtest is not None
+        assert svc12 is not None
+        assert svc22 is not None
 
         # Check non overriden properies value
         for svc in (svc1, svc1proc1, svc1proc2, svc2proc1, svc12):
-            self.assertEqual(["test_contact"], svc.contact_groups)
-            self.assertEqual(self._sched.timeperiods[tp24x7.uuid].get_name(),
-                             self._sched.timeperiods[svc.maintenance_period].get_name())
-            self.assertEqual(1, svc.retry_interval)
-            self.assertIs(self._sched.commands[cmdsvc.uuid],
-                          self._sched.commands[svc.check_command.command.uuid])
-            self.assertEqual(["w","u","c","r","f","s"], svc.notification_options)
-            self.assertIs(True, svc.notifications_enabled)
+            assert ["test_contact"] == svc.contact_groups
+            assert self._sched.timeperiods[tp24x7.uuid].get_name() == \
+                             self._sched.timeperiods[svc.maintenance_period].get_name()
+            assert 1 == svc.retry_interval
+            assert self._sched.commands[cmdsvc.uuid] is \
+                          self._sched.commands[svc.check_command.command.uuid]
+            assert ["w","u","c","r","f","s"] == svc.notification_options
+            assert True is svc.notifications_enabled
 
         # Check overriden properies value
         for svc in (svc2, svc2proc2, svc22):
-            self.assertEqual(["admins"], svc.contact_groups)
-            self.assertEqual(self._sched.timeperiods[tptest.uuid].get_name(),
-                             self._sched.timeperiods[svc.maintenance_period].get_name())
-            self.assertEqual(3, svc.retry_interval)
-            self.assertIs(self._sched.commands[cmdtest.uuid],
-                          self._sched.commands[svc.check_command.command.uuid])
-            self.assertEqual(["c","r"], svc.notification_options)
-            self.assertIs(False, svc.notifications_enabled)
+            assert ["admins"] == svc.contact_groups
+            assert self._sched.timeperiods[tptest.uuid].get_name() == \
+                             self._sched.timeperiods[svc.maintenance_period].get_name()
+            assert 3 == svc.retry_interval
+            assert self._sched.commands[cmdtest.uuid] is \
+                          self._sched.commands[svc.check_command.command.uuid]
+            assert ["c","r"] == svc.notification_options
+            assert False is svc.notifications_enabled
 
 
 class TestPropertyOverrideConfigBroken(AlignakTest):
 
     def test_service_property_override_errors(self):
         """ Property override broken """
-        with self.assertRaises(SystemExit):
+        self.print_header()
+
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_property_override_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(
             "Configuration in host::test_host_02 is incorrect;")

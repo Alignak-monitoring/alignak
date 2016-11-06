@@ -65,8 +65,8 @@ class TestEscalations(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_escalations.cfg')
-        self.assertTrue(self.conf_is_correct)
+        self.setup_with_file('./cfg/cfg_escalations.cfg')
+        assert self.conf_is_correct
 
         # Our scheduler
         self._sched = self.schedulers['scheduler-master'].sched
@@ -75,9 +75,9 @@ class TestEscalations(AlignakTest):
         self._broker = self._sched.brokers['broker-master']
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         time_hacker.set_real_time()
 
@@ -103,9 +103,9 @@ class TestEscalations(AlignakTest):
             print("Monitoring logs: %s" % monitoring_logs)
 
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
-        self.assertEqual(len(expected_logs), len(monitoring_logs), monitoring_logs)
+        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
 
     def test_wildcard_in_service_description(self):
         """ Test wildcards in service description """
@@ -117,13 +117,13 @@ class TestEscalations(AlignakTest):
 
         # Todo: confirm this assertion
         # We only found one, but there are 3 services for this host ... perharps normal?
-        self.assertEqual(1, len(self_generated))
-        self.assertEqual(3, len(host_services))
+        assert 1 == len(self_generated)
+        assert 3 == len(host_services)
 
         # We must find at least one self generated escalation in our host services
         for svc in host_services:
             print("Service: %s" % self._sched.services[svc])
-            self.assertIn(self_generated[0].uuid, self._sched.services[svc].escalations)
+            assert self_generated[0].uuid in self._sched.services[svc].escalations
 
     def test_simple_escalation(self):
         """ Test a simple escalation (NAGIOS legacy) """
@@ -140,7 +140,7 @@ class TestEscalations(AlignakTest):
         svc.act_depend_of = []  # ignore the host
         svc.event_handler_enabled = False
         # The service has 3 defined escalations:
-        self.assertEqual(3, len(svc.escalations))
+        assert 3 == len(svc.escalations)
 
         # Service escalation levels
         # Generated service escalation has a name based upon SE uuid ... too hard to get it simply:)
@@ -150,18 +150,18 @@ class TestEscalations(AlignakTest):
         # self.assertIn(self_generated.uuid, svc.escalations)
 
         tolevel2 = self._sched.escalations.find_by_name('ToLevel2')
-        self.assertIsNotNone(tolevel2)
+        assert tolevel2 is not None
         # Todo: do not match any of both assertions ... wtf?
         # self.assertIs(tolevel2, Serviceescalation)
         # self.assertIs(tolevel2, Escalation)
-        self.assertIn(tolevel2.uuid, svc.escalations)
+        assert tolevel2.uuid in svc.escalations
 
         tolevel3 = self._sched.escalations.find_by_name('ToLevel3')
-        self.assertIsNotNone(tolevel3)
+        assert tolevel3 is not None
         # Todo: do not match any of both assertions ... wtf?
         # self.assertIs(tolevel3, Serviceescalation)
         # self.assertIs(tolevel3, Escalation)
-        self.assertIn(tolevel3.uuid, svc.escalations)
+        assert tolevel3.uuid in svc.escalations
 
         # To make tests quicker we make notifications sent very quickly
         svc.notification_interval = 0.001
@@ -172,20 +172,20 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [
             [host, 0, 'UP'], [svc, 0, 'OK']
         ])
-        self.assertEqual("HARD", host.state_type)
-        self.assertEqual("UP", host.state)
-        self.assertEqual(0, host.current_notification_number)
+        assert "HARD" == host.state_type
+        assert "UP" == host.state
+        assert 0 == host.current_notification_number
 
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number
 
         # Service goes to CRITICAL/SOFT
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
         # No notification...
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
 
         # ---
         # 1/
@@ -193,14 +193,14 @@ class TestEscalations(AlignakTest):
         # Service goes to CRITICAL/HARD
         time.sleep(1)
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
         # Service notification number must be 1
-        self.assertEqual(1, svc.current_notification_number)
+        assert 1 == svc.current_notification_number
         cnn = svc.current_notification_number
 
         # We did not yet got an escalated notification
-        self.assertEqual(0, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 0 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
         # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
         # We also have a notification to level1 contact which is a contact defined for the host
@@ -222,10 +222,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(2, svc.current_notification_number)
+        assert 2 == svc.current_notification_number
 
         # We got an escalated notification
-        self.assertEqual(1, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 1 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
         # Now also notified to the level2
         expected_logs += [
@@ -242,10 +242,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(3, svc.current_notification_number)
+        assert 3 == svc.current_notification_number
 
         # We got one more escalated notification
-        self.assertEqual(2, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 2 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
                        u'CRITICAL;notify-service;BAD')
@@ -260,10 +260,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(4, svc.current_notification_number)
+        assert 4 == svc.current_notification_number
 
         # We got one more escalated notification
-        self.assertEqual(3, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 3 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
                        u'CRITICAL;notify-service;BAD')
@@ -278,10 +278,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(5, svc.current_notification_number)
+        assert 5 == svc.current_notification_number
 
         # We got one more escalated notification
-        self.assertEqual(4, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 4 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
                        u'CRITICAL;notify-service;BAD'),
@@ -296,10 +296,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(6, svc.current_notification_number)
+        assert 6 == svc.current_notification_number
 
         # We got one more escalated notification but we notified level 3 !
-        self.assertEqual(5, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 5 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
                        u'CRITICAL;notify-service;BAD')
@@ -312,16 +312,16 @@ class TestEscalations(AlignakTest):
         # Now we send 10 more alerts and we are still always notifying only level3
         for i in range(10):
             # Service is still CRITICAL/HARD
-            time.sleep(.1)
+            time.sleep(.2)
             self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
             # Service notification number increased
-            self.assertEqual(7 + i, svc.current_notification_number)
+            assert 7 + i == svc.current_notification_number
 
             # We got one more escalated notification
-            self.assertEqual(6 + i,
+            assert 6 + i == \
                              len([n.escalated for n in
-                                  self._sched.actions.values() if n.escalated]))
+                                  self._sched.actions.values() if n.escalated])
             expected_logs += [
                 (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
                            u'CRITICAL;notify-service;BAD')
@@ -361,7 +361,7 @@ class TestEscalations(AlignakTest):
         svc.act_depend_of = []  # ignore the host
         svc.event_handler_enabled = False
         # The service has 3 defined escalations:
-        self.assertEqual(3, len(svc.escalations))
+        assert 3 == len(svc.escalations)
 
         # Service escalation levels
         # Generated service escalation has a name based upon SE uuid ... too hard to get it simply:)
@@ -371,18 +371,18 @@ class TestEscalations(AlignakTest):
         # self.assertIn(self_generated.uuid, svc.escalations)
 
         tolevel2 = self._sched.escalations.find_by_name('ToLevel2-time')
-        self.assertIsNotNone(tolevel2)
+        assert tolevel2 is not None
         # Todo: do not match any of both assertions ... wtf?
         # self.assertIs(tolevel2, Serviceescalation)
         # self.assertIs(tolevel2, Escalation)
-        self.assertIn(tolevel2.uuid, svc.escalations)
+        assert tolevel2.uuid in svc.escalations
 
         tolevel3 = self._sched.escalations.find_by_name('ToLevel3-time')
-        self.assertIsNotNone(tolevel3)
+        assert tolevel3 is not None
         # Todo: do not match any of both assertions ... wtf?
         # self.assertIs(tolevel3, Serviceescalation)
         # self.assertIs(tolevel3, Escalation)
-        self.assertIn(tolevel3.uuid, svc.escalations)
+        assert tolevel3.uuid in svc.escalations
 
         # To make tests quicker we make notifications sent very quickly
         svc.notification_interval = 0.001
@@ -393,20 +393,20 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [
             [host, 0, 'UP'], [svc, 0, 'OK']
         ])
-        self.assertEqual("HARD", host.state_type)
-        self.assertEqual("UP", host.state)
-        self.assertEqual(0, host.current_notification_number)
+        assert "HARD" == host.state_type
+        assert "UP" == host.state
+        assert 0 == host.current_notification_number
 
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number
 
         # Service goes to CRITICAL/SOFT
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
         # No notification...
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
 
         # ---
         # 1/
@@ -414,14 +414,14 @@ class TestEscalations(AlignakTest):
         # Service goes to CRITICAL/HARD
         time.sleep(1)
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
         # Service notification number must be 1
-        self.assertEqual(1, svc.current_notification_number)
+        assert 1 == svc.current_notification_number
         cnn = svc.current_notification_number
 
         # We did not yet got an escalated notification
-        self.assertEqual(0, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 0 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
         # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
         # We also have a notification to level1 contact which is a contact defined for the host
@@ -454,11 +454,11 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(2, svc.current_notification_number)
+        assert 2 == svc.current_notification_number
 
         # Todo: check if it should be ok - test_contact notification is considered escalated.
         # We got 2 escalated notifications!
-        self.assertEqual(2, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 2 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
         # Now also notified to the level2 and a second notification to the service defined contact
         expected_logs += [
@@ -485,10 +485,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(3, svc.current_notification_number)
+        assert 3 == svc.current_notification_number
 
         # We got 2 more escalated notification
-        self.assertEqual(4, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 4 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
                        u'CRITICAL;notify-service;BAD'),
@@ -515,10 +515,10 @@ class TestEscalations(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
         # Service notification number increased
-        self.assertEqual(4, svc.current_notification_number)
+        assert 4 == svc.current_notification_number
 
         # We got one more escalated notification
-        self.assertEqual(5, len([n.escalated for n in self._sched.actions.values() if n.escalated]))
+        assert 5 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
         expected_logs += [
             (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
                        u'CRITICAL;notify-service;BAD')
@@ -540,12 +540,12 @@ class TestEscalations(AlignakTest):
             self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
             # Service notification number increased
-            self.assertEqual(5 + i, svc.current_notification_number)
+            assert 5 + i == svc.current_notification_number
 
             # We got one more escalated notification
-            self.assertEqual(6 + i,
+            assert 6 + i == \
                              len([n.escalated for n in
-                                  self._sched.actions.values() if n.escalated]))
+                                  self._sched.actions.values() if n.escalated])
             expected_logs += [
                 (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
                            u'CRITICAL;notify-service;BAD')

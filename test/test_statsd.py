@@ -100,7 +100,7 @@ class TestStats(AlignakTest):
         :return:
         """
         self.print_header()
-        self.assertIn('statsmgr', globals())
+        assert 'statsmgr' in globals()
 
     def test_statsmgr_register_disabled(self):
         """ Stats manager is registered as disabled
@@ -113,11 +113,11 @@ class TestStats(AlignakTest):
         self.clear_logs()
 
         # Register stats manager as disabled
-        self.assertFalse(self.statsmgr.register('arbiter-master', 'arbiter',
+        assert not self.statsmgr.register('arbiter-master', 'arbiter',
                                            statsd_host='localhost', statsd_port=8125,
-                                           statsd_prefix='alignak', statsd_enabled=False))
-        self.assertIsNone(self.statsmgr.statsd_sock)
-        self.assertIsNone(self.statsmgr.statsd_addr)
+                                           statsd_prefix='alignak', statsd_enabled=False)
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Alignak internal statistics are disabled.'
         ), 0)
@@ -133,13 +133,13 @@ class TestStats(AlignakTest):
         self.clear_logs()
 
         # Register stats manager as enabled
-        self.assertIsNone(self.statsmgr.statsd_sock)
-        self.assertIsNone(self.statsmgr.statsd_addr)
-        self.assertTrue(self.statsmgr.register('arbiter-master', 'arbiter',
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8125,
-                                          statsd_prefix='alignak', statsd_enabled=True))
-        self.assertIsNotNone(self.statsmgr.statsd_sock)
-        self.assertIsNotNone(self.statsmgr.statsd_addr)
+                                          statsd_prefix='alignak', statsd_enabled=True)
+        assert self.statsmgr.statsd_sock is not None
+        assert self.statsmgr.statsd_addr is not None
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
             'to: localhost:8125, prefix: alignak'
@@ -162,21 +162,21 @@ class TestStats(AlignakTest):
         self.clear_logs()
 
         # Register stats manager as disabled
-        self.assertFalse(self.statsmgr.register('arbiter-master', 'arbiter',
+        assert not self.statsmgr.register('arbiter-master', 'arbiter',
                                            statsd_host='localhost', statsd_port=8125,
-                                           statsd_prefix='alignak', statsd_enabled=False))
+                                           statsd_prefix='alignak', statsd_enabled=False)
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Alignak internal statistics are disabled.'
         ), 0)
 
         # Connect to StatsD server
-        self.assertIsNone(self.statsmgr.statsd_sock)
-        self.assertIsNone(self.statsmgr.statsd_addr)
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
         # This method is not usually called directly, but it must refuse the connection
         # if it not enabled
-        self.assertFalse(self.statsmgr.load_statsd())
-        self.assertIsNone(self.statsmgr.statsd_sock)
-        self.assertIsNone(self.statsmgr.statsd_addr)
+        assert not self.statsmgr.load_statsd()
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
         self.assert_log_match(re.escape(
             'WARNING: [alignak.stats] StatsD is not enabled, connection is not allowed'
         ), 1)
@@ -192,9 +192,9 @@ class TestStats(AlignakTest):
         self.clear_logs()
 
         # Register stats manager as enabled (another port than the default one)
-        self.assertTrue(self.statsmgr.register('arbiter-master', 'arbiter',
+        assert self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8888,
-                                          statsd_prefix='alignak', statsd_enabled=True))
+                                          statsd_prefix='alignak', statsd_enabled=True)
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
             'to: localhost:8888, prefix: alignak'
@@ -225,27 +225,27 @@ class TestStats(AlignakTest):
                                statsd_prefix='alignak', statsd_enabled=True)
 
         # Create a metric statistic
-        self.assertEqual(self.statsmgr.stats, {})
+        assert self.statsmgr.stats == {}
         self.statsmgr.incr('test', 0)
-        self.assertEqual(len(self.statsmgr.stats), 1)
+        assert len(self.statsmgr.stats) == 1
         # Get min, max, cout and sum
-        self.assertEqual(self.statsmgr.stats['test'], (0, 0, 1, 0))
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:0|ms'
         # ), 3)
 
         # Increment
         self.statsmgr.incr('test', 1)
-        self.assertEqual(len(self.statsmgr.stats), 1)
-        self.assertEqual(self.statsmgr.stats['test'], (0, 1, 2, 1))
+        assert len(self.statsmgr.stats) == 1
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
         # ), 4)
 
         # Increment - the function is called 'incr' but it does not increment, it sets the value!
         self.statsmgr.incr('test', 1)
-        self.assertEqual(len(self.statsmgr.stats), 1)
-        self.assertEqual(self.statsmgr.stats['test'], (0, 1, 3, 2))
+        assert len(self.statsmgr.stats) == 1
+        assert self.statsmgr.stats['test'] == (0, 1, 3, 2)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
         # ), 5)

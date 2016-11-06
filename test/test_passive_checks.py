@@ -82,16 +82,16 @@ class TestPassiveChecks(AlignakTest):
         svc4 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_A", "test_ok_4")
 
-        self.assertEqual("d", host_a.freshness_state)
-        self.assertEqual("x", host_b.freshness_state)
-        self.assertEqual("o", host_c.freshness_state)
-        self.assertEqual("d", host_d.freshness_state)
+        assert "d" == host_a.freshness_state
+        assert "x" == host_b.freshness_state
+        assert "o" == host_c.freshness_state
+        assert "d" == host_d.freshness_state
 
-        self.assertEqual("o", svc0.freshness_state)
-        self.assertEqual("w", svc1.freshness_state)
-        self.assertEqual("c", svc2.freshness_state)
-        self.assertEqual("u", svc3.freshness_state)
-        self.assertEqual("x", svc4.freshness_state)
+        assert "o" == svc0.freshness_state
+        assert "w" == svc1.freshness_state
+        assert "c" == svc2.freshness_state
+        assert "u" == svc3.freshness_state
+        assert "x" == svc4.freshness_state
 
     def test_2_freshness_expiration(self):
         """ When freshness period expires, set freshness state and output
@@ -138,20 +138,20 @@ class TestPassiveChecks(AlignakTest):
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
 
-        self.assertEqual("OK", svc0.state)
-        self.assertEqual("WARNING", svc1.state)
-        self.assertEqual("CRITICAL", svc2.state)
-        self.assertEqual("UNKNOWN", svc3.state)
-        self.assertEqual("UNKNOWN", svc4.state)
+        assert "OK" == svc0.state
+        assert "WARNING" == svc1.state
+        assert "CRITICAL" == svc2.state
+        assert "UNKNOWN" == svc3.state
+        assert "UNKNOWN" == svc4.state
 
-        self.assertEqual("DOWN", host_a.state)
-        self.assertEqual("DOWN", host_b.state)
-        self.assertEqual("UP", host_c.state)
-        self.assertEqual("DOWN", host_d.state)
+        assert "DOWN" == host_a.state
+        assert "DOWN" == host_b.state
+        assert "UP" == host_c.state
+        assert "DOWN" == host_d.state
 
         items = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
         for item in items:
-            self.assertEqual("Freshness period expired", item.output)
+            assert "Freshness period expired" == item.output
 
         self.assert_actions_count(0)
         self.assert_checks_count(2)  # test_host_0 and test_router_0

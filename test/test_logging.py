@@ -77,11 +77,11 @@ class TestLogging(AlignakTest):
 
         :return:
         """
-        self.assertEqual(self.logger.level, INFO)
-        self.assertEqual(self.logger.name, "alignak")
+        assert self.logger.level == INFO
+        assert self.logger.name == "alignak"
         test_logger = logging.getLogger("alignak.test.name")
-        self.assertIsNotNone(test_logger.parent)
-        self.assertEqual(test_logger.parent, self.logger)
+        assert test_logger.parent is not None
+        assert test_logger.parent == self.logger
 
     def test_drop_low_level_msg(self):
         """ Drop low level messages
@@ -118,26 +118,26 @@ class TestLogging(AlignakTest):
         """
         # No console handler
         my_logger = setup_logger(None, log_console=False)
-        self.assertEqual(my_logger, self.logger)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(my_logger.name, "alignak")
-        self.assertEqual(len(my_logger.handlers), 1)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 1
 
         # With console handler
         my_logger = setup_logger(None)
-        self.assertEqual(my_logger, self.logger)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(my_logger.name, "alignak")
-        self.assertEqual(len(my_logger.handlers), 2)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 2
 
         # Only append one console handler but update the logger level if required
         my_logger = setup_logger(None, level=DEBUG)
-        self.assertEqual(my_logger.level, DEBUG)
-        self.assertEqual(len(my_logger.handlers), 2)
+        assert my_logger.level == DEBUG
+        assert len(my_logger.handlers) == 2
         # Back to INFO (default level value)
         my_logger = setup_logger(None, log_console=True)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(len(my_logger.handlers), 2)
+        assert my_logger.level == INFO
+        assert len(my_logger.handlers) == 2
 
         msg = "test message"
         self.logger.info(msg)
@@ -150,10 +150,10 @@ class TestLogging(AlignakTest):
         """
         # With console handler and human date
         my_logger = setup_logger(None, human_log=True, human_date_format=u'%Y-%m-%d %H:%M:%S')
-        self.assertEqual(my_logger, self.logger)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(my_logger.name, "alignak")
-        self.assertEqual(len(my_logger.handlers), 2)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 2
 
     def test_log_config_file(self):
         """ Logger setup allows to update alignak root logger with a timed rotating file handler
@@ -161,27 +161,27 @@ class TestLogging(AlignakTest):
         :return:
         """
         my_logger = setup_logger(None, log_file='./test.log')
-        self.assertEqual(my_logger, self.logger)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(my_logger.name, "alignak")
-        self.assertEqual(len(my_logger.handlers), 3)
-        self.assertTrue(os.path.exists('./test.log'))
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 3
+        assert os.path.exists('./test.log')
 
         # Only append one file handler if file used is the same
         my_logger = setup_logger(None, log_file='./test.log')
-        self.assertEqual(my_logger, self.logger)
-        self.assertEqual(my_logger.level, INFO)
-        self.assertEqual(my_logger.name, "alignak")
-        self.assertEqual(len(my_logger.handlers), 3)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 3
 
         # Only append one file handler if file used is the same
         my_logger = setup_logger(None, log_file=os.path.abspath('./test.log'))
-        self.assertEqual(len(my_logger.handlers), 3)
+        assert len(my_logger.handlers) == 3
 
         # Only append one file handler if file used is the same
         my_logger = setup_logger(None, log_file=os.path.abspath('./test2.log'))
-        self.assertEqual(len(my_logger.handlers), 4)
-        self.assertTrue(os.path.exists('./test2.log'))
+        assert len(my_logger.handlers) == 4
+        assert os.path.exists('./test2.log')
 
     def test_log_utf8(self):
         """ Log as UTF8 format

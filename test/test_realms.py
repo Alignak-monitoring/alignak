@@ -48,6 +48,7 @@ This file is used to test realms usage
 """
 import re
 from alignak_test import AlignakTest
+import pytest
 
 
 class TestRealms(AlignakTest):
@@ -67,7 +68,7 @@ class TestRealms(AlignakTest):
         self.setup_with_file('cfg/realms/no_defined_realms.cfg')
         # self.logger.setLevel("INFO")  # We need Info level to assert on logs received
         # self.assertTrue(self.conf_is_correct)
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self.show_logs()
         # The following log line is not available in the test catched log, because too early
         # in the configuration load process
@@ -75,29 +76,29 @@ class TestRealms(AlignakTest):
         self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         # Only one realm in the configuration
-        self.assertEqual(len(self.arbiter.conf.realms), 1)
+        assert len(self.arbiter.conf.realms) == 1
 
         # All realm exists
         realm = self.arbiter.conf.realms.find_by_name("All")
-        self.assertIsNotNone(realm)
-        self.assertEqual(realm.realm_name, 'All')
-        self.assertEqual(realm.alias, 'Self created default realm')
-        self.assertTrue(realm.default)
+        assert realm is not None
+        assert realm.realm_name == 'All'
+        assert realm.alias == 'Self created default realm'
+        assert realm.default
 
         # All realm is the default realm
         default_realm = self.arbiter.conf.realms.get_default()
-        self.assertEqual(realm, default_realm)
+        assert realm == default_realm
 
         # Default realm does not exist anymore
         realm = self.arbiter.conf.realms.find_by_name("Default")
-        self.assertIsNone(realm)
+        assert realm is None
 
         # Hosts without realm definition are in the Default realm
         hosts = self.arbiter.conf.hosts
-        self.assertEqual(len(hosts), 2)
+        assert len(hosts) == 2
         for host in hosts:
-            self.assertEqual(host.realm, default_realm.uuid)
-            self.assertEqual(host.realm_name, default_realm.get_name())
+            assert host.realm == default_realm.uuid
+            assert host.realm_name == default_realm.get_name()
 
     def test_no_broker_in_realm_warning(self):
         """ Test missing broker in realm
@@ -106,20 +107,20 @@ class TestRealms(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/realms/no_broker_in_realm_warning.cfg')
-        self.assertFalse(self.conf_is_correct)
-        self.assertIn(u"Error: the scheduler Scheduler-distant got no broker in its realm or upper",
-                      self.configuration_errors)
+        assert not self.conf_is_correct
+        assert u"Error: the scheduler Scheduler-distant got no broker in its realm or upper" in \
+                      self.configuration_errors
 
         dist = self.arbiter.conf.realms.find_by_name("Distant")
-        self.assertIsNotNone(dist)
+        assert dist is not None
         sched = self.arbiter.conf.schedulers.find_by_name("Scheduler-distant")
-        self.assertIsNotNone(sched)
-        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_brokers))
-        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_pollers))
-        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_reactionners))
-        self.assertEqual(0, len(self.arbiter.conf.realms[sched.realm].potential_receivers))
+        assert sched is not None
+        assert 0 == len(self.arbiter.conf.realms[sched.realm].potential_brokers)
+        assert 0 == len(self.arbiter.conf.realms[sched.realm].potential_pollers)
+        assert 0 == len(self.arbiter.conf.realms[sched.realm].potential_reactionners)
+        assert 0 == len(self.arbiter.conf.realms[sched.realm].potential_receivers)
 
     def test_realm_host_assignation(self):
         """ Test host realm assignation
@@ -129,7 +130,7 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         for scheduler in self.schedulers:
             if scheduler == 'Scheduler-1':
@@ -137,21 +138,21 @@ class TestRealms(AlignakTest):
             elif scheduler == 'Scheduler-2':
                 sched_realm2 = self.schedulers[scheduler]
         realm1 = self.arbiter.conf.realms.find_by_name('realm1')
-        self.assertIsNotNone(realm1)
+        assert realm1 is not None
         realm2 = self.arbiter.conf.realms.find_by_name('realm2')
-        self.assertIsNotNone(realm2)
+        assert realm2 is not None
 
         test_host_realm1 = sched_realm1.conf.hosts.find_by_name("test_host_realm1")
-        self.assertIsNotNone(test_host_realm1)
-        self.assertEqual(realm1.uuid, test_host_realm1.realm)
+        assert test_host_realm1 is not None
+        assert realm1.uuid == test_host_realm1.realm
         test_host_realm2 = sched_realm1.conf.hosts.find_by_name("test_host_realm2")
-        self.assertIsNone(test_host_realm2)
+        assert test_host_realm2 is None
 
         test_host_realm2 = sched_realm2.conf.hosts.find_by_name("test_host_realm2")
-        self.assertIsNotNone(test_host_realm2)
-        self.assertEqual(realm2.uuid, test_host_realm2.realm)
+        assert test_host_realm2 is not None
+        assert realm2.uuid == test_host_realm2.realm
         test_host_realm1 = sched_realm2.conf.hosts.find_by_name("test_host_realm1")
-        self.assertIsNone(test_host_realm1)
+        assert test_host_realm1 is None
 
     def test_realm_hostgroup_assignation(self):
         """ Test realm hostgroup assignation
@@ -162,10 +163,10 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
         # self.assertEqual(len(self.configuration_warnings), 1)
 
@@ -174,30 +175,30 @@ class TestRealms(AlignakTest):
         # )
 
         # Check all daemons exist
-        self.assertEqual(len(self.arbiter.conf.arbiters), 1)
-        self.assertEqual(len(self.arbiter.conf.schedulers), 2)
-        self.assertEqual(len(self.arbiter.conf.brokers), 2)
-        self.assertEqual(len(self.arbiter.conf.pollers), 2)
-        self.assertEqual(len(self.arbiter.conf.reactionners), 1)
-        self.assertEqual(len(self.arbiter.conf.receivers), 0)
+        assert len(self.arbiter.conf.arbiters) == 1
+        assert len(self.arbiter.conf.schedulers) == 2
+        assert len(self.arbiter.conf.brokers) == 2
+        assert len(self.arbiter.conf.pollers) == 2
+        assert len(self.arbiter.conf.reactionners) == 1
+        assert len(self.arbiter.conf.receivers) == 0
 
         for daemon in self.arbiter.conf.schedulers:
-            self.assertIn(daemon.get_name(), ['Scheduler-1', 'Scheduler-2'])
-            self.assertIn(daemon.realm, self.arbiter.conf.realms)
+            assert daemon.get_name() in ['Scheduler-1', 'Scheduler-2']
+            assert daemon.realm in self.arbiter.conf.realms
 
         for daemon in self.arbiter.conf.brokers:
-            self.assertIn(daemon.get_name(), ['Broker-1', 'Broker-2'])
-            self.assertIn(daemon.realm, self.arbiter.conf.realms)
+            assert daemon.get_name() in ['Broker-1', 'Broker-2']
+            assert daemon.realm in self.arbiter.conf.realms
 
         for daemon in self.arbiter.conf.pollers:
-            self.assertIn(daemon.get_name(), ['Poller-1', 'Poller-2'])
-            self.assertIn(daemon.realm, self.arbiter.conf.realms)
+            assert daemon.get_name() in ['Poller-1', 'Poller-2']
+            assert daemon.realm in self.arbiter.conf.realms
 
         in_realm2 = self.schedulers['Scheduler-1'].sched.hostgroups.find_by_name('in_realm2')
         realm1 = self.arbiter.conf.realms.find_by_name('realm1')
-        self.assertIsNotNone(realm1)
+        assert realm1 is not None
         realm2 = self.arbiter.conf.realms.find_by_name('realm2')
-        self.assertIsNotNone(realm2)
+        assert realm2 is not None
 
         for scheduler in self.schedulers:
             if scheduler == 'Scheduler-1':
@@ -207,26 +208,26 @@ class TestRealms(AlignakTest):
 
         # 1 and 2 are link to realm2 because they are in the hostgroup in_realm2
         test_host1_hg_realm2 = sched_realm2.conf.hosts.find_by_name("test_host1_hg_realm2")
-        self.assertIsNotNone(test_host1_hg_realm2)
-        self.assertEqual(realm2.uuid, test_host1_hg_realm2.realm)
-        self.assertIn(in_realm2.get_name(), [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host1_hg_realm2.hostgroups])
+        assert test_host1_hg_realm2 is not None
+        assert realm2.uuid == test_host1_hg_realm2.realm
+        assert in_realm2.get_name() in [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host1_hg_realm2.hostgroups]
 
         test_host2_hg_realm2 = sched_realm2.conf.hosts.find_by_name("test_host2_hg_realm2")
-        self.assertIsNotNone(test_host2_hg_realm2)
-        self.assertEqual(realm2.uuid, test_host2_hg_realm2.realm)
-        self.assertIn(in_realm2.get_name(), [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host2_hg_realm2.hostgroups])
+        assert test_host2_hg_realm2 is not None
+        assert realm2.uuid == test_host2_hg_realm2.realm
+        assert in_realm2.get_name() in [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host2_hg_realm2.hostgroups]
 
         test_host3_hg_realm2 = sched_realm2.conf.hosts.find_by_name("test_host3_hg_realm2")
-        self.assertIsNone(test_host3_hg_realm2)
+        assert test_host3_hg_realm2 is None
         test_host3_hg_realm2 = sched_realm1.conf.hosts.find_by_name("test_host3_hg_realm2")
-        self.assertIsNotNone(test_host3_hg_realm2)
-        self.assertEqual(realm1.uuid, test_host3_hg_realm2.realm)
-        self.assertIn(in_realm2.get_name(), [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host3_hg_realm2.hostgroups])
+        assert test_host3_hg_realm2 is not None
+        assert realm1.uuid == test_host3_hg_realm2.realm
+        assert in_realm2.get_name() in [sched_realm2.conf.hostgroups[hg].get_name() for hg in test_host3_hg_realm2.hostgroups]
 
         hostgroup_realm2 = sched_realm1.conf.hostgroups.find_by_name("in_realm2")
-        self.assertIsNotNone(hostgroup_realm2)
+        assert hostgroup_realm2 is not None
         hostgroup_realm2 = sched_realm2.conf.hostgroups.find_by_name("in_realm2")
-        self.assertIsNotNone(hostgroup_realm2)
+        assert hostgroup_realm2 is not None
 
     def test_sub_realms(self):
         """ Test realm / sub-realm
@@ -235,33 +236,33 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms_sub.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         world = self.arbiter.conf.realms.find_by_name('World')
-        self.assertIsNotNone(world)
+        assert world is not None
         europe = self.arbiter.conf.realms.find_by_name('Europe')
-        self.assertIsNotNone(europe)
+        assert europe is not None
         paris = self.arbiter.conf.realms.find_by_name('Paris')
-        self.assertIsNotNone(paris)
+        assert paris is not None
 
         # Get satellites of the world realm
-        self.assertEqual(len(world.get_satellites_by_type('arbiter')), 0)
-        self.assertEqual(len(world.get_satellites_by_type('scheduler')), 1)
-        self.assertEqual(len(world.get_satellites_by_type('broker')), 1)
-        self.assertEqual(len(world.get_satellites_by_type('poller')), 1)
-        self.assertEqual(len(world.get_satellites_by_type('receiver')), 0)
-        self.assertEqual(len(world.get_satellites_by_type('reactionner')), 1)
+        assert len(world.get_satellites_by_type('arbiter')) == 0
+        assert len(world.get_satellites_by_type('scheduler')) == 1
+        assert len(world.get_satellites_by_type('broker')) == 1
+        assert len(world.get_satellites_by_type('poller')) == 1
+        assert len(world.get_satellites_by_type('receiver')) == 0
+        assert len(world.get_satellites_by_type('reactionner')) == 1
 
         # Get satellites of the europe realm
-        self.assertEqual(len(europe.get_satellites_by_type('arbiter')), 0)
-        self.assertEqual(len(europe.get_satellites_by_type('scheduler')), 0)
-        self.assertEqual(len(europe.get_satellites_by_type('broker')), 1)
-        self.assertEqual(len(europe.get_satellites_by_type('poller')), 0)
-        self.assertEqual(len(europe.get_satellites_by_type('receiver')), 0)
-        self.assertEqual(len(europe.get_satellites_by_type('reactionner')), 0)
+        assert len(europe.get_satellites_by_type('arbiter')) == 0
+        assert len(europe.get_satellites_by_type('scheduler')) == 0
+        assert len(europe.get_satellites_by_type('broker')) == 1
+        assert len(europe.get_satellites_by_type('poller')) == 0
+        assert len(europe.get_satellites_by_type('receiver')) == 0
+        assert len(europe.get_satellites_by_type('reactionner')) == 0
 
-        self.assertIn(europe.uuid, world.get_realms())
-        self.assertIn(paris.uuid, europe.get_realms())
+        assert europe.uuid in world.get_realms()
+        assert paris.uuid in europe.get_realms()
 
     def test_sub_realms_assignations(self):
         """ Test realm / sub-realm for broker
@@ -270,21 +271,21 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms_sub.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         world = self.arbiter.conf.realms.find_by_name('World')
-        self.assertIsNotNone(world)
+        assert world is not None
         europe = self.arbiter.conf.realms.find_by_name('Europe')
-        self.assertIsNotNone(europe)
+        assert europe is not None
         paris = self.arbiter.conf.realms.find_by_name('Paris')
-        self.assertIsNotNone(paris)
+        assert paris is not None
         # Get the broker in the realm level
         bworld = self.arbiter.conf.brokers.find_by_name('B-world')
-        self.assertIsNotNone(bworld)
+        assert bworld is not None
 
         # broker should be in the world level
-        self.assertIs(bworld.uuid in world.potential_brokers, True)
+        assert (bworld.uuid in world.potential_brokers) is True
         # in europe too
-        self.assertIs(bworld.uuid in europe.potential_brokers, True)
+        assert (bworld.uuid in europe.potential_brokers) is True
         # and in paris too
-        self.assertIs(bworld.uuid in paris.potential_brokers, True)
+        assert (bworld.uuid in paris.potential_brokers) is True

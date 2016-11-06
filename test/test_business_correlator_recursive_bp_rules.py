@@ -52,7 +52,7 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_business_correlator_recursive.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self._sched = self.schedulers['scheduler-master'].sched
 
     def test_recursive(self):
@@ -69,8 +69,8 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
         hst_cor = self._sched.hosts.find_by_name("ht34-peret-2")
         hst_cor.act_depend_of = []  # no host checks on critical check results
         # Is a Business Rule, not a simple host...
-        self.assertTrue(hst_cor.got_business_rule)
-        self.assertIsNotNone(hst_cor.business_rule)
+        assert hst_cor.got_business_rule
+        assert hst_cor.business_rule is not None
         bp_rule = hst_cor.business_rule
 
         self.scheduler_loop(3, [
@@ -78,14 +78,14 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
             [host2, 2, 'DOWN | rtt=10']
         ])
 
-        self.assertEqual('DOWN', host1.state)
-        self.assertEqual('HARD', host1.state_type)
-        self.assertEqual('DOWN', host2.state)
-        self.assertEqual('HARD', host2.state_type)
+        assert 'DOWN' == host1.state
+        assert 'HARD' == host1.state_type
+        assert 'DOWN' == host2.state
+        assert 'HARD' == host2.state_type
 
         # When all is ok, the BP rule state is 4: undetermined!
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
-        self.assertEqual(4, state)
+        assert 4 == state
 
 if __name__ == '__main__':
     unittest.main()

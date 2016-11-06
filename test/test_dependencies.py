@@ -26,6 +26,7 @@ import time
 from copy import copy
 from nose.tools import nottest
 from alignak_test import AlignakTest
+import pytest
 
 
 class TestDependencies(AlignakTest):
@@ -51,9 +52,9 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
         hosts = self.schedulers['scheduler-master'].sched.hosts
         services = self.schedulers['scheduler-master'].sched.services
 
@@ -61,26 +62,26 @@ class TestDependencies(AlignakTest):
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
         router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
 
-        self.assertEqual(1, len(host.act_depend_of))
-        self.assertEqual(router.uuid, host.act_depend_of[0][0])
+        assert 1 == len(host.act_depend_of)
+        assert router.uuid == host.act_depend_of[0][0]
 
         host.act_depend_of[0][1] = ['d', 'x']
         for state in ['o', 'UP']:
             router.state = state
-            self.assertTrue(host.is_enable_action_dependent(hosts, services))
+            assert host.is_enable_action_dependent(hosts, services)
         for state in ['d', 'DOWN', 'x', 'UNREACHABLE']:
             router.state = state
-            self.assertFalse(host.is_enable_action_dependent(hosts, services))
+            assert not host.is_enable_action_dependent(hosts, services)
 
         host.act_depend_of[0][1] = ['n']
         for state in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
             router.state = state
-            self.assertTrue(host.is_enable_action_dependent(hosts, services))
+            assert host.is_enable_action_dependent(hosts, services)
 
         host.act_depend_of[0][1] = ['d', 'n']
         for state in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
             router.state = state
-            self.assertTrue(host.is_enable_action_dependent(hosts, services))
+            assert host.is_enable_action_dependent(hosts, services)
 
         # b. 3 dep
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
@@ -88,8 +89,8 @@ class TestDependencies(AlignakTest):
         router_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_00")
         host_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
 
-        self.assertEqual(1, len(host.act_depend_of))
-        self.assertEqual(router.uuid, host.act_depend_of[0][0])
+        assert 1 == len(host.act_depend_of)
+        assert router.uuid == host.act_depend_of[0][0]
         # add dependencies
         ado = copy(host.act_depend_of[0])
         ado[0] = router_00.uuid
@@ -97,10 +98,10 @@ class TestDependencies(AlignakTest):
         ado = copy(host.act_depend_of[0])
         ado[0] = host_00.uuid
         host.act_depend_of.append(ado)
-        self.assertEqual(3, len(host.act_depend_of))
-        self.assertEqual(router.uuid, host.act_depend_of[0][0])
-        self.assertEqual(router_00.uuid, host.act_depend_of[1][0])
-        self.assertEqual(host_00.uuid, host.act_depend_of[2][0])
+        assert 3 == len(host.act_depend_of)
+        assert router.uuid == host.act_depend_of[0][0]
+        assert router_00.uuid == host.act_depend_of[1][0]
+        assert host_00.uuid == host.act_depend_of[2][0]
 
         host.act_depend_of[0][1] = ['d', 'x']
         host.act_depend_of[1][1] = ['d', 'x']
@@ -111,22 +112,22 @@ class TestDependencies(AlignakTest):
                 router_00.state = r00state
                 for hstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
-                    self.assertTrue(host.is_enable_action_dependent(hosts, services))
+                    assert host.is_enable_action_dependent(hosts, services)
         for rstate in ['d', 'DOWN', 'x', 'UNREACHABLE']:
             router.state = rstate
             for r00state in ['o', 'UP']:
                 router_00.state = r00state
                 for hstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
-                    self.assertTrue(host.is_enable_action_dependent(hosts, services))
+                    assert host.is_enable_action_dependent(hosts, services)
             for r00state in ['d', 'DOWN', 'x', 'UNREACHABLE']:
                 router_00.state = r00state
                 for hstate in ['o', 'UP']:
                     host_00.state = hstate
-                    self.assertTrue(host.is_enable_action_dependent(hosts, services))
+                    assert host.is_enable_action_dependent(hosts, services)
                 for hstate in ['d', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
-                    self.assertFalse(host.is_enable_action_dependent(hosts, services))
+                    assert not host.is_enable_action_dependent(hosts, services)
 
         host.act_depend_of[1][1] = ['n']
         for rstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
@@ -135,7 +136,7 @@ class TestDependencies(AlignakTest):
                 router_00.state = r00state
                 for hstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
-                    self.assertTrue(host.is_enable_action_dependent(hosts, services))
+                    assert host.is_enable_action_dependent(hosts, services)
 
         host.act_depend_of[1][1] = ['d', 'n']
         for rstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
@@ -144,7 +145,7 @@ class TestDependencies(AlignakTest):
                 router_00.state = r00state
                 for hstate in ['o', 'UP', 'd', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
-                    self.assertTrue(host.is_enable_action_dependent(hosts, services))
+                    assert host.is_enable_action_dependent(hosts, services)
 
     def test_u_check_and_set_unreachability(self):
         """ Test the function check_and_set_unreachability in SchedulingItem
@@ -153,9 +154,9 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
         hosts = self.schedulers['scheduler-master'].sched.hosts
         services = self.schedulers['scheduler-master'].sched.services
 
@@ -164,8 +165,8 @@ class TestDependencies(AlignakTest):
         router_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_00")
         host_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
 
-        self.assertEqual(1, len(host.act_depend_of))
-        self.assertEqual(router.uuid, host.act_depend_of[0][0])
+        assert 1 == len(host.act_depend_of)
+        assert router.uuid == host.act_depend_of[0][0]
         # add dependencies
         ado = copy(host.act_depend_of[0])
         ado[0] = router_00.uuid
@@ -173,10 +174,10 @@ class TestDependencies(AlignakTest):
         ado = copy(host.act_depend_of[0])
         ado[0] = host_00.uuid
         host.act_depend_of.append(ado)
-        self.assertEqual(3, len(host.act_depend_of))
-        self.assertEqual(router.uuid, host.act_depend_of[0][0])
-        self.assertEqual(router_00.uuid, host.act_depend_of[1][0])
-        self.assertEqual(host_00.uuid, host.act_depend_of[2][0])
+        assert 3 == len(host.act_depend_of)
+        assert router.uuid == host.act_depend_of[0][0]
+        assert router_00.uuid == host.act_depend_of[1][0]
+        assert host_00.uuid == host.act_depend_of[2][0]
 
         for rstate in ['o', 'UP']:
             router.state = rstate
@@ -186,7 +187,7 @@ class TestDependencies(AlignakTest):
                     host_00.state = hstate
                     host.state = 'UP'
                     host.check_and_set_unreachability(hosts, services)
-                    self.assertEqual('UP', host.state)
+                    assert 'UP' == host.state
         for rstate in ['d', 'DOWN', 'x', 'UNREACHABLE']:
             router.state = rstate
             for r00state in ['o', 'UP']:
@@ -195,19 +196,19 @@ class TestDependencies(AlignakTest):
                     host_00.state = hstate
                     host.state = 'UP'
                     host.check_and_set_unreachability(hosts, services)
-                    self.assertEqual('UP', host.state)
+                    assert 'UP' == host.state
             for r00state in ['d', 'DOWN', 'x', 'UNREACHABLE']:
                 router_00.state = r00state
                 for hstate in ['o', 'UP']:
                     host_00.state = hstate
                     host.state = 'UP'
                     host.check_and_set_unreachability(hosts, services)
-                    self.assertEqual('UP', host.state)
+                    assert 'UP' == host.state
                 for hstate in ['d', 'DOWN', 'x', 'UNREACHABLE']:
                     host_00.state = hstate
                     host.state = 'UP'
                     host.check_and_set_unreachability(hosts, services)
-                    self.assertEqual('UNREACHABLE', host.state)
+                    assert 'UNREACHABLE' == host.state
 
     def test_c_dependencies(self):
         """ Test dependencies correctly loaded from config files
@@ -216,16 +217,16 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         # test_host_00 -> test_router_00
         test_host_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
-        self.assertEqual(1, len(test_host_00.act_depend_of))
+        assert 1 == len(test_host_00.act_depend_of)
         for (host, _, _, _) in test_host_00.act_depend_of:
-            self.assertEqual(self.schedulers['scheduler-master'].sched.hosts[host].host_name,
-                             'test_router_00')
+            assert self.schedulers['scheduler-master'].sched.hosts[host].host_name == \
+                             'test_router_00'
 
         # test test_host_00.test_ok_1 -> test_host_00
         # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
@@ -233,16 +234,16 @@ class TestDependencies(AlignakTest):
             "test_host_00", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self.schedulers['scheduler-master'].sched.hosts:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name,
-                                 'test_host_00')
+                assert self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name == \
+                                 'test_host_00'
             else:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.services[dep_id].service_description,
-                                 'test_ok_0')
+                assert self.schedulers['scheduler-master'].sched.services[dep_id].service_description == \
+                                 'test_ok_0'
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
         test_host_c = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_C")
-        self.assertEqual(2, len(test_host_c.act_depend_of))
+        assert 2 == len(test_host_c.act_depend_of)
         hosts = []
         for (host, _, _, _) in test_host_c.act_depend_of:
             hosts.append(self.schedulers['scheduler-master'].sched.hosts[host].host_name)
@@ -250,32 +251,32 @@ class TestDependencies(AlignakTest):
 
         # test test_host_E -> test_host_D
         test_host_e = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_E")
-        self.assertEqual(1, len(test_host_e.act_depend_of))
+        assert 1 == len(test_host_e.act_depend_of)
         for (host, _, _, _) in test_host_e.act_depend_of:
-            self.assertEqual(self.schedulers['scheduler-master'].sched.hosts[host].host_name,
-                             'test_host_D')
+            assert self.schedulers['scheduler-master'].sched.hosts[host].host_name == \
+                             'test_host_D'
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_parent_svc")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self.schedulers['scheduler-master'].sched.hosts:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name,
-                                 'test_host_11')
+                assert self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name == \
+                                 'test_host_11'
             else:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.services[dep_id].service_description,
-                                 'test_son_svc')
+                assert self.schedulers['scheduler-master'].sched.services[dep_id].service_description == \
+                                 'test_son_svc'
 
         # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self.schedulers['scheduler-master'].sched.hosts:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name,
-                                 'test_host_11')
+                assert self.schedulers['scheduler-master'].sched.hosts[dep_id].host_name == \
+                                 'test_host_11'
             else:
-                self.assertEqual(self.schedulers['scheduler-master'].sched.services[dep_id].service_description,
-                                 'test_ok_0')
+                assert self.schedulers['scheduler-master'].sched.services[dep_id].service_description == \
+                                 'test_ok_0'
 
     def test_c_host_passive_service_active(self):
         """ Test host passive and service active
@@ -284,14 +285,14 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "host_P", "service_A")
-        self.assertEqual(0, len(svc.act_depend_of))
+        assert 0 == len(svc.act_depend_of)
 
     def test_c_host_passive_service_passive(self):
         """ Test host passive and service passive
@@ -300,14 +301,14 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "host_P", "service_P")
-        self.assertEqual(0, len(svc.act_depend_of))
+        assert 0 == len(svc.act_depend_of)
 
     def test_c_host_active_service_passive(self):
         """ Test host active and service passive
@@ -316,15 +317,15 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "host_A", "service_P")
-        self.assertEqual(1, len(svc.act_depend_of))
-        self.assertEqual(host.uuid, svc.act_depend_of[0][0])
+        assert 1 == len(svc.act_depend_of)
+        assert host.uuid == svc.act_depend_of[0][0]
 
     def test_c_host_active_on_host_passive(self):
         """ Test host active on host active
@@ -333,13 +334,13 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A_P")
-        self.assertEqual(0, len(host1.act_depend_of))
+        assert 0 == len(host1.act_depend_of)
 
     def test_c_host_passive_on_host_active(self):
         """ Test host passive on host active
@@ -348,14 +349,14 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_A")
-        self.assertEqual(1, len(host1.act_depend_of))
-        self.assertEqual(host0.uuid, host1.act_depend_of[0][0])
+        assert 1 == len(host1.act_depend_of)
+        assert host0.uuid == host1.act_depend_of[0][0]
 
     def test_c_host_passive_on_host_passive(self):
         """ Test host passive on host passive
@@ -364,13 +365,13 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_P")
-        self.assertEqual(0, len(host1.act_depend_of))
+        assert 0 == len(host1.act_depend_of)
 
     def test_c_options_x(self):
         """ Test conf for 'x' (UNREACHABLE) in act_depend_of
@@ -380,15 +381,15 @@ class TestDependencies(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
 
-        self.assertTrue(self.conf_is_correct)
-        self.assertEqual(len(self.configuration_errors), 0)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_A")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_B")
-        self.assertEqual(1, len(host1.act_depend_of))
-        self.assertEqual(host0.uuid, host1.act_depend_of[0][0])
-        self.assertEqual(['d', 'x'], host1.act_depend_of[0][1])
+        assert 1 == len(host1.act_depend_of)
+        assert host0.uuid == host1.act_depend_of[0][0]
+        assert ['d', 'x'] == host1.act_depend_of[0][1]
 
     def test_c_notright1(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -397,10 +398,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
-        self.assertEqual(len(self.configuration_errors), 4)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 4
+        assert len(self.configuration_warnings) == 0
 
     def test_c_notright2(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
@@ -409,11 +410,11 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
         # TODO: improve test
-        self.assertEqual(len(self.configuration_errors), 4)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 4
+        assert len(self.configuration_warnings) == 0
 
     def test_c_notright3(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
@@ -422,10 +423,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad3.cfg')
-        self.assertEqual(len(self.configuration_errors), 2)
-        self.assertEqual(len(self.configuration_warnings), 8)
+        assert len(self.configuration_errors) == 2
+        assert len(self.configuration_warnings) == 8
 
     def test_c_notright4(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -434,10 +435,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad4.cfg')
-        self.assertEqual(len(self.configuration_errors), 2)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 2
+        assert len(self.configuration_warnings) == 0
 
     def test_c_notright5(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -446,10 +447,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad5.cfg')
-        self.assertEqual(len(self.configuration_errors), 2)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 2
+        assert len(self.configuration_warnings) == 0
 
     def test_c_notright6(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -458,10 +459,10 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad6.cfg')
-        self.assertEqual(len(self.configuration_errors), 2)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 2
+        assert len(self.configuration_warnings) == 0
 
     def test_c_notright7(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -470,11 +471,11 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad7.cfg')
         # Service test_ok_0_notknown not found for 2 hosts.
-        self.assertEqual(len(self.configuration_errors), 3)
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 0
 
     def test_a_s_service_host_up(self):
         """ Test dependency (checks and notifications) between the service and the host (case 1)
@@ -490,7 +491,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
@@ -507,16 +508,16 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(10)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("OK", svc.state)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
         self.assert_actions_count(0)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, but check first host')
+        assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
 
         # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
         # test_host_00 (parent/dependent)
@@ -528,9 +529,9 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD')
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 1 == svc.current_notification_number, 'Critical HARD'
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'VOID', 'command')
         self.assert_actions_match(1, 'servicedesc test_ok_0', 'command')
@@ -550,7 +551,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
@@ -568,16 +569,16 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(10)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("OK", svc.state)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
         self.assert_actions_count(0)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, but check first host')
+        assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
 
         # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
         # test_host_00 (parent/dependent)
@@ -589,11 +590,11 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("DOWN", host.state)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("UNREACHABLE", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notif, unreachable HARD')
-        self.assertEqual(1, host.current_notification_number, '1 notif, down HARD')
+        assert "DOWN" == host.state
+        assert "HARD" == svc.state_type
+        assert "UNREACHABLE" == svc.state
+        assert 0 == svc.current_notification_number, 'No notif, unreachable HARD'
+        assert 1 == host.current_notification_number, '1 notif, down HARD'
         self.assert_actions_count(1)
         self.assert_actions_match(0, '--hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
         self.assert_checks_count(10)
@@ -601,7 +602,7 @@ class TestDependencies(AlignakTest):
         # test service keep in UNREACHABLE
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("UNREACHABLE", svc.state)
+        assert "UNREACHABLE" == svc.state
 
     def test_a_s_host_host(self):
         """ Test the dependency between 2 hosts
@@ -616,7 +617,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
         host_00.checks_in_progress = []
@@ -635,8 +636,8 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host_00, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("UP", host_00.state)
-        self.assertEqual("UP", router_00.state)
+        assert "UP" == host_00.state
+        assert "UP" == router_00.state
         self.assert_actions_count(0)
         self.assert_checks_count(12)
         # self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
@@ -646,9 +647,9 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[router_00, 0, 'UP']])
         time.sleep(0.1)
-        self.assertEqual("DOWN", host_00.state)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual(1, host_00.current_notification_number, 'Critical HARD')
+        assert "DOWN" == host_00.state
+        assert "UP" == router_00.state
+        assert 1 == host_00.current_notification_number, 'Critical HARD'
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'hostname test_host_00', 'command')
         self.assert_checks_count(10)
@@ -670,7 +671,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         router_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_00")
         router_00.checks_in_progress = []
@@ -693,11 +694,11 @@ class TestDependencies(AlignakTest):
         # Host is UP
         self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
-        self.assertEqual(0, host.current_notification_number, 'All OK no notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        assert 0 == host.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(9)
 
@@ -705,10 +706,10 @@ class TestDependencies(AlignakTest):
         print "====================== svc CRITICAL ==================="
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
         # New host check
         self.assert_checks_count(12)
@@ -718,11 +719,11 @@ class TestDependencies(AlignakTest):
         print "====================== host DOWN ==================="
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
-        self.assertEqual(0, host.current_notification_number, 'No notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
+        assert 0 == host.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(12)
         self.show_checks()
@@ -732,11 +733,11 @@ class TestDependencies(AlignakTest):
         self.scheduler_loop(1, [[router_00, 0, 'UP']])
         time.sleep(0.1)
         self.show_checks()
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("DOWN", host.state)
-        self.assertEqual("UNREACHABLE", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
-        self.assertEqual(1, host.current_notification_number, '1 host notification')
+        assert "UP" == router_00.state
+        assert "DOWN" == host.state
+        assert "UNREACHABLE" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
+        assert 1 == host.current_notification_number, '1 host notification'
         self.assert_checks_count(9)
         self.show_checks()
         self.assert_actions_count(1)
@@ -760,7 +761,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         router_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_00")
         router_00.checks_in_progress = []
@@ -783,11 +784,11 @@ class TestDependencies(AlignakTest):
         # Host is UP
         self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
-        self.assertEqual(0, host.current_notification_number, 'All OK no notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        assert 0 == host.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(9)
 
@@ -795,10 +796,10 @@ class TestDependencies(AlignakTest):
         print "====================== svc CRITICAL ==================="
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
         # New host check
         self.assert_checks_count(12)
@@ -808,12 +809,12 @@ class TestDependencies(AlignakTest):
         print "====================== host DOWN ==================="
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("UP", router_00.state)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
-        self.assertEqual(0, host.current_notification_number, 'No notifications')
-        self.assertEqual(0, router_00.current_notification_number, 'No notifications')
+        assert "UP" == router_00.state
+        assert "UP" == host.state
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
+        assert 0 == host.current_notification_number, 'No notifications'
+        assert 0 == router_00.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
         self.assert_checks_count(12)
         self.show_checks()
@@ -823,12 +824,12 @@ class TestDependencies(AlignakTest):
         self.scheduler_loop(1, [[router_00, 2, 'DOWN']])
         time.sleep(0.1)
         self.show_checks()
-        self.assertEqual("DOWN", router_00.state)
-        self.assertEqual("UNREACHABLE", host.state)
-        self.assertEqual("UNREACHABLE", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'No notifications')
-        self.assertEqual(0, host.current_notification_number, 'No notification')
-        self.assertEqual(1, router_00.current_notification_number, '1 host notifications')
+        assert "DOWN" == router_00.state
+        assert "UNREACHABLE" == host.state
+        assert "UNREACHABLE" == svc.state
+        assert 0 == svc.current_notification_number, 'No notifications'
+        assert 0 == host.current_notification_number, 'No notification'
+        assert 1 == router_00.current_notification_number, '1 host notifications'
         self.assert_checks_count(9)
         self.show_checks()
         self.assert_actions_count(1)
@@ -842,7 +843,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
         host.checks_in_progress = []
@@ -869,12 +870,12 @@ class TestDependencies(AlignakTest):
         time.sleep(0.1)
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc1.state_type)
-        self.assertEqual("OK", svc1.state)
-        self.assertEqual("HARD", svc2.state_type)
-        self.assertEqual("OK", svc2.state)
-        self.assertEqual("HARD", host.state_type)
-        self.assertEqual("UP", host.state)
+        assert "HARD" == svc1.state_type
+        assert "OK" == svc1.state
+        assert "HARD" == svc2.state_type
+        assert "OK" == svc2.state
+        assert "HARD" == host.state_type
+        assert "UP" == host.state
         self.assert_actions_count(0)
         self.assert_checks_count(9)
 
@@ -883,22 +884,22 @@ class TestDependencies(AlignakTest):
         time.sleep(0.1)
         self.assert_actions_count(0)
         self.assert_checks_count(12)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc1.state)
-        self.assertEqual("OK", svc2.state)
+        assert "UP" == host.state
+        assert "OK" == svc1.state
+        assert "OK" == svc2.state
         self.assert_checks_match(9, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(9, 'hostname test_host_00', 'command')
 
         print "====================== host UP ==================="
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("CRITICAL", svc1.state)
-        self.assertEqual("CRITICAL", svc2.state)
+        assert "UP" == host.state
+        assert "CRITICAL" == svc1.state
+        assert "CRITICAL" == svc2.state
         self.show_actions()
-        self.assertEqual(0, host.current_notification_number, 'No notifications')
-        self.assertEqual(1, svc1.current_notification_number, '1 notification')
-        self.assertEqual(1, svc2.current_notification_number, '1 notification')
+        assert 0 == host.current_notification_number, 'No notifications'
+        assert 1 == svc1.current_notification_number, '1 notification'
+        assert 1 == svc2.current_notification_number, '1 notification'
         self.assert_actions_count(4)
         self.assert_actions_match(0, 'VOID', 'command')
         self.assert_actions_match(1, 'VOID', 'command')
@@ -925,7 +926,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('check_freshness', 1)
 
@@ -933,7 +934,7 @@ class TestDependencies(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_E", "test_ok_0")
 
-        self.assertEqual(0, len(svc.act_depend_of))
+        assert 0 == len(svc.act_depend_of)
 
         # it's passive, create check manually
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
@@ -942,14 +943,14 @@ class TestDependencies(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         time.sleep(0.1)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
+        assert "UP" == host.state
+        assert "OK" == svc.state
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual("UP", host.state)
-        self.assertEqual("CRITICAL", svc.state)
+        assert "UP" == host.state
+        assert "CRITICAL" == svc.state
         self.assert_actions_count(0)
         self.assert_checks_count(12)
 
@@ -960,7 +961,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('check_freshness', 1)
 
@@ -968,21 +969,21 @@ class TestDependencies(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "host_A", "service_P")
 
-        self.assertEqual(1, len(svc.act_depend_of))
+        assert 1 == len(svc.act_depend_of)
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;0;Service is OK' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         time.sleep(0.1)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
+        assert "UP" == host.state
+        assert "OK" == svc.state
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual("UP", host.state)
-        self.assertEqual("OK", svc.state)
+        assert "UP" == host.state
+        assert "OK" == svc.state
         self.assert_actions_count(0)
         self.assert_checks_count(11)
         # checks_logs=[[[
@@ -1001,8 +1002,8 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(10, 'waitdep', 'status')
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        self.assertEqual("DOWN", host.state)
-        self.assertEqual("UNREACHABLE", svc.state)
+        assert "DOWN" == host.state
+        assert "UNREACHABLE" == svc.state
 
     def test_c_h_hostdep_withno_depname(self):
         """ Test for host dependency dispatched on all hosts of an hostgroup
@@ -1012,18 +1013,18 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/dependencies/hostdep_through_hostgroup.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
-        self.assertIsNotNone(host0)
+        assert host0 is not None
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_1")
-        self.assertIsNotNone(host1)
+        assert host1 is not None
 
         # Should got a link between host1 and host0 + link between host1 and router
-        self.assertEqual(len(host1.act_depend_of), 2)
+        assert len(host1.act_depend_of) == 2
         l = host1.act_depend_of[0]
         h = l[0]  # the host that host1 depend on
-        self.assertEqual(host0.uuid, h)
+        assert host0.uuid == h
 
     def test_c_h_explodehostgroup(self):
         """ Test for service dependencies dispatched on all hosts of an hostgroup
@@ -1033,14 +1034,14 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_explode_hostgroup.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
 
         # First version: explode_hostgroup property defined
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_router_0", "SNMP"
         )
-        self.assertEqual(len(svc.act_depend_of_me), 2)
+        assert len(svc.act_depend_of_me) == 2
         dependent_services = []
         for service in svc.act_depend_of_me:
             dependent_services.append(service[0])
@@ -1053,14 +1054,14 @@ class TestDependencies(AlignakTest):
             find_srv_by_name_and_hostname("test_router_0", "CPU")
         service_dependencies.append(service_dependency_cpu.uuid)
 
-        self.assertEqual(set(service_dependencies), set(dependent_services))
+        assert set(service_dependencies) == set(dependent_services)
 
 
         # Second version: hostgroup_name and no dependent_hostgroup_name property defined
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_router_0", "SNMP"
         )
-        self.assertEqual(len(svc.act_depend_of_me), 2)
+        assert len(svc.act_depend_of_me) == 2
         dependent_services = []
         for service in svc.act_depend_of_me:
             dependent_services.append(service[0])
@@ -1073,7 +1074,7 @@ class TestDependencies(AlignakTest):
             find_srv_by_name_and_hostname("test_router_0", "CPU")
         service_dependencies.append(service_dependency_cpu.uuid)
 
-        self.assertEqual(set(service_dependencies), set(dependent_services))
+        assert set(service_dependencies) == set(dependent_services)
 
     def test_c_h_implicithostgroups(self):
         """ All hosts in the hostgroup get the service dependencies. An host in the group can have
@@ -1083,52 +1084,52 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_implicit_hostgroup.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # Services on host_0
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
-        self.assertIsNotNone(svc)
+        assert svc is not None
 
         svc_snmp = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "SNMP")
-        self.assertIsNotNone(svc_snmp)
+        assert svc_snmp is not None
         svc_postfix = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "POSTFIX")
-        self.assertIsNotNone(svc_postfix)
+        assert svc_postfix is not None
         svc_cpu = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "CPU")
-        self.assertIsNotNone(svc_cpu)
+        assert svc_cpu is not None
 
         # Service on router_0
         svc_snmp2 = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_router_0", "SNMP")
-        self.assertIsNot(svc_snmp2, None)
+        assert svc_snmp2 is not None
 
         svc_postfix2 = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_router_0", "POSTFIX")
-        self.assertIsNotNone(svc_postfix2)
+        assert svc_postfix2 is not None
 
         # SNMP on the host is in the dependencies of POSTFIX of the host
-        self.assertIn(svc_snmp.uuid, [c[0] for c in svc_postfix.act_depend_of])
+        assert svc_snmp.uuid in [c[0] for c in svc_postfix.act_depend_of]
         # SNMP on the router is in the dependencies of POSTFIX of the router
-        self.assertIn(svc_snmp2.uuid, [c[0] for c in svc_postfix2.act_depend_of])
+        assert svc_snmp2.uuid in [c[0] for c in svc_postfix2.act_depend_of]
 
         # host_0 also has its SSH services and dependencies ...
         svc_postfix = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "POSTFIX_BYSSH")
-        self.assertIsNot(svc_postfix, None)
+        assert svc_postfix is not None
 
         svc_ssh = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "SSH")
-        self.assertIsNot(svc_ssh, None)
+        assert svc_ssh is not None
 
         svc_cpu = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("test_host_0", "CPU_BYSSH")
-        self.assertIsNot(svc_cpu, None)
+        assert svc_cpu is not None
 
-        self.assertIn(svc_ssh.uuid, [c[0] for c in svc_postfix.act_depend_of])
-        self.assertIn(svc_ssh.uuid, [c[0] for c in svc_cpu.act_depend_of])
+        assert svc_ssh.uuid in [c[0] for c in svc_postfix.act_depend_of]
+        assert svc_ssh.uuid in [c[0] for c in svc_cpu.act_depend_of]
 
     @nottest
     # Todo: test this @durieux
@@ -1140,17 +1141,17 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         for s in self.schedulers['scheduler-master'].sched.services:
             print s.get_full_name()
 
         NRPE = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("myspecifichost", "NRPE")
-        self.assertIsNotNone(NRPE)
+        assert NRPE is not None
         Load = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("myspecifichost", "Load")
-        self.assertIsNotNone(Load)
+        assert Load is not None
 
         # Direct service dependency definition is valid ...
-        self.assertIn(NRPE.uuid, [e[0] for e in Load.act_depend_of])
+        assert NRPE.uuid in [e[0] for e in Load.act_depend_of]

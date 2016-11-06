@@ -71,7 +71,7 @@ class Testretention(AlignakTest):
                 'Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual(True, svc.problem_has_been_acknowledged)
+        assert True == svc.problem_has_been_acknowledged
 
         comments = []
         for comm_uuid, comment in self.schedulers['scheduler-master'].sched.comments.iteritems():
@@ -79,22 +79,22 @@ class Testretention(AlignakTest):
 
         retention = self.schedulers['scheduler-master'].sched.get_retention_data()
 
-        self.assertIn('hosts', retention)
-        self.assertIn('services', retention)
-        self.assertEqual(len(retention['hosts']), 2)
-        self.assertEqual(len(retention['services']), 1)
+        assert 'hosts' in retention
+        assert 'services' in retention
+        assert len(retention['hosts']) == 2
+        assert len(retention['services']) == 1
 
         # Test if can json.dumps (serialize)
         for hst in retention['hosts']:
             try:
                 t = json.dumps(retention['hosts'][hst])
             except Exception as err:
-                self.assertTrue(False, 'Json dumps impossible: %s' % str(err))
+                assert False, 'Json dumps impossible: %s' % str(err)
         for service in retention['services']:
             try:
                 t = json.dumps(retention['services'][service])
             except Exception as err:
-                self.assertTrue(False, 'Json dumps impossible: %s' % str(err))
+                assert False, 'Json dumps impossible: %s' % str(err)
 
         # Test after get retention not have broken something
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
@@ -117,42 +117,42 @@ class Testretention(AlignakTest):
 
         self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
         time.sleep(0.1)
-        self.assertEqual(0, len(self.schedulers['scheduler-master'].sched.comments))
-        self.assertEqual(0, len(hostn.notifications_in_progress))
+        assert 0 == len(self.schedulers['scheduler-master'].sched.comments)
+        assert 0 == len(hostn.notifications_in_progress)
 
         self.schedulers['scheduler-master'].sched.restore_retention_data(retention)
 
-        self.assertEqual(hostn.last_state, 'DOWN')
-        self.assertEqual(svcn.last_state, 'CRITICAL')
+        assert hostn.last_state == 'DOWN'
+        assert svcn.last_state == 'CRITICAL'
 
-        self.assertNotEqual(host.uuid, hostn.uuid)
+        assert host.uuid != hostn.uuid
 
         # check downtime
-        self.assertEqual(host.downtimes, hostn.downtimes)
+        assert host.downtimes == hostn.downtimes
         for down_uuid, downtime in self.schedulers['scheduler-master'].sched.downtimes.iteritems():
-            self.assertEqual('My downtime', downtime.comment)
+            assert 'My downtime' == downtime.comment
 
         # check notifications
-        self.assertEqual(2, len(hostn.notifications_in_progress))
+        assert 2 == len(hostn.notifications_in_progress)
         for notif_uuid, notification in hostn.notifications_in_progress.iteritems():
-            self.assertEqual(host.notifications_in_progress[notif_uuid].command,
-                             notification.command)
-            self.assertEqual(host.notifications_in_progress[notif_uuid].t_to_go,
-                             notification.t_to_go)
+            assert host.notifications_in_progress[notif_uuid].command == \
+                             notification.command
+            assert host.notifications_in_progress[notif_uuid].t_to_go == \
+                             notification.t_to_go
 
         # check comments
-        self.assertEqual(2, len(self.schedulers['scheduler-master'].sched.comments))
+        assert 2 == len(self.schedulers['scheduler-master'].sched.comments)
         commentsn = []
         for comm_uuid, comment in self.schedulers['scheduler-master'].sched.comments.iteritems():
             commentsn.append(comment.comment)
-        self.assertEqual(comments, commentsn)
+        assert comments == commentsn
 
         # check notified_contacts
-        self.assertIsInstance(hostn.notified_contacts, set)
-        self.assertIsInstance(svcn.notified_contacts, set)
-        self.assertEqual(set([self.schedulers['scheduler-master'].sched.contacts.find_by_name("test_contact")]),
-                         hostn.notified_contacts)
+        assert isinstance(hostn.notified_contacts, set)
+        assert isinstance(svcn.notified_contacts, set)
+        assert set([self.schedulers['scheduler-master'].sched.contacts.find_by_name("test_contact")]) == \
+                         hostn.notified_contacts
 
         # acknowledge
-        self.assertEqual(True, svcn.problem_has_been_acknowledged)
+        assert True == svcn.problem_has_been_acknowledged
 

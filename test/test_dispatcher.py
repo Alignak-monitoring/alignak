@@ -46,19 +46,19 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dispatcher_simple.cfg')
-        self.assertEqual(1, len(self.arbiter.dispatcher.realms))
+        assert 1 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
-            self.assertEqual(1, len(realm.confs))
+            assert 1 == len(realm.confs)
             for cfg in realm.confs.values():
-                self.assertTrue(cfg.is_assigned)
-        self.assertEqual(1, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(4, len(self.arbiter.dispatcher.satellites))
+                assert cfg.is_assigned
+        assert 1 == len(self.arbiter.dispatcher.schedulers)
+        assert 4 == len(self.arbiter.dispatcher.satellites)
         for satellite in self.arbiter.dispatcher.satellites:
-            self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
-            self.assertEqual(1, len(satellite.cfg['schedulers']), 'must have 1 scheduler')
+            assert {} != satellite.cfg['schedulers'], satellite.get_name()
+            assert 1 == len(satellite.cfg['schedulers']), 'must have 1 scheduler'
 
         # check if scheduler has right the 6 hosts
-        self.assertEqual(6, len(self.schedulers['scheduler-master'].sched.hosts))
+        assert 6 == len(self.schedulers['scheduler-master'].sched.hosts)
 
     def test_simple_multi_schedulers(self):
         """ Simple test (one realm) but with multiple schedulers:
@@ -71,20 +71,20 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dispatcher_simple_multi_schedulers.cfg')
-        self.assertEqual(1, len(self.arbiter.dispatcher.realms))
+        assert 1 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
-            self.assertEqual(2, len(realm.confs))
+            assert 2 == len(realm.confs)
             for cfg in realm.confs.values():
-                self.assertTrue(cfg.is_assigned)
-        self.assertEqual(2, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(4, len(self.arbiter.dispatcher.satellites))
+                assert cfg.is_assigned
+        assert 2 == len(self.arbiter.dispatcher.schedulers)
+        assert 4 == len(self.arbiter.dispatcher.satellites)
         # for satellite in self.arbiter.dispatcher.satellites:
         #     self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
         #     self.assertEqual(2, len(satellite.cfg['schedulers']),
         #                      'must have 2 schedulers in {0}'.format(satellite.get_name()))
 
-        self.assertEqual(3, len(self.schedulers['scheduler-master'].sched.hosts))
-        self.assertEqual(3, len(self.schedulers['scheduler-master2'].sched.hosts))
+        assert 3 == len(self.schedulers['scheduler-master'].sched.hosts)
+        assert 3 == len(self.schedulers['scheduler-master2'].sched.hosts)
 
     def test_simple_multi_pollers(self):
         """ Simple test (one realm) but with multiple pollers:
@@ -97,17 +97,17 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dispatcher_simple_multi_pollers.cfg')
-        self.assertEqual(1, len(self.arbiter.dispatcher.realms))
+        assert 1 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
-            self.assertEqual(1, len(realm.confs))
+            assert 1 == len(realm.confs)
             for cfg in realm.confs.values():
-                self.assertTrue(cfg.is_assigned)
-        self.assertEqual(1, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(5, len(self.arbiter.dispatcher.satellites))
+                assert cfg.is_assigned
+        assert 1 == len(self.arbiter.dispatcher.schedulers)
+        assert 5 == len(self.arbiter.dispatcher.satellites)
         for satellite in self.arbiter.dispatcher.satellites:
-            self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
-            self.assertEqual(1, len(satellite.cfg['schedulers']),
-                             'must have 1 scheduler in {0}'.format(satellite.get_name()))
+            assert {} != satellite.cfg['schedulers'], satellite.get_name()
+            assert 1 == len(satellite.cfg['schedulers']), \
+                             'must have 1 scheduler in {0}'.format(satellite.get_name())
 
     def test_realms(self):
         """ Test with 2 realms.
@@ -128,16 +128,16 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dispatcher_realm.cfg')
-        self.assertEqual(2, len(self.arbiter.dispatcher.realms))
+        assert 2 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
-            self.assertEqual(1, len(realm.confs))
+            assert 1 == len(realm.confs)
             for cfg in realm.confs.values():
-                self.assertTrue(cfg.is_assigned)
-        self.assertEqual(2, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(8, len(self.arbiter.dispatcher.satellites))
+                assert cfg.is_assigned
+        assert 2 == len(self.arbiter.dispatcher.schedulers)
+        assert 8 == len(self.arbiter.dispatcher.satellites)
 
-        self.assertSetEqual(set([4, 6]), set([len(self.schedulers['scheduler-master'].sched.hosts),
-                                              len(self.schedulers['realm2scheduler-master'].sched.hosts)]))
+        assert set([4, 6]) == set([len(self.schedulers['scheduler-master'].sched.hosts),
+                                              len(self.schedulers['realm2scheduler-master'].sched.hosts)])
 
         # for satellite in self.arbiter.dispatcher.satellites:
         #     self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
@@ -173,25 +173,25 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub.cfg')
-        self.assertEqual(3, len(self.arbiter.dispatcher.realms))
+        assert 3 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
-            self.assertEqual(1, len(realm.confs))
+            assert 1 == len(realm.confs)
             for cfg in realm.confs.values():
-                self.assertTrue(cfg.is_assigned)
-        self.assertEqual(3, len(self.arbiter.dispatcher.schedulers))
-        self.assertEqual(10, len(self.arbiter.dispatcher.satellites),
-                         self.arbiter.dispatcher.satellites)
+                assert cfg.is_assigned
+        assert 3 == len(self.arbiter.dispatcher.schedulers)
+        assert 10 == len(self.arbiter.dispatcher.satellites), \
+                         self.arbiter.dispatcher.satellites
 
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_name() in ['poller-master', 'reactionner-master', 'broker-master']:
-                self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
-                self.assertEqual(2, len(satellite.cfg['schedulers']),
-                                 'must have 2 schedulers in {0}'.format(satellite.get_name()))
+                assert {} != satellite.cfg['schedulers'], satellite.get_name()
+                assert 2 == len(satellite.cfg['schedulers']), \
+                                 'must have 2 schedulers in {0}'.format(satellite.get_name())
             elif satellite.get_name() in ['realm3-poller-master', 'realm3-reactionner-master',
                                           'realm3-broker-master']:
-                self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
-                self.assertEqual(1, len(satellite.cfg['schedulers']),
-                                 'must have 1 scheduler in {0}'.format(satellite.get_name()))
+                assert {} != satellite.cfg['schedulers'], satellite.get_name()
+                assert 1 == len(satellite.cfg['schedulers']), \
+                                 'must have 1 scheduler in {0}'.format(satellite.get_name())
 
     def test_realms_with_sub_multi_scheduler(self):
         """ Test with 2 realms but some satellites are sub_realms + multi schedulers
@@ -232,8 +232,8 @@ class TestDispatcher(AlignakTest):
             self.arbiter.dispatcher.prepare_dispatch()
             self.arbiter.dispatcher.dispatch_ok = True
 
-            self.assertEqual(2, len(self.arbiter.dispatcher.schedulers))
-            self.assertEqual(4, len(self.arbiter.dispatcher.satellites))
+            assert 2 == len(self.arbiter.dispatcher.schedulers)
+            assert 4 == len(self.arbiter.dispatcher.satellites)
             master_sched = None
             spare_sched = None
             for scheduler in self.arbiter.dispatcher.schedulers:
@@ -243,15 +243,15 @@ class TestDispatcher(AlignakTest):
                 else:
                     spare_sched = scheduler
 
-            self.assertTrue(master_sched.ping)
-            self.assertEqual(0, master_sched.attempt)
-            self.assertTrue(spare_sched.ping)
-            self.assertEqual(0, spare_sched.attempt)
+            assert master_sched.ping
+            assert 0 == master_sched.attempt
+            assert spare_sched.ping
+            assert 0 == spare_sched.attempt
 
         for satellite in self.arbiter.dispatcher.satellites:
-            self.assertEqual(1, len(satellite.cfg['schedulers']))
+            assert 1 == len(satellite.cfg['schedulers'])
             scheduler = satellite.cfg['schedulers'].itervalues().next()
-            self.assertEqual('scheduler-master', scheduler['name'])
+            assert 'scheduler-master' == scheduler['name']
 
         # now simulate master sched down
         master_sched.check_interval = 1
@@ -283,8 +283,8 @@ class TestDispatcher(AlignakTest):
             self.arbiter.dispatcher.dispatch()
             self.arbiter.dispatcher.check_bad_dispatch()
 
-            self.assertTrue(master_sched.ping)
-            self.assertEqual(1, master_sched.attempt)
+            assert master_sched.ping
+            assert 1 == master_sched.attempt
 
             time.sleep(1)
             self.arbiter.dispatcher.check_alive()
@@ -293,9 +293,9 @@ class TestDispatcher(AlignakTest):
             self.arbiter.dispatcher.dispatch()
             self.arbiter.dispatcher.check_bad_dispatch()
 
-            self.assertTrue(master_sched.ping)
-            self.assertEqual(2, master_sched.attempt)
-            self.assertTrue(master_sched.alive)
+            assert master_sched.ping
+            assert 2 == master_sched.attempt
+            assert master_sched.alive
 
             time.sleep(1)
             self.arbiter.dispatcher.check_alive()
@@ -304,7 +304,7 @@ class TestDispatcher(AlignakTest):
             self.arbiter.dispatcher.dispatch()
             self.arbiter.dispatcher.check_bad_dispatch()
 
-            self.assertFalse(master_sched.alive)
+            assert not master_sched.alive
 
             history = mockreq.request_history
             send_conf_to_sched_master = False
@@ -323,16 +323,16 @@ class TestDispatcher(AlignakTest):
                 elif hist.url == 'http://localhost:7773/put_conf':
                     conf_sent['receiver'] = hist.json()
 
-            self.assertFalse(send_conf_to_sched_master, 'Conf to scheduler master must not be sent'
-                                                        'because it not alive')
-            self.assertEqual(5, len(conf_sent))
-            self.assertListEqual(['conf'], conf_sent['scheduler-spare'].keys())
+            assert not send_conf_to_sched_master, 'Conf to scheduler master must not be sent' \
+                                                        'because it not alive'
+            assert 5 == len(conf_sent)
+            assert ['conf'] == conf_sent['scheduler-spare'].keys()
 
             json_managed_spare = {}
             for satellite in self.arbiter.dispatcher.satellites:
-                self.assertEqual(1, len(satellite.cfg['schedulers']))
+                assert 1 == len(satellite.cfg['schedulers'])
                 scheduler = satellite.cfg['schedulers'].itervalues().next()
-                self.assertEqual('scheduler-spare', scheduler['name'])
+                assert 'scheduler-spare' == scheduler['name']
                 json_managed_spare[scheduler['instance_id']] = scheduler['push_flavor']
 
         # return of the scheduler master
@@ -355,8 +355,8 @@ class TestDispatcher(AlignakTest):
             self.arbiter.dispatcher.dispatch()
             self.arbiter.dispatcher.check_bad_dispatch()
 
-            self.assertTrue(master_sched.ping)
-            self.assertEqual(0, master_sched.attempt)
+            assert master_sched.ping
+            assert 0 == master_sched.attempt
 
             history = mockreq.request_history
             conf_sent = {}
@@ -374,14 +374,14 @@ class TestDispatcher(AlignakTest):
                 elif hist.url == 'http://localhost:7773/put_conf':
                     conf_sent['receiver'] = hist.json()
 
-            self.assertEqual(set(['scheduler-master', 'broker', 'poller', 'reactionner',
-                                  'receiver']),
-                             set(conf_sent.keys()))
+            assert set(['scheduler-master', 'broker', 'poller', 'reactionner',
+                                  'receiver']) == \
+                             set(conf_sent.keys())
 
             for satellite in self.arbiter.dispatcher.satellites:
-                self.assertEqual(1, len(satellite.cfg['schedulers']))
+                assert 1 == len(satellite.cfg['schedulers'])
                 scheduler = satellite.cfg['schedulers'].itervalues().next()
-                self.assertEqual('scheduler-master', scheduler['name'])
+                assert 'scheduler-master' == scheduler['name']
 
     def test_arbiter_spare(self):
         """ Test with arbiter spare
@@ -397,8 +397,8 @@ class TestDispatcher(AlignakTest):
             for arb in self.arbiter.dispatcher.arbiters:
                 # If not me and I'm a master
                 if arb != self.arbiter.dispatcher.arbiter:
-                    self.assertEqual(0, arb.attempt)
-                    self.assertEqual({}, arb.managed_confs)
+                    assert 0 == arb.attempt
+                    assert {} == arb.managed_confs
 
             self.arbiter.dispatcher.check_dispatch()
             # need time to have history filled
@@ -409,7 +409,7 @@ class TestDispatcher(AlignakTest):
                 if hist.url == 'http://localhost:8770/put_conf':
                     history_index = index
             conf_received = history[history_index].json()
-            self.assertListEqual(['conf'], conf_received.keys())
+            assert ['conf'] == conf_received.keys()
             spare_conf = unserialize(conf_received['conf'])
             # Test a property to be sure conf loaded correctly
-            self.assertEqual(5, spare_conf.perfdata_timeout)
+            assert 5 == spare_conf.perfdata_timeout

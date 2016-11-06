@@ -46,30 +46,30 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        self.assertEqual(host.last_state_change, 0)
+        assert host.last_state_change == 0
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        self.assertEqual(host.last_state_change, 0)
+        assert host.last_state_change == 0
 
         before = time.time()
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         after = time.time()
         time.sleep(0.2)
-        self.assertNotEqual(host.last_state_change, 0)
-        self.assertGreater(host.last_state_change, before)
-        self.assertLess(host.last_state_change, after)
+        assert host.last_state_change != 0
+        assert host.last_state_change > before
+        assert host.last_state_change < after
         reference_time = host.last_state_change
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.2)
-        self.assertEqual(host.last_state_change, reference_time)
+        assert host.last_state_change == reference_time
 
         before = time.time()
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        self.assertNotEqual(host.last_state_change, reference_time)
-        self.assertGreater(host.last_state_change, before)
+        assert host.last_state_change != reference_time
+        assert host.last_state_change > before
 
     def test_host_unreachable(self):
         """ Test last_state_change in unreachable mode (in host)
@@ -96,57 +96,57 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertFalse(host.problem_has_been_acknowledged)
+        assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("DOWN", host_router.state)
-        self.assertEqual("SOFT", host_router.state_type)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("HARD", host.state_type)
+        assert "DOWN" == host_router.state
+        assert "SOFT" == host_router.state_type
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("DOWN", host_router.state)
-        self.assertEqual("SOFT", host_router.state_type)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("HARD", host.state_type)
+        assert "DOWN" == host_router.state
+        assert "SOFT" == host_router.state_type
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
-        self.assertEqual("DOWN", host_router.state)
-        self.assertEqual("HARD", host_router.state_type)
-        self.assertEqual("UP", host.state)
-        self.assertEqual("HARD", host.state_type)
+        assert "DOWN" == host_router.state
+        assert "HARD" == host_router.state_type
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
 
         before = time.time()
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         after = time.time()
         time.sleep(0.2)
-        self.assertEqual("DOWN", host_router.state)
-        self.assertEqual("HARD", host_router.state_type)
-        self.assertEqual("UNREACHABLE", host.state)
-        self.assertEqual("SOFT", host.state_type)
+        assert "DOWN" == host_router.state
+        assert "HARD" == host_router.state_type
+        assert "UNREACHABLE" == host.state
+        assert "SOFT" == host.state_type
 
-        self.assertNotEqual(host.last_state_change, 0)
-        self.assertGreater(host.last_state_change, before)
-        self.assertLess(host.last_state_change, after)
+        assert host.last_state_change != 0
+        assert host.last_state_change > before
+        assert host.last_state_change < after
         reference_time = host.last_state_change
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.2)
-        self.assertEqual("UNREACHABLE", host.state)
-        self.assertEqual("UNREACHABLE", host.last_state)
-        self.assertEqual(host.last_state_change, reference_time)
+        assert "UNREACHABLE" == host.state
+        assert "UNREACHABLE" == host.last_state
+        assert host.last_state_change == reference_time
 
         before = time.time()
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        self.assertNotEqual(host.last_state_change, reference_time)
-        self.assertGreater(host.last_state_change, before)
+        assert host.last_state_change != reference_time
+        assert host.last_state_change > before
 
     def test_service(self):
         """ Test the last_state_change of service
@@ -168,23 +168,23 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.2)
-        self.assertEqual(svc.last_state_change, 0)
+        assert svc.last_state_change == 0
 
         before = time.time()
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         after = time.time()
         time.sleep(0.2)
-        self.assertNotEqual(svc.last_state_change, 0)
-        self.assertGreater(svc.last_state_change, before)
-        self.assertLess(svc.last_state_change, after)
+        assert svc.last_state_change != 0
+        assert svc.last_state_change > before
+        assert svc.last_state_change < after
         reference_time = svc.last_state_change
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.2)
-        self.assertEqual(svc.last_state_change, reference_time)
+        assert svc.last_state_change == reference_time
 
         before = time.time()
         self.scheduler_loop(1, [[svc, 0, 'UP']])
         time.sleep(0.2)
-        self.assertNotEqual(svc.last_state_change, reference_time)
-        self.assertGreater(svc.last_state_change, before)
+        assert svc.last_state_change != reference_time
+        assert svc.last_state_change > before

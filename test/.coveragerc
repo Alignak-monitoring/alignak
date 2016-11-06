@@ -1,6 +1,20 @@
 [report]
-omit =
-    */python?.?/*
-    */site-packages/nose/*
+;fail_under = 100
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+
 [run]
-source = alignak
+;branch = True
+source =
+    alignak
+
+omit =
+    */mock/*
+    */nose/*

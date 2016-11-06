@@ -77,6 +77,15 @@ class Module(Item):
 
     macros = {}
 
+    def __init__(self, params=None, parsing=True):
+        """
+        This function is useful because of the unit tests suite. Without this module initialisation
+        some tests are broken
+        :param params:
+        :param parsing:
+        """
+        super(Module, self).__init__(params, parsing=parsing)
+
     # For debugging purpose only (nice name)
     def get_name(self):
         """

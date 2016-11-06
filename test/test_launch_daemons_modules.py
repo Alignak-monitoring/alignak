@@ -115,7 +115,7 @@ class LaunchDaemons(AlignakTest):
                     outfile.write(line)
 
         self.setup_with_file('cfg/run_test_launch_daemons_modules/alignak.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self.procs = {}
         satellite_map = {
@@ -152,7 +152,7 @@ class LaunchDaemons(AlignakTest):
                     print(">>> " + line.rstrip())
                 for line in iter(proc.stderr.readline, b''):
                     print(">>> " + line.rstrip())
-            self.assertIsNone(ret, "Daemon %s not started!" % name)
+            assert ret is None, "Daemon %s not started!" % name
             print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
 
         # Let the daemons start ...
@@ -160,8 +160,8 @@ class LaunchDaemons(AlignakTest):
 
         print("Testing pid files and log files...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            self.assertTrue(os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon)
-            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon)
+            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         sleep(1)
 
@@ -184,15 +184,15 @@ class LaunchDaemons(AlignakTest):
                 print(">>> " + line.rstrip())
             for line in iter(self.procs[name].stderr.readline, b''):
                 print(">>> " + line.rstrip())
-        self.assertIsNone(ret, "Daemon %s not started!" % name)
+        assert ret is None, "Daemon %s not started!" % name
         print("%s running (pid=%d)" % (name, self.procs[name].pid))
 
         sleep(1)
 
         print("Testing pid files and log files...")
         for daemon in ['arbiter']:
-            self.assertTrue(os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon)
-            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon)
+            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         # Let the arbiter build and dispatch its configuration
         sleep(5)
@@ -200,7 +200,7 @@ class LaunchDaemons(AlignakTest):
         print("Get module information from log files...")
         nb_errors = 0
         for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            self.assertTrue(os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon)
+            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
             daemon_errors = False
             print("-----\n%s log file\n-----\n" % daemon)
             with open('/tmp/%sd.log' % daemon) as f:
@@ -216,7 +216,7 @@ class LaunchDaemons(AlignakTest):
                             print(line[:-1])
                         daemon_errors = True
                         nb_errors += 1
-        self.assertEqual(nb_errors, 0, "Error logs raised!")
+        assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons loaded the modules")
 
         print("Stopping the daemons...")
