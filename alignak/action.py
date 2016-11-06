@@ -205,30 +205,37 @@ class ActionBase(AlignakObject):
         elts = out.split('\n')
         # For perf data
         elts_line1 = elts[0].split('|')
-        # First line before | is output, and strip it
+
+        # First line before | is output, strip it
         self.output = elts_line1[0].strip().replace('___PROTECT_PIPE___', '|')
-        # Init perfdata as void
+
+        # Init perfdata as empty
         self.perf_data = ''
-        # After | is perfdata, and strip it
+        # After | it is perfdata, strip it
         if len(elts_line1) > 1:
             self.perf_data = elts_line1[1].strip().replace('___PROTECT_PIPE___', '|')
+
         # Now manage others lines. Before the | it's long_output
-        # And after it's all perf_data, \n join
+        # And after it's all perf_data, \n joined
         long_output = []
         in_perfdata = False
         for line in elts[1:]:
             # if already in perfdata, direct append
             if in_perfdata:
                 self.perf_data += ' ' + line.strip().replace('___PROTECT_PIPE___', '|')
-            else:  # not already in? search for the | part :)
+            else:  # not already in perf_data, search for the | part :)
                 elts = line.split('|', 1)
                 # The first part will always be long_output
                 long_output.append(elts[0].strip().replace('___PROTECT_PIPE___', '|'))
                 if len(elts) > 1:
                     in_perfdata = True
                     self.perf_data += ' ' + elts[1].strip().replace('___PROTECT_PIPE___', '|')
-        # long_output is all non output and perfline, join with \n
+
+        # long_output is all non output and performance data, joined with \n
         self.long_output = '\n'.join(long_output)
+        # Get sure the performance data are stripped
+        self.perf_data = self.perf_data.strip()
+
         logger.debug("Command result for '%s': %s", self.command, self.output)
 
     def check_finished(self, max_plugins_output_length):
