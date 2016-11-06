@@ -227,7 +227,7 @@ class Daemon(object):
         :param debug:
         :param debug_file:
         """
-        try:
+        try:  # pragma: no cover, exclude from code coverage
             if os.environ.get('COVERAGE_PROCESS_START'):
                 print("***")
                 print("* Executing daemon test with code coverage enabled")
@@ -609,7 +609,7 @@ class Daemon(object):
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
 
-    def daemonize(self, skip_close_fds=None):
+    def daemonize(self, skip_close_fds=None):  # pragma: no cover, not for unit tests...
         """Go in "daemon" mode: close unused fds, redirect stdout/err,
         chdir, umask, fork-setsid-fork-writepid
         Do the double fork to properly go daemon
@@ -621,7 +621,7 @@ class Daemon(object):
         logger.info("Daemonizing...")
 
         if skip_close_fds is None:
-            skip_close_fds = tuple()
+            skip_close_fds = []
 
         self.debug_output.append("Redirecting stdout and stderr as necessary..")
         if self.debug:
@@ -1161,6 +1161,7 @@ class Daemon(object):
                 except Exception as exp:  # pylint: disable=W0703
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
+                    logger.exception('Exception %s', exp)
                     self.modules_manager.set_to_restart(inst)
         statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
 

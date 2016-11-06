@@ -38,7 +38,7 @@ from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
 
 
-class fullTest(AlignakTest):
+class DaemonsStartTest(AlignakTest):
     def _get_subproc_data(self, name):
         try:
             print("Polling %s" % name)
@@ -58,6 +58,119 @@ class fullTest(AlignakTest):
 
     def tearDown(self):
         print("Test terminated!")
+
+    def test_arbiter_bad_configuration(self):
+        """ Running the Alignak Arbiter with bad parameters
+
+        :return:
+        """
+        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # in the files for pid and log files
+        if os.path.exists('./cfg/run_test_launch_daemons'):
+            shutil.rmtree('./cfg/run_test_launch_daemons')
+
+        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
+        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        replacements = {
+            '/usr/local/var/run/alignak': '/tmp',
+            '/usr/local/var/log/alignak': '/tmp',
+            '%(workdir)s': '/tmp',
+            '%(logdir)s': '/tmp',
+            '%(etcdir)s': '/tmp'
+        }
+        for filename in files:
+            lines = []
+            with open(filename) as infile:
+                for line in infile:
+                    for src, target in replacements.iteritems():
+                        line = line.replace(src, target)
+                    lines.append(line)
+            with open(filename, 'w') as outfile:
+                for line in lines:
+                    outfile.write(line)
+
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter']:
+            if os.path.exists('/tmp/%sd.pid' % daemon):
+                os.remove('/tmp/%sd.pid' % daemon)
+                print("- removed /tmp/%sd.pid" % daemon)
+            if os.path.exists('/tmp/%sd.log' % daemon):
+                os.remove('/tmp/%sd.log' % daemon)
+                print("- removed /tmp/%sd.log" % daemon)
+
+        print("Launching arbiter with bad configuration file...")
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-c", "cfg/run_test_launch_daemons/daemons/fake.ini",
+                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        sleep(1)
+
+        ret = arbiter.poll()
+        self.assertIsNotNone(ret, "Arbiter still running!")
+        for line in iter(arbiter.stdout.readline, b''):
+            print(">>> " + line.rstrip())
+        for line in iter(arbiter.stderr.readline, b''):
+            print(">>> " + line.rstrip())
+
+    def test_arbiter_verify(self):
+        """ Running the Alignak Arbiter in verify mode only
+
+        :return:
+        """
+        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # in the files for pid and log files
+        if os.path.exists('./cfg/run_test_launch_daemons'):
+            shutil.rmtree('./cfg/run_test_launch_daemons')
+
+        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
+        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
+                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        replacements = {
+            '/usr/local/var/run/alignak': '/tmp',
+            '/usr/local/var/log/alignak': '/tmp',
+            '%(workdir)s': '/tmp',
+            '%(logdir)s': '/tmp',
+            '%(etcdir)s': '/tmp'
+        }
+        for filename in files:
+            lines = []
+            with open(filename) as infile:
+                for line in infile:
+                    for src, target in replacements.iteritems():
+                        line = line.replace(src, target)
+                    lines.append(line)
+            with open(filename, 'w') as outfile:
+                for line in lines:
+                    outfile.write(line)
+
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter']:
+            if os.path.exists('/tmp/%sd.pid' % daemon):
+                os.remove('/tmp/%sd.pid' % daemon)
+                print("- removed /tmp/%sd.pid" % daemon)
+            if os.path.exists('/tmp/%sd.log' % daemon):
+                os.remove('/tmp/%sd.log' % daemon)
+                print("- removed /tmp/%sd.log" % daemon)
+
+        print("Launching arbiter with bad configuration file...")
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-V",
+                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        sleep(5)
+
+        ret = arbiter.poll()
+        self.assertIsNotNone(ret, "Arbiter still running!")
+        print("*** Arbiter exited on start!")
+        for line in iter(arbiter.stdout.readline, b''):
+            print(">>> " + line.rstrip())
+        for line in iter(arbiter.stderr.readline, b''):
+            print(">>> " + line.rstrip())
 
     def test_daemons_outputs_no_ssl(self):
         """ Running all the Alignak daemons - no SSL
