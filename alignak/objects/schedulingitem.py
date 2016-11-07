@@ -2666,7 +2666,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             sticky = sticky == 2
 
             data = {'ref': self.uuid, 'sticky': sticky, 'persistent': persistent, 'author': author,
-                    'comment': comment, 'end_time': end_time}
+                    'comment': comment, 'end_time': end_time, 'notify': notify}
             ack = Acknowledge(data)
             self.acknowledgement = ack
             if self.my_type == 'host':

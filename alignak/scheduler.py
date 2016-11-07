@@ -90,6 +90,7 @@ from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
+from alignak.acknowledge import Acknowledge
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -1260,7 +1261,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         self.hook_point('load_retention')
 
-    def get_retention_data(self):
+    def get_retention_data(self):  # pylint: disable=R0912
         """Get all host and service data in order to store it after
         The module is in charge of that
 
@@ -1294,6 +1295,36 @@ class Scheduler(object):  # pylint: disable=R0902
                     if fun:
                         val = fun(host, val)
                     h_dict[prop] = val
+            # manage special properties: the Notifications
+            if 'notifications_in_progress' in h_dict and h_dict['notifications_in_progress'] != {}:
+                notifs = {}
+                for notif_uuid, notification in h_dict['notifications_in_progress'].iteritems():
+                    notifs[notif_uuid] = notification.serialize()
+                h_dict['notifications_in_progress'] = notifs
+            # manage special properties: the downtimes
+            if 'downtimes' in h_dict and h_dict['downtimes'] != []:
+                downtimes = []
+                for downtime_uuid in h_dict['downtimes']:
+                    downtime_ser = self.downtimes[downtime_uuid].serialize()
+                    downtime_ser['comment_id'] = \
+                        self.comments[downtime_ser['comment_id']].serialize()
+                    downtimes.append(downtime_ser)
+                h_dict['downtimes'] = downtimes
+            # manage special properties: the acknowledges
+            if 'acknowledgement' in h_dict and h_dict['acknowledgement'] is not None:
+                h_dict['acknowledgement'] = h_dict['acknowledgement'].serialize()
+            # manage special properties: the comments
+            if 'comments' in h_dict and h_dict['comments'] != []:
+                comments = []
+                for comment_uuid in h_dict['comments']:
+                    comments.append(self.comments[comment_uuid].serialize())
+                h_dict['comments'] = comments
+            # manage special properties: the notified_contacts
+            if 'notified_contacts' in h_dict and h_dict['notified_contacts'] != []:
+                ncontacts = []
+                for contact_uuid in h_dict['notified_contacts']:
+                    ncontacts.append(self.contacts[contact_uuid].get_name())
+                h_dict['notified_contacts'] = ncontacts
             all_data['hosts'][host.host_name] = h_dict
 
         # Same for services
@@ -1329,74 +1360,59 @@ class Scheduler(object):  # pylint: disable=R0902
                         if fun:
                             val = fun(serv, val)
                         s_dict[prop] = val
+            # manage special properties: the notifications
+            if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress'] != {}:
+                notifs = {}
+                for notif_uuid, notification in s_dict['notifications_in_progress'].iteritems():
+                    notifs[notif_uuid] = notification.serialize()
+                s_dict['notifications_in_progress'] = notifs
+            # manage special properties: the downtimes
+            if 'downtimes' in s_dict and s_dict['downtimes'] != []:
+                downtimes = []
+                for downtime_uuid in s_dict['downtimes']:
+                    downtime_ser = self.downtimes[downtime_uuid].serialize()
+                    downtime_ser['comment_id'] = \
+                        self.comments[downtime_ser['comment_id']].serialize()
+                    downtimes.append(downtime_ser)
+                s_dict['downtimes'] = downtimes
+            # manage special properties: the acknowledges
+            if 'acknowledgement' in s_dict and s_dict['acknowledgement'] is not None:
+                s_dict['acknowledgement'] = s_dict['acknowledgement'].serialize()
+            # manage special properties: the comments
+            if 'comments' in s_dict and s_dict['comments'] != []:
+                comments = []
+                for comment_uuid in s_dict['comments']:
+                    comments.append(self.comments[comment_uuid].serialize())
+                s_dict['comments'] = comments
+            # manage special properties: the notified_contacts
+            if 'notified_contacts' in s_dict and s_dict['notified_contacts'] != []:
+                ncontacts = []
+                for contact_uuid in s_dict['notified_contacts']:
+                    ncontacts.append(self.contacts[contact_uuid].get_name())
+                s_dict['notified_contacts'] = ncontacts
             all_data['services'][(serv.host_name, serv.service_description)] = s_dict
         return all_data
 
-    def restore_retention_data(self, data):  # pylint: disable=R0912
+    def restore_retention_data(self, data):
         """Restore retention data
 
         Data coming from retention will override data coming from configuration
         It is kinda confusing when you modify an attribute (external command) and it get saved
         by retention
 
-        :param data:
-        :type data:
+        :param data: data fron retention
+        :type data: dict
         :return: None
         """
-
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
             # We take the dict of our value to load
             h_dict = data['hosts'][ret_h_name]
             host = self.hosts.find_by_name(ret_h_name)
             if host is not None:
-                # First manage all running properties
-                running_properties = host.__class__.running_properties
-                for prop, entry in running_properties.items():
-                    if entry.retention:
-                        # Maybe the saved one was not with this value, so
-                        # we just bypass this
-                        if prop in h_dict:
-                            setattr(host, prop, h_dict[prop])
-                # Ok, some are in properties too (like active check enabled
-                # or not. Will OVERRIDE THE CONFIGURATION VALUE!
-                properties = host.__class__.properties
-                for prop, entry in properties.items():
-                    if entry.retention:
-                        # Maybe the saved one was not with this value, so
-                        # we just bypass this
-                        if prop in h_dict:
-                            setattr(host, prop, h_dict[prop])
-                # Now manage all linked objects load from previous run
-                for notif in host.notifications_in_progress.values():
-                    notif.ref = host.id
-                    self.add(notif)
-                host.update_in_checking()
-                # And also add downtimes and comments
-                for downtime in host.downtimes:
-                    downtime.ref = host.id
-                    self.add(downtime)
-                for comm in host.comments:
-                    comm.ref = host.id
-                    self.add(comm)
-                    # raises comment id to do not overlap ids
-                if host.acknowledgement is not None:
-                    host.acknowledgement.ref = host.id
-                    # Raises the id of future ack so we don't overwrite
-                    # these one
-                # Relink the notified_contacts as a set() of true contacts objects
-                # it it was load from the retention, it's now a list of contacts
-                # names
-                if 'notified_contacts' in h_dict:
-                    new_notified_contacts = set()
-                    for cname in host.notified_contacts:
-                        comm = self.contacts.find_by_name(cname)
-                        # Maybe the contact is gone. Skip it
-                        if comm:
-                            new_notified_contacts.add(comm)
-                    host.notified_contacts = new_notified_contacts
+                self.restore_retention_data_item(h_dict, host)
 
-        # SAme for services
+        # Same for services
         ret_services = data['services']
         for (ret_s_h_name, ret_s_desc) in ret_services:
             # We take our dict to load
@@ -1404,51 +1420,90 @@ class Scheduler(object):  # pylint: disable=R0902
             serv = self.services.find_srv_by_name_and_hostname(ret_s_h_name, ret_s_desc)
 
             if serv is not None:
-                # Load the major values from running properties
-                running_properties = serv.__class__.running_properties
-                for prop, entry in running_properties.items():
-                    if entry.retention:
-                        # Maybe the saved one was not with this value, so
-                        # we just bypass this
-                        if prop in s_dict:
-                            setattr(serv, prop, s_dict[prop])
-                # And some others from properties dict too
-                properties = serv.__class__.properties
-                for prop, entry in properties.items():
-                    if entry.retention:
-                        # Maybe the saved one was not with this value, so
-                        # we just bypass this
-                        if prop in s_dict:
-                            setattr(serv, prop, s_dict[prop])
-                # Ok now manage all linked objects
-                for notif in serv.notifications_in_progress.values():
-                    notif.ref = serv.id
-                    self.add(notif)
-                serv.update_in_checking()
-                # And also add downtimes and comments
-                for downtime in serv.downtimes:
-                    downtime.ref = serv.id
-                    # raises the downtime id to do not overlap
-                    self.add(downtime)
-                for comm in serv.comments:
-                    comm.ref = serv.id
-                    self.add(comm)
-                    # raises comment id to do not overlap ids
-                if serv.acknowledgement is not None:
-                    serv.acknowledgement.ref = serv.id
-                    # Raises the id of future ack so we don't overwrite
-                    # these one
-                # Relink the notified_contacts as a set() of true contacts objects
-                # it it was load from the retention, it's now a list of contacts
-                # names
-                if 'notified_contacts' in s_dict:
-                    new_notified_contacts = set()
-                    for cname in serv.notified_contacts:
-                        comm = self.contacts.find_by_name(cname)
-                        # Maybe the contact is gone. Skip it
-                        if comm:
-                            new_notified_contacts.add(comm)
-                    serv.notified_contacts = new_notified_contacts
+                self.restore_retention_data_item(s_dict, serv)
+
+    def restore_retention_data_item(self, data, item):
+        """
+        restore data in item
+
+        :param data: retention data of the item
+        :type data: dict
+        :param item: host or service item
+        :type item: alignak.objects.host.Host | alignak.objects.service.Service
+        :return: None
+        """
+        # First manage all running properties
+        running_properties = item.__class__.running_properties
+        for prop, entry in running_properties.items():
+            if entry.retention:
+                # Maybe the saved one was not with this value, so
+                # we just bypass this
+                if prop in data:
+                    setattr(item, prop, data[prop])
+        # Ok, some are in properties too (like active check enabled
+        # or not. Will OVERRIDE THE CONFIGURATION VALUE!
+        properties = item.__class__.properties
+        for prop, entry in properties.items():
+            if entry.retention:
+                # Maybe the saved one was not with this value, so
+                # we just bypass this
+                if prop in data:
+                    setattr(item, prop, data[prop])
+        # Now manage all linked objects load from previous run
+        for notif_uuid, notif in item.notifications_in_progress.iteritems():
+            notif['ref'] = item.id
+            mynotif = Notification(params=notif)
+            self.add(mynotif)
+            item.notifications_in_progress[notif_uuid] = mynotif
+        item.update_in_checking()
+        item_comments = item.comments
+        item.comments = []
+        # And also add downtimes and comments
+        item_downtimes = []
+        for downtime in item.downtimes:
+            downtime["ref"] = item.id
+            if "comment_id" in downtime and isinstance(downtime["comment_id"], dict):
+                if downtime["comment_id"]["uuid"] not in self.comments:
+                    downtime["comment_id"]["ref"] = item.id
+                    comm = Comment(downtime["comment_id"])
+                    downtime["comment_id"] = comm.uuid
+                    item.add_comment(comm.uuid)
+            if downtime['uuid'] not in self.downtimes:
+                down = Downtime(downtime)
+                self.add(down)
+                item_downtimes.append(down.uuid)
+            else:
+                item_downtimes.append(downtime['uuid'])
+        item.downtimes = item_downtimes
+        if item.acknowledgement is not None:
+            item.acknowledgement = Acknowledge(item.acknowledgement)
+            item.acknowledgement.ref = item.uuid
+            # recreate the comment
+            if item.my_type == 'host':
+                comment_type = 1
+            else:
+                comment_type = 2
+            data = {
+                'persistent': item.acknowledgement.persistent,
+                'author': item.acknowledgement.author,
+                'comment': item.acknowledgement.comment, 'comment_type': comment_type,
+                'entry_type': 4, 'source': 0, 'expires': False, 'expire_time': 0, 'ref': item.uuid
+            }
+        # Relink the notified_contacts as a set() of true contacts objects
+        # it it was load from the retention, it's now a list of contacts
+        # names
+        for comm in item_comments:
+            comm["ref"] = item.id
+            if comm['uuid'] not in self.comments:
+                self.add(Comment(comm))
+            # raises comment id to do not overlap ids
+        new_notified_contacts = set()
+        for cname in item.notified_contacts:
+            comm = self.contacts.find_by_name(cname)
+            # Maybe the contact is gone. Skip it
+            if comm is not None:
+                new_notified_contacts.add(comm)
+        item.notified_contacts = new_notified_contacts
 
     def fill_initial_broks(self, bname, with_logs=False):
         """Create initial broks for a specific broker

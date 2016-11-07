@@ -184,3 +184,18 @@ class Notification(Action):  # pylint: disable=R0902
         self.fill_data_brok_from(data, 'full_status')
         brok = Brok({'type': 'notification_raise', 'data': data})
         return brok
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Timeperiod
+        :rtype: dict
+        """
+        res = super(Notification, self).serialize()
+
+        if res['command_call'] is not None:
+            res['command_call'] = res['command_call'].serialize()
+        return res
