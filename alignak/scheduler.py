@@ -1375,10 +1375,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And also add downtimes and comments
                 for downtime in host.downtimes:
                     downtime.ref = host.id
-                    if hasattr(downtime, 'extra_comment'):
-                        downtime.extra_comment.ref = host.id
-                    else:
-                        downtime.extra_comment = None
                     self.add(downtime)
                 for comm in host.comments:
                     comm.ref = host.id
@@ -1432,10 +1428,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And also add downtimes and comments
                 for downtime in serv.downtimes:
                     downtime.ref = serv.id
-                    if hasattr(downtime, 'extra_comment'):
-                        downtime.extra_comment.ref = serv.id
-                    else:
-                        downtime.extra_comment = None
                     # raises the downtime id to do not overlap
                     self.add(downtime)
                 for comm in serv.comments:

@@ -90,7 +90,6 @@ class Downtime(AlignakObject):
         'ref': StringProp(default=''),
         'ref_type': StringProp(default=''),
         'comment_id': StringProp(default=''),
-        'extra_comment': StringProp(default=''),
     }
 
     def __init__(self, params):
@@ -324,23 +323,17 @@ class Downtime(AlignakObject):
         }
         comm = Comment(data)
         self.comment_id = comm.uuid
-        self.extra_comment = comm.comment
         ref.add_comment(comm.uuid)
         return comm
 
     def del_automatic_comment(self, comments):
         """Remove automatic comment on ref previously created
 
-
         :param comments: comments objects to edit the wanted comment
         :type comments: dict
         :return: None
         """
-        # Extra comment can be None if we load it from a old version of Alignak
-        # TODO: remove it in a future version when every one got upgrade
-        if self.extra_comment is not None:
-            comments[self.comment_id].can_be_deleted = True
-        # self.ref.del_comment(self.comment_id)
+        comments[self.comment_id].can_be_deleted = True
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
