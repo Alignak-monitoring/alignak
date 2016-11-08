@@ -78,7 +78,7 @@ class MacroResolver(Borg):
         'TOTALHOSTSUNREACHABLE':
             '_get_total_hosts_unreachable',
         'TOTALHOSTSDOWNUNHANDLED':
-            '_get_total_hosts_unhandled',
+            '_get_total_hosts_down_unhandled',
         'TOTALHOSTSUNREACHABLEUNHANDLED':
             '_get_total_hosts_unreachable_unhandled',
         'TOTALHOSTPROBLEMS':
@@ -86,7 +86,7 @@ class MacroResolver(Borg):
         'TOTALHOSTPROBLEMSUNHANDLED':
             '_get_total_host_problems_unhandled',
         'TOTALSERVICESOK':
-            '_get_total_service_ok',
+            '_get_total_services_ok',
         'TOTALSERVICESWARNING':
             '_get_total_services_warning',
         'TOTALSERVICESCRITICAL':
@@ -131,11 +131,11 @@ class MacroResolver(Borg):
     ]
 
     def init(self, conf):
-        """Init macroresolver instance with conf.
-        Must be called once.
+        """Initialize macroresolver instance with conf.
+        Must be called at least once.
 
-        :param conf: conf to load
-        :type conf:
+        :param conf: configuration to load
+        :type conf: alignak.objects.Config
         :return: None
         """
 
@@ -173,9 +173,6 @@ class MacroResolver(Borg):
         :return: dict with macro parsed as key
         :rtype: dict
         """
-        # if chain in self.cache:
-        #    return self.cache[chain]
-
         regex = re.compile(r'(\$)')
         elts = regex.split(chain)
         macros = {}
@@ -186,14 +183,13 @@ class MacroResolver(Borg):
             elif in_macro:
                 macros[elt] = {'val': '', 'type': 'unknown'}
 
-        # self.cache[chain] = macros
-        if '' in macros:
-            del macros['']
         return macros
 
     def _get_value_from_element(self, elt, prop):
         """Get value from a element's property
         the property may be a function to call.
+
+        If the property is not resolved (because not implemented), this function will return 'n/a'
 
         :param elt: element
         :type elt: object
@@ -222,12 +218,12 @@ class MacroResolver(Borg):
             #     'Error when getting the property value for a macro: %s',
             #     MacroWarning, stacklevel=2)
             # Return a strange value when macro cannot be resolved
-            return 'XxX'
+            return 'n/a'
         except UnicodeError:
             if isinstance(value, str):
                 return unicode(value, 'utf8', errors='ignore')
             else:
-                return 'XxX'
+                return 'n/a'
 
     def _delete_unwanted_caracters(self, chain):
         """Remove not wanted char from chain
@@ -458,10 +454,14 @@ class MacroResolver(Borg):
             try:
                 return args[_id]
             except IndexError:
+                # Required argument not found, returns an empty string
                 return ''
 
     def _resolve_ondemand(self, macro, data):
         """Get on demand macro value
+
+        If the macro cannot be resolved, this function will return 'n/a' rather than
+        an empty string, this to alert the caller of a potential problem.
 
         :param macro: macro to parse
         :type macro:
@@ -473,7 +473,7 @@ class MacroResolver(Borg):
         elts = macro.split(':')
         nb_parts = len(elts)
         macro_name = elts[0]
-        # Len 3 == service, 2 = all others types...
+        # 3 parts for a service, 2 for all others types...
         if nb_parts == 3:
             val = ''
             (host_name, service_description) = (elts[1], elts[2])
@@ -512,7 +512,9 @@ class MacroResolver(Borg):
                         # Ok we got our value :)
                         break
             return val
-        return ''
+
+        # Return a strange value in this case rather than an empty string
+        return 'n/a'
 
     @staticmethod
     def _get_long_date_time():
@@ -590,6 +592,17 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.state == state)
 
+    def _tot_unhandled_hosts_by_state(self, state):
+        """Generic function to get the number of unhandled problem hosts in the specified state
+
+        :param state: state to filter on
+        :type state:
+        :return: number of host in state *state* and which are not acknowledged problems
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.state == state and
+                   h.is_problem and not h.problem_has_been_acknowledged)
+
     def _get_total_hosts_up(self):
         """
         Get the number of hosts up
@@ -608,6 +621,15 @@ class MacroResolver(Borg):
         """
         return self._tot_hosts_by_state('DOWN')
 
+    def _get_total_hosts_down_unhandled(self):
+        """
+        Get the number of down hosts not handled
+
+        :return: Number of hosts down and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_hosts_by_state('DOWN')
+
     def _get_total_hosts_unreachable(self):
         """
         Get the number of hosts unreachable
@@ -617,17 +639,16 @@ class MacroResolver(Borg):
         """
         return self._tot_hosts_by_state('UNREACHABLE')
 
-    @staticmethod
-    def _get_total_hosts_unreachable_unhandled():
-        """DOES NOTHING( Should get the number of unreachable hosts not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+    def _get_total_hosts_unreachable_unhandled(self):
         """
-        return 0
+        Get the number of unreachable hosts not handled
 
-    def _get_total_hosts_problems(self):
+        :return: Number of hosts unreachable and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_hosts_by_state('UNREACHABLE')
+
+    def _get_total_host_problems(self):
         """Get the number of hosts that are a problem
 
         :return: number of hosts with is_problem attribute True
@@ -635,18 +656,17 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.is_problem)
 
-    @staticmethod
-    def _get_total_hosts_problems_unhandled():
-        """DOES NOTHING( Should get the number of host problems not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+    def _get_total_host_problems_unhandled(self):
         """
-        return 0
+        Get the number of host problems not handled
+
+        :return: Number of hosts which are problems and not handled
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.is_problem and not h.problem_has_been_acknowledged)
 
     def _tot_services_by_state(self, state):
-        """Generic function to get the number of service in the specified state
+        """Generic function to get the number of services in the specified state
 
         :param state: state to filter on
         :type state:
@@ -656,7 +676,18 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.state == state)
 
-    def _get_total_service_ok(self):
+    def _tot_unhandled_services_by_state(self, state):
+        """Generic function to get the number of unhandled problem services in the specified state
+
+        :param state: state to filter on
+        :type state:
+        :return: number of service in state *state* and which are not acknowledged problems
+        :rtype: int
+        """
+        return sum(1 for s in self.services if s.state == state and
+                   s.is_problem and not s.problem_has_been_acknowledged)
+
+    def _get_total_services_ok(self):
         """
         Get the number of services ok
 
@@ -665,7 +696,7 @@ class MacroResolver(Borg):
         """
         return self._tot_services_by_state('OK')
 
-    def _get_total_service_warning(self):
+    def _get_total_services_warning(self):
         """
         Get the number of services warning
 
@@ -674,7 +705,7 @@ class MacroResolver(Borg):
         """
         return self._tot_services_by_state('WARNING')
 
-    def _get_total_service_critical(self):
+    def _get_total_services_critical(self):
         """
         Get the number of services critical
 
@@ -683,7 +714,7 @@ class MacroResolver(Borg):
         """
         return self._tot_services_by_state('CRITICAL')
 
-    def _get_total_service_unknown(self):
+    def _get_total_services_unknown(self):
         """
         Get the number of services unknown
 
@@ -692,35 +723,32 @@ class MacroResolver(Borg):
         """
         return self._tot_services_by_state('UNKNOWN')
 
-    @staticmethod
-    def _get_total_services_warning_unhandled():
-        """DOES NOTHING (Should get the number of warning services not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+    def _get_total_services_warning_unhandled(self):
         """
-        return 0
+        Get the number of warning services not handled
 
-    @staticmethod
-    def _get_total_services_critical_unhandled():
-        """DOES NOTHING (Should get the number of critical services not handled)
-
-        :return: 0 always
+        :return: Number of services warning and not handled
         :rtype: int
-        TODO: Implement this
         """
-        return 0
+        return self._tot_unhandled_services_by_state('WARNING')
 
-    @staticmethod
-    def _get_total_services_unknown_unhandled():
-        """DOES NOTHING (Should get the number of unknown services not handled)
+    def _get_total_services_critical_unhandled(self):
+        """
+        Get the number of critical services not handled
 
-        :return: 0 always
+        :return: Number of services critical and not handled
         :rtype: int
-        TODO: Implement this
         """
-        return 0
+        return self._tot_unhandled_services_by_state('CRITICAL')
+
+    def _get_total_services_unknown_unhandled(self):
+        """
+        Get the number of unknown services not handled
+
+        :return: Number of services unknown and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_services_by_state('UNKNOWN')
 
     def _get_total_service_problems(self):
         """Get the number of services that are a problem
@@ -730,32 +758,33 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.is_problem)
 
-    @staticmethod
-    def _get_total_service_problems_unhandled():
-        """DOES NOTHING (Should get the number of service problems not handled)
+    def _get_total_service_problems_unhandled(self):
+        """Get the number of services that are a problem and that are not acknowledged
 
-        :return: 0 always
+        :return: number of problem services which are not acknowledged
         :rtype: int
-        TODO: Implement this
         """
-        return 0
+        return sum(1 for s in self.services if s.is_problem and not s.problem_has_been_acknowledged)
 
     @staticmethod
     def _get_process_start_time():
         """DOES NOTHING ( Should get process start time)
 
-        :return: 0 always
-        :rtype: int
+        This function always returns 'n/a' to inform that it is not available
+
+        :return: n/a always
+        :rtype: str
         TODO: Implement this
         """
-        return 0
+        return 'n/a'
 
     @staticmethod
     def _get_events_start_time():
         """DOES NOTHING ( Should get events start time)
 
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+        This function always returns 'n/a' to inform that it is not available
+
+        :return: n/a always
+        :rtype: str
         """
-        return 0
+        return 'n/a'
