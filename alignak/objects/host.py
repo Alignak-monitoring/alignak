@@ -214,8 +214,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTDURATIONSEC':   'get_duration_sec',
         'HOSTDOWNTIME':      'get_downtime',
         'HOSTPERCENTCHANGE': 'percent_state_change',
-        'HOSTGROUPNAME':     ('get_groupname', 'hostgroups'),
-        'HOSTGROUPNAMES':    ('get_groupnames', 'hostgroups'),
+        'HOSTGROUPNAME':     ('get_groupname', ['hostgroups']),
+        'HOSTGROUPNAMES':    ('get_groupnames', ['hostgroups']),
         'LASTHOSTCHECK':     'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
         'LASTHOSTUP':        'last_time_up',
@@ -236,10 +236,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTNOTES':         'notes',
         'HOSTREALM':         'realm_name',
         'TOTALHOSTSERVICES': 'get_total_services',
-        'TOTALHOSTSERVICESOK': ('get_total_services_ok', 'services'),
-        'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', 'services'),
-        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', 'services'),
-        'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', 'services'),
+        'TOTALHOSTSERVICESOK': ('get_total_services_ok', ['services']),
+        'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', ['services']),
+        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
+        'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', ['services']),
         'HOSTBUSINESSIMPACT':  'business_impact',
     })
     # Todo: really unuseful ... should be removed, but let's discuss!
@@ -1123,7 +1123,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.snapshot_command.get_name()
 
-    def get_short_status(self):
+    def get_short_status(self, hosts, services):
         """Get the short status of this host
 
         :return: "U", "D", "N" or "n/a" based on host state_id or business_rule state
@@ -1135,11 +1135,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             4: "N",
         }
         if self.got_business_rule:
-            return mapping.get(self.business_rule.get_state(), "n/a")
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
         else:
             return mapping.get(self.state_id, "n/a")
 
-    def get_status(self):
+    def get_status(self, hosts, services):
         """Get the status of this host
 
         :return: "UP", "DOWN", "UNREACHABLE" or "n/a" based on host state_id or business_rule state
@@ -1151,7 +1151,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 1: "DOWN",
                 4: "UNREACHABLE",
             }
-            return mapping.get(self.business_rule.get_state(), "n/a")
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
         else:
             return self.state
 

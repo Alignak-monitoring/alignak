@@ -489,6 +489,107 @@ class TestConfig(AlignakTest):
             "Error : More than one realm are set to the default realm"
         )
 
+    def test_business_rules_incorrect(self):
+        """ Business rules use services which don't exist.
+        We want the arbiter to output an error message and exit
+        in a controlled manner.
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/business_correlator_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::Simple_1Of_1unk_host is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::Simple_1Of_1unk_host] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::Simple_1Of_1unk_host]: Business rule uses unknown host test_host_9"
+        ))
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::Simple_1Of_1unk_svc is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::Simple_1Of_1unk_svc] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::Simple_1Of_1unk_svc]: Business rule uses unknown service test_host_0/db3"
+        ))
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::ERP_unk_svc is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::ERP_unk_svc] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/web100"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/lvs100"
+        ))
+
+        self.assert_any_cfg_log_match(re.escape(
+            "services configuration is incorrect!"
+        ))
+
+    def test_business_rules_hostgroup_expansion_errors(self):
+        """ Configuration is not correct  because of a bad syntax in BR hostgroup expansion """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/business_correlator_expand_expression_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::bprule_invalid_regex is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_invalid_regex] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_invalid_regex]: Business rule uses invalid regex "
+            "r:test_host_0[,srv1: unexpected end of regular expression"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::bprule_empty_regex is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_empty_regex] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_empty_regex]: Business rule got an empty result "
+            "for pattern r:fake,srv1"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::bprule_unkonwn_service is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_unkonwn_service] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_unkonwn_service]: Business rule got an empty result "
+            "for pattern g:hostgroup_01,srv3"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::bprule_unkonwn_hostgroup is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_unkonwn_hostgroup] business_rule invalid"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::bprule_unkonwn_hostgroup]: Business rule got an empty result "
+            "for pattern g:hostgroup_03,srv1"
+        ))
+
+        self.assert_any_cfg_log_match(re.escape(
+            "services configuration is incorrect!"
+        ))
+
     def test_business_rules_bad_realm_conf(self):
         """ Configuration is not correct because of a bad configuration in business rules realms
 
@@ -496,7 +597,7 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         with self.assertRaises(SystemExit):
-            self.setup_with_file('cfg/config/alignak_business_rules_bad_realm_conf.cfg')
+            self.setup_with_file('cfg/config/business_rules_bad_realm_conf.cfg')
         self.assertFalse(self.conf_is_correct)
         self.show_configuration_logs()
 

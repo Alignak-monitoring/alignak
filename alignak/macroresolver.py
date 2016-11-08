@@ -199,14 +199,20 @@ class MacroResolver(Borg):
         :rtype: str
         """
         try:
-            arg = None
+            args = None
             # We have args to provide to the function
             if isinstance(prop, tuple):
-                prop, arg = prop
+                prop, args = prop
             value = getattr(elt, prop)
             if callable(value):
-                if arg:
-                    return unicode(value(getattr(self, arg, None)))
+                # Case where we need args to the function
+                # ex : HOSTGROUPNAME (we need hostgroups)
+                # ex : SHORTSTATUS (we need hosts and services if bp_rule)
+                if args:
+                    real_args = []
+                    for arg in args:
+                        real_args.append(getattr(self, arg, None))
+                    return unicode(value(*real_args))
                 else:
                     return unicode(value())
             else:
