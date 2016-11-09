@@ -89,21 +89,27 @@ class ServiceExtInfo(GenericExtInfo):
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = Item.properties.copy()
     properties.update({
-        'host_name':            StringProp(),
-        'service_description':  StringProp(),
-        'notes':                StringProp(default=''),
-        'notes_url':            StringProp(default=''),
-        'icon_image':           StringProp(default=''),
-        'icon_image_alt':       StringProp(default=''),
+        'host_name':
+            StringProp(),
+        'service_description':
+            StringProp(),
+        'notes':
+            StringProp(default=''),
+        'notes_url':
+            StringProp(default=''),
+        'icon_image':
+            StringProp(default=''),
+        'icon_image_alt':
+            StringProp(default=''),
     })
 
     # Hosts macros and prop that give the information
     # the prop can be callable or not
     macros = {
-        'SERVICEDESC':            'service_description',
-        'SERVICEACTIONURL':       'action_url',
-        'SERVICENOTESURL':        'notes_url',
-        'SERVICENOTES':           'notes'
+        'SERVICEDESC': 'service_description',
+        'SERVICEACTIONURL': 'action_url',
+        'SERVICENOTESURL': 'notes_url',
+        'SERVICENOTES': 'notes'
     }
 
 
