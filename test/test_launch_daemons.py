@@ -373,6 +373,10 @@ class DaemonsStartTest(AlignakTest):
             self.assertTrue(data, "Daemon %s has no conf!" % daemon)
             # TODO: test with magic_hash
 
+        print("Testing do_not_run")
+        for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            raw_data = req.get("%s://localhost:%s/do_not_run" % (http, satellite_map[daemon]), verify=False)
+
         print("Testing api")
         name_to_interface = {'arbiter': ArbiterInterface,
                              'scheduler': SchedulerInterface,
@@ -386,6 +390,17 @@ class DaemonsStartTest(AlignakTest):
             expected_data = set(name_to_interface[name](None).api())
             self.assertIsInstance(data, list, "Data is not a list!")
             self.assertEqual(set(data), expected_data, "Daemon %s has a bad API!" % name)
+
+        print("Testing api_full")
+        name_to_interface = {'arbiter': ArbiterInterface,
+                             'scheduler': SchedulerInterface,
+                             'broker': BrokerInterface,
+                             'poller': GenericInterface,
+                             'reactionner': GenericInterface,
+                             'receiver': ReceiverInterface}
+        for name, port in satellite_map.items():
+            raw_data = req.get("%s://localhost:%s/api_full" % (http, port), verify=False)
+            data = raw_data.json()
 
         print("Testing get_checks on scheduler")
         # TODO: if have poller running, the poller will get the checks before us

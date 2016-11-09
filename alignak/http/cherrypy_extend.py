@@ -30,7 +30,7 @@ from cherrypy._cpcompat import ntou
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 
 
-def zlib_processor(entity):
+def zlib_processor(entity):  # pragma: no cover, not used in the testing environment...
     """Read application/zlib data and put content into entity.params for later use.
 
     :param entity: cherrypy entity
