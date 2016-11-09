@@ -220,70 +220,7 @@ class Realm(Itemgroup):
                 res.append(mem)
         return res
 
-    def count_reactionners(self, reactionners):
-        """ Set the number of reactionners in this realm.
-
-        :return: None
-        TODO: Make this generic
-        """
-        self.nb_reactionners = 0
-        for reactionner_id in self.reactionners:
-            reactionner = reactionners[reactionner_id]
-            if not reactionner.spare:
-                self.nb_reactionners += 1
-        for realm in self.higher_realms:
-            for reactionner in realm.reactionners:
-                if not reactionner.spare and reactionner.manage_sub_realms:
-                    self.nb_reactionners += 1
-
-    def count_pollers(self, pollers):
-        """ Set the number of pollers in this realm.
-
-        :return: None
-        """
-        self.nb_pollers = 0
-        for poller_id in self.pollers:
-            poller = pollers[poller_id]
-            if not poller.spare:
-                self.nb_pollers += 1
-        for realm in self.higher_realms:
-            for poller in realm.pollers:
-                if not poller.spare and poller.manage_sub_realms:
-                    self.nb_pollers += 1
-
-    def count_brokers(self, brokers):
-        """ Set the number of brokers in this realm.
-
-        :return: None
-        TODO: Make this generic
-        """
-        self.nb_brokers = 0
-        for broker_id in self.brokers:
-            broker = brokers[broker_id]
-            if not broker.spare:
-                self.nb_brokers += 1
-        for realm in self.higher_realms:
-            for broker in realm.brokers:
-                if not broker.spare and broker.manage_sub_realms:
-                    self.nb_brokers += 1
-
-    def count_receivers(self, receivers):
-        """ Set the number of receivers in this realm.
-
-        :return: None
-        TODO: Make this generic
-        """
-        self.nb_receivers = 0
-        for receiver_id in self.receivers:
-            receiver = receivers[receiver_id]
-            if not receiver.spare:
-                self.nb_receivers += 1
-        for realm in self.higher_realms:
-            for receiver in realm.receivers:
-                if not receiver.spare and receiver.manage_sub_realms:
-                    self.nb_receivers += 1
-
-    def get_satellties_by_type(self, s_type):
+    def get_satellites_by_type(self, s_type):
         """Generic function to access one of the satellite attribute
         ie : self.pollers, self.reactionners ...
 
