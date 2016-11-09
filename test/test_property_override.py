@@ -123,19 +123,17 @@ class TestPropertyOverrideConfigBroken(AlignakTest):
             self.setup_with_file('cfg/cfg_property_override_broken.cfg')
         self.assertFalse(self.conf_is_correct)
 
-        self.assertIn("Configuration in host::test_host_02 is incorrect; "
-                      "from: cfg/default/daemons/reactionner-master.cfg:55",
-                      self.configuration_errors)
-        self.assertIn("Error: invalid service override syntax: fake value",
-                      self.configuration_errors)
-        self.assertIn("Error: trying to override property 'retry_interval' "
-                      "on service 'fakesrv' but it's unknown for this host",
-                      self.configuration_errors)
-        self.assertIn("Error: trying to override 'host_name', a forbidden property "
-                      "for service 'proc proc2'",
-                      self.configuration_errors)
-        self.assertIn("hosts configuration is incorrect!",
-                      self.configuration_errors)
+        self.assert_any_cfg_log_match(
+            "Configuration in host::test_host_02 is incorrect;")
+        self.assert_any_cfg_log_match(
+            "Error: invalid service override syntax: fake value")
+        self.assert_any_cfg_log_match(
+            "Error: trying to override property 'retry_interval' on service "
+            "'fakesrv' but it's unknown for this host")
+        self.assert_any_cfg_log_match(
+            "Error: trying to override 'host_name', a forbidden property for service 'proc proc2'")
+        self.assert_any_cfg_log_match(
+            "hosts configuration is incorrect!")
 
 
 if __name__ == '__main__':
