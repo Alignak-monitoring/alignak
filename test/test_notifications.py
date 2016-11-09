@@ -86,7 +86,7 @@ class TestNotifications(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
+        svc.notification_interval = 0.1
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
@@ -113,10 +113,16 @@ class TestNotifications(AlignakTest):
         cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
                                                                 svc.service_description)
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        self.external_command_loop()
+        self.assertTrue(svc.notifications_enabled)
+        self.assertEqual("HARD", svc.state_type)
+        self.assertEqual("CRITICAL", svc.state)
+        time.sleep(0.2)
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        self.assertEqual("HARD", svc.state_type)
+        self.assertEqual("CRITICAL", svc.state)
         self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
                                                              'notification')
-        self.assertTrue(svc.notifications_enabled)
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'VOID', 'command')
         self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
@@ -124,11 +130,9 @@ class TestNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         self.assertEqual(0, svc.current_notification_number, 'Ok HARD, no notifications')
-        # Todo: @ddurieux check if it normal to have 2 similar notifications as 0 and 1!
-        # self.assert_actions_count(3)
-        # self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
-        # self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
-        # self.assert_actions_match(2, 'serviceoutput OK', 'command')
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
 
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
