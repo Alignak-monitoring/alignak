@@ -137,7 +137,7 @@ class Service(SchedulingItem):
             BoolProp(default=True, fill_brok=['full_status']),
 
         'freshness_state':
-            CharProp(default='u', fill_brok=['full_status']),
+            CharProp(default='x', fill_brok=['full_status']),
 
         # Easy Service dep definition
         'service_dependencies':
