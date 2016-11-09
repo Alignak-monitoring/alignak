@@ -53,11 +53,25 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 class Stats(object):
     """Stats class to export data into a statsd format
 
+    This class allows to send metrics to a StatsD server using UDP datagrams.
+    Same behavior as::
+
+        echo "foo:1|c" | nc -u -w0 127.0.0.1 8125
+
     """
     def __init__(self):
+        # Our daemon type and name
         self.name = ''
         self.type = ''
+
+        # Our known statistics
         self.stats = {}
+
+        # local statsd part
+        self.statsd_host = None
+        self.statsd_port = None
+        self.statsd_prefix = None
+        self.statsd_enabled = None
 
         # Statsd daemon parameters
         self.statsd_sock = None
@@ -92,33 +106,51 @@ class Stats(object):
         self.statsd_enabled = statsd_enabled
 
         if self.statsd_enabled:
-            logger.info('Sending %s/%s daemon statistics to: %s:%s.%s',
+            logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
                         self.type, self.name,
                         self.statsd_host, self.statsd_port, self.statsd_prefix)
             self.load_statsd()
         else:
             logger.info('Alignak internal statistics are disabled.')
 
+        return self.statsd_enabled
+
     def load_statsd(self):
         """Create socket connection to statsd host
 
-        :return: None
+        Note that because of the UDP protocol used by StatsD, if no server is listening the
+        socket connection will be accepted anyway :)
+
+        :return: True if socket got created else False and an exception log is raised
         """
+        if not self.statsd_enabled:
+            logger.warning('StatsD is not enabled, connection is not allowed')
+            return False
+
         try:
+            logger.info('Trying to contact StatsD server...')
             self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
             self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        except (socket.error, socket.gaierror), exp:
-            logger.error('Cannot create statsd socket: %s', exp)
-            return
+        except (socket.error, socket.gaierror) as exp:
+            logger.exception('Cannot create StatsD socket: %s', exp)
+            return False
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.exception('Cannot create StatsD socket (other): %s', exp)
+            return False
+
+        logger.info('StatsD server contacted')
+        return True
 
     def incr(self, key, value):
         """Increments a key with value
+
+        If the key does not exist is is created
 
         :param key: key to edit
         :type key: str
         :param value: value to add
         :type value: int
-        :return: None
+        :return: True if the metric got sent, else False if not sent
         """
         _min, _max, number, _sum = self.stats.get(key, (None, None, 0, 0))
         number += 1
@@ -130,14 +162,21 @@ class Stats(object):
         self.stats[key] = (_min, _max, number, _sum)
 
         # Manage local statsd part
-        if self.statsd_sock and self.name:
+        if self.statsd_enabled and self.statsd_sock:
             # beware, we are sending ms here, value is in s
             packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, key, value * 1000)
+            # Do not log because it is spamming the log file, but leave this code in place
+            # for it may be restored easily for if more tests are necessary... ;)
+            # logger.info("Sending data: %s", packet)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
             except (socket.error, socket.gaierror):
-                pass  # cannot send? ok not a huge problem here and cannot
+                pass
+                # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
+            return True
+
+        return False
 
 # pylint: disable=C0103
 statsmgr = Stats()

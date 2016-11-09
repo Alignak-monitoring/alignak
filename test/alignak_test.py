@@ -152,6 +152,18 @@ class AlignakTest(unittest.TestCase):
         def assertRegex(self, *args, **kwargs):
             return self.assertRegexpMatches(*args, **kwargs)
 
+    def setup_logger(self):
+        """
+        Setup a log collector
+        :return:
+        """
+        self.logger = logging.getLogger("alignak")
+
+        # Add collector for test purpose.
+        collector_h = CollectorHandler()
+        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
+        self.logger.addHandler(collector_h)
+
     def setup_with_file(self, configuration_file):
         """
         Load alignak with defined configuration file
@@ -179,12 +191,9 @@ class AlignakTest(unittest.TestCase):
         self.conf_is_correct = False
         self.configuration_warnings = []
         self.configuration_errors = []
-        self.logger = logging.getLogger("alignak")
 
         # Add collector for test purpose.
-        collector_h = CollectorHandler()
-        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
-        self.logger.addHandler(collector_h)
+        self.setup_logger()
 
         # Initialize the Arbiter with no daemon configuration file
         self.arbiter = Arbiter(None, [configuration_file], False, False, False, False,
