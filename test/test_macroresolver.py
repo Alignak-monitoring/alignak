@@ -558,14 +558,14 @@ class TestMacroResolver(AlignakTest):
 
         # Parse custom macro to get contact custom variables based upon a fixed value
         # contact has a custom variable defined as _custom1 = value
-        dummy_call = "special_macro!$_CONTACT_CUSTOM1$"
+        dummy_call = "special_macro!$_CONTACTCUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing value', com)
 
         # Parse custom macro to get service custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $CONTACTNAME$
-        dummy_call = "special_macro!$_CONTACT_CUSTOM2$"
+        dummy_call = "special_macro!$_CONTACTCUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing test_macro_contact', com)
@@ -579,18 +579,22 @@ class TestMacroResolver(AlignakTest):
         mr = self.get_mr()
 
         hst = self._sched.hosts.find_by_name("test_macro_host")
+        # The host has custom variables, thus we may use them in a macro
+        self.assertIsNot(hst.customs, [])
+        self.assertIn('_CUSTOM1', hst.customs)
+        self.assertIn('_CUSTOM2', hst.customs)
         data = [hst]
 
         # Parse custom macro to get host custom variables based upon a fixed value
         # host has a custom variable defined as _custom1 = value
-        dummy_call = "special_macro!$_HOST_CUSTOM1$"
+        dummy_call = "special_macro!$_HOSTCUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing value', com)
 
-        # Parse custom macro to get service custom variables based upon another macro
+        # Parse custom macro to get host custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $HOSTNAME$
-        dummy_call = "special_macro!$_HOST_CUSTOM2$"
+        dummy_call = "special_macro!$_HOSTCUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing test_macro_host', com)
@@ -612,13 +616,13 @@ class TestMacroResolver(AlignakTest):
 
         # Parse custom macro to get service custom variables based upon a fixed value
         # special_macro is defined as: $USER1$/nothing $ARG1$
-        dummy_call = "special_macro!$_SERVICE_CUSTOM1$"
+        dummy_call = "special_macro!$_SERVICECUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing value', com)
 
         # Parse custom macro to get service custom variables based upon another macro
-        dummy_call = "special_macro!$_SERVICE_CUSTOM2$"
+        dummy_call = "special_macro!$_SERVICECUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         self.assertEqual('plugins/nothing test_host_0', com)

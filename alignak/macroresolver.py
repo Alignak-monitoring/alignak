@@ -338,8 +338,8 @@ class MacroResolver(Borg):
                             continue
                         if not getattr(elt, 'customs'):
                             continue
-                        if macro_name in elt.customs:
-                            macros[macro]['val'] = elt.customs[macro_name]
+                        if '_' + macro_name in elt.customs:
+                            macros[macro]['val'] = elt.customs['_' + macro_name]
                         # Then look on the macromodulations, in reverse order, so
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
