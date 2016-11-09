@@ -1400,7 +1400,7 @@ class Scheduler(object):  # pylint: disable=R0902
         It is kinda confusing when you modify an attribute (external command) and it get saved
         by retention
 
-        :param data: data fron retention
+        :param data: data from retention
         :type data: dict
         :return: None
         """
@@ -1490,7 +1490,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 'entry_type': 4, 'source': 0, 'expires': False, 'expire_time': 0, 'ref': item.uuid
             }
         # Relink the notified_contacts as a set() of true contacts objects
-        # it it was load from the retention, it's now a list of contacts
+        # if it was loaded from the retention, it's now a list of contacts
         # names
         for comm in item_comments:
             comm["ref"] = item.id
