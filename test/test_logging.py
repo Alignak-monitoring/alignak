@@ -183,6 +183,18 @@ class TestLogging(AlignakTest):
         self.assertEqual(len(my_logger.handlers), 4)
         self.assertTrue(os.path.exists('./test2.log'))
 
+    def test_log_utf8(self):
+        """ Log as UTF8 format
+
+        :return:
+        """
+        stuff = 'h\351h\351'  # Latin Small Letter E with acute in Latin-1
+        self.logger.info(stuff)
+        sutf8 = u'I love myself $£¤'  # dollar, pound, currency
+        self.logger.info(sutf8)
+        s = unichr(40960) + u'abcd' + unichr(1972)
+        self.logger.info(s)
+
     def test_log_format(self):
         """ Log string format
 
