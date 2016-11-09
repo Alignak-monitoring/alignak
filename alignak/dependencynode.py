@@ -72,7 +72,7 @@ class DependencyNode(object):
     """
     DependencyNode is a node class for business_rule expression(s)
     """
-    def __init__(self, params=None, parsing=False):
+    def __init__(self, params=None, parsing=False):  # pylint: disable=unused-argument
 
         self.operand = None
         self.sons = []

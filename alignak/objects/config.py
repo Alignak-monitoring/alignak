@@ -2052,7 +2052,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         #      r &= False
         return valid
 
-    def is_correct(self):  # pylint: disable=R0912
+    def is_correct(self):  # pylint: disable=R0912, too-many-statements
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
