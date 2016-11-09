@@ -1791,6 +1791,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 if enable_action:
                     self.set_myself_as_problem(hosts, services, timeperiods, bi_modulations)
 
+                # case no notification exist but notifications are enabled (for example, we
+                # enable notifications with external command)
+                if enable_action and self.notifications_enabled and \
+                        self.current_notification_number == 0:
+                    self.remove_in_progress_notifications()
+                    self.create_notifications('PROBLEM', notif_period, hosts, services)
+
         self.update_hard_unknown_phase_state()
         # Reset this flag. If it was true, actions were already taken
         self.in_scheduled_downtime_during_last_check = False
