@@ -2518,11 +2518,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         ok_count = 0
         # Expands child items format string macros.
         items = self.business_rule.list_all_elements()
-        for item in items:
-            if item in hosts:
-                item = hosts[item]
-            elif item in services:
-                item = services[item]
+        for item_uuid in items:
+            if item_uuid in hosts:
+                item = hosts[item_uuid]
+            elif item_uuid in services:
+                item = services[item_uuid]
 
             # Do not display children in OK state
             if item.last_hard_state_id == 0:
