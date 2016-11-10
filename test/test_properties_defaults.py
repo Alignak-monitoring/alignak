@@ -346,6 +346,8 @@ class TestEscalation(PropertiesTester, AlignakTest):
     without_default = ['escalation_name', 'first_notification', 'last_notification', 'first_notification_time', 'last_notification_time']
 
     properties = dict([
+        ('host_name', ''),
+        ('service_description', ''),
         ('contact_groups', []),
         ('contacts', []),
         ('imported_from', 'unknown'),

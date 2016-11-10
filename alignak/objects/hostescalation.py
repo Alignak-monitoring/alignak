@@ -65,27 +65,29 @@ class Hostescalation(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'host_name':             StringProp(),
-        'hostgroup_name':        StringProp(),
-        'first_notification':    IntegerProp(),
-        'last_notification':     IntegerProp(),
-        'notification_interval': IntegerProp(default=30),  # like Nagios value
-        'escalation_period':     StringProp(default=''),
-        'escalation_options':    ListProp(default=['d', 'u', 'r', 'w', 'c']),
-        'contacts':              StringProp(),
-        'contact_groups':        StringProp(),
-        'first_notification_time': IntegerProp(),
-        'last_notification_time': IntegerProp(),
+        'host_name':
+            StringProp(),
+        'hostgroup_name':
+            StringProp(),
+        'first_notification':
+            IntegerProp(),
+        'last_notification':
+            IntegerProp(),
+        'notification_interval':
+            IntegerProp(default=30),  # like Nagios value
+        'escalation_period':
+            StringProp(default=''),
+        'escalation_options':
+            ListProp(default=['d', 'u', 'r', 'w', 'c']),
+        'contacts':
+            StringProp(),
+        'contact_groups':
+            StringProp(),
+        'first_notification_time':
+            IntegerProp(),
+        'last_notification_time':
+            IntegerProp(),
     })
-
-    def get_name(self):
-        """Get escalation name
-
-        :return: name
-        :rtype: str
-        TODO: Remove this function
-        """
-        return ''
 
 
 class Hostescalations(Items):
@@ -102,18 +104,16 @@ class Hostescalations(Items):
         :type escalations: alignak.objects.escalation.Escalations
         :return: None
         """
-        # Now we explode all escalations (host_name, service_description) to escalations
-        for esca in self:
-            properties = esca.__class__.properties
-            name = getattr(esca, 'host_name', getattr(esca, 'hostgroup_name', ''))
-            creation_dict = {'escalation_name':
-                             'Generated-Hostescalation-%d-%s' % (esca.uuid, name)}
+        # Now we explode all escalations (host_name, hostgroup_name) to escalations
+        for escalation in self:
+            properties = escalation.__class__.properties
+            name = getattr(escalation, 'host_name', getattr(escalation, 'hostgroup_name', ''))
+            creation_dict = {
+                'escalation_name':
+                    'Generated-HostEscalation-%s-%s' % (name, escalation.uuid)
+            }
             for prop in properties:
-                if hasattr(esca, prop):
-                    creation_dict[prop] = getattr(esca, prop)
-            escalation = Escalation(creation_dict)
-            escalations.add_escalation(escalation)
+                if hasattr(escalation, prop):
+                    creation_dict[prop] = getattr(escalation, prop)
 
-        # print "All escalations"
-        # for es in escalations:
-        #    print es
+            escalations.add_escalation(Escalation(creation_dict))
