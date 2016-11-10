@@ -205,24 +205,27 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Passive checks for hosts - special case
         # ---------------------------------------------
-        # With timestamp in the past (- 30 seconds)
-        # The check is accepted
-        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
-        past = int(time.time() - 30)
+        # With timestamp in the past (before the last host check time!)
+        # The check is ignored because too late in the past
+        self.scheduler_loop(1, [[router, 0, 'Router is UP']])
+        router_last_check = router.last_chk
+        past = router_last_check - 30
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('Router is Down', router.output)
-        self.assertEqual(router.last_chk, past)
+        # Router did not changed state!
+        self.assertEqual('UP', router.state)
+        self.assertEqual('Router is UP', router.output)
+        router_last_check = router.last_chk
 
-        # With timestamp in the past (- 3600 seconds)
-        # The check is not be accepted
-        very_past = int(time.time() - 3600)
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;0;Router is Up' % very_past
+        # With timestamp in the past (- 1 seconds)
+        # The check is accepted because it is equal or after the last host check
+        time.sleep(2)
+        past = router_last_check
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        # Router do not change state!
+        # Router changed state!
         self.assertEqual('DOWN', router.state)
         self.assertEqual('Router is Down', router.output)
         self.assertEqual(router.last_chk, past)
@@ -324,9 +327,10 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;1;Host is Unreachable' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.scheduler_loop(1, [[router, 0, 'Host is UP']])
+        self.scheduler_loop(1, [[router, 0, 'Router is UP']])
         self.assertEqual('DOWN', host.state)
         self.assertEqual('Host is Unreachable', host.output)
+        router_last_check = router.last_chk
 
         # Receive passive host check Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
@@ -408,9 +412,19 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Passive checks for hosts - special case
         # ---------------------------------------------
-        # With timestamp in the past (- 30 seconds)
-        # The check is accepted
-        past = int(time.time() - 30)
+        # With timestamp in the past (before the last host check time!)
+        # The check is ignored because too late in the past
+        past = router_last_check - 30
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.assertEqual('UP', router.state)
+        self.assertEqual('Router is UP', router.output)
+
+        # With timestamp in the past (- 1 seconds)
+        # The check is accepted because it is equal or after the last host check
+        time.sleep(2)
+        past = router_last_check
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Router is Down' % past
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
