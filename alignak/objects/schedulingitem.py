@@ -1457,7 +1457,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     downtime.start_time <= self.last_chk and \
                     downtime.end_time >= int(time.time()) and \
                     self.state_id != 0 and downtime.trigger_id in ['', '0']:
-                print("Downtime!: %s" % downtime)
                 # returns downtimestart notifications
                 notif = downtime.enter(timeperiods, hosts, services, downtimes)
                 if notif is not None:
