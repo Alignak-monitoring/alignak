@@ -154,6 +154,21 @@ class InvalidPidFile(Exception):
 
 DEFAULT_WORK_DIR = './'
 
+try:  # pragma: no cover, exclude from code coverage
+    if os.environ.get('COVERAGE_PROCESS_START'):
+        print("***")
+        print("* Executing daemon test with code coverage enabled")
+        if 'coverage' not in sys.modules:
+            print("* coverage module is not loaded! Trying to import coverage module...")
+            import coverage
+
+            coverage.process_startup()
+            print("* coverage process started.")
+        print("***")
+except Exception as exp:  # pylint: disable=broad-except
+    print("Exception: %s", str(exp))
+    sys.exit(3)
+
 
 # pylint: disable=R0902
 class Daemon(object):
@@ -227,20 +242,6 @@ class Daemon(object):
         :param debug:
         :param debug_file:
         """
-        try:  # pragma: no cover, exclude from code coverage
-            if os.environ.get('COVERAGE_PROCESS_START'):
-                print("***")
-                print("* Executing daemon test with code coverage enabled")
-                if 'coverage' not in sys.modules:
-                    print("* coverage module is not loaded! Trying to import coverage module...")
-                    import coverage
-                    coverage.process_startup()
-                    print("* coverage process started.")
-                print("***")
-        except Exception as exp:  # pylint: disable=broad-except
-            print("Exception: %s", str(exp))
-            sys.exit(3)
-
         self.check_shm()
 
         self.name = name
