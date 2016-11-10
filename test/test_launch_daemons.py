@@ -106,10 +106,11 @@ class DaemonsStartTest(AlignakTest):
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        # sleep(1)
+        # Wait for arbiter parsing the configuration
+        sleep(5)
 
         ret = arbiter.poll()
-        self.assertIsNotNone(ret, "Arbiter still running!")
+        self.assertIsNotNone(ret, "Arbiter is still running!")
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
         for line in iter(arbiter.stderr.readline, b''):
