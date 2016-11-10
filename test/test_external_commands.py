@@ -1048,7 +1048,7 @@ class TestExternalCommands(AlignakTest):
             self.assertIn((log_level, log_message), monitoring_logs)
 
     def test_service_downtimes(self):
-        """ Test the downtime for hosts
+        """ Test the downtimes for services
         :return: None
         """
         # Our scheduler
@@ -1067,7 +1067,7 @@ class TestExternalCommands(AlignakTest):
         now = int(time.time())
         
         #  ---
-        # External command: add an host downtime
+        # External command: add a service downtime
         self.assertEqual(svc.downtimes, [])
         excmd = '[%d] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%s;%s;1;0;1200;' \
                 'test_contact;My downtime' % (now, now + 120, now + 1200)
@@ -1086,7 +1086,7 @@ class TestExternalCommands(AlignakTest):
         self.assertEqual(downtime.trigger_id, "0")
 
         #  ---
-        # External command: add another host downtime
+        # External command: add another service downtime
         excmd = '[%d] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%s;%s;1;0;1200;' \
                 'test_contact;My downtime 2' % (now, now + 1120, now + 11200)
         self._scheduler.run_external_command(excmd)
@@ -1097,7 +1097,7 @@ class TestExternalCommands(AlignakTest):
             self.assertIn(downtime, self._scheduler.downtimes)
 
         #  ---
-        # External command: yet another host downtime
+        # External command: yet another service downtime
         excmd = '[%d] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%s;%s;1;0;1200;test_contact;' \
                 'My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)
         self._scheduler.run_external_command(excmd)
@@ -1108,7 +1108,7 @@ class TestExternalCommands(AlignakTest):
             self.assertIn(downtime, self._scheduler.downtimes)
 
         #  ---
-        # External command: delete an host downtime (unknown downtime)
+        # External command: delete a service downtime (unknown downtime)
         excmd = '[%d] DEL_SVC_DOWNTIME;qsdqszerzerzd' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
@@ -1119,7 +1119,7 @@ class TestExternalCommands(AlignakTest):
             self.assertIn(downtime, self._scheduler.downtimes)
 
         #  ---
-        # External command: delete an host downtime
+        # External command: delete a service downtime
         excmd = '[%d] DEL_SVC_DOWNTIME;%s' % (now, downtime_id)
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
@@ -1130,7 +1130,7 @@ class TestExternalCommands(AlignakTest):
             self.assertIn(downtime, self._scheduler.downtimes)
 
         #  ---
-        # External command: delete all host downtime
+        # External command: delete all service downtime
         excmd = '[%d] DEL_ALL_SVC_DOWNTIMES;test_host_0;test_ok_0' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()

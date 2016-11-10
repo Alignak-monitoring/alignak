@@ -498,13 +498,14 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        print("Actions: %s" % self.schedulers['scheduler-master'].sched.actions)
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                         key=lambda x: x.creation_time)
         self.assertEqual(number, len(self.schedulers['scheduler-master'].sched.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
-                         ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
-                                    'command: %s' %
-                                    (idx, b.creation_time, b.is_a, b.type, b.status, b.t_to_go, b.command)
+                         ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, '
+                                    'planned: %s, command: %s' %
+                                    (idx, b.creation_time, b.is_a, b.type,
+                                     b.status, b.t_to_go, b.command)
                                     for idx, b in enumerate(actions))))
 
     def assert_actions_match(self, index, pattern, field):
@@ -513,7 +514,8 @@ class AlignakTest(unittest.TestCase):
 
         @verified
 
-        :param index: index number of actions list
+        :param index: index in the actions list. If index is -1, all the actions in the list are
+        searched for a matching pattern
         :type index: int
         :param pattern: pattern to verify is in the action
         :type pattern: str
@@ -522,14 +524,25 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
-        myaction = actions[index]
-        self.assertTrue(regex.search(getattr(myaction, field)),
-                        "Not found a matching patternin actions:\nindex=%s field=%s pattern=%r\n"
-                        "action_line=creation: %s, is_a: %s, type: %s, status: %s, planned: %s, "
-                        "command: %s" % (
-                            index, field, pattern, myaction.creation_time, myaction.is_a,
-                            myaction.type, myaction.status, myaction.t_to_go, myaction.command))
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                         key=lambda x: x.creation_time)
+        if index != -1:
+            myaction = actions[index]
+            self.assertTrue(regex.search(getattr(myaction, field)),
+                            "Not found a matching pattern in actions:\n"
+                            "index=%s field=%s pattern=%r\n"
+                            "action_line=creation: %s, is_a: %s, type: %s, "
+                            "status: %s, planned: %s, command: %s" % (
+                                index, field, pattern, myaction.creation_time, myaction.is_a,
+                                myaction.type, myaction.status, myaction.t_to_go, myaction.command))
+
+        for myaction in actions:
+            if regex.search(getattr(myaction, field)):
+                return
+
+        self.assertTrue(False,
+                        "Not found a matching pattern in actions:\nfield=%s pattern=%r\n" %
+                        (field, pattern))
 
     def assert_log_match(self, pattern, index=None):
         """
@@ -621,7 +634,7 @@ class AlignakTest(unittest.TestCase):
 
     def _any_check_match(self, pattern, field, assert_not):
         """
-        Search if any chek matches the requested pattern
+        Search if any check matches the requested pattern
 
         @verified
         :param pattern:
@@ -630,7 +643,8 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         regex = re.compile(pattern)
-        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(),
+                        key=lambda x: x.creation_time)
         for check in checks:
             if re.search(regex, getattr(check, field)):
                 self.assertTrue(not assert_not,
