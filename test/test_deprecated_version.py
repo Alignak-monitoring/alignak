@@ -11,7 +11,8 @@ else:
 
 class Test_Deprecated_alignak_bin_VERSION(unittest.TestCase):
 
-    def test_it(self):
+    def test_deprecated_version(self):
+        """ Test the deprecated Alignak version warning """
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter('always')
             import alignak.bin
