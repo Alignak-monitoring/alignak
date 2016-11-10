@@ -91,7 +91,7 @@ class TestPassiveChecks(AlignakTest):
         self.assertEqual("w", svc1.freshness_state)
         self.assertEqual("c", svc2.freshness_state)
         self.assertEqual("u", svc3.freshness_state)
-        self.assertEqual("u", svc4.freshness_state)
+        self.assertEqual("x", svc4.freshness_state)
 
     def test_2_freshness_expiration(self):
         """ When freshness period expires, set freshness state and output

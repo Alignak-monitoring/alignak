@@ -123,15 +123,11 @@ class TestConfig(PropertiesTester, AlignakTest):
     without_default = []
 
     properties = dict([
-        ('prefix', '/usr/local/alignak/'),
-        ('workdir', '/var/run/alignak/'),
+        ('prefix', ''),
         ('config_base_dir', ''),
-        ('use_local_log', True),
-        ('log_level', 'WARNING'),
-        ('local_log', '/var/log/alignak/arbiterd.log'),
+        ('triggers_dir', ''),
+        ('packs_dir', ''),
         ('resource_file', '/tmp/resources.txt'),
-        ('alignak_user', alignak.daemon.get_cur_user()),
-        ('alignak_group', alignak.daemon.get_cur_group()),
         ('enable_notifications', True),
         ('execute_service_checks', True),
         ('accept_passive_service_checks', True),
@@ -139,20 +135,23 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('accept_passive_host_checks', True),
         ('enable_event_handlers', True),
         ('log_rotation_method', 'd'),
-        ('log_archive_path', '/usr/local/alignak/var/archives'),
+        ('log_archive_path', '/usr/local/alignak/var/log/archives'),
         ('check_external_commands', True),
+        ('main_config_file', '/usr/local/etc/alignak/alignak.cfg'),
         ('command_file', ''),
-        ('lock_file', '/var/run/alignak/arbiterd.pid'),
         ('state_retention_file', ''),
         ('retention_update_interval', 60),
         ('use_syslog', False),
         ('log_notifications', True),
+        ('log_snapshots', True),
+        ('log_flappings', True),
+        ('log_active_checks', False),
         ('log_service_retries', True),
         ('log_host_retries', True),
         ('log_event_handlers', True),
         ('log_initial_states', True),
         ('log_external_commands', True),
-        ('log_passive_checks', True),
+        ('log_passive_checks', False),
         ('global_host_event_handler', ''),
         ('global_service_event_handler', ''),
         ('max_service_check_spread', 30),
@@ -161,7 +160,6 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('auto_reschedule_checks', True),
         ('auto_rescheduling_interval', 1),
         ('auto_rescheduling_window', 180),
-        ('use_aggressive_host_checking', False),
         ('translate_passive_host_checks', True),
         ('passive_host_checks_are_soft', True),
         ('enable_predictive_host_dependency_checks', True),
@@ -217,10 +215,8 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('use_true_regexp_matching', None),
         ('broker_module', ''),
         ('modified_attributes', 0L),
-        ('daemon_enabled', True),
 
         # Alignak specific
-        ('idontcareaboutsecurity', False),
         ('flap_history', 20),
         ('max_plugins_output_length', 8192),
         ('no_event_handlers_during_downtimes', False),
@@ -229,33 +225,14 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('enable_problem_impacts_states_change', False),
         ('resource_macros_names', []),
 
-        # SSL part
-        ('use_ssl', False),
-        ('server_key', 'etc/certs/server.key'),
-        ('ca_cert', 'etc/certs/ca.pem'),
-        ('server_cert', 'etc/certs/server.cert'),
-        ('hard_ssl_name_check', False),
-
-        ('human_timestamp_log', False),
-
         # Discovery part
         ('runners_timeout', 3600),
         ('pack_distribution_file', 'pack_distribution.dat'),
-
-        # WebUI part
-        ('webui_lock_file', 'webui.pid'),
-        ('webui_port', 8080),
-        ('webui_host', '0.0.0.0'),
 
         ('use_multiprocesses_serializer', False),
         ('daemon_thread_pool_size', 8),
         ('enable_environment_macros', True),
         ('timeout_exit_status', 2),
-
-        # kernel.alignak.io part
-        ('api_key', ''),
-        ('secret', ''),
-        ('http_proxy', ''),
 
         # statsd part
         ('statsd_host', 'localhost'),
@@ -307,6 +284,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', []),
+        ('contactgroup_members', []),
         ('uuid', ''),
         ])
 
@@ -483,6 +461,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
         ('notes_url', ''),
         ('action_url', ''),
         ('realm', ''),
+        ('hostgroup_members', []),
         ])
 
     def setUp(self):
@@ -505,10 +484,12 @@ class TestHost(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('display_name', ''),
+        ('address6', ''),
         ('parents', []),
         ('hostgroups', []),
         ('check_command', '_internal_host_up'),
         ('initial_state', 'o'),
+        ('freshness_state', 'd'),
         ('check_interval', 0),
         ('max_check_attempts', 1),
         ('retry_interval', 0),
@@ -516,13 +497,13 @@ class TestHost(PropertiesTester, AlignakTest):
         ('passive_checks_enabled', True),
         ('obsess_over_host', False),
         ('check_freshness', False),
-        ('freshness_threshold', 0),
+        ('freshness_threshold', 3600),
         ('event_handler', ''),
         ('event_handler_enabled', False),
         ('low_flap_threshold', 25),
         ('high_flap_threshold', 50),
         ('flap_detection_enabled', True),
-        ('flap_detection_options', ['o','d','u']),
+        ('flap_detection_options', ['o','d','x']),
         ('process_perf_data', True),
         ('retain_status_information', True),
         ('retain_nonstatus_information', True),
@@ -530,7 +511,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('contact_groups', []),
         ('notification_interval', 60),
         ('first_notification_delay', 0),
-        ('notification_options', ['d','u','r','f']),
+        ('notification_options', ['d','x','r','f']),
         ('notifications_enabled', True),
         ('stalking_options', ['']),
         ('notes', ''),
@@ -571,7 +552,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('snapshot_command', ''),
         ('snapshot_enabled', False),
         ('snapshot_period', ''),
-        ('snapshot_criteria', ['d','u']),
+        ('snapshot_criteria', ['d','x']),
         ('business_rule_host_notification_options', []),
         ('business_rule_service_notification_options', []),
         ])
@@ -593,6 +574,7 @@ class TestModule(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
+        ('module_types', ['']),
         ('modules', ['']),
         ])
 
@@ -611,6 +593,7 @@ class TestNotificationway(PropertiesTester, AlignakTest):
         'host_notification_commands', 'service_notification_commands']
 
     properties = dict([
+        ('uuid', ''),
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
         ('imported_from', 'unknown'),
@@ -660,12 +643,12 @@ class TestRealm(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
+        ('alias', ''),
         ('unknown_members', []),
         ('uuid', ''),
         ('realm_members', []),
         ('higher_realms', []),
         ('default', False),
-        ('broker_complete_links', False),
         ])
 
     def setUp(self):
@@ -789,7 +772,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
-        ('servicegroup_members', ''),
+        ('servicegroup_members', []),
         ])
 
     def setUp(self):
@@ -817,11 +800,12 @@ class TestService(PropertiesTester, AlignakTest):
         ('servicegroups', []),
         ('is_volatile', False),
         ('initial_state', 'o'),
+        ('freshness_state', 'x'),
         ('active_checks_enabled', True),
         ('passive_checks_enabled', True),
         ('obsess_over_service', False),
         ('check_freshness', False),
-        ('freshness_threshold', 0),
+        ('freshness_threshold', 3600),
         ('event_handler', ''),
         ('event_handler_enabled', False),
         ('check_interval', 0),
@@ -829,13 +813,13 @@ class TestService(PropertiesTester, AlignakTest):
         ('low_flap_threshold', 25),
         ('high_flap_threshold', 50),
         ('flap_detection_enabled', True),
-        ('flap_detection_options', ['o','w','c','u']),
+        ('flap_detection_options', ['o','w','c','u','x']),
         ('process_perf_data', True),
         ('retain_status_information', True),
         ('retain_nonstatus_information', True),
         ('notification_interval', 60),
         ('first_notification_delay', 0),
-        ('notification_options', ['w','u','c','r','f','s']),
+        ('notification_options', ['w','u','c','r','f','s', 'x']),
         ('notifications_enabled', True),
         ('contacts', []),
         ('contact_groups', []),
@@ -876,7 +860,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('snapshot_command', ''),
         ('snapshot_enabled', False),
         ('snapshot_period', ''),
-        ('snapshot_criteria', ['w','c','u']),
+        ('snapshot_criteria', ['w','c','u','x']),
         ('business_rule_host_notification_options', []),
         ('business_rule_service_notification_options', []),
         ('host_dependency_enabled', True),

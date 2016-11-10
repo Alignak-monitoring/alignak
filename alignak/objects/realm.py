@@ -79,7 +79,7 @@ class Realm(Itemgroup):
         'realm_name':
             StringProp(fill_brok=['full_status']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=''),
         # No status_broker_name because it put hosts, not host_name
         'realm_members':
             ListProp(default=[], split_on_coma=True),
