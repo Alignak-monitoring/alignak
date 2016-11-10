@@ -56,7 +56,7 @@ class TestRealms(AlignakTest):
     """
 
     def test_no_defined_realm(self):
-        """ Test configuration with no definde realm
+        """ Test configuration with no defined realm
         Load a configuration with no realm defined:
         - Alignak defines a default realm
         - All hosts with no realm defined are in this default realm
@@ -132,7 +132,6 @@ class TestRealms(AlignakTest):
         self.assertTrue(self.conf_is_correct)
 
         for scheduler in self.schedulers:
-            print("Scheduler: %s: %s" % (scheduler, self.schedulers[scheduler]))
             if scheduler == 'Scheduler-1':
                 sched_realm1 = self.schedulers[scheduler]
             elif scheduler == 'Scheduler-2':
@@ -229,6 +228,41 @@ class TestRealms(AlignakTest):
         hostgroup_realm2 = sched_realm2.conf.hostgroups.find_by_name("in_realm2")
         self.assertIsNotNone(hostgroup_realm2)
 
+    def test_sub_realms(self):
+        """ Test realm / sub-realm
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_realms_sub.cfg')
+        self.assertTrue(self.conf_is_correct)
+
+        world = self.arbiter.conf.realms.find_by_name('World')
+        self.assertIsNotNone(world)
+        europe = self.arbiter.conf.realms.find_by_name('Europe')
+        self.assertIsNotNone(europe)
+        paris = self.arbiter.conf.realms.find_by_name('Paris')
+        self.assertIsNotNone(paris)
+
+        # Get satellites of the world realm
+        self.assertEqual(len(world.get_satellites_by_type('arbiter')), 0)
+        self.assertEqual(len(world.get_satellites_by_type('scheduler')), 1)
+        self.assertEqual(len(world.get_satellites_by_type('broker')), 1)
+        self.assertEqual(len(world.get_satellites_by_type('poller')), 1)
+        self.assertEqual(len(world.get_satellites_by_type('receiver')), 0)
+        self.assertEqual(len(world.get_satellites_by_type('reactionner')), 1)
+
+        # Get satellites of the europe realm
+        self.assertEqual(len(europe.get_satellites_by_type('arbiter')), 0)
+        self.assertEqual(len(europe.get_satellites_by_type('scheduler')), 0)
+        self.assertEqual(len(europe.get_satellites_by_type('broker')), 1)
+        self.assertEqual(len(europe.get_satellites_by_type('poller')), 0)
+        self.assertEqual(len(europe.get_satellites_by_type('receiver')), 0)
+        self.assertEqual(len(europe.get_satellites_by_type('reactionner')), 0)
+
+        self.assertIn(europe.uuid, world.get_realms())
+        self.assertIn(paris.uuid, europe.get_realms())
+
     def test_sub_realms_assignations(self):
         """ Test realm / sub-realm for broker
 
@@ -239,14 +273,14 @@ class TestRealms(AlignakTest):
         self.assertTrue(self.conf_is_correct)
 
         world = self.arbiter.conf.realms.find_by_name('World')
-        self.assertIsNot(world, None)
+        self.assertIsNotNone(world)
         europe = self.arbiter.conf.realms.find_by_name('Europe')
-        self.assertIsNot(europe, None)
+        self.assertIsNotNone(europe)
         paris = self.arbiter.conf.realms.find_by_name('Paris')
-        self.assertIsNot(paris, None)
+        self.assertIsNotNone(paris)
         # Get the broker in the realm level
         bworld = self.arbiter.conf.brokers.find_by_name('B-world')
-        self.assertIsNot(bworld, None)
+        self.assertIsNotNone(bworld)
 
         # broker should be in the world level
         self.assertIs(bworld.uuid in world.potential_brokers, True)
