@@ -91,26 +91,35 @@ class HostExtInfo(GenericExtInfo):
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = Item.properties.copy()
     properties.update({
-        'host_name':            StringProp(),
-        'notes':                StringProp(default=''),
-        'notes_url':            StringProp(default=''),
-        'icon_image':           StringProp(default=''),
-        'icon_image_alt':       StringProp(default=''),
-        'vrml_image':           StringProp(default=''),
-        'statusmap_image':      StringProp(default=''),
+        'host_name':
+            StringProp(),
+        'notes':
+            StringProp(default=''),
+        'notes_url':
+            StringProp(default=''),
+        'icon_image':
+            StringProp(default=''),
+        'icon_image_alt':
+            StringProp(default=''),
+        'vrml_image':
+            StringProp(default=''),
+        'statusmap_image':
+            StringProp(default=''),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
-        '2d_coords':            StringProp(default='', no_slots=True),
-        '3d_coords':            StringProp(default='', no_slots=True),
+        '2d_coords':
+            StringProp(default='', no_slots=True),
+        '3d_coords':
+            StringProp(default='', no_slots=True),
     })
 
     # Hosts macros and prop that give the information
     # the prop can be callable or not
     macros = {
-        'HOSTNAME':          'host_name',
-        'HOSTNOTESURL':      'notes_url',
-        'HOSTNOTES':         'notes',
+        'HOSTNAME': 'host_name',
+        'HOSTNOTESURL': 'notes_url',
+        'HOSTNOTES': 'notes',
     }
 
 
@@ -146,12 +155,9 @@ class HostsExtInfo(Items):
         :type extinfo: alignak.objects.hostextinfo.HostExtInfo
         :return: None
         """
-        properties = ['notes',
-                      'notes_url',
-                      'icon_image',
-                      'icon_image_alt',
-                      'vrml_image',
-                      'statusmap_image']
+        # Note that 2d_coords and 3d_coords are never merged, so not usable !
+        properties = ['notes', 'notes_url', 'icon_image', 'icon_image_alt',
+                      'vrml_image', 'statusmap_image']
         # host properties have precedence over hostextinfo properties
         for prop in properties:
             if getattr(host, prop) == '' and getattr(extinfo, prop) != '':
