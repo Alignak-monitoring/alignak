@@ -538,6 +538,7 @@ class AlignakTest(unittest.TestCase):
                             "status: %s, planned: %s, command: %s" % (
                                 index, field, pattern, myaction.creation_time, myaction.is_a,
                                 myaction.type, myaction.status, myaction.t_to_go, myaction.command))
+            return
 
         for myaction in actions:
             if regex.search(getattr(myaction, field)):
