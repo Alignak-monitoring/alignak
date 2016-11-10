@@ -116,12 +116,11 @@ class Trigger(Item):
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-
         # Ok we can declare for this trigger call our functions
         for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
             locals()[name] = fun
 
-        code = self.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
+        code = self.code_bin
         env = dict(locals())
         env["self"] = ctx
         del env["ctx"]

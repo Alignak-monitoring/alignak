@@ -1,0 +1,5 @@
+times = perfs("test_host_0/HTTP-*", 'time')
+print "Found times: ", times
+avg = sum(times)/len(times)
+print "Average time: ", avg
+set_value(self, output='OK all is green', perfdata='avg_time=%dms' % avg, return_code=0)
