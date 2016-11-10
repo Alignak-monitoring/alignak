@@ -1451,10 +1451,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         status_updated = False
         for downtime_id in self.downtimes:
             downtime = downtimes[downtime_id]
-            # activate flexible downtimes (do not activate triggered downtimes)
-            if downtime.fixed is False and downtime.is_in_effect is False and \
+            # Activate flexible downtimes (do not activate triggered downtimes)
+            # Note: only activate if we are between downtime start and end time!
+            if not downtime.fixed and not downtime.is_in_effect and \
                     downtime.start_time <= self.last_chk and \
+                    downtime.end_time >= int(time.time()) and \
                     self.state_id != 0 and downtime.trigger_id in ['', '0']:
+                print("Downtime!: %s" % downtime)
                 # returns downtimestart notifications
                 notif = downtime.enter(timeperiods, hosts, services, downtimes)
                 if notif is not None:

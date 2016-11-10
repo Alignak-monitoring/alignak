@@ -343,6 +343,9 @@ class AlignakTest(unittest.TestCase):
                 self.assertGreater(len(obj.checks_in_progress), 0)
                 chk = mysched.sched.checks[obj.checks_in_progress[0]]
                 chk.set_type_active()
+                chk.check_time = time.time()
+                chk.wait_time = 0.0001
+                chk.last_poll = chk.check_time
                 chk.output = output
                 chk.exit_status = exit_status
                 mysched.sched.waiting_results.put(chk)
