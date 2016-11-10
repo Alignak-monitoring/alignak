@@ -167,6 +167,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
 
+        'triggers_dir':
+            StringProp(default=''),
+
+        'packs_dir':
+            StringProp(default=''),
+
         # Inner objects cache file for Nagios CGI
         'object_cache_file':
             UnusedProp(text=NO_LONGER_USED),

@@ -125,6 +125,8 @@ class TestConfig(PropertiesTester, AlignakTest):
     properties = dict([
         ('prefix', ''),
         ('config_base_dir', ''),
+        ('triggers_dir', ''),
+        ('packs_dir', ''),
         ('resource_file', '/tmp/resources.txt'),
         ('enable_notifications', True),
         ('execute_service_checks', True),
