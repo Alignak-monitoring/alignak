@@ -45,7 +45,7 @@ docs/tools/pages/
 
 
 # test and coverage
-test/.cov*
+test/.coverage
 
 test/cfg/run_test_launch_daemons
 test/cfg/run_test_launch_daemons_modules

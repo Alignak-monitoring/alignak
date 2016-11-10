@@ -106,10 +106,11 @@ class DaemonsStartTest(AlignakTest):
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        sleep(1)
+        # Wait for arbiter parsing the configuration
+        sleep(5)
 
         ret = arbiter.poll()
-        self.assertIsNotNone(ret, "Arbiter still running!")
+        self.assertIsNotNone(ret, "Arbiter is still running!")
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
         for line in iter(arbiter.stderr.readline, b''):
@@ -350,11 +351,12 @@ class DaemonsStartTest(AlignakTest):
         if ssl:
             for name, port in satellite_map.items():
                 raw_data = req.get("http://localhost:%s/ping" % port)
-                self.assertEqual('The client sent a plain HTTP request, but this server only speaks HTTPS on this port.', raw_data.text)
+                self.assertEqual('The client sent a plain HTTP request, but this server '
+                                 'only speaks HTTPS on this port.', raw_data.text)
 
         print("Testing get_satellite_list")
-        raw_data = req.get("%s://localhost:%s/get_satellite_list" % (http,
-                                                                     satellite_map['arbiter']), verify=False)
+        raw_data = req.get("%s://localhost:%s/get_satellite_list" %
+                           (http, satellite_map['arbiter']), verify=False)
         expected_data ={"reactionner": ["reactionner-master"],
                         "broker": ["broker-master"],
                         "arbiter": ["arbiter-master"],
@@ -373,6 +375,10 @@ class DaemonsStartTest(AlignakTest):
             self.assertTrue(data, "Daemon %s has no conf!" % daemon)
             # TODO: test with magic_hash
 
+        print("Testing do_not_run")
+        for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            raw_data = req.get("%s://localhost:%s/do_not_run" % (http, satellite_map[daemon]), verify=False)
+
         print("Testing api")
         name_to_interface = {'arbiter': ArbiterInterface,
                              'scheduler': SchedulerInterface,
@@ -387,7 +393,18 @@ class DaemonsStartTest(AlignakTest):
             self.assertIsInstance(data, list, "Data is not a list!")
             self.assertEqual(set(data), expected_data, "Daemon %s has a bad API!" % name)
 
-        print("Testing get_checks on scheduler")
+        print("Testing api_full")
+        name_to_interface = {'arbiter': ArbiterInterface,
+                             'scheduler': SchedulerInterface,
+                             'broker': BrokerInterface,
+                             'poller': GenericInterface,
+                             'reactionner': GenericInterface,
+                             'receiver': ReceiverInterface}
+        for name, port in satellite_map.items():
+            raw_data = req.get("%s://localhost:%s/api_full" % (http, port), verify=False)
+            data = raw_data.json()
+
+        # print("Testing get_checks on scheduler")
         # TODO: if have poller running, the poller will get the checks before us
         #
         # We need to sleep 10s to be sure the first check can be launched now (check_interval = 5)
