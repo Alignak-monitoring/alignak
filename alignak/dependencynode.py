@@ -65,13 +65,14 @@ from alignak.util import filter_service_by_host_tag_name
 from alignak.util import filter_service_by_servicegroup_name
 from alignak.util import filter_host_by_bp_rule_label
 from alignak.util import filter_service_by_host_bp_rule_label
+from alignak.misc.serialization import serialize, unserialize
 
 
 class DependencyNode(object):
     """
     DependencyNode is a node class for business_rule expression(s)
     """
-    def __init__(self, params=None):
+    def __init__(self, params=None, parsing=False):  # pylint: disable=unused-argument
 
         self.operand = None
         self.sons = []
@@ -84,7 +85,7 @@ class DependencyNode(object):
             if 'operand' in params:
                 self.operand = params['operand']
             if 'sons' in params:
-                self.sons = [DependencyNode(elem) for elem in params['sons']]
+                self.sons = [unserialize(elem) for elem in params['sons']]
             # Of: values are a triple OK,WARN,CRIT
             if 'of_values' in params:
                 self.of_values = tuple(params['of_values'])
@@ -107,7 +108,7 @@ class DependencyNode(object):
         :return: json representation of a DependencyNode
         :rtype: dict
         """
-        return {'operand': self.operand, 'sons': [elem.serialize() for elem in self.sons],
+        return {'operand': self.operand, 'sons': [serialize(elem) for elem in self.sons],
                 'of_values': self.of_values, 'is_of_mul': self.is_of_mul,
                 'not_value': self.not_value}
 
@@ -135,78 +136,80 @@ class DependencyNode(object):
         # should not go here...
         return state
 
-    def get_state(self):
+    def get_state(self, hosts, services):
         """Get node state by looking recursively over sons and applying operand
 
+        :param hosts: list of available hosts to search for
+        :param services: list of available services to search for
         :return: Node state
         :rtype: int
         """
-        # print "Ask state of me", self
-
-        # If we are a host or a service, wee just got the host/service
+        # If we are a host or a service, we just got the host/service
         # hard state
-        if self.operand in ['host', 'service']:
-            return self.get_simple_node_state()
+        if self.operand == 'host':
+            host = hosts[self.sons[0]]
+            return self.get_host_node_state(host.last_hard_state_id)
+        elif self.operand == 'service':
+            service = services[self.sons[0]]
+            return self.get_service_node_state(service.last_hard_state_id)
+        elif self.operand == '|':
+            return self.get_complex_or_node_state(hosts, services)
+        elif self.operand == '&':
+            return self.get_complex_and_node_state(hosts, services)
+        #  It's an Xof rule
+        elif self.operand == 'of:':
+            return self.get_complex_xof_node_state(hosts, services)
         else:
-            return self.get_complex_node_state()
+            return 4  # We have an unknown node. Code is not reachable because we validate operands
 
-    def get_simple_node_state(self):
-        """Get node state, simplest case ::
+    def get_host_node_state(self, state):
+        """Get host node state, simplest case ::
 
-        * Handle not value (revert) for host and service node
-        * Return 2 instead of 1 for host
+        * Handle not value (revert) for host and consider 1 as 2
 
         :return: 0, 1 or 2
         :rtype: int
-        TODO: Why return 1 when not 0 instead of 2 ?
         """
-        state = self.sons[0].last_hard_state_id
         # print "Get the hard state (%s) for the object %s" % (state, self.sons[0].get_name())
         # Make DOWN look as CRITICAL (2 instead of 1)
-        if self.operand == 'host' and state == 1:
+        if state == 1:
             state = 2
         # Maybe we are a NOT node, so manage this
         if self.not_value:
-            # We inverse our states
-            if self.operand == 'host' and state == 1:
-                return 0
-            if self.operand == 'host' and state == 0:
-                return 1
-            # Critical -> OK
-            if self.operand == 'service' and state == 2:
-                return 0
-            # OK -> CRITICAL (warning is untouched)
-            if self.operand == 'service' and state == 0:
-                return 2
+            return 0 if state else 2  # Keep the logic of return Down on NOT rules
         return state
 
-    def get_complex_node_state(self):
-        """Get state, handle AND, OR, X of aggregation.
+    def get_service_node_state(self, state):
+        """Get service node state, simplest case ::
+
+        * Handle not value (revert) for service
 
         :return: 0, 1 or 2
         :rtype: int
         """
-        if self.operand == '|':
-            return self.get_complex_or_node_state()
+        # Maybe we are a NOT node, so manage this
+        if self.not_value:
+            # Critical -> OK
+            if state == 2:
+                return 0
+            # OK -> CRITICAL (warning is untouched)
+            if state == 0:
+                return 2
+        return state
 
-        elif self.operand == '&':
-            return self.get_complex_and_node_state()
-
-        #  It's an Xof rule
-        else:
-            return self.get_complex_xof_node_state()
-
-    def get_complex_or_node_state(self):
+    def get_complex_or_node_state(self, hosts, services):
         """Get state , handle OR aggregation ::
 
            * Get the best state (min of sons)
            * Revert if it's a not node
 
+        :param hosts: host objects
+        :param services: service objects
         :return: 0, 1 or 2
         :rtype: int
         """
         # First we get the state of all our sons
-        states = [s.get_state() for s in self.sons]
+        states = [s.get_state(hosts, services) for s in self.sons]
         # Next we calculate the best state
         best_state = min(states)
         # Then we handle eventual not value
@@ -214,17 +217,19 @@ class DependencyNode(object):
             return self.get_reverse_state(best_state)
         return best_state
 
-    def get_complex_and_node_state(self):
+    def get_complex_and_node_state(self, hosts, services):
         """Get state , handle AND aggregation ::
 
            * Get the worst state. 2 or max of sons (3 <=> UNKNOWN < CRITICAL <=> 2)
            * Revert if it's a not node
 
+        :param hosts: host objects
+        :param services: service objects
         :return: 0, 1 or 2
         :rtype: int
         """
         # First we get the state of all our sons
-        states = [s.get_state() for s in self.sons]
+        states = [s.get_state(hosts, services) for s in self.sons]
         # Next we calculate the worst state
         if 2 in states:
             worst_state = 2
@@ -235,7 +240,7 @@ class DependencyNode(object):
             return self.get_reverse_state(worst_state)
         return worst_state
 
-    def get_complex_xof_node_state(self):
+    def get_complex_xof_node_state(self, hosts, services):
         """Get state , handle X of aggregation ::
 
            * Count the number of OK, WARNING, CRITICAL
@@ -243,12 +248,14 @@ class DependencyNode(object):
            * Return the code for first match (2, 1, 0)
            * If no rule apply, return OK for simple X of and worst state for multiple X of
 
+        :param hosts: host objects
+        :param services: service objects
         :return: 0, 1 or 2
         :rtype: int
         TODO: Looks like the last if does the opposite of what the comment says
         """
         # First we get the state of all our sons
-        states = [s.get_state() for s in self.sons]
+        states = [s.get_state(hosts, services) for s in self.sons]
 
         # We search for OK, WARNING or CRITICAL applications
         # And we will choice between them
@@ -336,9 +343,9 @@ class DependencyNode(object):
             return worst_state
 
     def list_all_elements(self):
-        """Get all host/service in our node and below
+        """Get all host/service uuid in our node and below
 
-        :return: list of hosts/services
+        :return: list of hosts/services uuids
         :rtype: list
         """
         res = []
@@ -350,7 +357,7 @@ class DependencyNode(object):
         for son in self.sons:
             res.extend(son.list_all_elements())
 
-        # and uniq the result
+        # and returns a list of unique uuids
         return list(set(res))
 
     def switch_zeros_of_values(self):
@@ -629,11 +636,12 @@ class DependencyNodeFactory(object):
         else:
             node.operand = 'object'
             obj, error = self.find_object(pattern, hosts, services)
+            # here we have Alignak SchedulingItem object (Host/Service)
             if obj is not None:
                 # Set host or service
                 # pylint: disable=E1101
                 node.operand = obj.__class__.my_type
-                node.sons.append(obj)
+                node.sons.append(obj.uuid)  # Only store the uuid, not the full object.
             else:
                 if running is False:
                     node.configuration_errors.append(error)
@@ -743,11 +751,12 @@ class DependencyNodeFactory(object):
             return node
 
         # Creates dependency node subtree
+        # here we have Alignak SchedulingItem object (Host/Service)
         for item in items:
             # Creates a host/service node
             son = DependencyNode()
             son.operand = item.__class__.my_type
-            son.sons.append(item)
+            son.sons.append(item.uuid)  # Only store the uuid, not the full object.
             # Appends it to wrapping node
             node.sons.append(son)
 

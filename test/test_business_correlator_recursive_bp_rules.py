@@ -45,25 +45,47 @@
 # This file is used to test reading and processing of config files
 #
 
-from alignak_test import *
+from alignak_test import AlignakTest, unittest
 
 
-class TestConfig(AlignakTest):
+class TestBusinessCorrelatorRecursive(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_python_crash_with_recursive_bp_rules.cfg'])
+        self.setup_with_file('cfg/cfg_business_correlator_recursive.cfg')
+        self.assertTrue(self.conf_is_correct)
+        self._sched = self.schedulers['scheduler-master'].sched
 
-    def test_dummy(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host1 = self.sched.hosts.find_by_name("ht34-peret-2-dif0")
-        host2 = self.sched.hosts.find_by_name("ht34-peret-2-dif1")
-        self.scheduler_loop(5, [[host1, 2, 'DOWN | value1=1 value2=2'], [host2, 2, 'DOWN | rtt=10']])
+    def test_recursive(self):
+        """ BR - recursive do not break python
+        """
+        self.print_header()
 
+        # Get the hosts
+        host1 = self._sched.hosts.find_by_name("ht34-peret-2-dif0")
+        host1.act_depend_of = []  # no host checks on critical check results
+        host2 = self._sched.hosts.find_by_name("ht34-peret-2-dif1")
+        host2.act_depend_of = []  # no host checks on critical check results
+
+        hst_cor = self._sched.hosts.find_by_name("ht34-peret-2")
+        hst_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple host...
+        self.assertTrue(hst_cor.got_business_rule)
+        self.assertIsNotNone(hst_cor.business_rule)
+        bp_rule = hst_cor.business_rule
+
+        self.scheduler_loop(3, [
+            [host1, 2, 'DOWN | value1=1 value2=2'],
+            [host2, 2, 'DOWN | rtt=10']
+        ])
+
+        self.assertEqual('DOWN', host1.state)
+        self.assertEqual('HARD', host1.state_type)
+        self.assertEqual('DOWN', host2.state)
+        self.assertEqual('HARD', host2.state_type)
+
+        # When all is ok, the BP rule state is 4: undetermined!
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        self.assertEqual(4, state)
 
 if __name__ == '__main__':
     unittest.main()

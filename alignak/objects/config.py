@@ -1862,12 +1862,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 continue
 
             bp_items = item.business_rule.list_all_elements()
-            for bp_item in bp_items:
-                if bp_item.uuid in self.hosts and item.business_rule_host_notification_options:
-                    bp_item.notification_options = item.business_rule_host_notification_options
-                elif bp_item.uuid in self.services and \
-                        item.business_rule_service_notification_options:
-                    bp_item.notification_options = item.business_rule_service_notification_options
+            for bp_item_uuid in bp_items:
+                if bp_item_uuid in self.hosts:
+                    bp_item = self.hosts[bp_item_uuid]
+                    notif_options = item.business_rule_host_notification_options
+                else:  # We have a service
+                    bp_item = self.services[bp_item_uuid]
+                    notif_options = item.business_rule_service_notification_options
+
+                if notif_options:
+                    bp_item.notification_options = notif_options
 
                 bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w', 'x'],
                                                  '', True))
@@ -2048,7 +2052,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         #      r &= False
         return valid
 
-    def is_correct(self):  # pylint: disable=R0912
+    def is_correct(self):  # pylint: disable=R0912, too-many-statements
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2160,7 +2164,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     if not e_ro:
                         continue
                     e_r = e_ro.realm_name
-                    for elt in item.business_rule.list_all_elements():
+                    for elt_uuid in item.business_rule.list_all_elements():
+                        if elt_uuid in self.hosts:
+                            elt = self.hosts[elt_uuid]
+                        else:
+                            elt = self.services[elt_uuid]
                         r_o = self.realms[elt.realm]
                         # Something was wrong in the conf, will be raised elsewhere
                         if not r_o:
@@ -2300,23 +2308,25 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # For host/service that are business based, we need to
         # link them too
         for serv in [srv for srv in self.services if srv.got_business_rule]:
-            for elem in serv.business_rule.list_all_elements():
-                if elem.uuid in self.services:
+            for elem_uuid in serv.business_rule.list_all_elements():
+                if elem_uuid in self.services:
+                    elem = self.services[elem_uuid]
                     if elem.host != serv.host:  # do not a host with itself
                         links.add((elem.host, serv.host))
-                else:  # it's already a host
-                    if elem.uuid != serv.host:
-                        links.add((elem.uuid, serv.host))
+                else:  # it's already a host]
+                    if elem_uuid != serv.host:
+                        links.add((elem_uuid, serv.host))
 
         # Same for hosts of course
         for host in [hst for hst in self.hosts if hst.got_business_rule]:
-            for elem in host.business_rule.list_all_elements():
-                if elem.uuid in self.services:  # if it's a service
+            for elem_uuid in host.business_rule.list_all_elements():
+                if elem_uuid in self.services:  # if it's a service
+                    elem = self.services[elem_uuid]
                     if elem.host != host.uuid:
                         links.add((elem.host, host.uuid))
                 else:  # e is a host
-                    if elem != host:
-                        links.add((elem.uuid, host.uuid))
+                    if elem_uuid != host.uuid:
+                        links.add((elem_uuid, host.uuid))
 
         # Now we create links in the graph. With links (set)
         # We are sure to call the less add_edge

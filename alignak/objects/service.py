@@ -201,8 +201,8 @@ class Service(SchedulingItem):
         'SERVICEDURATIONSEC':     'get_duration_sec',
         'SERVICEDOWNTIME':        'get_downtime',
         'SERVICEPERCENTCHANGE':   'percent_state_change',
-        'SERVICEGROUPNAME':       ('get_groupname', 'servicegroups'),
-        'SERVICEGROUPNAMES':      ('get_groupnames', 'servicegroups'),
+        'SERVICEGROUPNAME':       ('get_groupname', ['servicegroups']),
+        'SERVICEGROUPNAMES':      ('get_groupnames', ['servicegroups']),
         'LASTSERVICECHECK':       'last_chk',
         'LASTSERVICESTATECHANGE': 'last_state_change',
         'LASTSERVICEOK':          'last_time_ok',
@@ -1108,7 +1108,7 @@ class Service(SchedulingItem):
 
         return False
 
-    def get_short_status(self):
+    def get_short_status(self, hosts, services):
         """Get the short status of this host
 
         :return: "O", "W", "C", "U', or "n/a" based on service state_id or business_rule state
@@ -1122,11 +1122,11 @@ class Service(SchedulingItem):
             4: "N",
         }
         if self.got_business_rule:
-            return mapping.get(self.business_rule.get_state(), "n/a")
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
         else:
             return mapping.get(self.state_id, "n/a")
 
-    def get_status(self):
+    def get_status(self, hosts, services):
         """Get the status of this host
 
         :return: "OK", "WARNING", "CRITICAL", "UNKNOWN" or "n/a" based on
@@ -1142,7 +1142,7 @@ class Service(SchedulingItem):
                 3: "UNKNOWN",
                 4: "UNREACHABLE",
             }
-            return mapping.get(self.business_rule.get_state(), "n/a")
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
         else:
             return self.state
 

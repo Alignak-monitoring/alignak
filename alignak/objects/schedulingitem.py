@@ -439,8 +439,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     macros = {
         # Business rules output formatting related macros
-        'STATUS':            'get_status',
-        'SHORTSTATUS':       'get_short_status',
+        'STATUS':            ('get_status', ['hosts', 'services']),
+        'SHORTSTATUS':       ('get_short_status', ['hosts', 'services']),
         'FULLNAME':          'get_full_name',
     }
 
@@ -2466,7 +2466,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.processed_business_rule = rule
                 self.business_rule = node
 
-    def get_business_rule_output(self, hosts, macromodulations, timeperiods):
+    def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
         """
         Returns a status string for business rules based items formatted
         using business_rule_output_template attribute as template.
@@ -2487,6 +2487,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
           Would return
               "CRITICAL [ CRITICAL: host1,srv1 WARNING: host2,srv2  ]"
 
+        :param hosts: Hosts object to look for objects
+        :type hosts: alignak.objects.host.Hosts
+        :param services: Services object to look for objects
+        :type services: alignak.objects.service.Services
+        :param macromodulations: Macromodulations object to look for objects
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
+        :param timeperiods: Timeperiods object to look for objects
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: status for business rules
         :rtype: str
         """
@@ -2512,7 +2520,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         ok_count = 0
         # Expands child items format string macros.
         items = self.business_rule.list_all_elements()
-        for item in items:
+        for item_uuid in items:
+            if item_uuid in hosts:
+                item = hosts[item_uuid]
+            elif item_uuid in services:
+                item = services[item_uuid]
+
             # Do not display children in OK state
             if item.last_hard_state_id == 0:
                 ok_count += 1
@@ -2600,8 +2613,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # be modified by modulation.
                 self.create_business_rules(hosts, services, hostgroups, servicegroups,
                                            macromodulations, timeperiods, running=True)
-                state = self.business_rule.get_state()
-                check.output = self.get_business_rule_output(hosts, macromodulations, timeperiods)
+                state = self.business_rule.get_state(hosts, services)
+                check.output = self.get_business_rule_output(hosts, services,
+                                                             macromodulations, timeperiods)
             except Exception, err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
