@@ -64,28 +64,31 @@ class Serviceescalation(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'host_name':             StringProp(),
-        'hostgroup_name':        StringProp(),
-        'service_description':   StringProp(),
-        'first_notification':    IntegerProp(),
-        'last_notification':     IntegerProp(),
-        'notification_interval': IntegerProp(default=30),  # like Nagios value
-        'escalation_period':     StringProp(default=''),
-        'escalation_options':    ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
-        'contacts':              StringProp(),
-        'contact_groups':        StringProp(),
-        'first_notification_time': IntegerProp(),
-        'last_notification_time': IntegerProp(),
+        'host_name':
+            StringProp(),
+        'hostgroup_name':
+            StringProp(),
+        'service_description':
+            StringProp(),
+        'first_notification':
+            IntegerProp(),
+        'last_notification':
+            IntegerProp(),
+        'notification_interval':
+            IntegerProp(default=30),  # like Nagios value
+        'escalation_period':
+            StringProp(default=''),
+        'escalation_options':
+            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+        'contacts':
+            StringProp(),
+        'contact_groups':
+            StringProp(),
+        'first_notification_time':
+            IntegerProp(),
+        'last_notification_time':
+            IntegerProp(),
     })
-
-    def get_name(self):
-        """Get escalation name
-
-        :return: name
-        :rtype: str
-        TODO: Remove this function
-        """
-        return ''
 
 
 class Serviceescalations(Items):
@@ -103,13 +106,15 @@ class Serviceescalations(Items):
         :return: None
         """
         # Now we explode all escalations (host_name, service_description) to escalations
-        for svescal in self:
-            properties = svescal.__class__.properties
-
-            creation_dict = {'escalation_name': 'Generated-Serviceescalation-%s' % svescal.uuid}
+        for escalation in self:
+            properties = escalation.__class__.properties
+            host_name = getattr(escalation, 'host_name', '')
+            creation_dict = {
+                'escalation_name':
+                    'Generated-ServiceEscalation-%s-%s' % (host_name, escalation.uuid)
+            }
             for prop in properties:
-                if hasattr(svescal, prop):
-                    creation_dict[prop] = getattr(svescal, prop)
-            # print "Creation an escalation with:", creation_dict
-            escalation = Escalation(creation_dict)
-            escalations.add_escalation(escalation)
+                if hasattr(escalation, prop):
+                    creation_dict[prop] = getattr(escalation, prop)
+
+            escalations.add_escalation(Escalation(creation_dict))

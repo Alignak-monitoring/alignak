@@ -18,6 +18,7 @@ matrix:
 
 # command to install dependencies
 install:
+  - unset PYTHONWARNINGS
   # some are only used for travis/coveralls so we are installing them here only
   - ./test/setup_test.sh
 

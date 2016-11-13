@@ -224,7 +224,9 @@ class Contact(Item):
         :return: group name
         :rtype: str
         """
-        return self.contactgroups[0]
+        if self.contactgroups:
+            return self.contactgroups[0]
+        return 'Unknown'
 
     def get_groupnames(self):
         """
@@ -232,7 +234,9 @@ class Contact(Item):
         :return: comma separated list of the groups names
         :rtype: str
         """
-        return ', '.join(self.contactgroups)
+        if self.contactgroups:
+            return ', '.join(self.contactgroups)
+        return 'Unknown'
 
     def want_service_notification(self, notifways, timeperiods, downtimes,
                                   timestamp, state, n_type, business_impact, cmd=None):
