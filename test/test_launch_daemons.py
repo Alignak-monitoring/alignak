@@ -185,18 +185,9 @@ class DaemonsStartTest(AlignakTest):
 
         :return: None
         """
-        ssl_installed = True
-        try:
-            from OpenSSL import SSL
-        except ImportError:
-            ssl_installed = False
-            print "Install pyopenssl"
-            subprocess.call("pip install pyopenssl", shell=True)
-
+        # disable ssl warning
+        requests.packages.urllib3.disable_warnings()
         self._run_daemons_and_test_api(ssl=True)
-
-        if not ssl_installed:
-            subprocess.call("pip uninstall pyopenssl", shell=True)
 
     def _run_daemons_and_test_api(self, ssl=False):
         """ Running all the Alignak daemons to check their correct launch and API
