@@ -42,38 +42,53 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test reading and processing of config files
-#
+"""
+ This file is used to test checks modulations
+"""
 
-from alignak_test import *
+import time
+from alignak_test import AlignakTest, unittest
 
 
 class TestCheckModulations(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_checkmodulations.cfg'])
+        self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
+        assert self.conf_is_correct
 
-    def test_dummy(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("host_modulated")
-        self.assertIsNot(host, None)
-        print host.checkmodulations
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        mod = self.sched.checkmodulations.find_by_name("MODULATION")
-        self.assertIsNot(mod, None)
+    def test_checks_modulated_host_and_service(self):
+        """ Check modulation for an host and its service """
+        self.print_header()
 
-        self.assertIn(mod.uuid, host.checkmodulations)
+        # Get the host
+        host = self._sched.hosts.find_by_name("modulated_host")
+        assert host is not None
+        assert host.check_command is not None
 
-        c = None
+        # Get the check modulation
+        mod = self._sched.checkmodulations.find_by_name("MODULATION")
+        assert mod is not None
+        assert mod.get_name() == "MODULATION"
+        # Modulation is known by the host
+        assert mod.uuid in host.checkmodulations
+        # Modulation check command is not the same as the host one
+        assert mod.get_check_command(self._sched.timeperiods, time.time()) is not host.check_command
+
+        # Get the host service
+        svc = self._sched.services.find_srv_by_name_and_hostname("modulated_host",
+                                                                 "modulated_service")
+
+        # Service is going CRITICAL/HARD ... this forces an host check!
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert len(host.checks_in_progress) == 1
         for c in host.checks_in_progress:
-            print self.sched.checks[c].command
-            self.assertEqual('plugins/nothing VALUE', self.sched.checks[c].command)
+            assert 'plugins/nothing VALUE' == self._sched.checks[c].command
+
+        assert len(svc.checks_in_progress) == 1
+        for c in svc.checks_in_progress:
+            assert 'plugins/nothing VALUE' == self._sched.checks[c].command
 
 
 if __name__ == '__main__':
