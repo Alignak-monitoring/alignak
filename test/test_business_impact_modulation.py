@@ -53,20 +53,27 @@ from alignak_test import *
 class TestCritMod(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_critmodulation.cfg'])
+        self.setup_with_file('cfg/cfg_businesssimpact_modulation.cfg')
+        assert self.conf_is_correct
 
-    def test_critmodulation_def(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get our criticity modulation"
-        cm = self.sched.conf.businessimpactmodulations.find_by_name('CritMod')
-        self.assertIsNot(cm, None)
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
-        print svc.business_impact_modulations
-        self.assertIn(cm.uuid, svc.business_impact_modulations)
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
+    def test_business_impact_modulation(self):
+        """ Tests business impact modulation """
+        self.print_header()
+
+        # Get our criticity (BI) modulation
+        cm = self._sched.businessimpactmodulations.find_by_name('CritMod')
+        assert cm is not None
+        assert cm.get_name() == "CritMod"
+        assert cm.business_impact == 5
+
+        # Get our service
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
+        assert cm.uuid in svc.business_impact_modulations
+        # Service BI is defined as 2 but the BI modulation makes it be 5!
+        assert svc.business_impact == 5
 
 
 if __name__ == '__main__':
