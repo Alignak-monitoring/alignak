@@ -64,12 +64,17 @@ class MacroModulation(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'macromodulation_name': StringProp(fill_brok=['full_status']),
-        'modulation_period': StringProp(brok_transformation=to_name_if_possible,
-                                        fill_brok=['full_status']),
+        'macromodulation_name':
+            StringProp(fill_brok=['full_status']),
+        'modulation_period':
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
+    running_properties.update({
+        'customs':
+            StringProp(default={}, fill_brok=['full_status']),
+    })
 
     special_properties = ('modulation_period',)
 
@@ -77,12 +82,14 @@ class MacroModulation(Item):
 
     def get_name(self):
         """
-        Get the name of the timeperiod
+        Get the name of the macromodulation
 
-        :return: the timeperiod name string
+        :return: the macromodulation name string
         :rtype: str
         """
-        return self.macromodulation_name
+        if hasattr(self, 'macromodulation_name'):
+            return self.macromodulation_name
+        return 'Unnamed'
 
     def is_active(self, timperiods):
         """
@@ -106,12 +113,18 @@ class MacroModulation(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
+        state = True
 
         # Ok just put None as modulation_period, means 24x7
         if not hasattr(self, 'modulation_period'):
             self.modulation_period = None
 
-        return super(MacroModulation, self).is_correct()
+        if not hasattr(self, 'customs') or not self.customs:
+            msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
+            self.configuration_errors.append(msg)
+            state = False
+
+        return super(MacroModulation, self).is_correct() and state
 
 
 class MacroModulations(Items):

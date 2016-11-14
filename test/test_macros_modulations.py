@@ -52,31 +52,47 @@ from alignak_test import *
 class TestMacroModulations(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_macromodulations.cfg'])
+        self.setup_with_file('cfg/cfg_macros_modulation.cfg')
+        assert self.conf_is_correct
 
-    def test_dummy(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("host_modulated")
-        self.assertIsNot(host, None)
-        print host.macromodulations
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        mod = self.sched.macromodulations.find_by_name("MODULATION")
-        self.assertIsNot(mod, None)
+    def test_macros_modulation(self):
+        """ Test macros modulation """
+        self.print_header()
 
-        self.assertIn(mod.uuid, host.macromodulations)
+        # Get the host
+        host = self._sched.hosts.find_by_name("modulated_host")
+        assert host is not None
+        assert host.macromodulations is not None
 
-        c = None
-        for c_id in host.checks_in_progress:
-            c = self.sched.checks[c_id]
-            print c.command
-            # THE hst got 2 modulations. The first with the value MODULATED
-            # and the second with NOT_THE_GOOD. Both are currently active, but we want the firt one
-            self.assertEqual('plugins/nothing MODULATED', c.command)
+        # Get its macros modulations
+        mod = self._sched.macromodulations.find_by_name("MODULATION")
+        assert mod is not None
+        assert mod.get_name() == "MODULATION"
+        assert mod.is_active(self._sched.timeperiods)
+        assert mod.uuid in host.macromodulations
+
+        mod2 = self._sched.macromodulations.find_by_name("MODULATION2")
+        assert mod2 is not None
+        assert mod2.get_name() == "MODULATION2"
+        assert mod2.is_active(self._sched.timeperiods)
+        assert mod2.uuid in host.macromodulations
+
+        # Get the host service
+        svc = self._sched.services.find_srv_by_name_and_hostname("modulated_host",
+                                                                 "modulated_service")
+
+        # Service is going CRITICAL/HARD ... this forces an host check!
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert len(host.checks_in_progress) == 1
+        for c in host.checks_in_progress:
+            # The host has a custom macro defined as UNCHANGED
+            # The host has 2 attached modulations impacting this macro value.
+            # The first one with the value MODULATED and the second with NOT_THE_GOOD.
+            # Both are currently active, but we want to get the first one
+            assert 'plugins/nothing MODULATED' == self._sched.checks[c].command
 
 
 if __name__ == '__main__':

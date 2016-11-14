@@ -62,25 +62,6 @@ class TestBusinessCorrelator(AlignakTest):
         self.assertTrue(self.conf_is_correct)
         self._sched = self.schedulers['scheduler-master'].sched
 
-    def launch_internal_check(self, svc_br):
-        """ Launch an internal check for the business rule service provided """
-        # Launch an internal check
-        now = time.time()
-        self._sched.add(svc_br.launch_check(now - 1, self._sched.hosts, self._sched.services,
-                                            self._sched.timeperiods, self._sched.macromodulations,
-                                            self._sched.checkmodulations, self._sched.checks))
-        c = svc_br.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one to launch the check
-        # and another to get the result
-        self.scheduler_loop(2, [])
-
-        # We should not have the check anymore
-        self.assertEqual(0, len(svc_br.actions))
-
     def test_br_creation(self):
         """ BR - check creation of a simple services OR (db1 OR db2)
 

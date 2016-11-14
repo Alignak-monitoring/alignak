@@ -50,7 +50,7 @@
 # business rules.
 #
 
-import re
+import time
 
 from alignak_test import (
     unittest,
@@ -358,7 +358,6 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         self.assertEqual(0, bp_rule.get_state(self._sched.hosts, self._sched.services))
         self.assertEqual(0, svc_cor.last_hard_state_id)
 
-    @unittest.skip("Because of issue #566")
     def test_macro_expansion_bprule_macro_modulated(self):
         """ BR expansion - macro modulated """
         # Tests macro modulation
@@ -392,26 +391,21 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         self.assertEqual('CRITICAL', svc1.state)
         self.assertEqual('HARD', svc1.state_type)
 
-        # Forces business rule evaluation.
-        self.scheduler_loop(2, [
-            [svc_cor, None, None]
-        ])
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # Business rule should not have been re-evaluated (macro did not change
-        # value)
+        # Business rule should not have been re-evaluated (macro did not change value)
         self.assertIs(bp_rule, svc_cor.business_rule)
         bp_rule = svc_cor.business_rule
         self.assertEqual(2, bp_rule.get_state(self._sched.hosts, self._sched.services))
-        self.assertEqual(2, svc_cor.last_hard_state_id)
+        self.assertEqual(0, svc_cor.last_hard_state_id)
 
-        # Tests modulated value
+        # Get macro modulation value and change its value
         mod = self._sched.macromodulations.find_by_name("xof_modulation")
         mod.customs['_XOF'] = '1'
 
-        # Forces business rule evaluation.
-        self.scheduler_loop(2, [
-            [svc_cor, None, None]
-        ])
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
         self.assertEqual("1 of: test_host_01,srv1 & test_host_02,srv2", svc_cor.processed_business_rule)
         self.assertIsNot(svc_cor.business_rule, bp_rule)
@@ -424,10 +418,8 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         # Tests wrongly written macro modulation (inserts invalid string)
         mod.customs['_XOF'] = 'fake'
 
-        # Forces business rule evaluation.
-        self.scheduler_loop(2, [
-            [svc_cor, None, None]
-        ])
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
         # Business rule should have been re-evaluated (macro was modulated)
         self.assertIs(bp_rule, svc_cor.business_rule)
