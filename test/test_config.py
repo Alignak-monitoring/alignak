@@ -796,3 +796,35 @@ class TestConfig(AlignakTest):
 
         self.assertEqual(1, len(host1.chk_depend_of))
         self.assertEqual(['x'], host1.chk_depend_of[0][1])
+
+    def test_checks_modulation(self):
+        """ Detect checks modulation configuration errors
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/checks_modulation_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        # CM without check_command definition
+        self.assertIn("Configuration in checkmodulation::MODULATION is incorrect; "
+                      "from: cfg/config/checks_modulation_broken.cfg:9",
+                      self.configuration_errors)
+        self.assertIn("[checkmodulation::MODULATION] check_command property is missing",
+                      self.configuration_errors)
+
+        # MM without name
+        self.assertIn("Configuration in checkmodulation::Unnamed is incorrect; "
+                      "from: cfg/config/checks_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("a checkmodulation item has been defined without checkmodulation_name, "
+                      "from: cfg/config/checks_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!",
+                      self.configuration_errors)
+        self.assertIn("[checkmodulation::Unnamed] checkmodulation_name property is missing",
+                      self.configuration_errors)
+        self.assertIn("checkmodulations configuration is incorrect!",
+                      self.configuration_errors)
+

@@ -104,7 +104,9 @@ class CheckModulation(Item):
         :return: check modulation name
         :rtype: str
         """
-        return self.checkmodulation_name
+        if hasattr(self, 'checkmodulation_name'):
+            return self.checkmodulation_name
+        return 'Unnamed'
 
     def get_check_command(self, timeperiods, t_to_go):
         """Get the check_command if we are in the check period modulation
