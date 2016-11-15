@@ -309,6 +309,46 @@ def format_t_into_dhms_format(timestamp):
     return '%sd %sh %sm %ss' % (day, hour, mins, timestamp)
 
 
+def merge_periods(data):
+    """
+    Merge periods to have better continous periods.
+    Like 350-450, 400-600 => 350-600
+
+    :param data: list of periods
+    :type data: list
+    :return: better continous periods
+    :rtype: list
+    """
+    # sort by start date
+    newdata = sorted(data, key=lambda drange: drange[0])
+    end = 0
+    for period in newdata:
+        if period[0] != end and period[0] != (end - 1):
+            end = period[1]
+
+    dat = np.array(newdata)
+    new_intervals = []
+    cur_start = None
+    cur_end = None
+    for (dt_start, dt_end) in dat:
+        if cur_end is None:
+            cur_start = dt_start
+            cur_end = dt_end
+            continue
+        else:
+            if cur_end >= dt_start:
+                # merge, keep existing cur_start, extend cur_end
+                cur_end = dt_end
+            else:
+                # new interval, save previous and reset current to this
+                new_intervals.append((cur_start, cur_end))
+                cur_start = dt_start
+                cur_end = dt_end
+    # make sure final interval is saved
+    new_intervals.append((cur_start, cur_end))
+    return new_intervals
+
+
 # ################################ Pythonization ###########################
 def to_int(val):
     """Convert val to int (or raise Exception)

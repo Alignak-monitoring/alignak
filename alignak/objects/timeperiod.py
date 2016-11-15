@@ -132,6 +132,7 @@ from alignak.daterange import MonthDayDaterange
 from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
 from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
+from alignak.util import merge_periods
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -390,18 +391,16 @@ class Timeperiod(Item):
 
     def get_next_valid_time_from_t(self, timestamp):
         """
-        Get next valid time from the cache
+        Get next valid time. If it's in cache, get it, otherwise define it.
+        The limit to find it is 1 year.
 
         :param timestamp: number of seconds
-        :type timestamp: int
+        :type timestamp: int or float
         :return: Nothing or time in seconds
         :rtype: None or int
         """
         timestamp = int(timestamp)
         original_t = timestamp
-
-        # logger.debug("[%s] Check valid time for %s" %
-        #  ( self.get_name(), time.asctime(time.localtime(timestamp)))
 
         res_from_cache = self.find_next_valid_time_from_cache(timestamp)
         if res_from_cache is not None:
@@ -415,26 +414,26 @@ class Timeperiod(Item):
 
             # Ok, not in cache...
             dr_mins = []
-            s_dr_mins = []
 
-            for datarange in self.dateranges:
-                dr_mins.append(datarange.get_next_valid_time_from_t(timestamp))
+            for daterange in self.dateranges:
+                dr_mins.append(daterange.get_next_valid_time_from_t(timestamp))
 
             s_dr_mins = sorted([d for d in dr_mins if d is not None])
 
             for t01 in s_dr_mins:
-                if not self.exclude and still_loop is True:
+                if not self.exclude and still_loop:
                     # No Exclude so we are good
                     local_min = t01
                     still_loop = False
                 else:
                     for timeperiod in self.exclude:
-                        if not timeperiod.is_time_valid(t01) and still_loop is True:
+                        if not timeperiod.is_time_valid(t01) and still_loop:
                             # OK we found a date that is not valid in any exclude timeperiod
                             local_min = t01
                             still_loop = False
 
             if local_min is None:
+                # Looking for next invalid date
                 exc_mins = []
                 if s_dr_mins != []:
                     for timeperiod in self.exclude:
@@ -460,85 +459,64 @@ class Timeperiod(Item):
 
     def get_next_invalid_time_from_t(self, timestamp):
         """
-        Get next invalid time from the cache
+        Get the next invalid time
 
-        :param timestamp: number of seconds
-        :type timestamp: int
-        :return: Nothing or time in seconds
-        :rtype: None or int
+        :param timestamp: timestamp in seconds (of course)
+        :type timestamp: int or float
+        :return: timestamp of next invalid time
+        :rtype: int or float
         """
-        # time.asctime(time.localtime(timestamp)), timestamp
         timestamp = int(timestamp)
         original_t = timestamp
-        still_loop = True
 
-        # First try to find in cache
-        res_from_cache = self.find_next_invalid_time_from_cache(timestamp)
-        if res_from_cache is not None:
-            return res_from_cache
+        dr_mins = []
+        for daterange in self.dateranges:
+            timestamp = original_t
+            cont = True
+            while cont:
+                start = daterange.get_next_valid_time_from_t(timestamp)
+                if start is not None:
+                    end = daterange.get_next_invalid_time_from_t(start)
+                    dr_mins.append((start, end))
+                    timestamp = end
+                else:
+                    cont = False
+                if timestamp > original_t + (3600 * 24 * 365):
+                    cont = False
+        periods = merge_periods(dr_mins)
 
-        # Then look, maybe timestamp is already invalid
-        if not self.is_time_valid(timestamp):
-            return timestamp
+        # manage exclude periods
+        dr_mins = []
+        for exclude in self.exclude:
+            for daterange in exclude.dateranges:
+                timestamp = original_t
+                cont = True
+                while cont:
+                    start = daterange.get_next_valid_time_from_t(timestamp)
+                    if start is not None:
+                        end = daterange.get_next_invalid_time_from_t(start)
+                        dr_mins.append((start, end))
+                        timestamp = end
+                    else:
+                        cont = False
+                    if timestamp > original_t + (3600 * 24 * 365):
+                        cont = False
+        if len(dr_mins) == 0:
+            periods_exclude = []
+        else:
+            periods_exclude = merge_periods(dr_mins)
 
-        local_min = timestamp
-        res = None
-        # Loop for all minutes...
-        while still_loop:
-            dr_mins = []
-            # val_valids = []
-            # val_inval = []
-            # But maybe we can find a better solution with next invalid of standard dateranges
-            # "After valid of exclude, local_min =", time.asctime(time.localtime(local_min))
-            for daterange in self.dateranges:
-                # "Search a next invalid from DR", time.asctime(time.localtime(local_min))
-                next_t = daterange.get_next_invalid_time_from_t(local_min)
-
-                # "give me next invalid", time.asctime(time.localtime(m))
-                if next_t is not None:
-                    # But maybe it's invalid for this dr, but valid for other ones.
-                    # if not self.is_time_valid(m):
-                    dr_mins.append(next_t)
-
-            if dr_mins != []:
-                local_min = min(dr_mins)
-
-            # 'Invalid: local min', local_min #time.asctime(time.localtime(local_min))
-            # We do not loop unless the local_min is not valid
-            if not self.is_time_valid(local_min):
-                still_loop = False
-            else:  # continue until we reach too far..., in one minute
-                # After one month, go quicker...
-                if local_min > original_t + 3600 * 24 * 30:
-                    local_min += 3600
-                else:  # else search for 1min precision
-                    local_min += 60
-                # after one year, stop.
-                if local_min > original_t + 3600 * 24 * 366 + 1:  # 60*24*366 + 1:
-                    still_loop = False
-            # if we've got a real value, we check it with the exclude
-            if local_min is not None:
-                # Now check if local_min is not valid
-                for timeperiod in self.exclude:
-                    # "we check for invalid",
-                    # time.asctime(time.localtime(local_min)), 'with tp', tp.name
-                    if timeperiod.is_time_valid(local_min):
-                        still_loop = True
-                        # local_min + 60
-                        local_min = timeperiod.get_next_invalid_time_from_t(local_min + 60)
-                        # No loop more than one year
-                        if local_min > original_t + 60 * 24 * 366 + 1:
-                            still_loop = False
-                            res = None
-
-            if not still_loop:  # We find a possible value
-                # We take the result the minimal possible
-                if res is None or local_min < res:
-                    res = local_min
-
-        # Ok, we update the cache...
-        self.invalid_cache[original_t] = local_min
-        return local_min
+        if len(periods) >= 1:
+            # if first valid period is after original timestamp, the first invalid time
+            # is the original timestamp
+            if periods[0][0] > original_t:
+                return original_t
+            # check the first period + first period of exclude
+            if len(periods_exclude) >= 1:
+                if periods_exclude[0][0] < periods[0][1]:
+                    return periods_exclude[0][0]
+            return periods[0][1]
+        return original_t
 
     def has(self, prop):
         """
