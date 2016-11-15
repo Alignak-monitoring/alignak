@@ -75,7 +75,7 @@ class Businessimpactmodulation(Item):
 
         # Ok just put None as modulation_period, means 24x7
         if not hasattr(self, 'modulation_period'):
-            self.modulation_period = None
+            self.modulation_period = '24x7'
 
     def get_name(self):
         """Accessor to business_impact_modulation_name attribute
