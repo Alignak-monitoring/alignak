@@ -372,7 +372,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'last_perf_data':
             StringProp(default='', retention=True),
         'customs':
-            StringProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=['full_status']),
         # Warning: for the notified_contacts retention save,
         # we save only the names of the contacts, and we should RELINK
         # them when we load it.
