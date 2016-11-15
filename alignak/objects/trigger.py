@@ -78,7 +78,7 @@ class Trigger(Item):
                                'trigger_broker_raise_enabled': BoolProp(default=False)
                                })
 
-    def __init__(self, params=None, parsing=True, from_file=False):
+    def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
 
@@ -174,7 +174,7 @@ class Triggers(Items):
         :rtype: alignak.objects.trigger.Trigger
         """
         # Ok, go compile the code
-        trigger = Trigger({'trigger_name': name, 'code_src': src}, from_file=True)
+        trigger = Trigger({'trigger_name': name, 'code_src': src})
         trigger.compile()
         # Ok, add it
         self[trigger.uuid] = trigger
