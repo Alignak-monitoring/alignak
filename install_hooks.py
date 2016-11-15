@@ -117,7 +117,7 @@ def fix_alignak_cfg(config):
     pattern = "|".join(default_ssl.keys())
     changing_ssl = re.compile("^#(%s) *= *" % pattern)
     pattern = "|".join(default_macros.keys())
-    changing_mac = re.compile("^\$(%s)\$ *= *" % pattern)
+    changing_mac = re.compile(r"^\$(%s)\$ *= *" % pattern)
 
     # Fix resource paths
     alignak_file = os.path.join(

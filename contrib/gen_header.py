@@ -70,20 +70,20 @@ def regen_file(pfile, authors):
     in_auth = False
     with open(pfile) as fh:
         for line in fh:
-            if re.search("#  Copyright \(C\) 2009-201[0-9]:$", line):
+            if re.search(r"#  Copyright \(C\) 2009-201[0-9]:$", line):
                 in_auth = True
                 buff.append(line)
                 buff.extend(authors)
-            elif re.search("#  This file is part of Shinken.$", line):
+            elif re.search(r"#  This file is part of Shinken.$", line):
                 buff.append("\n")
                 buff.append(line)
                 in_auth = False
-            elif re.search("# -\*- coding: utf-8 -\*-$", line):
+            elif re.search(r"# -\*- coding: utf-8 -\*-$", line):
                 pass  # Will insert coding at the end in line 2
             elif not in_auth:
                 buff.append(line)
 
-    if re.search("\.py$", pfile):
+    if re.search(r"\.py$", pfile):
         buff.insert(1, "# -*- coding: utf-8 -*-\n")
 
     with open(pfile, "w+") as fh:

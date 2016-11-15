@@ -1,0 +1,18 @@
+doc-warnings: true
+test-warnings: false
+strictness: medium
+max-line-length: 100
+autodetect: true
+pep8:
+  full: true
+requirements:
+  - requirements.txt
+python-targets:
+  - 2
+ignore-paths:
+  - bin
+  - contrib
+  - dev
+  - doc
+  - etc
+  - test
