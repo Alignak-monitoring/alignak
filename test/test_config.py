@@ -828,3 +828,70 @@ class TestConfig(AlignakTest):
         self.assertIn("checkmodulations configuration is incorrect!",
                       self.configuration_errors)
 
+
+    def test_business_impact__modulation(self):
+        """ Detect business impact modulation configuration errors
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/businesssimpact_modulation_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        # MM without macro definition
+        self.assertIn("Configuration in businessimpactmodulation::CritMod is incorrect; "
+                      "from: cfg/config/businesssimpact_modulation_broken.cfg:10",
+                      self.configuration_errors)
+        self.assertIn("[businessimpactmodulation::CritMod] business_impact property is missing",
+                      self.configuration_errors)
+
+        # MM without name
+        self.assertIn("Configuration in businessimpactmodulation::Unnamed is incorrect; "
+                      "from: cfg/config/businesssimpact_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("a businessimpactmodulation item has been defined without "
+                      "business_impact_modulation_name, from: "
+                      "cfg/config/businesssimpact_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("The modulation_period of the businessimpactmodulation 'Unnamed' "
+                      "named '24x7' is unknown!",
+                      self.configuration_errors)
+        self.assertIn("[businessimpactmodulation::Unnamed] business_impact_modulation_name "
+                      "property is missing",
+                      self.configuration_errors)
+        self.assertIn("businessimpactmodulations configuration is incorrect!",
+                      self.configuration_errors)
+
+
+    def test_checks_modulation(self):
+        """ Detect checks modulation configuration errors
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/checks_modulation_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        # CM without check_command definition
+        self.assertIn("Configuration in checkmodulation::MODULATION is incorrect; "
+                      "from: cfg/config/checks_modulation_broken.cfg:9",
+                      self.configuration_errors)
+        self.assertIn("[checkmodulation::MODULATION] check_command property is missing",
+                      self.configuration_errors)
+
+        # MM without name
+        self.assertIn("Configuration in checkmodulation::Unnamed is incorrect; "
+                      "from: cfg/config/checks_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("a checkmodulation item has been defined without checkmodulation_name, "
+                      "from: cfg/config/checks_modulation_broken.cfg:2",
+                      self.configuration_errors)
+        self.assertIn("The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!",
+                      self.configuration_errors)
+        self.assertIn("[checkmodulation::Unnamed] checkmodulation_name property is missing",
+                      self.configuration_errors)
+        self.assertIn("checkmodulations configuration is incorrect!",
+                      self.configuration_errors)
+
