@@ -1356,7 +1356,7 @@ class Services(SchedulingItems):
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use',
-                            'servicegroups', 'trigger', 'trigger_name']
+                            'servicegroups', 'trigger_name']
                 if prop in excludes:
                     err = "Error: trying to override '%s', " \
                           "a forbidden property for service '%s'" % \
@@ -1673,9 +1673,9 @@ class Services(SchedulingItems):
 
     # We create new service if necessary (host groups and co)
     def explode(self, hosts, hostgroups, contactgroups,
-                servicegroups, servicedependencies, triggers):
+                servicegroups, servicedependencies):
         """
-        Explodes services, from host_name, hostgroup_name, and from templates.
+        Explodes services, from host, hostgroups, contactgroups, servicegroups and dependencies.
 
         :param hosts: The hosts container
         :type hosts:
@@ -1687,13 +1687,8 @@ class Services(SchedulingItems):
         :type servicegroups:
         :param servicedependencies: The servicedependencies container
         :type servicedependencies:
-        :param triggers: The triggers container
-        :type triggers:
         :return: None
         """
-        # items::explode_trigger_string_into_triggers
-        self.explode_trigger_string_into_triggers(triggers)
-
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
         itemkeys = self.items.keys()

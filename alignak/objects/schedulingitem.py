@@ -115,8 +115,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'passive_checks_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'check_period':
-            StringProp(fill_brok=['full_status'],
-                       special=True),
+            StringProp(fill_brok=['full_status'], special=True),
         # Set a default freshness threshold not 0 if parameter is missing
         # and check_freshness is enabled
         'check_freshness':
@@ -213,8 +212,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             IntegerProp(default=2, fill_brok=['full_status']),
 
         # Load some triggers
-        'trigger':
-            StringProp(default=''),
         'trigger_name':
             StringProp(default=''),
         'trigger_broker_raise_enabled':
@@ -533,7 +530,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
                 new_triggers.append(trigger.uuid)
             else:
-                self.configuration_errors.append('the %s %s does have a unknown trigger_name '
+                self.configuration_errors.append('the %s %s has an unknown trigger_name '
                                                  '"%s"' % (self.__class__.my_type,
                                                            self.get_full_name(),
                                                            tname))
@@ -2995,6 +2992,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype: bool
         """
         state = True
+
+        if hasattr(self, 'trigger') and getattr(self, 'trigger', None):
+            msg = "[%s::%s] 'trigger' property is not allowed" % (self.my_type, self.get_name())
+            self.configuration_warnings.append(msg)
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):

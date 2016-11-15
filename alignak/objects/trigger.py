@@ -78,7 +78,7 @@ class Trigger(Item):
                                'trigger_broker_raise_enabled': BoolProp(default=False)
                                })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params=None, parsing=True, from_file=False):
         if params is None:
             params = {}
 
@@ -107,7 +107,8 @@ class Trigger(Item):
 
         :return: None
         """
-        self.code_bin = compile(self.code_src, "<irc>", "exec")
+        if self.code_src:
+            self.code_bin = compile(self.code_src, "<irc>", "exec")
 
     def eval(self, ctx):
         """Execute the trigger
@@ -173,7 +174,7 @@ class Triggers(Items):
         :rtype: alignak.objects.trigger.Trigger
         """
         # Ok, go compile the code
-        trigger = Trigger({'trigger_name': name, 'code_src': src})
+        trigger = Trigger({'trigger_name': name, 'code_src': src}, from_file=True)
         trigger.compile()
         # Ok, add it
         self[trigger.uuid] = trigger

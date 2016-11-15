@@ -68,10 +68,56 @@ class TestTriggers(AlignakTest):
         # No error messages
         self.assertEqual(len(self.configuration_errors), 0)
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        self.assertGreaterEqual(len(self.configuration_warnings), 2)
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[host::test_host_trigger] 'trigger' property is not allowed"
+            )
+        )
+        self.assert_any_cfg_log_match(
+            re.escape(
+                "[service::test_service_trigger] 'trigger' property is not allowed"
+            )
+        )
 
         # Our scheduler
         self._sched = self.schedulers['scheduler-master'].sched
+
+    def test_ignored_inner_triggers(self):
+        """ Test that inner host/service configured triggers are ignored """
+        self.print_header()
+
+        # Get host and service
+        host = self._sched.hosts.find_by_name("test_host_trigger")
+        host.checks_in_progress = []
+        host.act_depend_of = []
+
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_service_trigger")
+        svc.checks_in_progress = []
+        svc.act_depend_of = []
+
+        # Set host output / perfdata
+        host.output = 'I am OK'
+        host.perf_data = 'cpu=95%'
+
+        # Set service output / perfdata
+        svc.output = 'I am OK'
+        svc.perf_data = 'cpu=95%'
+
+        # Run the service triggers
+        svc.eval_triggers(self._sched.triggers)
+
+        # Despite the service has an internal trigger, this trigger did not run!
+        self.assertEqual("I am OK", svc.output)
+        self.assertEqual("cpu=95%", svc.perf_data)
+
+        # Run the host triggers
+        host.eval_triggers(self._sched.triggers)
+        self.scheduler_loop(2, [])
+
+        # Despite the host has an internal trigger, this trigger did not run!
+        self.assertEqual("I am OK", host.output)
+        self.assertEqual("cpu=95%", host.perf_data)
 
     def test_function_perfdata(self):
         """ Try to catch the perf_datas of self """
@@ -171,63 +217,6 @@ class TestTriggers(AlignakTest):
         print "Perf_Data", svc.perf_data
         self.assertEqual("OK all is green", svc.output)
         self.assertEqual("users=12", svc.perf_data)
-
-    def test_in_conf_trigger(self):
-        """ Simple trigger declared inside the configuration """
-        self.print_header()
-
-        # Get host and service
-        host = self._sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []
-
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "i_got_trigger")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []
-
-        # Run the service triggers
-        svc.eval_triggers(self._sched.triggers)
-
-        # Fake the scheduler_loop function (run with an host check...)
-        self.scheduler_loop(1, [[host, 0, 'Fake host output']])
-        self.external_command_loop()
-
-        self.assertEqual("New output", svc.output)
-        self.assertEqual("New perf_data", svc.perf_data)
-
-    def test_simple_cpu_too_high(self):
-        """ Variable trigger declared inside the configuration """
-        self.print_header()
-
-        # Get host and service
-        host = self._sched.hosts.find_by_name("test_host_trigger")
-        host.checks_in_progress = []
-        host.act_depend_of = []
-
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "cpu_too_high")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []
-
-        # Set host output / perfdata
-        host.output = 'I am OK'
-        host.perf_data = 'cpu=95%'
-
-        # Set service output / perfdata
-        svc.output = 'I am OK'
-        svc.perf_data = 'cpu=95%'
-
-        # Run the service triggers
-        svc.eval_triggers(self._sched.triggers)
-
-        self.assertEqual("not good!", svc.output)
-        self.assertEqual("cpu=95%", svc.perf_data)
-
-        # Run the host triggers
-        host.eval_triggers(self._sched.triggers)
-        self.scheduler_loop(2, [])
-
-        self.assertEqual("not good!", host.output)
-        self.assertEqual("cpu=95", host.perf_data)
 
     def test_trig_file_loading(self):
         """ Test trigger files (*.trig) loading """

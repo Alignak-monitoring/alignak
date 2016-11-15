@@ -669,26 +669,6 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
-    def explode_trigger_string_into_triggers(self, triggers):
-        """
-        Add trigger to triggers if exist
-
-        :param triggers: trigger object
-        :type triggers: object
-        :return: None
-        """
-        src = getattr(self, 'trigger', '')
-        if src:
-            # Change on the fly the characters
-            src = src.replace(r'\n', '\n').replace(r'\t', '\t')
-            triger = triggers.create_trigger(
-                src,
-                'inner-trigger-' + self.__class__.my_type + str(self.uuid))
-            if triger:
-                # Maybe the trigger factory give me a already existing trigger,
-                # so my name can be dropped
-                self.triggers.append(triger.get_name())
-
     def dump(self, dfile=None):  # pylint: disable=W0613
         """
         Dump properties
