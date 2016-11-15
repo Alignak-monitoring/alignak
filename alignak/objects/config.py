@@ -1589,7 +1589,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.contactgroups.explode()
 
         # print "Hosts"
-        self.hosts.explode(self.hostgroups, self.contactgroups, self.triggers)
+        self.hosts.explode(self.hostgroups, self.contactgroups)
 
         # print "Hostgroups"
         self.hostgroups.explode()
@@ -1597,8 +1597,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # print "Services"
         # print "Initially got nb of services: %d" % len(self.services.items)
         self.services.explode(self.hosts, self.hostgroups, self.contactgroups,
-                              self.servicegroups, self.servicedependencies,
-                              self.triggers)
+                              self.servicegroups, self.servicedependencies)
         # print "finally got nb of services: %d" % len(self.services.items)
         # print "Servicegroups"
         self.servicegroups.explode()

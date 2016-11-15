@@ -260,8 +260,7 @@ def get_custom(obj_ref, cname, default=None):
 
 @declared
 def perfs(objs_ref, metric_name):
-    """ TODO: check this description
-        Get perfdatas from multiple services/hosts
+    """ Get the same performance data metric from multiple services/hosts
 
     :param objs_ref:
     :type objs_ref: object

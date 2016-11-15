@@ -1309,8 +1309,8 @@ class Hosts(SchedulingItems):
                         host.configuration_errors.append(err)
             host.hostgroups = new_hostgroups
 
-    def explode(self, hostgroups, contactgroups, triggers):
-        """Explode hosts, hostrgroups and triggers::
+    def explode(self, hostgroups, contactgroups):
+        """Explode hosts with hostgroups, contactgroups::
 
         * Add triggers source to host triggers
         * Add contact from contactgroups to host contacts
@@ -1324,10 +1324,6 @@ class Hosts(SchedulingItems):
         :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
-
-        # items::explode_trigger_string_into_triggers
-        self.explode_trigger_string_into_triggers(triggers)
-
         for template in self.templates.itervalues():
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property

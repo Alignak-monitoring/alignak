@@ -107,7 +107,8 @@ class Trigger(Item):
 
         :return: None
         """
-        self.code_bin = compile(self.code_src, "<irc>", "exec")
+        if self.code_src:
+            self.code_bin = compile(self.code_src, "<irc>", "exec")
 
     def eval(self, ctx):
         """Execute the trigger
@@ -116,12 +117,11 @@ class Trigger(Item):
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-
         # Ok we can declare for this trigger call our functions
         for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
             locals()[name] = fun
 
-        code = self.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
+        code = self.code_bin
         env = dict(locals())
         env["self"] = ctx
         del env["ctx"]
