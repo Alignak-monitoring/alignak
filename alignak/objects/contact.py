@@ -56,7 +56,7 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp
 from alignak.log import make_monitoring_log
 from alignak.commandcall import CommandCall
 
@@ -141,7 +141,7 @@ class Contact(Item):
         'downtimes':
             StringProp(default=[], fill_brok=['full_status'], retention=True),
         'customs':
-            StringProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=['full_status']),
     })
 
     # This tab is used to transform old parameters name into new ones

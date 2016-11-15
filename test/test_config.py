@@ -797,6 +797,41 @@ class TestConfig(AlignakTest):
         self.assertEqual(1, len(host1.chk_depend_of))
         self.assertEqual(['x'], host1.chk_depend_of[0][1])
 
+    def test_macro_modulation(self):
+        """ Detect macro modulation configuration errors
+
+        :return: None
+        """
+        self.print_header()
+        with self.assertRaises(SystemExit):
+            self.setup_with_file('cfg/config/macros_modulation_broken.cfg')
+        self.assertFalse(self.conf_is_correct)
+
+        # MM without macro definition
+        self.assertIn("Configuration in macromodulation::MODULATION2 is incorrect; "
+                      "from: cfg/config/macros_modulation_broken.cfg:10",
+                      self.configuration_errors)
+        self.assertIn("The modulation_period of the macromodulation 'MODULATION2' "
+                      "named '24x7' is unknown!",
+                      self.configuration_errors)
+        self.assertIn("[macromodulation::MODULATION2] contains no macro definition",
+                      self.configuration_errors)
+
+        # MM without name
+        self.assertIn("Configuration in macromodulation::Unnamed is incorrect; "
+                      "from: cfg/config/macros_modulation_broken.cfg:3",
+                      self.configuration_errors)
+        self.assertIn("a macromodulation item has been defined without macromodulation_name, "
+                      "from: cfg/config/macros_modulation_broken.cfg:3",
+                      self.configuration_errors)
+        self.assertIn("The modulation_period of the macromodulation 'Unnamed' "
+                      "named '24x7' is unknown!",
+                      self.configuration_errors)
+        self.assertIn("[macromodulation::Unnamed] macromodulation_name property is missing",
+                  self.configuration_errors)
+        self.assertIn("macromodulations configuration is incorrect!",
+                  self.configuration_errors)
+
     def test_checks_modulation(self):
         """ Detect checks modulation configuration errors
 
@@ -827,7 +862,6 @@ class TestConfig(AlignakTest):
                       self.configuration_errors)
         self.assertIn("checkmodulations configuration is incorrect!",
                       self.configuration_errors)
-
 
     def test_business_impact__modulation(self):
         """ Detect business impact modulation configuration errors
@@ -863,7 +897,6 @@ class TestConfig(AlignakTest):
         self.assertIn("businessimpactmodulations configuration is incorrect!",
                       self.configuration_errors)
 
-
     def test_checks_modulation(self):
         """ Detect checks modulation configuration errors
 
@@ -894,4 +927,3 @@ class TestConfig(AlignakTest):
                       self.configuration_errors)
         self.assertIn("checkmodulations configuration is incorrect!",
                       self.configuration_errors)
-
