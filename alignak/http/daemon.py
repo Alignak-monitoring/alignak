@@ -32,13 +32,8 @@ from cherrypy.wsgiserver import CherryPyWSGIServer
 # We need this to keep default processors in cherrypy
 from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_multipart_form_data
 
-try:
-    from OpenSSL import SSL, crypto
-    from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
-except ImportError:
-    SSL = None
-    pyOpenSSLAdapter = None  # pylint: disable=C0103
-
+from OpenSSL import SSL, crypto
+from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
 
 # load global helper objects for logs and stats computation
 from alignak.http.cherrypy_extend import zlib_processor
@@ -46,49 +41,46 @@ from alignak.http.cherrypy_extend import zlib_processor
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-try:
-    class Pyopenssl(pyOpenSSLAdapter):
+class Pyopenssl(pyOpenSSLAdapter):
+    """
+    Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
+    """
+
+    def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
         """
-        Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
+        Add init because need get the dhparam
+
+        :param certificate:
+        :param private_key:
+        :param certificate_chain:
+        :param dhparam:
         """
+        super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
+        self.dhparam = dhparam
 
-        def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
-            """
-            Add init because need get the dhparam
+    def get_context(self):
+        """Return an SSL.Context from self attributes."""
+        cont = SSL.Context(SSL.SSLv23_METHOD)
 
-            :param certificate:
-            :param private_key:
-            :param certificate_chain:
-            :param dhparam:
-            """
-            super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
-            self.dhparam = dhparam
+        # override:
+        ciphers = (
+            'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
+            'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
+            '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
+        )
+        cont.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
+                         SSL.OP_NO_SSLv3)
+        cont.set_cipher_list(ciphers)
+        if self.dhparam is not None:
+            cont.load_tmp_dh(self.dhparam)
+            cont.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
+        # end override
 
-        def get_context(self):
-            """Return an SSL.Context from self attributes."""
-            cont = SSL.Context(SSL.SSLv23_METHOD)
-
-            # override:
-            ciphers = (
-                'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
-                'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
-                '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
-            )
-            cont.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
-                             SSL.OP_NO_SSLv3)
-            cont.set_cipher_list(ciphers)
-            if self.dhparam is not None:
-                cont.load_tmp_dh(self.dhparam)
-                cont.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
-            # end override
-
-                cont.use_privatekey_file(self.private_key)
-            if self.certificate_chain:
-                cont.load_verify_locations(self.certificate_chain)
-            cont.use_certificate_file(self.certificate)
-            return cont
-except TypeError:
-    logger.info("pyopenssl not installed")
+            cont.use_privatekey_file(self.private_key)
+        if self.certificate_chain:
+            cont.load_verify_locations(self.certificate_chain)
+        cont.use_certificate_file(self.certificate)
+        return cont
 
 
 class InvalidWorkDir(Exception):
