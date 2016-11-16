@@ -27,6 +27,7 @@ import re
 import time
 import unittest2
 from alignak_test import AlignakTest
+import pytest
 
 
 class TestConfig(AlignakTest):
@@ -41,38 +42,38 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         # Arbiter named as in the configuration
-        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        assert self.arbiter.conf.conf_is_correct
         arbiter_link = self.arbiter.conf.arbiters.find_by_name('arbiter-master')
-        self.assertIsNotNone(arbiter_link)
-        self.assertListEqual(arbiter_link.configuration_errors, [])
-        self.assertListEqual(arbiter_link.configuration_warnings, [])
+        assert arbiter_link is not None
+        assert arbiter_link.configuration_errors == []
+        assert arbiter_link.configuration_warnings == []
 
         # Scheduler named as in the configuration
-        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        assert self.arbiter.conf.conf_is_correct
         scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
-        self.assertIsNotNone(scheduler_link)
+        assert scheduler_link is not None
         # Scheduler configuration is ok
-        self.assertTrue(self.schedulers['scheduler-master'].sched.conf.conf_is_correct)
+        assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
 
         # Broker, Poller, Reactionner named as in the configuration
         link = self.arbiter.conf.brokers.find_by_name('broker-master')
-        self.assertIsNotNone(link)
+        assert link is not None
         link = self.arbiter.conf.pollers.find_by_name('poller-master')
-        self.assertIsNotNone(link)
+        assert link is not None
         link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
-        self.assertIsNotNone(link)
+        assert link is not None
 
         # Receiver - no default receiver created
         link = self.arbiter.conf.receivers.find_by_name('receiver-master')
-        self.assertIsNotNone(link)
+        assert link is not None
 
     def test_config_conf_inner_properties(self):
         """ Default configuration has no loading problems ... and inner default proerties are
@@ -82,21 +83,21 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         # Arbiter configuration is correct
-        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        assert self.arbiter.conf.conf_is_correct
 
         # Configuration inner properties are valued
-        self.assertEqual(self.arbiter.conf.prefix, '')
-        self.assertEqual(self.arbiter.conf.main_config_file,
-                         os.path.abspath('cfg/cfg_default.cfg'))
-        self.assertEqual(self.arbiter.conf.config_base_dir, 'cfg')
+        assert self.arbiter.conf.prefix == ''
+        assert self.arbiter.conf.main_config_file == \
+                         os.path.abspath('cfg/cfg_default.cfg')
+        assert self.arbiter.conf.config_base_dir == 'cfg'
 
     def test_config_ok_no_declared_daemons(self):
         """ Default configuration has no loading problems ... but no daemons are defined
@@ -106,37 +107,37 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_config_simple.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         # Arbiter named as Default
-        self.assertTrue(self.arbiter.conf.conf_is_correct)
+        assert self.arbiter.conf.conf_is_correct
         arbiter_link = self.arbiter.conf.arbiters.find_by_name('Default-Arbiter')
-        self.assertIsNotNone(arbiter_link)
-        self.assertListEqual(arbiter_link.configuration_errors, [])
-        self.assertListEqual(arbiter_link.configuration_warnings, [])
+        assert arbiter_link is not None
+        assert arbiter_link.configuration_errors == []
+        assert arbiter_link.configuration_warnings == []
 
         # Scheduler named as Default
         link = self.arbiter.conf.schedulers.find_by_name('Default-Scheduler')
-        self.assertIsNotNone(link)
+        assert link is not None
         # Scheduler configuration is ok
-        self.assertTrue(self.schedulers['Default-Scheduler'].sched.conf.conf_is_correct)
+        assert self.schedulers['Default-Scheduler'].sched.conf.conf_is_correct
 
         # Broker, Poller, Reactionner named as Default
         link = self.arbiter.conf.brokers.find_by_name('Default-Broker')
-        self.assertIsNotNone(link)
+        assert link is not None
         link = self.arbiter.conf.pollers.find_by_name('Default-Poller')
-        self.assertIsNotNone(link)
+        assert link is not None
         link = self.arbiter.conf.reactionners.find_by_name('Default-Reactionner')
-        self.assertIsNotNone(link)
+        assert link is not None
 
         # Receiver - no default receiver created
         link = self.arbiter.conf.receivers.find_by_name('Default-Receiver')
-        self.assertIsNone(link)
+        assert link is None
 
     def test_symlinks(self):
         """ Test a configuration with symlinks to files
@@ -151,7 +152,7 @@ class TestConfig(AlignakTest):
 
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0",
                                                                        "test_HIDDEN")
-        self.assertIsNotNone(svc)
+        assert svc is not None
 
     def test_define_syntax(self):
         """ Test that define{} syntax is correctly checked: spaces, multi-lines, white-spaces
@@ -161,15 +162,15 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/alignak_define_with_space.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('spaced-host')
-        self.assertIsNotNone(host)
+        assert host is not None
 
     def test_definition_order(self):
         """ Test element definition order
@@ -183,18 +184,18 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/alignak_definition_order.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "myhost", "same_service")
-        self.assertIsNotNone(svc)
-        self.assertEqual('general1', svc.check_command.command.command_name)
-        self.assertEqual(1, svc.definition_order)
+        assert svc is not None
+        assert 'general1' == svc.check_command.command.command_name
+        assert 1 == svc.definition_order
 
     def test_service_not_hostname(self):
         """ Test the 'not hostname' syntax
@@ -206,22 +207,22 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_not_hostname.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
-        self.assertIsNotNone(host)
-        self.assertTrue(host.is_correct())
+        assert host is not None
+        assert host.is_correct()
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # Check that the service is attached to test_host_0
-        self.assertIsNotNone(svc)
-        self.assertTrue(svc.is_correct())
+        assert svc is not None
+        assert svc.is_correct()
 
         # Check that the service is NOT attached to test_host_1
         svc_not = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_1", "test_ok_0")
-        self.assertIsNone(svc_not)
+        assert svc_not is None
 
     def test_service_inheritance(self):
         """ Test services inheritance
@@ -236,24 +237,24 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # Service linked to an host
         svc = self.schedulers['Default-Scheduler'].sched.services.find_srv_by_name_and_hostname(
             "MYHOST", "SSH")
-        self.assertIsNotNone(svc)
+        assert svc is not None
 
         # Service linked to several hosts
         for hname in ["MYHOST2", "MYHOST3"]:
             svc = self.schedulers['Default-Scheduler'].sched.services.\
                 find_srv_by_name_and_hostname(hname, "SSH")
-            self.assertIsNotNone(svc)
+            assert svc is not None
 
         # Service template linked to an host template
         svc = self.schedulers['Default-Scheduler'].sched.services.find_srv_by_name_and_hostname(
             "test_host", "svc_inherited")
-        self.assertIsNotNone(svc)
-        self.assertEqual('check_ssh', svc.check_command.command.command_name)
+        assert svc is not None
+        assert 'check_ssh' == svc.check_command.command.command_name
 
     def test_service_with_no_host(self):
         """ A service not linked to any host raises an error
@@ -261,30 +262,30 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/alignak_service_nohost.cfg')
-        self.assertFalse(self.conf_is_correct)
-        self.assertIn("Configuration in service::will_not_exist is incorrect; "
-                      "from: cfg/config/alignak_service_nohost.cfg:1",
-                      self.configuration_errors)
-        self.assertIn("a service has been defined without host_name nor "
-                      "hostgroup_name, from: cfg/config/alignak_service_nohost.cfg:1",
-                      self.configuration_errors)
-        self.assertIn("[service::will_not_exist] not bound to any host.",
-                      self.configuration_errors)
-        self.assertIn("[service::will_not_exist] no check_command",
-                      self.configuration_errors)
+        assert not self.conf_is_correct
+        assert "Configuration in service::will_not_exist is incorrect; " \
+                      "from: cfg/config/alignak_service_nohost.cfg:1" in \
+                      self.configuration_errors
+        assert "a service has been defined without host_name nor " \
+                      "hostgroup_name, from: cfg/config/alignak_service_nohost.cfg:1" in \
+                      self.configuration_errors
+        assert "[service::will_not_exist] not bound to any host." in \
+                      self.configuration_errors
+        assert "[service::will_not_exist] no check_command" in \
+                      self.configuration_errors
 
-        self.assertIn("Configuration in service::will_error is incorrect; "
-                      "from: cfg/config/alignak_service_nohost.cfg:6",
-                      self.configuration_errors)
-        self.assertIn("[service::will_error] unknown host_name 'NOEXIST'",
-                      self.configuration_errors)
-        self.assertIn("[service::will_error] check_command 'None' invalid",
-                      self.configuration_errors)
+        assert "Configuration in service::will_error is incorrect; " \
+                      "from: cfg/config/alignak_service_nohost.cfg:6" in \
+                      self.configuration_errors
+        assert "[service::will_error] unknown host_name 'NOEXIST'" in \
+                      self.configuration_errors
+        assert "[service::will_error] check_command 'None' invalid" in \
+                      self.configuration_errors
 
-        self.assertIn("services configuration is incorrect!",
-                      self.configuration_errors)
+        assert "services configuration is incorrect!" in \
+                      self.configuration_errors
 
     def test_bad_template_use_itself(self):
         """ Detect a template that uses itself as a template
@@ -294,13 +295,13 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_host_template_itself.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         # TODO, issue #344
-        self.assertIn("Host bla use/inherits from itself ! "
-                      "from: cfg/config/host_bad_template_itself.cfg:1",
-                      self.configuration_errors)
+        assert "Host bla use/inherits from itself ! " \
+                      "from: cfg/config/host_bad_template_itself.cfg:1" in \
+                      self.configuration_errors
 
     def test_use_undefined_template(self):
         """ Test unknown template detection for host and service
@@ -309,15 +310,15 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_bad_undefined_template.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # TODO, issue #344
-        self.assertIn("Host test_host use/inherit from an unknown template: undefined_host ! "
-                      "from: cfg/config/use_undefined_template.cfg:1",
-                      self.configuration_warnings)
-        self.assertIn("Service test_service use/inherit from an unknown template: "
-                      "undefined_service ! from: cfg/config/use_undefined_template.cfg:6",
-                      self.configuration_warnings)
+        assert "Host test_host use/inherit from an unknown template: undefined_host ! " \
+                      "from: cfg/config/use_undefined_template.cfg:1" in \
+                      self.configuration_warnings
+        assert "Service test_service use/inherit from an unknown template: " \
+                      "undefined_service ! from: cfg/config/use_undefined_template.cfg:6" in \
+                      self.configuration_warnings
 
     def test_broken_configuration(self):
         """ Configuration is not correct because of a wrong relative path in the main config file
@@ -325,12 +326,12 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/alignak_broken_1.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # Error messages
-        self.assertEqual(len(self.configuration_errors), 2)
+        assert len(self.configuration_errors) == 2
         self.assert_any_cfg_log_match(
             re.escape(
                 "[config] cannot open config file 'cfg/config/etc/broken_1/minimal.cfg' for "
@@ -351,12 +352,12 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/alignak_broken_2.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # Error messages
-        self.assertEqual(len(self.configuration_errors), 2)
+        assert len(self.configuration_errors) == 2
         self.assert_any_cfg_log_match(
             re.escape(
                 "[config] cannot open config dir 'cfg/config/not-existing-dir' for reading"
@@ -375,9 +376,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/alignak_bad_timeperiods.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(
             re.escape(
@@ -391,11 +392,11 @@ class TestConfig(AlignakTest):
         )
 
         timeperiod = self.arbiter.conf.timeperiods.find_by_name("24x7")
-        self.assertEqual(True, timeperiod.is_correct())
+        assert True == timeperiod.is_correct()
         timeperiod = self.arbiter.conf.timeperiods.find_by_name("24x7_bad")
-        self.assertEqual(False, timeperiod.is_correct())
+        assert False == timeperiod.is_correct()
         timeperiod = self.arbiter.conf.timeperiods.find_by_name("24x7_bad2")
-        self.assertEqual(False, timeperiod.is_correct())
+        assert False == timeperiod.is_correct()
 
     def test_bad_contact(self):
         """ Test a service with an unknown contact
@@ -403,16 +404,16 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_contact_in_service.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         # The service got a unknown contact. It should raise an error
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0",
                                                                        "test_ok_0_badcon")
         print "Contacts:", svc.contacts
-        self.assertFalse(svc.is_correct())
+        assert not svc.is_correct()
         self.assert_any_cfg_log_match(
             "Configuration in service::test_ok_0_badcon is incorrect; from: "
             "cfg/config/service_bad_contact.cfg:1"
@@ -427,9 +428,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_notificationperiod_in_service.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
@@ -448,9 +449,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_realm_member.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
@@ -495,9 +496,9 @@ class TestConfig(AlignakTest):
         in a controlled manner.
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/business_correlator_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(re.escape(
@@ -540,9 +541,9 @@ class TestConfig(AlignakTest):
     def test_business_rules_hostgroup_expansion_errors(self):
         """ Configuration is not correct  because of a bad syntax in BR hostgroup expansion """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/business_correlator_expand_expression_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(re.escape(
@@ -596,9 +597,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/business_rules_bad_realm_conf.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
@@ -620,9 +621,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_realm_in_broker.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
@@ -639,9 +640,9 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_check_interval_in_service.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
@@ -660,12 +661,12 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         contact = self.schedulers['scheduler-master'].sched.contacts.find_by_name('test_contact')
-        self.assertEqual(contact.contact_name, 'test_contact')
-        self.assertEqual(contact.email, 'nobody@localhost')
-        self.assertEqual(contact.customs, {u'_VAR2': u'text', u'_VAR1': u'10'})
+        assert contact.contact_name == 'test_contact'
+        assert contact.email == 'nobody@localhost'
+        assert contact.customs == {u'_VAR2': u'text', u'_VAR1': u'10'}
 
     def test_config_hosts(self):
         """ Test hosts initial states
@@ -674,19 +675,19 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/host_config_all.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_000')
-        self.assertEqual('DOWN', host.state)
+        assert 'DOWN' == host.state
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_001')
-        self.assertEqual('UNREACHABLE', host.state)
+        assert 'UNREACHABLE' == host.state
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_002')
-        self.assertEqual('UP', host.state)
+        assert 'UP' == host.state
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_003')
-        self.assertEqual('UP', host.state)
+        assert 'UP' == host.state
 
     def test_config_hosts_names(self):
         """ Test hosts allowed hosts names:
@@ -701,36 +702,36 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/alignak_antivirg.cfg')
-        self.assertTrue(self.conf_is_correct, "Configuration is not valid")
+        assert self.conf_is_correct, "Configuration is not valid"
 
         # try to get the host
         # if it is not possible to get the host, it is probably because
         # "__ANTI-VIRG__" has been replaced by ";"
         hst = self.arbiter.conf.hosts.find_by_name('test__ANTI-VIRG___0')
-        self.assertIsNotNone(hst, "host 'test__ANTI-VIRG___0' not found")
-        self.assertTrue(hst.is_correct(), "config of host '%s' is not correct" % hst.get_name())
+        assert hst is not None, "host 'test__ANTI-VIRG___0' not found"
+        assert hst.is_correct(), "config of host '%s' is not correct" % hst.get_name()
 
         # try to get the host
         hst = self.arbiter.conf.hosts.find_by_name('test_host_1')
-        self.assertIsNotNone(hst, "host 'test_host_1' not found")
-        self.assertTrue(hst.is_correct(), "config of host '%s' is not true" % (hst.get_name()))
+        assert hst is not None, "host 'test_host_1' not found"
+        assert hst.is_correct(), "config of host '%s' is not true" % (hst.get_name())
 
         # try to get the host
         hst = self.arbiter.conf.hosts.find_by_name('test_host_2;with_semicolon')
-        self.assertIsNotNone(hst, "host 'test_host_2;with_semicolon' not found")
-        self.assertTrue(hst.is_correct(), "config of host '%s' is not true" % hst.get_name())
+        assert hst is not None, "host 'test_host_2;with_semicolon' not found"
+        assert hst.is_correct(), "config of host '%s' is not true" % hst.get_name()
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name(
             "test_host_2;with_semicolon")
-        self.assertIsNotNone(host, "host 'test_host_2;with_semicolon' not found")
-        self.assertEqual('UP', host.state)
+        assert host is not None, "host 'test_host_2;with_semicolon' not found"
+        assert 'UP' == host.state
 
         # We can send a command by escaping the semicolon.
         command = r'[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
             time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(command)
         self.external_command_loop()
-        self.assertEqual('DOWN', host.state)
+        assert 'DOWN' == host.state
 
     def test_config_services(self):
         """ Test services initial states
@@ -742,23 +743,23 @@ class TestConfig(AlignakTest):
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_0')
-        self.assertEqual('WARNING', svc.state)
+        assert 'WARNING' == svc.state
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_1')
-        self.assertEqual('UNKNOWN', svc.state)
+        assert 'UNKNOWN' == svc.state
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_2')
-        self.assertEqual('CRITICAL', svc.state)
+        assert 'CRITICAL' == svc.state
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_3')
-        self.assertEqual('OK', svc.state)
+        assert 'OK' == svc.state
 
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_4')
-        self.assertEqual('OK', svc.state)
+        assert 'OK' == svc.state
 
     def test_host_unreachable_values(self):
         """ Test unreachable value in:
@@ -770,32 +771,32 @@ class TestConfig(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/config/host_unreachable.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         # No error messages
-        self.assertEqual(len(self.configuration_errors), 0)
+        assert len(self.configuration_errors) == 0
         # No warning messages
-        self.assertEqual(len(self.configuration_warnings), 0)
+        assert len(self.configuration_warnings) == 0
 
         host0 = self.arbiter.conf.hosts.find_by_name('host_A')
         host1 = self.arbiter.conf.hosts.find_by_name('host_B')
-        self.assertEqual(['d', 'x', 'r', 'f', 's'], host0.notification_options)
-        self.assertEqual(['o', 'd', 'x'], host0.flap_detection_options)
-        self.assertEqual(['d', 'x'], host0.snapshot_criteria)
+        assert ['d', 'x', 'r', 'f', 's'] == host0.notification_options
+        assert ['o', 'd', 'x'] == host0.flap_detection_options
+        assert ['d', 'x'] == host0.snapshot_criteria
         # self.assertEqual('x', host0.initial_state)
         # self.assertEqual('x', host0.freshness_state)
 
-        self.assertEqual(1, len(host0.act_depend_of_me))
-        self.assertEqual(['d', 'x'], host0.act_depend_of_me[0][1])
+        assert 1 == len(host0.act_depend_of_me)
+        assert ['d', 'x'] == host0.act_depend_of_me[0][1]
 
-        self.assertEqual(1, len(host0.chk_depend_of_me))
-        self.assertEqual(['x'], host0.chk_depend_of_me[0][1])
+        assert 1 == len(host0.chk_depend_of_me)
+        assert ['x'] == host0.chk_depend_of_me[0][1]
 
-        self.assertEqual(1, len(host1.act_depend_of))
-        self.assertEqual(['d', 'x'], host1.act_depend_of[0][1])
+        assert 1 == len(host1.act_depend_of)
+        assert ['d', 'x'] == host1.act_depend_of[0][1]
 
-        self.assertEqual(1, len(host1.chk_depend_of))
-        self.assertEqual(['x'], host1.chk_depend_of[0][1])
+        assert 1 == len(host1.chk_depend_of)
+        assert ['x'] == host1.chk_depend_of[0][1]
 
     def test_macro_modulation(self):
         """ Detect macro modulation configuration errors
@@ -803,34 +804,34 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/macros_modulation_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # MM without macro definition
-        self.assertIn("Configuration in macromodulation::MODULATION2 is incorrect; "
-                      "from: cfg/config/macros_modulation_broken.cfg:10",
-                      self.configuration_errors)
-        self.assertIn("The modulation_period of the macromodulation 'MODULATION2' "
-                      "named '24x7' is unknown!",
-                      self.configuration_errors)
-        self.assertIn("[macromodulation::MODULATION2] contains no macro definition",
-                      self.configuration_errors)
+        assert "Configuration in macromodulation::MODULATION2 is incorrect; " \
+                      "from: cfg/config/macros_modulation_broken.cfg:10" in \
+                      self.configuration_errors
+        assert "The modulation_period of the macromodulation 'MODULATION2' " \
+                      "named '24x7' is unknown!" in \
+                      self.configuration_errors
+        assert "[macromodulation::MODULATION2] contains no macro definition" in \
+                      self.configuration_errors
 
         # MM without name
-        self.assertIn("Configuration in macromodulation::Unnamed is incorrect; "
-                      "from: cfg/config/macros_modulation_broken.cfg:3",
-                      self.configuration_errors)
-        self.assertIn("a macromodulation item has been defined without macromodulation_name, "
-                      "from: cfg/config/macros_modulation_broken.cfg:3",
-                      self.configuration_errors)
-        self.assertIn("The modulation_period of the macromodulation 'Unnamed' "
-                      "named '24x7' is unknown!",
-                      self.configuration_errors)
-        self.assertIn("[macromodulation::Unnamed] macromodulation_name property is missing",
-                  self.configuration_errors)
-        self.assertIn("macromodulations configuration is incorrect!",
-                  self.configuration_errors)
+        assert "Configuration in macromodulation::Unnamed is incorrect; " \
+                      "from: cfg/config/macros_modulation_broken.cfg:3" in \
+                      self.configuration_errors
+        assert "a macromodulation item has been defined without macromodulation_name, " \
+                      "from: cfg/config/macros_modulation_broken.cfg:3" in \
+                      self.configuration_errors
+        assert "The modulation_period of the macromodulation 'Unnamed' " \
+                      "named '24x7' is unknown!" in \
+                      self.configuration_errors
+        assert "[macromodulation::Unnamed] macromodulation_name property is missing" in \
+                  self.configuration_errors
+        assert "macromodulations configuration is incorrect!" in \
+                  self.configuration_errors
 
     def test_checks_modulation(self):
         """ Detect checks modulation configuration errors
@@ -838,30 +839,30 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/checks_modulation_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # CM without check_command definition
-        self.assertIn("Configuration in checkmodulation::MODULATION is incorrect; "
-                      "from: cfg/config/checks_modulation_broken.cfg:9",
-                      self.configuration_errors)
-        self.assertIn("[checkmodulation::MODULATION] check_command property is missing",
-                      self.configuration_errors)
+        assert "Configuration in checkmodulation::MODULATION is incorrect; " \
+                      "from: cfg/config/checks_modulation_broken.cfg:9" in \
+                      self.configuration_errors
+        assert "[checkmodulation::MODULATION] check_command property is missing" in \
+                      self.configuration_errors
 
         # MM without name
-        self.assertIn("Configuration in checkmodulation::Unnamed is incorrect; "
-                      "from: cfg/config/checks_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("a checkmodulation item has been defined without checkmodulation_name, "
-                      "from: cfg/config/checks_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!",
-                      self.configuration_errors)
-        self.assertIn("[checkmodulation::Unnamed] checkmodulation_name property is missing",
-                      self.configuration_errors)
-        self.assertIn("checkmodulations configuration is incorrect!",
-                      self.configuration_errors)
+        assert "Configuration in checkmodulation::Unnamed is incorrect; " \
+                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "a checkmodulation item has been defined without checkmodulation_name, " \
+                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!" in \
+                      self.configuration_errors
+        assert "[checkmodulation::Unnamed] checkmodulation_name property is missing" in \
+                      self.configuration_errors
+        assert "checkmodulations configuration is incorrect!" in \
+                      self.configuration_errors
 
     def test_business_impact__modulation(self):
         """ Detect business impact modulation configuration errors
@@ -869,33 +870,33 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/businesssimpact_modulation_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # MM without macro definition
-        self.assertIn("Configuration in businessimpactmodulation::CritMod is incorrect; "
-                      "from: cfg/config/businesssimpact_modulation_broken.cfg:10",
-                      self.configuration_errors)
-        self.assertIn("[businessimpactmodulation::CritMod] business_impact property is missing",
-                      self.configuration_errors)
+        assert "Configuration in businessimpactmodulation::CritMod is incorrect; " \
+                      "from: cfg/config/businesssimpact_modulation_broken.cfg:10" in \
+                      self.configuration_errors
+        assert "[businessimpactmodulation::CritMod] business_impact property is missing" in \
+                      self.configuration_errors
 
         # MM without name
-        self.assertIn("Configuration in businessimpactmodulation::Unnamed is incorrect; "
-                      "from: cfg/config/businesssimpact_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("a businessimpactmodulation item has been defined without "
-                      "business_impact_modulation_name, from: "
-                      "cfg/config/businesssimpact_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("The modulation_period of the businessimpactmodulation 'Unnamed' "
-                      "named '24x7' is unknown!",
-                      self.configuration_errors)
-        self.assertIn("[businessimpactmodulation::Unnamed] business_impact_modulation_name "
-                      "property is missing",
-                      self.configuration_errors)
-        self.assertIn("businessimpactmodulations configuration is incorrect!",
-                      self.configuration_errors)
+        assert "Configuration in businessimpactmodulation::Unnamed is incorrect; " \
+                      "from: cfg/config/businesssimpact_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "a businessimpactmodulation item has been defined without " \
+                      "business_impact_modulation_name, from: " \
+                      "cfg/config/businesssimpact_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "The modulation_period of the businessimpactmodulation 'Unnamed' " \
+                      "named '24x7' is unknown!" in \
+                      self.configuration_errors
+        assert "[businessimpactmodulation::Unnamed] business_impact_modulation_name " \
+                      "property is missing" in \
+                      self.configuration_errors
+        assert "businessimpactmodulations configuration is incorrect!" in \
+                      self.configuration_errors
 
     def test_checks_modulation(self):
         """ Detect checks modulation configuration errors
@@ -903,27 +904,27 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        with self.assertRaises(SystemExit):
+        with pytest.raises(SystemExit):
             self.setup_with_file('cfg/config/checks_modulation_broken.cfg')
-        self.assertFalse(self.conf_is_correct)
+        assert not self.conf_is_correct
 
         # CM without check_command definition
-        self.assertIn("Configuration in checkmodulation::MODULATION is incorrect; "
-                      "from: cfg/config/checks_modulation_broken.cfg:9",
-                      self.configuration_errors)
-        self.assertIn("[checkmodulation::MODULATION] check_command property is missing",
-                      self.configuration_errors)
+        assert "Configuration in checkmodulation::MODULATION is incorrect; " \
+                      "from: cfg/config/checks_modulation_broken.cfg:9" in \
+                      self.configuration_errors
+        assert "[checkmodulation::MODULATION] check_command property is missing" in \
+                      self.configuration_errors
 
         # MM without name
-        self.assertIn("Configuration in checkmodulation::Unnamed is incorrect; "
-                      "from: cfg/config/checks_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("a checkmodulation item has been defined without checkmodulation_name, "
-                      "from: cfg/config/checks_modulation_broken.cfg:2",
-                      self.configuration_errors)
-        self.assertIn("The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!",
-                      self.configuration_errors)
-        self.assertIn("[checkmodulation::Unnamed] checkmodulation_name property is missing",
-                      self.configuration_errors)
-        self.assertIn("checkmodulations configuration is incorrect!",
-                      self.configuration_errors)
+        assert "Configuration in checkmodulation::Unnamed is incorrect; " \
+                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "a checkmodulation item has been defined without checkmodulation_name, " \
+                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
+                      self.configuration_errors
+        assert "The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!" in \
+                      self.configuration_errors
+        assert "[checkmodulation::Unnamed] checkmodulation_name property is missing" in \
+                      self.configuration_errors
+        assert "checkmodulations configuration is incorrect!" in \
+                      self.configuration_errors

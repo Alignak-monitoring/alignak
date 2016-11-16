@@ -51,9 +51,9 @@ class TestMonitoringLogs(AlignakTest):
                 monitoring_logs.append((data['level'], data['message']))
 
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
-        self.assertEqual(len(expected_logs), len(monitoring_logs), monitoring_logs)
+        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
         time.sleep(0.1)
 
     def test_logs_hosts(self):
@@ -63,7 +63,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
 
         self._sched = self.schedulers['scheduler-master'].sched
@@ -130,7 +130,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -255,7 +255,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -303,7 +303,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -370,7 +370,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -400,7 +400,7 @@ class TestMonitoringLogs(AlignakTest):
              u'EXTERNAL COMMAND: [%s] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % now)
         ]
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
     def test_special_external_commands(self):
         """ Test logs for special external commands
@@ -408,7 +408,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -449,11 +449,11 @@ class TestMonitoringLogs(AlignakTest):
             (u'error', u"Command '[%s] UNKNOWN_COMMAND' is not recognized, sorry" % now)
         ]
         for log_level, log_message in expected_logs:
-            self.assertIn((log_level, log_message), monitoring_logs)
+            assert (log_level, log_message) in monitoring_logs
 
         # Now with disabled log of external commands
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -476,4 +476,4 @@ class TestMonitoringLogs(AlignakTest):
                 monitoring_logs.append((data['level'], data['message']))
 
         # No monitoring logs
-        self.assertEqual([], monitoring_logs)
+        assert [] == monitoring_logs

@@ -53,7 +53,7 @@ class TestHostExtended(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/extended/extended_info.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self._sched = self.schedulers['scheduler-master'].sched
 
     def test_extended_host_information(self):
@@ -68,17 +68,17 @@ class TestHostExtended(AlignakTest):
         self.scheduler_loop(2, [
             [host, 0, 'UP | value1=1 value2=2']
         ])
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
 
-        self.assertEqual('host.png', host.icon_image)
-        self.assertEqual('Alt for icon.png', host.icon_image_alt)
-        self.assertEqual('Notes', host.notes)
+        assert 'host.png' == host.icon_image
+        assert 'Alt for icon.png' == host.icon_image_alt
+        assert 'Notes' == host.notes
         # This parameter is already defined in the host, thus it is not overloaded by the one
         # in the hostextinfo definition
-        self.assertEqual('/alignak/wiki/doku.php/$HOSTNAME$', host.notes_url)
-        self.assertEqual('vrml.png', host.vrml_image)
-        self.assertEqual('map.png', host.statusmap_image)
+        assert '/alignak/wiki/doku.php/$HOSTNAME$' == host.notes_url
+        assert 'vrml.png' == host.vrml_image
+        assert 'map.png' == host.statusmap_image
         # Not implemented, see #574
         # self.assertEqual('1', host['2d_coords'])
         # self.assertEqual('2', host['3d_coords'])
@@ -99,13 +99,13 @@ class TestHostExtended(AlignakTest):
         self.scheduler_loop(2, [
             [svc, 0, 'OK']
         ])
-        self.assertEqual('OK', svc.state)
-        self.assertEqual('HARD', svc.state_type)
+        assert 'OK' == svc.state
+        assert 'HARD' == svc.state_type
 
-        self.assertEqual('service.png', svc.icon_image)
-        self.assertEqual('Alt for service.png', svc.icon_image_alt)
-        self.assertEqual('Notes for a service', svc.notes)
-        self.assertEqual('http://Notes_url/service', svc.notes_url)
+        assert 'service.png' == svc.icon_image
+        assert 'Alt for service.png' == svc.icon_image_alt
+        assert 'Notes for a service' == svc.notes
+        assert 'http://Notes_url/service' == svc.notes_url
 
 
 if __name__ == '__main__':

@@ -82,9 +82,9 @@ class TestStats(AlignakTest):
             'avg': 1.00,
         }
 
-        self.assertEqual(reference['min'],
-                         self.schedulers['scheduler-master'].sched.stats['latency']['min'])
-        self.assertEqual(reference['max'],
-                         self.schedulers['scheduler-master'].sched.stats['latency']['max'])
-        self.assertEqual(reference['avg'],
-                         self.schedulers['scheduler-master'].sched.stats['latency']['avg'])
+        assert reference['min'] == \
+                         self.schedulers['scheduler-master'].sched.stats['latency']['min']
+        assert reference['max'] == \
+                         self.schedulers['scheduler-master'].sched.stats['latency']['max']
+        assert reference['avg'] == \
+                         self.schedulers['scheduler-master'].sched.stats['latency']['avg']

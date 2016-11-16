@@ -50,25 +50,25 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, no notifications')
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'VOID', 'command')
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'Ok HARD, no notifications')
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
         self.assert_actions_count(0)
 
     def test_1_nonotif_enablewithcmd(self):
@@ -93,43 +93,43 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, no notifications')
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
         self.assert_actions_count(1)
-        self.assertFalse(svc.notifications_enabled)
+        assert not svc.notifications_enabled
 
         now = int(time.time())
         cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
                                                                 svc.service_description)
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.external_command_loop()
-        self.assertTrue(svc.notifications_enabled)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
+        assert svc.notifications_enabled
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
         time.sleep(0.2)
         self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'VOID', 'command')
         self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'Ok HARD, no notifications')
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
         self.assert_actions_count(2)
         self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
         self.assert_actions_match(1, 'serviceoutput OK', 'command')
@@ -161,30 +161,30 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
         self.assert_actions_count(2)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual(svc.current_notification_number, 2)
+        assert svc.current_notification_number == 2
         self.assert_actions_count(3)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual(svc.current_notification_number, 3)
+        assert svc.current_notification_number == 3
         self.assert_actions_count(4)
 
         now = time.time()
@@ -192,19 +192,19 @@ class TestNotifications(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual(svc.current_notification_number, 3)
+        assert svc.current_notification_number == 3
         self.assert_actions_count(4)
 
         now = time.time()
         cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assertEqual(svc.current_notification_number, 4)
+        assert svc.current_notification_number == 4
         self.assert_actions_count(5)
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
         self.assert_actions_count(5)
 
     def test_3_notifications(self):
@@ -230,33 +230,33 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Warning SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Warning SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Warning HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Warning HARD, must have 1 ' \
+                                                             'notification'
         self.assert_actions_count(2)
         self.assert_actions_match(1, 'serviceoutput WARNING', 'command')
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(2, svc.current_notification_number, 'Critical HARD,  must have 2 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 2 == svc.current_notification_number, 'Critical HARD,  must have 2 ' \
+                                                             'notification'
         self.assert_actions_count(3)
         self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
         self.assert_actions_match(2, 'serviceoutput CRITICAL', 'command')
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
         self.assert_actions_count(3)
         self.assert_actions_match(2, 'serviceoutput OK', 'command')
 
@@ -283,28 +283,28 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Caritical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Caritical HARD, must have 1 ' \
+                                                             'notification'
         self.assert_actions_count(2)
         self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(3, svc.current_notification_number, 'Warning HARD,  must have 3 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 3 == svc.current_notification_number, 'Warning HARD,  must have 3 ' \
+                                                             'notification'
         self.assert_actions_count(4)
         self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
         self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
@@ -334,22 +334,22 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         self.assert_actions_count(0)
         time.sleep(0.1)
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        self.assertEqual("HARD", svc.state_type)
+        assert "HARD" == svc.state_type
         self.assert_actions_count(1)
         time.sleep(7)
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         self.assert_actions_count(2)
         self.assert_actions_match(1, 'serviceoutput WARNING', 'command')
-        self.assertEqual(svc.last_time_critical, 0)
-        self.assertEqual(svc.last_time_unknown, 0)
-        self.assertGreater(svc.last_time_warning, 0)
-        self.assertGreater(svc.last_time_ok, 0)
+        assert svc.last_time_critical == 0
+        assert svc.last_time_unknown == 0
+        assert svc.last_time_warning > 0
+        assert svc.last_time_ok > 0
 
         time.sleep(2)
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
@@ -357,23 +357,23 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(2, 'serviceoutput WARNING', 'command')
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assertEqual(3, svc.current_notification_number)
+        assert 3 == svc.current_notification_number
         self.assert_actions_count(4)
-        self.assertEqual(svc.last_time_unknown, 0)
-        self.assertGreater(svc.last_time_warning, 0)
-        self.assertGreater(svc.last_time_critical, 0)
-        self.assertGreater(svc.last_time_ok, 0)
+        assert svc.last_time_unknown == 0
+        assert svc.last_time_warning > 0
+        assert svc.last_time_critical > 0
+        assert svc.last_time_ok > 0
         time.sleep(7)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assertEqual(4, svc.current_notification_number)
+        assert 4 == svc.current_notification_number
         self.assert_actions_count(5)
         self.assert_actions_match(4, 'serviceoutput CRITICAL', 'command')
-        self.assertEqual(5, len(svc.notifications_in_progress))
+        assert 5 == len(svc.notifications_in_progress)
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(7)
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
         self.assert_actions_count(5)
 
     def test_notifications_delay_recover_before_notif(self):
@@ -409,24 +409,24 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, no notifications')
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
         self.assert_actions_count(0)
 
     def test_notifications_ack(self):
@@ -452,20 +452,20 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
         self.show_actions()
         self.assert_actions_count(2)
 
@@ -476,24 +476,24 @@ class TestNotifications(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
         self.show_actions()
         self.assert_actions_count(2)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(1, svc.current_notification_number, 'Critical HARD, must have 1 '
-                                                             'notification')
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
         self.assert_actions_count(2)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(2, svc.current_notification_number, 'Warning HARD, must have 2 '
-                                                             'notifications')
+        assert "HARD" == svc.state_type
+        assert 2 == svc.current_notification_number, 'Warning HARD, must have 2 ' \
+                                                             'notifications'
         self.assert_actions_count(3)
 
     def test_notifications_downtime(self):
@@ -519,7 +519,7 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number, 'All OK no notifications')
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
 
         now = int(time.time())
@@ -529,17 +529,17 @@ class TestNotifications(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("SOFT", svc.state_type)
-        self.assertEqual("CRITICAL", svc.state)
-        self.assertEqual(0, svc.current_notification_number, 'Critical SOFT, no notifications')
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'serviceoutput OK', 'command')
         self.assert_actions_match(0, 'notificationtype DOWNTIMESTART', 'command')
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.assertEqual("HARD", svc.state_type)
-        self.assertEqual(0, svc.current_notification_number, 'Critical HARD, no notifications')
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
         self.assert_actions_count(2)
         self.assert_actions_match(1, 'VOID', 'command')
 
@@ -549,7 +549,7 @@ class TestNotifications(AlignakTest):
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
-        self.assertEqual(0, svc.current_notification_number)
+        assert 0 == svc.current_notification_number
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'serviceoutput OK', 'command')
         self.assert_actions_match(0, 'notificationtype DOWNTIMESTART', 'command')

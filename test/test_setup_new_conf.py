@@ -48,15 +48,15 @@ class TestSetupNewConf(AlignakTest):
         sched.load_config_file()
         sched.load_modules_manager()
         if hasattr(sched, 'modules'):
-            self.assertEqual(0, len(sched.modules))
+            assert 0 == len(sched.modules)
 
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched.new_conf = scheduler.conf_package
         sched.setup_new_conf()
-        self.assertEqual(1, len(sched.modules))
-        self.assertEqual(sched.modules[0].module_alias, 'Example')
-        self.assertEqual(sched.modules[0].option_3, 'foobar')
-        self.assertEqual(2, len(sched.conf.hosts))
+        assert 1 == len(sched.modules)
+        assert sched.modules[0].module_alias == 'Example'
+        assert sched.modules[0].option_3 == 'foobar'
+        assert 2 == len(sched.conf.hosts)
         # Stop launched modules
         sched.modules_manager.stop_all()
 
@@ -73,17 +73,17 @@ class TestSetupNewConf(AlignakTest):
         receiv.load_config_file()
         receiv.load_modules_manager()
         if hasattr(receiv, 'modules'):
-            self.assertEqual(0, len(receiv.modules))
+            assert 0 == len(receiv.modules)
 
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'receiver':
                 receiv.new_conf = satellite.cfg
         receiv.setup_new_conf()
-        self.assertEqual(1, len(receiv.modules))
-        self.assertEqual(receiv.modules[0].module_alias, 'Example')
-        self.assertEqual(receiv.modules[0].option_3, 'foobar')
+        assert 1 == len(receiv.modules)
+        assert receiv.modules[0].module_alias == 'Example'
+        assert receiv.modules[0].option_3 == 'foobar'
         # check get hosts
-        self.assertEqual(len(receiv.host_assoc), 2)
+        assert len(receiv.host_assoc) == 2
         # Stop launched modules
         receiv.modules_manager.stop_all()
 
@@ -100,15 +100,15 @@ class TestSetupNewConf(AlignakTest):
         poller.load_config_file()
         poller.load_modules_manager()
         if hasattr(poller, 'modules'):
-            self.assertEqual(0, len(poller.modules))
+            assert 0 == len(poller.modules)
 
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'poller':
                 poller.new_conf = satellite.cfg
         poller.setup_new_conf()
-        self.assertEqual(1, len(poller.new_modules_conf))
-        self.assertEqual(poller.new_modules_conf[0].module_alias, 'Example')
-        self.assertEqual(poller.new_modules_conf[0].option_3, 'foobar')
+        assert 1 == len(poller.new_modules_conf)
+        assert poller.new_modules_conf[0].module_alias == 'Example'
+        assert poller.new_modules_conf[0].option_3 == 'foobar'
         # Stop launched modules
         poller.modules_manager.stop_all()
 
@@ -125,15 +125,15 @@ class TestSetupNewConf(AlignakTest):
         broker.load_config_file()
         broker.load_modules_manager()
         if hasattr(broker, 'modules'):
-            self.assertEqual(0, len(broker.modules))
+            assert 0 == len(broker.modules)
 
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'broker':
                 broker.new_conf = satellite.cfg
         broker.setup_new_conf()
-        self.assertEqual(1, len(broker.modules))
-        self.assertEqual(broker.modules[0].module_alias, 'Example')
-        self.assertEqual(broker.modules[0].option_3, 'foobar')
+        assert 1 == len(broker.modules)
+        assert broker.modules[0].module_alias == 'Example'
+        assert broker.modules[0].option_3 == 'foobar'
         # Stop launched modules
         broker.modules_manager.stop_all()
 
@@ -150,14 +150,14 @@ class TestSetupNewConf(AlignakTest):
         reac.load_config_file()
         reac.load_modules_manager()
         if hasattr(reac, 'modules'):
-            self.assertEqual(0, len(reac.modules))
+            assert 0 == len(reac.modules)
 
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'reactionner':
                 reac.new_conf = satellite.cfg
         reac.setup_new_conf()
-        self.assertEqual(1, len(reac.new_modules_conf))
-        self.assertEqual(reac.new_modules_conf[0].module_alias, 'Example')
-        self.assertEqual(reac.new_modules_conf[0].option_3, 'foobar')
+        assert 1 == len(reac.new_modules_conf)
+        assert reac.new_modules_conf[0].module_alias == 'Example'
+        assert reac.new_modules_conf[0].option_3 == 'foobar'
         # Stop launched modules
         reac.modules_manager.stop_all()

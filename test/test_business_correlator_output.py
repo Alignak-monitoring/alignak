@@ -57,7 +57,7 @@ class TestBusinesscorrelOutput(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_business_correlator_output.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         self._sched = self.schedulers['scheduler-master'].sched
 
     def launch_internal_check(self, svc_br):
@@ -68,8 +68,8 @@ class TestBusinesscorrelOutput(AlignakTest):
                                             self._sched.timeperiods, self._sched.macromodulations,
                                             self._sched.checkmodulations, self._sched.checks))
         c = svc_br.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        assert True == c.internal
+        assert c.is_launchable(now)
 
         # ask the scheduler to launch this check
         # and ask 2 loops: one to launch the check
@@ -77,18 +77,18 @@ class TestBusinesscorrelOutput(AlignakTest):
         self.scheduler_loop(2, [])
 
         # We should not have the check anymore
-        self.assertEqual(0, len(svc_br.actions))
+        assert 0 == len(svc_br.actions)
 
     def test_bprule_empty_output(self):
         """ BR - empty output """
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy",
                                                                      "empty_bp_rule_output")
-        self.assertIs(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        self.assertEqual("", svc_cor.get_business_rule_output(self._sched.hosts,
+        assert True is svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+        assert "" == svc_cor.get_business_rule_output(self._sched.hosts,
                                                               self._sched.services,
                                                               self._sched.macromodulations,
-                                                              self._sched.timeperiods))
+                                                              self._sched.timeperiods)
 
     def test_bprule_expand_template_macros(self):
         """ BR - expand template macros"""
@@ -96,10 +96,10 @@ class TestBusinesscorrelOutput(AlignakTest):
                                                                      "formatted_bp_rule_output")
         svc_cor.act_depend_of = []  # no host checks on critical check results
         # Is a Business Rule, not a simple service...
-        self.assertTrue(svc_cor.got_business_rule)
-        self.assertIsNotNone(svc_cor.business_rule)
-        self.assertEqual("$STATUS$ $([$STATUS$: $FULLNAME$] )$",
-                         svc_cor.business_rule_output_template)
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == \
+                         svc_cor.business_rule_output_template
 
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # no host checks on critical check results
@@ -115,14 +115,14 @@ class TestBusinesscorrelOutput(AlignakTest):
             [svc2, 1, 'WARNING test_host_02/srv2'],
             [svc3, 2, 'CRITICAL test_host_03/srv3'],
             [hst4, 2, 'DOWN test_host_04']])
-        self.assertEqual('OK', svc1.state)
-        self.assertEqual('HARD', svc1.state_type)
-        self.assertEqual('WARNING', svc2.state)
-        self.assertEqual('HARD', svc2.state_type)
-        self.assertEqual('CRITICAL', svc3.state)
-        self.assertEqual('HARD', svc3.state_type)
-        self.assertEqual('DOWN', hst4.state)
-        self.assertEqual('HARD', hst4.state_type)
+        assert 'OK' == svc1.state
+        assert 'HARD' == svc1.state_type
+        assert 'WARNING' == svc2.state
+        assert 'HARD' == svc2.state_type
+        assert 'CRITICAL' == svc3.state
+        assert 'HARD' == svc3.state_type
+        assert 'DOWN' == hst4.state
+        assert 'HARD' == hst4.state_type
 
         time.sleep(1)
 
@@ -137,31 +137,31 @@ class TestBusinesscorrelOutput(AlignakTest):
         output = m.resolve_simple_macros_in_string(template, data,
                                                    self._sched.macromodulations,
                                                    self._sched.timeperiods)
-        self.assertEqual("OK,O,test_host_01,srv1,test_host_01/srv1", output)
+        assert "OK,O,test_host_01,srv1,test_host_01/srv1" == output
         host = self._sched.hosts[svc2.host]
         data = [host, svc2]
         output = m.resolve_simple_macros_in_string(template, data,
                                                    self._sched.macromodulations,
                                                    self._sched.timeperiods)
-        self.assertEqual("WARNING,W,test_host_02,srv2,test_host_02/srv2", output)
+        assert "WARNING,W,test_host_02,srv2,test_host_02/srv2" == output
         host = self._sched.hosts[svc3.host]
         data = [host, svc3]
         output = m.resolve_simple_macros_in_string(template, data,
                                                    self._sched.macromodulations,
                                                    self._sched.timeperiods)
-        self.assertEqual("CRITICAL,C,test_host_03,srv3,test_host_03/srv3", output)
+        assert "CRITICAL,C,test_host_03,srv3,test_host_03/srv3" == output
         data = [hst4]
         output = m.resolve_simple_macros_in_string(template, data,
                                                    self._sched.macromodulations,
                                                    self._sched.timeperiods)
-        self.assertEqual("DOWN,D,test_host_04,,test_host_04", output)
+        assert "DOWN,D,test_host_04,,test_host_04" == output
         host = self._sched.hosts[svc_cor.host]
         data = [host, svc_cor]
         output = m.resolve_simple_macros_in_string(template, data,
                                                    self._sched.macromodulations,
                                                    self._sched.timeperiods)
-        self.assertEqual("CRITICAL,C,dummy,formatted_bp_rule_output,dummy/formatted_bp_rule_output",
-                         output)
+        assert "CRITICAL,C,dummy,formatted_bp_rule_output,dummy/formatted_bp_rule_output" == \
+                         output
 
     def test_bprule_output(self):
         """ BR - output """
@@ -169,10 +169,10 @@ class TestBusinesscorrelOutput(AlignakTest):
                                                                      "formatted_bp_rule_output")
         svc_cor.act_depend_of = []  # no host checks on critical check results
         # Is a Business Rule, not a simple service...
-        self.assertTrue(svc_cor.got_business_rule)
-        self.assertIsNotNone(svc_cor.business_rule)
-        self.assertEqual("$STATUS$ $([$STATUS$: $FULLNAME$] )$",
-                         svc_cor.business_rule_output_template)
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == \
+                         svc_cor.business_rule_output_template
 
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # no host checks on critical check results
@@ -188,14 +188,14 @@ class TestBusinesscorrelOutput(AlignakTest):
             [svc2, 1, 'WARNING test_host_02/srv2'],
             [svc3, 2, 'CRITICAL test_host_03/srv3'],
             [hst4, 2, 'DOWN test_host_04']])
-        self.assertEqual('OK', svc1.state)
-        self.assertEqual('HARD', svc1.state_type)
-        self.assertEqual('WARNING', svc2.state)
-        self.assertEqual('HARD', svc2.state_type)
-        self.assertEqual('CRITICAL', svc3.state)
-        self.assertEqual('HARD', svc3.state_type)
-        self.assertEqual('DOWN', hst4.state)
-        self.assertEqual('HARD', hst4.state_type)
+        assert 'OK' == svc1.state
+        assert 'HARD' == svc1.state_type
+        assert 'WARNING' == svc2.state
+        assert 'HARD' == svc2.state_type
+        assert 'CRITICAL' == svc3.state
+        assert 'HARD' == svc3.state_type
+        assert 'DOWN' == hst4.state
+        assert 'HARD' == hst4.state_type
 
         time.sleep(1)
 
@@ -205,22 +205,22 @@ class TestBusinesscorrelOutput(AlignakTest):
         # Performs checks
         output = svc_cor.output
         print("BR output: %s" % output)
-        self.assertGreater(output.find("[WARNING: test_host_02/srv2]"), 0)
-        self.assertGreater(output.find("[CRITICAL: test_host_03/srv3]"), 0)
-        self.assertGreater(output.find("[DOWN: test_host_04]"), 0)
+        assert output.find("[WARNING: test_host_02/srv2]") > 0
+        assert output.find("[CRITICAL: test_host_03/srv3]") > 0
+        assert output.find("[DOWN: test_host_04]") > 0
 
         # Should not display OK state checks
-        self.assertEqual(-1, output.find("[OK: test_host_01/srv1]") )
-        self.assertTrue(output.startswith("CRITICAL"))
+        assert -1 == output.find("[OK: test_host_01/srv1]")
+        assert output.startswith("CRITICAL")
 
     def test_bprule_xof_one_critical_output(self):
         """ BR 3 of: - one CRITICAL output """
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy",
                                                                      "formatted_bp_rule_xof_output")
-        self.assertIs(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        self.assertEqual("$STATUS$ $([$STATUS$: $FULLNAME$] )$",
-                         svc_cor.business_rule_output_template)
+        assert True is svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == \
+                         svc_cor.business_rule_output_template
 
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # no host checks on critical check results
@@ -236,14 +236,14 @@ class TestBusinesscorrelOutput(AlignakTest):
             [svc2, 0, 'OK test_host_02/srv2'],
             [svc3, 2, 'CRITICAL test_host_03/srv3'],
             [hst4, 0, 'UP test_host_04']])
-        self.assertEqual('OK', svc1.state)
-        self.assertEqual('HARD', svc1.state_type)
-        self.assertEqual('OK', svc2.state)
-        self.assertEqual('HARD', svc2.state_type)
-        self.assertEqual('CRITICAL', svc3.state)
-        self.assertEqual('HARD', svc3.state_type)
-        self.assertEqual('UP', hst4.state)
-        self.assertEqual('HARD', hst4.state_type)
+        assert 'OK' == svc1.state
+        assert 'HARD' == svc1.state_type
+        assert 'OK' == svc2.state
+        assert 'HARD' == svc2.state_type
+        assert 'CRITICAL' == svc3.state
+        assert 'HARD' == svc3.state_type
+        assert 'UP' == hst4.state
+        assert 'HARD' == hst4.state_type
 
         time.sleep(1)
 
@@ -251,18 +251,18 @@ class TestBusinesscorrelOutput(AlignakTest):
         self.launch_internal_check(svc_cor)
 
         # Performs checks
-        self.assertEqual(0, svc_cor.business_rule.get_state(self._sched.hosts,
-                                                            self._sched.services))
-        self.assertEqual("OK [CRITICAL: test_host_03/srv3]", svc_cor.output)
+        assert 0 == svc_cor.business_rule.get_state(self._sched.hosts,
+                                                            self._sched.services)
+        assert "OK [CRITICAL: test_host_03/srv3]" == svc_cor.output
 
     def test_bprule_xof_all_ok_output(self):
         """ BR - 3 of: all OK output """
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy",
                                                                      "formatted_bp_rule_xof_output")
-        self.assertIs(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        self.assertEqual("$STATUS$ $([$STATUS$: $FULLNAME$] )$",
-                         svc_cor.business_rule_output_template)
+        assert True is svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == \
+                         svc_cor.business_rule_output_template
 
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # no host checks on critical check results
@@ -278,14 +278,14 @@ class TestBusinesscorrelOutput(AlignakTest):
             [svc2, 0, 'OK test_host_02/srv2'],
             [svc3, 0, 'OK test_host_03/srv3'],
             [hst4, 0, 'UP test_host_04']])
-        self.assertEqual('OK', svc1.state)
-        self.assertEqual('HARD', svc1.state_type)
-        self.assertEqual('OK', svc2.state)
-        self.assertEqual('HARD', svc2.state_type)
-        self.assertEqual('OK', svc3.state)
-        self.assertEqual('HARD', svc3.state_type)
-        self.assertEqual('UP', hst4.state)
-        self.assertEqual('HARD', hst4.state_type)
+        assert 'OK' == svc1.state
+        assert 'HARD' == svc1.state_type
+        assert 'OK' == svc2.state
+        assert 'HARD' == svc2.state_type
+        assert 'OK' == svc3.state
+        assert 'HARD' == svc3.state_type
+        assert 'UP' == hst4.state
+        assert 'HARD' == hst4.state_type
 
         time.sleep(1)
 
@@ -293,9 +293,9 @@ class TestBusinesscorrelOutput(AlignakTest):
         self.launch_internal_check(svc_cor)
 
         # Performs checks
-        self.assertEqual(0, svc_cor.business_rule.get_state(self._sched.hosts,
-                                                            self._sched.services))
-        self.assertEqual("OK all checks were successful.", svc_cor.output)
+        assert 0 == svc_cor.business_rule.get_state(self._sched.hosts,
+                                                            self._sched.services)
+        assert "OK all checks were successful." == svc_cor.output
 
 
 if __name__ == '__main__':

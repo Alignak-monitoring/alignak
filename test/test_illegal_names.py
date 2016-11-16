@@ -68,16 +68,16 @@ class TestConfig(AlignakTest):
         print "Illegal caracters: %s" % illegal_characts
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
         # should be correct
-        self.assertTrue(host.is_correct())
+        assert host.is_correct()
 
         # Now change the name with incorrect caract
         for charact in illegal_characts:
             host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here
-            self.assertEqual(False, host.is_correct())
+            assert False == host.is_correct()
 
         # test special cases manually to be sure
         for charact in ['!']:
             host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here
-            self.assertEqual(False, host.is_correct())
+            assert False == host.is_correct()

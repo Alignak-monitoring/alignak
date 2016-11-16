@@ -84,9 +84,9 @@ class TestEndParsingType(AlignakTest):
         value = getattr(obj, prop, None)
         if value is not None:
             obj_expected_type = self.map_type(obj.properties[prop])
-            self.assertIsInstance(value, obj_expected_type,
-                                  "The %s attr/property of %s object isn't a %s: %s, value=%r" %
-                                  (prop, obj, obj_expected_type, value.__class__, value))
+            assert isinstance(value, obj_expected_type), \
+                                  "The %s attr/property of %s object isn't a %s: %s, value=%r" % \
+                                  (prop, obj, obj_expected_type, value.__class__, value)
 
     @staticmethod
     def map_type(obj):
@@ -136,7 +136,7 @@ class TestEndParsingType(AlignakTest):
         :type container: object
         :return: None
         """
-        self.assertIsInstance(container, Items)
+        assert isinstance(container, Items)
         for obj in container:
             for prop in obj.properties:
                 self.check_object_property(obj, prop)
@@ -162,7 +162,7 @@ class TestEndParsingType(AlignakTest):
                 if prop not in ['ref']:  # TODO : clean this
                     if value is not None:
                         print "TESTING %s with value %s" % (prop, value)
-                        self.assertIsInstance(value, self.map_type(check.properties[prop]))
+                        assert isinstance(value, self.map_type(check.properties[prop]))
                     else:
                         print "Skipping %s " % prop
 
@@ -175,7 +175,7 @@ class TestEndParsingType(AlignakTest):
                 if prop not in ['already_start_escalations']:  # TODO : clean this
                     if value is not None:
                         print "TESTING %s with value %s" % (prop, value)
-                        self.assertIsInstance(value, self.map_type(notification.properties[prop]))
+                        assert isinstance(value, self.map_type(notification.properties[prop]))
                     else:
                         print "Skipping %s " % prop
 
@@ -188,7 +188,7 @@ class TestEndParsingType(AlignakTest):
                 if prop not in ['jjjj']:  # TODO : clean this
                     if value is not None:
                         print "TESTING %s with value %s" % (prop, value)
-                        self.assertIsInstance(value, self.map_type(eventhandler.properties[prop]))
+                        assert isinstance(value, self.map_type(eventhandler.properties[prop]))
                     else:
                         print "Skipping %s " % prop
 
@@ -200,7 +200,7 @@ class TestEndParsingType(AlignakTest):
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
                     print "TESTING %s with value %s" % (prop, value)
-                    self.assertIsInstance(value, self.map_type(timeperiod.properties[prop]))
+                    assert isinstance(value, self.map_type(timeperiod.properties[prop]))
                 else:
                     print "Skipping %s " % prop
 
@@ -212,6 +212,6 @@ class TestEndParsingType(AlignakTest):
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
                     print "TESTING %s with value %s" % (prop, value)
-                    self.assertIsInstance(value, self.map_type(command.properties[prop]))
+                    assert isinstance(value, self.map_type(command.properties[prop]))
                 else:
                     print "Skipping %s " % prop

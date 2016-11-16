@@ -6,10 +6,14 @@ cd test
 # Delete previously existing coverage results
 coverage erase
 
-# Run all the unit tests
-nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
+# Declare a COVERAGE_PROCESS_START environment variable
+# This variable is used to allow coverage tests in the Alignak daemons started processes
+COVERAGE_PROCESS_START='.coveragerc'
 
-# Combine coverage files
-coverage combine
+# Run test suite with py.test running its coverage plugin
+pytest --cov=alignak --cov-config .coveragerc test_*.py
+
+# Report about coverage
+coverage report -m
 cd ..
 

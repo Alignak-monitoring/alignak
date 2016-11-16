@@ -69,6 +69,7 @@ from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak.daemons.receiverdaemon import Receiver
 from alignak.daemons.arbiterdaemon import Arbiter
+import pytest
 
 try:
     import pwd, grp
@@ -181,8 +182,8 @@ class template_Daemon_Start():
         # Start normally
         d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
         print("Daemon configuration: %s" % d.__dict__)
-        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
-        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
         # Update working dir to use temporary
         d.workdir = tempfile.mkdtemp()
@@ -190,19 +191,19 @@ class template_Daemon_Start():
 
         # Start the daemon
         self.start_daemon(d)
-        self.assertTrue(os.path.exists(d.pidfile))
+        assert os.path.exists(d.pidfile)
 
         time.sleep(2)
 
         # Stop the daemon
         self.stop_daemon(d)
-        self.assertFalse(os.path.exists(d.pidfile))
+        assert not os.path.exists(d.pidfile)
 
         # Start as a daemon
         d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
         print("Daemon configuration: %s" % d.__dict__)
-        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
-        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
         # Update working dir to use temporary
         d.workdir = tempfile.mkdtemp()
@@ -210,13 +211,13 @@ class template_Daemon_Start():
 
         # Start the daemon
         self.start_daemon(d)
-        self.assertTrue(os.path.exists(d.pidfile))
+        assert os.path.exists(d.pidfile)
 
         time.sleep(2)
 
         #  Stop the daemon
         self.stop_daemon(d)
-        self.assertFalse(os.path.exists(d.pidfile))
+        assert not os.path.exists(d.pidfile)
 
     def test_bad_piddir(self):
         """ Test bad PID directory
@@ -229,7 +230,7 @@ class template_Daemon_Start():
         d.workdir = tempfile.mkdtemp()
         d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
 
-        with self.assertRaises(InvalidPidFile):
+        with pytest.raises(InvalidPidFile):
             self.start_daemon(d)
         d.do_stop()
 
@@ -245,7 +246,7 @@ class template_Daemon_Start():
         d = self.get_daemon()
         d.workdir = '/DONOTEXISTS'
 
-        with self.assertRaises(InvalidWorkDir):
+        with pytest.raises(InvalidWorkDir):
             self.start_daemon(d)
         d.do_stop()
 
@@ -258,8 +259,8 @@ class template_Daemon_Start():
 
         d = self.get_daemon()
         print("Daemon configuration: %s" % d.__dict__)
-        self.assertEqual(d.pidfile, '/usr/local/var/run/alignak/%sd.pid' % d.name)
-        self.assertEqual(d.local_log, '/usr/local/var/log/alignak/%sd.log' % d.name)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
         # Update log file information
         d.logdir = os.path.abspath('.')
@@ -269,7 +270,7 @@ class template_Daemon_Start():
         d.setup_alignak_logger(reload_configuration=False)
 
         # Log file exists...
-        self.assertTrue(os.path.exists(d.local_log))
+        assert os.path.exists(d.local_log)
 
         with open(d.local_log) as f:
             content = f.readlines()
@@ -290,7 +291,7 @@ class template_Daemon_Start():
             "License: AGPL",
             "-----"
         ]
-        self.assertEqual(d.get_header(), expected_result)
+        assert d.get_header() == expected_result
 
     def test_trace_unrecoverable(self):
         """ Test unrecoverable trace
@@ -318,7 +319,7 @@ class template_Daemon_Start():
         self.start_daemon(d1)
         time.sleep(1)
         print("PID file: %s" % d1.pidfile)
-        self.assertTrue(os.path.exists(d1.pidfile))
+        assert os.path.exists(d1.pidfile)
 
         # so that second daemon will not see first started one:
         os.unlink(d1.pidfile)
@@ -335,7 +336,7 @@ class template_Daemon_Start():
         d2.change_to_user_group()
         d2.change_to_workdir()
         d2.check_parallel_run()
-        self.assertFalse(d2.setup_communication_daemon())
+        assert not d2.setup_communication_daemon()
 
         # Stop the first daemon
         d1.http_daemon.srv.ready = False

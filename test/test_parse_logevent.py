@@ -61,7 +61,7 @@ class TestParseLogEvent(AlignakTest):
             'output': 'Connection refused',
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_notification_host(self):
         log = '[1402515279] HOST NOTIFICATION: admin;localhost;CRITICAL;notify-service-by-email;Connection refused'
@@ -77,7 +77,7 @@ class TestParseLogEvent(AlignakTest):
             'output': 'Connection refused',
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_alert_service(self):
         log = '[1329144231] SERVICE ALERT: dfw01-is02-006;cpu load maui;WARNING;HARD;4;WARNING - load average: 5.04, 4.67, 5.04'
@@ -93,7 +93,7 @@ class TestParseLogEvent(AlignakTest):
             'hostname': 'dfw01-is02-006'
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_alert_host(self):
         log = '[1329144231] HOST ALERT: dfw01-is02-006;WARNING;HARD;4;WARNING - load average: 5.04, 4.67, 5.04'
@@ -109,7 +109,7 @@ class TestParseLogEvent(AlignakTest):
             'hostname': 'dfw01-is02-006'
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_downtime_alert_host(self):
         log = '[1279250211] HOST DOWNTIME ALERT: testhost;STARTED; Host has entered a period of scheduled downtime'
@@ -123,7 +123,7 @@ class TestParseLogEvent(AlignakTest):
             'downtime_type': 'HOST'
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_downtime_alert_service(self):
         log = '[1279250211] SERVICE DOWNTIME ALERT: testhost;check_ssh;STARTED; Service has entered a period of scheduled downtime'
@@ -137,7 +137,7 @@ class TestParseLogEvent(AlignakTest):
             'downtime_type': 'SERVICE'
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_host_flapping(self):
         log = '[1375301662] SERVICE FLAPPING ALERT: testhost;check_ssh;STARTED; Service appears to have started flapping (24.2% change >= 20.0% threshold)'
@@ -151,7 +151,7 @@ class TestParseLogEvent(AlignakTest):
             'time': 1375301662
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
     def test_service_flapping(self):
         log = '[1375301662] HOST FLAPPING ALERT: hostbw;STARTED; Host appears to have started flapping (20.1% change > 20.0% threshold)'
@@ -165,7 +165,7 @@ class TestParseLogEvent(AlignakTest):
             'time': 1375301662
         }
         event = LogEvent(log)
-        self.assertEqual(event.data, expected)
+        assert event.data == expected
 
 if __name__ == '__main__':
     unittest.main()

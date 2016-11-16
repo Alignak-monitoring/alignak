@@ -86,14 +86,15 @@ class Item(AlignakObject):
     An Item is the base of many objects of Alignak. So it define common properties,
     common functions.
     """
-    properties = {
+    properties = AlignakObject.properties.copy()
+    properties.update({
         'imported_from':            StringProp(default='unknown'),
         'use':                      ListProp(default=[], split_on_coma=True),
         'name':                     StringProp(default=''),
         'definition_order':         IntegerProp(default=100),
         # TODO: find why we can't uncomment this line below.
         'register':                 BoolProp(default=True),
-    }
+    })
 
     running_properties = {
         # All errors and warning raised during the configuration parsing

@@ -170,7 +170,7 @@ class TestUnserialize(unittest.TestCase):
 
         '''
         unserialize(var)
-        self.assertTrue(True)
+        assert True
 
     def test_unserialize_check(self):
         """ Test unserialize checks
@@ -193,4 +193,4 @@ class TestUnserialize(unittest.TestCase):
         '''
 
         unserialize(var)
-        self.assertTrue(True)
+        assert True

@@ -60,7 +60,7 @@ class TestMacroResolver(AlignakTest):
     def setUp(self):
         self.maxDiff = None
         self.setup_with_file('cfg/cfg_macroresolver.cfg')
-        self.assertTrue(self.conf_is_correct)
+        assert self.conf_is_correct
         
         self._sched = self.schedulers['scheduler-master'].sched
 
@@ -89,10 +89,10 @@ class TestMacroResolver(AlignakTest):
         com = mr.resolve_command(svc.check_command, data,
                                  self._sched.macromodulations,
                                  self._sched.timeperiods)
-        self.assertEqual(com, "plugins/test_servicecheck.pl --type=ok --failchance=5% "
-                              "--previous-state=OK --state-duration=0 "
-                              "--total-critical-on-host=0 --total-warning-on-host=0 "
-                              "--hostname test_host_0 --servicedesc test_ok_0")
+        assert com == "plugins/test_servicecheck.pl --type=ok --failchance=5% " \
+                              "--previous-state=OK --state-duration=0 " \
+                              "--total-critical-on-host=0 --total-warning-on-host=0 " \
+                              "--hostname test_host_0 --servicedesc test_ok_0"
 
     def test_args_macro(self):
         """
@@ -111,25 +111,25 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "command_with_args"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual(com,
-                         'plugins/command -H 127.0.0.1 -t 9 -u -c  '
-                         '-a    and the last is .')
+        assert com == \
+                         'plugins/command -H 127.0.0.1 -t 9 -u -c  ' \
+                         '-a    and the last is .'
 
         # Extra arguments are provided - will be ignored
         dummy_call = "command_with_args!arg_1!arg_2!arg_3!arg_4!arg_5!extra argument"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual(com,
-                         'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 '
-                         '-a arg_2 arg_3 arg_4 and the last is arg_5.')
+        assert com == \
+                         'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 ' \
+                         '-a arg_2 arg_3 arg_4 and the last is arg_5.'
 
         # All arguments are provided
         dummy_call = "command_with_args!arg_1!arg_2!arg_3!arg_4!arg_5"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data,  self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual(com,
-                         'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 '
-                         '-a arg_2 arg_3 arg_4 and the last is arg_5.')
+        assert com == \
+                         'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 ' \
+                         '-a arg_2 arg_3 arg_4 and the last is arg_5.'
 
     def test_datetime_macros(self):
         """ Test date / time macros: SHORTDATETIME, LONGDATETIME, DATE, TIME, ...
@@ -165,11 +165,11 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$PROCESSSTARTTIME$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing n/a', com)
+        assert 'plugins/nothing n/a' == com
         dummy_call = "special_macro!$EVENTSTARTTIME$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing n/a', com)
+        assert 'plugins/nothing n/a' == com
 
     def test_summary_macros(self):
         """ Test summary macros: TOTALHOSTSUP, TOTALHOSTDOWN, ...
@@ -186,7 +186,7 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALHOSTSUP$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 3', com)
+        assert 'plugins/nothing 3' == com
 
         # Now my host is DOWN and not yet handled
         hst.state = 'DOWN'
@@ -195,17 +195,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALHOSTSDOWN$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALHOSTSDOWNUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         # Now my host is DOWN but handled
         hst.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALHOSTSDOWNUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Now my host is UNREACHABLE and not yet handled
         hst.state = 'UNREACHABLE'
@@ -214,17 +214,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLE$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLEUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         # Now my host is UNREACHABLE but handled
         hst.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLEUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Now my host is DOWN and not yet handled
         hst.state = 'DOWN'
@@ -233,11 +233,11 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALHOSTPROBLEMS$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALHOSTPROBLEMSUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
 
         # Now my host is UP and no more a problem
         hst.state = 'UP'
@@ -246,17 +246,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALHOSTPROBLEMS$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
         dummy_call = "special_macro!$TOTALHOSTPROBLEMSUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Number of services OK / WARNING / CRITICAL / UNKNOWN
         dummy_call = "special_macro!$TOTALSERVICESOK$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 2', com)
+        assert 'plugins/nothing 2' == com
 
         # Now my service is WARNING and not handled
         svc.state = 'WARNING'
@@ -265,17 +265,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALSERVICESWARNING$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALSERVICESWARNINGUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESWARNINGUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Now my service is CRITICAL and not handled
         svc.state = 'CRITICAL'
@@ -284,17 +284,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALSERVICESCRITICAL$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALSERVICESCRITICALUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESCRITICALUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Now my service is UNKNOWN and not handled
         svc.state = 'UNKNOWN'
@@ -303,17 +303,17 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWN$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWNUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWNUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
         # Now my service is WARNING and not handled
         svc.state = 'WARNING'
@@ -322,11 +322,11 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMS$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMSUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 1', com)
+        assert 'plugins/nothing 1' == com
 
         # Now my service is OK and no more a problem
         svc.state = 'OK'
@@ -335,11 +335,11 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMS$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMSUNHANDLED$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 0', com)
+        assert 'plugins/nothing 0' == com
 
     def test_special_macros_realm(self):
         """
@@ -355,7 +355,7 @@ class TestMacroResolver(AlignakTest):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         # Macro raised the default realm (All)
-        self.assertEqual('plugins/nothing All', com)
+        assert 'plugins/nothing All' == com
 
     def test_escape_macro(self):
         """
@@ -372,7 +372,7 @@ class TestMacroResolver(AlignakTest):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         # Not a macro but $$ is transformed as $
-        self.assertEqual('plugins/nothing $', com)
+        assert 'plugins/nothing $' == com
 
     def test_unicode_macro(self):
         """
@@ -390,14 +390,14 @@ class TestMacroResolver(AlignakTest):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         # Output is correctly restitued
-        self.assertEqual(u'plugins/nothing Père Noël', com)
+        assert u'plugins/nothing Père Noël' == com
 
         hst.output = 'Père Noël'
         dummy_call = "special_macro!$HOSTOUTPUT$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         # Output is correctly restitued
-        self.assertEqual(u'plugins/nothing P\xe8re No\xebl', com)
+        assert u'plugins/nothing P\xe8re No\xebl' == com
 
     def test_illegal_macro_output_chars(self):
         """ Check output macros are cleaned from illegal macro characters
@@ -420,7 +420,7 @@ class TestMacroResolver(AlignakTest):
             cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
             com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
             print com
-            self.assertEqual('plugins/nothing fake output', com)
+            assert 'plugins/nothing fake output' == com
 
     def test_env_macros(self):
         self.print_header()
@@ -430,12 +430,12 @@ class TestMacroResolver(AlignakTest):
         data.append(self.arbiter.conf)
 
         env = mr.get_env_macros(data)
-        self.assertNotEqual(env, {})
-        self.assertEqual('test_host_0', env['NAGIOS_HOSTNAME'])
-        self.assertEqual('0.0', env['NAGIOS_SERVICEPERCENTCHANGE'])
-        self.assertEqual('custvalue', env['NAGIOS__SERVICECUSTNAME'])
-        self.assertEqual('gnulinux', env['NAGIOS__HOSTOSTYPE'])
-        self.assertNotIn('NAGIOS_USER1', env)
+        assert env != {}
+        assert 'test_host_0' == env['NAGIOS_HOSTNAME']
+        assert '0.0' == env['NAGIOS_SERVICEPERCENTCHANGE']
+        assert 'custvalue' == env['NAGIOS__SERVICECUSTNAME']
+        assert 'gnulinux' == env['NAGIOS__HOSTOSTYPE']
+        assert 'NAGIOS_USER1' not in env
 
     def test_resource_file(self):
         """
@@ -451,26 +451,26 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$USER1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing plugins', com)
+        assert 'plugins/nothing plugins' == com
 
         # $PLUGINSDIR$ macro is defined as $USER1$ in the configuration file
         dummy_call = "special_macro!$PLUGINSDIR$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing plugins', com)
+        assert 'plugins/nothing plugins' == com
 
         # $INTERESTINGVARIABLE$ macro is defined as 'interesting_value' in the configuration file
         dummy_call = "special_macro!$INTERESTINGVARIABLE$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing interesting_value', com)
+        assert 'plugins/nothing interesting_value' == com
 
         # Look for multiple = in lines, should split the first
         # and keep others in the macro value
         dummy_call = "special_macro!$ANOTHERVALUE$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing first=second', com)
+        assert 'plugins/nothing first=second' == com
 
     def test_ondemand_macros(self):
         """
@@ -488,34 +488,34 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$HOSTXXX:test_host_0$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing', com)
+        assert 'plugins/nothing' == com
 
         # Request a specific host state
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing UP', com)
+        assert 'plugins/nothing UP' == com
 
         # Call with a void host name, means : myhost
         data = [hst]
         dummy_call = "special_macro!$HOSTSTATE:$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing UP', com)
+        assert 'plugins/nothing UP' == com
 
         # Now with a service, for our implicit host state
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing UP', com)
+        assert 'plugins/nothing UP' == com
                                                         
         # Now with a service, for our implicit host state (missing host ...)
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing UP', com)
+        assert 'plugins/nothing UP' == com
 
         # Now prepare another service
         svc2 = self._sched.conf.services.find_srv_by_name_and_hostname(
@@ -528,14 +528,14 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$SERVICESTATE:test_host_0:test_another_service$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing OK', com)
+        assert 'plugins/nothing OK' == com
 
         # Now call this data from our previous service - get service output
         data = [hst, svc2]
         dummy_call = "special_macro!$SERVICEOUTPUT:test_host_0:test_another_service$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing you should not pass', com)
+        assert 'plugins/nothing you should not pass' == com
 
         # Ok now with a host implicit way
         svc2.output = 'you should not pass'
@@ -543,7 +543,7 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$SERVICEOUTPUT::test_another_service$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing you should not pass', com)
+        assert 'plugins/nothing you should not pass' == com
 
     def test_contact_custom_macros(self):
         """
@@ -561,14 +561,14 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$_CONTACTCUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing value', com)
+        assert 'plugins/nothing value' == com
 
         # Parse custom macro to get service custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $CONTACTNAME$
         dummy_call = "special_macro!$_CONTACTCUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing test_macro_contact', com)
+        assert 'plugins/nothing test_macro_contact' == com
 
     def test_host_custom_macros(self):
         """
@@ -580,9 +580,9 @@ class TestMacroResolver(AlignakTest):
 
         hst = self._sched.hosts.find_by_name("test_macro_host")
         # The host has custom variables, thus we may use them in a macro
-        self.assertIsNot(hst.customs, [])
-        self.assertIn('_CUSTOM1', hst.customs)
-        self.assertIn('_CUSTOM2', hst.customs)
+        assert hst.customs is not []
+        assert '_CUSTOM1' in hst.customs
+        assert '_CUSTOM2' in hst.customs
         data = [hst]
 
         # Parse custom macro to get host custom variables based upon a fixed value
@@ -590,14 +590,14 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$_HOSTCUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing value', com)
+        assert 'plugins/nothing value' == com
 
         # Parse custom macro to get host custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $HOSTNAME$
         dummy_call = "special_macro!$_HOSTCUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing test_macro_host', com)
+        assert 'plugins/nothing test_macro_host' == com
 
     def test_service_custom_macros(self):
         """
@@ -619,13 +619,13 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$_SERVICECUSTOM1$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing value', com)
+        assert 'plugins/nothing value' == com
 
         # Parse custom macro to get service custom variables based upon another macro
         dummy_call = "special_macro!$_SERVICECUSTOM2$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing test_host_0', com)
+        assert 'plugins/nothing test_host_0' == com
 
     def test_hostadressX_macros(self):
         """
@@ -641,4 +641,4 @@ class TestMacroResolver(AlignakTest):
         dummy_call = "special_macro!$HOSTADDRESS$"
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-        self.assertEqual('plugins/nothing 127.0.0.1', com)
+        assert 'plugins/nothing 127.0.0.1' == com
