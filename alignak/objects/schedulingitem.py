@@ -62,11 +62,12 @@ or the consume_check. It's a very important class!
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
-import logging
+import os
 import re
 import random
 import time
 import traceback
+import logging
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -2613,6 +2614,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = self.business_rule.get_state(hosts, services)
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
+                if 'TEST_LOG_ACTIONS' in os.environ:
+                    logger.warning("Resolved BR for '%s', output: %s",
+                                   self.get_full_name(), check.output)
             except Exception, err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
@@ -2624,11 +2628,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = 'Host assumed to be UP'
+            if 'TEST_LOG_ACTIONS' in os.environ:
+                logger.warning("Set host %s as UP (internal check)", self.get_full_name())
         # Echo is just putting the same state again
         elif check.command == '_echo':
             state = self.state
             check.execution_time = 0
             check.output = self.output
+            if 'TEST_LOG_ACTIONS' in os.environ:
+                logger.warning("Echo the current state (%d) for %s ",
+                               self.state, self.get_full_name())
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state

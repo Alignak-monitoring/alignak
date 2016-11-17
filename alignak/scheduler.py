@@ -913,7 +913,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %d seconds",
                                    contact.contact_name,
-                                   item.__class__.my_type,
+                                   item.my_type,
                                    self.actions[action.uuid].command,
                                    int(execution_time))
                 elif action.exit_status != 0:
@@ -930,10 +930,17 @@ class Scheduler(object):  # pylint: disable=R0902
             try:
                 if action.status == 'timeout':
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
-                    action.output = "(%s Check Timed Out)" %\
-                                    ref.__class__.my_type.capitalize()  # pylint: disable=E1101
+                    action.output = "(%s %s check timed out)" % (
+                        ref.my_type, ref.get_full_name()
+                    )  # pylint: disable=E1101
                     action.long_output = action.output
                     action.exit_status = self.conf.timeout_exit_status
+                    logger.warning("Timeout raised for '%s' (check command for the %s '%s')"
+                                   ", check status code: %d, execution time: %d seconds",
+                                   action.command,
+                                   ref.my_type, ref.get_full_name(),
+                                   action.exit_status,
+                                   int(action.execution_time))
                 self.checks[action.uuid].get_return_from(action)
                 self.checks[action.uuid].status = 'waitconsume'
             except KeyError, exp:
@@ -950,7 +957,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 if action.is_snapshot:
                     _type = 'snapshot'
                 ref = self.find_item_by_id(self.checks[action.uuid].ref)
-                logger.warning("%s %s command '%s ' timed out after %d seconds",
+                logger.warning("%s %s command '%s' timed out after %d seconds",
                                ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
                                _type,
                                self.actions[action.uuid].command,

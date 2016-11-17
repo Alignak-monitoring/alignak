@@ -381,7 +381,7 @@ class TestAction(AlignakTest):
         self.wait_finished(a)
         assert 0 == a.exit_status
         assert 'done' == a.status
-        assert u"Wiadomo\u015b\u0107" == a.output.decode('utf8')
+        assert u"Wiadomo\u015b\u0107" == a.output
         assert "" == a.long_output
         assert "" == a.perf_data
 
