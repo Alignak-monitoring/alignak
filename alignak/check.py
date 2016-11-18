@@ -84,16 +84,6 @@ class Check(Action):  # pylint: disable=R0902
         'dependency_check': BoolProp(default=False),
     })
 
-    def copy_shell(self):
-        """return a copy of the check but just what is important for execution
-        So we remove the ref and all
-
-        :return: a copy of check
-        :rtype: object
-        """
-        # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Check({'uuid': self.uuid}))
-
     def get_return_from(self, check):
         """Update check data from action (notification for instance)
 
@@ -140,3 +130,19 @@ class Check(Action):  # pylint: disable=R0902
         :rtype: bool
         """
         return self.dependency_check
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+
+        The only usage is to send to poller, and it don't need to have the depend_on and
+        depend_on_me properties.
+
+        :return: json representation of a Check
+        :rtype: dict
+        """
+        res = super(Check, self).serialize()
+        if 'depend_on' in res:
+            del res['depend_on']
+        if 'depend_on_me' in res:
+            del res['depend_on_me']
+        return res
