@@ -63,29 +63,34 @@ class Businessimpactmodulation(Item):
     (of a Host/Service) during a modulation period.
     """
     my_type = 'businessimpactmodulation'
+    name_property = "business_impact_modulation_name"
 
     properties = Item.properties.copy()
-    properties.update({'business_impact_modulation_name': StringProp(),
-                       'business_impact':                 IntegerProp(),
-                       'modulation_period':               StringProp(default=''),
-                       })
+    properties.update({
+        'business_impact_modulation_name':
+            StringProp(default='Unnamed', fill_brok=['full_status']),
+        'business_impact':
+            IntegerProp(),
+        'modulation_period':
+            StringProp(default=''),
+    })
 
     def __init__(self, params=None, parsing=True):
         super(Businessimpactmodulation, self).__init__(params, parsing=parsing)
 
         # Ok just put None as modulation_period, means 24x7
         if not hasattr(self, 'modulation_period'):
-            self.modulation_period = '24x7'
+            self.modulation_period = None
 
-    def get_name(self):
-        """Accessor to business_impact_modulation_name attribute
-
-        :return: business impact modulation name
-        :rtype: str
-        """
-        if hasattr(self, 'business_impact_modulation_name'):
-            return self.business_impact_modulation_name
-        return 'Unnamed'
+    # def get_name(self):
+    #     """Accessor to business_impact_modulation_name attribute
+    #
+    #     :return: business impact modulation name
+    #     :rtype: str
+    #     """
+    #     if getattr(self, 'business_impact_modulation_name', ''):
+    #         return self.business_impact_modulation_name
+    #     return 'Unnamed'
 
 
 class Businessimpactmodulations(Items):
@@ -93,7 +98,6 @@ class Businessimpactmodulations(Items):
        several Businessimpactmodulation objects
 
     """
-    name_property = "business_impact_modulation_name"
     inner_class = Businessimpactmodulation
 
     def linkify(self, timeperiods):

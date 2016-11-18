@@ -75,7 +75,6 @@ def unserialize(j_obj, no_load=False):
     :type no_load: bool
     :return: un-serialized object
     """
-
     if no_load:
         data = j_obj
     else:
@@ -86,15 +85,20 @@ def unserialize(j_obj, no_load=False):
             cls = get_alignak_class(data['__sys_python_module__'])
             if cls is None:
                 return {}
-            return cls(data['content'], parsing=False)
+            return cls(params=data['content'], parsing=False)
 
         else:
+            # print("unserialize a dict")
             data_dict = {}
             for key, value in data.iteritems():
                 data_dict[key] = unserialize(value, True)
             return data_dict
 
+    elif isinstance(data, set):
+        # print("Unserialize a set: %s" % data)
+        return set([unserialize(item, True) for item in data])
     elif isinstance(data, list):
+        # print("Unserialize a list: %s" % data)
         return [unserialize(item, True) for item in data]
     else:
         return data

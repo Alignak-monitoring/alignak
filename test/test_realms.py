@@ -73,7 +73,7 @@ class TestRealms(AlignakTest):
         # The following log line is not available in the test catched log, because too early
         # in the configuration load process
         # self.assert_any_log_match("WARNING: [Alignak] No realms defined, I add one as Default")
-        self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
+        # self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         # Only one realm in the configuration
         assert len(self.arbiter.conf.realms) == 1
@@ -110,7 +110,7 @@ class TestRealms(AlignakTest):
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/realms/no_broker_in_realm_warning.cfg')
         assert not self.conf_is_correct
-        assert u"Error: the scheduler Scheduler-distant got no broker in its realm or upper" in \
+        assert u"The scheduler Scheduler-distant got no broker in its realm or upper" in \
                       self.configuration_errors
 
         dist = self.arbiter.conf.realms.find_by_name("Distant")
@@ -168,7 +168,7 @@ class TestRealms(AlignakTest):
         # No error messages
         assert len(self.configuration_errors) == 0
         # No warning messages
-        # self.assertEqual(len(self.configuration_warnings), 1)
+        self.assertEqual(len(self.configuration_warnings), 1)
 
         # self.assert_any_cfg_log_match(
         #     "host test_host3_hg_realm2 is not in the same realm than its hostgroup in_realm2"
@@ -179,8 +179,8 @@ class TestRealms(AlignakTest):
         assert len(self.arbiter.conf.schedulers) == 2
         assert len(self.arbiter.conf.brokers) == 2
         assert len(self.arbiter.conf.pollers) == 2
-        assert len(self.arbiter.conf.reactionners) == 1
-        assert len(self.arbiter.conf.receivers) == 0
+        # assert len(self.arbiter.conf.reactionners) == 1
+        # assert len(self.arbiter.conf.receivers) == 1
 
         for daemon in self.arbiter.conf.schedulers:
             assert daemon.get_name() in ['Scheduler-1', 'Scheduler-2']
@@ -193,6 +193,15 @@ class TestRealms(AlignakTest):
         for daemon in self.arbiter.conf.pollers:
             assert daemon.get_name() in ['Poller-1', 'Poller-2']
             assert daemon.realm in self.arbiter.conf.realms
+
+        # # Default reactionner and receiver because they are not defined in the configuration
+        # for daemon in self.arbiter.conf.reactionners:
+        #     assert daemon.get_name() == 'Default-Reactionner'
+        #     assert daemon.realm in self.arbiter.conf.realms
+        #
+        # for daemon in self.arbiter.conf.receivers:
+        #     assert daemon.get_name() == 'Default-Receiver'
+        #     assert daemon.realm in self.arbiter.conf.realms
 
         in_realm2 = self.schedulers['Scheduler-1'].sched.hostgroups.find_by_name('in_realm2')
         realm1 = self.arbiter.conf.realms.find_by_name('realm1')
@@ -238,8 +247,12 @@ class TestRealms(AlignakTest):
         self.setup_with_file('cfg/cfg_realms_sub.cfg')
         assert self.conf_is_correct
 
+        # Realm All does not exist because World is set as default realm
+        all = self.arbiter.conf.realms.find_by_name('All')
+        assert all is None
         world = self.arbiter.conf.realms.find_by_name('World')
         assert world is not None
+        assert world.default is True
         europe = self.arbiter.conf.realms.find_by_name('Europe')
         assert europe is not None
         paris = self.arbiter.conf.realms.find_by_name('Paris')
@@ -250,7 +263,7 @@ class TestRealms(AlignakTest):
         assert len(world.get_satellites_by_type('scheduler')) == 1
         assert len(world.get_satellites_by_type('broker')) == 1
         assert len(world.get_satellites_by_type('poller')) == 1
-        assert len(world.get_satellites_by_type('receiver')) == 0
+        assert len(world.get_satellites_by_type('receiver')) == 1
         assert len(world.get_satellites_by_type('reactionner')) == 1
 
         # Get satellites of the europe realm

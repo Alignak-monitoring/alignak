@@ -88,9 +88,12 @@ class Broker(BaseSatellite):
     """
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='brokerd.pid'),
-        'port':      IntegerProp(default=7772),
-        'local_log': PathProp(default='brokerd.log'),
+        'pidfile':
+            PathProp(default='brokerd.pid'),
+        'port':
+            IntegerProp(default=7772),
+        'local_log':
+            PathProp(default='brokerd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
@@ -475,9 +478,8 @@ class Broker(BaseSatellite):
 
             logger.debug("[%s] Sending us configuration %s", self.name, conf)
 
-            # If we've got something in the schedulers, we do not
-            # want it anymore
-            # self.schedulers.clear()
+            # Get our Schedulers
+            logger.info("[%s] schedulers: %s", self.name, conf['schedulers'])
             for sched_id in conf['schedulers']:
                 # Must look if we already have it to do not overdie our broks
 
@@ -519,6 +521,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now get arbiter
+            logger.info("[%s] arbiters: %s", self.name, conf['arbiters'])
             for arb_id in conf['arbiters']:
                 # Must look if we already have it
                 already_got = arb_id in self.arbiters
@@ -553,6 +556,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now for pollers
+            logger.info("[%s] pollers: %s", self.name, conf['pollers'])
             for pol_id in conf['pollers']:
                 # Must look if we already have it
                 already_got = pol_id in self.pollers
@@ -588,6 +592,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now reactionners
+            logger.info("[%s] reactionners: %s", self.name, conf['reactionners'])
             for rea_id in conf['reactionners']:
                 # Must look if we already have it
                 already_got = rea_id in self.reactionners
@@ -623,6 +628,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now receivers
+            logger.warning("[%s] receivers: %s", self.name, conf['receivers'])
             for rec_id in conf['receivers']:
                 # Must look if we already have it
                 already_got = rec_id in self.receivers
@@ -673,7 +679,7 @@ class Broker(BaseSatellite):
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
-            # Connection init with Schedulers
+            # Initialize connection with Schedulers, Pollers and Reactionners
             for sched_id in self.schedulers:
                 self.pynag_con_init(sched_id, i_type='scheduler')
 

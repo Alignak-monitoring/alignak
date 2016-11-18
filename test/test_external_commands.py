@@ -502,6 +502,17 @@ class TestExternalCommands(AlignakTest):
         assert 2048 == host.modified_attributes
 
         #  ---
+        # External command: change host custom var - undefined variable
+        host.modified_attributes = 0
+        # Not existing
+        assert '_UNDEFINED' not in host.customs
+        excmd = '[%d] CHANGE_CUSTOM_HOST_VAR;test_host_0;_UNDEFINED;other' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # Not existing
+        assert '_UNDEFINED' not in host.customs
+        assert 0 == host.modified_attributes
+
         # External command: change host custom var
         host.modified_attributes = 0
         excmd = '[%d] CHANGE_CUSTOM_HOST_VAR;test_host_0;_OSLICENSE;other' % time.time()
@@ -614,7 +625,7 @@ class TestExternalCommands(AlignakTest):
         assert 256 == svc.modified_attributes
 
         #  ---
-        # External command: max host check attempts
+        # External command: max service check attempts
         svc.modified_attributes = 0
         excmd = '[%d] CHANGE_MAX_SVC_CHECK_ATTEMPTS;test_host_0;test_ok_0;5' % time.time()
         self._scheduler.run_external_command(excmd)
@@ -623,7 +634,7 @@ class TestExternalCommands(AlignakTest):
         assert 4096 == svc.modified_attributes
 
         #  ---
-        # External command: retry host check interval
+        # External command: retry service check interval
         svc.modified_attributes = 0
         excmd = '[%d] CHANGE_NORMAL_SVC_CHECK_INTERVAL;test_host_0;test_ok_0;21' % time.time()
         self._scheduler.run_external_command(excmd)
@@ -632,7 +643,7 @@ class TestExternalCommands(AlignakTest):
         assert 1024 == svc.modified_attributes
 
         #  ---
-        # External command: retry host check interval
+        # External command: retry service check interval
         svc.modified_attributes = 0
         excmd = '[%d] CHANGE_RETRY_SVC_CHECK_INTERVAL;test_host_0;test_ok_0;42' % time.time()
         self._scheduler.run_external_command(excmd)
@@ -641,7 +652,18 @@ class TestExternalCommands(AlignakTest):
         assert 2048 == svc.modified_attributes
 
         #  ---
-        # External command: change host custom var
+        # External command: change service custom var - undefined variable
+        svc.modified_attributes = 0
+        # Not existing
+        assert '_UNDEFINED' not in svc.customs
+        excmd = '[%d] CHANGE_CUSTOM_SVC_VAR;test_host_0;test_ok_0;_UNDEFINED;other' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # Not existing
+        assert '_UNDEFINED' not in svc.customs
+        assert 0 == svc.modified_attributes
+
+        # External command: change service custom var
         svc.modified_attributes = 0
         excmd = '[%d] CHANGE_CUSTOM_SVC_VAR;test_host_0;test_ok_0;_CUSTNAME;other' % time.time()
         self._scheduler.run_external_command(excmd)
@@ -650,7 +672,7 @@ class TestExternalCommands(AlignakTest):
         assert 32768 == svc.modified_attributes
 
         #  ---
-        # External command: delay host first notification
+        # External command: delay service first notification
         svc.modified_attributes = 0
         assert svc.first_notification_delay == 0
         excmd = '[%d] DELAY_SVC_NOTIFICATION;test_host_0;test_ok_0;10' % time.time()
@@ -706,6 +728,17 @@ class TestExternalCommands(AlignakTest):
         assert 65536 == contact.modified_service_attributes
 
         #  ---
+        # External command: change service custom var - undefeined variable
+        contact.modified_attributes = 0
+        # Not existing
+        assert '_UNDEFINED' not in contact.customs
+        excmd = '[%d] CHANGE_CUSTOM_CONTACT_VAR;test_host_0;test_ok_0;_UNDEFINED;other' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        # Not existing
+        assert '_UNDEFINED' not in contact.customs
+        assert 0 == contact.modified_attributes
+
         # External command: change contact custom var
         # Issue #487: no customs for contacts ...
         contact.modified_attributes = 0
@@ -1825,6 +1858,8 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: disable / enable checks
+        from pprint import pprint
+        pprint(svc.__dict__)
         assert not svc.flap_detection_enabled
 
         excmd = '[%d] ENABLE_SVC_FLAP_DETECTION;test_host_0;test_ok_0' % time.time()

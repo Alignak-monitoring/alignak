@@ -55,6 +55,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
+from alignak.objects.host import Host
 
 from alignak.util import get_obj_name
 from alignak.property import StringProp, ListProp
@@ -66,51 +67,47 @@ class Hostgroup(Itemgroup):
     """
     Class to manage a group of host
     A Hostgroup is used to manage a group of hosts
+
+    Class variable are explained in the Itemgroup base class
     """
+    name_property = "hostgroup_name"
+    members_class = Host
+    members_property = "members"
+    groupmembers_property = "hostgroup_members"
     my_type = 'hostgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'hostgroup_name':       StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True),
-        'notes':                StringProp(default='', fill_brok=['full_status']),
-        'notes_url':            StringProp(default='', fill_brok=['full_status']),
-        'action_url':           StringProp(default='', fill_brok=['full_status']),
-        'realm':                StringProp(default='', fill_brok=['full_status'],
-                                           conf_send_preparation=get_obj_name),
+        'hostgroup_name':
+            StringProp(fill_brok=['full_status']),
+        'hostgroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+        'notes':
+            StringProp(default='', fill_brok=['full_status']),
+        'notes_url':
+            StringProp(default='', fill_brok=['full_status']),
+        'action_url':
+            StringProp(default='', fill_brok=['full_status']),
+        'realm':
+            StringProp(default='', fill_brok=['full_status'], conf_send_preparation=get_obj_name),
     })
 
     macros = {
         'HOSTGROUPALIAS':     'alias',
-        'HOSTGROUPMEMBERS':   'members',
+        'HOSTGROUPMEMBERS':   'get_members',
         'HOSTGROUPNOTES':     'notes',
         'HOSTGROUPNOTESURL':  'notes_url',
         'HOSTGROUPACTIONURL': 'action_url'
     }
 
-    def get_name(self):
-        """
-        Get name of group
-
-        :return: Name of hostgroup
-        :rtype: str
-        """
-        return self.hostgroup_name
-
     def get_hosts(self):
         """
         Get list of hosts of this group
 
-        :return: list of hosts
+        :return: list of hosts uuid
         :rtype: list
         """
-        if getattr(self, 'members', None) is not None:
-            return self.members
-        else:
-            return []
+        return self.get_members()
 
     def get_hostgroup_members(self):
         """
@@ -119,44 +116,48 @@ class Hostgroup(Itemgroup):
         :return: list of hosts
         :rtype: list
         """
-        if hasattr(self, 'hostgroup_members'):
-            return self.hostgroup_members
-        else:
-            return []
+        return self.get_group_members()
 
-    def get_hosts_by_explosion(self, hostgroups):
+    def get_hosts_by_explosion(self, hostgroups, hosts):
         """
-        Get hosts of this group
+        Get direct hosts of this group and all hosts from the sub-groups
+        Append sub-groups members to the members of this group
 
-        :param hostgroups: Hostgroup object
+        :param hostgroups: Hostgroups object
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
-        :return: list of hosts of this group
-        :rtype: list
+        :param hosts: hosts to explode
+        :type hosts: alignak.objects.host.Hosts
+        :return: return the list of members
+        :rtype: list[alignak.objects.host.Host]
         """
-        # First we tag the hg so it will not be explode
-        # if a son of it already call it
-        self.already_explode = True
+        # First we tag the group so it will not be exploded again if one of its members calls it
+        self.already_exploded = True
 
         # Now the recursive part
-        # rec_tag is set to False every HG we explode
-        # so if True here, it must be a loop in HG
-        # calls... not GOOD!
-        if self.rec_tag:
-            logger.error("[hostgroup::%s] got a loop in hostgroup definition", self.get_name())
-            return self.get_hosts()
+        # recursion_tag is set to False for every group we explode
+        # so if is True here, it must be a loop in the groups links... not GOOD!
+        if self.recursion_tag:
+            err = "[%s::%s] got a loop in %s definition" % \
+                  (self.my_type, self.get_name(), self.groupmembers_property)
+            self.configuration_errors.append(err)
+            return self.get_members()
 
-        # Ok, not a loop, we tag it and continue
-        self.rec_tag = True
+        # Ok, not in a loop, we tag it and continue
+        self.recursion_tag = True
 
-        hg_mbrs = self.get_hostgroup_members()
-        for hg_mbr in hg_mbrs:
-            hostgroup = hostgroups.find_by_name(hg_mbr.strip())
+        group_members = self.get_group_members()
+        for group_member in group_members:
+            hostgroup = hostgroups.find_by_name(group_member)
             if hostgroup is not None:
-                value = hostgroup.get_hosts_by_explosion(hostgroups)
-                if value is not None:
-                    self.add_string_member(value)
+                members_uuid = hostgroup.get_hosts_by_explosion(hostgroups, hosts)
+                if members_uuid:
+                    new_members = []
+                    for member_uuid in members_uuid:
+                        if member_uuid in hosts:
+                            new_members.append(hosts[member_uuid])
+                    self.add_members(new_members)
 
-        return self.get_hosts()
+        return self.get_members()
 
 
 class Hostgroups(Itemgroups):
@@ -164,22 +165,7 @@ class Hostgroups(Itemgroups):
     Class to manage list of Hostgroup
     Hostgroups is used to regroup all Hostgroup
     """
-    name_property = "hostgroup_name"  # is used for finding hostgroups
     inner_class = Hostgroup
-
-    def get_members_by_name(self, hgname):
-        """
-        Get all members by name given in parameter
-
-        :param hgname: name of members
-        :type hgname: str
-        :return: list of hosts with this name
-        :rtype: list
-        """
-        hostgroup = self.find_by_name(hgname)
-        if hostgroup is None:
-            return []
-        return hostgroup.get_hosts()
 
     def linkify(self, hosts=None, realms=None):
         """
@@ -191,10 +177,10 @@ class Hostgroups(Itemgroups):
         :type realms: alignak.objects.realm.Realms
         :return: None
         """
-        self.linkify_hg_by_hst(hosts)
-        self.linkify_hg_by_realms(realms, hosts)
+        self.linkify_hostgroup_by_host(hosts)
+        self.linkify_hostgroup_by_realms(realms, hosts)
 
-    def linkify_hg_by_hst(self, hosts):
+    def linkify_hostgroup_by_host(self, hosts):
         """
         We just search for each hostgroup the id of the hosts
         and replace the name by the id
@@ -203,33 +189,48 @@ class Hostgroups(Itemgroups):
         :type hosts: object
         :return: None
         """
+        logger.debug("Linkify hostgroups and hosts")
         for hostgroup in self:
-            mbrs = hostgroup.get_hosts()
+            members = hostgroup.get_hosts()
+            logger.debug("- HG: %s, members: %s", hostgroup, members)
             # The new member list, in id
-            new_mbrs = []
-            for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
-                if mbr == '':  # void entry, skip this
+
+            new_members = []
+            for member in members:
+                member = member.strip()
+                if member == '':  # void entry, skip this
                     continue
-                elif mbr == '*':
-                    new_mbrs.extend(hosts.items.keys())
+                elif member == '*':
+                    new_members.extend(hosts.items.keys())
+                elif member in hosts:
+                    # We got an host uuid
+                    logger.debug("HG: %s, found an host: %s", hostgroup, hosts[member])
+                    new_members.append(member)
+
+                    # Update the found host hostgroups property and make it uniquified
+                    hosts[member].hostgroups.append(hostgroup.uuid)
+                    hosts[member].hostgroups = list(set(hosts[member].hostgroups))
                 else:
-                    host = hosts.find_by_name(mbr)
+                    host = hosts.find_by_name(member)
                     if host is not None:
-                        new_mbrs.append(host.uuid)
+                        new_members.append(host.uuid)
+                        logger.debug("HG: %s, found a member: %s", hostgroup, member)
+
+                        # Update the found host hostgroups property and make it unique
                         host.hostgroups.append(hostgroup.uuid)
-                        # and be sure we are uniq in it
                         host.hostgroups = list(set(host.hostgroups))
                     else:
-                        hostgroup.add_string_unknown_member(mbr)
+                        hostgroup.add_unknown_member(member)
 
-            # Make members uniq
-            new_mbrs = list(set(new_mbrs))
+            if new_members:
+                # Make members uniq
+                new_members = list(set(new_members))
+                logger.debug("HG: %s, new members: %s", hostgroup, new_members)
 
-            # We find the id, we replace the names
-            hostgroup.replace_members(new_mbrs)
+                # We update the group members
+                hostgroup.members = new_members
 
-    def linkify_hg_by_realms(self, realms, hosts):
+    def linkify_hostgroup_by_realms(self, realms, hosts):
         """
         More than an explode function, but we need to already
         have members so... Will be really linkify just after
@@ -277,46 +278,49 @@ class Hostgroups(Itemgroups):
                               "than its hostgroup %s" % (host.get_name(), hostgroup.get_name())
                         hostgroup.configuration_warnings.append(msg)
 
-    def add_member(self, hname, hgname):
-        """
-        Add a host string to a hostgroup member
-        if the host group do not exist, create it
+    def add_group_member(self, host, hostgroup_name):
+        """Add an host to a hostgroup.
+        If the hostgroup does not exist it is created
 
-        :param hname: host name
-        :type hname: str
-        :param hgname:hostgroup name
-        :type hgname: str
+        :param host: host item
+        :type host: alignak.objects.host.Host
+        :param hostgroup_name:hostgroup name
+        :type hostgroup_name: str
         :return: None
         """
-        hostgroup = self.find_by_name(hgname)
-        # if the id do not exist, create the hg
+        hostgroup = self.find_by_name(hostgroup_name)
         if hostgroup is None:
-            hostgroup = Hostgroup({'hostgroup_name': hgname, 'alias': hgname, 'members': hname})
-            self.add(hostgroup)
+            # Create the group if it does not yet exist
+            hostgroup = Hostgroup({'hostgroup_name': hostgroup_name,
+                                   'members': [host.get_name()],
+                                   'imported_from': 'inner'})
+            self.add_item(hostgroup)
         else:
-            hostgroup.add_string_member(hname)
+            hostgroup.add_member(host)
 
-    def explode(self):
+    def explode(self, hosts):
         """
-        Fill members with hostgroup_members
+        Populate the members property with the group members and the members of the sub-groups
 
+        :param hosts: hosts to explode
+        :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        # We do not want a same hostgroup to be exploded again and again
-        # so we tag it
-        for tmp_hg in self.items.values():
-            tmp_hg.already_explode = False
         for hostgroup in self.items.values():
-            if hasattr(hostgroup, 'hostgroup_members') and not \
-                    hostgroup.already_explode:
-                # get_hosts_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for tmp_hg in self.items.values():
-                    tmp_hg.rec_tag = False
-                hostgroup.get_hosts_by_explosion(self)
+            for groupmember in hostgroup.get_group_members():
+                group = self.find_by_name(groupmember)
+                if group is None:
+                    continue
+                if group.already_exploded:
+                    continue
 
-        # We clean the tags
-        for tmp_hg in self.items.values():
-            if hasattr(tmp_hg, 'rec_tag'):
-                del tmp_hg.rec_tag
-            del tmp_hg.already_explode
+                # get_hosts_by_explosion is a recursive function, so we must
+                # tag the groups to avoid looping infinetely
+                for groupmember in self.items.values():
+                    groupmember.recursion_tag = False
+                hostgroup.get_hosts_by_explosion(self, hosts)
+
+        # Clean the recursion tag
+        for group in self.items.values():
+            if hasattr(group, 'recursion_tag'):
+                del group.recursion_tag

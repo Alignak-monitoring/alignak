@@ -61,12 +61,13 @@ class CheckModulation(Item):
     during a check_period.
 
     """
+    name_property = "checkmodulation_name"
     my_type = 'checkmodulation'
 
     properties = Item.properties.copy()
     properties.update({
         'checkmodulation_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default='Unnamed', fill_brok=['full_status']),
         'check_command':
             StringProp(fill_brok=['full_status']),
         'check_period':
@@ -98,15 +99,15 @@ class CheckModulation(Item):
         res['check_command'] = self.check_command.serialize()
         return res
 
-    def get_name(self):
-        """Accessor to checkmodulation_name attribute
-
-        :return: check modulation name
-        :rtype: str
-        """
-        if hasattr(self, 'checkmodulation_name'):
-            return self.checkmodulation_name
-        return 'Unnamed'
+    # def get_name(self):
+    #     """Accessor to checkmodulation_name attribute
+    #
+    #     :return: check modulation name
+    #     :rtype: str
+    #     """
+    #     if getattr(self, 'checkmodulation_name', ''):
+    #         return self.checkmodulation_name
+    #     return 'Unnamed'
 
     def get_check_command(self, timeperiods, t_to_go):
         """Get the check_command if we are in the check period modulation
@@ -129,37 +130,31 @@ class CheckModulation(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
 
         # Internal checks before executing inherited function...
         if not hasattr(self, 'check_command'):
-            msg = "[checkmodulation::%s] do not have any check_command defined" % (
-                self.get_name()
-            )
-            self.configuration_errors.append(msg)
-            state = False
+            self.add_error("[checkmodulation::%s] do not have any check_command defined" %
+                           (self.get_name()))
         else:
             if self.check_command is None:
-                msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("[checkmodulation::%s] a check_command is missing" %
+                               (self.get_name()))
+
             if not self.check_command.is_valid():
-                msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("[checkmodulation::%s] a check_command is invalid" %
+                               (self.get_name()))
 
         # Ok just put None as check_period, means 24x7
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        return super(CheckModulation, self).is_correct() and state
+        return super(CheckModulation, self).is_correct() and self.conf_is_correct
 
 
 class CheckModulations(CommandCallItems):
     """CheckModulations class allowed to handle easily several CheckModulation objects
 
     """
-    name_property = "checkmodulation_name"
     inner_class = CheckModulation
 
     def linkify(self, timeperiods, commands):

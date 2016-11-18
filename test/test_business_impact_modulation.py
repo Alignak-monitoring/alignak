@@ -63,15 +63,54 @@ class TestCritMod(AlignakTest):
         """ Tests business impact modulation """
         self.print_header()
 
+        # Get the host
+        host = self._sched.hosts.find_by_name("test_host_0")
+        assert host is not None
+        host.checks_in_progress = []
+        host.act_depend_of = []
+        host.event_handler_enabled = False
+
+        # Get 24x7 timeperiod
+        tp = self._sched.timeperiods.find_by_name('24x7')
+        assert tp is not None
+
         # Get our criticity (BI) modulation
-        cm = self._sched.businessimpactmodulations.find_by_name('CritMod')
-        assert cm is not None
-        assert cm.get_name() == "CritMod"
-        assert cm.business_impact == 5
+        bim = self._sched.businessimpactmodulations.find_by_name('CritMod')
+        assert bim is not None
+        assert bim.get_name() == "CritMod"
+        assert bim.modulation_period == tp.uuid
+        assert bim.business_impact == 5
 
         # Get our service
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_00")
-        assert cm.uuid in svc.business_impact_modulations
+        assert svc is not None
+        # Make notifications sent very quickly
+        svc.notification_interval = 10.0
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = True
+        assert svc.state == "OK"
+        assert bim.uuid in svc.business_impact_modulations
+
+        # Host is UP
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        assert len(host.checks_in_progress) == 0
+        assert len(svc.checks_in_progress) == 1
+
+        # Service is going CRITICAL ... this forces an host check!
+        self.scheduler_loop(2, [[svc, 2, 'BROKEN!']])
+        assert len(host.checks_in_progress) == 1
+        assert len(svc.checks_in_progress) == 0
+
+        # The host is always UP
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        assert len(host.checks_in_progress) == 0
+        assert len(svc.checks_in_progress) == 1
+
+        # So our service is CRITICAL/HARD
+        assert svc.state == "CRITICAL"
+        assert svc.state_type == "HARD"
+
         # Service BI is defined as 2 but the BI modulation makes it be 5!
         assert svc.business_impact == 5
 

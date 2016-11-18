@@ -60,6 +60,7 @@ class SatelliteLink(Item):
     Arbiter and other satellites. Used by the Dispatcher object.
 
     """
+    # name_property = "name"
 
     properties = Item.properties.copy()
     properties.update({
@@ -80,7 +81,7 @@ class SatelliteLink(Item):
         'manage_arbiters':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'modules':
-            ListProp(default=[''], to_send=True, split_on_coma=True),
+            ListProp(default=[''], to_send=True),
         'polling_interval':
             IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
         'use_timezone':
@@ -98,6 +99,15 @@ class SatelliteLink(Item):
             BoolProp(default=True, fill_brok=['full_status']),
         'passive':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        # Statsd interface
+        'statsd_host':
+            StringProp(default=''),
+        'statsd_port':
+            IntegerProp(default=8125),
+        'statsd_prefix':
+            StringProp(default=''),
+        'statsd_enabled':
+            BoolProp(default=False),
     })
 
     running_properties = Item.running_properties.copy()
@@ -107,7 +117,7 @@ class SatelliteLink(Item):
         'alive':
             BoolProp(default=True, fill_brok=['full_status']),
         'broks':
-            StringProp(default=[]),
+            ListProp(default=[]),
 
         # the number of failed attempt
         'attempt':
@@ -119,7 +129,7 @@ class SatelliteLink(Item):
         'last_check':
             IntegerProp(default=0, fill_brok=['full_status']),
         'managed_confs':
-            StringProp(default={}),
+            DictProp(default={}),
         'is_sent':
             BoolProp(default=False),
     })
@@ -310,7 +320,7 @@ class SatelliteLink(Item):
 
         :return: None
         """
-        logger.debug("Pinging %s", self.get_name())
+        logger.info("Pinging %s", self.get_name())
         try:
             if self.con is None:
                 self.create_connection()
@@ -528,7 +538,9 @@ class SatelliteLink(Item):
             if entry.to_send:
                 self.cfg['global'][prop] = getattr(self, prop)
         cls = self.__class__
+        logger.info("Prepare for conf: %s" % cls)
         # Also add global values
+        # @mohierf, Moved to properties ...
         self.cfg['global']['statsd_host'] = cls.statsd_host
         self.cfg['global']['statsd_port'] = cls.statsd_port
         self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
@@ -577,8 +589,7 @@ class SatelliteLink(Item):
 class SatelliteLinks(Items):
     """Class to handle serveral SatelliteLink"""
 
-    # name_property = "name"
-    # inner_class = SchedulerLink
+    inner_class = SatelliteLink
 
     def linkify(self, realms, modules):
         """Link realms and modules in all SatelliteLink
@@ -590,10 +601,10 @@ class SatelliteLinks(Items):
         :type modules: list
         :return: None
         """
-        self.linkify_s_by_p(realms)
-        self.linkify_s_by_plug(modules)
+        self.linkify_with_realms(realms)
+        self.linkify_with_modules(modules)
 
-    def linkify_s_by_p(self, realms):
+    def linkify_with_realms(self, realms):
         """Link realms in all SatelliteLink
 
         :param realms: Realm object list

@@ -55,7 +55,9 @@ class ReceiverLink(SatelliteLink):
     """
     Class to manage the receiver information
     """
+    name_property = "receiver_name"
     my_type = 'receiver'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'receiver_name':      StringProp(fill_brok=['full_status'], to_send=True),
@@ -106,5 +108,4 @@ class ReceiverLinks(SatelliteLinks):
     Class to manage list of ReceiverLink.
     ReceiverLinks is used to regroup all receivers
     """
-    name_property = "receiver_name"
     inner_class = ReceiverLink

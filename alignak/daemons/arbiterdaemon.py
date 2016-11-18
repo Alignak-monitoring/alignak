@@ -99,7 +99,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     })
 
     def __init__(self, config_file, monitoring_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, config_name, analyse=None):
+                 debug_file, arbiter_name, analyse=None):
 
         super(Arbiter, self).__init__('arbiter', config_file, is_daemon, do_replace,
                                       debug, debug_file)
@@ -107,7 +107,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.config_files = monitoring_files
         self.verify_only = verify_only
         self.analyse = analyse
-        self.config_name = config_name
+        self.arbiter_name = arbiter_name
 
         self.broks = {}
         self.is_master = False
@@ -123,7 +123,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.must_run = True
 
         self.http_interface = ArbiterInterface(self)
-        self.conf = Config()
+        self.conf = Config({'name': 'Arbiter configuration'})
 
     def add(self, b):
         """Generic function to add objects to queues.
@@ -147,11 +147,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        for brk in self.conf.brokers:
+        for broker in self.conf.brokers:
             # Send only if alive of course
-            if brk.manage_arbiters and brk.alive:
-                is_send = brk.push_broks(self.broks)
-                if is_send:
+            if broker.manage_arbiters and broker.alive:
+                is_sent = broker.push_broks(self.broks)
+                if is_sent:
                     # They are gone, we keep none!
                     self.broks.clear()
 
@@ -160,15 +160,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        sat_lists = [self.conf.brokers, self.conf.receivers,
-                     self.conf.pollers, self.conf.reactionners]
-        for lst in sat_lists:
-            for sat in lst:
+        for satellites in [self.conf.brokers, self.conf.receivers,
+                          self.conf.pollers, self.conf.reactionners]:
+            for satellite in satellites:
                 # Get only if alive of course
-                if sat.alive:
-                    new_cmds = sat.get_external_commands()
-                    for new_cmd in new_cmds:
-                        self.external_commands.append(new_cmd)
+                if satellite.alive:
+                    external_commands = satellite.get_external_commands()
+                    for external_command in external_commands:
+                        self.external_commands.append(external_command)
 
     def get_broks_from_satellitelinks(self):
         """Get broks from my internal satellitelinks (satellite status)
@@ -176,13 +175,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         TODO: Why satellitelink obj have broks and not the app itself?
         """
-        tabs = [self.conf.brokers, self.conf.schedulers,
-                self.conf.pollers, self.conf.reactionners,
-                self.conf.receivers]
-        for tab in tabs:
-            for sat in tab:
-                new_broks = sat.get_all_broks()
+        for satellites in [self.conf.brokers, self.conf.schedulers,
+                           self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
+            for satellite in satellites:
+                new_broks = satellite.get_all_broks()
                 for brok in new_broks:
+                    logger.debug("Satellite '%s' brok", satellite, brok)
                     self.add(brok)
 
     def get_initial_broks_from_satellitelinks(self):
@@ -190,12 +188,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        tabs = [self.conf.brokers, self.conf.schedulers,
-                self.conf.pollers, self.conf.reactionners,
-                self.conf.receivers]
-        for tab in tabs:
-            for sat in tab:
-                brok = sat.get_initial_status_brok()
+        for satellites in [self.conf.brokers, self.conf.schedulers,
+                           self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
+            for satellite in satellites:
+                brok = satellite.get_initial_status_brok()
+                logger.debug("Satellite '%s' initial brok: %s", satellite, brok)
                 self.add(brok)
 
     @staticmethod
@@ -254,9 +251,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         self.conf.early_arbiter_linking()
 
-        # Search which Arbiterlink I am
+        # Search which arbiter I am in the arbiters list
         for arb in self.conf.arbiters:
-            if arb.get_name() in ['Default-Arbiter', self.config_name]:
+            if arb.get_name() in ['Default-Arbiter', self.arbiter_name]:
+                logger.info("I found myself in the configuration: %s", arb.get_name())
+                # Arbiter is master one
                 arb.need_conf = False
                 self.myself = arb
                 self.is_master = not self.myself.spare
@@ -276,6 +275,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # Set myself as alive ;)
                 self.myself.alive = True
             else:  # not me
+                # Arbiter is not me!
+                logger.info("Found another arbiter in the configuration: %s", arb.get_name())
                 arb.need_conf = True
 
         if not self.myself:
@@ -283,7 +284,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                      "To solve this, please change the arbiter_name parameter in "
                      "the arbiter configuration file (certainly arbiter-master.cfg) "
                      "with the value '%s'."
-                     " Thanks." % (self.config_name, socket.gethostname()))
+                     " Thanks." % (self.arbiter_name, socket.gethostname()))
+
+        # Whether I am a spare arbiter, I will parse the whole configuration. This may be useful
+        # if the master fails before sending its configuration to me!
 
         # Ok it's time to load the module manager now!
         self.load_modules_manager()
@@ -291,6 +295,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
         self.do_load_modules(self.myself.modules)
+
+        if not self.is_master:
+            logger.info("I am not the master arbiter, I stop parsing the configuration")
+            return
 
         # Call modules that manage this read configuration pass
         self.hook_point('read_configuration')
@@ -329,7 +337,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.apply_implicit_inheritance()
 
         # Fill default values
-        self.conf.fill_default()
+        self.conf.set_default_values()
 
         # Remove templates from config
         self.conf.remove_templates()
@@ -381,7 +389,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
             # Display found warnings and errors
-            self.conf.show_errors()
+            # self.conf.show_errors()
             sys.exit(err)
 
         # REF: doc/alignak-conf-dispatching.png (2)
@@ -410,7 +418,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.conf.show_errors()
             sys.exit(0)
 
-        if self.analyse:
+        if self.analyse:  # pragma: no cover, not used currently (see #607)
             self.launch_analyse()
             sys.exit(0)
 
@@ -420,18 +428,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.prepare_for_sending()
 
         # Ignore daemon configuration parameters (port, log, ...) in the monitoring configuration
-        # It's better to use daemon default parameters rather than host found in the monitoring
-        # configuration...
+        # It's better to use daemon default parameters rather than those found in the monitoring
+        # configuration (if some are found because they should not be there)...
 
         self.accept_passive_unknown_check_results = BoolProp.pythonize(
             getattr(self.myself, 'accept_passive_unknown_check_results', '0')
         )
 
-        #  We need to set self.host & self.port to be used by do_daemon_init_and_start
-        self.host = self.myself.address
-        self.port = self.myself.port
-
-        logger.info("Configuration Loaded")
+        logger.info("Configuration loaded and prepared")
 
         # Still a last configuration check because some things may have changed when
         # we prepared the configuration for sending
@@ -477,6 +481,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for type_c in types_creations:
                 (_, _, prop, dummy) = types_creations[type_c]
                 if prop not in objs:
+                    logger.warning("Got unmanaged %s objects from module %s", prop, inst.get_name())
                     continue
                 for obj in objs[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array
@@ -491,8 +496,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.debug("Added %i objects to %s from module %s",
                              len(objs[prop]), type_c, inst.get_name())
 
-    def launch_analyse(self):
-        """Print the number of objects we have for each type.
+    def launch_analyse(self):  # pragma: no cover, not used currently (see #607)
+        """ Dump the number of objects we have for each type to a JSON formatted file
 
         :return: None
         """
@@ -556,7 +561,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             else:
                 self.request_stop()
 
-        except SystemExit, exp:
+        except SystemExit as exp:
             # With a 2.4 interpreter the sys.exit() in load_config_file
             # ends up here and must be handled.
             sys.exit(exp.code)
@@ -565,27 +570,37 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             raise
 
     def setup_new_conf(self):
-        """ Setup a new conf received from a Master arbiter.
+        """ Setup a new configuration received from a Master arbiter.
 
+        Todo: perharps we should not accept the configuration or raise an error if we do not
+        find our own configuration data in the data. Thus this should never happen...
         :return: None
         """
         with self.conf_lock:
-            conf = self.new_conf
-            if not conf:
+            if not self.new_conf:
+                logger.warning("Should not be here - I already got a configuration")
                 return
+
+            logger.info("I received a new configuration from my master")
+
             try:
-                conf = unserialize(conf)
+                conf = unserialize(self.new_conf)
             except AlignakClassLookupException as exp:
-                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
-            self.new_conf = None
+                logger.exception('Cannot un-serialize received configuration: %s', exp)
+                return
+
+            logger.info("Got new configuration #%s", conf.magic_hash)
+
+            logger.info("I am: %s", self.arbiter_name)
+            # This is my new configuration now ...
             self.cur_conf = conf
             self.conf = conf
+            # Ready to get a new one ...
+            self.new_conf = None
             for arb in self.conf.arbiters:
-                if (arb.address, arb.port) == (self.host, self.port):
+                if arb.get_name() in ['Default-Arbiter', self.arbiter_name]:
                     self.myself = arb
-                    arb.is_me = lambda x: True  # we now definitively know who we are, just keep it.
-                else:
-                    arb.is_me = lambda x: False  # and we know who we are not, just keep it.
+                    logger.info("I found myself in the configuration")
 
     def do_loop_turn(self):
         """Loop turn for Arbiter
@@ -595,8 +610,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # If I am a spare, I wait for the master arbiter to send me
         # true conf.
-        if self.myself.spare:
-            logger.debug("I wait for master")
+        if not self.is_master:
+            logger.info("Waiting for master...")
             self.wait_for_master_death()
 
         if self.must_run:
@@ -608,38 +623,39 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.info("Waiting for master death")
         timeout = 1.0
-        self.last_master_speack = time.time()
+        self.last_master_ping = time.time()
 
         # Look for the master timeout
         master_timeout = 300
         for arb in self.conf.arbiters:
             if not arb.spare:
                 master_timeout = arb.check_interval * arb.max_check_attempts
-        logger.info("I'll wait master for %d seconds", master_timeout)
+        logger.warning("I'll wait master for %d seconds", master_timeout)
 
         while not self.interrupted:
             # This is basically sleep(timeout) and returns 0, [], int
             # We could only paste here only the code "used" but it could be
             # harder to maintain.
             _, _, tcdiff = self.handle_requests(timeout)
-            # if there was a system Time Change (tcdiff) then we have to adapt last_master_speak:
+            # if there was a system Time Change (tcdiff) then we have to adapt last_master_ping:
+            if tcdiff:
+                self.last_master_ping += tcdiff
+
             if self.new_conf:
                 self.setup_new_conf()
-            if tcdiff:
-                self.last_master_speack += tcdiff
+
             sys.stdout.write(".")
             sys.stdout.flush()
 
             # Now check if master is dead or not
             now = time.time()
-            if now - self.last_master_speack > master_timeout:
+            if now - self.last_master_ping > master_timeout:
                 logger.info("Arbiter Master is dead. The arbiter %s take the lead",
                             self.myself.get_name())
-                for arb in self.conf.arbiters:
-                    if not arb.spare:
-                        arb.alive = False
+                for arbiter in self.conf.arbiters:
+                    if not arbiter.spare:
+                        arbiter.alive = False
                 self.must_run = True
                 break
 
@@ -650,17 +666,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # Now get all external commands and put them into the
         # good schedulers
-        for ext_cmd in self.external_commands:
-            self.external_commands_manager.resolve_command(ext_cmd)
+        for external_command in self.external_commands:
+            self.external_commands_manager.resolve_command(external_command)
 
         # Now for all alive schedulers, send the commands
-        for sched in self.conf.schedulers:
-            cmds = sched.external_commands
-            if len(cmds) > 0 and sched.alive:
-                logger.debug("Sending %d commands to scheduler %s", len(cmds), sched.get_name())
-                sched.run_external_commands(cmds)
+        for scheduler in self.conf.schedulers:
+            cmds = scheduler.external_commands
+            if len(cmds) > 0 and scheduler.alive:
+                logger.debug("Sending %d commands to scheduler %s", len(cmds), scheduler.get_name())
+                scheduler.run_external_commands(cmds)
             # clean them
-            sched.external_commands = []
+            scheduler.external_commands = []
 
     def check_and_log_tp_activation_change(self):
         """Raise log for timeperiod change (useful for debug)
@@ -684,17 +700,24 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # Before running, I must be sure who am I
         # The arbiters change, so we must re-discover the new self.me
-        for arb in self.conf.arbiters:
-            if arb.get_name() in ['Default-Arbiter', self.config_name]:
-                self.myself = arb
+        for arbiter in self.conf.arbiters:
+            if arbiter.get_name() in ['Default-Arbiter', self.arbiter_name]:
+                self.myself = arbiter
+                logger.info("I am the arbiter: %s", self.myself.arbiter_name)
 
-        logger.info("Begin to dispatch configurations to satellites")
+        logger.info("Begin to dispatch configuration to the satellites")
+        print("Begin to dispatch configuration to the satellites")
+
         self.dispatcher = Dispatcher(self.conf, self.myself)
         self.dispatcher.check_alive()
         self.dispatcher.check_dispatch()
         # REF: doc/alignak-conf-dispatching.png (3)
         self.dispatcher.prepare_dispatch()
         self.dispatcher.dispatch()
+        logger.info("Configuration has been dispatched to the satellites")
+
+        logger.info("Configuration has been dispatched to the satellites")
+        print("Configuration has been dispatched to the satellites")
 
         # Now we can get all initial broks for our satellites
         self.get_initial_broks_from_satellitelinks()

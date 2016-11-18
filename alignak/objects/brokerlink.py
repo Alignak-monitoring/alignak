@@ -51,7 +51,9 @@ class BrokerLink(SatelliteLink):
     """
     Class to manage the broker information
     """
+    name_property = "broker_name"
     my_type = 'broker'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'broker_name': StringProp(fill_brok=['full_status'], to_send=True),
@@ -72,5 +74,4 @@ class BrokerLinks(SatelliteLinks):
     Class to manage list of BrokerLink.
     BrokerLinks is used to regroup all brokers
     """
-    name_property = "broker_name"
     inner_class = BrokerLink

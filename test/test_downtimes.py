@@ -579,6 +579,8 @@ class TestDowntime(AlignakTest):
         assert host.scheduled_downtime_depth == 1
 
         assert 0 == host.current_notification_number, 'Should not have any notification'
+        print("host notif: %s" % host.notification_options)
+        self.show_actions()
         # Notification: downtime start
         self.assert_actions_count(1)
         # The downtime started

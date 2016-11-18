@@ -60,6 +60,7 @@ class MacroModulation(Item):
     A MacroModulation is defined to change critical and warning level in some periods (like the
     night)
     """
+    name_property = "macromodulation_name"
     my_type = 'macromodulation'
 
     properties = Item.properties.copy()
@@ -79,17 +80,6 @@ class MacroModulation(Item):
     special_properties = ('modulation_period',)
 
     macros = {}
-
-    def get_name(self):
-        """
-        Get the name of the macromodulation
-
-        :return: the macromodulation name string
-        :rtype: str
-        """
-        if hasattr(self, 'macromodulation_name'):
-            return self.macromodulation_name
-        return 'Unnamed'
 
     def is_active(self, timperiods):
         """
@@ -113,25 +103,22 @@ class MacroModulation(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
 
         # Ok just put None as modulation_period, means 24x7
         if not hasattr(self, 'modulation_period'):
             self.modulation_period = None
 
         if not hasattr(self, 'customs') or not self.customs:
-            msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
-            self.configuration_errors.append(msg)
-            state = False
+            self.add_error("[macromodulation::%s] contains no macro definition" %
+                           (self.get_name()))
 
-        return super(MacroModulation, self).is_correct() and state
+        return super(MacroModulation, self).is_correct() and self.conf_is_correct
 
 
 class MacroModulations(Items):
     """
     Class to manage all MacroModulation
     """
-    name_property = "macromodulation_name"
     inner_class = MacroModulation
 
     def linkify(self, timeperiods):

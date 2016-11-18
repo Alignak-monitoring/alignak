@@ -2080,8 +2080,7 @@ class TestBusinessCorrelator(AlignakTest):
         # Config is not correct because of a wrong relative path
         # in the main config file
         #
-        print "Get the hosts and services"
-        now = time.time()
+        # Get the hosts and services
         host = self._sched.hosts.find_by_name("test_darthelmet")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router

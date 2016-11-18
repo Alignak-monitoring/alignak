@@ -52,10 +52,7 @@ This module provide Pack and Packs classes used to define 'group' of configurati
 import logging
 import os
 import re
-try:
-    import json
-except ImportError:
-    json = None  # pylint: disable=C0103
+import json
 
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp
@@ -68,6 +65,7 @@ class Pack(Item):
     Class to manage a Pack
     A Pack contain multiple configuration files (like all checks for os 'FreeBSD')
     """
+    name_property = "pack_name"
     my_type = 'pack'
 
     properties = Item.properties.copy()
@@ -76,25 +74,11 @@ class Pack(Item):
     running_properties = Item.running_properties.copy()
     running_properties.update({'macros': StringProp(default={})})
 
-    # For debugging purpose only (nice name)
-    def get_name(self):
-        """
-        Get the name of the pack
-
-        :return: the pack name string or 'UnnamedPack'
-        :rtype: str
-        """
-        try:
-            return self.pack_name
-        except AttributeError:
-            return 'UnnamedPack'
-
 
 class Packs(Items):
     """
     Class to manage all Pack
     """
-    name_property = "pack_name"
     inner_class = Pack
 
     def load_file(self, path):
@@ -131,10 +115,7 @@ class Packs(Items):
         :type name: str
         :return: None
         """
-        if not json:
-            logger.warning("[Pack] cannot load the pack file '%s': missing json lib", name)
-            return
-        # Ok, go compile the code
+        # Create the pack object and add it to our list
         try:
             json_dump = json.loads(buf)
             if 'name' not in json_dump:
@@ -151,7 +132,7 @@ class Packs(Items):
             pack.commands = json_dump.get('commands', [])
             if not pack.path.endswith('/'):
                 pack.path += '/'
-            # Ok, add it
-            self[pack.uuid] = pack
+
+            self.add_item(pack)
         except ValueError, exp:
             logger.error("[Pack] error in loading pack file '%s': '%s'", name, exp)

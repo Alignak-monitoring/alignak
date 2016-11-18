@@ -67,33 +67,53 @@ class Notification(Action):  # pylint: disable=R0902
 
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    __metaclass__ = AutoSlots
+    # __metaclass__ = AutoSlots
 
     my_type = 'notification'
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':                StringProp(default='notification'),
-        'notification_type':   IntegerProp(default=0, fill_brok=['full_status']),
-        'start_time':          IntegerProp(default=0, fill_brok=['full_status']),
-        'end_time':            IntegerProp(default=0, fill_brok=['full_status']),
-        'contact_name':        StringProp(default='', fill_brok=['full_status']),
-        'host_name':           StringProp(default='', fill_brok=['full_status']),
-        'service_description': StringProp(default='', fill_brok=['full_status']),
-        'reason_type':         IntegerProp(default=1, fill_brok=['full_status']),
-        'state':               IntegerProp(default=0, fill_brok=['full_status']),
-        'ack_author':          StringProp(default='', fill_brok=['full_status']),
-        'ack_data':            StringProp(default='', fill_brok=['full_status']),
-        'escalated':           BoolProp(default=False, fill_brok=['full_status']),
-        'command_call':        StringProp(default=None),
-        'contact':             StringProp(default=None),
-        'notif_nb':            IntegerProp(default=1),
-        'command':             StringProp(default='UNSET'),
-        'sched_id':            IntegerProp(default=0),
-        'enable_environment_macros': BoolProp(default=False),
+        'is_a':
+            StringProp(default='notification'),
+        'notification_type':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'contact_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'host_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'service_description':
+            StringProp(default='', fill_brok=['full_status']),
+        'reason_type':
+            IntegerProp(default=1, fill_brok=['full_status']),
+        'state':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'ack_author':
+            StringProp(default='', fill_brok=['full_status']),
+        'ack_data':
+            StringProp(default='', fill_brok=['full_status']),
+        'escalated':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'command_call':
+            StringProp(default=None),
+        'contact':
+            StringProp(default=None),
+        'notif_nb':
+            IntegerProp(default=1),
+        'command':
+            StringProp(default='UNSET'),
+        'sched_id':
+            IntegerProp(default=0),
+        'enable_environment_macros':
+            BoolProp(default=False),
         # Keep a list of currently active escalations
-        'already_start_escalations':  SetProp(default=set()),
-        'type':               StringProp(default='PROBLEM'),
+        'already_start_escalations':
+            SetProp(default=set()),
+        'type':
+            StringProp(default='PROBLEM'),
 
     })
 
@@ -124,7 +144,7 @@ class Notification(Action):  # pylint: disable=R0902
     def is_administrative(self):
         """Check if this notification is "administrative"
 
-        :return: True in type not in ('PROBLEM', 'RECOVERY'), False otherwise
+        :return: True if type not in ('PROBLEM', 'RECOVERY'), False otherwise
         :rtype: bool
         """
         if self.type in ('PROBLEM', 'RECOVERY'):

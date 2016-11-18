@@ -150,7 +150,7 @@ class TestAction(AlignakTest):
             'module_type': 'nrpe-booster',
             'u_time': 0.0,
             'env': {},
-            'log_actions': True
+            'log_actions': False
         }
         # Will fill the action properties with the parameters
         action = Action(parameters)

@@ -63,27 +63,59 @@ class Servicegroup(Itemgroup):
     Class to manage a servicegroup
     A servicegroup is used to group services
     """
+    name_property = "servicegroup_name"
+    members_property = "members"
+    groupmembers_property = "servicegroup_members"
     my_type = 'servicegroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_name':    StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'servicegroup_members': ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True),
-        'notes':                StringProp(default='', fill_brok=['full_status']),
-        'notes_url':            StringProp(default='', fill_brok=['full_status']),
-        'action_url':           StringProp(default='', fill_brok=['full_status']),
+        # 'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_name':
+            StringProp(fill_brok=['full_status']),
+        'servicegroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+        'notes':
+            StringProp(default='', fill_brok=['full_status']),
+        'notes_url':
+            StringProp(default='', fill_brok=['full_status']),
+        'action_url':
+            StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
-        'SERVICEGROUPALIAS':     'alias',
-        'SERVICEGROUPMEMBERS':   'members',
-        'SERVICEGROUPNOTES':     'notes',
-        'SERVICEGROUPNOTESURL':  'notes_url',
+        'SERVICEGROUPALIAS': 'alias',
+        'SERVICEGROUPMEMBERS': 'get_members',
+        'SERVICEGROUPNOTES': 'notes',
+        'SERVICEGROUPNOTESURL': 'notes_url',
         'SERVICEGROUPACTIONURL': 'action_url'
     }
+
+    def __init__(self, params=None, parsing=True, debug=False):
+
+        if params is None:
+            params = {}
+        super(Servicegroup, self).__init__(params, parsing=parsing, debug=debug)
+
+        logger.debug("SG %s %s, members: %s, group members: %s",
+                     parsing, self.get_name(), self.get_members(), self.get_group_members())
+        if parsing:
+            # Manage the specific format of members property
+            # List containing host_name,service_description for each service (h1,s1,h2,s2,...)
+            # Transform this list to a list of strings: [h1/s1, h2/s2,...]
+            seek = 0
+            host_name = ''
+            new_members = []
+            for member in self.get_members():
+                if seek % 2 == 0:
+                    host_name = member
+                else:
+                    new_members.append("%s/%s" % (host_name, member))
+                seek += 1
+
+            if new_members:
+                self.members = new_members
+            logger.debug("SG %s, members: %s", self.get_name(), self.get_members())
 
     def get_services(self):
         """
@@ -92,19 +124,7 @@ class Servicegroup(Itemgroup):
         :return: list of services (members)
         :rtype: list
         """
-        if getattr(self, 'members', None) is not None:
-            return self.members
-        else:
-            return []
-
-    def get_name(self):
-        """
-        Get list of groups members of this servicegroup
-
-        :return: the servicegroup name string
-        :rtype: str
-        """
-        return self.servicegroup_name
+        return self.get_members()
 
     def get_servicegroup_members(self):
         """
@@ -113,57 +133,55 @@ class Servicegroup(Itemgroup):
         :return: list of services
         :rtype: list | str
         """
-        if hasattr(self, 'servicegroup_members'):
-            return self.servicegroup_members
-        else:
-            return []
+        return self.get_group_members()
 
-    def get_services_by_explosion(self, servicegroups):
+    def get_services_by_explosion(self, servicegroups, services):
         """
-        Get all services of this servicegroup and add it in members container
+        Get direct services of this group and all services from the sub-groups.
+        Append sub-groups members to the members of this group
 
         :param servicegroups: servicegroups object
-        :type servicegroups: object
-        :return: return empty string or list of members
-        :rtype: str or list
+        :type servicegroups: alignak.objects.servicegroup.Servicegroups
+        :param services: services to explode
+        :type services: alignak.objects.service.Services
+        :return: return the list of members
+        :rtype: list[alignak.objects.service.Service]
         """
-        # First we tag the hg so it will not be explode
-        # if a son of it already call it
-        self.already_explode = True
+        # First we tag the group so it will not be exploded again if one of its members calls it
+        self.already_exploded = True
 
         # Now the recursive part
-        # rec_tag is set to False every HG we explode
-        # so if True here, it must be a loop in HG
-        # calls... not GOOD!
-        if self.rec_tag:
-            logger.error("[servicegroup::%s] got a loop in servicegroup definition",
-                         self.get_name())
-            if hasattr(self, 'members'):
-                return self.members
-            else:
-                return ''
-        # Ok, not a loop, we tag it and continue
-        self.rec_tag = True
+        # recursion_tag is set to False for every group we explode
+        # so if is True here, it must be a loop in the groups links... not GOOD!
+        if self.recursion_tag:
+            err = "[%s::%s] got a loop in %s definition" % \
+                  (self.my_type, self.get_name(), self.groupmembers_property)
+            self.configuration_errors.append(err)
+            return self.get_members()
 
-        sg_mbrs = self.get_servicegroup_members()
-        for sg_mbr in sg_mbrs:
-            servicegroup = servicegroups.find_by_name(sg_mbr.strip())
+        # Ok, not in a loop, we tag it and continue
+        self.recursion_tag = True
+
+        group_members = self.get_group_members()
+        for group_member in group_members:
+            servicegroup = servicegroups.find_by_name(group_member)
             if servicegroup is not None:
-                value = servicegroup.get_services_by_explosion(servicegroups)
-                if value is not None:
-                    self.add_string_member(value)
+                members_uuid = servicegroup.get_services_by_explosion(servicegroups, services)
+                if members_uuid:
+                    new_members = []
+                    for member_uuid in members_uuid:
+                        if member_uuid in services:
+                            new_members.append(services[member_uuid])
+                    self.add_members(new_members)
 
-        if hasattr(self, 'members'):
-            return self.members
-        else:
-            return ''
+        logger.debug("SG %s, after explosion members: %s", self.get_name(), self.get_members())
+        return self.get_members()
 
 
 class Servicegroups(Itemgroups):
     """
     Class to manage all servicegroups
     """
-    name_property = "servicegroup_name"  # is used for finding servicegroup
     inner_class = Servicegroup
 
     def linkify(self, hosts, services):
@@ -176,103 +194,118 @@ class Servicegroups(Itemgroups):
         :type services: object
         :return: None
         """
-        self.linkify_sg_by_srv(hosts, services)
+        self.linkify_servicegroup_by_service(hosts, services)
 
-    def linkify_sg_by_srv(self, hosts, services):
+    def linkify_servicegroup_by_service(self, hosts, services):
         """
         We just search for each host the id of the host
         and replace the name by the id
-        TODO: very slow for high services, so search with host list,
-        not service one
+
+        TODO: very slow for high services, so search with host list, not service one
 
         :param hosts: hosts object
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :param services: services object
-        :type services: object
+        :type services: alignak.objects.service.Services
         :return: None
         """
-        for servicegroup in self:
-            mbrs = servicegroup.get_services()
+        logger.debug("Linkify servicegroups and services")
+        for servicegroup in self.items.values():
+            members = servicegroup.get_services()
+            logger.debug("- SG: %s, members: %s", servicegroup, members)
             # The new member list, in id
-            new_mbrs = []
-            seek = 0
-            host_name = ''
-            if len(mbrs) == 1 and mbrs[0] != '':
-                servicegroup.add_string_unknown_member('%s' % mbrs[0])
+            new_members = []
 
-            for mbr in mbrs:
-                if seek % 2 == 0:
-                    host_name = mbr.strip()
-                else:
-                    service_desc = mbr.strip()
-                    find = services.find_srv_by_name_and_hostname(host_name, service_desc)
-                    if find is not None:
-                        new_mbrs.append(find.uuid)
+            # Group members is an array of string formatted as is: host_name/service_descrption
+            for member in members:
+                member = member.strip()
+                if member == '':  # void entry, skip this
+                    continue
+                elif member in services:
+                    # We got a service uuid
+                    logger.debug("SG: %s, found a service: %s", servicegroup, services[member])
+                    new_members.append(member)
+
+                    # Update the found service servicegroups property and make it uniquified
+                    services[member].servicegroups.append(servicegroup.uuid)
+                    services[member].servicegroups = list(set(services[member].servicegroups))
+                elif '/' in member:
+                    # We got a host_name/service_description string
+                    host_name = member.split('/')[0]
+                    service_description = member.split('/')[1]
+                    service = services.find_srv_by_name_and_hostname(host_name, service_description)
+                    if service is not None:
+                        logger.debug("SG: %s, found a service: %s", servicegroup, service)
+                        new_members.append(service.uuid)
+
+                        # Update the found service servicegroups property and make it uniquified
+                        service.servicegroups.append(servicegroup.uuid)
+                        service.servicegroups = list(set(service.servicegroups))
                     else:
                         host = hosts.find_by_name(host_name)
-                        if not (host and host.is_excluded_for_sdesc(service_desc)):
-                            servicegroup.add_string_unknown_member('%s,%s' %
-                                                                   (host_name, service_desc))
+                        if not (host and host.is_excluded_for_sdesc(service_description)):
+                            # A not found host/service is stored in unknown_members
+                            servicegroup.add_unknown_member("%s/%s" % (host_name,
+                                                                       service_description))
                         elif host:
                             self.configuration_warnings.append(
                                 'servicegroup %r : %s is excluded from the services of the host %s'
-                                % (servicegroup, service_desc, host_name)
+                                % (servicegroup, service_description, host_name)
                             )
-                seek += 1
 
-            # Make members uniq
-            new_mbrs = list(set(new_mbrs))
+            if new_members:
+                new_members = list(set(new_members))
+                logger.debug("SG: %s, new members: %s", servicegroup, new_members)
 
-            # We find the id, we replace the names
-            servicegroup.replace_members(new_mbrs)
-            for srv_id in servicegroup.members:
-                serv = services[srv_id]
-                serv.servicegroups.append(servicegroup.uuid)
-                # and make this uniq
-                serv.servicegroups = list(set(serv.servicegroups))
+                # We update the group members
+                servicegroup.members = new_members
 
-    def add_member(self, cname, sgname):
-        """
-        Add a member (service) to this servicegroup
+    def add_group_member(self, service, servicegroup_name):
+        """Add a service to a servicegroup.
+        If the servicegroup does not exist it is created
 
-        :param cname: member (service) name
-        :type cname: str
-        :param sgname: servicegroup name
-        :type sgname: str
+        :param service: service unique identifier
+        :type service: uuid
+        :param servicegroup_name: servicegroup name
+        :type servicegroup_name: str
         :return: None
         """
-        svcgp = self.find_by_name(sgname)
-        # if the id do not exist, create the cg
-        if svcgp is None:
-            svcgp = Servicegroup({'servicegroup_name': sgname, 'alias': sgname, 'members': cname})
-            self.add(svcgp)
+        servicegroup = self.find_by_name(servicegroup_name)
+        if servicegroup is None:
+            # Create the group if it does not yet exist
+            print("Create SG: %s" % servicegroup_name)
+            servicegroup = Servicegroup({'servicegroup_name': servicegroup_name,
+                                         'members': [service.get_name()],
+                                         'imported_from': 'inner'})
+            logger.debug("Created a servicegroup declared in a service: %s / %s" %
+                         (servicegroup_name, servicegroup.members))
+            self.add_item(servicegroup)
         else:
-            svcgp.add_string_member(cname)
+            servicegroup.add_member(service)
 
-    def explode(self):
+    def explode(self, services):
         """
-        Get services and put them in members container
+        Populate the members property with the group members and the members of the sub-groups
 
+        :param services: services to explode
+        :type services: alignak.objects.service.Services
         :return: None
         """
-        # We do not want a same service group to be exploded again and again
-        # so we tag it
         for servicegroup in self.items.values():
-            servicegroup.already_explode = False
+            for groupmember in servicegroup.get_group_members():
+                group = self.find_by_name(groupmember)
+                if group is None:
+                    continue
+                if group.already_exploded:
+                    continue
 
-        for servicegroup in self.items.values():
-            if hasattr(servicegroup, 'servicegroup_members') and not \
-                    servicegroup.already_explode:
-                # get_services_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for sg2 in self.items.values():
-                    sg2.rec_tag = False
-                servicegroup.get_services_by_explosion(self)
+                # get_services_by_explosion is a recursive function, so we must
+                # tag the groups to avoid looping indefinetely
+                for groupmember in self.items.values():
+                    groupmember.recursion_tag = False
+                servicegroup.get_services_by_explosion(self, services)
 
-        # We clean the tags
+        # Clean the recursion tag
         for servicegroup in self.items.values():
-            try:
-                del servicegroup.rec_tag
-            except AttributeError:
-                pass
-            del servicegroup.already_explode
+            if hasattr(servicegroup, 'recursion_tag'):
+                del servicegroup.recursion_tag

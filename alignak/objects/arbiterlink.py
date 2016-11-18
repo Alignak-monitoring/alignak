@@ -60,7 +60,9 @@ class ArbiterLink(SatelliteLink):
     Class to manage the link to Arbiter daemon.
     With it, arbiter can see if a Arbiter daemon is alive, and can send it new configuration
     """
+    name_property = "arbiter_name"
     my_type = 'arbiter'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'arbiter_name':    StringProp(),
@@ -150,7 +152,6 @@ class ArbiterLinks(SatelliteLinks):
     Class to manage list of ArbiterLink.
     ArbiterLinks is used to regroup all links with Arbiter daemon
     """
-    name_property = "arbiter_name"
     inner_class = ArbiterLink
 
     def linkify(self, modules, realms=None):
@@ -161,4 +162,4 @@ class ArbiterLinks(SatelliteLinks):
         :type modules: list
         :return: None
         """
-        self.linkify_s_by_plug(modules)
+        self.linkify_with_modules(modules)

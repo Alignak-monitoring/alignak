@@ -98,8 +98,7 @@ class TestBusinesscorrelOutput(AlignakTest):
         # Is a Business Rule, not a simple service...
         assert svc_cor.got_business_rule
         assert svc_cor.business_rule is not None
-        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == \
-                         svc_cor.business_rule_output_template
+        assert "$STATUS$ $([$STATUS$: $FULLNAME$] )$" == svc_cor.business_rule_output_template
 
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # no host checks on critical check results

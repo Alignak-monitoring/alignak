@@ -66,17 +66,20 @@ class Trigger(Item):
     """Trigger class provides a simple set of method to compile and execute a python file
 
     """
+    name_property = "trigger_name"
     my_type = 'trigger'
 
     properties = Item.properties.copy()
-    properties.update({'trigger_name': StringProp(fill_brok=['full_status']),
-                       'code_src': StringProp(default='', fill_brok=['full_status']),
-                       })
+    properties.update({
+        'trigger_name': StringProp(fill_brok=['full_status']),
+        'code_src': StringProp(default='', fill_brok=['full_status']),
+    })
 
     running_properties = Item.running_properties.copy()
-    running_properties.update({'code_bin': StringProp(default=None),
-                               'trigger_broker_raise_enabled': BoolProp(default=False)
-                               })
+    running_properties.update({
+        'code_bin': StringProp(default=None),
+        'trigger_broker_raise_enabled': BoolProp(default=False)
+    })
 
     def __init__(self, params=None, parsing=True):
         if params is None:
@@ -90,17 +93,6 @@ class Trigger(Item):
         res = super(Trigger, self).serialize()
         del res['code_bin']
         return res
-
-    def get_name(self):
-        """Accessor to trigger_name attribute
-
-        :return: trigger name
-        :rtype: str
-        """
-        try:
-            return self.trigger_name
-        except AttributeError:
-            return 'UnnamedTrigger'
 
     def compile(self):
         """Compile the trigger
@@ -137,7 +129,6 @@ class Triggers(Items):
     """Triggers class allowed to handle easily several Trigger objects
 
     """
-    name_property = "trigger_name"
     inner_class = Trigger
 
     def load_file(self, path):
@@ -173,12 +164,11 @@ class Triggers(Items):
         :return: new trigger object
         :rtype: alignak.objects.trigger.Trigger
         """
-        # Ok, go compile the code
+        # Create the trigger object and add it to our list
         trigger = Trigger({'trigger_name': name, 'code_src': src})
         trigger.compile()
-        # Ok, add it
-        self[trigger.uuid] = trigger
-        return trigger
+
+        self.add_item(trigger)
 
     def compile(self):
         """Loop on triggers and call Trigger.compile()

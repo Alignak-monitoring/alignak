@@ -63,12 +63,15 @@ class Escalation(Item):
     """Escalation class is used to implement notification escalation
 
     """
+    name_property = "escalation_name"
     my_type = 'escalation'
 
     properties = Item.properties.copy()
     properties.update({
         'escalation_name':
             StringProp(),
+        'hostgroup_name':
+            StringProp(default=''),
         'host_name':
             StringProp(default=''),
         'service_description':
@@ -88,11 +91,11 @@ class Escalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['d', 'u', 'r', 'w', 'c']),
         'contacts':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[]),
         'contact_groups':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[]),
     })
 
     running_properties = Item.running_properties.copy()
@@ -104,14 +107,6 @@ class Escalation(Item):
                           'first_notification_time', 'last_notification_time')
     special_properties_time_based = ('contacts', 'contact_groups',
                                      'first_notification', 'last_notification')
-
-    def get_name(self):
-        """Accessor to escalation_name attribute
-
-        :return: escalation name
-        :rtype: str
-        """
-        return self.escalation_name
 
     def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
         """Check if the escalation is eligible (notification is escalated or not)
@@ -225,7 +220,6 @@ class Escalation(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
 
         # Internal checks before executing inherited function...
 
@@ -235,29 +229,22 @@ class Escalation(Item):
 
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
-            msg = '%s: I do not have contacts nor contact_groups' % (self.get_name())
-            self.configuration_errors.append(msg)
-            state = False
+            self.add_error("%s: I do not have contacts nor contact_groups" % (self.get_name()))
 
         # If time_based or not, we do not check all properties
         if self.time_based:
             if not hasattr(self, 'first_notification_time'):
-                msg = '%s: I do not have first_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("%s: I do not have first_notification_time" % (self.get_name()))
+
             if not hasattr(self, 'last_notification_time'):
-                msg = '%s: I do not have last_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("%s: I do not have last_notification_time" % (self.get_name()))
+
         else:  # we check classical properties
             if not hasattr(self, 'first_notification'):
-                msg = '%s: I do not have first_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("%s: I do not have first_notification" % (self.get_name()))
+
             if not hasattr(self, 'last_notification'):
-                msg = '%s: I do not have last_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
-                state = False
+                self.add_error("%s: I do not have last_notification" % (self.get_name()))
 
         # Change the special_properties definition according to time_based ...
         save_special_properties = self.special_properties
@@ -269,14 +256,13 @@ class Escalation(Item):
         if self.time_based:
             self.special_properties = save_special_properties
 
-        return state_parent and state
+        return state_parent and self.conf_is_correct
 
 
 class Escalations(Items):
     """Escalations manage a list of Escalation objects, used for parsing configuration
 
     """
-    name_property = "escalation_name"
     inner_class = Escalation
 
     def linkify(self, timeperiods, contacts, services, hosts):
@@ -302,14 +288,14 @@ class Escalations(Items):
         self.linkify_es_by_s(services)
         self.linkify_es_by_h(hosts)
 
-    def add_escalation(self, escalation):
-        """Wrapper for add_item method
-
-        :param escalation: escalation to add to item dict
-        :type escalation: alignak.objects.escalation.Escalation
-        :return: None
-        """
-        self.add_item(escalation)
+    # def add_escalation(self, escalation):
+    #     """Wrapper for add_item method
+    #
+    #     :param escalation: escalation to add to item dict
+    #     :type escalation: alignak.objects.escalation.Escalation
+    #     :return: None
+    #     """
+    #     self.add_item(escalation)
 
     def linkify_es_by_s(self, services):
         """Add each escalation object into service.escalation attribute
@@ -318,11 +304,12 @@ class Escalations(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for escal in self:
+        for escalation in self:
             # If no host, no hope of having a service
-            if not (hasattr(escal, 'host_name') and hasattr(escal, 'service_description')):
+            if not (getattr(escalation, 'host_name', None) and
+                    getattr(escalation, 'service_description', None)):
                 continue
-            es_hname, sdesc = escal.host_name, escal.service_description
+            es_hname, sdesc = escalation.host_name, escalation.service_description
             if '' in (es_hname.strip(), sdesc.strip()):
                 continue
             for hname in strip_and_uniq(es_hname.split(',')):
@@ -331,14 +318,12 @@ class Escalations(Items):
                     if slist is not None:
                         slist = [services[serv] for serv in slist]
                         for serv in slist:
-                            serv.escalations.append(escal.uuid)
+                            serv.escalations.append(escalation.uuid)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
-                            # print "Linking service", s.get_name(), 'with me', es.get_name()
-                            serv.escalations.append(escal.uuid)
-                            # print "Now service", s.get_name(), 'have', s.escalations
+                            serv.escalations.append(escalation.uuid)
 
     def linkify_es_by_h(self, hosts):
         """Add each escalation object into host.escalation attribute
@@ -357,9 +342,7 @@ class Escalations(Items):
             for hname in strip_and_uniq(escal.host_name.split(',')):
                 host = hosts.find_by_name(hname)
                 if host is not None:
-                    # print "Linking host", h.get_name(), 'with me', es.get_name()
                     host.escalations.append(escal.uuid)
-                    # print "Now host", h.get_name(), 'have', h.escalations
 
     def explode(self, hosts, hostgroups, contactgroups):
         """Loop over all escalation and explode hostsgroups in host

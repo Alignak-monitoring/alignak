@@ -497,9 +497,9 @@ class ExternalCommandManager:
             self.contactgroups = conf.contactgroups
             self.timeperiods = conf.timeperiods
 
-        self.confs = None
+        self.parts = None
         if self.mode == 'dispatcher':
-            self.confs = conf.confs
+            self.parts = conf.parts
 
         self.accept_passive_unknown_check_results = accept_unknown
 
@@ -595,7 +595,7 @@ class ExternalCommandManager:
                 logger.debug("Receiver pushing external command to scheduler %s", sched)
                 sched['external_commands'].append(extcmd)
         else:
-            for cfg in self.confs.values():
+            for cfg in self.parts.values():
                 if cfg.hosts.find_by_name(host_name) is not None:
                     logger.debug("Host %s found in a configuration", host_name)
                     if cfg.is_assigned:
@@ -1158,8 +1158,9 @@ class ExternalCommandManager:
         :type varvalue: str
         :return: None
         """
-        contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
-        contact.customs[varname.upper()] = varvalue
+        if varname.upper() in contact.customs:
+            contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
+            contact.customs[varname.upper()] = varvalue
 
     @staticmethod
     def change_custom_host_var(host, varname, varvalue):
@@ -1176,8 +1177,9 @@ class ExternalCommandManager:
         :type varvalue: str
         :return: None
         """
-        host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
-        host.customs[varname.upper()] = varvalue
+        if varname.upper() in host.customs:
+            host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
+            host.customs[varname.upper()] = varvalue
 
     @staticmethod
     def change_custom_svc_var(service, varname, varvalue):
@@ -1194,8 +1196,9 @@ class ExternalCommandManager:
         :type varname: str
         :return: None
         """
-        service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
-        service.customs[varname.upper()] = varvalue
+        if varname.upper() in service.customs:
+            service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
+            service.customs[varname.upper()] = varvalue
 
     def change_global_host_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global host event handler)

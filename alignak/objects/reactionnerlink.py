@@ -52,7 +52,9 @@ class ReactionnerLink(SatelliteLink):
     """
     Class to manage the reactionner information
     """
+    name_property = "reactionner_name"
     my_type = 'reactionner'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'reactionner_name': StringProp(fill_brok=['full_status'], to_send=True),
@@ -77,5 +79,4 @@ class ReactionnerLinks(SatelliteLinks):  # (Items):
     Class to manage list of ReactionnerLink.
     ReactionnerLinks is used to regroup all reactionners
     """
-    name_property = "reactionner_name"
     inner_class = ReactionnerLink

@@ -54,7 +54,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 5
         hosts = self.schedulers['scheduler-master'].sched.hosts
         services = self.schedulers['scheduler-master'].sched.services
 
@@ -156,7 +157,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 5
         hosts = self.schedulers['scheduler-master'].sched.hosts
         services = self.schedulers['scheduler-master'].sched.services
 
@@ -219,7 +221,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         # test_host_00 -> test_router_00
         test_host_00 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_00")
@@ -287,7 +290,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
@@ -303,7 +307,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
@@ -319,7 +324,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
@@ -336,7 +342,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A_P")
@@ -351,7 +358,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_A_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_A")
@@ -367,7 +375,8 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        # assert len(self.configuration_warnings) == 0
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_0")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_P_P")
@@ -383,7 +392,8 @@ class TestDependencies(AlignakTest):
 
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 1
 
         host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_A")
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_B")
@@ -400,8 +410,9 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
-        assert len(self.configuration_errors) == 4
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 2
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 6
 
     def test_c_notright2(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
@@ -413,8 +424,9 @@ class TestDependencies(AlignakTest):
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
         # TODO: improve test
-        assert len(self.configuration_errors) == 4
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 2
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 6
 
     def test_c_notright3(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
@@ -425,8 +437,9 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad3.cfg')
-        assert len(self.configuration_errors) == 2
-        assert len(self.configuration_warnings) == 8
+        assert len(self.configuration_errors) == 3
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 13
 
     def test_c_notright4(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -437,8 +450,8 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad4.cfg')
-        assert len(self.configuration_errors) == 2
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 1
+        assert len(self.configuration_warnings) == 5
 
     def test_c_notright5(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -449,8 +462,9 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad5.cfg')
-        assert len(self.configuration_errors) == 2
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 1
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 5
 
     def test_c_notright6(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -461,8 +475,9 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad6.cfg')
-        assert len(self.configuration_errors) == 2
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 1
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 5
 
     def test_c_notright7(self):
         """ Test that the arbiter raises an error when have an orphan dependency in config files
@@ -474,8 +489,9 @@ class TestDependencies(AlignakTest):
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad7.cfg')
         # Service test_ok_0_notknown not found for 2 hosts.
-        assert len(self.configuration_errors) == 3
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_errors) == 2
+        # Some warnings are emitted for information...
+        assert len(self.configuration_warnings) == 5
 
     def test_a_s_service_host_up(self):
         """ Test dependency (checks and notifications) between the service and the host (case 1)

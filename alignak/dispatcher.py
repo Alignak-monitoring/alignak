@@ -74,34 +74,37 @@ class Dispatcher:
     It has to handle spare, realms, poller tags etc.
     """
 
-    # Load all elements, set them as not assigned
-    # and add them to elements, so loop will be easier :)
     def __init__(self, conf, arbiter):
+        """
+        Load all elements, set them as not assigned
+        and add them to elements, so loop will be easier :)
+
+        :param conf: the monitoring configuration to get dispatched
+        :type conf alignak.objects.Config
+        :param arbiter: the arbiter that will dispatch the configuration
+        :type arbiter: alignak.daemons.Arbiter
+        """
         self.arbiter = arbiter
+
         # Pointer to the whole conf
         self.conf = conf
         logger.debug("Dispatcher __init__: %s / %s", self.arbiter, self.conf)
-        if hasattr(self.conf, 'confs'):
-            logger.debug("Dispatch conf confs: %s", self.conf.confs)
-        else:
-            logger.debug("Dispatch conf has no confs")
 
         self.realms = conf.realms
-        # Direct pointer to important elements for us
 
+        # Direct pointer to important elements for us
         for sat_type in ('arbiters', 'schedulers', 'reactionners',
                          'brokers', 'receivers', 'pollers'):
             setattr(self, sat_type, getattr(self.conf, sat_type))
 
-            # for each satellite, we look if current arbiter have a specific
+            # for each satellite, we look if current arbiter has a specific
             # satellitemap value set for this satellite.
             # if so, we give this map to the satellite (used to build satellite URI later)
             if arbiter is None:
                 continue
 
-            key = sat_type[:-1] + '_name'  # i.e: schedulers -> scheduler_name
             for satellite in getattr(self, sat_type):
-                sat_name = getattr(satellite, key)
+                sat_name = satellite.get_name()
                 satellite.set_arbiter_satellitemap(arbiter.satellitemap.get(sat_name, {}))
 
         self.dispatch_queue = {'schedulers': [], 'reactionners': [],
@@ -109,7 +112,8 @@ class Dispatcher:
         self.elements = []  # all elements, sched and satellites
         self.satellites = []  # only satellites not schedulers
 
-        for cfg in self.conf.confs.values():
+        # Initialize configuration parts
+        for cfg in self.conf.parts.values():
             cfg.is_assigned = False
             cfg.assigned_to = None
             cfg.push_flavor = 0
@@ -127,11 +131,12 @@ class Dispatcher:
         self.elements.extend(self.receivers)
         self.satellites.extend(self.receivers)
 
-        # Some flag about dispatch need or not
+        # Some flag about dispatch needed or not
         self.dispatch_ok = False
         self.first_dispatch_done = False
 
         # Prepare the satellites confs
+        logger.info("Dispatcher satellites: %s" % self.satellites)
         for satellite in self.satellites:
             satellite.prepare_for_conf()
 
@@ -156,7 +161,6 @@ class Dispatcher:
         """
         now = time.time()
         for elt in self.elements:
-            # print "Updating elements", elt.get_name(), elt.__dict__
             elt.update_infos(now)
 
             # Not alive needs new need_conf
@@ -178,25 +182,33 @@ class Dispatcher:
         # Check if the other arbiter has a conf, but only if I am a master
         for arb in self.arbiters:
             # If not me and I'm a master
-            if arb != self.arbiter and self.arbiter and not self.arbiter.spare:
+            if self.arbiter and arb != self.arbiter and not self.arbiter.spare:
                 if not arb.have_conf(self.conf.magic_hash):
-                    if not hasattr(self.conf, 'whole_conf_pack'):
-                        logger.error('CRITICAL: the arbiter try to send a configuration but '
-                                     'it is not a MASTER one?? Look at your configuration.')
-                        continue
-                    logger.info('Configuration sent to arbiter: %s', arb.get_name())
-                    arb.put_conf(self.conf.whole_conf_pack)
-                    # Remind it that WE are the master here!
-                    arb.do_not_run()
+                    logger.info('Sending configuration #%s to arbiter: %s',
+                                self.conf.magic_hash, arb.get_name())
+                    is_sent = arb.put_conf(self.conf.whole_conf_pack)
+                    arb.is_sent = is_sent
+                    if not is_sent:
+                        logger.warning('Configuration sending error to arbiter: %s',
+                                       arb.get_name())
+                    else:
+                        arb.active = True
+                        # Remind it that WE are the master here!
+                        arb.do_not_run()
+                        logger.info('Configuration sent to arbiter: %s', arb.get_name())
                 else:
                     # Ok, it already has the conf. I remember that
                     # it does not have to run, I'm still alive!
+                    logger.debug("Do not send configuration")
                     arb.do_not_run()
 
         # We check for confs to be dispatched on alive schedulers. If not dispatched, need
         # dispatch :) and if dispatch on a failed node, remove the association, and need a new
         # dispatch
         for realm in self.realms:
+            # Todo: Spare arbiter fails else...
+            if not hasattr(realm, 'confs'):
+                continue
             for cfg_id in realm.confs:
                 conf_uuid = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
@@ -230,9 +242,9 @@ class Dispatcher:
                         sched.need_conf = True
                         sched.conf = None
 
-        self.check_disptach_other_satellites()
+        self.check_dispatch_other_satellites()
 
-    def check_disptach_other_satellites(self):
+    def check_dispatch_other_satellites(self):
         """
         Check the dispatch in other satellites: reactionner, poller, broker, receiver
 
@@ -301,7 +313,6 @@ class Dispatcher:
                 # If element has a conf, I do not care, it's a good dispatch
                 # If dead: I do not ask it something, it won't respond..
                 if elt.conf is None and elt.reachable:
-                    # print "Ask", elt.get_name() , 'if it got conf'
                     if elt.have_conf():
                         logger.warning("The element %s have a conf and should "
                                        "not have one! I ask it to idle now",
@@ -310,8 +321,6 @@ class Dispatcher:
                         elt.wait_new_conf()
                         # I do not care about order not send or not. If not,
                         # The next loop will resent it
-                    # else:
-                    #    print "No conf"
 
         # I ask satellites which sched_id they manage. If I do not agree, I ask
         # them to remove it
@@ -326,9 +335,11 @@ class Dispatcher:
                 continue
             id_to_delete = []
             for cfg_id in cfg_ids:
-                # DBG print sat_type, ":", satellite.get_name(), "manage cfg id:", cfg_id
                 # Ok, we search for realms that have the conf
                 for realm in self.realms:
+                    # Todo: Spare arbiter fails else...
+                    if not hasattr(realm, 'confs'):
+                        continue
                     if cfg_id in realm.confs:
                         conf_uuid = realm.confs[cfg_id].uuid
                         # Ok we've got the realm, we check its to_satellites_managed_by
@@ -399,6 +410,10 @@ class Dispatcher:
             arbiters_cfg[arb.uuid] = arb.give_satellite_cfg()
 
         for realm in self.realms:
+            # Todo: Spare arbiter fails else...
+            if not hasattr(realm, 'confs'):
+                continue
+
             for cfg in realm.confs.values():
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                     self.prepare_dispatch_other_satellites(sat_type, realm, cfg, arbiters_cfg)
@@ -409,28 +424,38 @@ class Dispatcher:
 
         :return: None
         """
+        nb_conf = 0
+
         for realm in self.realms:
+            # Todo: Spare arbiter fails else...
+            if not hasattr(realm, 'confs'):
+                continue
+
             conf_to_dispatch = [cfg for cfg in realm.confs.values() if not cfg.is_assigned]
 
-            # Now we get in scheds all scheduler of this realm and upper so
-            scheds = self.get_scheduler_ordered_list(realm)
+            # Now we get all schedulers of this realm and upper
+            schedulers = self.get_scheduler_ordered_list(realm)
+
+            # prepare configuration only for alive schedulers
+            schedulers = [s for s in schedulers if s.alive]
+
+            logger.info('[%s] Prepare scheduler dispatching %d/%d configurations',
+                        realm.get_name(), len(conf_to_dispatch), len(schedulers))
+            logger.info('[%s] Dispatching schedulers ordered as: %s',
+                        realm.get_name(), ','.join([s.get_name() for s in schedulers]))
 
             nb_conf = len(conf_to_dispatch)
-            if nb_conf > 0:
-                logger.info('[%s] Prepare dispatching for this realm', realm.get_name())
-                logger.info('[%s] Prepare dispatching %d/%d configurations',
-                            realm.get_name(), nb_conf, len(realm.confs))
-                logger.info('[%s] Dispatching schedulers ordered as: %s',
-                            realm.get_name(), ','.join([s.get_name() for s in scheds]))
+            if nb_conf <= 0:
+                logger.warning("[%s] No available schedulers for dispatching the configuration :(",
+                               realm.get_name())
+                return
 
-            # prepare conf only for alive schedulers
-            scheds = [s for s in scheds if s.alive]
-
-            for conf in conf_to_dispatch:
-                logger.info('[%s] Dispatching configuration %s', realm.get_name(), conf.uuid)
+            for realm_conf in conf_to_dispatch:
+                logger.info('[%s] Preparing configuration #%s (%s)',
+                            realm.get_name(), realm_conf.magic_hash, realm_conf.uuid)
 
                 # If there is no alive schedulers, not good...
-                if len(scheds) == 0:
+                if len(schedulers) == 0:
                     logger.warning('[%s] There are no alive schedulers in this realm!',
                                    realm.get_name())
                     break
@@ -439,86 +464,91 @@ class Dispatcher:
                 # or when there are no more schedulers available
                 while True:
                     try:
-                        sched = scheds.pop()
+                        scheduler = schedulers.pop()
                     except IndexError:  # No more schedulers.. not good, no loop
                         # need_loop = False
-                        # The conf does not need to be dispatch
-                        cfg_id = conf.uuid
+                        # The conf does not need to be dispatched
+                        cfg_id = realm_conf.uuid
                         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                             realm.to_satellites[sat_type][cfg_id] = None
                             realm.to_satellites_need_dispatch[sat_type][cfg_id] = False
                             realm.to_satellites_managed_by[sat_type][cfg_id] = []
                         break
 
-                    logger.info('[%s] Preparing configuration %s for the scheduler %s',
-                                realm.get_name(), conf.uuid, sched.get_name())
-                    if not sched.need_conf:
+                    logger.info('[%s] Preparing configuration for the scheduler %s (%s)',
+                                realm.get_name(), scheduler.get_name(),
+                                'spare' if scheduler.spare else 'master')
+                    if not scheduler.need_conf:
                         logger.info('[%s] The scheduler %s do not need any configuration, sorry',
-                                    realm.get_name(), sched.get_name())
+                                    realm.get_name(), scheduler.get_name())
                         continue
 
                     # We give this configuration a new 'flavor'
-                    conf.push_flavor = random.randint(1, 1000000)
+                    realm_conf.push_flavor = random.randint(1, 1000000)
                     satellites = realm.get_satellites_links_for_scheduler(self.pollers,
                                                                           self.reactionners,
                                                                           self.brokers)
                     conf_package = {
-                        'conf': realm.serialized_confs[conf.uuid],
-                        'override_conf': sched.get_override_configuration(),
-                        'modules': sched.modules,
+                        'conf': realm.serialized_confs[realm_conf.uuid],
+                        'override_conf': scheduler.get_override_configuration(),
+                        # Todo: should be serialized, no?
+                        'modules': scheduler.modules,
                         'satellites': satellites,
-                        'instance_name': sched.scheduler_name,
-                        'push_flavor': conf.push_flavor,
-                        'skip_initial_broks': sched.skip_initial_broks,
+                        'instance_name': scheduler.scheduler_name,
+                        'push_flavor': realm_conf.push_flavor,
+                        'skip_initial_broks': scheduler.skip_initial_broks,
                         'accept_passive_unknown_check_results':
-                            sched.accept_passive_unknown_check_results,
+                            scheduler.accept_passive_unknown_check_results,
                         # local statsd
+                        # Todo: really necessary? To be confirmed ...
                         'statsd_host': self.conf.statsd_host,
                         'statsd_port': self.conf.statsd_port,
                         'statsd_prefix': self.conf.statsd_prefix,
                         'statsd_enabled': self.conf.statsd_enabled,
                     }
 
-                    sched.conf = conf
-                    sched.conf_package = conf_package
-                    sched.push_flavor = conf.push_flavor
-                    sched.need_conf = False
-                    sched.is_sent = False
-                    conf.is_assigned = True
-                    conf.assigned_to = sched
-
                     # We update all data for this scheduler
-                    sched.managed_confs = {conf.uuid: conf.push_flavor}
+                    scheduler.managed_confs = {realm_conf.uuid: realm_conf.push_flavor}
+                    scheduler.conf = realm_conf
+                    scheduler.conf_package = conf_package
+                    scheduler.push_flavor = realm_conf.push_flavor
+                    scheduler.need_conf = False
+                    scheduler.is_sent = False
+                    realm_conf.is_assigned = True
+                    realm_conf.assigned_to = scheduler
+                    logger.debug('[%s] configuration for the scheduler %s: %s / %s',
+                                 realm.get_name(), scheduler.get_name(),
+                                 scheduler.conf.uuid, scheduler.conf.get_name())
 
                     # Now we generate the conf for satellites:
-                    cfg_id = conf.uuid
-                    sat_cfg = sched.give_satellite_cfg()
+                    cfg_id = realm_conf.uuid
+                    sat_cfg = scheduler.give_satellite_cfg()
                     for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                         realm.to_satellites[sat_type][cfg_id] = sat_cfg
                         realm.to_satellites_need_dispatch[sat_type][cfg_id] = True
                         realm.to_satellites_managed_by[sat_type][cfg_id] = []
 
-                    # Special case for receiver because need to send it the hosts list
-                    hnames = [h.get_name() for h in conf.hosts]
+                    # Special case for receiver because we need to send it the hosts list
+                    hnames = [h.get_name() for h in realm_conf.hosts]
                     sat_cfg['hosts'] = hnames
                     realm.to_satellites['receiver'][cfg_id] = sat_cfg
 
-                    # The config is prepared for a scheduler, no need check another scheduler
+                    # The config is prepared for a scheduler, no need to check another scheduler
                     break
 
-        nb_missed = len([cfg for cfg in self.conf.confs.values() if not cfg.is_assigned])
+        nb_missed = len([cfg for cfg in self.conf.parts.values() if not cfg.is_assigned])
         if nb_missed > 0:
-            logger.warning("All schedulers configurations are not dispatched, %d are missing",
-                           nb_missed)
+            logger.warning("All schedulers configurations (%d) are not dispatched, %d are missing",
+                           nb_conf, nb_missed)
         else:
-            logger.info("All schedulers configurations are dispatched :)")
+            logger.info("All schedulers configurations (%d) are dispatched :)", nb_conf)
 
-        # Sched without conf in a dispatch ok are set to no need_conf
+        # Scheduler without configuration in a dispatch are set to no need_conf
         # so they do not raise dispatch where no use
-        for sched in self.schedulers.items.values():
-            if sched.conf is None:
+        for scheduler in self.schedulers.items.values():
+            if scheduler.conf is None:
                 # "so it do not ask anymore for conf"
-                sched.need_conf = False
+                scheduler.need_conf = False
 
     def prepare_dispatch_other_satellites(self, sat_type, realm, cfg, arbiters_cfg):
         """
@@ -528,28 +558,42 @@ class Dispatcher:
         """
 
         if not realm.to_satellites_need_dispatch[sat_type][cfg.uuid]:
+            logger.info("[%s] No satellites dispatch needed for this realm", realm.get_name())
             return
 
-        # make copies of potential_react list for sort
+        # make copies of potential satellites list for sort
         satellites = []
         for sat_id in realm.get_potential_satellites_by_type(sat_type):
             sat = getattr(self, "%ss" % sat_type)[sat_id]
             if sat.alive and sat.reachable:
+                logger.info("[%s] satellite %s is reachable",
+                            realm.get_name(), sat.get_name())
                 satellites.append(sat)
+            else:
+                logger.warning("[%s] satellite %s is not reachable",
+                               realm.get_name(), sat.get_name())
+
+        if not satellites:
+            logger.warning("[%s] no %s satellites available for dispatch",
+                           realm.get_name(), sat_type)
+            return
 
         satellite_string = "[%s] Dispatching %s satellites ordered as: " % (
             realm.get_name(), sat_type)
         for sat in satellites:
-            satellite_string += '%s (spare:%s), ' % (
-                sat.get_name(), str(sat.spare))
+            satellite_string += '%s (spare:%s), ' % (sat.get_name(), str(sat.spare))
         logger.info(satellite_string)
 
         conf_uuid = cfg.uuid
         # Now we dispatch cfg to every one ask for it
         nb_cfg_prepared = 0
         for sat in satellites:
-            if nb_cfg_prepared >= realm.get_nb_of_must_have_satellites(sat_type):
-                continue
+            # Todo: Remove this test, because the number of satellites per type in a realm
+            # do not take care of the spare daemons
+            # if nb_cfg_prepared >= realm.get_nb_of_must_have_satellites(sat_type):
+            #     logger.warning("Already prepared enough satellites: %d / %s",
+            #                    nb_cfg_prepared, sat_type)
+            #     continue
             sat.cfg['schedulers'][conf_uuid] = realm.to_satellites[sat_type][conf_uuid]
             if sat.manage_arbiters:
                 sat.cfg['arbiters'] = arbiters_cfg
@@ -582,34 +626,46 @@ class Dispatcher:
         """
         if self.dispatch_ok:
             return
+
         self.dispatch_ok = True
         for scheduler in self.schedulers:
             if scheduler.is_sent:
                 continue
-            t01 = time.time()
+            start = time.time()
             logger.info('Sending configuration to scheduler %s', scheduler.get_name())
-            is_sent = scheduler.put_conf(scheduler.conf_package)
-            logger.debug("Conf is sent in %d", time.time() - t01)
+            is_sent = False
+            if scheduler.reachable:
+                is_sent = scheduler.put_conf(scheduler.conf_package)
+            else:
+                logger.warning("Scheduler %s is not reachable", scheduler.get_name())
+
+            logger.debug("Conf is sent in %d", time.time() - start)
             if not is_sent:
-                logger.warning('Configuration sending error to scheduler %s', scheduler.get_name())
+                logger.warning('Configuration not sent to scheduler %s', scheduler.get_name())
                 self.dispatch_ok = False
             else:
-                logger.info('Configuration sent to scheduler %s',
-                            scheduler.get_name())
+                logger.info('Configuration sent to scheduler %s (%s)',
+                            scheduler.get_name(), time.time() - start)
                 scheduler.is_sent = True
+
         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
             for satellite in self.satellites:
                 if satellite.get_my_type() == sat_type:
                     if satellite.is_sent:
                         continue
+                    start = time.time()
                     logger.info('Sending configuration to %s %s', sat_type, satellite.get_name())
-                    is_sent = satellite.put_conf(satellite.cfg)
-                    satellite.is_sent = is_sent
-                    if not is_sent:
-                        logger.warning('Configuration sending error to %s %s',
+                    satellite.is_sent = False
+                    if satellite.reachable:
+                        satellite.is_sent = satellite.put_conf(satellite.cfg)
+                    else:
+                        logger.warning("%s %s is not reachable", sat_type, satellite.get_name())
+                    if not satellite.is_sent:
+                        logger.warning('Configuration not sent to %s %s',
                                        sat_type, satellite.get_name())
                         self.dispatch_ok = False
                         continue
                     satellite.active = True
 
-                    logger.info('Configuration sent to %s %s', sat_type, satellite.get_name())
+                    logger.info('Configuration sent to %s %s (%s)',
+                                sat_type, satellite.get_name(), time.time() - start)

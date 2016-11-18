@@ -77,7 +77,7 @@ class ModulesManager(object):
 
         # By default the modules configuration is correct and the
         # warnings and errors lists are empty
-        self.configuration_is_correct = True
+        self.conf_is_correct = True
         self.configuration_warnings = []
         self.configuration_errors = []
 

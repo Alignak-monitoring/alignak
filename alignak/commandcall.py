@@ -58,28 +58,40 @@ from alignak.objects.command import Command
 
 
 class CommandCall(AlignakObject):
-    """This class is use when a service, contact or host define
+    """This class is used when a service, contact or host defines
     a command with args.
+
+    Todo: why not making it be an Item?
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    __metaclass__ = AutoSlots
+    # __metaclass__ = AutoSlots
 
     # __slots__ = ('uuid', 'call', 'command', 'valid', 'args', 'poller_tag',
     #              'reactionner_tag', 'module_type', '__dict__')
     my_type = 'CommandCall'
 
     properties = {
-        'call':            StringProp(),
-        'command':         StringProp(),
-        'poller_tag':      StringProp(default='None'),
-        'reactionner_tag': StringProp(default='None'),
-        'module_type':     StringProp(default='fork'),
-        'valid':           BoolProp(default=False),
-        'args':            ListProp(default=[]),
-        'timeout':         IntegerProp(default=-1),
-        'late_relink_done': BoolProp(default=False),
-        'enable_environment_macros': BoolProp(default=False),
+        'call':
+            StringProp(default=''),
+        'command':
+            StringProp(default=''),
+        'poller_tag':
+            StringProp(default='None'),
+        'reactionner_tag':
+            StringProp(default='None'),
+        'module_type':
+            StringProp(default='fork'),
+        'valid':
+            BoolProp(default=False),
+        'args':
+            ListProp(default=[]),
+        'timeout':
+            IntegerProp(default=-1),
+        'late_relink_done':
+            BoolProp(default=False),
+        'enable_environment_macros':
+            BoolProp(default=False),
     }
 
     def __init__(self, params, parsing=True):
@@ -95,13 +107,17 @@ class CommandCall(AlignakObject):
             self.late_relink_done = False  # To do not relink again and again the same commandcall
             self.valid = self.command is not None
             if self.valid:
+                self.module_type = self.command.module_type
+                self.enable_environment_macros = self.command.enable_environment_macros
+                self.timeout = int(self.command.timeout)
+
+                # -----------------------------
+                # Todo: explain what is it for?
+                # -----------------------------
                 # If the host/service do not give an override poller_tag, take
                 # the one of the command
                 self.poller_tag = params.get('poller_tag', 'None')  # from host/service
                 self.reactionner_tag = params.get('reactionner_tag', 'None')
-                self.module_type = self.command.module_type
-                self.enable_environment_macros = self.command.enable_environment_macros
-                self.timeout = int(self.command.timeout)
                 if self.valid and self.poller_tag == 'None':
                     # from command if not set
                     self.poller_tag = self.command.poller_tag
@@ -114,6 +130,7 @@ class CommandCall(AlignakObject):
             self.command = Command(params['command'], parsing=parsing)
 
     def serialize(self):
+        # Todo: check if necessary! Why not using the generic serialize?
         cls = self.__class__
         # id is not in *_properties
         res = {'uuid': self.uuid}
@@ -132,6 +149,8 @@ class CommandCall(AlignakObject):
         """
 
         # First protect
+        if not self.call:
+            return None, None
         p_call = self.call.replace(r'\!', '___PROTECT_EXCLAMATION___')
         tab = p_call.split('!')
         return tab[0].strip(), [s.replace('___PROTECT_EXCLAMATION___', '!') for s in tab[1:]]

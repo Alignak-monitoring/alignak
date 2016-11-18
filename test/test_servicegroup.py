@@ -50,7 +50,7 @@ class TestServiceGroup(AlignakTest):
     def test_look_for_alias(self):
         """ Services groups alias
 
-        Default configuration has no loading problems ... as of it servicegroups are parsed correctly
+        Default configuration has no loading problems ... as such servicegroups are parsed correctly
         :return: None
         """
         self.print_header()
@@ -71,14 +71,15 @@ class TestServiceGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        
+        self._sched = self.schedulers['scheduler-master'].sched
 
         #  Found a servicegroup named allhosts_and_groups
-        sg = self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("allservices_and_groups")
+        sg = self._sched.servicegroups.find_by_name("allservices_and_groups")
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "allservices_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.servicegroups.get_members_by_name("allservices_and_groups")) == \
-            1
+        assert len(self._sched.servicegroups.get_members_of("allservices_and_groups")) == 1
 
         assert len(sg.get_services()) == 1
 
@@ -92,28 +93,27 @@ class TestServiceGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
         #  Found a servicegroup named allhosts_and_groups
-        sg = self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("allservices_and_groups")
+        sg = self._sched.servicegroups.find_by_name("allservices_and_groups")
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "allservices_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.servicegroups.get_members_by_name(
-                "allservices_and_groups"
-            )) == \
-            1
+        assert len(self._sched.servicegroups.get_members_of("allservices_and_groups")) == 1
 
         assert len(sg.get_services()) == 1
         print("List servicegroup services:")
         for service_id in sg.members:
-            service = self.schedulers['scheduler-master'].sched.services[service_id]
+            print("Service id: %s (%s)" % (service_id, self._sched.services))
+            service = self._sched.services[service_id]
             print("Service: %s" % service)
             assert isinstance(service, Service)
 
             if service.get_name() == 'test_ok_0':
                 assert len(service.get_servicegroups()) == 4
                 for group_id in service.servicegroups:
-                    group = self.schedulers['scheduler-master'].sched.servicegroups[group_id]
+                    group = self._sched.servicegroups[group_id]
                     print("Group: %s" % group)
                     assert group.get_name() in [
                         'ok', 'servicegroup_01', 'servicegroup_02', 'allservices_and_groups'
@@ -136,13 +136,14 @@ class TestServiceGroup(AlignakTest):
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_no_service.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
 
+        self._sched = self.schedulers['scheduler-master'].sched
+
         # Found a servicegroup named void
-        sg = self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("void")
+        sg = self._sched.servicegroups.find_by_name("void")
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "void"
 
-        assert len(self.schedulers['scheduler-master'].sched.servicegroups.get_members_by_name("void")) == \
-            0
+        assert len(self._sched.servicegroups.get_members_of("void")) == 0
 
         print("Services: %s" % sg.get_servicegroup_members())
         assert len(sg.get_servicegroup_members()) == 0
@@ -158,27 +159,24 @@ class TestServiceGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
-        self.nb_servicegroups = len(self.schedulers['scheduler-master'].sched.servicegroups)
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        self.nb_servicegroups = len(self._sched.servicegroups)
 
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_with_space.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        # Two more groups than the default configuration
-        assert len(self.schedulers['scheduler-master'].sched.servicegroups) == self.nb_servicegroups + 2
+        # Two more groups than the former default configuration
+        assert len(self._sched.servicegroups) == self.nb_servicegroups + 2
 
-        assert self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("test_With Spaces").get_name() == \
-            "test_With Spaces"
-        assert self.schedulers['scheduler-master'].sched.servicegroups.get_members_by_name(
-                "test_With Spaces"
-            ) is not \
-            []
+        assert self._sched.servicegroups.find_by_name("test_With Spaces").get_name() == \
+               "test_With Spaces"
+        assert self._sched.servicegroups.get_members_of("test_With Spaces") is not []
 
-        assert self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("test_With another Spaces").get_name() == \
+        assert self._sched.servicegroups.find_by_name("test_With another Spaces").get_name() == \
             "test_With another Spaces"
-        assert self.schedulers['scheduler-master'].sched.servicegroups.get_members_by_name(
-                "test_With another Spaces"
-            ) is not \
-            []
+        assert self._sched.servicegroups.get_members_of("test_With another Spaces") is not []
 
     def test_servicegroups_generated(self):
         """ Test that servicegroups can be built from service definition
@@ -188,16 +186,20 @@ class TestServiceGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroups_generated.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
-        self.nb_servicegroups = len(self.schedulers['scheduler-master'].sched.servicegroups)
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        self.nb_servicegroups = len(self._sched.servicegroups)
 
         sgs = []
         for name in ["MYSVCGP", "MYSVCGP2", "MYSVCGP3", "MYSVCGP4"]:
-            sg = self.schedulers['scheduler-master'].sched.servicegroups.find_by_name(name)
+            sg = self._sched.servicegroups.find_by_name(name)
             assert sg is not None
+            print("SG: %s, members: %s" % (sg, sg.get_members()))
             sgs.append(sg)
 
-        svc3 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("fake host", "fake svc3")
-        svc4 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("fake host", "fake svc4")
+        svc3 = self._sched.services.find_srv_by_name_and_hostname("fake host", "fake svc3")
+        svc4 = self._sched.services.find_srv_by_name_and_hostname("fake host", "fake svc4")
+        print sgs[0].get_members()
         assert svc3.uuid in sgs[0].members
         assert svc3.uuid in sgs[1].members
         assert svc4.uuid in sgs[2].members

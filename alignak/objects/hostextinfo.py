@@ -72,8 +72,9 @@ class HostExtInfo(GenericExtInfo):
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    __metaclass__ = AutoSlots
+    # __metaclass__ = AutoSlots
 
+    name_property = "host_name"  # use for the search by name
     my_type = 'hostextinfo'
 
     # properties defined by configuration
@@ -128,7 +129,6 @@ class HostsExtInfo(Items):
     into Hosts if necessary
 
     """
-    name_property = "host_name"  # use for the search by name
     inner_class = HostExtInfo  # use for know what is in items
 
     def merge(self, hosts):

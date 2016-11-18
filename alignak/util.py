@@ -408,18 +408,21 @@ def to_split(val, split_on_coma=True):
     >>> to_split('')
     []
     """
-    if isinstance(val, list):
+    if isinstance(val, (list, set, tuple)):
         return val
     if not split_on_coma:
         return [val]
     val = val.split(',')
     if val == ['']:
         val = []
-    return val
+    new_val = []
+    for item in val:
+        new_val.append(item.strip())
+    return new_val
 
 
 def list_split(val, split_on_coma=True):
-    """Try to split a each member of a list with comma separator.
+    """Try to split each member of a list with comma separator.
     If we don't have to split just return val
 
     :param val: value to split
@@ -443,12 +446,15 @@ def list_split(val, split_on_coma=True):
         return val
     new_val = []
     for subval in val:
-        # This happens when re-seriliazing
+        # This happens when re-serializing
         # TODO: Do not pythonize on re-serialization
         if isinstance(subval, list):
             continue
         new_val.extend(subval.split(','))
-    return new_val
+    new_new_val = []
+    for item in new_val:
+        new_new_val.append(item.strip())
+    return new_new_val
 
 
 def to_best_int_float(val):
@@ -632,13 +638,14 @@ def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=W0613
 def get_obj_name(obj):
     """Get object name (call get_name) if not a string
 
-    :param obj: obj we wan the name
+    :param obj: obj we want the name
     :type obj: object
     :return: object name
     :rtype: str
     """
     # Maybe we do not have a real object but already a string. If so
     # return the string
+    # Todo: unuseful function ... now we have uuid and not objects!!!
     if isinstance(obj, basestring):
         return obj
     return obj.get_name()
@@ -1267,32 +1274,51 @@ def is_complex_expr(expr):
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 
+    Arbiter only:
+            "-a", "--arbiter": Monitored configuration file(s),
+            (multiple -a can be used, and they will be concatenated to make a global configuration
+            file)
+            "-V", "--verify-config": Verify configuration file(s) and exit
+            "-n", "--config-name": Set the name of the arbiter to pick in the configuration files.
+            This allows an arbiter to find its own configuration in the whole Alignak configuration
+            Using this parameter is mandatory when several arbiters are existing in the
+            configuration to determine which one is the master/spare. The spare arbiter must be
+            launched with this parameter!
+
+    All daemons:
+        '-c', '--config': Daemon configuration file (ini file)
+        '-d', '--daemon': Run as a daemon
+        '-r', '--replace': Replace previous running daemon
+        '-f', '--debugfile': File to dump debug logs
+
+
     :param arbiter: Do we parse args for arbiter?
     :type arbiter: bool
     :return: args
-
-    TODO : Remove, profile, name, migrate, analyse opt from code
     """
-    parser = argparse.ArgumentParser(version="%(prog)s " + VERSION)
+    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
     if arbiter:
         parser.add_argument('-a', '--arbiter', action='append', required=True,
-                            dest="monitoring_files",
-                            help='Monitored configuration file(s),'
-                                 'multiple -a can be used, and they will be concatenated. ')
-        parser.add_argument("-V", "--verify-config", dest="verify_only", action="store_true",
-                            help="Verify config file and exit")
-        parser.add_argument("-n", "--config-name", dest="config_name",
+                            dest='monitoring_files',
+                            help='Monitored configuration file(s), '
+                                 '(multiple -a can be used, and they will be concatenated '
+                                 'to make a global configuration file)')
+        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
+                            help='Verify configuration file(s) and exit')
+        parser.add_argument('-n', '--arbiter-name', dest='arbiter_name',
                             default='arbiter-master',
-                            help="Use name of arbiter defined in the configuration files "
-                                 "(default arbiter-master)")
+                            help='Set the name of the arbiter to pick in the configuration files '
+                                 'For a spare arbiter, this parameter must contain its name!')
 
-    parser.add_argument('-c', '--config', dest="config_file",
+    parser.add_argument('-s', '--spare', dest='config_file',
+                        help='Daemon is a spare daemon')
+    parser.add_argument('-c', '--config', dest='config_file',
                         help='Daemon configuration file')
-    parser.add_argument('-d', '--daemon', dest="is_daemon", action='store_true',
+    parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
                         help='Run as a daemon')
-    parser.add_argument('-r', '--replace', dest="do_replace", action='store_true',
+    parser.add_argument('-r', '--replace', dest='do_replace', action='store_true',
                         help='Replace previous running daemon')
-    parser.add_argument('--debugfile', dest="debug_file",
-                        help="File to dump debug logs")
+    parser.add_argument('-f', '--debugfile', dest='debug_file',
+                        help='File to dump debug logs')
 
     return parser.parse_args()

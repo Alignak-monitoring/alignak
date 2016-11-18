@@ -56,6 +56,7 @@ class SchedulerLink(SatelliteLink):
     """
     Class to manage the scheduler information
     """
+    name_property = "scheduler_name"
 
     # Ok we lie a little here because we are a mere link in fact
     my_type = 'scheduler'
@@ -140,5 +141,4 @@ class SchedulerLink(SatelliteLink):
 class SchedulerLinks(SatelliteLinks):
     """Please Add a Docstring to describe the class here"""
 
-    name_property = "scheduler_name"
     inner_class = SchedulerLink
