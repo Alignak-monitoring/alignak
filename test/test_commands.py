@@ -59,6 +59,78 @@ class TestCommand(AlignakTest):
     This class tests the commands
     """
 
+    def setUp(self):
+        self.setup_with_file('cfg/cfg_commands.cfg')
+        assert self.conf_is_correct
+
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+    def test_css_in_commands(self):
+        """ Test CSS and HTML in command """
+        self.print_header()
+
+        # The test is implicit because the configuration got loaded!
+
+    def test_semi_colon_in_commands(self):
+        """Test semi-colon in commands """
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        # Get the hosts and services"
+        host = self._sched.hosts.find_by_name("test_host_0")
+        assert host is not None
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "svc_semi_colon")
+        assert svc is not None
+
+        svc.get_event_handlers(self._sched.hosts, self._sched.macromodulations,
+                               self._sched.timeperiods)
+        assert len(svc.actions) == 1
+        for action in svc.actions:
+            assert action.is_a == 'eventhandler'
+            assert action.command == '/test_eventhandler.pl sudo -s pkill toto ; cd /my/path && ./exec'
+
+    def test_spaces_in_commands(self):
+        """Test spaces in commands """
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        # Get the hosts and services"
+        host = self._sched.hosts.find_by_name("test_host_0")
+        assert host is not None
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "svc_spaces")
+        assert svc is not None
+
+        # Schedule checks
+        svc.schedule(self._sched.hosts, self._sched.services, self._sched.timeperiods,
+                     self._sched.macromodulations, self._sched.checkmodulations, self._sched.checks)
+        assert len(svc.actions) == 1
+        for action in svc.actions:
+            assert action.is_a == 'check'
+            assert action.command == '/check_snmp_int.pl -H 127.0.0.1 -C public ' \
+                                     '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
+                                     'Module - Port 2          " ' \
+                                     '-r -f -k -Y -B -w "90000,90000" -c "120000,120000"'
+            # Run checks now
+            action.t_to_go = 0
+
+        # the scheduler need to get this new checks in its own queues
+        self._sched.get_new_actions()
+        untagged_checks = self._sched.get_to_run_checks(True, False, poller_tags=['None'])
+        assert len(untagged_checks) == 1
+        for check in untagged_checks:
+            assert check.is_a == 'check'
+            assert check.command == '/check_snmp_int.pl -H 127.0.0.1 -C public ' \
+                                    '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
+                                    'Module - Port 2          " ' \
+                                    '-r -f -k -Y -B -w "90000,90000" -c "120000,120000"'
+
     def test_command_no_parameters(self):
         """ Test command without parameters
 

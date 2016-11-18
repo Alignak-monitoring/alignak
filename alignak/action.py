@@ -339,15 +339,15 @@ class ActionBase(AlignakObject):
         return new_i
 
     def got_shell_characters(self):
-        """Check if the command_attribute has shell characters
+        """Check if the command_attribute (command line) has shell characters
         Shell characters are : '!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
                                '|', '{', '}', ';', '<', '>', '?', '`'
 
         :return: True if one shell character is found, False otherwise
         :rtype: bool
         """
-        for command in self.command:
-            if command in SHELLCHARS:
+        for character in SHELLCHARS:
+            if character in self.command:
                 return True
         return False
 
@@ -451,7 +451,7 @@ if os.name != 'nt':
                     pass
 
 
-else:
+else:  # pragma: no cover, not currently tested with Windows...
 
     import ctypes  # pylint: disable=C0411,C0413
 
