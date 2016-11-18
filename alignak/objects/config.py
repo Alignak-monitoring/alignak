@@ -1559,15 +1559,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     line = prop
                 unmanaged.append(line)
         if len(unmanaged) != 0:
-            mailing_list_uri = "https://lists.sourceforge.net/lists/listinfo/alignak-devel"
             logger.warning("The following parameter(s) are not currently managed.")
 
             for line in unmanaged:
                 logger.info(line)
 
-            logger.warning("Unmanaged configuration statement, do you really need it?"
-                           "Ask for it on the developer mailing list %s or submit a pull "
-                           "request on the Alignak github ", mailing_list_uri)
+            logger.warning("Unmanaged configuration statements, do you really need it?"
+                           "Create an issue on the Alignak repository or submit a pull "
+                           "request: http://www.github.com/Alignak-monitoring/alignak")
 
     def override_properties(self):
         """Wrapper for calling override_properties method of services attribute

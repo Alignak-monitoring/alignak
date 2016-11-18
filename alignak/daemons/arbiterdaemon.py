@@ -129,6 +129,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Generic function to add objects to queues.
         Only manage Broks and ExternalCommand
 
+        #Todo: does the arbiter still needs to manage external commands
+
         :param b: objects to add
         :type b: alignak.brok.Brok | alignak.external_command.ExternalCommand
         :return: None
