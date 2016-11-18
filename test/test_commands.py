@@ -70,6 +70,8 @@ class TestCommand(AlignakTest):
         """ Test CSS and HTML in command """
         self.print_header()
 
+        # The test is implicit because the configuration got loaded!
+
     def test_semi_colon_in_commands(self):
         """Test semi-colon in commands """
         # Our scheduler
