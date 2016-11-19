@@ -136,7 +136,9 @@ class ActionBase(AlignakObject):
     def __init__(self, params=None, parsing=True):
         super(ActionBase, self).__init__(params, parsing=parsing)
         self.creation_time = time.time()
+        self.exit_status = 3
         self.fill_default()
+        self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
@@ -184,7 +186,10 @@ class ActionBase(AlignakObject):
         self.stdoutdata = ''
         self.stderrdata = ''
 
-        logger.debug("Launch command: %s", self.command)
+        logger.debug("Launch command: '%s'", self.command)
+        if self.log_actions:
+            logger.warning("Launch command: '%s'", self.command)
+
         return self.execute__()  # OS specific part
 
     def get_outputs(self, out, max_plugins_output_length):
@@ -208,6 +213,7 @@ class ActionBase(AlignakObject):
 
         # First line before | is output, strip it
         self.output = elts_line1[0].strip().replace('___PROTECT_PIPE___', '|')
+        self.output = self.output.decode('utf8', 'ignore')
 
         # Init perfdata as empty
         self.perf_data = ''
@@ -236,7 +242,11 @@ class ActionBase(AlignakObject):
         # Get sure the performance data are stripped
         self.perf_data = self.perf_data.strip()
 
-        logger.debug("Command result for '%s': %s", self.command, self.output)
+        logger.debug("Command result for '%s': %d, %s",
+                     self.command, self.exit_status, self.output)
+        if self.log_actions:
+            logger.warning("Check result for '%s': %d, %s",
+                           self.command, self.exit_status, self.output)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
@@ -253,7 +263,8 @@ class ActionBase(AlignakObject):
 
         _, _, child_utime, child_stime, _ = os.times()
         if self.process.poll() is None:
-            self.wait_time = min(self.wait_time * 2, 0.1)
+            # polling every 1/2 s ... for a timeout in seconds, this is enough
+            self.wait_time = min(self.wait_time * 2, 0.5)
             now = time.time()
 
             # If the fcntl is available (unix) we try to read in a
@@ -274,6 +285,9 @@ class ActionBase(AlignakObject):
                 _, _, n_child_utime, n_child_stime, _ = os.times()
                 self.u_time = n_child_utime - child_utime
                 self.s_time = n_child_stime - child_stime
+                if self.log_actions:
+                    logger.warning("Check for '%s' exited on timeout (%d s)",
+                                   self.command, self.timeout)
                 return
             return
 
@@ -289,6 +303,9 @@ class ActionBase(AlignakObject):
             self.stderrdata += no_block_read(self.process.stderr)
 
         self.exit_status = self.process.returncode
+        if self.log_actions:
+            logger.warning("Check for '%s' exited with return code %d",
+                           self.command, self.exit_status)
 
         # we should not keep the process now
         del self.process

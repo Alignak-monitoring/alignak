@@ -43,9 +43,6 @@ class LaunchDaemons(AlignakTest):
             print("Problem on terminate and wait subproc %s: %s" % (name, err))
 
     def setUp(self):
-        # Set environment variable to ask code Coverage collection
-        os.environ['COVERAGE_PROCESS_START'] = '.coveragerc'
-
         self.procs = {}
 
     def tearDown(self):
