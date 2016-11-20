@@ -52,8 +52,6 @@ to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
 
-import sys
-
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
 
@@ -64,10 +62,6 @@ def main():
     :return: None
     """
     args = parse_daemon_args(True)
-
-    if not args.monitoring_files:
-        print "Requires at least one monitoring configuration file (option -a/--arbiter)"
-        sys.exit(2)
 
     # Protect for windows multiprocessing that will RELAUNCH all
     while True:
