@@ -79,17 +79,6 @@ class EventHandler(Action):
         super(EventHandler, self).__init__(params, parsing=parsing)
         self.t_to_go = time.time()
 
-    def copy_shell(self):
-        """Get a copy o this event handler with minimal values (default, id, is snapshot)
-
-        :return: new event handler
-        :rtype: alignak.eventhandler.EventHandler
-        """
-        # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(EventHandler({'command': '',
-                                               'uuid': self.uuid,
-                                               'is_snapshot': self.is_snapshot}))
-
     def get_return_from(self, e_handler):
         """Setter of the following attributes::
 

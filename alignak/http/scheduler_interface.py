@@ -53,7 +53,6 @@ class SchedulerInterface(GenericInterface):
         :return: serialized check/action list
         :rtype: str
         """
-        # print "We ask us checks"
         if poller_tags is None:
             poller_tags = ['None']
         if reactionner_tags is None:
@@ -64,7 +63,6 @@ class SchedulerInterface(GenericInterface):
         do_actions = (do_actions == 'True')
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
                                                worker_name, module_types)
-        # print "Sending %d checks" % len(res)
         self.app.sched.nb_checks_send += len(res)
 
         return serialize(res, True)

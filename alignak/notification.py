@@ -111,15 +111,6 @@ class Notification(Action):  # pylint: disable=R0902
         'SERVICENOTIFICATIONID':    'uuid'
     }
 
-    def copy_shell(self):
-        """Get a copy o this notification with minimal values (default + id)
-
-        :return: new notification
-        :rtype: alignak.notification.Notification
-        """
-        # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Notification({'uuid': self.uuid}))
-
     def is_launchable(self, timestamp):
         """Check if this notification can be launched base on time
 

@@ -702,19 +702,19 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # Ok, con is unknown, so we create it
             # Or maybe is the connection lost, we recreate it
             except (HTTPEXCEPTIONS, KeyError), exp:
-                logger.debug('get_new_actions exception:: %s,%s ', type(exp), str(exp))
+                logger.exception('get_new_actions HTTP exception:: %s', exp)
                 self.pynag_con_init(sched_id)
             # scheduler must not be initialized
             # or scheduler must not have checks
             except AttributeError, exp:
-                logger.debug('get_new_actions exception:: %s,%s ', type(exp), str(exp))
+                logger.exception('get_new_actions attribute exception:: %s', exp)
             # Bad data received
             except AlignakClassLookupException as exp:
                 logger.error('Cannot un-serialize actions received: %s', exp)
             # What the F**k? We do not know what happened,
             # log the error message if possible.
             except Exception, exp:
-                logger.error("A satellite raised an unknown exception: %s (%s)", exp, type(exp))
+                logger.exception('A satellite raised an unknown exception:: %s', exp)
                 raise
 
     def get_returns_queue_len(self):

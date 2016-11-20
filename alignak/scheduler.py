@@ -843,11 +843,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     if chk.status == 'scheduled' and chk.is_launchable(now) and not chk.internal:
                         chk.status = 'inpoller'
                         chk.worker = worker_name
-                        # We do not send c, because it is a link (c.ref) to
-                        # host/service and poller do not need it. It only
-                        # need a shell with id, command and defaults
-                        # parameters. It's the goal of copy_shell
-                        res.append(chk.copy_shell())
+                        res.append(chk)
 
         # If reactionner want to notify too
         if do_actions:
@@ -872,8 +868,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         # This is for child notifications and eventhandlers
                         act.status = 'inpoller'
                         act.worker = worker_name
-                        new_a = act.copy_shell()
-                        res.append(new_a)
+                        res.append(act)
         return res
 
     def put_results(self, action):
@@ -1864,23 +1859,25 @@ class Scheduler(object):  # pylint: disable=R0902
         worker_names = {}
         now = int(time.time())
         for chk in self.checks.values():
-            time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
-            if time_to_orphanage:
-                if chk.status == 'inpoller' and chk.t_to_go < now - time_to_orphanage:
-                    chk.status = 'scheduled'
-                    if chk.worker not in worker_names:
-                        worker_names[chk.worker] = 1
-                        continue
-                    worker_names[chk.worker] += 1
+            if chk.status == 'inpoller':
+                time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
+                if time_to_orphanage:
+                    if chk.t_to_go < now - time_to_orphanage:
+                        chk.status = 'scheduled'
+                        if chk.worker not in worker_names:
+                            worker_names[chk.worker] = 1
+                            continue
+                        worker_names[chk.worker] += 1
         for act in self.actions.values():
-            time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
-            if time_to_orphanage:
-                if act.status == 'inpoller' and act.t_to_go < now - time_to_orphanage:
-                    act.status = 'scheduled'
-                    if act.worker not in worker_names:
-                        worker_names[act.worker] = 1
-                        continue
-                    worker_names[act.worker] += 1
+            if act.status == 'inpoller':
+                time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
+                if time_to_orphanage:
+                    if act.t_to_go < now - time_to_orphanage:
+                        act.status = 'scheduled'
+                        if act.worker not in worker_names:
+                            worker_names[act.worker] = 1
+                            continue
+                        worker_names[act.worker] += 1
 
         for w_id in worker_names:
             logger.warning("%d actions never came back for the satellite '%s'."
