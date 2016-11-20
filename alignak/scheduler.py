@@ -2158,6 +2158,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # Do recurrent works like schedule, consume
             # delete_zombie_checks
+            _t1 = time.time()
             for i in self.recurrent_works:
                 (name, fun, nb_ticks) = self.recurrent_works[i]
                 # A 0 in the tick will just disable it
@@ -2167,6 +2168,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         _t0 = time.time()
                         fun()
                         statsmgr.incr('loop.%s' % name, time.time() - _t0)
+            statsmgr.incr('complete_loop', time.time() - _t1)
 
             # DBG: push actions to passives?
             self.push_actions_to_passives_satellites()
