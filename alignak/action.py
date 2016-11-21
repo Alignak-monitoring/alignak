@@ -136,7 +136,6 @@ class ActionBase(AlignakObject):
     def __init__(self, params=None, parsing=True):
         super(ActionBase, self).__init__(params, parsing=parsing)
         self.creation_time = time.time()
-        self.exit_status = 3
         self.fill_default()
         self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
 
