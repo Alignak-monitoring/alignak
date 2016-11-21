@@ -70,10 +70,10 @@ class ArbiterInterface(GenericInterface):
 
         :return: None
         """
-        # If I'm the master, ignore the command
+        # If I'm the master, ignore the command and raise a log
         if self.app.is_master:
-            logger.debug("Received message to not run. "
-                         "I am the Master, ignore and continue to run.")
+            logger.warning("Received message to not run. "
+                           "I am the Master, ignore and continue to run.")
         # Else, I'm just a spare, so I listen to my master
         else:
             logger.debug("Received message to not run. I am the spare, stopping.")
@@ -163,14 +163,14 @@ class ArbiterInterface(GenericInterface):
                         if not hasattr(daemon, prop):
                             continue
                         val = getattr(daemon, prop)
-                        if prop == "realm":
+                        if prop in ["realms", "conf", "con", "tags"]:
                             continue
                         # give a try to a json able object
                         try:
                             json.dumps(val)
                             env[prop] = val
-                        except TypeError, exp:
-                            logger.debug('%s', exp)
+                        except TypeError as exp:
+                            logger.error('%s: %s', prop, str(exp))
                 lst.append(env)
         return res
 

@@ -2661,11 +2661,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                          "resultmodulations",
                          "businessimpactmodulations",
                          "escalations",
+                         "arbiters",
+                         "brokers",
+                         "pollers",
+                         "reactionners",
+                         "receivers",
                          "schedulers",
                          "realms",
                          ):
             try:
                 objs = [jsonify_r(i) for i in getattr(self, category)]
+            except TypeError:
+                logger.warning("Dumping configuration, '%s' not present in the configuration",
+                               category)
+                continue
             except AttributeError:
                 logger.warning("Dumping configuration, '%s' not present in the configuration",
                                category)

@@ -444,7 +444,7 @@ class DaemonsStartTest(AlignakTest):
             for daemon in daemons:
                 print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
                 assert daemon['alive']
-                assert not ('realm' in daemon)
+                assert not ('realms' in daemon)
                 assert 'realm_name' in daemon
 
         print("Testing get_running_id")
