@@ -162,15 +162,15 @@ class ArbiterInterface(GenericInterface):
                     for prop in props:
                         if not hasattr(daemon, prop):
                             continue
-                        val = getattr(daemon, prop)
                         if prop in ["realms", "conf", "con", "tags"]:
                             continue
+                        val = getattr(daemon, prop)
                         # give a try to a json able object
                         try:
                             json.dumps(val)
                             env[prop] = val
                         except TypeError as exp:
-                            logger.error('%s: %s', prop, str(exp))
+                            logger.warning('get_all_states, %s: %s', prop, str(exp))
                 lst.append(env)
         return res
 
