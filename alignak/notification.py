@@ -188,5 +188,7 @@ class Notification(Action):  # pylint: disable=R0902
         res = super(Notification, self).serialize()
 
         if res['command_call'] is not None:
-            res['command_call'] = res['command_call'].serialize()
+            if not isinstance(res['command_call'], str) and \
+                    not isinstance(res['command_call'], dict):
+                res['command_call'] = res['command_call'].serialize()
         return res
