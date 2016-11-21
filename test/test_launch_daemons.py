@@ -20,6 +20,7 @@
 #
 
 import os
+import sys
 import time
 import signal
 import json
@@ -451,7 +452,10 @@ class DaemonsStartTest(AlignakTest):
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
-            assert raw_data.json() == 'DEBUG'
+            if sys.version_info < (2, 7):
+                assert raw_data.json() == 'UNKNOWN' # Cannot get log level with python 2.6
+            else:
+                assert raw_data.json() == 'DEBUG'
 
         print("Testing get_all_states")
         raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
