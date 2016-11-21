@@ -186,20 +186,26 @@ class TestLaunchDaemonsRealms(AlignakTest):
         expected_logs = {
             'poller': [
                 "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
+                # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
+                # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
+                # Check warning
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
+                # Check critical
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
+                # Check timeout
+                "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
@@ -239,16 +245,40 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
             ],
             'scheduler': [
+                # Internal host check
+                # "[alignak.objects.schedulingitem] Set host localhost as UP (internal check)",
+                # "[alignak.objects.schedulingitem] Got check result: 0 for 'localhost'",
                 "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-all-00/dummy_timeout'), check status code: 2, execution time: 5 seconds"
+                # Timed out check
+                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-all-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
+                # Check ok
+                "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-all-00/dummy_ok'",
+                # Check warning
+                "[alignak.objects.schedulingitem] Got check result: 1 for 'alignak-all-00/dummy_warning'",
+                # Check critical
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-all-00/dummy_critical'",
+                # Check unknown
+                "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-all-00/dummy_unknown'",
+                # Check time
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-all-00/dummy_timeout'",
             ],
             'scheduler-north': [
                 "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-north-00/dummy_timeout'), check status code: 2, execution time: 5 seconds"
+                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-north-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
+                "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-north-00/dummy_ok'",
+                "[alignak.objects.schedulingitem] Got check result: 1 for 'alignak-north-00/dummy_warning'",
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_critical'",
+                "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-north-00/dummy_unknown'",
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_timeout'",
             ],
             'scheduler-south': [
                 "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-south-00/dummy_timeout'), check status code: 2, execution time: 5 seconds"
+                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-south-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
+                "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-south-00/dummy_ok'",
+                "[alignak.objects.schedulingitem] Got check result: 1 for 'alignak-south-00/dummy_warning'",
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_critical'",
+                "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-south-00/dummy_unknown'",
+                "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_timeout'",
             ]
         }
         logs = {}

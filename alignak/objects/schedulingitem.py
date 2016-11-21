@@ -1547,6 +1547,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         ok_up = self.__class__.ok_up  # OK for service, UP for host
 
         # ============ MANAGE THE CHECK ============ #
+        if 'TEST_LOG_ACTIONS' in os.environ:
+            logger.warning("Got check result: %d for '%s'",
+                           chk.exit_status, self.get_full_name())
 
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
