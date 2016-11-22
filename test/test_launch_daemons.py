@@ -532,7 +532,8 @@ class DaemonsStartTest(AlignakTest):
             for line in iter(proc.stderr.readline, b''):
                 print("*** " + line.rstrip())
             # The log contain some DEBUG log
-            assert debug_log
+            if sys.version_info >= (2, 7):
+                assert debug_log # Cannot set/get log level with python 2.6
             # The log do not contain any ERROR log
             assert not error_log
 
