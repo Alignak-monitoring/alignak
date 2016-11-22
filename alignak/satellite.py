@@ -897,6 +897,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             else:
                 name = 'Unnamed satellite'
             self.name = name
+            # Set my own process title
+            self.set_proctitle(self.name)
 
             # local statsd
             self.statsd_host = g_conf['statsd_host']

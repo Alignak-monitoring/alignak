@@ -45,9 +45,9 @@ Previously some of those variables were linked to a specific class which made no
 """
 from collections import namedtuple
 try:
-    from setproctitle import setproctitle  # pylint: disable=W0611
-except ImportError as err:
-    def setproctitle(title):  # pylint: disable=W0613
+    from setproctitle import setproctitle  # pylint: disable=unused-import
+except ImportError as err:  # pragma: no cover, setproctitle is in the requirements.txt
+    def setproctitle(title):  # pylint: disable=unused-argument
         """
         Return name
         :param title: name of process

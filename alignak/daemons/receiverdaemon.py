@@ -210,6 +210,8 @@ class Receiver(Satellite):
             else:
                 name = 'Unnamed receiver'
             self.name = name
+            # Set my own process title
+            self.set_proctitle(self.name)
             # local statsd
             self.statsd_host = conf['global']['statsd_host']
             self.statsd_port = conf['global']['statsd_port']

@@ -460,6 +460,8 @@ class Broker(BaseSatellite):
             else:
                 name = 'Unnamed broker'
             self.name = name
+            # Set my own process title
+            self.set_proctitle(self.name)
             # local statsd
             self.statsd_host = g_conf['statsd_host']
             self.statsd_port = g_conf['statsd_port']
