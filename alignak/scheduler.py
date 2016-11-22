@@ -1509,7 +1509,7 @@ class Scheduler(object):  # pylint: disable=R0902
             comm = self.contacts.find_by_name(cname)
             # Maybe the contact is gone. Skip it
             if comm is not None:
-                new_notified_contacts.add(comm)
+                new_notified_contacts.add(comm.uuid)
         item.notified_contacts = new_notified_contacts
 
     def fill_initial_broks(self, bname, with_logs=False):
