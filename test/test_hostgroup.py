@@ -46,6 +46,58 @@ class TestHostGroup(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
 
+    def test_multiple_hostgroup_definition(self):
+        """
+        No error when the same group is defined twice in an host/service or
+        when a host/service is defined twice in a group
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/hostgroup/multiple_hostgroup.cfg')
+        assert self.schedulers['scheduler-master'].conf.conf_is_correct
+
+        print "Get the hosts and services"
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("will crash")
+        assert host is not None
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "will crash", "Crash")
+        assert svc is not None
+
+        grp = self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("hg-sample")
+        assert grp is not None
+        assert host.uuid in grp.members
+
+        grp = self.schedulers['scheduler-master'].sched.servicegroups.find_by_name("Crashed")
+        assert grp is not None
+        assert svc.uuid in grp.members
+
+    def test_multiple_not_hostgroup_definition(self):
+        """
+        No error when the same group is defined twice in an host/service
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/hostgroup/multiple_not_hostgroup.cfg')
+        assert self.schedulers['scheduler-master'].conf.conf_is_correct
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "hst_in_BIG", "THE_SERVICE")
+        assert svc is not None
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "hst_in_IncludeLast", "THE_SERVICE")
+        assert svc is not None
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "hst_in_NotOne", "THE_SERVICE")
+        # Not present!
+        assert svc is None
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "hst_in_NotTwo", "THE_SERVICE")
+        # Not present!
+        assert svc is None
+
     def test_bad_hostgroup(self):
         """ Test bad hostgroups in the configuration
         :return: None
@@ -57,10 +109,8 @@ class TestHostGroup(AlignakTest):
         # Configuration is not ok
         assert self.conf_is_correct == False
 
-        self.show_configuration_logs()
-
-        # 3 error messages, bad hostgroup member
-        assert len(self.configuration_errors) == 3
+        # 5 error messages, bad hostgroup member
+        assert len(self.configuration_errors) == 5
         # No warning messages
         assert len(self.configuration_warnings) == 0
         # Error is an unknown member in a group (\ escape the [ and ' ...)
@@ -68,8 +118,15 @@ class TestHostGroup(AlignakTest):
             "\[hostgroup::allhosts_bad\] as hostgroup, got unknown member \'BAD_HOST\'"
         )
         self.assert_any_cfg_log_match(
-            "Configuration in hostgroup::allhosts_bad is incorrect; from: "\
+            "Configuration in hostgroup::allhosts_bad is incorrect; from: "
             "cfg/hostgroup/hostgroups_bad_conf.cfg:1"
+        )
+        self.assert_any_cfg_log_match(
+            "the hostgroup allhosts_bad_realm got an unknown realm \'Unknown\'"
+        )
+        self.assert_any_cfg_log_match(
+            "Configuration in hostgroup::allhosts_bad_realm is incorrect; from: "
+            "cfg/hostgroup/hostgroups_bad_conf.cfg:7"
         )
         self.assert_any_cfg_log_match(
             "hostgroups configuration is incorrect!"
