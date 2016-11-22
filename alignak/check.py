@@ -71,17 +71,28 @@ class Check(Action):  # pylint: disable=R0902
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':             StringProp(default='check'),
-        'state':            IntegerProp(default=0),
-        'long_output':      StringProp(default=''),
-        'depend_on':        ListProp(default=[]),
-        'depend_on_me':     ListProp(default=[], split_on_coma=False),
-        'perf_data':        StringProp(default=''),
-        'check_type':       IntegerProp(default=0),
-        'poller_tag':       StringProp(default='None'),
-        'internal':         BoolProp(default=False),
-        'from_trigger':     BoolProp(default=False),
-        'dependency_check': BoolProp(default=False),
+        'is_a':
+            StringProp(default='check'),
+        'state':
+            IntegerProp(default=0),
+        'long_output':
+            StringProp(default=''),
+        'depend_on':
+            ListProp(default=[]),
+        'depend_on_me':
+            ListProp(default=[], split_on_coma=False),
+        'perf_data':
+            StringProp(default=''),
+        'check_type':
+            IntegerProp(default=0),
+        'poller_tag':
+            StringProp(default='None'),
+        'internal':
+            BoolProp(default=False),
+        'from_trigger':
+            BoolProp(default=False),
+        'dependency_check':
+            BoolProp(default=False),
     })
 
     def get_return_from(self, check):

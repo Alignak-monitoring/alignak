@@ -68,11 +68,16 @@ class EventHandler(Action):
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':           StringProp(default='eventhandler'),
-        'long_output':    StringProp(default=''),
-        'perf_data':      StringProp(default=''),
-        'sched_id':       IntegerProp(default=0),
-        'is_snapshot':    BoolProp(default=False),
+        'is_a':
+            StringProp(default='eventhandler'),
+        'long_output':
+            StringProp(default=''),
+        'perf_data':
+            StringProp(default=''),
+        'sched_id':
+            IntegerProp(default=0),
+        'is_snapshot':
+            BoolProp(default=False),
     })
 
     def __init__(self, params=None, parsing=True):

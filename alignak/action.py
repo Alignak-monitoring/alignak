@@ -112,32 +112,58 @@ class ActionBase(AlignakObject):
     process = None
 
     properties = {
-        'is_a':             StringProp(default=''),
-        'type':             StringProp(default=''),
-        'creation_time':       FloatProp(default=0.0),
-        '_in_timeout':      BoolProp(default=False),
-        'status':           StringProp(default='scheduled'),
-        'exit_status':      IntegerProp(default=3),
-        'output':           StringProp(default='', fill_brok=['full_status']),
-        't_to_go':          FloatProp(default=0.0),
-        'check_time':       IntegerProp(default=0),
-        'execution_time':   FloatProp(default=0.0),
-        'u_time':           FloatProp(default=0.0),
-        's_time':           FloatProp(default=0.0),
-        'reactionner_tag':  StringProp(default='None'),
-        'env':              DictProp(default={}),
-        'module_type':      StringProp(default='fork', fill_brok=['full_status']),
-        'worker':           StringProp(default='none'),
-        'command':          StringProp(),
-        'timeout':          IntegerProp(default=10),
-        'ref':              StringProp(default=''),
+        'is_a':
+            StringProp(default=''),
+        'type':
+            StringProp(default=''),
+        'creation_time':
+            FloatProp(default=0.0),
+        '_in_timeout':
+            BoolProp(default=False),
+        'status':
+            StringProp(default='scheduled'),
+        'exit_status':
+            IntegerProp(default=3),
+        'output':
+            StringProp(default='', fill_brok=['full_status']),
+        't_to_go':
+            FloatProp(default=0.0),
+        'check_time':
+            IntegerProp(default=0),
+        'execution_time':
+            FloatProp(default=0.0),
+        'u_time':
+            FloatProp(default=0.0),
+        's_time':
+            FloatProp(default=0.0),
+        'reactionner_tag':
+            StringProp(default='None'),
+        'env':
+            DictProp(default={}),
+        'module_type':
+            StringProp(default='fork', fill_brok=['full_status']),
+        'worker':
+            StringProp(default='none'),
+        'command':
+            StringProp(),
+        'timeout':
+            IntegerProp(default=10),
+        'ref':
+            StringProp(default=''),
     }
 
     def __init__(self, params=None, parsing=True):
         super(ActionBase, self).__init__(params, parsing=parsing)
-        self.creation_time = time.time()
+
+        # Set a creation time only if not provided
+        if not params or 'creation_time' not in params:
+            self.creation_time = time.time()
+        # Set actions log only if not provided
+        if not params or 'log_actions' not in params:
+            self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
+
+        # Fill default parameters
         self.fill_default()
-        self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
