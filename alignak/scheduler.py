@@ -91,6 +91,7 @@ from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.acknowledge import Acknowledge
+from alignak.log import make_monitoring_log
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -1275,6 +1276,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: dict containing host and service data
         :rtype: dict
         """
+        brok = make_monitoring_log('INFO', 'RETENTION SAVE')
+        self.broks.append(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1411,6 +1414,9 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
+        brok = make_monitoring_log('INFO', 'RETENTION LOAD')
+        self.broks.append(brok)
+
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
             # We take the dict of our value to load
