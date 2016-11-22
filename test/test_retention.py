@@ -150,7 +150,7 @@ class Testretention(AlignakTest):
         # check notified_contacts
         assert isinstance(hostn.notified_contacts, set)
         assert isinstance(svcn.notified_contacts, set)
-        assert set([self.schedulers['scheduler-master'].sched.contacts.find_by_name("test_contact")]) == \
+        assert set([self.schedulers['scheduler-master'].sched.contacts.find_by_name("test_contact").uuid]) == \
                          hostn.notified_contacts
 
         # acknowledge
