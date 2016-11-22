@@ -80,11 +80,11 @@ class Dispatcher:
         self.arbiter = arbiter
         # Pointer to the whole conf
         self.conf = conf
-        logger.warning("Dispatcher __init__: %s / %s", self.arbiter, self.conf)
+        logger.debug("Dispatcher __init__: %s / %s", self.arbiter, self.conf)
         if hasattr(self.conf, 'confs'):
-            logger.warning("Dispatch conf confs: %s", self.conf.confs)
+            logger.debug("Dispatch conf confs: %s", self.conf.confs)
         else:
-            logger.warning("Dispatch conf has no confs")
+            logger.debug("Dispatch conf has no confs")
 
         self.realms = conf.realms
         # Direct pointer to important elements for us
