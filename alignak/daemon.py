@@ -686,13 +686,16 @@ class Daemon(object):
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self):
+    def do_daemon_init_and_start(self, daemon_name=None):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
+        :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
+        daemon name (eg. arbiter) will be used for the process title
+        :type daemon_name: str
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        self.set_proctitle()
+        self.set_proctitle(daemon_name)
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
@@ -996,12 +999,18 @@ class Daemon(object):
                         signal.SIGUSR2, signal.SIGHUP):
                 signal.signal(sig, func)
 
-    def set_proctitle(self):
+    def set_proctitle(self, daemon_name=None):
         """Set the proctitle of the daemon
 
+        :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
+        daemon name (eg. arbiter) will be used for the process title
+        :type daemon_name: str
         :return: None
         """
-        setproctitle("alignak-%s" % self.name)
+        if daemon_name:
+            setproctitle("alignak-%s %s" % (self.name, daemon_name))
+        else:
+            setproctitle("alignak-%s" % self.name)
 
     def get_header(self):
         """ Get the log file header
