@@ -108,16 +108,22 @@ class GenericInterface(object):
         return self.app.cur_conf is not None
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def set_log_level(self, loglevel):  # pylint: disable=R0201
+    def set_log_level(self, loglevel=None):  # pylint: disable=R0201
         """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
         :param loglevel: a value in one of the above
         :type loglevel: str
         :return: None
         """
+        if loglevel is None:
+            parameters = cherrypy.request.json
+            loglevel = parameters['loglevel']
         alignak_logger = logging.getLogger("alignak")
-        return alignak_logger.setLevel(loglevel)
+        alignak_logger.setLevel(loglevel)
+        return loglevel
+    set_log_level.method = 'post'
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -127,12 +133,13 @@ class GenericInterface(object):
         :return: current log level
         :rtype: str
         """
+        alignak_logger = logging.getLogger("alignak")
         return {logging.NOTSET: 'NOTSET',
                 logging.DEBUG: 'DEBUG',
                 logging.INFO: 'INFO',
                 logging.WARNING: 'WARNING',
                 logging.ERROR: 'ERROR',
-                logging.CRITICAL: 'CRITICAL'}.get(logger.level, 'UNKNOWN')
+                logging.CRITICAL: 'CRITICAL'}.get(alignak_logger.getEffectiveLevel(), 'UNKNOWN')
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

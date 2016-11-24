@@ -20,8 +20,10 @@
 #
 
 import os
+import sys
 import time
 import signal
+import json
 
 import subprocess
 from time import sleep
@@ -266,7 +268,7 @@ class DaemonsStartTest(AlignakTest):
                     "-c", "./cfg/run_test_launch_daemons/daemons/%sd.ini" % daemon]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            sleep(1)
+            sleep(0.1)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
 
         sleep(1)
@@ -335,8 +337,8 @@ class DaemonsStartTest(AlignakTest):
             data = raw_data.json()
             assert data == 'pong', "Daemon %s  did not ping back!" % name
 
-        print("Testing ping with satellite SSL and client not SSL")
         if ssl:
+            print("Testing ping with satellite SSL and client not SSL")
             for name, port in satellite_map.items():
                 raw_data = req.get("http://localhost:%s/ping" % port)
                 assert 'The client sent a plain HTTP request, but this server ' \
@@ -360,12 +362,14 @@ class DaemonsStartTest(AlignakTest):
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
             data = raw_data.json()
-            assert data, "Daemon %s has no conf!" % daemon
+            assert data == True, "Daemon %s has no conf!" % daemon
             # TODO: test with magic_hash
 
         print("Testing do_not_run")
-        for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+        for daemon in ['arbiter']:
             raw_data = req.get("%s://localhost:%s/do_not_run" % (http, satellite_map[daemon]), verify=False)
+            data = raw_data.json()
+            print("%s, do_not_run: %s" % (name, data))
 
         print("Testing api")
         name_to_interface = {'arbiter': ArbiterInterface,
@@ -378,7 +382,6 @@ class DaemonsStartTest(AlignakTest):
             raw_data = req.get("%s://localhost:%s/api" % (http, port), verify=False)
             data = raw_data.json()
             expected_data = set(name_to_interface[name](None).api())
-            assert isinstance(data, list), "Data is not a list!"
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
 
         print("Testing api_full")
@@ -391,6 +394,8 @@ class DaemonsStartTest(AlignakTest):
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/api_full" % (http, port), verify=False)
             data = raw_data.json()
+            expected_data = set(name_to_interface[name](None).api_full())
+            assert set(data) == expected_data, "Daemon %s has a bad API!" % name
 
         # print("Testing get_checks on scheduler")
         # TODO: if have poller running, the poller will get the checks before us
@@ -408,6 +413,7 @@ class DaemonsStartTest(AlignakTest):
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
             data = raw_data.json()
+            print("%s, raw stats: %s" % (name, data))
             if name == 'broker':
                 assert isinstance(data, list), "Data is not a list!"
             else:
@@ -417,9 +423,12 @@ class DaemonsStartTest(AlignakTest):
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/what_i_managed" % (http, port), verify=False)
             data = raw_data.json()
+            print("%s, what I manage: %s" % (name, data))
             assert isinstance(data, dict), "Data is not a dict!"
             if name != 'arbiter':
                 assert 1 == len(data), "The dict must have 1 key/value!"
+            else:
+                assert 0 == len(data), "The dict must be empty!"
 
         print("Testing get_external_commands")
         for name, port in satellite_map.items():
@@ -430,9 +439,23 @@ class DaemonsStartTest(AlignakTest):
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
-            data = raw_data.json()
-            assert isinstance(data, unicode), "Data is not an unicode!"
-            # TODO: seems level get not same tham defined in *d.ini files
+            assert raw_data.json() == 'INFO'
+
+        print("Testing set_log_level")
+        for name, port in satellite_map.items():
+            raw_data = req.post("%s://localhost:%s/set_log_level" % (http, port),
+                                data=json.dumps({'loglevel': 'DEBUG'}),
+                                headers={'Content-Type': 'application/json'},
+                                verify=False)
+            assert raw_data.json() == 'DEBUG'
+
+        print("Testing get_log_level")
+        for name, port in satellite_map.items():
+            raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
+            if sys.version_info < (2, 7):
+                assert raw_data.json() == 'UNKNOWN' # Cannot get log level with python 2.6
+            else:
+                assert raw_data.json() == 'DEBUG'
 
         print("Testing get_all_states")
         raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
@@ -443,8 +466,12 @@ class DaemonsStartTest(AlignakTest):
             print("Got Alignak state for: %ss / %d instances" % (daemon_type, len(daemons)))
             for daemon in daemons:
                 print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
+                print(" - %s: %s", daemon['%s_name' % daemon_type], daemon)
                 assert daemon['alive']
-                assert not ('realm' in daemon)
+                assert 'realms' not in daemon
+                assert 'confs' not in daemon
+                assert 'tags' not in daemon
+                assert 'con' not in daemon
                 assert 'realm_name' in daemon
 
         print("Testing get_running_id")
@@ -491,12 +518,23 @@ class DaemonsStartTest(AlignakTest):
         time.sleep(1)
 
         for name, proc in self.procs.items():
-            data = self._get_subproc_data(name)
+            self._get_subproc_data(name)
+            debug_log = False
+            error_log = False
             print("%s stdout:" % (name))
             for line in iter(proc.stdout.readline, b''):
+                if 'DEBUG:' in line:
+                    debug_log = True
+                if 'ERROR:' in line:
+                    error_log = True
                 print(">>> " + line.rstrip())
             print("%s stderr:" % (name))
             for line in iter(proc.stderr.readline, b''):
-                print(">>> " + line.rstrip())
+                print("*** " + line.rstrip())
+            # The log contain some DEBUG log
+            if sys.version_info >= (2, 7):
+                assert debug_log # Cannot set/get log level with python 2.6
+            # The log do not contain any ERROR log
+            assert not error_log
 
         print("Done testing")
