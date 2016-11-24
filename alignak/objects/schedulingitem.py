@@ -1548,7 +1548,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # ============ MANAGE THE CHECK ============ #
         if 'TEST_LOG_ACTIONS' in os.environ:
-            logger.warning("Got check result: %d for '%s'",
+            logger.info("Got check result: %d for '%s'",
                            chk.exit_status, self.get_full_name())
 
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
@@ -2618,7 +2618,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
                 if 'TEST_LOG_ACTIONS' in os.environ:
-                    logger.warning("Resolved BR for '%s', output: %s",
+                    logger.info("Resolved BR for '%s', output: %s",
                                    self.get_full_name(), check.output)
             except Exception, err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
@@ -2632,14 +2632,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             check.execution_time = 0
             check.output = 'Host assumed to be UP'
             if 'TEST_LOG_ACTIONS' in os.environ:
-                logger.warning("Set host %s as UP (internal check)", self.get_full_name())
+                logger.info("Set host %s as UP (internal check)", self.get_full_name())
         # Echo is just putting the same state again
         elif check.command == '_echo':
             state = self.state
             check.execution_time = 0
             check.output = self.output
             if 'TEST_LOG_ACTIONS' in os.environ:
-                logger.warning("Echo the current state (%d) for %s ",
+                logger.info("Echo the current state (%d) for %s ",
                                self.state, self.get_full_name())
         check.long_output = check.output
         check.check_time = time.time()
