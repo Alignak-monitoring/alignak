@@ -55,7 +55,11 @@ import sys
 import time
 
 from alignak_test import AlignakTest, unittest, time_hacker
+
+from alignak.misc.serialization import serialize, unserialize
 from alignak.action import Action
+from alignak.check import Check
+from alignak.eventhandler import EventHandler
 
 
 class TestAction(AlignakTest):
@@ -81,6 +85,134 @@ class TestAction(AlignakTest):
             if time.time() - start > 20:
                 print "Timeout: 20s!"
                 return
+
+    def test_action_creation(self):
+        """ Test action object creation / initialization
+
+        :return: None
+        """
+        self.print_header()
+
+        # Create an action without any parameters
+        # Will fill only the default action properties
+        action = Action()
+        for prop in action.__class__.properties.keys():
+            # command has no default value
+            if prop not in ['command']:
+                assert hasattr(action, prop)
+
+        # # Serialize an action
+        # An action object is not serializable! Should it be?
+        # When a poller/reactionner gets actions, the whole list is serialized
+        # action_serialized = serialize(action)
+        # print(action_serialized)
+
+        # Create a check without any parameters
+        # Will fill only the default action properties
+        check = Check()
+        for prop in check.__class__.properties.keys():
+            # command has no default value
+            if prop not in ['command']:
+                assert hasattr(check, prop)
+
+        # # Serialize a check
+        # A check object is not serializable! Should it be?
+        # check_serialized = serialize(check)
+        # print(check_serialized)
+
+        # Create an event_handler without any parameters
+        # Will fill only the default action properties
+        event_handler = EventHandler()
+        for prop in event_handler.__class__.properties.keys():
+            # command has no default value
+            if prop not in ['command']:
+                assert hasattr(event_handler, prop)
+
+        # # Serialize an event_handler
+        # An event handler object is not serializable! Should it be?
+        # event_handler_serialized = serialize(event_handler)
+        # print(event_handler_serialized)
+
+        # Create an action with parameters
+        parameters = {
+            'status': 'planned',
+            'ref': 'host_uuid',
+            'check_time': 0,
+            'exit_status': 0,
+            'output': 'Output ...',
+            'execution_time': 0.0,
+            'creation_time': time.time(),
+            'worker': 'test_worker',
+            'timeout': 100,
+            't_to_go': 0.0,
+            'is_a': 'action',
+            'reactionner_tag': 'tag',
+            'module_type': 'nrpe-booster',
+            'u_time': 0.0,
+            'env': {},
+            'log_actions': True
+        }
+        # Will fill the action properties with the parameters
+        action = Action(parameters)
+
+        # And it will add an uuid
+        parameters['uuid'] = action.uuid
+        # Those parameters are missing in the provided parameters but they will exist in the object
+        parameters.update({
+            's_time': 0.0,
+            '_in_timeout': False,
+            'type': '',
+        })
+        # creation_time and log_actions will not be modified! They are set
+        # only if they do not yet exist
+        assert action.__dict__ == parameters
+
+        # Create a check with parameters
+        parameters = {
+            'status': 'planned',
+            'ref': 'host_uuid',
+            'check_time': 0,
+            'exit_status': 0,
+            'output': 'Output ...',
+            'execution_time': 0.0,
+            'creation_time': time.time(),
+            'worker': 'test_worker',
+            'timeout': 100,
+            't_to_go': 0.0,
+            'is_a': 'check',
+            'reactionner_tag': 'tag',
+            'module_type': 'nrpe-booster',
+            'u_time': 0.0,
+            'env': {},
+            's_time': 0.0,
+            '_in_timeout': True,
+            'type': 'action_type',
+            'log_actions': True,
+            'check_type': 0,
+            'depend_on_me': [],
+            'depend_on': [],
+            'dependency_check': False,
+            'from_trigger': False,
+            'internal': False,
+            'long_output': '',
+            'perf_data': '',
+            'poller_tag': 'None',
+            'state': 0
+        }
+        # Will fill the action properties with the parameters
+        # The missing parameters will be set with their default value
+        check = Check(parameters)
+
+        # And it will add an uuid
+        parameters['uuid'] = check.uuid
+        # Those parameters are missing in the provided parameters but they will exist in the object
+        parameters.update({
+            'long_output': '',
+            'perf_data': '',
+            'poller_tag': 'None',
+            'state': 0
+        })
+        assert check.__dict__ == parameters
 
     def test_action(self):
         """ Test simple action execution
@@ -294,12 +426,12 @@ class TestAction(AlignakTest):
             assert 'Not a valid shell command: No closing quotation' == a.output
             assert 3 == a.exit_status
 
-    # We got problems on LARGE output, more than 64K in fact.
-    # We try to solve it with the fcntl and non blocking read
-    # instead of "communicate" mode. So here we try to get a 100K
-    # output. Should NOT be in a timeout
     def test_huge_output(self):
         """ Test huge output
+
+         We got problems on LARGE output, more than 64K in fact.
+        We try to solve it with the fcntl and non blocking read instead of
+        "communicate" mode. So here we try to get a 100K output. Should NOT be in a timeout
 
         :return: None
         """

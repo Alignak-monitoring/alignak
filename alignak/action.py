@@ -112,33 +112,58 @@ class ActionBase(AlignakObject):
     process = None
 
     properties = {
-        'is_a':             StringProp(default=''),
-        'type':             StringProp(default=''),
-        'creation_time':       FloatProp(default=0.0),
-        '_in_timeout':      BoolProp(default=False),
-        'status':           StringProp(default='scheduled'),
-        'exit_status':      IntegerProp(default=3),
-        'output':           StringProp(default='', fill_brok=['full_status']),
-        't_to_go':          FloatProp(default=0.0),
-        'check_time':       IntegerProp(default=0),
-        'execution_time':   FloatProp(default=0.0),
-        'u_time':           FloatProp(default=0.0),
-        's_time':           FloatProp(default=0.0),
-        'reactionner_tag':  StringProp(default='None'),
-        'env':              DictProp(default={}),
-        'module_type':      StringProp(default='fork', fill_brok=['full_status']),
-        'worker':           StringProp(default='none'),
-        'command':          StringProp(),
-        'timeout':          IntegerProp(default=10),
-        'ref':              StringProp(default=''),
+        'is_a':
+            StringProp(default=''),
+        'type':
+            StringProp(default=''),
+        'creation_time':
+            FloatProp(default=0.0),
+        '_in_timeout':
+            BoolProp(default=False),
+        'status':
+            StringProp(default='scheduled'),
+        'exit_status':
+            IntegerProp(default=3),
+        'output':
+            StringProp(default='', fill_brok=['full_status']),
+        't_to_go':
+            FloatProp(default=0.0),
+        'check_time':
+            IntegerProp(default=0),
+        'execution_time':
+            FloatProp(default=0.0),
+        'u_time':
+            FloatProp(default=0.0),
+        's_time':
+            FloatProp(default=0.0),
+        'reactionner_tag':
+            StringProp(default='None'),
+        'env':
+            DictProp(default={}),
+        'module_type':
+            StringProp(default='fork', fill_brok=['full_status']),
+        'worker':
+            StringProp(default='none'),
+        'command':
+            StringProp(),
+        'timeout':
+            IntegerProp(default=10),
+        'ref':
+            StringProp(default=''),
     }
 
     def __init__(self, params=None, parsing=True):
         super(ActionBase, self).__init__(params, parsing=parsing)
-        self.creation_time = time.time()
-        self.exit_status = 3
+
+        # Set a creation time only if not provided
+        if not params or 'creation_time' not in params:
+            self.creation_time = time.time()
+        # Set actions log only if not provided
+        if not params or 'log_actions' not in params:
+            self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
+
+        # Fill default parameters
         self.fill_default()
-        self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
 
     def set_type_active(self):
         """Dummy function, only useful for checks"""
@@ -188,7 +213,7 @@ class ActionBase(AlignakObject):
 
         logger.debug("Launch command: '%s'", self.command)
         if self.log_actions:
-            logger.warning("Launch command: '%s'", self.command)
+            logger.info("Launch command: '%s'", self.command)
 
         return self.execute__()  # OS specific part
 
@@ -245,8 +270,8 @@ class ActionBase(AlignakObject):
         logger.debug("Command result for '%s': %d, %s",
                      self.command, self.exit_status, self.output)
         if self.log_actions:
-            logger.warning("Check result for '%s': %d, %s",
-                           self.command, self.exit_status, self.output)
+            logger.info("Check result for '%s': %d, %s",
+                        self.command, self.exit_status, self.output)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
@@ -286,8 +311,8 @@ class ActionBase(AlignakObject):
                 self.u_time = n_child_utime - child_utime
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
-                    logger.warning("Check for '%s' exited on timeout (%d s)",
-                                   self.command, self.timeout)
+                    logger.info("Check for '%s' exited on timeout (%d s)",
+                                self.command, self.timeout)
                 return
             return
 
@@ -304,8 +329,8 @@ class ActionBase(AlignakObject):
 
         self.exit_status = self.process.returncode
         if self.log_actions:
-            logger.warning("Check for '%s' exited with return code %d",
-                           self.command, self.exit_status)
+            logger.info("Check for '%s' exited with return code %d",
+                        self.command, self.exit_status)
 
         # we should not keep the process now
         del self.process
