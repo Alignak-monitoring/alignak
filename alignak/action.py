@@ -271,7 +271,7 @@ class ActionBase(AlignakObject):
                      self.command, self.exit_status, self.output)
         if self.log_actions:
             logger.info("Check result for '%s': %d, %s",
-                           self.command, self.exit_status, self.output)
+                        self.command, self.exit_status, self.output)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
@@ -312,7 +312,7 @@ class ActionBase(AlignakObject):
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
                     logger.info("Check for '%s' exited on timeout (%d s)",
-                                   self.command, self.timeout)
+                                self.command, self.timeout)
                 return
             return
 
@@ -330,7 +330,7 @@ class ActionBase(AlignakObject):
         self.exit_status = self.process.returncode
         if self.log_actions:
             logger.info("Check for '%s' exited with return code %d",
-                           self.command, self.exit_status)
+                        self.command, self.exit_status)
 
         # we should not keep the process now
         del self.process

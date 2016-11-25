@@ -179,13 +179,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # Run deamons for 2 minutes
         self.run_and_check_alignak_daemons(120)
 
-        # Expected WARNING logs from the daemons
-        initgroups = 'initgroups'
-        if sys.version_info < (2, 7):
-            initgroups = 'setgroups'
+        # Expected logs from the daemons
         expected_logs = {
             'poller': [
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
                 # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
@@ -211,7 +207,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-north': [
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
@@ -228,7 +223,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-south': [
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
                 "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
@@ -248,9 +242,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 # Internal host check
                 # "[alignak.objects.schedulingitem] Set host localhost as UP (internal check)",
                 # "[alignak.objects.schedulingitem] Got check result: 0 for 'localhost'",
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                # Timed out check
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-all-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
                 # Check ok
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-all-00/dummy_ok'",
                 # Check warning
@@ -263,8 +254,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-all-00/dummy_timeout'",
             ],
             'scheduler-north': [
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-north-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-north-00/dummy_ok'",
                 "[alignak.objects.schedulingitem] Got check result: 1 for 'alignak-north-00/dummy_warning'",
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_critical'",
@@ -272,8 +261,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_timeout'",
             ],
             'scheduler-south': [
-                "[alignak.daemon] Cannot call the additional groups setting with %s (Operation not permitted)" % initgroups,
-                "[alignak.scheduler] Timeout raised for '/tmp/dummy_command.sh 0 10' (check command for the service 'alignak-south-00/dummy_timeout'), check status code: 2, execution time: 5 seconds",
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-south-00/dummy_ok'",
                 "[alignak.objects.schedulingitem] Got check result: 1 for 'alignak-south-00/dummy_warning'",
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_critical'",
@@ -281,25 +268,23 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_timeout'",
             ]
         }
-        logs = {}
 
         for name in ['poller', 'poller-north', 'poller-south',
                      'scheduler', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
-            logs[name] = []
             print("-----\n%s log file\n" % name)
             with open('/tmp/%s.log' % name) as f:
-                for line in f:
-                    # Catches only the WARNING logs
-                    if 'WARNING' in line:
-                        # ansi_escape.sub('', line)
-                        line = line.split('WARNING: ')
+                lines = f.readlines()
+                logs = []
+                for line in lines:
+                    # Catches INFO logs
+                    if 'INFO' in line:
+                        line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
-                        # Remove the leading ": "
-                        logs[name].append(line)
-                        print(">>> " + line)
+                        print("line: %s" % line)
+                        logs.append(line)
 
             for log in expected_logs[name]:
-                assert log in logs[name]
+                assert log in logs
 
