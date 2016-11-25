@@ -74,11 +74,13 @@ class ArbiterInterface(GenericInterface):
         if self.app.is_master:
             logger.warning("Received message to not run. "
                            "I am the Master, ignore and continue to run.")
+            return False
         # Else, I'm just a spare, so I listen to my master
         else:
             logger.debug("Received message to not run. I am the spare, stopping.")
             self.app.last_master_speack = time.time()
             self.app.must_run = False
+            return True
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -177,8 +179,11 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_objects_properties(self, table):
-        """'Dump all objects of the type in
-        [hosts, services, contacts, commands, hostgroups, servicegroups]
+        """'Dump all objects of the required type existing in the configuration:
+            - hosts, services, contacts,
+            - hostgroups, servicegroups, contactgroups
+            - commands, timeperiods
+            - ...
 
         :param table: table name
         :type table: str
