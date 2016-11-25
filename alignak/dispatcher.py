@@ -236,6 +236,9 @@ class Dispatcher:
         # I think so. It is not good. I ask a global redispatch for
         # the cfg_id I think is not correctly dispatched.
         for realm in self.realms:
+            # Todo: Spare arbiter fails else...
+            if not hasattr(realm, 'confs'):
+                continue
             for cfg_id in realm.confs:
                 conf_uuid = realm.confs[cfg_id].uuid
                 push_flavor = realm.confs[cfg_id].push_flavor
