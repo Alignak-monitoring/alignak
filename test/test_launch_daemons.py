@@ -345,6 +345,7 @@ class DaemonsStartTest(AlignakTest):
                                  'only speaks HTTPS on this port.' == raw_data.text
 
         print("Testing get_satellite_list")
+        # Arbiter only
         raw_data = req.get("%s://localhost:%s/get_satellite_list" %
                            (http, satellite_map['arbiter']), verify=False)
         expected_data ={"reactionner": ["reactionner-master"],
@@ -359,6 +360,7 @@ class DaemonsStartTest(AlignakTest):
             assert set(data[k]) == set(v)
 
         print("Testing have_conf")
+        # Except Arbiter (not spare)
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
             data = raw_data.json()
@@ -366,10 +368,13 @@ class DaemonsStartTest(AlignakTest):
             # TODO: test with magic_hash
 
         print("Testing do_not_run")
-        for daemon in ['arbiter']:
-            raw_data = req.get("%s://localhost:%s/do_not_run" % (http, satellite_map[daemon]), verify=False)
-            data = raw_data.json()
-            print("%s, do_not_run: %s" % (name, data))
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/do_not_run" %
+                           (http, satellite_map['arbiter']), verify=False)
+        data = raw_data.json()
+        print("%s, do_not_run: %s" % (name, data))
+        # Arbiter master returns False, spare returns True
+        assert data is False
 
         print("Testing api")
         name_to_interface = {'arbiter': ArbiterInterface,
@@ -458,7 +463,9 @@ class DaemonsStartTest(AlignakTest):
                 assert raw_data.json() == 'DEBUG'
 
         print("Testing get_all_states")
-        raw_data = req.get("%s://localhost:%s/get_all_states" % (http, satellite_map['arbiter']), verify=False)
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/get_all_states" %
+                           (http, satellite_map['arbiter']), verify=False)
         data = raw_data.json()
         assert isinstance(data, dict), "Data is not a dict!"
         for daemon_type in data:
@@ -474,6 +481,26 @@ class DaemonsStartTest(AlignakTest):
                 assert 'con' not in daemon
                 assert 'realm_name' in daemon
 
+        print("Testing get_objects_properties")
+        for object in ['host', 'service', 'contact',
+                       'hostgroup', 'servicegroup', 'contactgroup',
+                       'command', 'timeperiod',
+                       'notificationway', 'escalation',
+                       'checkmodulation', 'macromodulation', 'resultmodulation',
+                       'businessimpactmodulation'
+                       'hostdependencie', 'servicedependencie',
+                       'realm',
+                       'arbiter', 'scheduler', 'poller', 'broker', 'reactionner', 'receiver']:
+            # Arbiter only
+            raw_data = req.get("%s://localhost:%s/get_objects_properties" %
+                               (http, satellite_map['arbiter']),
+                               params={'table': '%ss' % object}, verify=False)
+            data = raw_data.json()
+            assert isinstance(data, list), "Data is not a list!"
+            for element in data:
+                assert isinstance(element, dict), "Object data is not a dict!"
+                print("%s: %s" % (object, element['%s_name' % object]))
+
         print("Testing get_running_id")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
@@ -481,11 +508,15 @@ class DaemonsStartTest(AlignakTest):
             assert isinstance(data, unicode), "Data is not an unicode!"
 
         print("Testing fill_initial_broks")
-        raw_data = req.get("%s://localhost:%s/fill_initial_broks" % (http, satellite_map['scheduler']), params={'bname': 'broker-master'}, verify=False)
+        # Scheduler only
+        raw_data = req.get("%s://localhost:%s/fill_initial_broks" %
+                           (http, satellite_map['scheduler']),
+                           params={'bname': 'broker-master'}, verify=False)
         data = raw_data.json()
         assert data is None, "Data must be None!"
 
         print("Testing get_broks")
+        # Scheduler and poller only
         for name in ['scheduler', 'poller']:
             raw_data = req.get("%s://localhost:%s/get_broks" % (http, satellite_map[name]),
                                params={'bname': 'broker-master'}, verify=False)
@@ -495,7 +526,8 @@ class DaemonsStartTest(AlignakTest):
         print("Testing get_returns")
         # get_return requested by scheduler to poller daemons
         for name in ['reactionner', 'receiver', 'poller']:
-            raw_data = req.get("%s://localhost:%s/get_returns" % (http, satellite_map[name]), params={'sched_id': 0}, verify=False)
+            raw_data = req.get("%s://localhost:%s/get_returns" %
+                               (http, satellite_map[name]), params={'sched_id': 0}, verify=False)
             data = raw_data.json()
             assert isinstance(data, list), "Data is not a list!"
 
