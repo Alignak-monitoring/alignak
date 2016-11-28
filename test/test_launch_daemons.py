@@ -76,16 +76,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/var/log/alignak': '/tmp',
             '/usr/local/etc/alignak': '/tmp'
         }
-        for filename in files:
-            lines = []
-            with open(filename) as infile:
-                for line in infile:
-                    for src, target in replacements.iteritems():
-                        line = line.replace(src, target)
-                    lines.append(line)
-            with open(filename, 'w') as outfile:
-                for line in lines:
-                    outfile.write(line)
+        self.files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -130,16 +121,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/var/log/alignak': '/tmp',
             '/usr/local/etc/alignak': '/tmp'
         }
-        for filename in files:
-            lines = []
-            with open(filename) as infile:
-                for line in infile:
-                    for src, target in replacements.iteritems():
-                        line = line.replace(src, target)
-                    lines.append(line)
-            with open(filename, 'w') as outfile:
-                for line in lines:
-                    outfile.write(line)
+        self.files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -199,16 +181,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/var/log/alignak': '/tmp',
             '/usr/local/etc/alignak': '/tmp'
         }
-        for filename in files:
-            lines = []
-            with open(filename) as infile:
-                for line in infile:
-                    for src, target in replacements.iteritems():
-                        line = line.replace(src, target)
-                    lines.append(line)
-            with open(filename, 'w') as outfile:
-                for line in lines:
-                    outfile.write(line)
+        self.files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -261,16 +234,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/var/log/alignak': '/tmp',
             '/usr/local/etc/alignak': '/tmp'
         }
-        for filename in files:
-            lines = []
-            with open(filename) as infile:
-                for line in infile:
-                    for src, target in replacements.iteritems():
-                        line = line.replace(src, target)
-                    lines.append(line)
-            with open(filename, 'w') as outfile:
-                for line in lines:
-                    outfile.write(line)
+        self.files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -377,16 +341,7 @@ class DaemonsStartTest(AlignakTest):
                 'certs/': '',
                 'use_ssl	                0': 'use_ssl	                1'
             })
-        for filename in files:
-            lines = []
-            with open(filename) as infile:
-                for line in infile:
-                    for src, target in replacements.iteritems():
-                        line = line.replace(src, target)
-                    lines.append(line)
-            with open(filename, 'w') as outfile:
-                for line in lines:
-                    outfile.write(line)
+        self.files_update(files, replacements)
 
         self.procs = {}
         satellite_map = {
