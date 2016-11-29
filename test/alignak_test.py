@@ -164,6 +164,24 @@ class AlignakTest(unittest.TestCase):
         collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
         self.logger.addHandler(collector_h)
 
+    def files_update(self, files, replacements):
+        """Update files content with the defined replacements
+
+        :param files: list of files to parse and replace
+        :param replacements: list of values to replace
+        :return:
+        """
+        for filename in files:
+            lines = []
+            with open(filename) as infile:
+                for line in infile:
+                    for src, target in replacements.iteritems():
+                        line = line.replace(src, target)
+                    lines.append(line)
+            with open(filename, 'w') as outfile:
+                for line in lines:
+                    outfile.write(line)
+
     def setup_with_file(self, configuration_file):
         """
         Load alignak with defined configuration file
