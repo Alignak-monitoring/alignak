@@ -157,4 +157,4 @@ NICENESS=5
 # user/group for the var/run rights
 #ALIGNAKUSER=alignak
 #ALIGNAKGROUP=alignak
-#HOME=`grep ^$ALIGNAKUSER: /etc/passwd | cut -d: -f 6`
+#HOME=`getent passwd $ALIGNAKUSER | cut -d: -f 6`

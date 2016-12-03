@@ -107,7 +107,7 @@ def fix_alignak_cfg(config):
         default_users['group'] = 'alignak'
         default_users['ALIGNAKUSER'] = 'alignak'
         default_users['ALIGNAKGROUP'] = 'alignak'
-        default_users['HOME'] = '`grep ^$ALIGNAKUSER: /etc/passwd | cut -d: -f 6`'
+        default_users['HOME'] = '`getent passwd "$ALIGNAKUSER" | cut -d: -f 6`'
 
     # Prepare pattern for alignak.cfg
     pattern = "|".join(default_paths.keys())
