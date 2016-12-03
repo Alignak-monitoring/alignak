@@ -72,12 +72,12 @@ ALIGNAKCFG="$ETC/alignak.cfg"
 #ALIGNAKSPECIFICCFG="$ETC/alignak-specific.cfg"
 
 # The command to launch
-ARBITERDAEMON=$BIN/alignak-arbiter
+ARBITERDAEMON="$BIN/alignak-arbiter"
 
 #The ARBITER PID
-if [ -r $ALIGNAKCFG ] ; then
-    tmppid=`grep 'lock_file=' $ALIGNAKCFG | grep -v '#' | tail -n 1 | awk -F '=' '{print $2}'`
-    ARBITERPID=${tmppid-$RUN/arbiterd.pid}
+if [ -r "$ALIGNAKCFG" ]; then
+    tmppid=`grep 'lock_file=' "$ALIGNAKCFG" | grep -v '#' | tail -n 1 | awk -F '=' '{print $2}'`
+    ARBITERPID="${tmppid-$RUN/arbiterd.pid}"
 else
     ARBITERPID="$RUN/arbiterd.pid"
 fi
@@ -90,7 +90,7 @@ ARBITERDEBUGFILE="$LOG/arbiter-debug.log"
 SCHEDULERCFG="$ETC/daemons/schedulerd.ini"
 
 # The command to launch
-SCHEDULERDAEMON=$BIN/alignak-scheduler
+SCHEDULERDAEMON="$BIN/alignak-scheduler"
 
 # The SCHEDULER PID
 SCHEDULERPID="$RUN/schedulerd.pid"
@@ -103,7 +103,7 @@ SCHEDULERDEBUGFILE="$LOG/scheduler-debug.log"
 POLLERCFG="$ETC/daemons/pollerd.ini"
 
 # The command to launch
-POLLERDAEMON=$BIN/alignak-poller
+POLLERDAEMON="$BIN/alignak-poller"
 
 # The poller pid
 POLLERPID="$RUN/pollerd.pid"
@@ -116,7 +116,7 @@ POLLERDEBUGFILE="$LOG/poller-debug.log"
 REACTIONNERCFG="$ETC/daemons/reactionnerd.ini"
 
 # The command to launch
-REACTIONNERDAEMON=$BIN/alignak-reactionner
+REACTIONNERDAEMON="$BIN/alignak-reactionner"
 
 #The reactionner pid
 REACTIONNERPID="$RUN/reactionnerd.pid"
@@ -129,7 +129,7 @@ REACTIONNERDEBUGFILE="$LOG/reactionner-debug.log"
 BROKERCFG="$ETC/daemons/brokerd.ini"
 
 # The command to launch
-BROKERDAEMON=$BIN/alignak-broker
+BROKERDAEMON="$BIN/alignak-broker"
 
 # The broker pid
 BROKERPID="$RUN/brokerd.pid"
@@ -142,7 +142,7 @@ BROKERDEBUGFILE="$LOG/broker-debug.log"
 RECEIVERCFG="$ETC/daemons/receiverd.ini"
 
 # The command to launch
-RECEIVERDAEMON=$BIN/alignak-receiver
+RECEIVERDAEMON="$BIN/alignak-receiver"
 
 #The receiver pid
 RECEIVERPID="$RUN/receiverd.pid"
@@ -157,4 +157,4 @@ NICENESS=5
 # user/group for the var/run rights
 #ALIGNAKUSER=alignak
 #ALIGNAKGROUP=alignak
-#HOME=`getent passwd $ALIGNAKUSER | cut -d: -f 6`
+#HOME=`getent passwd "$ALIGNAKUSER" | cut -d: -f 6`
