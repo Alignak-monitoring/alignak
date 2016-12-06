@@ -477,3 +477,28 @@ class TestMonitoringLogs(AlignakTest):
 
         # No monitoring logs
         assert [] == monitoring_logs
+
+    def test_timeperiod_transition_log(self):
+        self.setup_with_file('cfg/cfg_default.cfg')
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        tp = self._sched.timeperiods.find_by_name('24x7')
+
+        self.assertIsNot(tp, None)
+
+        data = unserialize(tp.check_and_log_activation_change().data)
+        assert data['level'] == 'info'
+        assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;-1;1'
+
+        # Now make this tp unable to be active again by removing al it's daterange
+        dr = tp.dateranges
+        tp.dateranges = []
+        data = unserialize(tp.check_and_log_activation_change().data)
+        assert data['level'] == 'info'
+        assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;1;0'
+
+        # Ok, let get back to work
+        tp.dateranges = dr
+        data = unserialize(tp.check_and_log_activation_change().data)
+        assert data['level'] == 'info'
+        assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;0;1'
