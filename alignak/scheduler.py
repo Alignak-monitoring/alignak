@@ -1837,6 +1837,12 @@ class Scheduler(object):  # pylint: disable=R0902
             # We take all, we can clear it
             elt.broks = []
 
+        # Also fetch broks from contact (like contactdowntime)
+        for contact in self.contacts:
+            for brok in contact.broks:
+                self.add(brok)
+            contact.broks = []
+
     def check_freshness(self):
         """
         Iter over all hosts and services to check freshness if check_freshness enabled and

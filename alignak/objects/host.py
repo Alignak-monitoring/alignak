@@ -460,7 +460,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: bool
         """
         return self.is_excluded_for_sdesc(
-            getattr(self, 'service_description', None), service.is_tpl()
+            getattr(service, 'service_description', None), service.is_tpl()
         )
 
     def is_excluded_for_sdesc(self, sdesc, is_tpl=False):
