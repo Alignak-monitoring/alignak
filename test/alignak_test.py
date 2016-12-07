@@ -53,6 +53,7 @@ from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager, ExternalCommand
 from alignak.check import Check
 from alignak.message import Message
+from alignak.misc.serialization import serialize, unserialize
 from alignak.objects.arbiterlink import ArbiterLink
 from alignak.objects.schedulerlink import SchedulerLink
 from alignak.objects.pollerlink import PollerLink
@@ -769,6 +770,56 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         self._any_log_match(pattern, assert_not=True)
+
+    def _any_brok_match(self, pattern, level, assert_not):
+        """
+        Search if any brok message in the Scheduler broks matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param assert_not:
+        :return:
+        """
+        regex = re.compile(pattern)
+
+        monitoring_logs = []
+        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+                if re.search(regex, data['message']) and (level is None or data['level'] == level):
+                    self.assertTrue(not assert_not, "Found matching brok:\n"
+                                    "pattern = %r\nbrok message = %r" % (pattern, data['message']))
+                    return
+
+        self.assertTrue(assert_not, "No matching brok found:\n"
+                                    "pattern = %r\n" "brok message = %r" % (pattern,
+                                                                            monitoring_logs))
+
+    def assert_any_brok_match(self, pattern, level=None):
+        """
+        Search if any brok message in the Scheduler broks matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
+        self._any_brok_match(pattern, level, assert_not=False)
+
+    def assert_no_brok_match(self, pattern, level=None):
+        """
+        Search if no brok message in the Scheduler broks matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
+        self._any_brok_match(pattern, level, assert_not=True)
 
     def get_log_match(self, pattern):
         regex = re.compile(pattern)
