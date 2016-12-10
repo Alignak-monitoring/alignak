@@ -591,7 +591,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 items = getattr(self, chk.ref_type + 's')
                 elt = items[chk.ref]
                 # First remove the link in host/service
-                elt.remove_in_progress_check(chk)
+                elt.remove_in_progress_check(chk.uuid)
                 # Then in dependent checks (I depend on, or check
                 # depend on me)
                 for dependent_checks in chk.depend_on_me:
