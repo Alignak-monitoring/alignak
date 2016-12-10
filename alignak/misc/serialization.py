@@ -88,17 +88,14 @@ def unserialize(j_obj, no_load=False):
             return cls(params=data['content'], parsing=False)
 
         else:
-            # print("unserialize a dict")
             data_dict = {}
             for key, value in data.iteritems():
                 data_dict[key] = unserialize(value, True)
             return data_dict
 
     elif isinstance(data, set):
-        # print("Unserialize a set: %s" % data)
         return set([unserialize(item, True) for item in data])
     elif isinstance(data, list):
-        # print("Unserialize a list: %s" % data)
         return [unserialize(item, True) for item in data]
     else:
         return data

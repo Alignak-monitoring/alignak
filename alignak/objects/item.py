@@ -84,6 +84,29 @@ class Item(AlignakObject):
     Class to manage an item
     An Item is the base of many objects of Alignak. So it define common properties,
     common functions.
+
+    `name_property` defines the property to be used by the generic get_name function
+    `my_type` defines the object type manged by the class (eg. host, service, contact,...)
+    Thos will be overloaded by the inherited classes: Host, Service, ...
+
+    `properties` declares the object properties defined by the configuration. Each property is
+    a Property (or inherited) object tha tis configured as is:
+        * required: is required in the configuration
+        * default: default value if no value set in the configuration
+        * fill_brok: if set, send this property to the broker.
+            there are two usable broks types:
+                full_status for initial and update status broks,
+                check_result for check results broks
+        * no_slots: do not take this property for __slots__
+
+        Only for the initial call
+            conf_send_preparation: if set, it will give the property to this function.
+            It's used to "flatten" some dangerous properties like realms that are too
+            'linked' to be sent like as is.
+            brok_transformation: if set, will call the function with the value of the
+            property the major times it will be to flatten the data (like
+            realm_name instead of the realm object).
+
     """
 
     name_property = 'name'

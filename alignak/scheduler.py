@@ -742,7 +742,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        print("scatter master notifications")
         now = time.time()
         for act in self.actions.values():
             # We only want notifications
@@ -755,13 +754,11 @@ class Scheduler(object):  # pylint: disable=R0902
                     # We use it to create "child" notifications (for the contacts and
                     # notification_commands) which are executed in the reactionner.
                     item = self.find_item_by_id(act.ref)
-                    print("scatter master notifications, item: %s" % item)
                     childnotifs = []
                     notif_period = self.timeperiods.items.get(item.notification_period, None)
                     if not item.notification_is_blocked_by_item(notif_period, self.hosts,
                                                                 self.services, act.type,
                                                                 t_wished=now):
-                        print("scatter master notifications, child notfi")
                         # If it is possible to send notifications
                         # of this type at the current time, then create
                         # a single notification for each contact of this item.
@@ -845,7 +842,6 @@ class Scheduler(object):  # pylint: disable=R0902
         if do_checks:
             print("Do checks ...")
             for chk in self.checks.values():
-                print("Check: %s" % chk.__dict__)
                 #  If the command is untagged, and the poller too, or if both are tagged
                 #  with same name, go for it
                 # if do_check, call for poller, and so poller_tags by default is ['None']

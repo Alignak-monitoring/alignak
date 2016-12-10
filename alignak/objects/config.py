@@ -2121,7 +2121,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 self.add_error("Services exist with the poller_tag '%s' but no poller "
                                "got this tag" % tag)
 
-        # Check that all hosts involved in business_rules are from the same realm
+        # Check that all hosts involved in business rules are from the same realm
         for lst in [self.services, self.hosts]:
             for item in lst:
                 if item.got_business_rule:

@@ -91,25 +91,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # The host and service do not have the same 0 value, now yes :)
     ok_up = 'UP'
 
-    # if Host(or more generally Item) instances were created with all properties
-    # having a default value set in the instance then we wouldn't need this:
-    service_includes = service_excludes = []
-    # though, as these 2 attributes are to be relatively low used it's not
-    # that bad to have the default be defined only once here at the class level.
-
-    # properties defined by configuration
-    # *required: is required in conf
-    # *default: default value if no set in conf
-    # *pythonize: function to call when transforming string to python object
-    # *fill_brok: if set, send to broker.
-    #    there are two categories:
-    #       full_status for initial and update status, check_result for check results
-    # *no_slots: do not take this property for __slots__
-    #  Only for the initial call
-    # conf_send_preparation: if set, will pass the property to this function. It's used to "flatten"
-    #  some dangerous properties like realms that are too 'linked' to be sent like that.
-    # brok_transformation: if set, will call the function with the value of the property
-    #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = SchedulingItem.properties.copy()
     properties.update({
         'host_name':
@@ -133,6 +114,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+         # State the host will be set to if the freshness_threshold is raised
         'freshness_state':
             CharProp(default='d', fill_brok=['full_status']),
 
@@ -299,7 +281,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        if hasattr(self, 'host_name') and not hasattr(self, 'address'):
+        if hasattr(self, 'host_name') and not getattr(self, 'address', ''):
             self.address = self.host_name
 
         if self.initial_state == 'd':
@@ -1337,7 +1319,6 @@ class Hosts(SchedulingItems):
             # Register host in the hostgroups
             if getattr(host, 'hostgroups', None) is not None:
                 for hostgroup in host.hostgroups:
-                    # print("Add hostgroups from an host: %s (%s)" % (host, hostgroup))
                     hostgroups.add_group_member(host, hostgroup)
 
     def apply_dependencies(self):

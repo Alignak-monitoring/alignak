@@ -2504,11 +2504,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # Business rule did not change (no macro was modulated)
                     return
 
+                # Raise an exception if the rule is broken because of macromodulation
                 fact = DependencyNodeFactory(self)
-                node = fact.eval_cor_pattern(rule, hosts, services,
-                                             hostgroups, servicegroups, running)
+                node = fact.eval_cor_pattern(rule,
+                                             hosts, services,
+                                             hostgroups, servicegroups,
+                                             running)
                 self.processed_business_rule = rule
                 self.business_rule = node
+
 
     def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
         """
@@ -2594,6 +2598,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             data = [self]
         output = macroresolver.resolve_simple_macros_in_string(template_string, data,
                                                                macromodulations, timeperiods)
+        print("get_business, output: %s" % output)
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):
@@ -2663,7 +2668,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 if 'TEST_LOG_ACTIONS' in os.environ:
                     logger.info("Resolved BR for '%s', output: %s",
                                 self.get_full_name(), check.output)
-            except Exception, err:  # pylint: disable=W0703
+            except Exception as err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",
@@ -2684,6 +2689,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if 'TEST_LOG_ACTIONS' in os.environ:
                 logger.info("Echo the current state (%d) for %s ",
                             self.state, self.get_full_name())
+
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state

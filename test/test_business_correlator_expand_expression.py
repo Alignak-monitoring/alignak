@@ -424,7 +424,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
 
         # Business rule should have been re-evaluated (macro was modulated)
         assert bp_rule is svc_cor.business_rule
-        assert 3 == svc_cor.last_hard_state_id
+        assert 3 == svc_cor.state_id
         assert svc_cor.output.startswith("Error while re-evaluating business rule")
 
     def test_macro_expansion_bprule_macro_profile(self):

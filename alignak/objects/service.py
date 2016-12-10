@@ -103,13 +103,6 @@ class Service(SchedulingItem):
     # The host and service do not have the same 0 value, now yes :)
     ok_up = 'OK'
 
-    # properties defined by configuration
-    # required: is required in conf
-    # default: default value if no set in conf
-    # pythonize: function to call when transforming string to python object
-    # fill_brok: if set, send to broker. there are two categories:
-    #  full_status for initial and update status, check_result for check results
-    # no_slots: do not take this property for __slots__
     properties = SchedulingItem.properties.copy()
     properties.update({
         'host_name':

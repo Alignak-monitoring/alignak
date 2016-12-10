@@ -859,8 +859,6 @@ class Broker(BaseSatellite):
                 self.timeout = self.timeout - (end - begin)
             self.timeout = 1.0
 
-            # print "get new broks watch new conf 1: end", len(self.broks)
-
         # Say to modules it's a new tick :)
         self.hook_point('tick')
 
