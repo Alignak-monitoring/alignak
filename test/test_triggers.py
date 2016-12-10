@@ -76,7 +76,7 @@ class TestTriggers(AlignakTest):
         )
         self.assert_any_cfg_log_match(
             re.escape(
-                "[service::test_service_trigger] 'trigger' property is not allowed"
+                "[service::test_host_0/test_service_trigger] 'trigger' property is not allowed"
             )
         )
 
