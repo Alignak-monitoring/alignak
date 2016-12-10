@@ -70,14 +70,19 @@ class Module(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'python_name': StringProp(),
-        'module_alias': StringProp(),
+        'python_name': StringProp(default=''),
+        'module_alias': StringProp(default=''),
         'module_types': ListProp(default=['']),
         # Todo: modules for modules ... hmmm. Not implemented ...
         'modules': ListProp(default=[])
     })
 
     macros = {}
+
+    def __repr__(self):
+        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
+
+    __str__ = __repr__
 
     # For debugging purpose only (nice name)
     def get_name(self):
@@ -107,11 +112,6 @@ class Module(Item):
         :return: True / False
         """
         return module_type in self.module_types
-
-    def __repr__(self):
-        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
-
-    __str__ = __repr__
 
 
 class Modules(Items):

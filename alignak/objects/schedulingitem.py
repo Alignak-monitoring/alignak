@@ -2513,7 +2513,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.processed_business_rule = rule
                 self.business_rule = node
 
-
     def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
         """
         Returns a status string for business rules based items formatted

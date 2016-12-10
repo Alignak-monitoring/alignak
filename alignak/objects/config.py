@@ -107,6 +107,7 @@ from alignak.objects.servicegroup import Servicegroup, Servicegroups
 from alignak.objects.servicedependency import Servicedependency, Servicedependencies
 from alignak.objects.hostdependency import Hostdependency, Hostdependencies
 from alignak.objects.module import Module, Modules
+from alignak.objects.satellitelink import SatelliteLinks
 from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 from alignak.objects.trigger import Triggers
@@ -1637,44 +1638,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     def apply_inheritance(self):
         """Apply inheritance over templates
-        Template can be used in the following objects::
-
-        * hosts
-        * contacts
-        * services
-        * servicedependencies
-        * hostdependencies
-        * timeperiods
-        * hostsextinfo
-        * servicesextinfo
-        * serviceescalations
-        * hostescalations
-        * escalations
+        Templates can be used in all the configuration managed objects.
 
         :return: None
         """
-        # Todo: check if it is really necessary... the Item __init__ function fills the
-        # default values after the parameters got parsed...
         # Apply inheritance for all the managed objects
         for _, _, prop, _ in self.types_creations.values():
             if getattr(self, prop, None) is not None:
-                # Fill the missing properties with their default values
+                # Not for modules nor daemons and satellites
+                if isinstance(getattr(self, prop, None), (Modules, SatelliteLinks)):
+                    continue
+                # Apply inheritance for a list of objects
                 getattr(self, prop).apply_inheritance()
-
-        # # inheritance properties by template
-        # self.hosts.apply_inheritance()
-        # self.contacts.apply_inheritance()
-        # self.services.apply_inheritance()
-        # self.servicedependencies.apply_inheritance()
-        # self.hostdependencies.apply_inheritance()
-        # self.timeperiods.apply_inheritance()
-        # self.hostsextinfo.apply_inheritance()
-        # self.servicesextinfo.apply_inheritance()
-        #
-        # # Now escalations too
-        # self.serviceescalations.apply_inheritance()
-        # self.hostescalations.apply_inheritance()
-        # self.escalations.apply_inheritance()
 
     def apply_implicit_inheritance(self):
         """Wrapper for calling apply_implicit_inheritance method of services attributes
@@ -1689,10 +1664,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        # Fill default for config (self)
-        # Todo: not necessary... the Item __init__ function fills the default missing properties
-        # super(Config, self).fill_default()
-
         # First create missing satellites, so that no other satellites will
         # be created after this point
         self.fill_default_satellites()
@@ -1701,8 +1672,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # not have a realm
         self.fill_default_realm()
 
-        # Todo: check if it is really necessary... the Item __init__ function fills the
-        # default values after the parameters got parsed...
         for _, _, prop, _ in self.types_creations.values():
             if getattr(self, prop, None) is not None:
                 # Fill the missing properties with their default values
@@ -1717,7 +1686,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         Create a new one (default) and tag everyone that do not have
         a realm prop to be put in this realm
 
-        Todo: perharps we should check if some realms exist that one
+        Todo: perharps we should check if some realms exist and that one
         of them is defined as the default realm
 
         :return: None

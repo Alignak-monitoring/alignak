@@ -513,10 +513,10 @@ class TestHostgroup(PropertiesTester, AlignakTest):
 
 class TestHost(PropertiesTester, AlignakTest):
 
-    unused_props = ['retain_nonstatus_information', 'retain_status_information']
+    unused_props = []
 
     without_default = [
-        'uuid', 'host_name', 'check_period', 'notification_period'
+        'uuid', 'host_name', 'notification_period'
         ]
 
     properties = dict([
@@ -536,6 +536,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('initial_state', 'o'),
         ('freshness_state', 'd'),
         ('check_interval', 0),
+        ('check_period', ''),
         ('max_check_attempts', 1),
         ('retry_interval', 0),
         ('active_checks_enabled', True),
@@ -606,12 +607,14 @@ class TestHost(PropertiesTester, AlignakTest):
 
 class TestModule(PropertiesTester, AlignakTest):
 
-    unused_props = ['option_1', 'option_2', 'option_3']
+    unused_props = []
 
-    without_default = ['module_alias', 'python_name']
+    without_default = []
 
     properties = dict([
-        ('uuid', ''),
+        # ('uuid', ''),
+        ('module_alias', ''),
+        ('python_name', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -851,7 +854,7 @@ class TestService(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['check_period', 'notification_period',
+    without_default = ['notification_period',
                        'host_name', 'service_description']
 
     properties = dict([
@@ -865,6 +868,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('display_name', ''),
         ('max_check_attempts', 1),
         ('check_command', ''),
+        ('check_period', ''),
         ('hostgroup_name', ''),
         ('servicegroups', []),
         ('is_volatile', False),

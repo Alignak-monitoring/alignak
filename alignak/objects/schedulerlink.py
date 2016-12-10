@@ -63,20 +63,30 @@ class SchedulerLink(SatelliteLink):
 
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'scheduler_name':     StringProp(fill_brok=['full_status']),
-        'port':               IntegerProp(default=7768, fill_brok=['full_status']),
-        'weight':             IntegerProp(default=1, fill_brok=['full_status']),
-        'skip_initial_broks': BoolProp(default=False, fill_brok=['full_status']),
-        'accept_passive_unknown_check_results': BoolProp(default=False, fill_brok=['full_status']),
+        'scheduler_name':
+            StringProp(fill_brok=['full_status']),
+        'port':
+            IntegerProp(default=7768, fill_brok=['full_status']),
+        'weight':
+            IntegerProp(default=1, fill_brok=['full_status']),
+        'skip_initial_broks':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'accept_passive_unknown_check_results':
+            BoolProp(default=False, fill_brok=['full_status']),
     })
 
     running_properties = SatelliteLink.running_properties.copy()
     running_properties.update({
-        'conf': StringProp(default=None),
-        'conf_package': DictProp(default={}),
-        'need_conf': StringProp(default=True),
-        'external_commands': StringProp(default=[]),
-        'push_flavor': IntegerProp(default=0),
+        'conf':
+            StringProp(default=None),
+        'conf_package':
+            DictProp(default={}),
+        'need_conf':
+            StringProp(default=True),
+        'external_commands':
+            StringProp(default=[]),
+        'push_flavor':
+            IntegerProp(default=0),
     })
 
     def run_external_commands(self, commands):

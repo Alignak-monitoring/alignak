@@ -56,8 +56,10 @@ class BrokerLink(SatelliteLink):
 
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'broker_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port': IntegerProp(default=7772, fill_brok=['full_status']),
+        'broker_name':
+            StringProp(fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
     def register_to_my_realm(self):

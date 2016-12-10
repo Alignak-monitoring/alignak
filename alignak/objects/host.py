@@ -114,7 +114,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
-         # State the host will be set to if the freshness_threshold is raised
+        # State the host will be set to if the freshness_threshold is raised
         'freshness_state':
             CharProp(default='d', fill_brok=['full_status']),
 

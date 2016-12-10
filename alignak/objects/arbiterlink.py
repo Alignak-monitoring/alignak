@@ -65,9 +65,12 @@ class ArbiterLink(SatelliteLink):
 
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'arbiter_name':    StringProp(),
-        'host_name':       StringProp(default=socket.gethostname()),
-        'port':            IntegerProp(default=7770),
+        'arbiter_name':
+            StringProp(),
+        'host_name':
+            StringProp(default=socket.gethostname()),
+        'port':
+            IntegerProp(default=7770),
     })
 
     def is_me(self):
