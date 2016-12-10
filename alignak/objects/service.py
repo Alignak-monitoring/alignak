@@ -1080,7 +1080,7 @@ class Service(SchedulingItem):
                     notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
             logger.debug("Service: %s, notification %s sending is blocked by globals",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         # Block if the current status is not in the notification_options w,u,c,r,f,s,x
@@ -1092,17 +1092,17 @@ class Service(SchedulingItem):
             self.state == 'UNREACHABLE' and 'x' not in self.notification_options
         ):  # pylint: disable=R0911
             logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
             logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
         if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
             logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
@@ -1110,20 +1110,20 @@ class Service(SchedulingItem):
         if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up or \
                 host.scheduled_downtime_depth > 0:
             logger.debug("Service: %s, notification %s sending is blocked by status",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         # When in downtime, only allow end-of-downtime notifications
         if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
             logger.debug("Service: %s, notification %s sending is blocked by downtime",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
         if self.scheduled_downtime_depth > 0 and n_type in \
                 ('PROBLEM', 'RECOVERY', 'FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
             logger.debug("Service: %s, notification %s sending is blocked by downtime",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         # Block if the status is SOFT
@@ -1137,7 +1137,7 @@ class Service(SchedulingItem):
                                                     'FLAPPINGDISABLED') or \
                 host.state != host.ok_up:
             logger.debug("Service: %s, notification %s sending is blocked by soft state, "
-                         "acknowledged, flapping or host DOWN", n_type, self.get_name())
+                         "acknowledged, flapping or host DOWN", self.get_name(), n_type)
             return True
 
         # Block if business rule smart notifications is enabled and all its
@@ -1147,7 +1147,7 @@ class Service(SchedulingItem):
                 and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
             logger.debug("Service: %s, notification %s sending is blocked by business rules",
-                         n_type, self.get_name())
+                         self.get_name(), n_type)
             return True
 
         return False
@@ -1532,7 +1532,6 @@ class Services(SchedulingItems):
         :type hostnames: str
         :return: None
         """
-        print(" - explode services from hosts: %s" % service)
         # the list of our host_names if more than 1
         duplicate_for_hosts = []
         # the list of !host_name so we remove them after
@@ -1714,7 +1713,6 @@ class Services(SchedulingItems):
 
         to_remove = []
         for service in self:
-            # print(" - exploding service 2: %s" % service)
             host = hosts.find_by_name(service.host_name)
             if host and host.is_excluded_for(service):
                 to_remove.append(service)

@@ -303,13 +303,14 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_bad_undefined_template.cfg')
         assert self.conf_is_correct
+        self.show_configuration_logs()
 
         # TODO, issue #344
         assert "host test_host use/inherit from an unknown template: undefined_host ! " \
-                      "from: cfg/config/use_undefined_template.cfg:1" in \
+               "from: cfg/config/use_undefined_template.cfg:1" in \
                       self.configuration_warnings
-        assert "service test_service use/inherit from an unknown template: " \
-                      "undefined_service ! from: cfg/config/use_undefined_template.cfg:6" in \
+        assert "service test_host/test_service use/inherit from an unknown template: " \
+               "undefined_service ! from: cfg/config/use_undefined_template.cfg:6" in \
                       self.configuration_warnings
 
     def test_broken_configuration(self):
@@ -495,40 +496,51 @@ class TestConfig(AlignakTest):
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::Simple_1Of_1unk_host is incorrect; "
+            "services configuration is incorrect:",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_host] business_rule is invalid"
+            "[service::test_host_0/Simple_1Of_1unk_svc] business_rule is invalid",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_host]: Business rule uses unknown host test_host_9"
-        ))
-
-        self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::Simple_1Of_1unk_svc is incorrect; "
+            "[service::test_host_0/Simple_1Of_1unk_svc]: Business rule uses unknown "
+            "service test_host_0/db3",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_svc] business_rule is invalid"
+            "Configuration in service::test_host_0/Simple_1Of_1unk_svc is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:128",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::Simple_1Of_1unk_svc]: Business rule uses unknown service test_host_0/db3"
-        ))
-
-        self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::ERP_unk_svc is incorrect; "
+            "[service::test_host_0/Simple_1Of_1unk_host] business_rule is invalid",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::ERP_unk_svc] business_rule is invalid"
+            "[service::test_host_0/Simple_1Of_1unk_host]: Business rule uses "
+            "unknown host test_host_9",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/web100"
+            "Configuration in service::test_host_0/Simple_1Of_1unk_host is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:144",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::ERP_unk_svc]: Business rule uses unknown service test_host_0/lvs100"
+            "[service::test_host_0/ERP_unk_svc] business_rule is invalid",
         ))
-
         self.assert_any_cfg_log_match(re.escape(
-            "services configuration is incorrect:"
+            "[service::test_host_0/ERP_unk_svc]: Business rule uses unknown "
+            "service test_host_0/web100",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::test_host_0/ERP_unk_svc]: Business rule uses unknown service test_host_0/lvs100",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::test_host_0/ERP_unk_svc is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:136",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::Will Miss hostname for this service] unknown host_name 'Dont expect to find this'",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::Dont expect to find this/Will Miss hostname "
+            "for this service is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:162",
         ))
 
     def test_business_rules_hostgroup_expansion_errors(self):
@@ -539,49 +551,76 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
         self.show_configuration_logs()
 
+        # Warnings
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::dummy/bprule_invalid_regex is incorrect; "
+            "host test_host_02 use/inherit from an unknown template: tag1 ! "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:58"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::dummy/bprule_invalid_regex] business_rule is invalid"
+            "host test_host_02 use/inherit from an unknown template: tag2 ! "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:58"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::dummy/bprule_invalid_regex]: Business rule uses invalid regex "
-            "r:test_host_0[,srv1: unexpected end of regular expression"
+            "host test_host_01 use/inherit from an unknown template: tag1 ! "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:49"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::dummy/bprule_invalid_regex is incorrect; "
+            "host test_host_01 use/inherit from an unknown template: tag2 ! "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:49"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::dummy/bprule_invalid_regex] business_rule is invalid"
+            "service dummy/bprule_invalid_regex use/inherit from an unknown template: "
+            "generic-service_bcee_bcee ! "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:142"
+        ))
+        
+        # Errors
+        self.assert_any_cfg_log_match(re.escape(
+            "services configuration is incorrect:",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::dummy/bprule_empty_regex]: Business rule got an empty result "
-            "for pattern r:fake,srv1"
+            "[service::dummy/bprule_empty_regex] business_rule is invalid",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::dummy/bprule_empty_regex]: Business rule got an empty "
+            "result for pattern r:fake,srv1",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in service::dummy/bprule_empty_regex is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:128",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::dummy/bprule_unkonwn_service] business_rule is invalid",
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[service::dummy/bprule_unkonwn_service]: Business rule got an empty "
+            "result for pattern g:hostgroup_01,srv3",
         ))
         self.assert_any_cfg_log_match(re.escape(
             "Configuration in service::dummy/bprule_unkonwn_service is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:135",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_service] business_rule is invalid"
+            "[service::dummy/bprule_unkonwn_hostgroup] business_rule is invalid",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_service]: Business rule got an empty result "
-            "for pattern g:hostgroup_01,srv3"
+            "[service::dummy/bprule_unkonwn_hostgroup]: Business rule got an empty "
+            "result for pattern g:hostgroup_03,srv1",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in service::bprule_unkonwn_hostgroup is incorrect; "
+            "Configuration in service::dummy/bprule_unkonwn_hostgroup is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:121",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_hostgroup] business_rule is invalid"
+            "[service::dummy/bprule_invalid_regex] business_rule is invalid",
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "[service::bprule_unkonwn_hostgroup]: Business rule got an empty result "
-            "for pattern g:hostgroup_03,srv1"
+            "[service::dummy/bprule_invalid_regex]: Business rule uses invalid "
+            "regex r:test_host_0[,srv1: unexpected end of regular expression",
         ))
-
         self.assert_any_cfg_log_match(re.escape(
-            "services configuration is incorrect:"
+            "Configuration in service::dummy/bprule_invalid_regex is incorrect; "
+            "from: cfg/config/../default/daemons/reactionner-master.cfg:142"
         ))
 
     def test_business_rules_bad_realm_conf(self):

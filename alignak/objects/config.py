@@ -375,7 +375,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(managed=False, default=True),
 
         'passive_host_checks_are_soft':
-            BoolProp(managed=False, default=True),
+            BoolProp(managed=False, default=False),
 
         # Todo: not used anywhere in the source code
         'enable_predictive_host_dependency_checks':
@@ -845,14 +845,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 res[prop] = getattr(self, prop).serialize()
 
         for _, _, prop, _ in self.types_creations.values():
-            # print("-----\nStoring list: %s" % (prop))
             if getattr(self, prop, None) is None:
                 res[prop] = None
             else:
                 # Serialize the list of objects
                 res[prop] = getattr(self, prop).serialize()
-                # res[prop] = serialize(getattr(self, prop))
-            # print("Stored list: %s = %s" % (prop, getattr(self, prop, 'Do not exist!')))
 
         for prop in ['triggers', 'packs']:
             if getattr(self, prop, None) is None:
@@ -2520,11 +2517,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for pack_id in realm.packs:
                 for host_uuid in realm.packs[pack_id]:
                     host = self.hosts[host_uuid]
-                    # print(" - host: %s, services: %s" % (host.get_name(), host.services))
                     host.pack_id = pack_id
                     self.confs[pack_id + offset].hosts.add_item(host)
                     for service_uuid in host.services:
-                        # print(" - host: %s, service: %s" % (host.get_name(), service_uuid))
                         service = self.services[service_uuid]
                         self.confs[pack_id + offset].services.add_item(service)
                 # Now the conf can be linked to the realm
@@ -2546,7 +2541,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # And also relink the hosts with the new hostgroups
             for host in current_conf.hosts:
-                # print(" - host: %s" % (host.get_name()))
                 initial_hostgroups = host.hostgroups
                 new_hostgroups = []
                 for hostgroup_uuid in initial_hostgroups:

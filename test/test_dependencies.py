@@ -943,27 +943,134 @@ class TestDependencies(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        self.schedulers['scheduler-master'].sched.update_recurrent_works_tick('check_freshness', 1)
+        # Passive hosts checks are considered as immediate hard states
+        assert self.arbiter.conf.passive_host_checks_are_soft is False
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_E")
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
-            "test_host_E", "test_ok_0")
+        # Check freshness on each scheduler tick
+        self._sched.update_recurrent_works_tick('check_freshness', 1)
+
+        # Get host and service
+        host = self._sched.hosts.find_by_name("test_host_E")
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_E", "test_ok_0")
 
         assert 0 == len(svc.act_depend_of)
 
-        # it's passive, create check manually
+        # Host is passively checked, create check manually
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        # Todo: should be in HARD state (because passive_host_checks_are_soft is False)!
+        assert "SOFT" == host.state_type
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        assert "SOFT" == host.state_type
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        assert "SOFT" == host.state_type
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        assert "SOFT" == host.state_type
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        # Todo: we need to get 5 passive host check to go HARD !
+        # Passive hosts checks should be hard on first attempt!
+        # Except if the global passive_host_checks_are_soft is set !
+        assert "HARD" == host.state_type
+
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._sched.run_external_command(excmd)
         self.external_command_loop()
         time.sleep(0.1)
         assert "UP" == host.state
+        # When going UP, immediate HARD state!
+        assert "HARD" == host.state_type
+
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        # Ok, still five checks before going DOWN!
+        assert "HARD" == host.state_type
+
+        # it's passive, create check manually
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
+        self._sched.run_external_command(excmd)
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
         assert "OK" == svc.state
+        assert "HARD" == svc.state_type
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "UP" == host.state
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self._sched.run_external_command(excmd)
         self.external_command_loop()
         assert "UP" == host.state
         assert "CRITICAL" == svc.state

@@ -180,7 +180,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('auto_rescheduling_interval', 1),
         ('auto_rescheduling_window', 180),
         ('translate_passive_host_checks', True),
-        ('passive_host_checks_are_soft', True),
+        ('passive_host_checks_are_soft', False),
         ('enable_predictive_host_dependency_checks', True),
         ('enable_predictive_service_dependency_checks', True),
         ('cached_host_check_horizon', 0),

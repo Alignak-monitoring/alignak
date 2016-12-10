@@ -203,12 +203,6 @@ class Itemgroup(Item):
         :rtype: list[str]
         """
         members_property = getattr(self.__class__, "members_property", 'not_existing')
-        # if not names:
-        #     members_names = []
-        #     print("Groups: %s" % self.members_uuid)
-        #     for member in getattr(self, members_property, []):
-        #         members_names.append(self.members_uuid[member])
-        #     return members_names
         return getattr(self, members_property, [])
 
     def get_group_members(self):

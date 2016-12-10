@@ -273,7 +273,6 @@ class Servicegroups(Itemgroups):
         servicegroup = self.find_by_name(servicegroup_name)
         if servicegroup is None:
             # Create the group if it does not yet exist
-            print("Create SG: %s" % servicegroup_name)
             servicegroup = Servicegroup({'servicegroup_name': servicegroup_name,
                                          'members': [service.get_name()],
                                          'imported_from': 'inner'})

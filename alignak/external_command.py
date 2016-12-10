@@ -3431,8 +3431,9 @@ class ExternalCommandManager:
         :type comment: str
         :return: None
         """
-        data = {'ref': host.uuid, 'ref_type': host.my_type, 'start_time': start_time,
-                'end_time': end_time, 'fixed': fixed, 'trigger_id': trigger_id,
+        data = {'ref': host.uuid, 'ref_type': host.my_type,
+                'start_time': start_time, 'end_time': end_time,
+                'fixed': fixed, 'trigger_id': trigger_id,
                 'duration': duration, 'author': author, 'comment': comment}
         downtime = Downtime(data)
         self.send_an_element(downtime.add_automatic_comment(host))
