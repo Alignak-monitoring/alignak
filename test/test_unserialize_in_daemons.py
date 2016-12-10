@@ -67,18 +67,6 @@ class TestUnserialize(AlignakTest):
     def set_expected(self, obj):
         """Create a dictionary with default expected values for an object"""
         all_props = {}
-        # for key, value in getattr(obj, "properties", {}).iteritems():
-        #     if key == 'uuid':
-        #         continue
-        #     if value.has_default:
-        #         # Make a copy for iterable properties
-        #         if hasattr(value.default, '__iter__'):
-        #             all_props[key] = copy(value.default)
-        #         else:
-        #             all_props[key] = value.default
-        #     else:
-        #         all_props[key] = value
-
         for key, value in getattr(obj, "running_properties", {}).iteritems():
             if value.has_default:
                 # Make a copy for iterable properties
@@ -88,9 +76,6 @@ class TestUnserialize(AlignakTest):
                     all_props[key] = value.default
             else:
                 all_props[key] = value
-
-        # for key, value in getattr(obj, "macros", {}).iteritems():
-        #     all_props[key] = value
 
         return all_props
 
@@ -881,6 +866,7 @@ class TestUnserialize(AlignakTest):
             'check_flapping_recovery_notification': True,
             'check_freshness': False,
             'check_interval': 0,
+            'check_period': '',
             'check_type': 0,
             'checkmodulations': [],
             'checks_in_progress': [],
@@ -1101,6 +1087,7 @@ class TestUnserialize(AlignakTest):
             'business_rule_service_notification_options': [],
             'business_rule_smart_notifications': False,
             'check_command': '',
+            'check_period': '',
             'check_flapping_recovery_notification': True,
             'check_freshness': False,
             'check_interval': 0,
@@ -1207,6 +1194,8 @@ class TestUnserialize(AlignakTest):
             's_time': 0.0,
             'scheduled_downtime_depth': 0,
             'service_overrides': [],
+            'service_excludes': [],
+            'service_includes': [],
             'services': [],
             'should_be_scheduled': 1,
             'snapshot_command': None,
@@ -1281,6 +1270,7 @@ class TestUnserialize(AlignakTest):
             'business_rule_service_notification_options': [],
             'business_rule_smart_notifications': False,
             'check_command': '_internal_host_up',
+            'check_period': '',
             'check_flapping_recovery_notification': True,
             'check_freshness': False,
             'check_interval': 0,
@@ -1387,6 +1377,8 @@ class TestUnserialize(AlignakTest):
             's_time': 0.0,
             'scheduled_downtime_depth': 0,
             'service_overrides': [],
+            'service_excludes': [],
+            'service_includes': [],
             'services': [],
             'should_be_scheduled': 1,
             'snapshot_command': None,
@@ -1469,7 +1461,7 @@ class TestUnserialize(AlignakTest):
 
         # Host contacts, commands, ... still with default values and not yet linked!
         assert host1.contacts == ['contact1']
-        assert host1.check_command == None
+        assert host1.check_command == ''
         assert host2.check_command == '_internal_host_up'
 
         # Manage inheritance
@@ -2130,23 +2122,21 @@ class TestUnserialize(AlignakTest):
         # restore serialized properties
         # ---
         item = Item(parsing=False)
-        # We get an object with an uuid but without any properties
+        # We get an object with an uuid and its properties
         print("Item: %s" % item.__dict__)
         expected = {'uuid': item.uuid}
         expected.update(self.set_expected(item))
+        expected.update({'tags': set([])})
         assert expected == item.__dict__
 
         serialized_item = item.serialize()
         # We should get a dictionary with Item properties, running_properties and macros
         # configuration_errors and configuration_warnings are filtered
-        expected = {'uuid': item.uuid,
-                    # Item properties:
-                    'use': [],
-                    'definition_order': 100, 'register': True,
-                    'imported_from': 'unknown', 'name': '',
-                    # Item running properties (filtered):
-                    'tags': []}
-        print("Serialized Item: %s" % serialized_item)
+        expected = {
+            'customs': {}, 'plus': {},
+            'uuid': item.uuid,
+            'conf_is_correct': True, 'tags': []
+        }
         assert expected == serialized_item
 
         # Item global object serialize
@@ -2168,19 +2158,22 @@ class TestUnserialize(AlignakTest):
         print("Item: %s" % item.__dict__)
         expected = {'uuid': item.uuid}
         expected.update(self.set_expected(item))
-        expected.update({'customs': {}, 'plus': {}})
+        expected.update({
+            'configuration_errors': [], 'use': [], 'display_name': '', 'definition_order': 100,
+            'tags': set([]), 'name': 'unnamed', 'register': True, 'customs': {},
+            'alias': '', 'plus': {}, 'configuration_warnings': [],
+            'imported_from': 'unknown', 'conf_is_correct': True,
+        'extra': '', 'foo': ''})
         assert expected == item.__dict__
 
         serialized_item = item.serialize()
         # We should get a dictionary with Item properties, running_properties and macros
         # configuration_errors and configuration_warnings are filtered
-        expected = {'uuid': item.uuid,
-                    # Item properties:
-                    'use': [],
-                    'definition_order': 100, 'register': True,
-                    'imported_from': 'unknown', 'name': '',
-                    # Item running properties (filtered):
-                    'tags': []}
+        expected = {'uuid': item.uuid}
+        expected.update({
+            'use': [], 'display_name': '', 'definition_order': 100, 'tags': [], 'name': 'unnamed',
+            'register': True, 'customs': {}, 'alias': '', 'plus': {}, 'imported_from': 'unknown',
+            'conf_is_correct': True, 'extra': '', 'foo': ''})
         print("Serialized Item: %s" % serialized_item)
         assert expected == serialized_item
 
@@ -2201,19 +2194,21 @@ class TestUnserialize(AlignakTest):
         # We get an item with an uuid, its properties, running properties and macros PLUS
         # the parameters and the inner defined properties
         expected = {'uuid': item.uuid,
+                    'conf_is_correct': True,
                     # Item properties:
                     'use': [],
                     'definition_order': 100, 'register': True,
-                    'imported_from': 'file.cfg', 'name': '',
+                    'imported_from': 'file.cfg', 'name': 'unnamed',
+                    'alias': '', 'display_name': '',
                     # Item running properties:
                     'configuration_errors': [],
-                    'configuration_warnings': ['Guessing the property foo type because '
-                                               'it is not in Item object properties'],
+                    'configuration_warnings': [],
                     'tags': set([]),
                     # Item self declared properties
                     'customs': {},
                     'plus': {},
                     # Item parameters
+                    'extra': '',
                     'foo': 'bar',
                     }
         print("Item: %s" % item.__dict__)
@@ -2225,16 +2220,11 @@ class TestUnserialize(AlignakTest):
         # Note that parameters that are not defined in properties, running_properties or macros
         # are not filtered. This because an Item object uses a ToGuessProp object for guessed
         # properties.
-        expected = {'uuid': item.uuid,
-                    # Item properties:
-                    'use': [],
-                    'definition_order': 100, 'register': True,
-                    'imported_from': 'file.cfg', 'name': '',
-                    # Item running properties:
-                    'tags': [],
-                    # Item parameters
-                    'foo': 'bar',
-                    }
+        expected = {'uuid': item.uuid}
+        expected.update({
+            'use': [], 'display_name': '', 'definition_order': 100, 'tags': [], 'name': 'unnamed',
+            'register': True, 'customs': {}, 'alias': '', 'plus': {}, 'foo': 'bar', 'extra': '',
+            'imported_from': 'file.cfg', 'conf_is_correct': True})
         print("Serialized Item: %s" % serialized_item)
         assert expected == serialized_item
 
@@ -2267,18 +2257,23 @@ class TestUnserialize(AlignakTest):
 
         # Build a list with the 3 items
         items_list = Items([item1, item2, item3])
-        # We get an object with an uuid but without any properties
-        expected = {# Item properties:
-                    'configuration_errors': [], 'configuration_warnings': [],
-                    'name_to_item': {},
-                    'name_to_template': {},
-                    'templates': {},
-                    'items': {
-                        item1.uuid: item1,
-                        item2.uuid: item2,
-                        item3.uuid: item3,
-                    }}
-        print("Item: %s" % items_list)
+        expected = {
+            'conf_is_correct': True,
+            'configuration_errors': [], 'configuration_warnings': [],
+            # Unnamed items are named with their uuid!
+            'name_to_item': {
+                item1.uuid: item1,
+                item2.uuid: item2,
+                item3.uuid: item3,
+            },
+            'name_to_template': {},
+            'templates': {},
+            'items': {
+                item1.uuid: item1,
+                item2.uuid: item2,
+                item3.uuid: item3,
+            }
+        }
         assert expected == items_list.__dict__
 
         serialized_items_list = items_list.serialize()
@@ -2305,42 +2300,74 @@ class TestUnserialize(AlignakTest):
         contact1 = Contact({'contact_name': 'contact1', 'use': 'contact_tpl'}, parsing=True)
         assert not contact1.is_tpl()
         expected = {'uuid': contact1.uuid}
-        expected.update(self.set_expected(contact1))
-        expected['contact_name'] = 'contact1'
-        expected['use'] = ['contact_tpl']
-        expected.update({'plus': {}})
+        expected.update({
+            'address1': 'none',
+            'address2': 'none',
+            'address3': 'none',
+            'address4': 'none',
+            'address5': 'none',
+            'address6': 'none',
+            'alias': '',
+            'broks': [],
+            'can_submit_commands': False,
+            'conf_is_correct': True,
+            'configuration_errors': [],
+            'configuration_warnings': [],
+            'contact_name': 'contact1',
+            'contactgroups': [],
+            'customs': {},
+            'definition_order': 100,
+            'display_name': '',
+            'downtimes': [],
+            'email': 'none',
+            'expert': False,
+            'host_notification_commands': [],
+            'host_notification_options': [],
+            'host_notifications_enabled': True,
+            'imported_from': 'unknown',
+            'in_scheduled_downtime': False,
+            'is_admin': False,
+            'min_business_impact': 0,
+            'modified_attributes': 0,
+            'modified_host_attributes': 0,
+            'modified_service_attributes': 0,
+            'name': 'unnamed',
+            'notificationways': [],
+            'pager': 'none',
+            'password': 'NOPASSWORDSET',
+            'plus': {},
+            'register': True,
+            'service_notification_commands': [],
+            'service_notification_options': [],
+            'service_notifications_enabled': True,
+            'tags': set([]),
+            'use': ['contact_tpl']})
         assert expected == contact1.__dict__
 
         # Independent contact
         contact2 = Contact({'contact_name': 'contact2', 'imported_from': 'file.cfg'})
         assert not contact2.is_tpl()
-        # We get an item with an uuid, its properties, running properties and macros PLUS
-        # the parameters and the inner defined properties
-        expected = {'uuid': contact2.uuid}
-        expected.update(self.set_expected(contact2))
-        expected['contact_name'] = 'contact2'
-        expected['imported_from'] = 'file.cfg'
-        expected.update({'plus': {}})
-        assert expected == contact2.__dict__
 
         # Build a contacts list with the 3 contacts
         contacts_list = Contacts([tpl1, contact1, contact2])
-        expected = {# Item properties:
-                    'configuration_errors': [], 'configuration_warnings': [],
-                    'name_to_item': {
-                        'contact1': contact1,
-                        'contact2': contact2
-                    },
-                    'name_to_template': {
-                        'contact_tpl': tpl1
-                    },
-                    'templates': {
-                        tpl1.uuid: tpl1,
-                    },
-                    'items': {
-                        contact1.uuid: contact1,
-                        contact2.uuid: contact2,
-                    }}
+        expected = {
+            'conf_is_correct': True,
+            'configuration_errors': [], 'configuration_warnings': [],
+            'name_to_item': {
+                'contact1': contact1,
+                'contact2': contact2
+            },
+            'name_to_template': {
+                'contact_tpl': tpl1
+            },
+            'templates': {
+                tpl1.uuid: tpl1,
+            },
+            'items': {
+                contact1.uuid: contact1,
+                contact2.uuid: contact2,
+            }
+        }
         print("Item: %s" % contacts_list)
         assert expected == contacts_list.__dict__
 
@@ -2365,145 +2392,6 @@ class TestUnserialize(AlignakTest):
         assert contacts_list.find_by_name('contact2') == contact2
         assert contacts_list.find_tpl_by_name('contact_tpl') == tpl1
 
-    def test_serialize_hosts_list(self):
-        """ Test Hosts serialization / unserialization...
-
-        :return: None
-        """
-        self.print_header()
-
-        # SchedulingItem initialization
-        sched_item1 = SchedulingItem(parsing=True)
-        assert not sched_item1.is_tpl()
-        # We get an item with an uuid, its properties, running properties and macros PLUS
-        # the parameters and the inner defined properties
-        expected = {'uuid': sched_item1.uuid}
-        expected.update(self.set_expected(sched_item1))
-        expected.update({'plus': {}})
-        # Remove class variables
-        expected.pop('current_event_id')
-        expected.pop('current_problem_id')
-        # Todo: check with this does not assert!
-        assert expected == sched_item1.__dict__
-
-        # Host initialization as a template
-        tpl1 = Host({'name': 'host_tpl', 'register': '0'})
-        assert tpl1.definition_order == 100
-        assert tpl1.is_tpl()
-
-        # Host initialization as depending upon the template
-        host1 = Host({'host_name': 'host1', 'contacts': 'contact1', 'use': 'host_tpl'})
-        print("Host1: %s" % host1)
-        # We get an item with an uuid, its properties, running properties and macros PLUS
-        # the parameters and the inner defined properties
-        expected = {'uuid': host1.uuid}
-        expected.update(self.set_expected(host1))
-        expected['host_name'] = 'host1'
-        expected['use'] = ['host_tpl']
-        expected['contacts'] = ['contact1']
-        expected.update({'plus': {}})
-        # Remove inherited class variables
-        expected.pop('current_event_id')
-        expected.pop('current_problem_id')
-        # Remove class variables
-        expected.pop('service_excludes')
-        expected.pop('service_includes')
-
-        assert expected == host1.__dict__
-
-        # Independent Host
-        host2 = Host({'host_name': 'host2', 'contacts': 'contact1', 'imported_from': 'file.cfg'})
-        print("Host2: %s" % host2)
-        # We get an item with an uuid, its properties, running properties and macros PLUS
-        # the parameters and the inner defined properties
-        expected = {'uuid': host2.uuid}
-        expected.update(self.set_expected(host2))
-        expected['host_name'] = 'host2'
-        expected['contacts'] = ['contact1']
-        expected['imported_from'] = 'file.cfg'
-        expected.update({'plus': {}})
-        # Remove inherited class variables
-        expected.pop('current_event_id')
-        expected.pop('current_problem_id')
-        # Remove class variables
-        expected.pop('service_excludes')
-        expected.pop('service_includes')
-
-        assert expected == host2.__dict__
-
-        # Build a hosts list with the 3 hosts
-        hosts_list = Hosts([tpl1, host1, host2])
-        expected = {# Item properties:
-                    'configuration_errors': [], 'configuration_warnings': [],
-                    'name_to_item': {
-                        'host1': host1,
-                        'host2': host2
-                    },
-                    'name_to_template': {
-                        'host_tpl': tpl1
-                    },
-                    'templates': {
-                        tpl1.uuid: tpl1,
-                    },
-                    'items': {
-                        host1.uuid: host1,
-                        host2.uuid: host2,
-                    }}
-        print("Hosts list: %s" % hosts_list)
-        assert expected == hosts_list.__dict__
-
-        # No templates in the items list, only the real items
-        serialized_hosts_list = hosts_list.serialize()
-        expected = {
-            host1.uuid: host1.serialize(),
-            host2.uuid: host2.serialize(),
-        }
-        # print("Serialized hosts list: %s" % serialized_hosts_list)
-        assert expected == serialized_hosts_list
-
-        # Relation Hosts / templates
-        hosts_list.linkify_templates()
-        assert host1.tags == ['host_tpl']
-        assert host2.tags == []
-
-        # Contact initialization as depending upon the template
-        contact1 = Contact({'contact_name': 'contact1'}, parsing=True)
-        assert not contact1.is_tpl()
-        assert contact1.notificationways == []
-
-        # Build a contacts list with the 3 contacts
-        contacts_list = Contacts([contact1])
-        print("Contacts: %s" % contacts_list)
-        expected = {  # Item properties:
-            'configuration_errors': [], 'configuration_warnings': [],
-            'name_to_item': {
-                'contact1': contact1,
-            },
-            'name_to_template': {},
-            'templates': {},
-            'items': {
-                contact1.uuid: contact1,
-            }}
-        assert expected == contacts_list.__dict__
-
-        # Search in the list
-        for host in hosts_list:
-            assert isinstance(host, Host)
-        assert hosts_list.find_by_name('host1') == host1
-        assert hosts_list.find_by_name('host2') == host2
-        assert hosts_list.find_tpl_by_name('host_tpl') == tpl1
-
-        # link hosts with timeperiods, commands, ...
-        hosts_list.linkify(Timeperiods([]), Commands([]),
-                           contacts_list,
-                           Realms([]), Resultmodulations([]), Businessimpactmodulations([]),
-                           Escalations([]), Hostgroups([]), Triggers([]),
-                           CheckModulations([]), MacroModulations([]))
-
-        # Host contacts, commands, ...
-        assert host1.contacts == [contact1.uuid]
-        print("Host: %s" % host1.__dict__)
-
     def test_serialize_contacts_group(self):
         """ Test Contacts / Contacts groups serialization / unserialization...
 
@@ -2524,57 +2412,11 @@ class TestUnserialize(AlignakTest):
         contact2 = Contact({'contact_name': 'contact2', 'contactgroups': 'contacts_group'})
         assert not contact2.is_tpl()
         assert contact2.notificationways == []
-        # We get an item with an uuid, its properties, running properties and macros PLUS
-        # the parameters and the inner defined properties
-        expected = {'uuid': contact2.uuid,
-                    # Item properties:
-                    'use': [],
-                    'definition_order': 100, 'register': True,
-                    'imported_from': 'unknown',
-                    # Item running properties:
-                    'configuration_errors': [],
-                    'configuration_warnings': [],
-                    'tags': set([]),
-                    # Item self declared properties
-                    'customs': {},
-                    'plus': {},
-                    # Item parameters
-                    'contact_name': 'contact2', 'password': 'NOPASSWORDSET',
-                    'name': '', 'alias': 'none',
-                    'host_notifications_enabled': True,
-                    'host_notification_commands': [],
-                    'host_notification_options': [''],
-                    'host_notification_period': '',
-                    'service_notifications_enabled': True,
-                    'service_notification_commands': [],
-                    'service_notification_options': [''],
-                    'service_notification_period': '',
-                    'can_submit_commands': False, 'expert': False, 'is_admin': False,
-                    'in_scheduled_downtime': False, 'downtimes': [],
-                    'notificationways': [],
-                    'min_business_impact': 0,
-                    'modified_attributes': 0L,
-                    'modified_service_attributes': 0L,
-                    'modified_host_attributes': 0L,
-                    'retain_status_information': True,
-                    'broks': [],
-                    'email': 'none', 'pager': 'none',
-                    'address1': 'none', 'address2': 'none', 'address3': 'none',
-                    'address4': 'none', 'address5': 'none', 'address6': 'none',
-                    'contactgroups': ['contacts_group'],
-                    # Macros
-                    'CONTACTPAGER': 'pager', 'CONTACTGROUPNAMES': 'get_groupnames',
-                    'CONTACTNAME': 'contact_name', 'CONTACTEMAIL': 'email',
-                    'CONTACTGROUPNAME': 'get_groupname', 'CONTACTADDRESS3': 'address3',
-                    'CONTACTADDRESS2': 'address2', 'CONTACTADDRESS1': 'address1',
-                    'CONTACTALIAS': 'alias', 'CONTACTADDRESS5': 'address5',
-                    'CONTACTADDRESS4': 'address4', 'CONTACTADDRESS6': 'address6'
-                    }
-        assert expected == contact2.__dict__
 
         # Build a contacts list with the 3 contacts
         contacts_list = Contacts([tpl1, contact1, contact2])
         expected = {  # Item properties:
+            'conf_is_correct': True,
             'configuration_errors': [], 'configuration_warnings': [],
             'name_to_item': {
                 'contact1': contact1,
