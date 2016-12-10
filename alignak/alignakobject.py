@@ -159,18 +159,6 @@ class AlignakObject(object):
                 else:
                     res[prop] = getattr(self, prop)
 
-        for prop in cls.running_properties:
-            if filter and prop in filter:
-                continue
-            if hasattr(self, prop):
-                if isinstance(cls.running_properties[prop], SetProp):
-                    res[prop] = list(getattr(self, prop))
-                else:
-                    res[prop] = getattr(self, prop)
-
-        for prop in cls.macros:
-            res[prop] = getattr(self, prop)
-
         return res
 
     def fill_default(self, which_properties="properties"):
