@@ -83,7 +83,7 @@ class Downtime(AlignakObject):
             BoolProp(default=True, fill_brok=['full_status']),
         'start_time':
             IntegerProp(default=0, fill_brok=['full_status']),
-        # Default duration is one hour
+        # Default duration is one hour
         'duration':
             IntegerProp(default=3600, fill_brok=['full_status']),
         'trigger_id':

@@ -2598,7 +2598,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             data = [self]
         output = macroresolver.resolve_simple_macros_in_string(template_string, data,
                                                                macromodulations, timeperiods)
-        print("get_business, output: %s" % output)
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):

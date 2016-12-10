@@ -349,14 +349,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         return ','.join(sorted(groupnames))
 
-    def get_full_name(self):
-        """Accessor to host_name attribute
-
-        :return: host_name
-        :rtype: str
-        """
-        return self.host_name
-
     def get_hostgroups(self):
         """Accessor to hostgroups attribute
 

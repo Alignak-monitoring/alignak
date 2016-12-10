@@ -161,7 +161,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         for satellites in [self.conf.brokers, self.conf.receivers,
-                          self.conf.pollers, self.conf.reactionners]:
+                           self.conf.pollers, self.conf.reactionners]:
             for satellite in satellites:
                 # Get only if alive of course
                 if satellite.alive:

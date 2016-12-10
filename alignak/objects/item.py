@@ -746,7 +746,7 @@ class Item(AlignakObject):
         :return: name
         :rtype: str
         """
-        return self.name
+        return self.get_name()
 
 
 class Items(object):
