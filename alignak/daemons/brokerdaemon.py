@@ -326,12 +326,10 @@ class Broker(BaseSatellite):
         for mod in self.modules_manager.get_internal_instances():
             try:
                 mod.manage_brok(brok)
-            except Exception, exp:  # pylint: disable=W0703
-                logger.debug(str(exp.__dict__))
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
                                mod.get_name(), str(exp))
-                logger.warning("Exception type: %s", type(exp))
-                logger.warning("Back trace of this kill: %s", traceback.format_exc())
+                logger.exception(exp)
                 self.modules_manager.set_to_restart(mod)
 
     def add_broks_to_queue(self, broks):
@@ -400,23 +398,24 @@ class Broker(BaseSatellite):
                 else:  # no con? make the connection
                     self.pynag_con_init(sched_id, i_type=i_type)
             # Ok, con is not known, so we create it
-            except KeyError, exp:
+            except KeyError as exp:
                 logger.debug("Key error for get_broks : %s", str(exp))
                 self.pynag_con_init(sched_id, i_type=i_type)
-            except HTTPEXCEPTIONS, exp:
+            except HTTPEXCEPTIONS as exp:
                 logger.warning("Connection problem to the %s %s: %s",
                                i_type, links[sched_id]['name'], str(exp))
+                logger.exception(exp)
                 links[sched_id]['con'] = None
             # scheduler must not #be initialized
-            except AttributeError, exp:
+            except AttributeError as exp:
                 logger.warning("The %s %s should not be initialized: %s",
                                i_type, links[sched_id]['name'], str(exp))
+                logger.exception(exp)
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
-            except Exception, err:  # pylint: disable=W0703
-                logger.error(str(err))
-                logger.error(traceback.format_exc())
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception(exp)
                 sys.exit(1)
 
     def get_retention_data(self):
@@ -452,8 +451,10 @@ class Broker(BaseSatellite):
 
         :return: None
         """
+
         with self.conf_lock:
             conf = unserialize(self.new_conf, True)
+            logger.warning("Configuration: %s", conf)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals
@@ -628,7 +629,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now receivers
-            logger.warning("[%s] receivers: %s", self.name, conf['receivers'])
+            logger.debug("[%s] receivers: %s", self.name, conf['receivers'])
             for rec_id in conf['receivers']:
                 # Must look if we already have it
                 already_got = rec_id in self.receivers
@@ -798,14 +799,12 @@ class Broker(BaseSatellite):
         for mod in ext_modules:
             try:
                 mod.to_q.put(to_send)
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 # first we must find the modules
-                logger.debug(str(exp.__dict__))
                 logger.warning("The mod %s queue raise an exception: %s, "
                                "I'm tagging it to restart later",
                                mod.get_name(), str(exp))
-                logger.warning("Exception type: %s", type(exp))
-                logger.warning("Back trace of this kill: %s", traceback.format_exc())
+                logger.exception(exp)
                 self.modules_manager.set_to_restart(mod)
 
         # No more need to send them

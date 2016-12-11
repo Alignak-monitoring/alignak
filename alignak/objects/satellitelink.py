@@ -532,19 +532,19 @@ class SatelliteLink(Item):
 
         :return: None
         """
+        logger.debug("Prepare for conf: %s" % self)
         self.cfg = {'global': {}, 'schedulers': {}, 'arbiters': {}}
         properties = self.__class__.properties
         for prop, entry in properties.items():
             if entry.to_send:
                 self.cfg['global'][prop] = getattr(self, prop)
-        cls = self.__class__
-        logger.info("Prepare for conf: %s" % cls)
+        # cls = self.__class__
         # Also add global values
-        # @mohierf, Moved to properties ...
-        self.cfg['global']['statsd_host'] = cls.statsd_host
-        self.cfg['global']['statsd_port'] = cls.statsd_port
-        self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
-        self.cfg['global']['statsd_enabled'] = cls.statsd_enabled
+        self.cfg['global']['statsd_host'] = self.statsd_host
+        self.cfg['global']['statsd_port'] = self.statsd_port
+        self.cfg['global']['statsd_prefix'] = self.statsd_prefix
+        self.cfg['global']['statsd_enabled'] = self.statsd_enabled
+        logger.debug("Prepare for conf: %s" % self.cfg)
 
     def add_global_conf_parameters(self, params):
         """Add some extra params in cfg dict attribute.

@@ -600,6 +600,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for arb in self.conf.arbiters:
                 if arb.get_name() in ['Default-Arbiter', self.arbiter_name]:
                     self.myself = arb
+
+                    self.accept_passive_unknown_check_results = BoolProp.pythonize(
+                        getattr(self.myself, 'accept_passive_unknown_check_results', '0')
+                    )
+
                     logger.info("I found myself in the configuration")
 
     def do_loop_turn(self):
