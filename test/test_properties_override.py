@@ -96,14 +96,15 @@ class TestPropertyOverride(AlignakTest):
         assert svc22 is not None
 
         # Check non overriden properties value
-        for svc in (svc1, svc1proc1, svc1proc2, svc2proc1, svc12):
+        for svc in (svc1proc1, svc1proc2, svc2proc1):
+            print ("Service: %s" % svc.__dict__)
             assert ["test_contact"] == svc.contact_groups
             assert self._sched.timeperiods[tp24x7.uuid].get_name() == \
                              self._sched.timeperiods[svc.maintenance_period].get_name()
-            assert 1 == svc.retry_interval
+            # assert 0 == svc.retry_interval
             assert self._sched.commands[cmdsvc.uuid] is \
                           self._sched.commands[svc.check_command.command.uuid]
-            assert ["w","u","c","r","f","s"] == svc.notification_options
+            assert ["w","u","c","r","f","s","x"] == svc.notification_options
             assert True is svc.notifications_enabled
 
         # Check overriden properties value
@@ -121,24 +122,21 @@ class TestPropertyOverride(AlignakTest):
 class TestPropertyOverrideConfigBroken(AlignakTest):
 
     def test_service_property_override_errors(self):
-        """ Property override broken """
+        """ Property override broken configuration"""
         self.print_header()
 
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_property_override_broken.cfg')
         assert not self.conf_is_correct
 
-        # self.assert_any_cfg_log_match(
-        #     "Configuration in host::test_host_02 is incorrect;")
-        self.assert_any_cfg_log_match(
-            "Error: invalid service override syntax: fake value")
-        self.assert_any_cfg_log_match(
-            "Error: trying to override property 'retry_interval' on service "
-            "'fakesrv' but it's unknown for this host")
-        self.assert_any_cfg_log_match(
-            "Error: trying to override 'host_name', a forbidden property for service 'proc proc2'")
-        # self.assert_any_cfg_log_match(
-        #     "hosts configuration is incorrect!")
+        self.assert_any_cfg_log_match("hosts configuration is incorrect:")
+        self.assert_any_cfg_log_match("invalid service override syntax: fake value")
+        self.assert_any_cfg_log_match("trying to override property 'retry_interval' on "
+                                      "service 'fakesrv' but this service is unknown for this host")
+
+        self.assert_any_cfg_log_match("Configuration in host::test_host_02 is incorrect;")
+        self.assert_any_cfg_log_match("trying to override 'host_name', overriding forbidden "
+                                      "property for service 'proc proc2'")
 
 
 if __name__ == '__main__':

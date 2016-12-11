@@ -254,7 +254,16 @@ class Item(AlignakObject):
         self.fill_default()
 
     def __str__(self):
-        return '<%s "name"=%r />' % (self.__class__.__name__, self.get_name())
+        name_property = getattr(self.__class__, "name_property", 'not_existing')
+        if self.is_tpl():
+            return "<%s template, '%s'=%s />" \
+                   % (self.__class__.__name__, name_property, self.get_name())
+        if self.use:
+            return "<%s, '%s'=%s, uses:%s />" \
+                   % (self.__class__.__name__, name_property, self.get_name(), self.get_templates())
+        else:
+            return "<%s, '%s'=%s />" \
+                   % (self.__class__.__name__, name_property, self.get_name())
 
     __repr__ = __str__
 
@@ -397,12 +406,6 @@ class Item(AlignakObject):
         :rtype: list
         """
         return [n.strip() for n in getattr(self, 'use', []) if n.strip()]
-
-        # use = getattr(self, 'use', '')
-        # if isinstance(use, list):
-        #     return [n.strip() for n in use if n.strip()]
-        # else:
-        #     return [n.strip() for n in use.split(',') if n.strip()]
 
     def has_plus(self, prop):
         """
@@ -1238,8 +1241,8 @@ class Items(object):
             # To help debugging properties inheritance, I leave this code that may help others ;)
             # Set the property name and uncomment those lines to activate debug prints
             # for the templates properties inheritance
-            # if item.my_type == 'host' and prop == 'initial_state':
-            #     debug = True
+            if item.my_type == 'service' and prop == 'business_impact':
+                debug = True
             inherited_value = self.get_property_by_inheritance(item, prop, debug=debug)
             if inherited_value is not None:
                 # Inheritance has not been blocked, then update the property value
@@ -1254,8 +1257,10 @@ class Items(object):
         # We check for all Class properties if the item has it
         # if not, it check all host templates for a value
         cls = self.inner_class
+        logger.debug("Inheritance for : %s, %d properties", cls, len(cls.properties))
         for prop in cls.properties:
             self.apply_partial_inheritance(prop)
+
         for item in itertools.chain(self.items.itervalues(), self.templates.itervalues()):
             self.get_customs_properties_by_inheritance(item)
 

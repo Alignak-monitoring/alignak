@@ -264,7 +264,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             print('Host __init__: %s, attributes list: %s' %
                   (self.__class__, [key for key in self.__dict__]))
 
-    #######
+#######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
 #   ___ ___  _ __ | |_ _  __ _ _   _ _ __ __ _| |_ _  ___  _ __
@@ -365,13 +365,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.tags
 
-    # def get_realm_name(self):
-    #     """Accessor to realm attribute
-    #     :return: realm object of host
-    #     :rtype: alignak.objects.realm.Realm
-    #     """
-    #     return self.realm_name
-    #
     def is_linked_with_host(self, other):
         """Check if other is in act_depend_of host attribute
 
@@ -393,14 +386,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         self.services.append(service)
-
-    def __repr__(self):
-        return '<Host host_name=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None))
-
-    __str__ = __repr__
 
     def is_excluded_for(self, service):
         """Check whether this host should have the passed service be "excluded" or "not included".

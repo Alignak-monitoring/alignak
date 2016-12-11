@@ -274,15 +274,6 @@ class Service(SchedulingItem):
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
 
-    def __repr__(self):
-        return '<Service host_name=%r desc=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'service_description', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None)
-        )
-    __str__ = __repr__
-
     @property
     def unique_key(self):
         """Unique key for this service
@@ -1357,39 +1348,38 @@ class Services(SchedulingItems):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        ovr_re = re.compile(r'^([^,]+),([^\s]+)\s+(.*)$')
-        ovr_hosts = [h for h in hosts if getattr(h, 'service_overrides', None)]
-        for host in ovr_hosts:
-            # We're only looking for hosts having service overrides defined
+        overriding_regexp = re.compile(r'^([^,]+),([^\s]+)\s+(.*)$')
+
+        # We're only looking for hosts having service overrides defined
+        overriding_hosts = [h for h in hosts if getattr(h, 'service_overrides', None)]
+        for host in overriding_hosts:
             if isinstance(host.service_overrides, list):
                 service_overrides = host.service_overrides
             else:
                 service_overrides = [host.service_overrides]
-            for ovr in service_overrides:
+
+            for overriden_services in service_overrides:
                 # Checks service override syntax
-                match = ovr_re.search(ovr)
+                match = overriding_regexp.search(overriden_services)
                 if match is None:
-                    err = "Error: invalid service override syntax: %s" % ovr
-                    host.configuration_errors.append(err)
+                    host.add_error("invalid service override syntax: %s"
+                                   % overriden_services)
                     continue
-                sdescr, prop, value = match.groups()
-                # Looks for corresponding service
-                service = self.find_srv_by_name_and_hostname(
-                    getattr(host, "host_name", ""), sdescr
-                )
+
+                service_description, prop, value = match.groups()
+                # Search for corresponding service
+                service = self.find_srv_by_name_and_hostname(host.get_name(), service_description)
                 if service is None:
-                    err = "Error: trying to override property '%s' on service '%s' " \
-                          "but it's unknown for this host" % (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error("trying to override property '%s' on service '%s' but this "
+                                   "service is unknown for this host" % (prop, service_description))
                     continue
-                # Checks if override is allowed
+
+                # Check if overriding is allowed
                 excludes = ['host_name', 'service_description', 'use',
                             'servicegroups', 'trigger_name']
                 if prop in excludes:
-                    err = "Error: trying to override '%s', " \
-                          "a forbidden property for service '%s'" % \
-                          (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error("trying to override '%s', overriding forbidden property "
+                                   "for service '%s'" % (prop, service_description))
                     continue
 
                 # Pythonize the value because here value is str.
