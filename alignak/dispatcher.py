@@ -136,7 +136,7 @@ class Dispatcher:
         self.first_dispatch_done = False
 
         # Prepare the satellites confs
-        logger.info("Dispatcher satellites: %s" % self.satellites)
+        logger.info("Dispatcher satellites: %s", self.satellites)
         for satellite in self.satellites:
             satellite.prepare_for_conf()
 
@@ -557,7 +557,9 @@ class Dispatcher:
         :return:
         """
 
-        if not realm.to_satellites_need_dispatch[sat_type][cfg.uuid]:
+        # Todo: check if it really may be an empty dictionary?
+        if not realm.to_satellites_need_dispatch[sat_type] or \
+                not realm.to_satellites_need_dispatch[sat_type][cfg.uuid]:
             logger.info("[%s] No satellites dispatch needed for this realm", realm.get_name())
             return
 

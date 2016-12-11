@@ -263,8 +263,8 @@ class TestRealms(AlignakTest):
         assert len(world.get_satellites_by_type('scheduler')) == 1
         assert len(world.get_satellites_by_type('broker')) == 1
         assert len(world.get_satellites_by_type('poller')) == 1
-        assert len(world.get_satellites_by_type('receiver')) == 1
-        assert len(world.get_satellites_by_type('reactionner')) == 1
+        assert len(world.get_satellites_by_type('receiver')) == 0
+        assert len(world.get_satellites_by_type('reactionner')) == 0
 
         # Get satellites of the europe realm
         assert len(europe.get_satellites_by_type('arbiter')) == 0
