@@ -93,7 +93,7 @@ class Service(SchedulingItem):
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     # only used by (un)index_item (via 'name_property')
     name_property = 'unique_key'

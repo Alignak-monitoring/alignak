@@ -115,7 +115,7 @@ class AlignakObject(object):
         if getattr(self, 'uuid', None) is None:
             # Alert about missing object uuid
             warnings.warn("Object do not have an uuid! %s" % self, RuntimeWarning, stacklevel=2)
-            print("Problem with an object %s, no uuid in: %s!" % (self.my_type, self.__dict__))
+            # print("Problem with an object '%s', no uuid in: %s!" % (self.my_type, self.__dict__))
             self.uuid = uuid.uuid4().hex
 
         # Fill default values for unset running properties

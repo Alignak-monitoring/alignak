@@ -72,7 +72,7 @@ class HostExtInfo(GenericExtInfo):
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     name_property = "host_name"  # use for the search by name
     my_type = 'hostextinfo'

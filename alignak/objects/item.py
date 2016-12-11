@@ -258,7 +258,7 @@ class Item(AlignakObject):
         if self.is_tpl():
             return "<%s template, '%s'=%s />" \
                    % (self.__class__.__name__, name_property, self.get_name())
-        if self.use:
+        if getattr(self, "use", None):
             return "<%s, '%s'=%s, uses:%s />" \
                    % (self.__class__.__name__, name_property, self.get_name(), self.get_templates())
         else:
@@ -1241,8 +1241,8 @@ class Items(object):
             # To help debugging properties inheritance, I leave this code that may help others ;)
             # Set the property name and uncomment those lines to activate debug prints
             # for the templates properties inheritance
-            if item.my_type == 'service' and prop == 'business_impact':
-                debug = True
+            # if item.my_type == 'service' and prop == 'business_impact':
+            #     debug = True
             inherited_value = self.get_property_by_inheritance(item, prop, debug=debug)
             if inherited_value is not None:
                 # Inheritance has not been blocked, then update the property value

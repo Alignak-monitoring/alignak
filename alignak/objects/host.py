@@ -83,7 +83,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     For example it defines parents, check_interval, check_command  etc.
     """
     # AutoSlots metaclass create the __slots__ with properties and running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     name_property = "host_name"
     my_type = 'host'

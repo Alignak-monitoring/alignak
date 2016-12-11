@@ -64,7 +64,7 @@ class Command(Item):
     A command is an external command that a poller module runs to
     check if something is ok or not
     """
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     name_property = "command_name"
     my_type = "command"
