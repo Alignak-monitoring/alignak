@@ -81,7 +81,7 @@ from alignak.http.arbiter_interface import ArbiterInterface
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Arbiter(Daemon):  # pylint: disable=R0902
+class Arbiter(Daemon):  # pylint: disable=R0902, no-member
     """
     Arbiter class. Referenced as "app" in most Interface
 
@@ -180,7 +180,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for satellite in satellites:
                 new_broks = satellite.get_all_broks()
                 for brok in new_broks:
-                    logger.debug("Satellite '%s' brok", satellite, brok)
+                    logger.debug("Satellite '%s' brok: %s", satellite, brok)
                     self.add(brok)
 
     def get_initial_broks_from_satellitelinks(self):
@@ -711,7 +711,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("I am the arbiter: %s", self.myself.arbiter_name)
 
         logger.info("Begin to dispatch configuration to the satellites")
-        print("Begin to dispatch configuration to the satellites")
 
         self.dispatcher = Dispatcher(self.conf, self.myself)
         self.dispatcher.check_alive()
@@ -722,7 +721,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.info("Configuration has been dispatched to the satellites")
 
         logger.info("Configuration has been dispatched to the satellites")
-        print("Configuration has been dispatched to the satellites")
 
         # Now we can get all initial broks for our satellites
         self.get_initial_broks_from_satellitelinks()

@@ -193,8 +193,8 @@ class TestConfig(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "myhost", "same_service")
         assert svc is not None
-        assert 'general1' == svc.check_command.command.command_name
         assert 1 == svc.definition_order
+        assert 'general1' == svc.check_command.command.command_name
 
     def test_service_not_hostname(self):
         """ Test the 'not hostname' syntax

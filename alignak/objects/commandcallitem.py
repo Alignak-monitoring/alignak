@@ -57,8 +57,7 @@ class CommandCallItems(Items):
 
                     setattr(item, command_name, cmdcall)
                 else:
-                    logger.debug("Command definition not found for: %s / %s"
-                                 % (item, command_name))
+                    logger.debug("Command definition not found for: %s / %s", item, command_name)
                     if item.my_type == 'host' and command_name == 'check_command':
                         cmdcall = self.create_commandcall(item, commands, '_internal_host_up')
                         setattr(item, command_name, cmdcall)

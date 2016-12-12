@@ -478,7 +478,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if parsing:
             # Item creation from the monitoring configuration
-            logger.debug("Created scheduling item %s: %s" % (self.my_type, self.get_name()))
+            logger.debug("Created scheduling item %s: %s", self.my_type, self.get_name())
             return
 
         if params is None:
@@ -502,8 +502,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             print('SchedulingItem __init__: %s, attributes list: %s' %
                   (self.__class__, [key for key in self.__dict__]))
 
-    def serialize(self):
-        res = super(SchedulingItem, self).serialize()
+    def serialize(self, filtered_fields=None):
+        res = super(SchedulingItem, self).serialize(filtered_fields=filtered_fields)
 
         for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
                      'acknowledgement']:
@@ -3145,8 +3145,8 @@ class SchedulingItems(CommandCallItems):
                 all_items["service"] = item
             else:
                 all_items["host"] = item
-            for filter in filters:
-                if not filter(all_items):
+            for item_filter in filters:
+                if not item_filter(all_items):
                     failed = True
                     break
             if failed is False:

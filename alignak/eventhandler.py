@@ -62,7 +62,7 @@ class EventHandler(Action):
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     my_type = 'eventhandler'
 

@@ -867,7 +867,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return "%02dh %02dm %02ds" % (hours, mins, secs)
 
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
-                                        n_type, t_wished=None):
+                                        n_type, t_wished=None):  # pylint: disable: R0911
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -1340,22 +1340,21 @@ class Hosts(SchedulingItems):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
         if len(loop) > 0:
-            self.add_error("Loop detected while checking hosts ")
-            state = False
+            self.conf_is_correct = False
+            self.configuration_errors.append("Loop detected while checking hosts ")
             for uuid, item in self.items.iteritems():
                 for elem in loop:
                     if elem == uuid:
-                        state = False
-                        self.add_error("Host %s is parent in dependency defined in %s" %
-                                       (item.get_name(), item.imported_from))
+                        self.configuration_errors.append(
+                            "Host %s is parent in dependency defined in %s" %
+                            (item.get_name(), item.imported_from))
                     elif elem in item.parents:
-                        state = False
-                        self.add_error("Host %s is child in dependency defined in %s" %
-                                       (self[elem].get_name(), self[elem].imported_from))
+                        self.configuration_errors.append(
+                            "Host %s is child in dependency defined in %s" %
+                            (self[elem].get_name(), self[elem].imported_from))
 
-        return super(Hosts, self).is_correct() and state
+        return super(Hosts, self).is_correct() and self.conf_is_correct

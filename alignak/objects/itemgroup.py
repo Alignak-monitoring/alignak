@@ -54,8 +54,6 @@
 """
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
-import warnings
-
 from alignak.objects.item import Item, Items
 from alignak.brok import Brok
 from alignak.property import ListProp, DictProp
@@ -193,7 +191,7 @@ class Itemgroup(Item):
             setattr(self, 'unknown_members', [])
         self.unknown_members.append(member)
 
-    def get_members(self, names=True):
+    def get_members(self):
         """
         Get members of this group. Returns a list of the members names
 
@@ -271,7 +269,7 @@ class Itemgroups(Items):
 
     __repr__ = __str__
 
-    def get_members_of(self, groupname, names=False):
+    def get_members_of(self, groupname):
         """
         Get members of a group
 

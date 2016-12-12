@@ -51,7 +51,6 @@ See detailed concepts below
 
 """
 import time
-import uuid
 import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp

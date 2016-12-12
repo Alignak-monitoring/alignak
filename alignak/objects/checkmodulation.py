@@ -94,20 +94,10 @@ class CheckModulation(Item):
 
         super(CheckModulation, self).__init__(params, parsing=parsing)
 
-    def serialize(self):
-        res = super(CheckModulation, self).serialize()
+    def serialize(self, filtered_fields=None):
+        res = super(CheckModulation, self).serialize(filtered_fields=filtered_fields)
         res['check_command'] = self.check_command.serialize()
         return res
-
-    # def get_name(self):
-    #     """Accessor to checkmodulation_name attribute
-    #
-    #     :return: check modulation name
-    #     :rtype: str
-    #     """
-    #     if getattr(self, 'checkmodulation_name', ''):
-    #         return self.checkmodulation_name
-    #     return 'Unnamed'
 
     def get_check_command(self, timeperiods, t_to_go):
         """Get the check_command if we are in the check period modulation

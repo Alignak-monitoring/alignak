@@ -89,8 +89,8 @@ class Trigger(Item):
         if 'code_src' in params:
             self.compile()
 
-    def serialize(self):
-        res = super(Trigger, self).serialize()
+    def serialize(self, filtered_fields=None):
+        res = super(Trigger, self).serialize(filtered_fields=filtered_fields)
         del res['code_bin']
         return res
 

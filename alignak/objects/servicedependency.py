@@ -445,17 +445,19 @@ class Servicedependencies(Items):
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")
         if len(loop) > 0:
-            self.add_error("Loop detected while checking service dependencies")
+            self.conf_is_correct = False
+            self.configuration_errors. append("Loop detected while checking service dependencies")
             for item in self:
                 for elem in loop:
                     if elem == item.service_description:
-                        self.add_error("Service %s is parent service_description in "
-                                       "dependency defined in %s" %
-                                       (item.service_description_string, item.imported_from))
+                        self.configuration_errors.append(
+                            "Service %s is parent service_description in "
+                            "dependency defined in %s" %
+                            (item.service_description_string, item.imported_from))
                     elif elem == item.dependent_service_description:
-                        self.add_error("Service %s is child service_description in "
-                                       "dependency defined in %s" %
-                                       (item.dependent_service_description_string,
-                                        item.imported_from))
+                        self.configuration_errors.append(
+                            "Service %s is child service_description in "
+                            "dependency defined in %s" %
+                            (item.dependent_service_description_string, item.imported_from))
 
         return super(Servicedependencies, self).is_correct() and self.conf_is_correct

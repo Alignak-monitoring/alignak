@@ -424,7 +424,6 @@ class DictProp(Property):
             return val
 
         # val is in the form "key1=addr:[port],key2=addr:[port],..."
-        print("DictProp: %s / %s / %s" % (self.__dict__, self.elts_prop.__dict__, val))
         return dict([split(kv) for kv in to_split(val)])
 
 

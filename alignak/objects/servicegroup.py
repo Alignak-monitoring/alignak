@@ -276,8 +276,8 @@ class Servicegroups(Itemgroups):
             servicegroup = Servicegroup({'servicegroup_name': servicegroup_name,
                                          'members': [service.get_name()],
                                          'imported_from': 'inner'})
-            logger.debug("Created a servicegroup declared in a service: %s / %s" %
-                         (servicegroup_name, servicegroup.members))
+            logger.debug("Created a servicegroup declared in a service: %s / %s",
+                         servicegroup_name, servicegroup.members)
             self.add_item(servicegroup)
         else:
             servicegroup.add_member(service)

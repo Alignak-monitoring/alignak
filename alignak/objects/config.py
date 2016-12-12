@@ -81,7 +81,7 @@ from StringIO import StringIO
 from multiprocessing import Process, Manager
 import json
 
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import serialize
 
 from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
@@ -798,7 +798,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     setattr(self, prop, CommandCall(params[prop], parsing=parsing))
 
             # Restore some properties from the parameters
-            for obj_class, list_class, prop, _ in self.types_creations.values():
+            for _, list_class, prop, _ in self.types_creations.values():
                 logger.debug("Restoring configuration parameters: %s (%s)", prop, list_class)
                 if prop in params and params[prop]:
                     setattr(self, prop, list_class(params[prop], parsing=parsing))
@@ -816,14 +816,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     # We restore if it exists in the parameters
                     setattr(self, prop, params[prop])
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """
         Serialize the whole monitoring configuration. This is to build a configuration that
         will be sent to the spare arbiter.
         :return:
         """
         saved_magic_hash = self.magic_hash
-        res = super(Config, self).serialize()
+        res = super(Config, self).serialize(filtered_fields=filtered_fields)
 
         # Special properties to serialize
         res['macros'] = self.macros
@@ -843,7 +843,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if getattr(self, prop, None) is None:
                 res[prop] = None
             else:
-                res[prop] = getattr(self, prop).serialize()
+                res[prop] = getattr(self, prop).serialize(filtered_fields=filtered_fields)
 
         for _, _, prop, _ in self.types_creations.values():
             if getattr(self, prop, None) is None:
@@ -1300,6 +1300,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.debug("Loading packs from: %s", path)
             self.packs.load_file(path)
 
+    # pylint: disable=no-self-use, unused-argument
     def linkify_one_command_with_commands(self, commands, command_name):
         """
         Link a command
@@ -1324,13 +1325,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.services.optimize_service_search(self.hosts)
 
         # First linkify myself with global commands thanks to the CommandCallItems
-        cc = CommandCallItems([self])
-        cc.linkify_one_command_with_commands(self.commands, 'ocsp_command')
-        cc.linkify_one_command_with_commands(self.commands, 'ochp_command')
-        cc.linkify_one_command_with_commands(self.commands, 'host_perfdata_command')
-        cc.linkify_one_command_with_commands(self.commands, 'service_perfdata_command')
-        cc.linkify_one_command_with_commands(self.commands, 'global_host_event_handler')
-        cc.linkify_one_command_with_commands(self.commands, 'global_service_event_handler')
+        cmd_call = CommandCallItems([self])
+        cmd_call.linkify_one_command_with_commands(self.commands, 'ocsp_command')
+        cmd_call.linkify_one_command_with_commands(self.commands, 'ochp_command')
+        cmd_call.linkify_one_command_with_commands(self.commands, 'host_perfdata_command')
+        cmd_call.linkify_one_command_with_commands(self.commands, 'service_perfdata_command')
+        cmd_call.linkify_one_command_with_commands(self.commands, 'global_host_event_handler')
+        cmd_call.linkify_one_command_with_commands(self.commands, 'global_service_event_handler')
 
         # link hosts with the other objects
         self.hosts.linkify(self.timeperiods, self.commands,
@@ -1488,10 +1489,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
                     # Prepare a sub-process that will manage the serialize computation
                     proc = Process(target=serialize_config,
-                                   name="serializer-%s-%d" % (realm.get_name(), i),
-                                   args=(child_q, realm.get_name(), i, realm_conf))
+                                   name="serializer-%s-%d" % (realm.get_name(), realm),
+                                   args=(child_q, realm.get_name(), realm, realm_conf))
                     proc.start()
-                    processes.append((i, proc))
+                    processes.append((realm, proc))
 
                 # Here all sub-processes are launched for this realm, now wait for them to finish
                 while len(processes) != 0:
@@ -2511,12 +2512,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # And also relink the hosts with the new hostgroups
             for host in current_conf.hosts:
                 initial_hostgroups = host.hostgroups
-                new_hostgroups = []
+                new_hostgroups_list = []
                 for hostgroup_uuid in initial_hostgroups:
                     ohg = self.hostgroups[hostgroup_uuid]
                     nhg = current_conf.hostgroups.find_by_name(ohg.get_name())
-                    new_hostgroups.append(nhg.uuid)
-                host.hostgroups = new_hostgroups
+                    new_hostgroups_list.append(nhg.uuid)
+                host.hostgroups = new_hostgroups_list
 
             # Fill servicegroup
             for initial_servicegroup in self.servicegroups:
@@ -2529,12 +2530,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # And also relink the services with the new servicegroups
             for service in current_conf.services:
                 initial_servicegroups = service.servicegroups
-                new_servicegroups = []
+                new_servicegroups_list = []
                 for servicegroup_uuid in initial_servicegroups:
                     osg = self.servicegroups[servicegroup_uuid]
                     nsg = current_conf.servicegroups.find_by_name(osg.get_name())
-                    new_servicegroups.append(nsg.uuid)
-                service.servicegroups = new_servicegroups
+                    new_servicegroups_list.append(nsg.uuid)
+                service.servicegroups = new_servicegroups_list
 
         # Now we fill other_elements by host (services are already with their respective hosts)
         # so they are not tagged)

@@ -52,7 +52,6 @@
 implements way of sending notifications. Basically used for parsing.
 
 """
-import uuid
 import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -120,14 +119,14 @@ class NotificationWay(Item):
                 # We recreate the objects list
                 setattr(self, prop, [CommandCall(item, parsing=False) for item in params[prop]])
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serializes into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(NotificationWay, self).serialize()
+        res = super(NotificationWay, self).serialize(filtered_fields=filtered_fields)
 
         for prop in ['service_notification_commands', 'host_notification_commands']:
             # We serialize the objects list

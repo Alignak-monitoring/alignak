@@ -58,8 +58,7 @@
 This class is a base class for nearly all configuration
 elements like service, hosts or contacts.
 """
-# pylint: disable=too-many-lines
-# pylint: disable=too-many-public-methods
+# pylint: disable=no-member, too-many-lines, too-many-public-methods
 from __future__ import print_function
 import time
 import itertools
@@ -149,7 +148,7 @@ class Item(AlignakObject):
         # We save our customs variables
         'customs':
             DictProp(default={}, fill_brok=['full_status']),
-        # # We save our plus (+) properties
+        # We save our plus (+) properties
         'plus':
             DictProp(default={}, fill_brok=['full_status']),
     }
@@ -496,7 +495,7 @@ class Item(AlignakObject):
                 setattr(self, new_name, value)
                 delattr(self, old_name)
 
-    def get_raw_import_values(self):
+    def get_raw_import_values(self):  # pylint: disable=no-self-use
         """
         Get properties => values of this object
 
@@ -858,7 +857,7 @@ class Items(object):
         Checks if an object holding the same name already exists in the index.
 
         If so, it compares their definition order: the lowest definition order
-        is kept. If definition order equal, an error is risen.Item
+        is kept. If definition order equals, an error is raised.
 
         The method returns the item that should be added after it has decided
         which one should be kept.
@@ -877,17 +876,13 @@ class Items(object):
             existing = self.name_to_template[name]
         else:
             existing = self.name_to_item[name]
-        if existing == item:
+        if existing.uuid == item.uuid:
             return item
 
         existing_prio = getattr(
-            existing,
-            "definition_order",
-            existing.properties["definition_order"].default)
+            existing, "definition_order", existing.properties["definition_order"].default)
         item_prio = getattr(
-            item,
-            "definition_order",
-            item.properties["definition_order"].default)
+            item, "definition_order", item.properties["definition_order"].default)
         if existing_prio < item_prio:
             # Existing item has lower priority, so it has precedence.
             return existing
@@ -898,11 +893,10 @@ class Items(object):
         else:
             # Don't know which one to keep, lastly defined has precedence
             objcls = getattr(self.inner_class, "my_type", "[unknown]")
-            message = "duplicate %s name %s, from: %s, using lastly defined. " \
-                      "You may manually set the definition_order parameter " \
-                      "to avoid this message." % \
-                      (objcls, name, item.imported_from)
-            item.configuration_warnings.append(message)
+            item.add_error("duplicate %s name %s, from: %s, using lastly defined. "
+                           "You may manually set the definition_order parameter "
+                           "to avoid this message." % (objcls, name, item.imported_from),
+                           is_warning=True)
         if item.is_tpl():
             self.remove_template(existing)
         else:
@@ -1162,7 +1156,6 @@ class Items(object):
             # Ok, look at no twins (it's bad!)
             for t_id in twins:
                 item = self.items[t_id]
-                valid = False
                 item.add_error("[items] %s.%s is duplicated from %s" %
                                (item.__class__.my_type, item.get_name(), item.imported_from),
                                is_warning=True)
@@ -1224,7 +1217,7 @@ class Items(object):
         logger.debug("Serializing items: %s", self.inner_class.my_type)
         res = {}
         for key, item in self.items.iteritems():
-            res[key] = item.serialize()
+            res[key] = item.serialize(filtered_fields=None)
         return res
 
     def apply_partial_inheritance(self, prop):
@@ -1304,7 +1297,7 @@ class Items(object):
                     if escalation is not None:
                         new_escalations.append(escalation.uuid)
                     else:
-                        self.add_error("the escalation '%s' defined for '%s' is unknown" %
+                        item.add_error("the escalation '%s' defined for '%s' is unknown" %
                                        (escalation_name, item.get_name()))
                 item.escalations = new_escalations
 

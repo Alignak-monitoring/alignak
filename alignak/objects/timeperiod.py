@@ -253,7 +253,7 @@ class Timeperiod(Item):
 
         return string
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serializes into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -262,7 +262,7 @@ class Timeperiod(Item):
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(Timeperiod, self).serialize()
+        res = super(Timeperiod, self).serialize(filtered_fields=filtered_fields)
 
         res['dateranges'] = []
         for elem in self.dateranges:

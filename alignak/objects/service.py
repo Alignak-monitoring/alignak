@@ -384,9 +384,6 @@ class Service(SchedulingItem):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-        cls = self.__class__
-
         if getattr(self, 'service_description', ''):
             for char in self.__class__.illegal_object_name_chars:
                 if char in self.service_description:

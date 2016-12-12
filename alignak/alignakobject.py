@@ -24,7 +24,7 @@ from __future__ import print_function
 import uuid
 import warnings
 from copy import copy
-from alignak.property import Property, SetProp, StringProp
+from alignak.property import SetProp, StringProp
 
 
 class AlignakObject(object):

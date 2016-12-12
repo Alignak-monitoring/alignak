@@ -234,7 +234,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.conf = conf
 
         logger.info("Scheduler %s is loading its configuration", conf.instance_name)
-        for obj_class, list_class, prop, _ in self.conf.types_creations.values():
+        for _, _, prop, _ in self.conf.types_creations.values():
             setattr(self, prop, getattr(conf, prop))
             logger.info(" - %s: %s", prop, getattr(conf, prop))
         logger.info("Scheduler loaded its configuration")
@@ -840,7 +840,6 @@ class Scheduler(object):  # pylint: disable=R0902
             module_types = ['fork']
         # If poller want to do checks
         if do_checks:
-            print("Do checks ...")
             for chk in self.checks.values():
                 #  If the command is untagged, and the poller too, or if both are tagged
                 #  with same name, go for it

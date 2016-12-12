@@ -151,7 +151,7 @@ class Timerange(AlignakObject):
             self.mend = params["mend"]
             self.is_valid = params["is_valid"]
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -622,7 +622,7 @@ class Daterange(AbstractDaterange):
             for timeinterval in params['other'].split(','):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -636,7 +636,8 @@ class Daterange(AbstractDaterange):
                 'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
                 'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
                 'skip_interval': self.skip_interval, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+                'timeranges': [
+                    t.serialize(filtered_fields=filtered_fields) for t in self.timeranges]}
 
 
 class CalendarDaterange(Daterange):
@@ -685,7 +686,7 @@ class StandardDaterange(AbstractDaterange):
 
         self.day = params['day']
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -695,7 +696,8 @@ class StandardDaterange(AbstractDaterange):
         :rtype: dict
         """
         return {'day': self.day, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+                'timeranges': [
+                    t.serialize(filtered_fields=filtered_fields) for t in self.timeranges]}
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid

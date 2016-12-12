@@ -83,7 +83,7 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
     # of the Alignak process. If not, the comment will be deleted the
     # next time Alignak restarts.
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 

@@ -200,8 +200,8 @@ class Contact(Item):
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
-    def serialize(self):
-        res = super(Contact, self).serialize()
+    def serialize(self, filtered_fields=None):
+        res = super(Contact, self).serialize(filtered_fields=filtered_fields)
 
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if getattr(self, prop) is None:

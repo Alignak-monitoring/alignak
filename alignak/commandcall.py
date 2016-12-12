@@ -65,7 +65,7 @@ class CommandCall(AlignakObject):
     """
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     # __slots__ = ('uuid', 'call', 'command', 'valid', 'args', 'poller_tag',
     #              'reactionner_tag', 'module_type', '__dict__')
@@ -129,7 +129,7 @@ class CommandCall(AlignakObject):
             super(CommandCall, self).__init__(params, parsing=parsing)
             self.command = Command(params['command'], parsing=parsing)
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         # Todo: check if necessary! Why not using the generic serialize?
         cls = self.__class__
         # id is not in *_properties
@@ -138,7 +138,7 @@ class CommandCall(AlignakObject):
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
 
-        res['command'] = self.command.serialize()
+        res['command'] = self.command.serialize(filtered_fields=filtered_fields)
         return res
 
     def get_command_and_args(self):

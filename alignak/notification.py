@@ -67,7 +67,7 @@ class Notification(Action):  # pylint: disable=R0902
 
     # AutoSlots create the __slots__ with properties and
     # running_properties names
-    # __metaclass__ = AutoSlots
+    __metaclass__ = AutoSlots
 
     my_type = 'notification'
 
@@ -118,17 +118,17 @@ class Notification(Action):  # pylint: disable=R0902
     })
 
     macros = {
-        'NOTIFICATIONTYPE':         'type',
-        'NOTIFICATIONRECIPIENTS':   'recipients',
-        'NOTIFICATIONISESCALATED':  'escalated',
-        'NOTIFICATIONAUTHOR':       'author',
-        'NOTIFICATIONAUTHORNAME':   'author_name',
-        'NOTIFICATIONAUTHORALIAS':  'author_alias',
-        'NOTIFICATIONCOMMENT':      'comment',
-        'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       'uuid',
+        'NOTIFICATIONTYPE': 'type',
+        'NOTIFICATIONRECIPIENTS': 'recipients',
+        'NOTIFICATIONISESCALATED': 'escalated',
+        'NOTIFICATIONAUTHOR': 'author',
+        'NOTIFICATIONAUTHORNAME': 'author_name',
+        'NOTIFICATIONAUTHORALIAS': 'author_alias',
+        'NOTIFICATIONCOMMENT': 'comment',
+        'HOSTNOTIFICATIONNUMBER': 'notif_nb',
+        'HOSTNOTIFICATIONID': 'uuid',
         'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    'uuid'
+        'SERVICENOTIFICATIONID': 'uuid'
     }
 
     def is_launchable(self, timestamp):
@@ -196,7 +196,7 @@ class Notification(Action):  # pylint: disable=R0902
         brok = Brok({'type': 'notification_raise', 'data': data})
         return brok
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -205,7 +205,7 @@ class Notification(Action):  # pylint: disable=R0902
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(Notification, self).serialize()
+        res = super(Notification, self).serialize(filtered_fields=filtered_fields)
 
         if res['command_call'] is not None:
             if not isinstance(res['command_call'], str) and \
