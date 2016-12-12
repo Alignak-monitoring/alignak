@@ -639,6 +639,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: True if self.attempt >= self.max_check_attempts, otherwise False
         :rtype: bool
         """
+        if self.passive_checks_enabled and not self.active_checks_enabled:
+            return True
         return self.attempt >= self.max_check_attempts
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
