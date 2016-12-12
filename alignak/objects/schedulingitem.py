@@ -735,7 +735,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                 chk.exit_status = 2
                             elif self.freshness_state == 'c':
                                 chk.exit_status = 2
-                            elif self.freshness_state == 'u':
+                            elif self.freshness_state == 'u' or self.freshness_state == 'x':
                                 chk.exit_status = 3
                             return chk
                         else:

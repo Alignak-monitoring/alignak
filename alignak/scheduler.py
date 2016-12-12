@@ -1338,7 +1338,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 for contact_uuid in h_dict['notified_contacts']:
                     ncontacts.append(self.contacts[contact_uuid].get_name())
                 h_dict['notified_contacts'] = ncontacts
-            print("Retention host %s: %s" % (host.host_name, h_dict))
             all_data['hosts'][host.host_name] = h_dict
 
         # Same for services

@@ -129,7 +129,7 @@ from alignak.daterange import Daterange, CalendarDaterange
 from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
-from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
+from alignak.property import StringProp, ListProp, BoolProp
 from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 from alignak.util import merge_periods
