@@ -84,7 +84,7 @@ class CommandCallItems(Items):
                         commands_list.append(cmdcall)
                 setattr(item, commands_name_list, commands_list)
 
-    def create_commandcall(self, item, commands, command):
+    def create_commandcall(self, item, commands, command):  # pylint: disable=no-self-use
         """
         Create commandCall object with command for an item
 

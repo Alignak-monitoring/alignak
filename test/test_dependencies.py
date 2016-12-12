@@ -937,7 +937,7 @@ class TestDependencies(AlignakTest):
             self.assert_actions_match(3, 'hostname test_host_00 --servicedesc test_ok_0', 'command')
             self.assert_actions_match(2, 'hostname test_host_00 --servicedesc test_ok_1', 'command')
 
-    @pytest.mark.skip(reason="@ddurieux: must fix the HARD state for passive checks")
+    # @pytest.mark.skip(reason="@ddurieux: must fix the HARD state for passive checks")
     def test_p_s_service_not_check_passive_host(self):
         """ Test passive service critical not check the dependent host (passive)
 

@@ -532,7 +532,7 @@ class SatelliteLink(Item):
 
         :return: None
         """
-        logger.debug("Prepare for conf: %s",  self)
+        logger.debug("Prepare for conf: %s", self)
         self.cfg = {'global': {}, 'schedulers': {}, 'arbiters': {}}
         properties = self.__class__.properties
         for prop, entry in properties.items():

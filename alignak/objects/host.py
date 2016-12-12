@@ -866,8 +866,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         hours, mins = divmod(mins, 60)
         return "%02dh %02dm %02ds" % (hours, mins, secs)
 
+    # pylint: disable=too-many-return-statements
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
-                                        n_type, t_wished=None):  # pylint: disable: R0911
+                                        n_type, t_wished=None):
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 

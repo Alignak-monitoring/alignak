@@ -589,7 +589,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902, no-member
                 logger.exception('Cannot un-serialize received configuration: %s', exp)
                 return
 
-            logger.info("Got new configuration #%s", conf.magic_hash)
+            logger.info("Got new configuration #%s", getattr(conf, 'magic_hash', '00000'))
 
             logger.info("I am: %s", self.arbiter_name)
             # This is my new configuration now ...

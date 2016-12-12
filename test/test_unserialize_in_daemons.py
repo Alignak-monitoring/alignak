@@ -991,14 +991,16 @@ class TestUnserialize(AlignakTest):
         # Some specific variables are serialized as lists and not sets!
         expected.update({
             'child_dependencies': [], 'parent_dependencies': [], 'notified_contacts': [], 'tags': [],
-            # Add those ignored 2 variables :/ see before!
-            'current_event_id': 0, 'current_problem_id': 0
+            # Ignore those ignored 2 variables :/ see before!
+            # 'current_event_id': 0, 'current_problem_id': 0
         })
         # Specific and inner properties are filtered
         serialized_item.update({
             'configuration_errors': [], 'configuration_warnings': [], 'customs': {}, 'plus': {},
             # 'check_command': None, 'current_event_id': 0, 'current_problem_id': 0
         })
+        serialized_item.pop('current_event_id')
+        serialized_item.pop('current_problem_id')
         # print("Serialized Item: %s" % serialized_item)
         assert expected == serialized_item
 
