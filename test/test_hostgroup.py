@@ -190,7 +190,6 @@ class TestHostGroup(AlignakTest):
 
         assert len(hg.get_hosts()) == 2
         print("Members: %s" % hg.get_members())
-        print("Members: %s" % hg.get_members(names=False))
         print("List hostgroup hosts:")
         for host_id in hg.members:
             host = self.schedulers['scheduler-master'].sched.hosts[host_id]
