@@ -1338,6 +1338,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 for contact_uuid in h_dict['notified_contacts']:
                     ncontacts.append(self.contacts[contact_uuid].get_name())
                 h_dict['notified_contacts'] = ncontacts
+            print("Retention host %s: %s" % (host.host_name, h_dict))
             all_data['hosts'][host.host_name] = h_dict
 
         # Same for services
@@ -1466,6 +1467,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 # we just bypass this
                 if prop in data:
                     setattr(item, prop, data[prop])
+
         # Now manage all linked objects load from previous run
         for notif_uuid, notif in item.notifications_in_progress.iteritems():
             notif['ref'] = item.uuid
@@ -1475,6 +1477,7 @@ class Scheduler(object):  # pylint: disable=R0902
         item.update_in_checking()
         item_comments = item.comments
         item.comments = []
+
         # And also add downtimes and comments
         item_downtimes = []
         for downtime in item.downtimes:

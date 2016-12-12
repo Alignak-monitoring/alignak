@@ -60,14 +60,16 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
     servicestate) are disabled.
     """
 
-    properties = {
+    properties = AlignakObject.properties.copy()
+    properties.update({
         'uuid': None,
         'sticky': None,
         'notify': None,
         'end_time': None,
         'author': None,
         'comment': None,
-    }
+    })
+
     # If the "sticky" option is set to one (1), the acknowledgement
     # will remain until the service returns to an OK state. Otherwise
     # the acknowledgement will automatically be removed when the

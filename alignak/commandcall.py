@@ -71,7 +71,8 @@ class CommandCall(AlignakObject):
     #              'reactionner_tag', 'module_type', '__dict__')
     my_type = 'CommandCall'
 
-    properties = {
+    properties = AlignakObject.properties.copy()
+    properties.update({
         'call':
             StringProp(default=''),
         'command':
@@ -92,7 +93,7 @@ class CommandCall(AlignakObject):
             BoolProp(default=False),
         'enable_environment_macros':
             BoolProp(default=False),
-    }
+    })
 
     def __init__(self, params, parsing=True):
 

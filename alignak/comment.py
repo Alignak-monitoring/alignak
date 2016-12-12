@@ -55,19 +55,31 @@ class Comment(AlignakObject):
     It contains data like author, type, expire_time, persistent etc..
     """
 
-    properties = {
-        'entry_time':   IntegerProp(),
-        'persistent':   BoolProp(),
-        'author':       StringProp(default='(Alignak)'),
-        'comment':      StringProp(default='Automatic Comment'),
-        'comment_type': IntegerProp(),
-        'entry_type':   IntegerProp(),
-        'source':       IntegerProp(),
-        'expires':      BoolProp(),
-        'expire_time':  IntegerProp(),
-        'can_be_deleted': BoolProp(default=False),
-        'ref':  StringProp(default='')
-    }
+    properties = AlignakObject.properties.copy()
+    properties.update({
+        'entry_time':
+            IntegerProp(default=0),
+        'persistent':
+            BoolProp(),
+        'author':
+            StringProp(default='(Alignak)'),
+        'comment':
+            StringProp(default='Automatic Comment'),
+        'comment_type':
+            IntegerProp(),
+        'entry_type':
+            IntegerProp(),
+        'source':
+            IntegerProp(),
+        'expires':
+            BoolProp(),
+        'expire_time':
+            IntegerProp(),
+        'can_be_deleted':
+            BoolProp(default=False),
+        'ref':
+            StringProp(default='')
+    })
 
     def __init__(self, params):
         """Adds a comment to a particular service. If the "persistent" field
@@ -91,7 +103,7 @@ class Comment(AlignakObject):
         :type comment_type: int
         :param entry_type: type of entry linked to this comment ::
 
-                          * 1 <=> USER_COMMENT
+                          * 1 <=>USER_COMMENT
                           * 2 <=>DOWNTIME_COMMENT
                           * 3 <=>FLAPPING_COMMENT
                           * 4 <=>ACKNOWLEDGEMENT_COMMENT
@@ -109,9 +121,19 @@ class Comment(AlignakObject):
         :type expire_time: int
         :return: None
         """
-        super(Comment, self).__init__(params)
-        self.entry_time = int(time.time())
-        self.fill_default()
+        if 'uuid' not in params:
+            super(Comment, self).__init__(params)
+            self.fill_default(which_properties="properties")
+
+        # Update my properties with provided parameters
+        for prop in self.__class__.properties:
+            if prop in params:
+                setattr(self, prop, params[prop])
+
+        if 'uuid' not in params:
+            # Comment creation
+            if self.entry_time == 0:
+                self.entry_time = int(time.time())
 
     def __str__(self):
-        return "Comment id=%s %s" % (self.uuid, self.comment)
+        return "Comment id=%s, '%s'" % (self.uuid, self.comment)

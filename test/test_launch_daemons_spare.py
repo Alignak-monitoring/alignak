@@ -25,7 +25,7 @@ import signal
 import subprocess
 from time import sleep
 import shutil
-import unittest
+import pytest
 
 from alignak_test import AlignakTest
 
@@ -181,8 +181,8 @@ class TestLaunchDaemonsSpare(AlignakTest):
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons loaded the modules")
 
-    @unittest.skip("Temporarily disabled -  "
-                   "need some more work on realms to get a correct configuration")
+    @pytest.mark.skip(reason="Temporarily disabled -  "
+                             "need some more work on realms to get a correct configuration")
     def test_daemons_spare(self):
         """ Running the Alignak daemons for a spare configuration
 
