@@ -83,8 +83,10 @@ class Check(Action):  # pylint: disable=R0902
             ListProp(default=[], split_on_coma=False),
         'perf_data':
             StringProp(default=''),
-        'check_type':
-            IntegerProp(default=0),
+        'passive_check':
+            BoolProp(default=False),
+        'freshness_expired':
+            BoolProp(default=False),
         'poller_tag':
             StringProp(default='None'),
         'internal':
@@ -117,36 +119,38 @@ class Check(Action):  # pylint: disable=R0902
         return timestamp > self.t_to_go
 
     def __str__(self):
-        return "Check %s status:%s command:%s ref:%s" % \
-               (self.uuid, self.status, self.command, self.ref)
+        return "Check %s %s status:%s command:%s ref:%s" % \
+               (self.uuid,
+                "active" if not self.passive_check else "passive",
+                self.status, self.command, self.ref)
 
     def set_type_active(self):
-        """Set check_type attribute to 0
+        """Set this check as an active one (indeed, not passive)
 
         :return: None
         """
-        self.check_type = 0
+        self.passive_check = False
 
     def set_type_passive(self):
-        """Set check_type attribute to 1
+        """Set this check as a passive one
 
         :return: None
         """
-        self.check_type = 1
+        self.passive_check = True
 
     def is_dependent(self):
         """Getter for dependency_check attribute
 
-        :return: True if this check was created for dependent one, False otherwise
+        :return: True if this check was created for a dependent one, False otherwise
         :rtype: bool
         """
         return self.dependency_check
 
     def serialize(self):
-        """This function serialize into a simple dict object.
+        """This function serializes into a simple dict object.
 
-        The only usage is to send to poller, and it don't need to have the depend_on and
-        depend_on_me properties.
+        The only usage is to send to poller, and it does not need to have the
+        depend_on and depend_on_me properties.
 
         :return: json representation of a Check
         :rtype: dict

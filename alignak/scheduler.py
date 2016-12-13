@@ -267,6 +267,15 @@ class Scheduler(object):  # pylint: disable=R0902
         # and push flavor
         self.push_flavor = conf.push_flavor
 
+        # Update our hosts/services freshness threshold
+        if self.conf.check_host_freshness and self.conf.host_freshness_check_interval >= 0:
+            for host in self.hosts:
+                if host.freshness_threshold == -1:
+                    host.freshness_threshold = self.conf.host_freshness_check_interval
+            for service in self.services:
+                if service.freshness_threshold == -1:
+                    service.freshness_threshold = self.conf.service_freshness_check_interval
+
         # Now we can update our 'ticks' for special calls
         # like the retention one, etc
         self.update_recurrent_works_tick('update_retention_file',
@@ -1653,14 +1662,14 @@ class Scheduler(object):  # pylint: disable=R0902
                 for dep in depchks:
                     self.add(dep)
 
-                if self.conf.log_active_checks and chk.check_type == 0:
+                if self.conf.log_active_checks and not chk.passive_check:
                     item.raise_check_result()
 
-        # loop to resolv dependencies
+        # loop to resolve dependencies
         have_resolved_checks = True
         while have_resolved_checks:
             have_resolved_checks = False
-            # All 'finished' checks (no more dep) raise checks they depends on
+            # All 'finished' checks (no more dep) raise checks they depend on
             for chk in self.checks.values():
                 if chk.status == 'havetoresolvedep':
                     for dependent_checks in chk.depend_on_me:
@@ -1846,11 +1855,19 @@ class Scheduler(object):  # pylint: disable=R0902
     def check_freshness(self):
         """
         Iter over all hosts and services to check freshness if check_freshness enabled and
-        passive_checks_enabled enabled
+        passive_checks_enabled are set
 
         :return: None
         """
-        for elt in self.iter_hosts_and_services():
+        items = []
+        if self.conf.check_host_freshness:
+            # Freshness check configured for hosts
+            items.extend(self.hosts)
+        if self.conf.check_service_freshness:
+            # Freshness check configured for services
+            items.extend(self.services)
+
+        for elt in items:
             if elt.check_freshness and elt.passive_checks_enabled:
                 chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                              self.macromodulations, self.checkmodulations,

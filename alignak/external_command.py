@@ -2981,7 +2981,7 @@ class ExternalCommandManager:
             chk.get_outputs(plugin_output, host.max_plugins_output_length)
             chk.status = 'waitconsume'
             chk.check_time = self.current_timestamp  # we are using the external command timestamps
-            # Set the corresponding host's check_type to passive=1
+            # Set the corresponding host's check type to passive
             chk.set_type_passive()
             self.daemon.nb_check_received += 1
             self.send_an_element(chk)
@@ -3054,7 +3054,7 @@ class ExternalCommandManager:
             chk.get_outputs(plugin_output, service.max_plugins_output_length)
             chk.status = 'waitconsume'
             chk.check_time = self.current_timestamp  # we are using the external command timestamps
-            # Set the corresponding service's check_type to passive=1
+            # Set the corresponding service's check type to passive
             chk.set_type_passive()
             self.daemon.nb_check_received += 1
             self.send_an_element(chk)

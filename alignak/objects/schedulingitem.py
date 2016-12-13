@@ -122,7 +122,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
-            IntegerProp(default=3600, fill_brok=['full_status']),
+            IntegerProp(default=-1, fill_brok=['full_status']),
 
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
@@ -330,8 +330,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             StringProp(default=None, retention=True),
         'acknowledgement_type':
             IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
-        'check_type':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'has_been_checked':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'should_be_scheduled':
@@ -643,6 +641,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                            checks):
+        # pylint: disable=too-many-nested-blocks
         """Check freshness and schedule a check now if necessary.
 
         :param hosts: hosts objects, used to launch checks
@@ -669,9 +668,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # If we start alignak, we begin the freshness period
                 if self.last_state_update == 0.0:
                     self.last_state_update = now
-                if self.last_state_update < now - (
-                        self.freshness_threshold + cls.additional_freshness_latency
-                ):
+                if self.last_state_update < now - \
+                        (self.freshness_threshold + cls.additional_freshness_latency):
                     # Do not raise a check for passive only checked hosts
                     # when not in check period ...
                     if not self.active_checks_enabled:
@@ -687,16 +685,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                                     macromodulations, checkmodulations, checks)
                             chk.output = "Freshness period expired"
                             chk.set_type_passive()
-                            if self.freshness_state == 'o':
-                                chk.exit_status = 0
-                            elif self.freshness_state == 'w':
-                                chk.exit_status = 1
-                            elif self.freshness_state == 'd':
-                                chk.exit_status = 2
-                            elif self.freshness_state == 'c':
-                                chk.exit_status = 2
-                            elif self.freshness_state == 'u':
-                                chk.exit_status = 3
+                            chk.freshness_expired = True
+                            if self.my_type == 'host':
+                                if self.freshness_state == 'o':
+                                    chk.exit_status = 0
+                                elif self.freshness_state == 'd':
+                                    chk.exit_status = 2
+                                elif self.freshness_state in ['u', 'x']:
+                                    chk.exit_status = 4
+                            else:
+                                if self.freshness_state == 'o':
+                                    chk.exit_status = 0
+                                elif self.freshness_state == 'w':
+                                    chk.exit_status = 1
+                                elif self.freshness_state == 'c':
+                                    chk.exit_status = 2
+                                elif self.freshness_state == 'u':
+                                    chk.exit_status = 3
+                                elif self.freshness_state == 'x':
+                                    chk.exit_status = 4
                             return chk
                         else:
                             logger.debug(
@@ -1600,7 +1607,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.last_chk = int(chk.check_time)
         self.output = chk.output
         self.long_output = chk.long_output
-        self.check_type = chk.check_type  # 0 => Active check, 1 => passive check
+        # self.check_type = chk.check_type  # 0 => Active check, 1 => passive check
         if self.__class__.process_performance_data and self.process_perf_data:
             self.last_perf_data = self.perf_data
             self.perf_data = chk.perf_data
@@ -1611,8 +1618,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if resultmod is not None:
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
-        if chk.exit_status == 1 and self.__class__.my_type == 'host':
-            chk.exit_status = 2
+        if not chk.freshness_expired:
+            if chk.exit_status == 1 and self.__class__.my_type == 'host':
+                chk.exit_status = 2
 
         self.set_state_from_exit_status(chk.exit_status, notif_period, hosts, services)
 

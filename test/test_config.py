@@ -256,6 +256,27 @@ class TestConfig(AlignakTest):
         assert svc is not None
         assert 'check_ssh' == svc.check_command.command.command_name
 
+    def test_service_templating_inheritance(self):
+        """ Test services inheritance
+        Services are attached to hosts thanks to host/service template relation
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
+        assert self.conf_is_correct
+        self._sched = self.schedulers['Default-Scheduler'].sched
+
+        # An host
+        host = self._sched.hosts.find_by_name("test.host.A")
+        assert host is not None
+
+        # Service linked to hist host
+        svc = self._sched.services.find_srv_by_name_and_hostname("test.host.A", "nsca_uptime")
+        assert svc is not None
+        svc = self._sched.services.find_srv_by_name_and_hostname("test.host.A", "nsca_cpu")
+        assert svc is not None
+
     def test_service_with_no_host(self):
         """ A service not linked to any host raises an error
 
