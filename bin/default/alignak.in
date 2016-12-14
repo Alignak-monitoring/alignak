@@ -65,11 +65,12 @@ ARBITERCFG="$ETC/daemons/arbiterd.ini"
 
 # location of the alignak configuration file
 # Now look if some required variables are pre defined:
-if ! test "$ALIGNAKCFG"
-then
+if [ -z "$ALIGNAKCFG" ]; then
     # Please update $ETC$ instead of this one.
     ALIGNAKCFG="$ETC/alignak.cfg"
 fi
+echo "Alignak main configuration file is: $ALIGNAKCFG"
+echo "---"
 
 # We got 2 configs because tools like Centreon don't generate all
 # configuration (only the alignak.cfg part)
