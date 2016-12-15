@@ -66,6 +66,7 @@ class Hostdependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
+    name_property = "dependency_name"
     my_type = 'hostdependency'
 
     # F is dep of D
@@ -80,14 +81,22 @@ class Hostdependency(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'dependent_host_name':           StringProp(),
-        'dependent_hostgroup_name':      StringProp(default=''),
-        'host_name':                     StringProp(),
-        'hostgroup_name':                StringProp(default=''),
-        'inherits_parent':               BoolProp(default=False),
-        'execution_failure_criteria':    ListProp(default=['n'], split_on_coma=True),
-        'notification_failure_criteria': ListProp(default=['n'], split_on_coma=True),
-        'dependency_period':             StringProp(default='')
+        'dependent_host_name':
+            StringProp(default=''),
+        'dependent_hostgroup_name':
+            StringProp(default=''),
+        'host_name':
+            StringProp(default=''),
+        'hostgroup_name':
+            StringProp(default=''),
+        'inherits_parent':
+            BoolProp(default=False),
+        'execution_failure_criteria':
+            ListProp(default=['n']),
+        'notification_failure_criteria':
+            ListProp(default=['n']),
+        'dependency_period':
+            StringProp(default='')
     })
 
     def __init__(self, params=None, parsing=True):
@@ -99,22 +108,16 @@ class Hostdependency(Item):
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
         super(Hostdependency, self).__init__(params, parsing=parsing)
 
-    def get_name(self):
-        """Get name based on dependent_host_name and host_name attributes
-        Each attribute is substituted by 'unknown' if attribute does not exist
+    @property
+    def dependency_name(self):
+        """Build a name for a service dependency
 
-        :return: dependent_host_name/host_name
-        :rtype: str
+        :return: Tuple with host_name and service_description for service and dependent service
+        :rtype: tuple
         """
-        dependent_host_name = 'unknown'
-        if getattr(self, 'dependent_host_name', None):
-            dependent_host_name = getattr(
-                getattr(self, 'dependent_host_name'), 'host_name', 'unknown'
-            )
-        host_name = 'unknown'
-        if getattr(self, 'host_name', None):
-            host_name = getattr(getattr(self, 'host_name'), 'host_name', 'unknown')
-        return dependent_host_name + '/' + host_name
+        return (getattr(self, 'dependent_host_name', 'undefined') +
+                '..' +
+                getattr(self, 'host_name', 'undefined'))
 
 
 class Hostdependencies(Items):
@@ -154,7 +157,7 @@ class Hostdependencies(Items):
             hostdep = self.items[h_id]
             # We explode first the dependent (son) part
             dephnames = []
-            if hasattr(hostdep, 'dependent_hostgroup_name'):
+            if getattr(hostdep, 'dependent_hostgroup_name', None):
                 dephg_names = [n.strip() for n in hostdep.dependent_hostgroup_name.split(',')]
                 for dephg_name in dephg_names:
                     dephg = hostgroups.find_by_name(dephg_name)
@@ -165,12 +168,12 @@ class Hostdependencies(Items):
                         continue
                     dephnames.extend([m.strip() for m in dephg.get_hosts()])
 
-            if hasattr(hostdep, 'dependent_host_name'):
+            if getattr(hostdep, 'dependent_host_name', None):
                 dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
 
             # Ok, and now the father part :)
             hnames = []
-            if hasattr(hostdep, 'hostgroup_name'):
+            if getattr(hostdep, 'hostgroup_name', None):
                 hg_names = [n.strip() for n in hostdep.hostgroup_name.split(',')]
                 for hg_name in hg_names:
                     hostgroup = hostgroups.find_by_name(hg_name)
@@ -181,7 +184,7 @@ class Hostdependencies(Items):
                         continue
                     hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
-            if hasattr(hostdep, 'host_name'):
+            if getattr(hostdep, 'host_name', None):
                 hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
 
             # Loop over all sons and fathers to get S*F host deps

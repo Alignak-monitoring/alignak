@@ -48,10 +48,14 @@
 implements service escalation for notification. Basically used for parsing.
 
 """
+import logging
+
 from alignak.objects.item import Item, Items
 from alignak.objects.escalation import Escalation
 
 from alignak.property import IntegerProp, StringProp, ListProp
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Serviceescalation(Item):
@@ -60,14 +64,17 @@ class Serviceescalation(Item):
     TODO: Why this class does not inherit from alignak.objects.Escalation.
           Maybe we can merge it
     """
+    name_property = "escalation_name"
     my_type = 'serviceescalation'
 
     properties = Item.properties.copy()
     properties.update({
+        'escalation_name':
+            StringProp(),
         'host_name':
             StringProp(),
         'hostgroup_name':
-            StringProp(),
+            StringProp(default=''),
         'service_description':
             StringProp(),
         'first_notification':
@@ -79,7 +86,7 @@ class Serviceescalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['d', 'u', 'r', 'w', 'c']),
         'contacts':
             StringProp(),
         'contact_groups':
@@ -95,11 +102,10 @@ class Serviceescalations(Items):
     """Serviceescalations manage a list of Serviceescalation objects, used for parsing configuration
 
     """
-    name_property = ""
     inner_class = Serviceescalation
 
     def explode(self, escalations):
-        """Create instance of Escalation for each ServiceEscalation object
+        """Create an instance of Escalation for each ServiceEscalation object
 
         :param escalations: list of escalation, used to add new ones
         :type escalations: alignak.objects.escalation.Escalations
@@ -107,14 +113,10 @@ class Serviceescalations(Items):
         """
         # Now we explode all escalations (host_name, service_description) to escalations
         for escalation in self:
-            properties = escalation.__class__.properties
-            host_name = getattr(escalation, 'host_name', '')
-            creation_dict = {
-                'escalation_name':
-                    'Generated-ServiceEscalation-%s-%s' % (host_name, escalation.uuid)
-            }
-            for prop in properties:
-                if hasattr(escalation, prop):
-                    creation_dict[prop] = getattr(escalation, prop)
+            name = getattr(escalation, 'host_name', '')
+            escalation.escalation_name = 'Generated-ServiceEscalation-%s-%s' % \
+                                         (name, escalation.uuid)
 
-            escalations.add_escalation(Escalation(creation_dict))
+            serialized = escalation.serialize()
+            logger.debug("Service escalation: %s", serialized)
+            escalations.add_item(Escalation(serialized))

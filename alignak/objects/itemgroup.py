@@ -54,25 +54,77 @@
 """
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
-import warnings
-
 from alignak.objects.item import Item, Items
 from alignak.brok import Brok
-from alignak.property import ListProp
+from alignak.property import ListProp, DictProp
 
 
 class Itemgroup(Item):
+    """Class to manage a group of items
+
+    An Itemgroup is used to group items together. It may contain members
+    and sub-groups as group members
+
+    As for other Item based objects, it defines `name_property`and `my_type` that
+    will be overloaded by the inherited classes: hostgroup, ...
+
+    The Itemgroups also defines some extra class properties:
+    - members_class: to define the base class of the group items
+    - members_property: for the configuration property used
+    to specify the members of the group
+    - groupmembers_property: for the configuration property used
+    to specify the sub-groups of the group
+
     """
-    Class to manage a group of items
-    An itemgroup is used to regroup items (group)
-    """
+    name_property = "groupname"
+    my_type = 'group'
+
+    members_class = Item
+    members_property = "members"
+    groupmembers_property = "groupmembers"
 
     properties = Item.properties.copy()
     properties.update({
-        'members': ListProp(fill_brok=['full_status'], default=None, split_on_coma=True),
-        # Alignak specific
-        'unknown_members': ListProp(default=[]),
+        # List of members names
+        'members':
+            ListProp(default=[], fill_brok=['full_status']),
     })
+
+    running_properties = Item.running_properties.copy()
+    running_properties.update({
+        # Dictionary for members uuid/name relation
+        'members_uuid':
+            DictProp(default={}, fill_brok=['full_status']),
+    })
+
+    def __init__(self, params=None, parsing=True, debug=False):
+
+        if params is None:
+            params = {}
+        super(Itemgroup, self).__init__(params, parsing=parsing, debug=debug)
+
+        if parsing:
+            # On creation, groups are not yet exploded (populated with their members)
+            self.already_exploded = False
+            # We need a list to store unknwon group members
+            self.unknown_members = []
+
+    def __str__(self):
+        return '<%s %s, %s members, %d sub-groups />' % (
+            self.__class__.__name__, self.get_name(),
+            len(self.get_members()) if self.get_members() else 'no',
+            len(self.get_group_members() if self.get_group_members() else 'no'))
+
+    __repr__ = __str__
+
+    def __iter__(self):
+        return self.members.__iter__()
+
+    def __delitem__(self, i):
+        try:
+            self.members.remove(i)
+        except ValueError:
+            pass
 
     def copy_shell(self):
         """
@@ -84,58 +136,47 @@ class Itemgroup(Item):
         :return: None
         """
         cls = self.__class__
-        new_i = cls()  # create a new group
-        new_i.uuid = self.uuid  # with the same id
+        new_group = cls()  # create a new group
+        new_group.uuid = self.uuid  # with the same id
 
         # Copy all properties
         for prop in cls.properties:
             if prop is not 'members':
                 if hasattr(self, prop):
-                    val = getattr(self, prop)
-                    setattr(new_i, prop, val)
-        # but no members
-        new_i.members = []
-        return new_i
+                    setattr(new_group, prop, getattr(self, prop))
+        # except the group members
+        new_group.members = []
+        return new_group
 
-    def replace_members(self, members):
+    def add_member(self, new_member):
         """
-        Replace members of itemgroup by new members list
+        Add a new member to the group
 
-        :param members: list of members
-        :type members: list
+        :param new_member: member to append unique identifier
+        :type new_member: str (uuid)
         :return: None
         """
-        self.members = members
+        self.add_members([new_member])
 
-    def fill_default(self):
+    def add_members(self, new_members):
         """
-        Put property and it default value for properties not defined and not required
+        Add new members to members list
 
+        :param new_members: members to append list
+        :type new_members: list of Item objects
         :return: None
         """
-        cls = self.__class__
-        for prop, entry in cls.properties.items():
-            if not hasattr(self, prop) and not entry.required:
-                value = entry.default
-                setattr(self, prop, value)
-
-    def add_string_member(self, member):
-        """
-        Add new entry(member) to members list
-
-        :param member: member name
-        :type member: str
-        :return: None
-        """
-        # Avoid empty elements in lists ...
-        if not member:
+        # Ignore empty list
+        if not new_members:
             return
-        add_fun = list.extend if isinstance(member, list) else list.append
-        if not hasattr(self, "members"):
-            self.members = []
-        add_fun(self.members, member)
 
-    def add_string_unknown_member(self, member):
+        for new_member in new_members:
+            self.members_uuid.update({new_member.get_name(): new_member.uuid})
+            if new_member.get_name() in self.get_members():
+                continue
+            self.members.append(new_member.get_name())
+
+    def add_unknown_member(self, member):
         """
         Add new entry(member) to unknown members list
 
@@ -143,55 +184,50 @@ class Itemgroup(Item):
         :type member: str
         :return: None
         """
-        add_fun = list.extend if isinstance(member, list) else list.append
-        if not self.unknown_members:
-            self.unknown_members = []
-        add_fun(self.unknown_members, member)
+        # Ignore empty element...
+        if not member:
+            return
+        if not hasattr(self, 'unknown_members'):
+            setattr(self, 'unknown_members', [])
+        self.unknown_members.append(member)
 
-    def __iter__(self):
-        return self.members.__iter__()
+    def get_members(self):
+        """
+        Get members of this group. Returns a list of the members names
 
-    def __delitem__(self, i):
-        try:
-            self.members.remove(i)
-        except ValueError:
-            pass
+        If the parameter `names` is False, this function will return the members uuid
+
+        :return: list of members
+        :rtype: list[str]
+        """
+        members_property = getattr(self.__class__, "members_property", 'not_existing')
+        return getattr(self, members_property, [])
+
+    def get_group_members(self):
+        """
+        Get groups members of this group
+
+        :return: list of services
+        :rtype: list | str
+        """
+        groupmembers_property = getattr(self.__class__, "groupmembers_property", 'not_existing')
+        return getattr(self, groupmembers_property, [])
 
     def is_correct(self):
         """
         Check if a group is valid.
-        Valid mean all members exists, so list of unknown_members is empty
+        Valid means that all members exist, so list of unknown_members is empty
 
         :return: True if group is correct, otherwise False
         :rtype: bool
         """
-        state = True
 
         if self.unknown_members:
             for member in self.unknown_members:
-                msg = "[%s::%s] as %s, got unknown member '%s'" % (
-                    self.my_type, self.get_name(), self.__class__.my_type, member
-                )
-                self.configuration_errors.append(msg)
-            state = False
+                self.add_error("[%s::%s] got an unknown member '%s'" %
+                               (self.my_type, self.get_name(), member))
 
-        return super(Itemgroup, self).is_correct() and state
-
-    def has(self, prop):
-        """
-        Check if self have a property
-
-        :param prop: property name
-        :type prop: string
-        :return: True if self has this attribute, otherwise False
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
+        return super(Itemgroup, self).is_correct() and self.conf_is_correct
 
     def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
         """
@@ -225,37 +261,33 @@ class Itemgroups(Items):
     Class to manage list of groups of items
     An itemgroups is used to regroup items group
     """
+    inner_class = Itemgroup
 
-    def fill_default(self):
+    def __str__(self):
+        return '<%s, %d groups />' % (
+            self.__class__.__name__, len(self))
+
+    __repr__ = __str__
+
+    def get_members_of(self, groupname):
         """
-        Put property and it default value for properties not defined and not required in
-        each itemgroup
+        Get members of a group
 
-        :return: None
-        """
-        for i in self:
-            i.fill_default()
+        Returns a list of the group members uuid. If nams parameter is True the list
+        contains the names rather then the uuid.
 
-    def add(self, itemgroup):
-        """
-        Add an item (itemgroup) to Itemgroups
+        If the group is not found, returns None
 
-        :param itemgroup: an item
-        :type itemgroup: alignak.objects.itemgroup.Itemgroup
-        :return: None
-        """
-        self.add_item(itemgroup)
-
-    def get_members_by_name(self, gname):
-        """
-        Get members of groups have name in parameter
-
-        :param gname: name of group
-        :rtype gname: str
+        :param groupname: name of the group to get members
+        :rtype groupname: str
+        :param names: the returned list contains the names, else the uuids
+        :rtype names: bool
         :return: list of members
         :rtype: list
         """
-        group = self.find_by_name(gname)
-        if group is None:
-            return []
-        return getattr(group, 'members', [])
+        group = self.find_by_name(groupname)
+        if group is not None:
+            # if names:
+            #     for member in group.get_members():
+            return group.get_members()
+        return None

@@ -58,45 +58,58 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self._sched = self.schedulers['scheduler-master'].sched
 
     def test_bprule_standard_notifications(self):
+        """BR standard notification"""
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_default")
         svc_cor.act_depend_of = []
-        assert True is svc_cor.got_business_rule
+        assert svc_cor.got_business_rule
         assert svc_cor.business_rule is not None
         assert False is svc_cor.business_rule_smart_notifications
+        assert svc_cor.notification_options == [u'c', u'f', u's', u'r', u'u', u'w', u'x']
 
         dummy = self._sched.hosts.find_by_name("dummy")
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv1")
         svc1.act_depend_of = []  # ignore the host dependency
         svc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv2")
         svc2.act_depend_of = []  # ignore the host dependency
+        assert svc2.notification_options == [u'c', u'f', u's', u'r', u'u', u'w', u'x']
 
         self.scheduler_loop(2, [
             [dummy, 0, 'UP dummy'],
             [svc1, 0, 'OK test_host_01/srv1'],
             [svc2, 2, 'CRITICAL test_host_02/srv2']])
 
-        # HARD/CRITICAL so it is now a problem
+        # svc2 is HARD/CRITICAL so it is now a problem
         assert svc2.is_problem
+        # BR is critical
+        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts, self._sched.services)
 
         now = time.time()
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_02;srv2;2;1;1;lausser;blablub" % (now)
         self._sched.run_external_command(cmd)
         self.external_command_loop()
-        assert True is svc2.problem_has_been_acknowledged
+        assert svc2.problem_has_been_acknowledged
+        # Service is still a problem
+        assert svc2.is_problem
+        # BR is critical
+        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts, self._sched.services)
+        assert not svc_cor.is_problem
+        assert not svc_cor.state == "CRITICAL"
+
+        timeperiod = self._sched.timeperiods[svc2.notification_period]
+        # svc2 blocks the notification sending because the problem has been acknowledged!
+        assert svc2.notification_is_blocked_by_item(timeperiod, self._sched.hosts,
+                                                    self._sched.services, 'PROBLEM')
 
         self.scheduler_loop(1, [[svc_cor, None, None]])
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
-        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts,
-                                                            self._sched.services)
-        timeperiod = self._sched.timeperiods[svc_cor.notification_period]
-        host = self._sched.hosts[svc_cor.host]
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                     self._sched.hosts,
-                                                                     self._sched.services,
-                                                                     'PROBLEM')
+        # BR is still critical
+        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts, self._sched.services)
+        assert False is svc_cor.notification_is_blocked_by_item(timeperiod, self._sched.hosts,
+                                                                self._sched.services, 'PROBLEM')
 
     def test_bprule_smart_notifications_ack(self):
+        """BR smart notifications acknowledge"""
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
         svc_cor.act_depend_of = []
         assert True is svc_cor.got_business_rule
@@ -117,13 +130,12 @@ class TestBusinesscorrelNotifications(AlignakTest):
         # HARD/CRITICAL so it is now a problem
         assert svc2.is_problem
 
-        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts,
-                                                            self._sched.services)
+        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts, self._sched.services)
         timeperiod = self._sched.timeperiods[svc_cor.notification_period]
         assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                     self._sched.hosts,
-                                                                     self._sched.services,
-                                                                     'PROBLEM')
+                                                                self._sched.hosts,
+                                                                self._sched.services,
+                                                                'PROBLEM')
 
 
         now = time.time()
@@ -140,6 +152,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
                                                                     'PROBLEM')
 
     def test_bprule_smart_notifications_svc_ack_downtime(self):
+        """BR smart notifications service downtime"""
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
         svc_cor.act_depend_of = []
         assert True is svc_cor.got_business_rule
@@ -195,6 +208,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
                                                                     'PROBLEM')
 
     def test_bprule_smart_notifications_hst_ack_downtime(self):
+        """BR smart notifications host downtime"""
         svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
         svc_cor.act_depend_of = []
         assert True is svc_cor.got_business_rule

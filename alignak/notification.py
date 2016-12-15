@@ -73,42 +73,62 @@ class Notification(Action):  # pylint: disable=R0902
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':                StringProp(default='notification'),
-        'notification_type':   IntegerProp(default=0, fill_brok=['full_status']),
-        'start_time':          IntegerProp(default=0, fill_brok=['full_status']),
-        'end_time':            IntegerProp(default=0, fill_brok=['full_status']),
-        'contact_name':        StringProp(default='', fill_brok=['full_status']),
-        'host_name':           StringProp(default='', fill_brok=['full_status']),
-        'service_description': StringProp(default='', fill_brok=['full_status']),
-        'reason_type':         IntegerProp(default=1, fill_brok=['full_status']),
-        'state':               IntegerProp(default=0, fill_brok=['full_status']),
-        'ack_author':          StringProp(default='', fill_brok=['full_status']),
-        'ack_data':            StringProp(default='', fill_brok=['full_status']),
-        'escalated':           BoolProp(default=False, fill_brok=['full_status']),
-        'command_call':        StringProp(default=None),
-        'contact':             StringProp(default=None),
-        'notif_nb':            IntegerProp(default=1),
-        'command':             StringProp(default='UNSET'),
-        'sched_id':            IntegerProp(default=0),
-        'enable_environment_macros': BoolProp(default=False),
+        'is_a':
+            StringProp(default='notification'),
+        'notification_type':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'contact_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'host_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'service_description':
+            StringProp(default='', fill_brok=['full_status']),
+        'reason_type':
+            IntegerProp(default=1, fill_brok=['full_status']),
+        'state':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'ack_author':
+            StringProp(default='', fill_brok=['full_status']),
+        'ack_data':
+            StringProp(default='', fill_brok=['full_status']),
+        'escalated':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'command_call':
+            StringProp(default=None),
+        'contact':
+            StringProp(default=None),
+        'notif_nb':
+            IntegerProp(default=1),
+        'command':
+            StringProp(default='UNSET'),
+        'sched_id':
+            IntegerProp(default=0),
+        'enable_environment_macros':
+            BoolProp(default=False),
         # Keep a list of currently active escalations
-        'already_start_escalations':  SetProp(default=set()),
-        'type':               StringProp(default='PROBLEM'),
+        'already_start_escalations':
+            SetProp(default=set()),
+        'type':
+            StringProp(default='PROBLEM'),
 
     })
 
     macros = {
-        'NOTIFICATIONTYPE':         'type',
-        'NOTIFICATIONRECIPIENTS':   'recipients',
-        'NOTIFICATIONISESCALATED':  'escalated',
-        'NOTIFICATIONAUTHOR':       'author',
-        'NOTIFICATIONAUTHORNAME':   'author_name',
-        'NOTIFICATIONAUTHORALIAS':  'author_alias',
-        'NOTIFICATIONCOMMENT':      'comment',
-        'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       'uuid',
+        'NOTIFICATIONTYPE': 'type',
+        'NOTIFICATIONRECIPIENTS': 'recipients',
+        'NOTIFICATIONISESCALATED': 'escalated',
+        'NOTIFICATIONAUTHOR': 'author',
+        'NOTIFICATIONAUTHORNAME': 'author_name',
+        'NOTIFICATIONAUTHORALIAS': 'author_alias',
+        'NOTIFICATIONCOMMENT': 'comment',
+        'HOSTNOTIFICATIONNUMBER': 'notif_nb',
+        'HOSTNOTIFICATIONID': 'uuid',
         'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    'uuid'
+        'SERVICENOTIFICATIONID': 'uuid'
     }
 
     def is_launchable(self, timestamp):
@@ -124,7 +144,7 @@ class Notification(Action):  # pylint: disable=R0902
     def is_administrative(self):
         """Check if this notification is "administrative"
 
-        :return: True in type not in ('PROBLEM', 'RECOVERY'), False otherwise
+        :return: True if type not in ('PROBLEM', 'RECOVERY'), False otherwise
         :rtype: bool
         """
         if self.type in ('PROBLEM', 'RECOVERY'):
@@ -176,7 +196,7 @@ class Notification(Action):  # pylint: disable=R0902
         brok = Brok({'type': 'notification_raise', 'data': data})
         return brok
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -185,7 +205,7 @@ class Notification(Action):  # pylint: disable=R0902
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(Notification, self).serialize()
+        res = super(Notification, self).serialize(filtered_fields=filtered_fields)
 
         if res['command_call'] is not None:
             if not isinstance(res['command_call'], str) and \

@@ -374,9 +374,8 @@ class TestDispatcher(AlignakTest):
                 elif hist.url == 'http://localhost:7773/put_conf':
                     conf_sent['receiver'] = hist.json()
 
-            assert set(['scheduler-master', 'broker', 'poller', 'reactionner',
-                                  'receiver']) == \
-                             set(conf_sent.keys())
+            assert set(['scheduler-master', 'broker', 'poller', 'reactionner', 'receiver']) == \
+                   set(conf_sent.keys())
 
             for satellite in self.arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])

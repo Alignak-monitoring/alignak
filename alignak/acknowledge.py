@@ -50,49 +50,45 @@ implements acknowledgment for notification. Basically used for parsing.
 
 """
 
+from alignak.property import StringProp, IntegerProp
 from alignak.alignakobject import AlignakObject
 
 
-class Acknowledge(AlignakObject):  # pylint: disable=R0903
+class Acknowledge(AlignakObject):
     """
-    Allows you to acknowledge the current problem for the specified service.
+    Allows to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
-    servicestate) are disabled.
+    service state) are disabled.
+
+    If the "sticky" option is set to one (1), the acknowledgement
+    will remain until the service returns to an OK state. Otherwise
+    the acknowledgement will automatically be removed when the
+    service changes state. In this case Web interfaces set a value
+    of (2).
+
+    If the "notify" option is set to one (1), a notification will be
+    sent out to contacts indicating that the current service problem
+    has been acknowledged.
+
+    If the "persistent" option is set to one (1), the comment
+    associated with the acknowledgement will survive across restarts
+    of the Alignak process. If not, the comment will be deleted the
+    next time Alignak restarts.
+
     """
 
-    properties = {
-        'uuid': None,
-        'sticky': None,
-        'notify': None,
-        'end_time': None,
-        'author': None,
-        'comment': None,
-    }
-    # If the "sticky" option is set to one (1), the acknowledgement
-    # will remain until the service returns to an OK state. Otherwise
-    # the acknowledgement will automatically be removed when the
-    # service changes state. In this case Web interfaces set a value
-    # of (2).
-    #
-    # If the "notify" option is set to one (1), a notification will be
-    # sent out to contacts indicating that the current service problem
-    # has been acknowledged.
-    #
-    # If the "persistent" option is set to one (1), the comment
-    # associated with the acknowledgement will survive across restarts
-    # of the Alignak process. If not, the comment will be deleted the
-    # next time Alignak restarts.
-
-    def serialize(self):
-        """This function serialize into a simple dict object.
-        It is used when transferring data to other daemons over the network (http)
-
-        Here we directly return all attributes
-
-        :return: json representation of a Acknowledge
-        :rtype: dict
-        """
-        return {'uuid': self.uuid, 'ref': self.ref, 'sticky': self.sticky, 'notify': self.notify,
-                'end_time': self.end_time, 'author': self.author, 'comment': self.comment,
-                'persistent': self.persistent
-                }
+    properties = AlignakObject.properties.copy()
+    properties.update({
+        'sticky':
+            StringProp(default='1'),
+        'notify':
+            StringProp(default='1'),
+        'persistent':
+            StringProp(default='1'),
+        'end_time':
+            IntegerProp(default=0),
+        'author':
+            StringProp(default='Alignak'),
+        'comment':
+            StringProp(default='Alignak created acknowledge'),
+    })

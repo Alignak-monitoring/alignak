@@ -72,6 +72,15 @@ class Testretention(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert True == svc.problem_has_been_acknowledged
+        assert svc.acknowledgement.__dict__ == {
+            "comment": "Acknowledge service",
+            "uuid": svc.acknowledgement.uuid,
+            "ref": svc.uuid,
+            "author": "Big brother",
+            "persistent": True,
+            "sticky": True,
+            "end_time": 0,
+            "notify": True}
 
         comments = []
         for comm_uuid, comment in self.schedulers['scheduler-master'].sched.comments.iteritems():
@@ -90,11 +99,18 @@ class Testretention(AlignakTest):
                 t = json.dumps(retention['hosts'][hst])
             except Exception as err:
                 assert False, 'Json dumps impossible: %s' % str(err)
+            assert "notifications_in_progress" in t
+            assert "downtimes" in t
+            assert "acknowledgement" in t
+
         for service in retention['services']:
             try:
                 t = json.dumps(retention['services'][service])
             except Exception as err:
                 assert False, 'Json dumps impossible: %s' % str(err)
+            assert "notifications_in_progress" in t
+            assert "downtimes" in t
+            assert "acknowledgement" in t
 
         # Test after get retention not have broken something
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
@@ -127,7 +143,7 @@ class Testretention(AlignakTest):
 
         assert host.uuid != hostn.uuid
 
-        # check downtime
+        # check downtimes (only for host and not for service)
         assert host.downtimes == hostn.downtimes
         for down_uuid, downtime in self.schedulers['scheduler-master'].sched.downtimes.iteritems():
             assert 'My downtime' == downtime.comment

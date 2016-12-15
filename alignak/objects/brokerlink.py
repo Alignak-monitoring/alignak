@@ -51,11 +51,15 @@ class BrokerLink(SatelliteLink):
     """
     Class to manage the broker information
     """
+    name_property = "broker_name"
     my_type = 'broker'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'broker_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port': IntegerProp(default=7772, fill_brok=['full_status']),
+        'broker_name':
+            StringProp(fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
     def register_to_my_realm(self):
@@ -72,5 +76,4 @@ class BrokerLinks(SatelliteLinks):
     Class to manage list of BrokerLink.
     BrokerLinks is used to regroup all brokers
     """
-    name_property = "broker_name"
     inner_class = BrokerLink

@@ -53,16 +53,24 @@ class PollerLink(SatelliteLink):
     Class to manage the link between Arbiter and Poller. With it, arbiter
     can see if a poller is alive, and can send it new configuration
     """
+    name_property = "poller_name"
     my_type = 'poller'
+
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'poller_name':  StringProp(fill_brok=['full_status'], to_send=True),
-        'port':         IntegerProp(default=7771, fill_brok=['full_status']),
-        'min_workers':  IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
-        'max_workers':  IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        'processes_by_worker': IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        'poller_tags':  ListProp(default=['None'], to_send=True),
+        'poller_name':
+            StringProp(fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7771, fill_brok=['full_status']),
+        'min_workers':
+            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
+        'max_workers':
+            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        'processes_by_worker':
+            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        'poller_tags':
+            ListProp(default=['None'], to_send=True),
     })
 
     def register_to_my_realm(self):
@@ -79,5 +87,4 @@ class PollerLinks(SatelliteLinks):
     Class to manage list of PollerLink.
     PollerLinks is used to regroup all links between the Arbiter and different Pollers
     """
-    name_property = "poller_name"
     inner_class = PollerLink

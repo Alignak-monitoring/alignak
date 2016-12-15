@@ -63,12 +63,6 @@ __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
            'CharProp', 'StringProp', 'ListProp',
            'FULL_STATUS', 'CHECK_RESULT')
 
-# Suggestion
-# Is this useful? see above
-__author__ = "Hartmut Goebel <h.goebel@goebel-consult.de>"
-__copyright__ = "Copyright 2010-2011 by Hartmut Goebel <h.goebel@goebel-consult.de>"
-__licence__ = "GNU Affero General Public License version 3 (AGPL v3)"
-
 FULL_STATUS = 'full_status'
 CHECK_RESULT = 'check_result'
 
@@ -110,7 +104,7 @@ class Property(object):
         `retention_preparation`: function, if set, will go this function before
                      being save to the retention data
         `split_on_coma`: indicates that list property value should not be
-                     split on coma delimiter (values conain comas that
+                     splitted on coma delimiter (values contains comas that
                      we want to keep).
 
         Only for the initial call:
@@ -319,7 +313,7 @@ class ListProp(Property):
         """Convert value into a list::
 
         * split value (or each element if value is a list) on coma char
-        * strip split values
+        * strip splitted values
 
         :param val: value to convert
         :type val: basestring
@@ -423,7 +417,7 @@ class DictProp(Property):
                  matches.group(2))[self.elts_prop is None]
             )
 
-        if val is None:
+        if val is None or not val:
             return dict()
 
         if self.elts_prop is None:
@@ -501,7 +495,7 @@ class IntListProp(ListProp):
 
 
 class PythonizeError(Exception):
-    """Simple Exception raise during pythonize call
+    """Simple Exception raised during pythonize call
 
     """
     pass

@@ -142,11 +142,11 @@ class Check(Action):  # pylint: disable=R0902
         """
         return self.dependency_check
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
 
-        The only usage is to send to poller, and it don't need to have the depend_on and
-        depend_on_me properties.
+        The only usage is to send to poller, and it does not need to have the
+        depend_on and depend_on_me properties.
 
         :return: json representation of a Check
         :rtype: dict

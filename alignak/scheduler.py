@@ -107,19 +107,19 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         self.sched_daemon = scheduler_daemon
-        # When set to false by us, we die and arbiter launch a new Scheduler
+
+        # When set to false by us, we die and the arbiter will launch a new Scheduler
         self.must_run = True
 
-        # protect this uniq list
-        self.waiting_results = Queue()  # satellites returns us results
-        # and to not wait for them, we put them here and
-        # use them later
+        # satellites return us results
+        # To avoid waiting for them, we put them in a queue and will use them later
+        self.waiting_results = Queue()
 
         # Every N seconds we call functions like consume, del zombies
         # etc. All of theses functions are in recurrent_works with the
         # every tick to run. So must be an integer > 0
         # The order is important, so make key an int.
-        # TODO: at load, change value by configuration one (like reaper time, etc)
+        # Some values are updated when the configuration is received and parsed
         self.recurrent_works = {
             0: ('update_downtimes_and_comments', self.update_downtimes_and_comments, 1),
             1: ('schedule', self.schedule, 1),  # just schedule
@@ -171,9 +171,9 @@ class Scheduler(object):  # pylint: disable=R0902
             }
         }
 
-        self.instance_id = 0  # Temporary set. Will be erase later
+        self.instance_id = 0  # Temporary set. Will be updated later
 
-        # Ours queues
+        # Our queues
         self.checks = {}
         self.actions = {}
         self.downtimes = {}
@@ -188,10 +188,10 @@ class Scheduler(object):  # pylint: disable=R0902
         self.need_dump_memory = False  # set by signal 1
         self.need_objects_dump = False  # set by signal 2
 
-        # And a dummy push flavor
+        # And a dummy push flavor that will be updated later
         self.push_flavor = 0
 
-        # Now fake initialize for our satellites
+        # Now fake initialize our satellites
         self.brokers = {}
         self.pollers = {}
         self.reactionners = {}
@@ -230,45 +230,39 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         self.program_start = int(time.time())
-        self.conf = conf
-        self.hostgroups = conf.hostgroups
-        self.services = conf.services
-        # We need reversed list for search in the retention
-        # file read
-        self.services.optimize_service_search(conf.hosts)
-        self.hosts = conf.hosts
 
-        self.notificationways = conf.notificationways
-        self.checkmodulations = conf.checkmodulations
-        self.macromodulations = conf.macromodulations
-        self.businessimpactmodulations = conf.businessimpactmodulations
-        self.resultmodulations = conf.resultmodulations
-        self.contacts = conf.contacts
-        self.contactgroups = conf.contactgroups
-        self.servicegroups = conf.servicegroups
-        self.timeperiods = conf.timeperiods
-        self.commands = conf.commands
+        self.conf = conf
+
+        logger.info("Scheduler %s is loading its configuration", conf.instance_name)
+        for _, _, prop, _ in self.conf.types_creations.values():
+            setattr(self, prop, getattr(conf, prop))
+            logger.info(" - %s: %s", prop, getattr(conf, prop))
+        logger.info("Scheduler loaded its configuration")
+
+        # We need to provide the hosts list to the services for revert searching...
+        if self.services:
+            self.services.optimize_service_search(conf.hosts)
+
+        # Triggers
         self.triggers = conf.triggers
         self.triggers.compile()
         self.triggers.load_objects(self)
-        self.escalations = conf.escalations
 
-        # self.status_file = StatusFile(self)
-        #  External status file
-        # From Arbiter. Use for Broker to differentiate schedulers
+        # From Arbiter. Used for Brokers to differentiate their schedulers
         self.instance_id = conf.instance_id
+
         # Tag our hosts with our instance_id
         for host in self.hosts:
             host.instance_id = conf.instance_id
         for serv in self.services:
             serv.instance_id = conf.instance_id
-        # self for instance_name
+
+        # Self tag for instance name
         self.instance_name = conf.instance_name
         # and push flavor
         self.push_flavor = conf.push_flavor
 
-        # Now we can update our 'ticks' for special calls
-        # like the retention one, etc
+        # Now we can update our 'ticks' for special calls like the retention one, etc
         self.update_recurrent_works_tick('update_retention_file',
                                          self.conf.retention_update_interval * 60)
         self.update_recurrent_works_tick('clean_queues', self.conf.cleaning_queues_interval)
@@ -300,11 +294,24 @@ class Scheduler(object):  # pylint: disable=R0902
         :type brokers:
         :return: None
         """
+
+        # Todo: Did not found why but self.pollers here is a list and not a dict...
+        self.brokers = {}
+        self.pollers = {}
+        self.reactionners = {}
+
+        logger.debug("Loading pollers: %s", pollers)
         self.pollers = pollers
+        logger.debug("Loading reactionners: %s", reactionners)
         self.reactionners = reactionners
+        logger.debug("Loading brokers: %s", brokers)
+        # For brokers, we want to index our own dictionray with the broker name instead
+        # of its uuid and we also want to have some specific information in place of
+        # the one that are provided
         for broker in brokers.values():
-            self.brokers[broker['name']] = {'broks': {}, 'has_full_broks': False,
-                                            'initialized': False}
+            self.brokers.update({
+                broker['name']: {'broks': {}, 'has_full_broks': False, 'initialized': False}
+            })
 
     def die(self):
         """Set must_run attribute to False
@@ -584,7 +591,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 items = getattr(self, chk.ref_type + 's')
                 elt = items[chk.ref]
                 # First remove the link in host/service
-                elt.remove_in_progress_check(chk)
+                elt.remove_in_progress_check(chk.uuid)
                 # Then in dependent checks (I depend on, or check
                 # depend on me)
                 for dependent_checks in chk.depend_on_me:
@@ -1325,6 +1332,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     comments.append(self.comments[comment_uuid].serialize())
                 h_dict['comments'] = comments
             # manage special properties: the notified_contacts
+            # Todo: notified_contacts should be a set and not a list, no?
             if 'notified_contacts' in h_dict and h_dict['notified_contacts'] != []:
                 ncontacts = []
                 for contact_uuid in h_dict['notified_contacts']:
@@ -1390,6 +1398,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     comments.append(self.comments[comment_uuid].serialize())
                 s_dict['comments'] = comments
             # manage special properties: the notified_contacts
+            # Todo: notified_contacts should be a set and not a list, no?
             if 'notified_contacts' in s_dict and s_dict['notified_contacts'] != []:
                 ncontacts = []
                 for contact_uuid in s_dict['notified_contacts']:
@@ -1457,22 +1466,24 @@ class Scheduler(object):  # pylint: disable=R0902
                 # we just bypass this
                 if prop in data:
                     setattr(item, prop, data[prop])
+
         # Now manage all linked objects load from previous run
         for notif_uuid, notif in item.notifications_in_progress.iteritems():
-            notif['ref'] = item.id
+            notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
             item.notifications_in_progress[notif_uuid] = mynotif
         item.update_in_checking()
         item_comments = item.comments
         item.comments = []
+
         # And also add downtimes and comments
         item_downtimes = []
         for downtime in item.downtimes:
-            downtime["ref"] = item.id
+            downtime["ref"] = item.uuid
             if "comment_id" in downtime and isinstance(downtime["comment_id"], dict):
                 if downtime["comment_id"]["uuid"] not in self.comments:
-                    downtime["comment_id"]["ref"] = item.id
+                    downtime["comment_id"]["ref"] = item.uuid
                     comm = Comment(downtime["comment_id"])
                     downtime["comment_id"] = comm.uuid
                     item.add_comment(comm.uuid)
@@ -1501,16 +1512,16 @@ class Scheduler(object):  # pylint: disable=R0902
         # if it was loaded from the retention, it's now a list of contacts
         # names
         for comm in item_comments:
-            comm["ref"] = item.id
+            comm["ref"] = item.uuid
             if comm['uuid'] not in self.comments:
                 self.add(Comment(comm))
             # raises comment id to do not overlap ids
         new_notified_contacts = set()
         for cname in item.notified_contacts:
-            comm = self.contacts.find_by_name(cname)
+            contact = self.contacts.find_by_name(cname)
             # Maybe the contact is gone. Skip it
-            if comm is not None:
-                new_notified_contacts.add(comm.uuid)
+            if contact is not None:
+                new_notified_contacts.add(contact.uuid)
         item.notified_contacts = new_notified_contacts
 
     def fill_initial_broks(self, bname, with_logs=False):

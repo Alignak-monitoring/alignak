@@ -151,7 +151,7 @@ class Timerange(AlignakObject):
             self.mend = params["mend"]
             self.is_valid = params["is_valid"]
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -306,9 +306,7 @@ class AbstractDaterange(AlignakObject):
         """
         if self.is_time_day_valid(timestamp):
             for timerange in self.timeranges:
-                # print tr, "is valid?", tr.is_time_valid(t)
                 if timerange.is_time_valid(timestamp):
-                    # print "return True"
                     return True
         return False
 
@@ -532,7 +530,6 @@ class AbstractDaterange(AlignakObject):
 
         # Ok we've got a next invalid day and a invalid possibility in
         # timerange, so the next invalid is this day+sec_from_morning
-        # print "T_day", t_day, "Sec from morning", sec_from_morning
         if t_day is not None and sec_from_morning is not None:
             return t_day + sec_from_morning + 1
 
@@ -625,7 +622,7 @@ class Daterange(AbstractDaterange):
             for timeinterval in params['other'].split(','):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -639,7 +636,8 @@ class Daterange(AbstractDaterange):
                 'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
                 'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
                 'skip_interval': self.skip_interval, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+                'timeranges': [
+                    t.serialize(filtered_fields=filtered_fields) for t in self.timeranges]}
 
 
 class CalendarDaterange(Daterange):
@@ -688,7 +686,7 @@ class StandardDaterange(AbstractDaterange):
 
         self.day = params['day']
 
-    def serialize(self):
+    def serialize(self, filtered_fields=None):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -698,7 +696,8 @@ class StandardDaterange(AbstractDaterange):
         :rtype: dict
         """
         return {'day': self.day, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+                'timeranges': [
+                    t.serialize(filtered_fields=filtered_fields) for t in self.timeranges]}
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid

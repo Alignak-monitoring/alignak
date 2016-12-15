@@ -111,7 +111,8 @@ class ActionBase(AlignakObject):
     """
     process = None
 
-    properties = {
+    properties = AlignakObject.properties.copy()
+    properties.update({
         'is_a':
             StringProp(default=''),
         'type':
@@ -150,7 +151,7 @@ class ActionBase(AlignakObject):
             IntegerProp(default=10),
         'ref':
             StringProp(default=''),
-    }
+    })
 
     def __init__(self, params=None, parsing=True):
         super(ActionBase, self).__init__(params, parsing=parsing)
@@ -162,7 +163,7 @@ class ActionBase(AlignakObject):
         if not params or 'log_actions' not in params:
             self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
 
-        # Fill default parameters
+        # Fill missing properties with their default value
         self.fill_default()
 
     def set_type_active(self):

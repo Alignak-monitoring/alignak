@@ -88,9 +88,12 @@ class Broker(BaseSatellite):
     """
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='brokerd.pid'),
-        'port':      IntegerProp(default=7772),
-        'local_log': PathProp(default='brokerd.log'),
+        'pidfile':
+            PathProp(default='brokerd.pid'),
+        'port':
+            IntegerProp(default=7772),
+        'local_log':
+            PathProp(default='brokerd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
@@ -323,12 +326,10 @@ class Broker(BaseSatellite):
         for mod in self.modules_manager.get_internal_instances():
             try:
                 mod.manage_brok(brok)
-            except Exception, exp:  # pylint: disable=W0703
-                logger.debug(str(exp.__dict__))
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
                                mod.get_name(), str(exp))
-                logger.warning("Exception type: %s", type(exp))
-                logger.warning("Back trace of this kill: %s", traceback.format_exc())
+                logger.exception(exp)
                 self.modules_manager.set_to_restart(mod)
 
     def add_broks_to_queue(self, broks):
@@ -397,23 +398,24 @@ class Broker(BaseSatellite):
                 else:  # no con? make the connection
                     self.pynag_con_init(sched_id, i_type=i_type)
             # Ok, con is not known, so we create it
-            except KeyError, exp:
+            except KeyError as exp:
                 logger.debug("Key error for get_broks : %s", str(exp))
                 self.pynag_con_init(sched_id, i_type=i_type)
-            except HTTPEXCEPTIONS, exp:
+            except HTTPEXCEPTIONS as exp:
                 logger.warning("Connection problem to the %s %s: %s",
                                i_type, links[sched_id]['name'], str(exp))
+                logger.exception(exp)
                 links[sched_id]['con'] = None
             # scheduler must not #be initialized
-            except AttributeError, exp:
+            except AttributeError as exp:
                 logger.warning("The %s %s should not be initialized: %s",
                                i_type, links[sched_id]['name'], str(exp))
+                logger.exception(exp)
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
-            except Exception, err:  # pylint: disable=W0703
-                logger.error(str(err))
-                logger.error(traceback.format_exc())
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception(exp)
                 sys.exit(1)
 
     def get_retention_data(self):
@@ -449,8 +451,10 @@ class Broker(BaseSatellite):
 
         :return: None
         """
+
         with self.conf_lock:
             conf = unserialize(self.new_conf, True)
+            logger.warning("Configuration: %s", conf)
             self.new_conf = None
             self.cur_conf = conf
             # Got our name from the globals
@@ -475,9 +479,8 @@ class Broker(BaseSatellite):
 
             logger.debug("[%s] Sending us configuration %s", self.name, conf)
 
-            # If we've got something in the schedulers, we do not
-            # want it anymore
-            # self.schedulers.clear()
+            # Get our Schedulers
+            logger.info("[%s] schedulers: %s", self.name, conf['schedulers'])
             for sched_id in conf['schedulers']:
                 # Must look if we already have it to do not overdie our broks
 
@@ -519,6 +522,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now get arbiter
+            logger.info("[%s] arbiters: %s", self.name, conf['arbiters'])
             for arb_id in conf['arbiters']:
                 # Must look if we already have it
                 already_got = arb_id in self.arbiters
@@ -553,6 +557,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now for pollers
+            logger.info("[%s] pollers: %s", self.name, conf['pollers'])
             for pol_id in conf['pollers']:
                 # Must look if we already have it
                 already_got = pol_id in self.pollers
@@ -588,6 +593,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now reactionners
+            logger.info("[%s] reactionners: %s", self.name, conf['reactionners'])
             for rea_id in conf['reactionners']:
                 # Must look if we already have it
                 already_got = rea_id in self.reactionners
@@ -623,6 +629,7 @@ class Broker(BaseSatellite):
                 logger.info(" - %s ", daemon['name'])
 
             # Now receivers
+            logger.debug("[%s] receivers: %s", self.name, conf['receivers'])
             for rec_id in conf['receivers']:
                 # Must look if we already have it
                 already_got = rec_id in self.receivers
@@ -673,7 +680,7 @@ class Broker(BaseSatellite):
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
-            # Connection init with Schedulers
+            # Initialize connection with Schedulers, Pollers and Reactionners
             for sched_id in self.schedulers:
                 self.pynag_con_init(sched_id, i_type='scheduler')
 
@@ -792,14 +799,12 @@ class Broker(BaseSatellite):
         for mod in ext_modules:
             try:
                 mod.to_q.put(to_send)
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 # first we must find the modules
-                logger.debug(str(exp.__dict__))
                 logger.warning("The mod %s queue raise an exception: %s, "
                                "I'm tagging it to restart later",
                                mod.get_name(), str(exp))
-                logger.warning("Exception type: %s", type(exp))
-                logger.warning("Back trace of this kill: %s", traceback.format_exc())
+                logger.exception(exp)
                 self.modules_manager.set_to_restart(mod)
 
         # No more need to send them
@@ -852,8 +857,6 @@ class Broker(BaseSatellite):
                 end = time.time()
                 self.timeout = self.timeout - (end - begin)
             self.timeout = 1.0
-
-            # print "get new broks watch new conf 1: end", len(self.broks)
 
         # Say to modules it's a new tick :)
         self.hook_point('tick')

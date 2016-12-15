@@ -51,7 +51,6 @@ See detailed concepts below
 
 """
 import time
-import uuid
 import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp
@@ -73,43 +72,71 @@ class Downtime(AlignakObject):
 
     """
 
-    properties = {
-        'activate_me': StringProp(default=[]),
-        'entry_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'fixed': BoolProp(default=True, fill_brok=['full_status']),
-        'start_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'duration': IntegerProp(default=0, fill_brok=['full_status']),
-        'trigger_id': StringProp(default=''),
-        'end_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'real_end_time': IntegerProp(default=0),
-        'author': StringProp(default='', fill_brok=['full_status']),
-        'comment': StringProp(default=''),
-        'is_in_effect': BoolProp(default=False),
-        'has_been_triggered': BoolProp(default=False),
-        'can_be_deleted': BoolProp(default=False),
-        'ref': StringProp(default=''),
-        'ref_type': StringProp(default=''),
-        'comment_id': StringProp(default=''),
-    }
+    properties = AlignakObject.properties.copy()
+    properties.update({
+        'activate_me':
+            StringProp(default=[]),
+        'entry_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'fixed':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        # Default duration is one hour
+        'duration':
+            IntegerProp(default=3600, fill_brok=['full_status']),
+        'trigger_id':
+            StringProp(default=''),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'real_end_time':
+            IntegerProp(default=0),
+        'author':
+            StringProp(default='Alignak', fill_brok=['full_status']),
+        'comment':
+            StringProp(default='Alignak created downtime'),
+        'is_in_effect':
+            BoolProp(default=False),
+        'has_been_triggered':
+            BoolProp(default=False),
+        'can_be_deleted':
+            BoolProp(default=False),
+        'ref':
+            StringProp(default='unknown'),
+        'ref_type':
+            StringProp(default='unknown'),
+        'comment_id':
+            StringProp(default=''),
+    })
 
     def __init__(self, params):
 
-        # TODO: Fix this if (un-serializing)
         if 'uuid' not in params:
-            self.uuid = uuid.uuid4().hex
-            self.ref = params['ref']  # pointer to srv or host we are apply
-            self.ref_type = params['ref_type']
-            self.activate_me = []  # The other downtimes i need to activate
-            self.entry_time = int(time.time())
-            self.fixed = params['fixed']
-            self.start_time = params['start_time']
-            self.duration = params['duration']
-            self.trigger_id = params['trigger_id']
-            if self.trigger_id not in ['', '0']:  # triggered plus fixed makes no sense
+            # Downtime creation
+            super(Downtime, self).__init__(params)
+            self.fill_default(which_properties="properties")
+
+        # Update my properties with provided parameters
+        for prop in self.__class__.properties:
+            if prop in params:
+                setattr(self, prop, params[prop])
+
+        if 'uuid' not in params:
+            # Downtime creation
+
+            # Default start and end time
+            if self.start_time == 0:
+                self.start_time = int(time.time())
+            if self.end_time == 0:
+                self.end_time = self.start_time + self.duration
+
+            # triggered and fixed makes no sense for a downtime
+            if self.trigger_id not in ['', '0']:
                 self.fixed = False
-            self.end_time = params['end_time']
-            if params['fixed']:
-                self.duration = params['end_time'] - params['start_time']
+            # If fixed, duration is set to end - start time
+            if self.fixed:
+                self.duration = self.end_time - self.start_time
+
             # This is important for flexible downtimes. Here start_time and
             # end_time mean: in this time interval it is possible to trigger
             # the beginning of the downtime which lasts for duration.
@@ -117,29 +144,23 @@ class Downtime(AlignakObject):
             # recalculated from now+duration
             # end_time will be displayed in the web interface, but real_end_time
             # is used internally
-            self.real_end_time = params['end_time']
-            self.author = params['author']
-            self.comment = params['comment']
+            self.activate_me = []  # The other downtimes i need to activate
+            self.entry_time = int(time.time())
+            self.real_end_time = self.end_time
+
+            # If downtime is fixed: start_time has been reached,
+            # Id downtime is flexible: non-ok checkresult
             self.is_in_effect = False
-            # fixed: start_time has been reached,
-            # flexible: non-ok checkresult
 
             self.has_been_triggered = False  # another downtime has triggered me
             self.can_be_deleted = False
-        else:
-            super(Downtime, self).__init__(params)
 
     def __str__(self):
-        if self.is_in_effect is True:
-            active = "active"
-        else:
-            active = "inactive"
-        if self.fixed is True:
-            d_type = "fixed"
-        else:
-            d_type = "flexible"
-        return "%s %s Downtime id=%s %s - %s" % (
-            active, d_type, self.uuid, time.ctime(self.start_time), time.ctime(self.end_time))
+        active = "Active" if self.is_in_effect else "Inactive"
+        d_type = "fixed" if self.fixed else "flexible"
+
+        return "%s %s Downtime id=%s, %s -> %s" \
+               % (active, d_type, self.uuid, time.ctime(self.start_time), time.ctime(self.end_time))
 
     @property
     def id(self):  # pylint: disable=C0103
@@ -198,7 +219,7 @@ class Downtime(AlignakObject):
         res = []
         self.is_in_effect = True
         if self.fixed is False:
-            now = time.time()
+            now = int(time.time())
             self.real_end_time = now + self.duration
         if item.scheduled_downtime_depth == 0:
             item.raise_enter_downtime_log_entry()

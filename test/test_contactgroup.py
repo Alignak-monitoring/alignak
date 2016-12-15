@@ -52,10 +52,11 @@ class TestContactGroup(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_groups_with_no_alias.cfg')
-        assert self.schedulers['Default-Scheduler'].conf.conf_is_correct
+        assert self.schedulers['scheduler-master'].conf.conf_is_correct
 
         #  Find a contactgroup named NOALIAS
-        cg = self.schedulers['Default-Scheduler'].sched.contactgroups.find_by_name("NOALIAS")
+        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name("NOALIAS")
+        print(cg.__dict__)
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "NOALIAS"
         assert cg.alias == "NOALIAS"
@@ -68,26 +69,33 @@ class TestContactGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        from pprint import pprint
+        pprint(self.schedulers['scheduler-master'].conf.contactgroups.name_to_item)
 
         #  Found a contactgroup named allhosts_and_groups
-        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name(
-            "allcontacts_and_groups"
-        )
+        cg = self._sched.contactgroups.find_by_name("allcontacts_and_groups")
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "allcontacts_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name(
-                "allcontacts_and_groups"
-            )) == \
-            2
+        assert len(self._sched.contactgroups.get_members_of("allcontacts_and_groups")) == 2
 
         assert len(cg.get_contacts()) == 2
         for cid in cg.get_contacts():
-            contact = self.schedulers['scheduler-master'].sched.contacts[cid]
-            print(contact)
+            contact = self._sched.contacts[cid]
             if contact.get_name() == "test_contact":
-                assert contact.get_groupname() == "another_contact_test"
-                assert contact.get_groupnames() == "another_contact_test"
+                # One of the group the contact is related to... not this is the group alias!
+                assert contact.get_groupname(
+                    self._sched.contactgroups) in ["test_contacts_alias",
+                                                   "another_contact_test",
+                                                   "All: Contacts and groups"]
+                # It is a string and not a list ...
+                assert contact.get_groupnames(
+                    self._sched.contactgroups) == "allcontacts_and_groups," \
+                                                  "another_contact_test,test_contact"
+
             # This should match but there is a problem currently
             # Todo: fix this cross reference between contacts and contactgroups
             # Ongoing PR ...
@@ -104,13 +112,15 @@ class TestContactGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
         #  Found a contactgroup named allhosts_and_groups
-        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name("allcontacts_and_groups")
+        cg = self._sched.contactgroups.find_by_name("allcontacts_and_groups")
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "allcontacts_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name(
+        assert len(self._sched.contactgroups.get_members_of(
                 "allcontacts_and_groups"
             )) == \
             2
@@ -118,14 +128,14 @@ class TestContactGroup(AlignakTest):
         assert len(cg.get_contacts()) == 2
         print("List contactgroup contacts:")
         for contact_id in cg.members:
-            contact = self.schedulers['scheduler-master'].sched.contacts[contact_id]
+            contact = self._sched.contacts[contact_id]
             print("Contact: %s" % contact)
             assert isinstance(contact, Contact)
 
             if contact.get_name() == 'test_ok_0':
                 assert len(contact.get_contactgroups()) == 4
                 for group_id in contact.contactgroups:
-                    group = self.schedulers['scheduler-master'].sched.contactgroups[group_id]
+                    group = self._sched.contactgroups[group_id]
                     print("Group: %s" % group)
                     assert group.get_name() in [
                         'ok', 'contactgroup_01', 'contactgroup_02', 'allcontacts_and_groups'
@@ -146,23 +156,24 @@ class TestContactGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_no_contact.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        assert len(self.schedulers['scheduler-master'].sched.contactgroups) == \
-            3
+        assert len(self._sched.contactgroups) == 3
 
-        for group in self.schedulers['scheduler-master'].sched.contactgroups:
+        for group in self._sched.contactgroups:
             # contactgroups property returns an object list ... unlike the hostgroups property
             # of an host group ...
-            # group = self.schedulers['scheduler-master'].sched.contactgroups[group_id]
+            # group = self._sched.contactgroups[group_id]
             print("Group: %s" % group)
 
         # Found a contactgroup named void
-        cg = self.schedulers['scheduler-master'].sched.contactgroups.find_by_name("void")
+        cg = self._sched.contactgroups.find_by_name("void")
         print("cg: %s" % cg)
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "void"
 
-        assert len(self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name("void")) == \
+        assert len(self._sched.contactgroups.get_members_of("void")) == \
             0
 
         print("Contacts: %s" % cg.get_contactgroup_members())
@@ -178,32 +189,33 @@ class TestContactGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
-        self.nb_contactgroups = len(self.schedulers['scheduler-master'].sched.contactgroups)
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+        self.nb_contactgroups = len(self._sched.contactgroups)
 
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_with_space.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
         # Two more groups than the default configuration
-        assert len(self.schedulers['scheduler-master'].sched.contactgroups) == self.nb_contactgroups + 1
+        assert len(self._sched.contactgroups) == self.nb_contactgroups + 1
 
-        assert self.schedulers['scheduler-master'].sched.contactgroups.find_by_name("test_With Spaces").get_name() == \
+        assert self._sched.contactgroups.find_by_name("test_With Spaces").get_name() == \
             "test_With Spaces"
-        assert self.schedulers['scheduler-master'].sched.contactgroups.get_members_by_name(
-                "test_With Spaces"
-            ) is not \
-            []
+        assert self._sched.contactgroups.get_members_of("test_With Spaces") is not []
 
     def _dump_host(self, h):
         print "Dumping host", h.get_name()
         print h.contact_groups
         for c in h.contacts:
-            print "->", self.schedulers['scheduler-master'].sched.contacts[c].get_name()
+            print "->", self._sched.contacts[c].get_name()
 
     def _dump_svc(self, s):
         print "Dumping Service", s.get_name()
         print "  contact_groups : %s " % s.contact_groups
         for c in s.contacts:
-            print "->", self.schedulers['scheduler-master'].sched.contacts[c].get_name()
+            print "->", self._sched.contacts[c].get_name()
 
     def test_contactgroups_plus_inheritance(self):
         """ Test that contactgroups correclty manage inheritance
@@ -212,69 +224,51 @@ class TestContactGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroups_plus_inheritance.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        host0 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host0 = self._sched.hosts.find_by_name("test_host_0")
         # HOST 1 should have 2 group of contacts
         # WARNING, it's a string, not the real objects!
         self._dump_host(host0)
 
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host0.contacts]
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host0.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host0.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in host0.contacts]
 
-        host2 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_2")
+        host2 = self._sched.hosts.find_by_name("test_host_2")
         self._dump_host(host2)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host2.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host2.contacts]
 
-        host3 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_3")
+        host3 = self._sched.hosts.find_by_name("test_host_3")
         self._dump_host(host3)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host3.contacts]
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host3.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host3.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in host3.contacts]
 
-        host4 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_4")
+        host4 = self._sched.hosts.find_by_name("test_host_4")
         self._dump_host(host4)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host4.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host4.contacts]
 
-        host5 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_5")
+        host5 = self._sched.hosts.find_by_name("test_host_5")
         self._dump_host(host5)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host5.contacts]
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host5.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host5.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in host5.contacts]
 
-        host6 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_6")
+        host6 = self._sched.hosts.find_by_name("test_host_6")
         self._dump_host(host6)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host6.contacts]
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in host6.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in host6.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in host6.contacts]
 
         # Now Let's check service inheritance
 
-        svc1 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
-            "test_host_0", "svc_tmplA"
-        )
+        svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "svc_tmplA")
         self._dump_svc(svc1)
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in svc1.contacts]
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in svc1.contacts]
 
-        svc2 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
-            "test_host_0", "svc_tmplB"
-        )
+        svc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "svc_tmplB")
         self._dump_svc(svc2)
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in svc2.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in svc2.contacts]
 
-        svc3 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
-            "test_host_0", "svc_tmplA_tmplB"
-        )
-        assert "test_contact_1" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in svc3.contacts]
-        assert "test_contact_2" in \
-            [self.schedulers['scheduler-master'].sched.contacts[c].get_name() for c in svc3.contacts]
+        svc3 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "svc_tmplA_tmplB")
+        assert "test_contact_1" in [self._sched.contacts[c].get_name() for c in svc3.contacts]
+        assert "test_contact_2" in [self._sched.contacts[c].get_name() for c in svc3.contacts]
         self._dump_svc(svc3)

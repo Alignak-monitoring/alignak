@@ -135,9 +135,7 @@ class TestModules(AlignakTest):
         # Log missing module
         self.assert_any_log_match(
             re.escape(
-                "Your configuration parameters 'status_file = /var/status.dat' and "
-                "'object_cache_file = /var/status.dat' need to use an external module such "
-                "as 'retention' but I did not found one!"
+                "Your configuration parameters 'status_file = /var/status.dat' and 'object_cache_file = /var/status.dat' need to use an external module such as 'retention' but I did not found one!"
             )
         )
         self.assert_any_log_match(

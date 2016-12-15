@@ -64,27 +64,22 @@ class Resultmodulation(Item):
     during a modulation_period.
 
     """
+    name_property = "resultmodulation_name"
     my_type = 'resultmodulation'
 
     properties = Item.properties.copy()
     properties.update({
-        'resultmodulation_name': StringProp(),
-        'exit_codes_match':      IntListProp(default=[]),
-        'exit_code_modulation':  IntegerProp(default=None),
-        'modulation_period':     StringProp(default=None),
+        'resultmodulation_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'exit_codes_match':
+            IntListProp(default=[]),
+        'exit_code_modulation':
+            IntegerProp(default=3),
+        'modulation_period':
+            StringProp(default=None),
     })
 
     special_properties = ('modulation_period',)
-
-    def get_name(self):
-        """Accessor to resultmodulation_name attribute
-
-        :return: result modulation name
-        :rtype: str
-        """
-        if hasattr(self, 'resultmodulation_name'):
-            return self.resultmodulation_name
-        return 'Unnamed'
 
     def is_active(self, timperiods):
         """
@@ -95,6 +90,7 @@ class Resultmodulation(Item):
         """
         now = int(time.time())
         timperiod = timperiods[self.modulation_period]
+        # If timeperiod does not exist, then it is also valid...
         if not timperiod or timperiod.is_time_valid(now):
             return True
         return False
@@ -126,7 +122,6 @@ class Resultmodulations(Items):
     """Resultmodulations class allowed to handle easily several CheckModulation objects
 
     """
-    name_property = "resultmodulation_name"
     inner_class = Resultmodulation
 
     def linkify(self, timeperiods):

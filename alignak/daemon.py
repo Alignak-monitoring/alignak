@@ -209,8 +209,12 @@ class Daemon(object):
             BoolProp(default=False),
         'daemon_enabled':
             BoolProp(default=True),
-        'spare':
-            BoolProp(default=False),
+        # Todo: spare is not present currently in the daemon.ini file
+        # 'spare':
+        #     BoolProp(default=False),
+        # Todo: missing daemon.ini port parameter!
+        'port':
+            IntegerProp(default=0),
         'max_queue_size':
             IntegerProp(default=0),
         'daemon_thread_pool_size':
@@ -948,7 +952,6 @@ class Daemon(object):
         :type reference_path: str
         :return: None
         """
-        # print "Create relative paths with", reference_path
         properties = self.__class__.properties
         for prop, entry in properties.items():
             if isinstance(entry, ConfigPathProp):

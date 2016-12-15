@@ -62,7 +62,8 @@ class ContactDowntime(AlignakObject):
 
     """
 
-    properties = {
+    properties = AlignakObject.properties.copy()
+    properties.update({
         'start_time': IntegerProp(default=0, fill_brok=['full_status']),
         'end_time': IntegerProp(default=0, fill_brok=['full_status']),
         'author': StringProp(default='', fill_brok=['full_status']),
@@ -70,8 +71,7 @@ class ContactDowntime(AlignakObject):
         'is_in_effect': BoolProp(default=False),
         'can_be_deleted': BoolProp(default=False),
         'ref': StringProp(default=''),
-
-    }
+    })
 
     # Schedule a contact downtime. It's far more easy than a host/service
     # one because we got a beginning, and an end. That's all for running.

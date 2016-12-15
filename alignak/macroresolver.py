@@ -377,19 +377,20 @@ class MacroResolver(Borg):
 
         return c_line.strip()
 
-    def resolve_command(self, com, data, macromodulations, timeperiods):
+    def resolve_command(self, command, data, macromodulations, timeperiods):
         """Resolve command macros with data
 
-        :param com: check / event handler or command call object
-        :type com: object
-        :param data: objects list, use to look for a specific macro
+        :param command: check / event handler or command call object
+        :type command: object
+        :param data: objects list, used to search a specific macro
         :type data:
         :return: command line with '$MACRO$' replaced with values
         :rtype: str
         """
-        c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
-                                                    args=com.args)
+        if command and command.command:
+            c_line = command.command.command_line
+            return self.resolve_simple_macros_in_string(c_line, data, macromodulations,
+                                                        timeperiods, args=command.args)
 
     @staticmethod
     def _get_type_of_macro(macros, objs):

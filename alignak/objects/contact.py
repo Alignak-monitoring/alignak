@@ -53,6 +53,7 @@ implements contact for notification. Basically used for parsing.
 """
 import logging
 from alignak.objects.item import Item
+from alignak.objects.notificationway import NotificationWay
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
@@ -67,28 +68,28 @@ class Contact(Item):
     """Host class implements monitoring concepts for contact.
     For example it defines host_notification_period, service_notification_period etc.
     """
+    name_property = "contact_name"
     my_type = 'contact'
 
     properties = Item.properties.copy()
     properties.update({
         'contact_name':
             StringProp(fill_brok=['full_status']),
-        'alias':
-            StringProp(default='none', fill_brok=['full_status']),
         'contactgroups':
             ListProp(default=[], fill_brok=['full_status']),
+        # Todo: define default parameters for contact notifications
         'host_notifications_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
         'service_notifications_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
         'host_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(fill_brok=['full_status']),
         'service_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(fill_brok=['full_status']),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status']),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status']),
         # To be consistent with notificationway object attributes
         'host_notification_commands':
             ListProp(default=[], fill_brok=['full_status']),
@@ -112,18 +113,18 @@ class Contact(Item):
             StringProp(default='none', fill_brok=['full_status']),
         'address6':
             StringProp(default='none', fill_brok=['full_status']),
+        'notificationways':
+            ListProp(default=[], fill_brok=['full_status']),
+        # WebUI only information
+        # Todo: remove this!
+        'password':
+            StringProp(default='NOPASSWORDSET', fill_brok=['full_status']),
         'can_submit_commands':
             BoolProp(default=False, fill_brok=['full_status']),
         'is_admin':
             BoolProp(default=False, fill_brok=['full_status']),
         'expert':
             BoolProp(default=False, fill_brok=['full_status']),
-        'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'notificationways':
-            ListProp(default=[], fill_brok=['full_status']),
-        'password':
-            StringProp(default='NOPASSWORDSET', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
@@ -139,7 +140,7 @@ class Contact(Item):
         'broks':
             ListProp(default=[]),  # and here broks raised
         'downtimes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
+            ListProp(default=[], fill_brok=['full_status'], retention=True),
         'customs':
             DictProp(default={}, fill_brok=['full_status']),
     })
@@ -162,8 +163,8 @@ class Contact(Item):
         'CONTACTADDRESS4': 'address4',
         'CONTACTADDRESS5': 'address5',
         'CONTACTADDRESS6': 'address6',
-        'CONTACTGROUPNAME': 'get_groupname',
-        'CONTACTGROUPNAMES': 'get_groupnames'
+        'CONTACTGROUPNAME': ('get_groupname', ['contactgroups']),
+        'CONTACTGROUPNAMES': ('get_groupnames', ['contactgroups'])
     }
 
     special_properties = (
@@ -180,11 +181,15 @@ class Contact(Item):
         'min_business_impact'
     )
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params=None, parsing=True, debug=False):
+
         if params is None:
             params = {}
+        super(Contact, self).__init__(params, parsing=parsing, debug=debug)
+        # Fill default values
+        super(Contact, self).fill_default()
 
-        # At deserialization, thoses are dict
+        # At deserialization, those are dict
         # TODO: Separate parsing instance from recreated ones
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
@@ -194,10 +199,9 @@ class Contact(Item):
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden
                 del params[prop]
-        super(Contact, self).__init__(params, parsing=parsing)
 
-    def serialize(self):
-        res = super(Contact, self).serialize()
+    def serialize(self, filtered_fields=None):
+        res = super(Contact, self).serialize(filtered_fields=filtered_fields)
 
         for prop in ['service_notification_commands', 'host_notification_commands']:
             if getattr(self, prop) is None:
@@ -207,36 +211,33 @@ class Contact(Item):
 
         return res
 
-    def get_name(self):
-        """Get contact name
+    def get_groupname(self, groups):
+        """Get name of the contact's first contactgroup
 
-        :return: contact name
+        :return: the first contact group name
         :rtype: str
         """
-        try:
-            return self.contact_name
-        except AttributeError:
-            return 'UnnamedContact'
+        groupname = ''
+        for group_id in self.contactgroups:
+            group = groups[group_id]
+            if group:
+                groupname = "%s" % (group.alias)
+                return groupname
+        return groupname
 
-    def get_groupname(self):
-        """
-        Get the first group name whose contact belongs to
-        :return: group name
+    def get_groupnames(self, groups):
+        """Get list of the item's groups names
+
+        :return: comma separated alphabetically ordered string list
         :rtype: str
         """
-        if self.contactgroups:
-            return self.contactgroups[0]
-        return 'Unknown'
+        groupnames = []
+        for group_id in self.contactgroups:
+            group = groups[group_id]
+            if group:
+                groupnames.append(group.get_name())
 
-    def get_groupnames(self):
-        """
-        Get all the groups name whose contact belongs to
-        :return: comma separated list of the groups names
-        :rtype: str
-        """
-        if self.contactgroups:
-            return ', '.join(self.contactgroups)
-        return 'Unknown'
+        return ','.join(sorted(groupnames))
 
     def want_service_notification(self, notifways, timeperiods, downtimes,
                                   timestamp, state, n_type, business_impact, cmd=None):
@@ -342,8 +343,6 @@ class Contact(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-        cls = self.__class__
 
         # Internal checks before executing inherited function...
 
@@ -352,23 +351,19 @@ class Contact(Item):
         if self.notificationways == []:
             for prop in self.special_properties:
                 if not hasattr(self, prop):
-                    msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
-                    self.configuration_errors.append(msg)
-                    state = False
+                    self.add_error("[contact::%s] %s property is missing" %
+                                   (self.get_name(), prop))
 
         if hasattr(self, 'contact_name'):
-            for char in cls.illegal_object_name_chars:
+            for char in self.__class__.illegal_object_name_chars:
                 if char in self.contact_name:
-                    msg = "[contact::%s] %s character not allowed in contact_name" % (
-                        self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
+                    self.add_error("[contact::%s] %s character not allowed in contact_name" %
+                                   (self.get_name(), char))
         else:
             if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
                 self.contact_name = self.alias
 
-        return super(Contact, self).is_correct() and state
+        return super(Contact, self).is_correct() and self.conf_is_correct
 
     def raise_enter_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)
@@ -420,10 +415,9 @@ class Contacts(CommandCallItems):
     """Contacts manage a list of Contacts objects, used for parsing configuration
 
     """
-    name_property = "contact_name"
     inner_class = Contact
 
-    def linkify(self, commands, notificationways):
+    def linkify(self, commands, notificationways, contactgroups):
         """Create link between objects::
 
          * contacts -> notificationways
@@ -433,12 +427,41 @@ class Contacts(CommandCallItems):
         :return: None
         TODO: Clean this function
         """
+        self.linkify_contact_by_contactgroup(contactgroups)
         self.linkify_with_notificationways(notificationways)
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
+    def linkify_contact_by_contactgroup(self, contactgroups):
+        """Link contacts with contactgroups
+
+        :param contactgroups: contactgroups
+        :type contactgroups: alignak.objects.contactgroup.contactgroups
+        :return: None
+        """
+        for contact in self:
+            new_contactgroups = []
+            if hasattr(contact, 'contactgroups') and contact.contactgroups:
+                # Because contacts groups can be created because a contact references
+                # a not existing group or because a group exists in the configuration,
+                # we can have an uuid or a name...
+                for contactgroup_name in contact.contactgroups:
+                    if contactgroup_name in contactgroups:
+                        # We got an uuid and already linked the item with its group
+                        new_contactgroups.append(contactgroup_name)
+                        continue
+
+                    contactgroup = contactgroups.find_by_name(contactgroup_name)
+                    if contactgroup is not None:
+                        new_contactgroups.append(contactgroup.uuid)
+                    else:
+                        contact.add_error("the contactgroup '%s' of the contact '%s' is unknown" %
+                                          (contactgroup_name, contact.get_full_name()))
+
+            contact.contactgroups = list(set(new_contactgroups))
+
     def linkify_with_notificationways(self, notificationways):
-        """Link hosts with realms
+        """Link contacts with notification ways
 
         :param notificationways: notificationways object to link with
         :type notificationways: alignak.objects.notificationway.Notificationways
@@ -479,10 +502,9 @@ class Contacts(CommandCallItems):
 
         # Register ourselves into the contactsgroups we are in
         for contact in self:
-            if not (hasattr(contact, 'contact_name') and hasattr(contact, 'contactgroups')):
-                continue
-            for contactgroup in contact.contactgroups:
-                contactgroups.add_member(contact.contact_name, contactgroup.strip())
+            if getattr(contact, 'contactgroups', None) is not None:
+                for contactgroup in contact.contactgroups:
+                    contactgroups.add_group_member(contact, contactgroup.strip())
 
         # Now create a notification way with the simple parameter of the
         # contacts
@@ -498,12 +520,14 @@ class Contacts(CommandCallItems):
                     setattr(contact, param, contact.properties[param].default)
 
             if need_notificationway:
-                # print "Create notif way with", params
-                cname = getattr(contact, 'contact_name', getattr(contact, 'alias', ''))
-                nw_name = cname + '_inner_notificationway'
-                notificationways.new_inner_member(nw_name, params)
+                params.update({
+                    'notificationway_name': contact.get_name() + '_inner_notificationway'
+                })
+                notificationway = NotificationWay(params)
+                notificationway.fill_default()
+                notificationways.add_item(notificationway)
 
                 if not hasattr(contact, 'notificationways'):
-                    contact.notificationways = [nw_name]
+                    contact.notificationways = [notificationway.get_name()]
                 else:
-                    contact.notificationways.append(nw_name)
+                    contact.notificationways.append(notificationway.get_name())

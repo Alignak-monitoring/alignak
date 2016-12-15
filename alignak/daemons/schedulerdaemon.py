@@ -224,6 +224,25 @@ class Alignak(BaseSatellite):
     def setup_new_conf(self):
         """Setup new conf received for scheduler
 
+        The received configuration is a dictionary:
+            conf_package = {
+                'conf': realm.serialized_confs[realm_conf.uuid],
+                'override_conf': scheduler.get_override_configuration(),
+                'modules': scheduler.modules,
+                'satellites': satellites,
+                'instance_name': scheduler.scheduler_name,
+                'push_flavor': realm_conf.push_flavor,
+                'skip_initial_broks': scheduler.skip_initial_broks,
+                'accept_passive_unknown_check_results':
+                    scheduler.accept_passive_unknown_check_results,
+                # local statsd
+                # Todo: really necessary? To be confirmed ...
+                'statsd_host': self.conf.statsd_host,
+                'statsd_port': self.conf.statsd_port,
+                'statsd_prefix': self.conf.statsd_prefix,
+                'statsd_enabled': self.conf.statsd_enabled,
+            }
+
         :return: None
         """
         with self.conf_lock:
@@ -262,35 +281,41 @@ class Alignak(BaseSatellite):
 
             self.cur_conf = conf
             self.override_conf = override_conf
+            # Todo: should not be serialized, no? Not serialized when prepared for sending...
+            # But are modules really necessary?
             self.modules = unserialize(modules, True)
             self.satellites = satellites
 
             # Now We create our pollers, reactionners and brokers
-            for sat_type in ['pollers', 'reactionners', 'brokers']:
-                if sat_type not in satellites:
+            for satellite_type in ['pollers', 'reactionners', 'brokers']:
+                if satellite_type not in satellites:
                     continue
-                for sat_id in satellites[sat_type]:
+
+                for satellite_id in satellites[satellite_type]:
                     # Must look if we already have it
-                    sats = getattr(self, sat_type)
-                    sat = satellites[sat_type][sat_id]
+                    new_satellites = getattr(self, satellite_type)
+                    new_satellite = satellites[satellite_type][satellite_id]
 
-                    sats[sat_id] = sat
+                    new_satellites[satellite_id] = new_satellite
 
-                    if sat['name'] in override_conf['satellitemap']:
-                        sat = dict(sat)  # make a copy
-                        sat.update(override_conf['satellitemap'][sat['name']])
+                    if new_satellite['name'] in override_conf['satellitemap']:
+                        new_satellite = dict(new_satellite)  # make a copy
+                        new_satellite.update(override_conf['satellitemap'][new_satellite['name']])
 
-                    proto = 'http'
-                    if sat['use_ssl']:
-                        proto = 'https'
-                    uri = '%s://%s:%s/' % (proto, sat['address'], sat['port'])
+                    scheme = 'http'
+                    if new_satellite['use_ssl']:
+                        scheme = 'https'
+                    uri = '%s://%s:%s/' % (scheme, new_satellite['address'], new_satellite['port'])
 
-                    sats[sat_id]['uri'] = uri
-                    sats[sat_id]['last_connection'] = 0
-                    setattr(self, sat_type, sats)
-                logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
-                logger.info("We have our %s:", sat_type)
-                for daemon in satellites[sat_type].values():
+                    new_satellites[satellite_id]['uri'] = uri
+                    new_satellites[satellite_id]['last_connection'] = 0
+
+                    setattr(self, satellite_type, new_satellites)
+                    logger.debug("We configured our %s: %s", satellite_type, new_satellites)
+
+                logger.debug("We have our %s: %s ", satellite_type, satellites[satellite_type])
+                logger.info("We have our %s:", satellite_type)
+                for daemon in satellites[satellite_type].values():
                     logger.info(" - %s ", daemon['name'])
 
             # First mix conf and override_conf to have our definitive conf
@@ -316,14 +341,11 @@ class Alignak(BaseSatellite):
             # We must update our Config dict macro with good value
             # from the config parameters
             self.sched.conf.fill_resource_macros_names_macros()
-            # print "DBG: got macros", self.sched.conf.macros
 
-            # Creating the Macroresolver Class & unique instance
+            # Creating the Macroresolver Class & unique instance for this daemon
+            # Todo: we should make the MacroResolver be a singleton?
             m_solver = MacroResolver()
             m_solver.init(self.conf)
-
-            # self.conf.dump()
-            # self.conf.quick_debug()
 
             # Now create the external commands manager
             # We are an applyer: our role is not to dispatch commands, but to apply them

@@ -113,6 +113,7 @@ class TestCommand(AlignakTest):
         assert len(svc.actions) == 1
         for action in svc.actions:
             assert action.is_a == 'check'
+            assert action.module_type == 'fork'
             assert action.command == '/check_snmp_int.pl -H 127.0.0.1 -C public ' \
                                      '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
                                      'Module - Port 2          " ' \
@@ -142,8 +143,8 @@ class TestCommand(AlignakTest):
         c = Command()
         # No command_name nor command_line attribute exist!
         # Todo: __init__ may raise an exception because of this, no?
-        assert getattr(c, 'command_name', None) is None
-        assert getattr(c, 'command_line', None) is None
+        assert getattr(c, 'command_name', None) == '_echo'
+        assert getattr(c, 'command_line', None) == ''
 
         assert c.poller_tag == 'None'
         assert c.reactionner_tag == 'None'
@@ -152,9 +153,10 @@ class TestCommand(AlignakTest):
         assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
+        b.prepare()
         assert 'initial_command_status' == b.type
-        assert 'command_name' not in b.data
-        assert 'command_line' not in b.data
+        assert b.data['command_name'] == c.command_name
+        assert b.data['command_line'] == c.command_line
 
     def test_command_internal(self):
         """ Test internal command
@@ -176,8 +178,8 @@ class TestCommand(AlignakTest):
         assert c.poller_tag == 'None'
         assert c.reactionner_tag == 'None'
         assert c.timeout == -1
-        # Module type is the command name without the '_' prefix
-        assert c.module_type == 'internal_host_up'
+        # Module type is 'internal'
+        assert c.module_type == 'internal'
         assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
@@ -223,23 +225,70 @@ class TestCommand(AlignakTest):
         """
         self.print_header()
 
-        t = {
+        c1 = Command({
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
-        }
-        c = Command(t)
+        })
+
+        c2 = Command({
+            'command_name': 'check_command_test2',
+            'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
+            'module_type': 'nrpe-booster',
+            'poller_tag': 'DMZ',
+            'reactionner_tag': 'REAC'
+        })
 
         # now create a commands packs
-        cs = Commands([c])
+        cs = Commands([c1, c2])
+        cs.add_item(c2)
+
         dummy_call = "check_command_test!titi!toto"
         cc = CommandCall({"commands": cs, "call": dummy_call})
         assert True == cc.is_valid()
-        assert c == cc.command
+        assert c1 == cc.command
         assert 'DMZ' == cc.poller_tag
         assert 'REAC' == cc.reactionner_tag
+        assert cc.serialize() == {
+            'uuid': cc.uuid,
+            'late_relink_done': False,
+            'poller_tag': 'DMZ',
+            'reactionner_tag': 'REAC',
+            'valid': True,
+            'module_type': 'nrpe-booster',
+            'timeout': -1,
+            'enable_environment_macros': False,
+            'call': 'check_command_test!titi!toto',
+            'args': ['titi', 'toto'],
+            'command': {
+                'uuid': c1.uuid,
+                'command_name': 'check_command_test',
+                'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
+                'use': [],
+                'display_name': '',
+                'conf_is_correct': True,
+                'definition_order': 100,
+                'poller_tag': 'DMZ',
+                'register': True,
+                'name': 'unnamed',
+                'alias': '',
+                'reactionner_tag': 'REAC',
+                'module_type': 'nrpe-booster',
+                'imported_from': 'unknown',
+                'timeout': -1,
+                'plus': {},
+                'customs': {},
+                'enable_environment_macros': False,
+                'tags': []
+            },
+        }
+
+        dummy_call = "check_command_test2!tata!tutu"
+        cc = CommandCall({"commands": cs, "call": dummy_call})
+        assert True == cc.is_valid()
+        assert c2 == cc.command
 
 if __name__ == '__main__':
     unittest.main()

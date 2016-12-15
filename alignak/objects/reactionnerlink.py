@@ -52,15 +52,23 @@ class ReactionnerLink(SatelliteLink):
     """
     Class to manage the reactionner information
     """
+    name_property = "reactionner_name"
     my_type = 'reactionner'
+
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'reactionner_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port':             IntegerProp(default=7769, fill_brok=['full_status']),
-        'min_workers':      IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
-        'max_workers':      IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        'processes_by_worker': IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        'reactionner_tags':      ListProp(default=['None'], to_send=True),
+        'reactionner_name':
+            StringProp(fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7769, fill_brok=['full_status']),
+        'min_workers':
+            IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+        'max_workers':
+            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        'processes_by_worker':
+            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        'reactionner_tags':
+            ListProp(default=['None'], to_send=True),
     })
 
     def register_to_my_realm(self):
@@ -77,5 +85,4 @@ class ReactionnerLinks(SatelliteLinks):  # (Items):
     Class to manage list of ReactionnerLink.
     ReactionnerLinks is used to regroup all reactionners
     """
-    name_property = "reactionner_name"
     inner_class = ReactionnerLink

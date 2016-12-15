@@ -110,26 +110,22 @@ class TestHostGroup(AlignakTest):
         assert self.conf_is_correct == False
 
         # 5 error messages, bad hostgroup member
-        assert len(self.configuration_errors) == 5
+        assert len(self.configuration_errors) == 4
         # No warning messages
         assert len(self.configuration_warnings) == 0
         # Error is an unknown member in a group (\ escape the [ and ' ...)
         self.assert_any_cfg_log_match(
-            "\[hostgroup::allhosts_bad\] as hostgroup, got unknown member \'BAD_HOST\'"
+            "hostgroups configuration is incorrect:"
         )
         self.assert_any_cfg_log_match(
-            "Configuration in hostgroup::allhosts_bad is incorrect; from: "
-            "cfg/hostgroup/hostgroups_bad_conf.cfg:1"
+            "the hostgroup allhosts_bad_realm got an unknown realm 'Unknown'"
         )
         self.assert_any_cfg_log_match(
-            "the hostgroup allhosts_bad_realm got an unknown realm \'Unknown\'"
+            "\[hostgroup::allhosts_bad\] got an unknown member \'BAD_HOST\'"
         )
         self.assert_any_cfg_log_match(
-            "Configuration in hostgroup::allhosts_bad_realm is incorrect; from: "
-            "cfg/hostgroup/hostgroups_bad_conf.cfg:7"
-        )
-        self.assert_any_cfg_log_match(
-            "hostgroups configuration is incorrect!"
+            "Configuration in hostgroup::allhosts_bad is incorrect; "
+            "from: cfg/hostgroup/hostgroups_bad_conf.cfg:1"
         )
 
     def test_look_for_alias(self):
@@ -154,17 +150,25 @@ class TestHostGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
         #  Found a hostgroup named allhosts_and_groups
-        hg = self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("allhosts_and_groups")
+        hg = self._sched.hostgroups.find_by_name("allhosts_and_groups")
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "allhosts_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name("allhosts_and_groups")) == \
-            2
+        assert len(self._sched.hostgroups.get_members_of("allhosts_and_groups")) == 2
 
         assert len(hg.hostgroup_members) == 4
         assert len(hg.get_hostgroup_members()) == 4
+
+        # Members are hosts uuid
+        print("Members: %s" % hg.get_members())
+        assert len(hg.get_members()) == 2
+        for host_id in hg.members:
+            host = self.schedulers['scheduler-master'].sched.hosts[host_id]
+            print("Host: %s" % host)
+            assert isinstance(host, Host)
 
         assert len(hg.get_hosts()) == 2
 
@@ -175,16 +179,17 @@ class TestHostGroup(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_members.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
         #  Found a hostgroup named allhosts_and_groups
-        hg = self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("allhosts_and_groups")
+        hg = self._sched.hostgroups.find_by_name("allhosts_and_groups")
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "allhosts_and_groups"
 
-        assert len(self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name("allhosts_and_groups")) == \
-            2
+        assert len(self._sched.hostgroups.get_members_of("allhosts_and_groups")) == 2
 
         assert len(hg.get_hosts()) == 2
+        print("Members: %s" % hg.get_members())
         print("List hostgroup hosts:")
         for host_id in hg.members:
             host = self.schedulers['scheduler-master'].sched.hosts[host_id]
@@ -230,7 +235,7 @@ class TestHostGroup(AlignakTest):
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "void"
 
-        assert len(self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name("void")) == \
+        assert len(self.schedulers['scheduler-master'].sched.hostgroups.get_members_of("void")) == \
             0
 
         assert len(hg.get_hostgroup_members()) == 0
@@ -254,14 +259,14 @@ class TestHostGroup(AlignakTest):
 
         assert self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("test_With Spaces").get_name() == \
             "test_With Spaces"
-        assert self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name(
+        assert self.schedulers['scheduler-master'].sched.hostgroups.get_members_of(
                 "test_With Spaces"
             ) is not \
             []
 
         assert self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("test_With another Spaces").get_name() == \
             "test_With another Spaces"
-        assert self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name(
+        assert self.schedulers['scheduler-master'].sched.hostgroups.get_members_of(
                 "test_With another Spaces"
             ) is not \
             []

@@ -66,15 +66,17 @@ class Contactgroup(Itemgroup):
     """Class to manage a group of contacts
     A Contactgroup is used to manage a group of contacts
     """
+    name_property = "contactgroup_name"
+    members_property = "members"
+    groupmembers_property = "contactgroup_members"
     my_type = 'contactgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'contactgroup_name':    StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'contactgroup_members': ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True)
+        'contactgroup_name':
+            StringProp(fill_brok=['full_status']),
+        'contactgroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join')
     })
 
     macros = {
@@ -89,19 +91,7 @@ class Contactgroup(Itemgroup):
         :return: list of contacts
         :rtype: list[alignak.objects.contact.Contact]
         """
-        if getattr(self, 'members', None) is not None:
-            return [m.strip() for m in self.members]
-        else:
-            return []
-
-    def get_name(self):
-        """
-        Get name of group
-
-        :return: Name of contactgroup
-        :rtype: str
-        """
-        return getattr(self, 'contactgroup_name', 'UNNAMED-CONTACTGROUP')
+        return self.get_members()
 
     def get_contactgroup_members(self):
         """
@@ -110,49 +100,48 @@ class Contactgroup(Itemgroup):
         :return: list of contacts
         :rtype: list
         """
-        if hasattr(self, 'contactgroup_members'):
-            return self.contactgroup_members
-        else:
-            return []
+        return self.get_group_members()
 
-    def get_contacts_by_explosion(self, contactgroups):
+    def get_contacts_by_explosion(self, contactgroups, contacts):
         """
-        Get hosts of this group
+        Get direct contacts of this group and all contacts from the sub-groups
+        Append sub-groups members to the members of this group
 
-        :param contactgroups: Contactgroups object, use to look for a specific one
+        :param contactgroups: Contactgroups object
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
+        :param contacts: contacts to explode
+        :type contacts: alignak.objects.contact.Contacts
         :return: list of contact of this group
         :rtype: list[alignak.objects.contact.Contact]
         """
-        # First we tag the hg so it will not be explode
-        # if a son of it already call it
-        self.already_explode = True
+        # First we tag the group so it will not be exploded again if one of its members calls it
+        self.already_exploded = True
 
         # Now the recursive part
-        # rec_tag is set to False every CG we explode
-        # so if True here, it must be a loop in HG
-        # calls... not GOOD!
-        if self.rec_tag:
-            logger.error("[contactgroup::%s] got a loop in contactgroup definition",
-                         self.get_name())
-            if hasattr(self, 'members'):
-                return self.members
-            else:
-                return ''
-        # Ok, not a loop, we tag it and continue
-        self.rec_tag = True
+        # recursion_tag is set to False for every group we explode
+        # so if is True here, it must be a loop in the groups links... not GOOD!
+        if self.recursion_tag:
+            err = "[%s::%s] got a loop in %s definition" % \
+                  (self.my_type, self.get_name(), self.groupmembers_property)
+            self.configuration_errors.append(err)
+            return self.get_members()
 
-        cg_mbrs = self.get_contactgroup_members()
-        for cg_mbr in cg_mbrs:
-            contactgroup = contactgroups.find_by_name(cg_mbr.strip())
+        # Ok, not in a loop, we tag it and continue
+        self.recursion_tag = True
+
+        group_members = self.get_group_members()
+        for group_member in group_members:
+            contactgroup = contactgroups.find_by_name(group_member)
             if contactgroup is not None:
-                value = contactgroup.get_contacts_by_explosion(contactgroups)
-                if value is not None:
-                    self.add_string_member(value)
-        if hasattr(self, 'members'):
-            return self.members
-        else:
-            return ''
+                members_uuid = contactgroup.get_contacts_by_explosion(contactgroups, contacts)
+                if members_uuid:
+                    new_members = []
+                    for member_uuid in members_uuid:
+                        if member_uuid in contacts:
+                            new_members.append(contacts[member_uuid])
+                    self.add_members(new_members)
+
+        return self.get_members()
 
 
 class Contactgroups(Itemgroups):
@@ -160,32 +149,7 @@ class Contactgroups(Itemgroups):
     Contactgroups is used to regroup all Contactgroup
 
     """
-    name_property = "contactgroup_name"  # is used for finding contactgroup
     inner_class = Contactgroup
-
-    def get_members_by_name(self, cgname):
-        """
-        Get all members by name given in parameter
-
-        :param cgname: name of members
-        :type cgname: str
-        :return: list of contacts with this name
-        :rtype: list[alignak.objects.contact.Contact]
-        """
-        contactgroup = self.find_by_name(cgname)
-        if contactgroup is None:
-            return []
-        return contactgroup.get_contacts()
-
-    def add_contactgroup(self, contactgroup):
-        """Wrapper for add_item method
-        Add a contactgroup to the contactgroup list
-
-        :param contactgroup: contact group to add
-        :type contactgroup:
-        :return: None
-        """
-        self.add_item(contactgroup)
 
     def linkify(self, contacts):
         """Create link between objects::
@@ -196,78 +160,98 @@ class Contactgroups(Itemgroups):
         :type contacts: alignak.objects.contact.Contacts
         :return: None
         """
-        self.linkify_cg_by_cont(contacts)
+        self.linkify_contactgroup_by_contact(contacts)
 
-    def linkify_cg_by_cont(self, contacts):
+    def linkify_contactgroup_by_contact(self, contacts):
         """Link the contacts with contactgroups
 
         :param contacts: realms object to link with
         :type contacts: alignak.objects.contact.Contacts
         :return: None
         """
+        logger.debug("Linkify contactgroups and contacts")
         for contactgroup in self:
-            mbrs = contactgroup.get_contacts()
+            members = contactgroup.get_contacts()
+            logger.debug("- CG: %s, members: %s", contactgroup, members)
 
             # The new member list, in id
-            new_mbrs = []
-            for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
-                if mbr == '':  # void entry, skip this
+            new_members = []
+            for member in members:
+                member = member.strip()
+                if member == '':  # void entry, skip this
                     continue
-                member = contacts.find_by_name(mbr)
-                # Maybe the contact is missing, if so, must be put in unknown_members
-                if member is not None:
-                    new_mbrs.append(member.uuid)
+                elif member in contacts:
+                    # We got a contact uuid
+                    logger.debug("CG: %s, found a contact: %s", contactgroup, contacts[member])
+                    new_members.append(member)
+
+                    # Update the found contact contactgroups property and make it uniquified
+                    # Note that it is a list of groups name
+                    contacts[member].contactgroups.append(contactgroup.uuid)
+                    contacts[member].contactgroups = list(set(contacts[member].contactgroups))
                 else:
-                    contactgroup.add_string_unknown_member(mbr)
+                    contact = contacts.find_by_name(member)
+                    if contact is not None:
+                        logger.debug("CG: %s, found a member: %s", contactgroup, member)
+                        new_members.append(contact.uuid)
 
-            # Make members uniq
-            new_mbrs = list(set(new_mbrs))
+                        # Update the found contact contactgroups property and make it uniquified
+                        contact.contactgroups.append(contactgroup.uuid)
+                        contact.contactgroups = list(set(contact.contactgroups))
+                    else:
+                        # A not found contact is stored in unknown_members
+                        contactgroup.add_unknown_member(member)
 
-            # We find the id, we replace the names
-            contactgroup.replace_members(new_mbrs)
+            if new_members:
+                new_members = list(set(new_members))
+                logger.debug("CG: %s, new members: %s", contactgroup, new_members)
 
-    def add_member(self, cname, cgname):
-        """Add a contact string to a contact member
-        if the contact group do not exist, create it
+                # We update the group members
+                contactgroup.members = new_members
 
-        :param cname: contact name
-        :type cname: str
-        :param cgname: contact group name
-        :type cgname: str
+    def add_group_member(self, contact, contactgroup_name):
+        """Add a contact to a contactgroup.
+        If the contactgroup does not exist it is created
+
+        :param contact: contact unique identifier
+        :type contact: uuid
+        :param contactgroup_name: contact group name
+        :type contactgroup_name: str
         :return: None
         """
-        contactgroup = self.find_by_name(cgname)
-        # if the id do not exist, create the cg
+        contactgroup = self.find_by_name(contactgroup_name)
         if contactgroup is None:
-            contactgroup = Contactgroup({'contactgroup_name': cgname,
-                                         'alias': cgname, 'members': cname})
-            self.add_contactgroup(contactgroup)
+            # Create the group if it does not yet exist
+            contactgroup = Contactgroup({'contactgroup_name': contactgroup_name,
+                                         'members': [contact.get_name()],
+                                         'imported_from': 'inner'})
+            self.add_item(contactgroup)
         else:
-            contactgroup.add_string_member(cname)
+            contactgroup.add_member(contact)
 
-    def explode(self):
+    def explode(self, contacts):
         """
         Fill members with contactgroup_members
 
+        :param contacts: contacts to explode
+        :type contacts: alignak.objects.contact.Contacts
         :return:None
         """
-        # We do not want a same hg to be explode again and again
-        # so we tag it
-        for tmp_cg in self.items.values():
-            tmp_cg.already_explode = False
-
         for contactgroup in self.items.values():
-            if hasattr(contactgroup, 'contactgroup_members') and not \
-                    contactgroup.already_explode:
-                # get_contacts_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for tmp_cg in self.items.values():
-                    tmp_cg.rec_tag = False
-                contactgroup.get_contacts_by_explosion(self)
+            for groupmember in contactgroup.get_group_members():
+                group = self.find_by_name(groupmember)
+                if group is None:
+                    continue
+                if group.already_exploded:
+                    continue
 
-        # We clean the tags
-        for tmp_cg in self.items.values():
-            if hasattr(tmp_cg, 'rec_tag'):
-                del tmp_cg.rec_tag
-            del tmp_cg.already_explode
+                # get_contacts_by_explosion is a recursive function, so we must
+                # tag the groups to avoid looping infinetely
+                for groupmember in self.items.values():
+                    groupmember.recursion_tag = False
+                contactgroup.get_contacts_by_explosion(self, contacts)
+
+        # Clean the recursion tag
+        for group in self.items.values():
+            if hasattr(group, 'recursion_tag'):
+                del group.recursion_tag

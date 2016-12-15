@@ -66,44 +66,36 @@ class Command(Item):
     """
     __metaclass__ = AutoSlots
 
+    name_property = "command_name"
     my_type = "command"
 
     properties = Item.properties.copy()
     properties.update({
-        'command_name': StringProp(fill_brok=['full_status']),
-        'command_line': StringProp(fill_brok=['full_status']),
-        'poller_tag':   StringProp(default='None'),
-        'reactionner_tag':   StringProp(default='None'),
-        'module_type':  StringProp(default=None),
-        'timeout':      IntegerProp(default=-1),
-        'enable_environment_macros': BoolProp(default=False),
+        'command_name':
+            StringProp(default='_echo', fill_brok=['full_status']),
+        'command_line':
+            StringProp(default='', fill_brok=['full_status']),
+        'poller_tag':
+            StringProp(default='None'),
+        'reactionner_tag':
+            StringProp(default='None'),
+        'module_type':
+            StringProp(default='fork'),
+        'timeout':
+            IntegerProp(default=-1),
+        'enable_environment_macros':
+            BoolProp(default=False),
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params=None, parsing=True, debug=False):
 
         if params is None:
             params = {}
-        super(Command, self).__init__(params, parsing=parsing)
+        super(Command, self).__init__(params, parsing=parsing, debug=debug)
 
-        if not hasattr(self, 'timeout'):
-            self.timeout = -1
-
-        if not hasattr(self, 'poller_tag'):
-            self.poller_tag = 'None'
-        if not hasattr(self, 'enable_environment_macros'):
-            self.enable_environment_macros = False
-        if not hasattr(self, 'reactionner_tag'):
-            self.reactionner_tag = 'None'
-        if not hasattr(self, 'module_type'):
-            # If the command start with a _, set the module_type
-            # as the name of the command, without the _
-            if getattr(self, 'command_line', '').startswith('_'):
-                module_type = getattr(self, 'command_line', '').split(' ')[0]
-                # and we remove the first _
-                self.module_type = module_type[1:]
-            # If no command starting with _, be fork :)
-            else:
-                self.module_type = 'fork'
+        # Specific for internal commands
+        if self.command_line == 'bp_rule' or self.command_line.startswith('_'):
+            self.module_type = 'internal'
 
     def get_name(self):
         """
@@ -140,9 +132,8 @@ class Command(Item):
 class Commands(Items):
     """
     Class to manage all commands
-    A command is an external command the poller module run to
-    see if something is ok or not
+    A command is an external command the poller module is launching to
+    check if something (host/service) is ok or not
     """
 
     inner_class = Command
-    name_property = "command_name"

@@ -49,10 +49,14 @@
 implements host escalation for notification. Basically used for parsing.
 
 """
+import logging
+
 from alignak.objects.item import Item, Items
 from alignak.objects.escalation import Escalation
 
 from alignak.property import IntegerProp, StringProp, ListProp
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Hostescalation(Item):
@@ -61,14 +65,17 @@ class Hostescalation(Item):
     TODO: Why this class does not inherit from alignak.objects.Escalation.
           Maybe we can merge it
     """
+    name_property = "escalation_name"
     my_type = 'hostescalation'
 
     properties = Item.properties.copy()
     properties.update({
+        'escalation_name':
+            StringProp(),
         'host_name':
             StringProp(),
         'hostgroup_name':
-            StringProp(),
+            StringProp(default=''),
         'first_notification':
             IntegerProp(),
         'last_notification':
@@ -94,7 +101,6 @@ class Hostescalations(Items):
     """Hostescalations manage a list of Hostescalation objects, used for parsing configuration
 
     """
-    name_property = ""
     inner_class = Hostescalation
 
     def explode(self, escalations):
@@ -106,14 +112,9 @@ class Hostescalations(Items):
         """
         # Now we explode all escalations (host_name, hostgroup_name) to escalations
         for escalation in self:
-            properties = escalation.__class__.properties
             name = getattr(escalation, 'host_name', getattr(escalation, 'hostgroup_name', ''))
-            creation_dict = {
-                'escalation_name':
-                    'Generated-HostEscalation-%s-%s' % (name, escalation.uuid)
-            }
-            for prop in properties:
-                if hasattr(escalation, prop):
-                    creation_dict[prop] = getattr(escalation, prop)
+            escalation.escalation_name = 'Generated-HostEscalation-%s-%s' % (name, escalation.uuid)
 
-            escalations.add_escalation(Escalation(creation_dict))
+            serialized = escalation.serialize()
+            logger.debug("Host escalation: %s", serialized)
+            escalations.add_item(Escalation(serialized))

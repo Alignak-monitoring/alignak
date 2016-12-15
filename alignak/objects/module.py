@@ -65,17 +65,24 @@ class Module(Item):
     """
     Class to manage a module
     """
+    name_property = "module_alias"
     my_type = 'module'
 
     properties = Item.properties.copy()
     properties.update({
-        'python_name': StringProp(),
-        'module_alias': StringProp(),
-        'module_types': ListProp(default=[''], split_on_coma=True),
-        'modules': ListProp(default=[''], split_on_coma=True)
+        'python_name': StringProp(default=''),
+        'module_alias': StringProp(default=''),
+        'module_types': ListProp(default=['']),
+        # Todo: modules for modules ... hmmm. Not implemented ...
+        'modules': ListProp(default=[])
     })
 
     macros = {}
+
+    def __repr__(self):
+        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
+
+    __str__ = __repr__
 
     # For debugging purpose only (nice name)
     def get_name(self):
@@ -106,18 +113,12 @@ class Module(Item):
         """
         return module_type in self.module_types
 
-    def __repr__(self):
-        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
-
-    __str__ = __repr__
-
 
 class Modules(Items):
     """
     Class to manage list of modules
     Modules is used to group all Module
     """
-    name_property = "module_alias"
     inner_class = Module
 
     def linkify(self):
@@ -126,9 +127,9 @@ class Modules(Items):
 
         :return: None
         """
-        self.linkify_s_by_plug()
+        self.linkify_with_modules()
 
-    def linkify_s_by_plug(self, modules=None):
+    def linkify_with_modules(self, modules=None):
         """
         Link modules
 

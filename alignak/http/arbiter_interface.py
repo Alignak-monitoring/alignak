@@ -50,6 +50,7 @@ class ArbiterInterface(GenericInterface):
         return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     def put_conf(self, conf=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 
@@ -57,6 +58,9 @@ class ArbiterInterface(GenericInterface):
         :type conf:
         :return: None
         """
+        # if conf is None:
+        #     confs = cherrypy.request.json
+        #     conf = confs['conf']
         with self.app.conf_lock:
             super(ArbiterInterface, self).put_conf(conf)
             self.app.must_run = False

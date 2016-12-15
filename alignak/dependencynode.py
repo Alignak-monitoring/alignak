@@ -170,7 +170,6 @@ class DependencyNode(object):
         :return: 0, 1 or 2
         :rtype: int
         """
-        # print "Get the hard state (%s) for the object %s" % (state, self.sons[0].get_name())
         # Make DOWN look as CRITICAL (2 instead of 1)
         if state == 1:
             state = 2
@@ -274,8 +273,6 @@ class DependencyNode(object):
             elif state == 2:
                 nb_crit += 1
 
-        # print "NB:", nb_ok, nb_warn, nb_crit
-
         def get_state_for(nb_tot, nb_real, nb_search):
             """Check if there is enough value to apply this rule
 
@@ -306,8 +303,6 @@ class DependencyNode(object):
         warn_apply = get_state_for(nb_sons, nb_warn + nb_crit, nb_search_warn)
         crit_apply = get_state_for(nb_sons, nb_crit, nb_search_crit)
 
-        # print "What apply?", ok_apply, warn_apply, crit_apply
-
         # return the worst state that apply
         if crit_apply:
             if self.not_value:
@@ -328,12 +323,10 @@ class DependencyNode(object):
         # ask a simple form Xof: or a multiple one A,B,Cof:
         # the simple should give OK, the mult should give the worst state
         if self.is_of_mul:
-            # print "Is mul, send 0"
             if self.not_value:
                 return self.get_reverse_state(0)
             return 0
         else:
-            # print "not mul, return worst", worse_state
             if 2 in states:
                 worst_state = 2
             else:
@@ -418,7 +411,6 @@ class DependencyNodeFactory(object):
         :rtype: alignak.dependencynode.DependencyNode
         """
         pattern = pattern.strip()
-        # print "***** EVAL ", pattern
         complex_node = False
 
         # Look if it's a complex pattern (with rule) or
@@ -452,7 +444,6 @@ class DependencyNodeFactory(object):
         regex = re.compile(xof_pattern)
         matches = regex.search(pattern)
         if matches is not None:
-            # print "Match the of: thing N=", m.groups()
             node.operand = 'of:'
             groups = matches.groups()
             # We can have a Aof: rule, or a multiple A,B,Cof: rule.
@@ -491,7 +482,6 @@ class DependencyNodeFactory(object):
         for char in pattern:
             if char == '(':
                 stacked_par += 1
-                # print "INCREASING STACK TO", stacked_par
 
                 in_par = True
                 tmp = tmp.strip()
@@ -508,7 +498,6 @@ class DependencyNodeFactory(object):
                     tmp += char
 
             elif char == ')':
-                # print "Need closing a sub expression?", tmp
                 stacked_par -= 1
 
                 if stacked_par < 0:
@@ -517,7 +506,6 @@ class DependencyNodeFactory(object):
                     continue
 
                 if stacked_par == 0:
-                    # print "THIS is closing a sub compress expression", tmp
                     tmp = tmp.strip()
                     son = self.eval_cor_pattern(tmp, hosts, services,
                                                 hostgroups, servicegroups, running)
@@ -546,16 +534,15 @@ class DependencyNodeFactory(object):
             elif char == '!':
                 tmp = tmp.strip()
                 if tmp and tmp[0] != '!':
+                    # TODO : real error
                     print "Error : bad expression near", tmp, "wrong position for '!'"
                     continue
                 # Flags next node not state
                 son_is_not = True
                 # DO NOT keep the c in tmp, we consumed it
 
-            # print "MATCHING", c, pattern
             elif char == '&' or char == '|':
                 # Oh we got a real cut in an expression, if so, cut it
-                # print "REAL & for cutting"
                 tmp = tmp.strip()
                 # Look at the rule viability
                 if node.operand is not None and node.operand != 'of:' and char != node.operand:
@@ -565,7 +552,6 @@ class DependencyNodeFactory(object):
                 if node.operand != 'of:':
                     node.operand = char
                 if tmp != '':
-                    # print "Will analyse the current str", tmp
                     son = self.eval_cor_pattern(tmp, hosts, services,
                                                 hostgroups, servicegroups, running)
                     # Maybe our son was notted
@@ -582,14 +568,12 @@ class DependencyNodeFactory(object):
         # Be sure to manage the trainling part when the line is done
         tmp = tmp.strip()
         if tmp != '':
-            # print "Managing trainling part", tmp
             son = self.eval_cor_pattern(tmp, hosts, services,
                                         hostgroups, servicegroups, running)
             # Maybe our son was notted
             if son_is_not:
                 son.not_value = True
                 son_is_not = False
-            # print "4end I've %s got new sons" % pattern , o
             node.sons.append(son)
 
         # We got our nodes, so we can update 0 values of of_values
@@ -616,7 +600,6 @@ class DependencyNodeFactory(object):
         node = DependencyNode()
         pattern = self.eval_xof_pattern(node, pattern)
 
-        # print "Try to find?", pattern
         # If it's a not value, tag the node and find
         # the name without this ! operator
         if pattern.startswith('!'):
@@ -666,7 +649,6 @@ class DependencyNodeFactory(object):
         :return: tuple with Host or Service object and error
         :rtype: tuple
         """
-        # print "Finding object", pattern
         obj = None
         error = None
         is_service = False
