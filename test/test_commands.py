@@ -225,34 +225,65 @@ class TestCommand(AlignakTest):
         """
         self.print_header()
 
-        t = {
+        c1 = Command({
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
-        }
-        c = Command(t)
+        })
 
-        t2 = {
+        c2 = Command({
             'command_name': 'check_command_test2',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
-        }
-        c2 = Command(t2)
+        })
 
         # now create a commands packs
-        cs = Commands([c, c2])
+        cs = Commands([c1, c2])
         cs.add_item(c2)
 
         dummy_call = "check_command_test!titi!toto"
         cc = CommandCall({"commands": cs, "call": dummy_call})
         assert True == cc.is_valid()
-        assert c == cc.command
+        assert c1 == cc.command
         assert 'DMZ' == cc.poller_tag
         assert 'REAC' == cc.reactionner_tag
+        assert cc.serialize() == {
+            'uuid': cc.uuid,
+            'late_relink_done': False,
+            'poller_tag': 'DMZ',
+            'reactionner_tag': 'REAC',
+            'valid': True,
+            'module_type': 'nrpe-booster',
+            'timeout': -1,
+            'enable_environment_macros': False,
+            'call': 'check_command_test!titi!toto',
+            'args': ['titi', 'toto'],
+            'command': {
+                'uuid': c1.uuid,
+                'command_name': 'check_command_test',
+                'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
+                'use': [],
+                'display_name': '',
+                'conf_is_correct': True,
+                'definition_order': 100,
+                'poller_tag': 'DMZ',
+                'register': True,
+                'name': 'unnamed',
+                'alias': '',
+                'reactionner_tag': 'REAC',
+                'module_type': 'nrpe-booster',
+                'imported_from': 'unknown',
+                'timeout': -1,
+                'plus': {},
+                'customs': {},
+                'enable_environment_macros': False,
+                'tags': []
+            },
+        }
 
         dummy_call = "check_command_test2!tata!tutu"
         cc = CommandCall({"commands": cs, "call": dummy_call})

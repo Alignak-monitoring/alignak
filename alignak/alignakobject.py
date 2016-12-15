@@ -45,7 +45,7 @@ class AlignakObject(object):
 
         This method will create and set an object uuid if none exists. If no uuid still exists
         then the object is considered as a fresh new object and all the properties are initialized
-        else the properties initialization step is skipped.
+        otherwise the properties initialization step is skipped.
 
         Properties initialization is done by creating a new attribute for each item defined in
         the `properties`, `running_properties` and ` macros` dictionaries. The newly created
@@ -57,10 +57,8 @@ class AlignakObject(object):
 
         If debug is set, then this method will print information about the object properties
 
-        The parsing parameter indicates that the object is created from the configuration. As such,
-        if a property exists in the parameters the corresponding Property has its
-        `configuration_set` property set to True, else it remains False. This to allow knowing if
-        a property has been valued as default or from the configuration.
+        The parsing parameter indicates that the object is created from the initial Alignak
+        configuration.
 
         :param debug: print debug information about the object properties
         :param params: parameters used to create the object

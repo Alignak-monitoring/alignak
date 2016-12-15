@@ -119,11 +119,11 @@ class CommandCall(AlignakObject):
                 # the one of the command
                 self.poller_tag = params.get('poller_tag', 'None')  # from host/service
                 self.reactionner_tag = params.get('reactionner_tag', 'None')
-                if self.valid and self.poller_tag == 'None':
+                if self.poller_tag == 'None':
                     # from command if not set
                     self.poller_tag = self.command.poller_tag
                 # Same for reactionner tag
-                if self.valid and self.reactionner_tag == 'None':
+                if self.reactionner_tag == 'None':
                     # from command if not set
                     self.reactionner_tag = self.command.reactionner_tag
         else:
@@ -131,14 +131,14 @@ class CommandCall(AlignakObject):
             self.command = Command(params['command'], parsing=parsing)
 
     def serialize(self, filtered_fields=None):
-        # Todo: check if necessary! Why not using the generic serialize?
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-
+        """
+        Serialize a command call. Call base serialization method and include serialized
+        inner command.
+        # Todo: check which fields should be filtered for an omtimization
+        :param filtered_fields:
+        :return:
+        """
+        res = super(CommandCall, self).serialize(filtered_fields=filtered_fields)
         res['command'] = self.command.serialize(filtered_fields=filtered_fields)
         return res
 
