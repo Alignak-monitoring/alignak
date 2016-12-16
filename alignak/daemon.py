@@ -162,6 +162,8 @@ class Daemon(object):
     """
 
     properties = {
+        'daemon_type':
+            StringProp(default='unknown'),
         # workdir is relative to $(dirname "$0"/..)
         # where "$0" is the path of the file being executed,
         # in python normally known as:
@@ -435,12 +437,12 @@ class Daemon(object):
         except ImportError:
             logger.warning('I do not have the module guppy for memory dump, please install it')
 
-    def load_modules_manager(self):
+    def load_modules_manager(self, daemon_name):
         """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
 
         :return: None
         """
-        self.modules_manager = ModulesManager(self.name, self.sync_manager,
+        self.modules_manager = ModulesManager(daemon_name, self.sync_manager,
                                               max_queue_size=getattr(self, 'max_queue_size', 0))
 
     def change_to_workdir(self):
@@ -686,7 +688,7 @@ class Daemon(object):
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, daemon_name=None):
+    def do_daemon_init_and_start(self):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
@@ -695,7 +697,7 @@ class Daemon(object):
         :type daemon_name: str
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        self.set_proctitle(daemon_name)
+        self.set_proctitle()
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
@@ -999,6 +1001,7 @@ class Daemon(object):
                         signal.SIGUSR2, signal.SIGHUP):
                 signal.signal(sig, func)
 
+    # pylint: disable=no-member
     def set_proctitle(self, daemon_name=None):
         """Set the proctitle of the daemon
 
@@ -1008,9 +1011,11 @@ class Daemon(object):
         :return: None
         """
         if daemon_name:
-            setproctitle("alignak-%s %s" % (self.name, daemon_name))
+            setproctitle("alignak-%s %s" % (self.daemon_type, daemon_name))
+            if hasattr(self, 'modules_manager'):
+                self.modules_manager.set_daemon_name(daemon_name)
         else:
-            setproctitle("alignak-%s" % self.name)
+            setproctitle("alignak-%s" % self.daemon_type)
 
     def get_header(self):
         """ Get the log file header

@@ -75,7 +75,7 @@ from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
-from alignak.property import BoolProp, PathProp, IntegerProp
+from alignak.property import BoolProp, PathProp, IntegerProp, StringProp
 from alignak.http.arbiter_interface import ArbiterInterface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -90,6 +90,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
     properties = Daemon.properties.copy()
     properties.update({
+        'daemon_type':
+            StringProp(default='arbiter'),
         'pidfile':
             PathProp(default='arbiterd.pid'),
         'port':
@@ -285,8 +287,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                      "with the value '%s'."
                      " Thanks." % (self.config_name, socket.gethostname()))
 
+        # Set my own process title
+        self.set_proctitle(self.myself.get_name())
+
         # Ok it's time to load the module manager now!
-        self.load_modules_manager()
+        self.load_modules_manager(self.myself.get_name())
         # we request the instances without them being *started*
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
@@ -539,6 +544,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
             self.do_daemon_init_and_start()
+
+            # Set my own process title
+            self.set_proctitle(self.myself.get_name())
 
             # ok we are now fully daemonized (if requested)
             # now we can start our "external" modules (if any):

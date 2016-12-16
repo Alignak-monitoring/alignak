@@ -46,7 +46,7 @@ class TestSetupNewConf(AlignakTest):
         sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False,
                                 '/tmp/scheduler.log')
         sched.load_config_file()
-        sched.load_modules_manager()
+        sched.load_modules_manager('scheduler-name')
         if hasattr(sched, 'modules'):
             assert 0 == len(sched.modules)
 
@@ -71,7 +71,7 @@ class TestSetupNewConf(AlignakTest):
         receiv = receiverdaemon('cfg/setup_new_conf/daemons/receiverd.ini', False, False, False,
                                 '/tmp/receiver.log')
         receiv.load_config_file()
-        receiv.load_modules_manager()
+        receiv.load_modules_manager('receiver-name')
         if hasattr(receiv, 'modules'):
             assert 0 == len(receiv.modules)
 
@@ -98,7 +98,7 @@ class TestSetupNewConf(AlignakTest):
         poller = pollerdaemon('cfg/setup_new_conf/daemons/pollerd.ini', False, False, False,
                               '/tmp/poller.log')
         poller.load_config_file()
-        poller.load_modules_manager()
+        poller.load_modules_manager('poller-name')
         if hasattr(poller, 'modules'):
             assert 0 == len(poller.modules)
 
@@ -123,7 +123,7 @@ class TestSetupNewConf(AlignakTest):
         broker = brokerdaemon('cfg/setup_new_conf/daemons/brokerd.ini', False, False, False,
                               '/tmp/broker.log')
         broker.load_config_file()
-        broker.load_modules_manager()
+        broker.load_modules_manager('broker-name')
         if hasattr(broker, 'modules'):
             assert 0 == len(broker.modules)
 
@@ -148,7 +148,7 @@ class TestSetupNewConf(AlignakTest):
         reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False,
                                  False, '/tmp/reactionner.log')
         reac.load_config_file()
-        reac.load_modules_manager()
+        reac.load_modules_manager('reactionner-name')
         if hasattr(reac, 'modules'):
             assert 0 == len(reac.modules)
 

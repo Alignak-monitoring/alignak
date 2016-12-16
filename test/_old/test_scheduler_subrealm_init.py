@@ -72,7 +72,7 @@ class testSchedulerInit(AlignakTest):
         sched.load_config_file()
 
         sched.do_daemon_init_and_start(fake=True)
-        sched.load_modules_manager()
+        sched.load_modules_manager('scheduler-name')
 
         # Launch an arbiter so that the scheduler get a conf and init
         args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0]]

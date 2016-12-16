@@ -458,11 +458,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                                    module_name)
                     __warned.add(module_name)
                 return
-        # We want to give to the Worker the name of the daemon (poller or reactionner)
-        cls_name = self.__class__.__name__.lower()
+        # We give to the Worker the instance name of the daemon (eg. poller-master)
+        # and not the daemon type (poller)
         worker = Worker(1, queue, self.returns_queue, self.processes_by_worker,
                         mortal=mortal, max_plugins_output_length=self.max_plugins_output_length,
-                        target=target, loaded_into=cls_name, http_daemon=self.http_daemon)
+                        target=target, loaded_into=self.name, http_daemon=self.http_daemon)
         worker.module_name = module_name
         # save this worker
         self.workers[worker.uuid] = worker
@@ -1060,7 +1060,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             self.do_post_daemon_init()
 
-            self.load_modules_manager()
+            self.load_modules_manager(self.name)
 
             # We wait for initial conf
             self.wait_for_initial_conf()

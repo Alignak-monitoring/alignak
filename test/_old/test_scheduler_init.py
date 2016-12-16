@@ -98,7 +98,7 @@ class testSchedulerInit(AlignakTest):
         d.load_config_file()
 
         d.do_daemon_init_and_start(fake=True)
-        d.load_modules_manager()
+        d.load_modules_manager('daemon-name')
 
         # Launch an arbiter so that the scheduler get a conf and init
         args = ["../alignak/bin/alignak_arbiter.py", "-c", daemons_config[Arbiter][0]]

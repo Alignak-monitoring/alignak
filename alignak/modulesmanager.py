@@ -67,8 +67,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 class ModulesManager(object):
     """This class is used to manage modules and call callback"""
 
-    def __init__(self, modules_type, sync_manager, max_queue_size=0):
-        self.modules_type = modules_type
+    def __init__(self, daemon_type, sync_manager, max_queue_size=0):
+        self.daemon_type = daemon_type
+        self.daemon_name = daemon_type
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
@@ -81,7 +82,19 @@ class ModulesManager(object):
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        logger.debug("Created a module manager for '%s'", self.modules_type)
+        logger.debug("Created a module manager for '%s'", self.daemon_type)
+
+    def set_daemon_name(self, daemon_name):
+        """
+        Set the daemon name of the daemon which this manager is attached to
+        and propagate this daemon name to our managed modules
+
+        :param daemon_name:
+        :return:
+        """
+        self.daemon_name = daemon_name
+        for instance in self.instances:
+            instance.set_loaded_into(daemon_name)
 
     def set_modules(self, modules):
         """Setter for modules and allowed_type attributes
@@ -260,7 +273,7 @@ class ModulesManager(object):
                 )
             else:
                 # Give the module the data to which daemon/module it is loaded into
-                instance.set_loaded_into(self.modules_type)
+                instance.set_loaded_into(self.daemon_name)
                 self.instances.append(instance)
 
         for instance in self.instances:
