@@ -141,8 +141,7 @@ else
 fi
 
 # Now look if some required variables are pre defined:
-if ! test "$ALIGNAKCFG"
-then
+if [ -z "$ALIGNAKCFG" ]; then
     ALIGNAKCFG="$ETC/alignak.cfg"
 fi
 
@@ -276,8 +275,7 @@ do_start() {
         output=$($modfilepath -d -c "${modinifile}" $DEBUGCMD 2>&1)
         rc=$?
     else
-        if ! test "$ALIGNAKSPECIFICCFG"
-        then
+        if [ -z "$ALIGNAKSPECIFICCFG" ]; then
             output=$($modfilepath -d -c "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1)
         else
             output=$($modfilepath -d -c "${modinifile}" -a "$ALIGNAKCFG" -a "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1)
@@ -369,8 +367,7 @@ do_check() {
     modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
     modinifile=$(eval echo ${modINI})
 
-    if ! test "$ALIGNAKSPECIFICCFG"
-    then
+    if [ -z "$ALIGNAKSPECIFICCFG" ]; then
        $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1
     else
        $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" -a "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
