@@ -65,7 +65,7 @@ from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
 from alignak.http.scheduler_interface import SchedulerInterface
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.satellite import BaseSatellite
 from alignak.stats import statsmgr
 
@@ -79,6 +79,8 @@ class Alignak(BaseSatellite):
 
     properties = BaseSatellite.properties.copy()
     properties.update({
+        'daemon_type':
+            StringProp(default='scheduler'),
         'pidfile':
             PathProp(default='schedulerd.pid'),
         'port':
@@ -252,6 +254,15 @@ class Alignak(BaseSatellite):
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
+            if 'scheduler_name' in new_c:
+                name = new_c['scheduler_name']
+            else:
+                name = instance_name
+            self.name = name
+
+            # Set my own process title
+            self.set_proctitle(self.name)
+
             # Tag the conf with our data
             self.conf = conf
             self.conf.push_flavor = new_c['push_flavor']
@@ -375,7 +386,7 @@ class Alignak(BaseSatellite):
 
             self.do_daemon_init_and_start()
 
-            self.load_modules_manager()
+            self.load_modules_manager(self.name)
 
             self.uri = self.http_daemon.uri
             logger.info("[Scheduler] General interface is at: %s", self.uri)

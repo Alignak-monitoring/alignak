@@ -50,7 +50,7 @@ This module provide Reactionner class used to launch notifications or event hand
 """
 
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 
 
 class Reactionner(Satellite):
@@ -73,9 +73,14 @@ class Reactionner(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='reactionnerd.pid'),
-        'port':      IntegerProp(default=7769),
-        'local_log': PathProp(default='reactionnerd.log'),
+        'daemon_type':
+            StringProp(default='reactionner'),
+        'pidfile':
+            PathProp(default='reactionnerd.pid'),
+        'port':
+            IntegerProp(default=7769),
+        'local_log':
+            PathProp(default='reactionnerd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):

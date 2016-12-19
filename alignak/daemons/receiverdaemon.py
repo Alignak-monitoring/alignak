@@ -59,7 +59,7 @@ from multiprocessing import active_children
 
 from alignak.misc.serialization import unserialize
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.http.client import HTTPEXCEPTIONS
 from alignak.stats import statsmgr
@@ -76,6 +76,8 @@ class Receiver(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
+        'daemon_type':
+            StringProp(default='receiver'),
         'pidfile':
             PathProp(default='receiverd.pid'),
         'port':
@@ -409,7 +411,7 @@ class Receiver(Satellite):
 
             self.do_daemon_init_and_start()
 
-            self.load_modules_manager()
+            self.load_modules_manager(self.name)
 
             #  We wait for initial conf
             self.wait_for_initial_conf()

@@ -18,9 +18,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test host- and service-downtimes.
-#
+"""
+    This file contains classes and utilities for Alignak tests modules
+"""
 
 import sys
 from sys import __stdout__
@@ -258,7 +258,7 @@ class AlignakTest(unittest.TestCase):
         # Build schedulers dictionary with the schedulers involved in the configuration
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched = Alignak([], False, False, True, '/tmp/scheduler.log')
-            sched.load_modules_manager()
+            sched.load_modules_manager(scheduler.name)
             sched.new_conf = scheduler.conf_package
             if sched.new_conf:
                 sched.setup_new_conf()

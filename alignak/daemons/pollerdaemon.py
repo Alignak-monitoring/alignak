@@ -47,7 +47,7 @@
 This modules provides class for the Poller daemon
 """
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 
 
 class Poller(Satellite):
@@ -60,9 +60,14 @@ class Poller(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='pollerd.pid'),
-        'port':      IntegerProp(default=7771),
-        'local_log': PathProp(default='pollerd.log'),
+        'daemon_type':
+            StringProp(default='poller'),
+        'pidfile':
+            PathProp(default='pollerd.pid'),
+        'port':
+            IntegerProp(default=7771),
+        'local_log':
+            PathProp(default='pollerd.log'),
     })
 
     def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
