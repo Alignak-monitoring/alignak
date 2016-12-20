@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import shutil
 import sys
 import re
 import fileinput
@@ -49,12 +50,14 @@ def get_init_scripts(config):
     """
     data_files = config['files']['data_files']
     if 'win' in sys.platform:
-        pass
+        raise Exception("Not yet Windows ready, sorry. For more information, "
+                        "see: https://github.com/Alignak-monitoring/alignak/issues/522")
     elif 'linux' in sys.platform or 'sunos5' in sys.platform:
-        data_files = data_files + "\netc/init.d = bin/init.d/*"
-        data_files = data_files + "\netc/default = bin/default/alignak.in"
+        data_files = data_files + "\nalignak/bin/etc/init.d = bin/init.d/*"
+        data_files = data_files + "\nalignak/bin/etc/default = bin/default/alignak.in"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        data_files = data_files + "\netc/rc.d = bin/rc.d/*"
+        data_files = data_files + "\nalignak/bin/etc/rc.d = bin/rc.d/*"
+        data_files = data_files + "\nalignak/bin/etc/default = bin/default/alignak.in"
     else:
         raise Exception("Unsupported platform, sorry")
 
@@ -73,209 +76,133 @@ def fix_alignak_cfg(config):
     :param config:
     :return:
     """
+
+    """
+    Default Alignak configuration and directories are defined as is:
+    """
+    alignak_cfg = {
+        'USER': 'alignak',
+        'GROUP': 'alignak',
+        'BIN': '/bin',
+        'ETC': '/alignak/etc',
+        'RUN': '/alignak/run',
+        'LOG': '/alignak/log',
+        'INIT': '/alignak/bin',
+        'LIBEXEC': '/alignak/libexec',
+        'PLUGINSDIR': '/alignak/libexec'
+    }
+    pattern = "|".join(alignak_cfg.keys())
+    # Search from start of line something like ETC=qsdqsdqsd
+    changing_path = re.compile("^(%s) *= *" % pattern)
+
+    # Handle main Alignak configuration file (eg. /etc/default/alignak)
+    old_name = os.path.join(config.install_dir, "alignak", "alignak.in")
+
+    for line in fileinput.input(old_name, inplace=True):
+        line = line.strip()
+        got_path = changing_path.match(line)
+        if got_path:
+            found = got_path.group(1)
+            alignak_cfg[found] = os.path.join(
+                config.install_dir, alignak_cfg[found].strip("/")
+            )
+            print("%s=%s" % (got_path.group(1), alignak_cfg[found]))
+        else:
+            print(line)
+
+    new_name1 = os.path.join(config.install_dir, "alignak", "alignak")
+    new_name2 = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak")
+    shutil.copy(old_name, new_name1)
+    shutil.move(old_name, new_name2)
+
+    print("\n"
+          "===================================================="
+          "====================================================")
+    print("Alignak installation directory: %s" % config.install_dir)
+    print("===================================================="
+          "====================================================\n")
+
+    print("\n"
+          "===================================================="
+          "====================================================")
+    print("Alignak main configuration directories: ")
+    for path in alignak_cfg:
+        print(" %s = %s" % (path, alignak_cfg[path]))
+    print("===================================================="
+          "====================================================\n")
+
+    """
+    Update resource files
+     - get all .cfg files in the /usr/local/etc/alignak/arbiter/resource.d folder
+     - update the $LOG$=, $ETC$=,... macros with the real installation paths
+    """
+    pattern = "|".join(alignak_cfg.keys())
+    # Search from start of line something like ETC=qsdqsdqsd
+    changing_path = re.compile("^(%s) *= *" % pattern)
+
+    resource_folder = os.path.join(alignak_cfg["ETC"], "arbiter", "resource.d")
+    for _, _, files in os.walk(resource_folder):
+        for r_file in files:
+            if not re.search(r"\.cfg$", r_file):
+                continue
+
+            # Handle resource paths file
+            resource_file = os.path.join(resource_folder, r_file)
+            for line in fileinput.input(resource_file, inplace=True):
+                line = line.strip()
+                got_path = changing_path.match(line)
+                if got_path:
+                    print("%s=%s" % (got_path.group(1), alignak_cfg[got_path.group(1)]))
+                else:
+                    print(line)
+
+    """
+    Update daemons configuration files
+     - get all .ini files in the /usr/local/etc/alignak/arbiter/resource.d folder
+     - update the $LOGSDIR$, $ETCDIR$ and $PLUGINSDIR$ macros with the real installation paths
+    """
     default_paths = {
-        'workdir': '/var/run/alignak',
-        'logdir': '/var/log/alignak',
-        # TODO: confirm is is unuseful...
-        'modules_dir': '/var/lib/alignak/modules',
-        'plugins_dir': '/var/libexec/alignak',
-
-        'lock_file': '/var/run/alignak/arbiterd.pid',
-        'local_log': '/var/log/alignak/arbiterd.log',
-        'pidfile': '/var/run/alignak/arbiterd.pid',
-
-        'pack_distribution_file': '/var/lib/alignak/pack_distribution.dat'
+        'workdir': 'RUN',
+        'logdir': 'LOG',
+        'etcdir': 'ETC',
+        'pluginsdir': 'LIBEXEC'
     }
-
-    default_macros = {
-        'LOGSDIR': '/var/log/alignak',
-        'PLUGINSDIR': '/var/libexec/alignak',
-    }
-
-    default_ssl = {
-        'ca_cert': '/etc/alignak/certs/ca.pem',
-        'server_cert': '/etc/alignak/certs/server.cert',
-        'server_key': '/etc/alignak/certs/server.key',
-    }
-
-    # Changing default user/group if root
-    default_users = {}
-    if getpass.getuser() == 'root':
-        default_users['alignak_user'] = 'alignak'
-        default_users['alignak_group'] = 'alignak'
-        default_users['user'] = 'alignak'
-        default_users['group'] = 'alignak'
-        default_users['ALIGNAKUSER'] = 'alignak'
-        default_users['ALIGNAKGROUP'] = 'alignak'
-        default_users['HOME'] = '`getent passwd "$ALIGNAKUSER" | cut -d: -f 6`'
-
-    # Prepare pattern for alignak.cfg
     pattern = "|".join(default_paths.keys())
     changing_path = re.compile("^(%s) *= *" % pattern)
-    pattern = "|".join(default_users.keys())
-    changing_user = re.compile("^#(%s) *= *" % pattern)
-    pattern = "|".join(default_ssl.keys())
-    changing_ssl = re.compile("^#(%s) *= *" % pattern)
-    pattern = "|".join(default_macros.keys())
-    changing_mac = re.compile(r"^\$(%s)\$ *= *" % pattern)
 
-    # Fix resource paths
-    alignak_file = os.path.join(
-        config.install_dir, "etc", "alignak", "arbiter", "resource.d", "paths.cfg"
-    )
-    if not os.path.exists(alignak_file):
-        print(
-            "\n"
-            "================================================================================\n"
-            "==  The configuration file '%s' is missing.                                   ==\n"
-            "================================================================================\n"
-            % alignak_file
-        )
+    daemons_folder = os.path.join(alignak_cfg["ETC"], "daemons")
+    for _, _, files in os.walk(daemons_folder):
+        for d_file in files:
+            if not re.search(r"\.ini", d_file):
+                continue
 
-    for line in fileinput.input(alignak_file, inplace=True):
-        line = line.strip()
-        mac_attr_name = changing_mac.match(line)
-        if mac_attr_name:
-            new_path = os.path.join(config.install_dir,
-                                    default_macros[mac_attr_name.group(1)].strip("/"))
-            print("$%s$=%s" % (mac_attr_name.group(1),
-                             new_path))
-        else:
-            print(line)
+            # Handle daemon configuration file
+            daemon_file = os.path.join(daemons_folder, d_file)
+            for line in fileinput.input(daemon_file, inplace=True):
+                line = line.strip()
+                got_path = changing_path.match(line)
+                if got_path:
+                    print("%s=%s" % (got_path.group(1), alignak_cfg[default_paths[got_path.group(1)]]))
+                else:
+                    print(line)
 
-    # Fix alignak.cfg
-    alignak_file = os.path.join(config.install_dir, "etc", "alignak", "alignak.cfg")
-    if not os.path.exists(alignak_file):
-        print(
-            "\n"
-            "================================================================================\n"
-            "==  The configuration file '%s' is missing.                                   ==\n"
-            "================================================================================\n"
-            % alignak_file
-        )
-
-    for line in fileinput.input(alignak_file, inplace=True):
-        line = line.strip()
-        path_attr_name = changing_path.match(line)
-        user_attr_name = changing_user.match(line)
-        ssl_attr_name = changing_ssl.match(line)
-        if path_attr_name:
-            new_path = os.path.join(config.install_dir,
-                                    default_paths[path_attr_name.group(1)].strip("/"))
-            print("%s=%s" % (path_attr_name.group(1),
-                             new_path))
-        elif user_attr_name:
-            print("#%s=%s" % (user_attr_name.group(1),
-                             default_users[user_attr_name.group(1)]))
-        elif ssl_attr_name:
-            new_path = os.path.join(config.install_dir,
-                                    default_ssl[ssl_attr_name.group(1)].strip("/"))
-            print("#%s=%s" % (ssl_attr_name.group(1),
-                             new_path))
-        else:
-            print(line)
-
-    # Handle daemons ini files
-    for ini_file in ["arbiterd.ini", "brokerd.ini", "schedulerd.ini",
-                     "pollerd.ini", "reactionnerd.ini", "receiverd.ini"]:
-        # Prepare pattern for ini files
-        daemon_name = ini_file.replace(".ini", "")
-        default_paths['lock_file'] = '/var/run/alignak/%s.pid' % daemon_name
-        default_paths['local_log'] = '/var/log/alignak/%s.log' % daemon_name
-        default_paths['pidfile'] = '/var/run/alignak/%s.pid' % daemon_name
-        pattern = "|".join(default_paths.keys())
-        changing_path = re.compile("^(%s) *= *" % pattern)
-
-        # Fix ini file
-        alignak_file = os.path.join(config.install_dir, "etc", "alignak", "daemons", ini_file)
-        if not os.path.exists(alignak_file):
-            print(
-                "\n"
-                "================================================================================\n"
-                "==  The configuration file '%s' is missing.                                   ==\n"
-                "================================================================================\n"
-                % alignak_file
-            )
-
-        for line in fileinput.input(alignak_file, inplace=True):
-            line = line.strip()
-            path_attr_name = changing_path.match(line)
-            user_attr_name = changing_user.match(line)
-            ssl_attr_name = changing_ssl.match(line)
-            if path_attr_name:
-                new_path = os.path.join(config.install_dir,
-                                        default_paths[path_attr_name.group(1)].strip("/"))
-                print("%s=%s" % (path_attr_name.group(1),
-                                 new_path))
-            elif user_attr_name:
-                print("#%s=%s" % (user_attr_name.group(1),
-                                 default_users[user_attr_name.group(1)]))
-            elif ssl_attr_name:
-                new_path = os.path.join(config.install_dir,
-                                        default_ssl[ssl_attr_name.group(1)].strip("/"))
-                print("#%s=%s" % (ssl_attr_name.group(1),
-                                 new_path))
-            else:
-                print(line)
-
-    # Handle default/alignak
-    if 'linux' in sys.platform or 'sunos5' in sys.platform:
-        old_name = os.path.join(config.install_dir, "etc", "default", "alignak.in")
-        if not os.path.exists(old_name):
-            print("\n"
-                  "=======================================================================================================\n"
-                  "==  The configuration file '%s' is missing.\n"
-                  "=======================================================================================================\n"
-                  % alignak_file)
-
-        new_name = os.path.join(config.install_dir, "etc", "default", "alignak")
-        try:
-            os.rename(old_name, new_name)
-        except OSError as e:
-            print("\n"
-                  "=======================================================================================================\n"
-                  "==  The configuration file '%s' could not be renamed to '%s'.\n"
-                  "==  The newly installed configuration will not be up-to-date.\n"
-                  "=======================================================================================================\n"
-                  % (old_name, new_name))
-
-        default_paths = {
-            'ETC': '/etc/alignak',
-            'VAR': '/var/lib/alignak',
-            'BIN': '/bin',
-            'RUN': '/var/run/alignak',
-            'LOG': '/var/log/alignak',
-            'LIB': '/var/libexec/alignak',
-        }
-        pattern = "|".join(default_paths.keys())
-        changing_path = re.compile("^(%s) *= *" % pattern)
-        for line in fileinput.input(new_name,  inplace=True):
-            line = line.strip()
-            path_attr_name = changing_path.match(line)
-            user_attr_name = changing_user.match(line)
-            if path_attr_name:
-                new_path = os.path.join(config.install_dir,
-                                        default_paths[path_attr_name.group(1)].strip("/"))
-                print("%s=%s" % (path_attr_name.group(1),
-                                 new_path))
-            elif user_attr_name:
-                print("#%s=%s" % (user_attr_name.group(1),
-                                 default_users[user_attr_name.group(1)]))
-
-            else:
-                print(line)
-
+    """
+    Get default run scripts and configuration location
+    """
     # Alignak run script
     alignak_run = ''
     if 'win' in sys.platform:
-        pass
+        raise Exception("Not yet Windows ready, sorry. For more information, "
+                        "see: https://github.com/Alignak-monitoring/alignak/issues/522")
     elif 'linux' in sys.platform or 'sunos5' in sys.platform:
-        alignak_run = os.path.join(config.install_dir, "etc", "init.d", "alignak start")
+        alignak_run = os.path.join(config.install_dir,
+                                   "alignak", "bin", "etc", "init.d", "alignak start")
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        alignak_run = os.path.join(config.install_dir, "etc", "rc.d", "alignak start")
+        alignak_run = os.path.join(config.install_dir,
+                                   "alignak", "bin", "etc", "rc.d", "alignak start")
 
     # Alignak configuration root directory
-    alignak_etc = os.path.join(config.install_dir, "etc", "alignak")
+    alignak_etc = alignak_cfg["ETC"]
 
     # Add ENV vars only if we are in virtualenv
     # in order to get init scripts working
@@ -330,9 +257,9 @@ def fix_alignak_cfg(config):
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
           "== You should also grant ownership on those directories to the user alignak:  ==\n"
-          "==   chown -R alignak:alignak /usr/local/var/run/alignak                      ==\n"
-          "==   chown -R alignak:alignak /usr/local/var/log/alignak                      ==\n"
-          "==   chown -R alignak:alignak /usr/local/var/libexec/alignak                  ==\n"
+          "==   chown -R alignak:alignak %s\n"
+          "==   chown -R alignak:alignak %s\n"
+          "==   chown -R alignak:alignak %s\n"
           "==                                                                            ==\n"
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
@@ -342,7 +269,8 @@ def fix_alignak_cfg(config):
           "==   http://alignak-monitoring.github.io/download/                            ==\n"
           "==                                                                            ==\n"
           "================================================================================\n"
-          % (alignak_run, alignak_etc, alignak_etc, alignak_etc)
+          % (alignak_run, alignak_etc, alignak_etc, alignak_etc,
+             alignak_cfg["RUN"], alignak_cfg["LOG"], alignak_cfg["LIBEXEC"])
           )
 
     # Check Alignak recommended user existence
