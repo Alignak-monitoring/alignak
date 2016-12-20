@@ -364,12 +364,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'auto_rescheduling_window':
             IntegerProp(managed=False, default=180),
 
-        # Todo: not used anywhere in the source code
         'translate_passive_host_checks':
-            BoolProp(managed=False, default=True),
+            UnusedProp(text='Alignak passive checks management make this parameter unuseful.'),
+            # BoolProp(managed=False, default=True),
 
         'passive_host_checks_are_soft':
-            BoolProp(managed=False, default=True),
+            UnusedProp(text='Alignak passive checks management make this parameter unuseful.'),
+            # BoolProp(managed=False, default=True),
 
         # Todo: not used anywhere in the source code
         'enable_predictive_host_dependency_checks':
@@ -513,13 +514,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True, class_inherit=[(Service, 'global_check_freshness')]),
 
         'service_freshness_check_interval':
-            IntegerProp(default=60),
+            IntegerProp(default=3600),
 
         'check_host_freshness':
             BoolProp(default=True, class_inherit=[(Host, 'global_check_freshness')]),
 
         'host_freshness_check_interval':
-            IntegerProp(default=60),
+            IntegerProp(default=3600),
 
         'additional_freshness_latency':
             IntegerProp(default=15, class_inherit=[(Host, None), (Service, None)]),

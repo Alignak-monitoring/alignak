@@ -170,6 +170,8 @@ class Service(SchedulingItem):
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unknown':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+        'last_time_unreachable':
+            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'host':
             StringProp(default=None),
         'state_before_hard_unknown_reach_phase': StringProp(default='OK', retention=True),
@@ -490,10 +492,10 @@ class Service(SchedulingItem):
 ####
 
     def set_state_from_exit_status(self, status, notif_period, hosts, services):
-        """Set the state in UP, WARNING, CRITICAL or UNKNOWN
-        with the status of a check. Also update last_state
+        """Set the state in UP, WARNING, CRITICAL, UNKNOWN or UNREACHABLE
+        according to the status of a check. Also updates the last_state
 
-        :param status: integer between 0 and 3
+        :param status: integer between 0 and 4
         :type status: int
         :return: None
         """
@@ -534,6 +536,11 @@ class Service(SchedulingItem):
             self.state_id = 3
             self.last_time_unknown = int(self.last_state_update)
             state_code = 'u'
+        elif status == 4:
+            self.state = 'UNREACHABLE'
+            self.state_id = 4
+            self.last_time_unreachable = int(self.last_state_update)
+            state_code = 'x'
         else:
             self.state = 'CRITICAL'  # exit code UNDETERMINED
             self.state_id = 2

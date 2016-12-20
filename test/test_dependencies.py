@@ -933,10 +933,13 @@ class TestDependencies(AlignakTest):
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_E")
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_E", "test_ok_0")
-
+        # Max attempts is 2 for this host
+        assert host.max_check_attempts == 2
+        # Max attempts is 3 for this service
+        assert svc.max_check_attempts == 3
         assert 0 == len(svc.act_depend_of)
 
-        # it's passive, create check manually
+        # Set host and service as OK
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
@@ -944,14 +947,60 @@ class TestDependencies(AlignakTest):
         self.external_command_loop()
         time.sleep(0.1)
         assert "UP" == host.state
+        assert "HARD" == host.state_type
         assert "OK" == svc.state
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(0)
+
+        # Set host DOWN
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        # SOFT state type on 1st attempt
+        assert "SOFT" == host.state_type
+        self.assert_actions_count(0)
+
+        # Set host DOWN
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "DOWN" == host.state
+        # HARD state type on 2nd attempt
+        assert "HARD" == host.state_type
+        # and an action is raised (PROBLEM notification)
+        self.assert_actions_count(1)
+
+        # Set host UP
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        time.sleep(0.1)
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
+        self.assert_actions_count(2)
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        assert "UP" == host.state
         assert "CRITICAL" == svc.state
-        self.assert_actions_count(0)
+        assert "SOFT" == svc.state_type
+        self.assert_actions_count(2)
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "CRITICAL" == svc.state
+        assert "SOFT" == svc.state_type
+        self.assert_actions_count(2)
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert "CRITICAL" == svc.state
+        # Need 3 attempts for the HARD state
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(3)
         self.assert_checks_count(12)
 
     def test_ap_s_passive_service_check_active_host(self):

@@ -169,35 +169,24 @@ class TestAction(AlignakTest):
 
         # Create a check with parameters
         parameters = {
-            'status': 'planned',
-            'ref': 'host_uuid',
             'check_time': 0,
-            'exit_status': 0,
-            'output': 'Output ...',
-            'execution_time': 0.0,
-            'creation_time': time.time(),
-            'worker': 'test_worker',
-            'timeout': 100,
-            't_to_go': 0.0,
-            'is_a': 'check',
-            'reactionner_tag': 'tag',
-            'module_type': 'nrpe-booster',
-            'u_time': 0.0,
-            'env': {},
-            's_time': 0.0,
-            '_in_timeout': True,
-            'type': 'action_type',
-            'log_actions': True,
-            'check_type': 0,
-            'depend_on_me': [],
+            'creation_time': 1481616993.195676,
             'depend_on': [],
+            'depend_on_me': [],
             'dependency_check': False,
+            'env': {},
+            'execution_time': 0.0,
             'from_trigger': False,
-            'internal': False,
-            'long_output': '',
-            'perf_data': '',
-            'poller_tag': 'None',
-            'state': 0
+            'is_a': 'check',
+            'log_actions': False,
+            'module_type': 'fork',
+            'ref': '',
+            's_time': 0.0,
+            't_to_go': 0.0,
+            'timeout': 10,
+            'type': '',
+            'u_time': 0.0,
+            'worker': 'none'
         }
         # Will fill the action properties with the parameters
         # The missing parameters will be set with their default value
@@ -207,10 +196,18 @@ class TestAction(AlignakTest):
         parameters['uuid'] = check.uuid
         # Those parameters are missing in the provided parameters but they will exist in the object
         parameters.update({
+            '_in_timeout': False,
+            'exit_status': 3,
+            'internal': False,
             'long_output': '',
+            'output': '',
+            'passive_check': False,
+            'freshness_expired': False,
             'perf_data': '',
             'poller_tag': 'None',
-            'state': 0
+            'reactionner_tag': 'None',
+            'state': 0,
+            'status': 'scheduled',
         })
         assert check.__dict__ == parameters
 

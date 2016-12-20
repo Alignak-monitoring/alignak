@@ -139,7 +139,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
         'freshness_state':
-            CharProp(default='d', fill_brok=['full_status']),
+            CharProp(default='x', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
@@ -509,8 +509,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # And only if we enable the impact state change
         cls = self.__class__
         if (cls.enable_problem_impacts_states_change and
-                self.is_impact and
-                not self.state_changed_since_impact):
+                self.is_impact and not self.state_changed_since_impact):
             self.last_state = self.state_before_impact
         else:
             self.last_state = self.state
@@ -527,6 +526,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
+        elif status == 4:
+            self.state = 'UNREACHABLE'
+            self.state_id = 4
+            self.last_time_unreachable = int(self.last_state_update)
+            state_code = 'x'
         else:
             self.state = 'DOWN'  # exit code UNDETERMINED
             self.state_id = 1
@@ -557,7 +561,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             return True
         elif status == 'd' and self.state == 'DOWN':
             return True
-        elif status == 'x' and self.state == 'UNREACHABLE':
+        elif status in ['u', 'x'] and self.state == 'UNREACHABLE':
             return True
         return False
 
