@@ -581,6 +581,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             conf = self.new_conf
             if not conf:
                 return
+            logger.info("Sending us a configuration %s")
             try:
                 conf = unserialize(conf)
             except AlignakClassLookupException as exp:
