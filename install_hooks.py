@@ -91,21 +91,17 @@ def fix_alignak_cfg(config):
         'GROUP': 'alignak',
         'BIN': '/bin',
         'ETC': '/alignak/etc',
+        'VAR': '/alignak/libexec',
         'RUN': '/alignak/run',
-        'LOG': '/alignak/log',
-        'INIT': '/alignak/bin',
-        'LIBEXEC': '/alignak/libexec',
-        'PLUGINSDIR': '/alignak/libexec'
+        'LOG': '/alignak/log'
     }
     pattern = "|".join(alignak_cfg.keys())
     # Search from start of line something like ETC=qsdqsdqsd
     changing_path = re.compile("^(%s) *= *" % pattern)
 
-    # No more necessary for packaging
-    # Handle main Alignak configuration file (eg. /etc/default/alignak)
-    old_name = os.path.join(config.install_dir, "alignak", "alignak.in")
-
-    for line in fileinput.input(old_name, inplace=True):
+    # Read main Alignak configuration file (eg. /etc/default/alignak)
+    old_name = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak.in")
+    for line in open(old_name):
         line = line.strip()
         got_path = changing_path.match(line)
         if got_path:
@@ -113,14 +109,6 @@ def fix_alignak_cfg(config):
             alignak_cfg[found] = os.path.join(
                 config.install_dir, alignak_cfg[found].strip("/")
             )
-            print("%s=%s" % (got_path.group(1), alignak_cfg[found]))
-        else:
-            print(line)
-
-    new_name1 = os.path.join(config.install_dir, "alignak", "alignak")
-    # new_name2 = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak")
-    shutil.copy(old_name, new_name1)
-    # shutil.move(old_name, new_name2)
 
     print("\n"
           "===================================================="
@@ -172,7 +160,7 @@ def fix_alignak_cfg(config):
         'workdir': 'RUN',
         'logdir': 'LOG',
         'etcdir': 'ETC',
-        'pluginsdir': 'LIBEXEC'
+        'pluginsdir': 'VAR'
     }
     pattern = "|".join(default_paths.keys())
     changing_path = re.compile("^(%s) *= *" % pattern)
@@ -277,7 +265,7 @@ def fix_alignak_cfg(config):
           "==                                                                            ==\n"
           "================================================================================\n"
           % (alignak_run, alignak_etc, alignak_etc, alignak_etc,
-             alignak_cfg["RUN"], alignak_cfg["LOG"], alignak_cfg["LIBEXEC"])
+             alignak_cfg["RUN"], alignak_cfg["LOG"], alignak_cfg["VAR"])
           )
 
     # Check Alignak recommended user existence
