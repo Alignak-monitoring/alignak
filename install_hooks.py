@@ -103,7 +103,7 @@ def fix_alignak_cfg(config):
 
     # No more necessary for packaging
     # Handle main Alignak configuration file (eg. /etc/default/alignak)
-    old_name = os.path.join(config.install_dir, "alignak", "alignak")
+    old_name = os.path.join(config.install_dir, "alignak", "alignak.in")
 
     for line in fileinput.input(old_name, inplace=True):
         line = line.strip()
