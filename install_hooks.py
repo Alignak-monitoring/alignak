@@ -100,15 +100,16 @@ def fix_alignak_cfg(config):
     changing_path = re.compile("^(%s) *= *" % pattern)
 
     # Read main Alignak configuration file (eg. /etc/default/alignak)
-    old_name = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak.in")
-    for line in open(old_name):
-        line = line.strip()
-        got_path = changing_path.match(line)
-        if got_path:
-            found = got_path.group(1)
-            alignak_cfg[found] = os.path.join(
-                config.install_dir, alignak_cfg[found].strip("/")
-            )
+    cfg_file_name = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak.in")
+    if os.path.exists(cfg_file_name):
+        for line in open(cfg_file_name):
+            line = line.strip()
+            got_path = changing_path.match(line)
+            if got_path:
+                found = got_path.group(1)
+                alignak_cfg[found] = os.path.join(
+                    config.install_dir, alignak_cfg[found].strip("/")
+                )
 
     print("\n"
           "===================================================="
