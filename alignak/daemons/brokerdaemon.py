@@ -280,7 +280,7 @@ class Broker(BaseSatellite):
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
             logger.warning("Connection problem to the %s %s: %s",
-                        i_type, links[s_id]['name'], str(exp))
+                           i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
 
@@ -305,7 +305,7 @@ class Broker(BaseSatellite):
             links[s_id]['running_id'] = new_run_id
         except HTTPEXCEPTIONS, exp:
             logger.warning("Connection problem to the %s %s: %s",
-                        i_type, links[s_id]['name'], str(exp))
+                           i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
         except KeyError, exp:
