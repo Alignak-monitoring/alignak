@@ -102,14 +102,22 @@ def fix_alignak_cfg(config):
     # Read main Alignak configuration file (eg. /etc/default/alignak)
     cfg_file_name = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak.in")
     if os.path.exists(cfg_file_name):
+        print("Alignak shell configuration file is: %s" % cfg_file_name)
         for line in open(cfg_file_name):
             line = line.strip()
+            print("Line: %s" % line)
             got_path = changing_path.match(line)
             if got_path:
                 found = got_path.group(1)
                 alignak_cfg[found] = os.path.join(
                     config.install_dir, alignak_cfg[found].strip("/")
                 )
+    else:
+        print("Alignak shell configuration file not found: %s" % cfg_file_name)
+        for path in alignak_cfg:
+            alignak_cfg[path] = os.path.join(
+                config.install_dir, alignak_cfg[path].strip("/")
+            )
 
     print("\n"
           "===================================================="
@@ -129,7 +137,7 @@ def fix_alignak_cfg(config):
 
     """
     Update resource files
-     - get all .cfg files in the /usr/local/etc/alignak/arbiter/resource.d folder
+     - get all .cfg files in the arbiter/resource.d folder
      - update the $LOG$=, $ETC$=,... macros with the real installation paths
     """
     pattern = "|".join(alignak_cfg.keys())
@@ -154,7 +162,7 @@ def fix_alignak_cfg(config):
 
     """
     Update daemons configuration files
-     - get all .ini files in the /usr/local/etc/alignak/arbiter/resource.d folder
+     - get all .ini files in the arbiter/daemons folder
      - update the $LOGSDIR$, $ETCDIR$ and $PLUGINSDIR$ macros with the real installation paths
     """
     default_paths = {
@@ -185,17 +193,17 @@ def fix_alignak_cfg(config):
     """
     Get default run scripts and configuration location
     """
-    # Alignak run script
-    alignak_run = ''
-    if 'win' in sys.platform:
-        raise Exception("Not yet Windows ready, sorry. For more information, "
-                        "see: https://github.com/Alignak-monitoring/alignak/issues/522")
-    elif 'linux' in sys.platform or 'sunos5' in sys.platform:
-        alignak_run = os.path.join(config.install_dir,
-                                   "alignak", "bin", "etc", "init.d", "alignak start")
-    elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        alignak_run = os.path.join(config.install_dir,
-                                   "alignak", "bin", "etc", "rc.d", "alignak start")
+    # # Alignak run script
+    # alignak_run = ''
+    # if 'win' in sys.platform:
+    #     raise Exception("Not yet Windows ready, sorry. For more information, "
+    #                     "see: https://github.com/Alignak-monitoring/alignak/issues/522")
+    # elif 'linux' in sys.platform or 'sunos5' in sys.platform:
+    #     alignak_run = os.path.join(config.install_dir,
+    #                                "alignak", "bin", "etc", "init.d", "alignak start")
+    # elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
+    #     alignak_run = os.path.join(config.install_dir,
+    #                                "alignak", "bin", "etc", "rc.d", "alignak start")
 
     # Alignak configuration root directory
     alignak_etc = alignak_cfg["ETC"]
@@ -235,8 +243,7 @@ def fix_alignak_cfg(config):
           "==                                                                            ==\n"
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
-          "== You can run Alignak with:                                                  ==\n"
-          "==   %s\n"
+          "== You can run Alignak with the scripts located in the dev folder.            ==\n"
           "==                                                                            ==\n"
           "== The default installed configuration is located here:                       ==\n"
           "==   %s\n"
@@ -255,7 +262,6 @@ def fix_alignak_cfg(config):
           "== You should also grant ownership on those directories to the user alignak:  ==\n"
           "==   chown -R alignak:alignak %s\n"
           "==   chown -R alignak:alignak %s\n"
-          "==   chown -R alignak:alignak %s\n"
           "==                                                                            ==\n"
           "== -------------------------------------------------------------------------- ==\n"
           "==                                                                            ==\n"
@@ -265,8 +271,7 @@ def fix_alignak_cfg(config):
           "==   http://alignak-monitoring.github.io/download/                            ==\n"
           "==                                                                            ==\n"
           "================================================================================\n"
-          % (alignak_run, alignak_etc, alignak_etc, alignak_etc,
-             alignak_cfg["RUN"], alignak_cfg["LOG"], alignak_cfg["VAR"])
+          % (alignak_etc, alignak_etc, alignak_etc, alignak_cfg["LOG"], alignak_cfg["VAR"])
           )
 
     # Check Alignak recommended user existence
