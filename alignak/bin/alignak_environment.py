@@ -105,9 +105,9 @@ import re
 
 from pipes import quote as cmd_quote
 
-from docopt import docopt, DocoptExit
-
 import ConfigParser
+
+from docopt import docopt, DocoptExit
 
 from alignak.version import VERSION as __version__
 
@@ -126,7 +126,7 @@ class AlignakConfigParser(object):
             print("Command line parsing error:\n%s." % (exp))
             exit(64)
 
-        # Alignak version as a property
+        # Alignak version as a property
         self.alignak_version = __version__
 
         # Print export commands for calling shell
@@ -170,26 +170,26 @@ class AlignakConfigParser(object):
                 if self.verbose:
                     print("Section: %s" % section)
                 for (key, value) in config.items(section):
-                    property = "%s.%s" % (section, key)
+                    inner_property = "%s.%s" % (section, key)
 
                     # Set object property
-                    setattr(self, property, value)
+                    setattr(self, inner_property, value)
 
                     # Set environment variable
-                    os.environ[property] = value
+                    os.environ[inner_property] = value
 
                     if self.verbose:
-                        print(" %s = %s" % (property, value))
+                        print(" %s = %s" % (inner_property, value))
 
                     if self.export:
                         # Allowed shell variables may only contain: [a-zA-z0-9_]
-                        property = re.sub('[^0-9a-zA-Z]+', '_', property)
-                        property = property.upper()
-                        print("export %s=%s" % (property, cmd_quote(value)))
+                        inner_property = re.sub('[^0-9a-zA-Z]+', '_', inner_property)
+                        inner_property = inner_property.upper()
+                        print("export %s=%s" % (inner_property, cmd_quote(value)))
         except ConfigParser.InterpolationMissingOptionError as err:
             err = str(err)
             wrong_variable = err.split('\n')[3].split(':')[1].strip()
-            print("Incorrect or missing variable '%s' in config file : %s"%
+            print("Incorrect or missing variable '%s' in config file : %s" %
                   (wrong_variable, self.configuration_file))
             sys.exit(3)
 
@@ -201,12 +201,12 @@ def main():
     """
     Main function
     """
-    bc = AlignakConfigParser()
-    bc.parse()
+    parsed_configuration = AlignakConfigParser()
+    parsed_configuration.parse()
 
-    if bc.export:
+    if parsed_configuration.export:
         # Export Alignak version
-        print("export ALIGNAK_VERSION=%s" % (bc.alignak_version))
+        print("export ALIGNAK_VERSION=%s" % (parsed_configuration.alignak_version))
 
 if __name__ == '__main__':
     main()
