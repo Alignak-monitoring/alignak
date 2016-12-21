@@ -62,7 +62,7 @@ def get_init_scripts(config):
         # data_files = data_files + "\nalignak/bin/etc/rc.d = bin/rc.d/*"
         # data_files = data_files + "\nalignak/bin/etc/default = bin/default/alignak.in"
         data_files = data_files + "\nalignak/bin/etc/rc.d = for_freebsd/rc.d/*"
-        data_files = data_files + "\nalignak/bin/etc/default = for_freebsd/default/alignak.in"
+        # data_files = data_files + "\nalignak/bin/etc/default = for_freebsd/default/alignak.in"
         data_files = data_files + "\nalignak/etc = for_freebsd/alignak.ini"
     else:
         raise Exception("Unsupported platform, sorry")
@@ -101,8 +101,9 @@ def fix_alignak_cfg(config):
     # Search from start of line something like ETC=qsdqsdqsd
     changing_path = re.compile("^(%s) *= *" % pattern)
 
+    # No more necessary for packaging
     # Handle main Alignak configuration file (eg. /etc/default/alignak)
-    old_name = os.path.join(config.install_dir, "alignak", "alignak.in")
+    old_name = os.path.join(config.install_dir, "alignak", "alignak")
 
     for line in fileinput.input(old_name, inplace=True):
         line = line.strip()
@@ -117,9 +118,9 @@ def fix_alignak_cfg(config):
             print(line)
 
     new_name1 = os.path.join(config.install_dir, "alignak", "alignak")
-    new_name2 = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak")
+    # new_name2 = os.path.join(config.install_dir, "alignak", "bin", "etc", "default", "alignak")
     shutil.copy(old_name, new_name1)
-    shutil.move(old_name, new_name2)
+    # shutil.move(old_name, new_name2)
 
     print("\n"
           "===================================================="
