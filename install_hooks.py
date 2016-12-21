@@ -53,17 +53,17 @@ def get_init_scripts(config):
         raise Exception("Not yet Windows ready, sorry. For more information, "
                         "see: https://github.com/Alignak-monitoring/alignak/issues/522")
     elif 'linux' in sys.platform or 'sunos5' in sys.platform:
-        # data_files = data_files + "\nalignak/bin/etc/init.d = bin/init.d/*"
-        # data_files = data_files + "\nalignak/bin/etc/default = bin/default/alignak.in"
-        data_files = data_files + "\nalignak/bin/etc/init.d = systemV/init.d/*"
-        data_files = data_files + "\nalignak/bin/etc/default = systemV/default/alignak.in"
-        data_files = data_files + "\nalignak/etc = systemV/alignak.ini"
+        # Perhaps we may completely remove this @Seb-Solon? init.d scripts moved to packaging repo
+        print("Linux: %s" % sys.platform)
+        # data_files = data_files + "\nalignak/bin/etc/init.d = systemV/init.d/*"
+        # data_files = data_files + "\nalignak/bin/etc/default = systemV/default/alignak.in"
+        # data_files = data_files + "\nalignak/etc = systemV/alignak.ini"
     elif 'bsd' in sys.platform or 'dragonfly' in sys.platform:
-        # data_files = data_files + "\nalignak/bin/etc/rc.d = bin/rc.d/*"
-        # data_files = data_files + "\nalignak/bin/etc/default = bin/default/alignak.in"
-        data_files = data_files + "\nalignak/bin/etc/rc.d = for_freebsd/rc.d/*"
-        # data_files = data_files + "\nalignak/bin/etc/default = for_freebsd/default/alignak.in"
-        data_files = data_files + "\nalignak/etc = for_freebsd/alignak.ini"
+        # Perhaps we may completely remove this @Seb-Solon? rc.d scripts moved to packaging repo
+        print("Unix: %s" % sys.platform)
+        # data_files = data_files + "\nalignak/bin/etc/rc.d = for_freebsd/rc.d/*"
+        # # data_files = data_files + "\nalignak/bin/etc/default = for_freebsd/default/alignak.in"
+        # data_files = data_files + "\nalignak/etc = for_freebsd/alignak.ini"
     else:
         raise Exception("Unsupported platform, sorry")
 
