@@ -394,12 +394,8 @@ class AlignakTest(unittest.TestCase):
         self.schedulers['scheduler-master'].sched.delete_zombie_actions()
         checks = self.schedulers['scheduler-master'].sched.get_to_run_checks(True, False, worker_name='tester')
         actions = self.schedulers['scheduler-master'].sched.get_to_run_checks(False, True, worker_name='tester')
-        # print "------------ worker loop checks ----------------"
-        # print checks
-        # print "------------ worker loop actions ----------------"
         if verbose is True:
             self.show_actions()
-        # print "------------ worker loop new ----------------"
         for a in actions:
             a.status = 'inpoller'
             a.check_time = time.time()
@@ -407,7 +403,6 @@ class AlignakTest(unittest.TestCase):
             self.schedulers['scheduler-master'].sched.put_results(a)
         if verbose is True:
             self.show_actions()
-        # print "------------ worker loop end ----------------"
 
     def launch_internal_check(self, svc_br):
         """ Launch an internal check for the business rule service provided """
