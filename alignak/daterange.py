@@ -306,9 +306,7 @@ class AbstractDaterange(AlignakObject):
         """
         if self.is_time_day_valid(timestamp):
             for timerange in self.timeranges:
-                # print tr, "is valid?", tr.is_time_valid(t)
                 if timerange.is_time_valid(timestamp):
-                    # print "return True"
                     return True
         return False
 
@@ -532,7 +530,6 @@ class AbstractDaterange(AlignakObject):
 
         # Ok we've got a next invalid day and a invalid possibility in
         # timerange, so the next invalid is this day+sec_from_morning
-        # print "T_day", t_day, "Sec from morning", sec_from_morning
         if t_day is not None and sec_from_morning is not None:
             return t_day + sec_from_morning + 1
 

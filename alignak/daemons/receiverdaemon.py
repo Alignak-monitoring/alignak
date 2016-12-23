@@ -393,9 +393,7 @@ class Receiver(Satellite):
 
         # Maybe we do not have something to do, so we wait a little
         if len(self.broks) == 0:
-            # print "watch new conf 1: begin", len(self.broks)
             self.watch_for_new_conf(1.0)
-            # print "get enw broks watch new conf 1: end", len(self.broks)
 
     def main(self):
         """Main receiver function

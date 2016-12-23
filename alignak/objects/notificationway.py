@@ -399,6 +399,5 @@ class NotificationWays(CommandCallItems):
             params = {}
         params['notificationway_name'] = name
         params['uuid'] = new_uuid
-        # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
         notificationway = NotificationWay(params)
         self.add_item(notificationway)
