@@ -478,34 +478,34 @@ class DependencyNodeFactory(object):
         in_par = False
         tmp = ''
         son_is_not = False  # We keep is the next son will be not or not
-        stacked_par = 0
+        stacked_parenthesis = 0
         for char in pattern:
             if char == '(':
-                stacked_par += 1
+                stacked_parenthesis += 1
 
                 in_par = True
                 tmp = tmp.strip()
                 # Maybe we just start a par, but we got some things in tmp
                 # that should not be good in fact !
-                if stacked_par == 1 and tmp != '':
+                if stacked_parenthesis == 1 and tmp != '':
                     # TODO : real error
                     print "ERROR : bad expression near", tmp
                     continue
 
                 # If we are already in a par, add this (
                 # but not if it's the first one so
-                if stacked_par > 1:
+                if stacked_parenthesis > 1:
                     tmp += char
 
             elif char == ')':
-                stacked_par -= 1
+                stacked_parenthesis -= 1
 
-                if stacked_par < 0:
+                if stacked_parenthesis < 0:
                     # TODO : real error
                     print "Error : bad expression near", tmp, "too much ')'"
                     continue
 
-                if stacked_par == 0:
+                if stacked_parenthesis == 0:
                     tmp = tmp.strip()
                     son = self.eval_cor_pattern(tmp, hosts, services,
                                                 hostgroups, servicegroups, running)
