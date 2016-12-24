@@ -228,6 +228,81 @@ class template_Daemon_Start():
         self.stop_daemon(d)
         assert not os.path.exists(d.pidfile)
 
+    def test_config_and_replace_and_stop(self):
+        """ Test configuration loaded, daemon started, replaced and stopped
+
+        :return:
+        """
+        self.print_header()
+
+        # Start normally
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Update log file information
+        d.logdir = os.path.abspath('.')
+        d.local_log = os.path.abspath('./test.log')
+
+        # Do not reload the configuration file (avoid replacing modified properties for the test...)
+        d.setup_alignak_logger(reload_configuration=False)
+
+        # Start the daemon
+        self.start_daemon(d)
+        assert os.path.exists(d.pidfile)
+        fpid = open(d.pidfile, 'r+')
+        pid_var = fpid.readline().strip(' \r\n')
+        print("Daemon's pid: %s" % pid_var)
+
+        # Get daemon stratistics
+        stats = d.get_stats_struct()
+        assert 'metrics' in stats
+        assert 'version' in stats
+        assert 'name' in stats
+        assert stats['name'] == d.name
+        assert stats['type'] == d.daemon_type
+        assert 'modules' in stats
+
+        time.sleep(2)
+
+        # Stop the daemon, do not unlink the pidfile
+        d.do_stop()
+        # self.stop_daemon(d)
+        assert os.path.exists(d.pidfile)
+
+        # Update log file information
+        d.logdir = os.path.abspath('.')
+        d.local_log = os.path.abspath('./test.log')
+
+        # Do not reload the configuration file (avoid replacing modified properties for the test...)
+        d.setup_alignak_logger(reload_configuration=False)
+
+        # Start as a daemon and replace if still exists
+        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        assert os.path.exists(d.pidfile)
+        fpid = open(d.pidfile, 'r+')
+        pid_var = fpid.readline().strip(' \r\n')
+        print("Daemon's (new) pid: %s" % pid_var)
+
+        time.sleep(2)
+
+        #  Stop the daemon
+        self.stop_daemon(d)
+        assert not os.path.exists(d.pidfile)
+
     def test_bad_piddir(self):
         """ Test bad PID directory
 

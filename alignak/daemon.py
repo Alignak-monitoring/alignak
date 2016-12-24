@@ -514,7 +514,7 @@ class Daemon(object):
         :return: None
         """
         # TODO: other daemon run on nt
-        if os.name == 'nt':
+        if os.name == 'nt':  # pragma: no cover, not currently tested with Windows...
             logger.warning("The parallel daemon check is not available on Windows")
             self.__open_pidfile(write=True)
             return
@@ -522,12 +522,19 @@ class Daemon(object):
         # First open the pid file in open mode
         self.__open_pidfile()
         try:
-            pid = int(self.fpid.readline().strip(' \r\n'))
+            pid_var = self.fpid.readline().strip(' \r\n')
+            if pid_var:
+                pid = int(pid_var)
+                logger.info("Found an existing pid: '%s'", pid_var)
+            else:
+                logger.debug("Not found an existing pid: %s", self.pidfile)
+                return
         except (IOError, ValueError) as err:
-            logger.info("Stale pidfile exists at %s (%s). Reusing it.", err, self.pidfile)
+            logger.warning("pidfile is empty or has an invalid content: %s", self.pidfile)
             return
 
         try:
+            logger.info("Killing process: '%s'", pid)
             os.kill(pid, 0)
         except Exception as err:  # pylint: disable=W0703
             # consider any exception as a stale pidfile.

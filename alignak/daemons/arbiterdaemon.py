@@ -730,8 +730,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.dispatcher.dispatch()
         logger.info("Configuration has been dispatched to the satellites")
 
-        logger.info("Configuration has been dispatched to the satellites")
-
         # Now we can get all initial broks for our satellites
         self.get_initial_broks_from_satellitelinks()
 
