@@ -1204,7 +1204,7 @@ class Daemon(object):
 
         """
         res = {
-            'metrics': [], 'version': VERSION, 'name': self.name, 'type': '',
+            'metrics': [], 'version': VERSION, 'name': self.name, 'type': self.daemon_type,
             'modules': {
                 'internal': {}, 'external': {}
             }

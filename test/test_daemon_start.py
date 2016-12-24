@@ -158,6 +158,8 @@ class template_Daemon_Start():
         :param daemon:
         :return:
         """
+        daemon.load_modules_manager(daemon.name)
+        daemon.do_load_modules([])
         daemon.do_daemon_init_and_start()
 
     def stop_daemon(self, daemon):
@@ -181,7 +183,6 @@ class template_Daemon_Start():
 
         # Start normally
         d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
-        print("Daemon configuration: %s" % d.__dict__)
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -193,15 +194,23 @@ class template_Daemon_Start():
         self.start_daemon(d)
         assert os.path.exists(d.pidfile)
 
+        # Get daemon stratistics
+        stats = d.get_stats_struct()
+        assert 'metrics' in stats
+        assert 'version' in stats
+        assert 'name' in stats
+        assert stats['name'] == d.name
+        assert stats['type'] == d.daemon_type
+        assert 'modules' in stats
+
         time.sleep(2)
 
         # Stop the daemon
         self.stop_daemon(d)
         assert not os.path.exists(d.pidfile)
 
-        # Start as a daemon
+        # Start as a daemon and replace if still exists
         d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
-        print("Daemon configuration: %s" % d.__dict__)
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -258,7 +267,6 @@ class template_Daemon_Start():
         self.print_header()
 
         d = self.get_daemon()
-        print("Daemon configuration: %s" % d.__dict__)
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -274,7 +282,6 @@ class template_Daemon_Start():
 
         with open(d.local_log) as f:
             content = f.readlines()
-        print(content)
 
     def test_daemon_header(self):
         """ Test daemon header
@@ -348,27 +355,27 @@ class template_Daemon_Start():
 
 #############################################################################
 
-class Test_Broker__Start(template_Daemon_Start, AlignakTest):
+class Test_Broker_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Broker
 
 
-class Test_Scheduler__Start(template_Daemon_Start, AlignakTest):
+class Test_Scheduler_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Alignak
 
 
-class Test_Poller__Start(template_Daemon_Start, AlignakTest):
+class Test_Poller_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Poller
 
 
-class Test_Reactionner__Start(template_Daemon_Start, AlignakTest):
+class Test_Reactionner_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Reactionner
 
 
-class Test_Receiver__Start(template_Daemon_Start, AlignakTest):
+class Test_Receiver_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Receiver
 
 
-class Test_Arbiter__Start(template_Daemon_Start, AlignakTest):
+class Test_Arbiter_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Arbiter
 
     def create_daemon(self, is_daemon=False, do_replace=False):
