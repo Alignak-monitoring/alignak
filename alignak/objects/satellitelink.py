@@ -194,7 +194,11 @@ class SatelliteLink(Item):
         try:
             self.con.post('put_conf', {'conf': conf}, wait='long')
             return True
-        except HTTPEXCEPTIONS, exp:
+        except IOError as exp:
+            self.con = None
+            logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
+            return False
+        except HTTPEXCEPTIONS as exp:
             self.con = None
             logger.error("Exception: %s", exp)
             logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
