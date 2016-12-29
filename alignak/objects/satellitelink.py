@@ -196,6 +196,7 @@ class SatelliteLink(Item):
             return True
         except HTTPEXCEPTIONS, exp:
             self.con = None
+            logger.error("Exception: %s", exp)
             logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
             return False
 

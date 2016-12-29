@@ -266,7 +266,7 @@ class DaemonsStartTest(AlignakTest):
         ret = arbiter.poll()
         print("*** Arbiter exited on kill, no return code!")
         assert ret is None, "Arbiter is still running!"
-        # No ERRORS because the daemons are not alive !
+        ok = True
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
             if 'WARNING:' in line:
@@ -283,8 +283,11 @@ class DaemonsStartTest(AlignakTest):
                 assert ok
             if 'ERROR:' in line:
                 # Only ERROR because of configuration sending failures...
-                assert 'ERROR: [alignak.objects.satellitelink] Failed sending configuration for ' in line
-            assert 'CRITICAL:' not in line
+                if 'ERROR: [alignak.objects.satellitelink] Failed sending configuration for ' not in line:
+                    ok = False
+            if 'CRITICAL:' in line:
+                ok = False
+        assert ok
         for line in iter(arbiter.stderr.readline, b''):
             print("*** " + line.rstrip())
             assert False, "stderr output!"
