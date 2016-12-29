@@ -196,12 +196,11 @@ class SatelliteLink(Item):
             return True
         except IOError as exp:
             self.con = None
-            logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
+            logger.error("IOError for %s: %s", self.get_name(), str(exp))
             return False
         except HTTPEXCEPTIONS as exp:
             self.con = None
-            logger.error("Exception: %s", exp)
-            logger.error("Failed sending configuration for %s: %s", self.get_name(), str(exp))
+            # logger.error("Failed sending configuration: %s", str(exp))
             return False
 
     def get_all_broks(self):
