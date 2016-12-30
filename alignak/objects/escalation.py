@@ -336,9 +336,7 @@ class Escalations(Items):
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
-                            # print "Linking service", s.get_name(), 'with me', es.get_name()
                             serv.escalations.append(escal.uuid)
-                            # print "Now service", s.get_name(), 'have', s.escalations
 
     def linkify_es_by_h(self, hosts):
         """Add each escalation object into host.escalation attribute
@@ -357,9 +355,7 @@ class Escalations(Items):
             for hname in strip_and_uniq(escal.host_name.split(',')):
                 host = hosts.find_by_name(hname)
                 if host is not None:
-                    # print "Linking host", h.get_name(), 'with me', es.get_name()
                     host.escalations.append(escal.uuid)
-                    # print "Now host", h.get_name(), 'have', h.escalations
 
     def explode(self, hosts, hostgroups, contactgroups):
         """Loop over all escalation and explode hostsgroups in host
