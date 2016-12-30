@@ -34,6 +34,11 @@ class template_DaemonLink_get_name():
 
     def test_get_name(self):
         link = self.get_link()
+        link.fill_default()
+
+        print("Name: %s / %s" % (link.get_my_type(), link.get_name()))
+        print("Config: %s" % (link.give_satellite_cfg()))
+        assert False == link.have_conf()
         try:
             self.assertEqual("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())
         except AttributeError:
@@ -41,27 +46,33 @@ class template_DaemonLink_get_name():
 
 
 class Test_ArbiterLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link arbiter"""
     daemon_link = ArbiterLink
 
+
 class Test_SchedulerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link scheduler"""
     daemon_link = SchedulerLink
 
 
 class Test_BrokerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link broker"""
     daemon_link = BrokerLink
 
 
 class Test_ReactionnerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link reactionner"""
     daemon_link = ReactionnerLink
 
 
 class Test_ReceiverLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link receiver"""
     daemon_link = ReceiverLink
 
 
 class Test_PollerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+    """Test satellite link poller"""
     daemon_link = PollerLink
-
 
 
 if __name__ == '__main__':

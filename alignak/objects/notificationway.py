@@ -312,7 +312,7 @@ class NotificationWay(Item):
                     )
                     self.configuration_errors.append(msg)
                     state = False
-                if not cmd.is_valid():
+                elif not cmd.is_valid():
                     msg = "[notificationway::%s] a service_notification_command is invalid" % (
                         self.get_name()
                     )
@@ -341,7 +341,7 @@ class NotificationWay(Item):
                     )
                     self.configuration_errors.append(msg)
                     state = False
-                if not cmd.is_valid():
+                elif not cmd.is_valid():
                     msg = "[notificationway::%s] a host_notification_command is invalid (%s)" % (
                         cmd.get_name(), str(cmd.__dict__)
                     )
