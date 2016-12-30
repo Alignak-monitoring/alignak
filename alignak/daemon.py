@@ -177,8 +177,6 @@ class Daemon(object):
             PathProp(default=DEFAULT_WORK_DIR),
         'etcdir':
             PathProp(default=DEFAULT_WORK_DIR),
-        'pluginsdir':
-            PathProp(default=DEFAULT_WORK_DIR),
         'host':
             StringProp(default='0.0.0.0'),
         'user':

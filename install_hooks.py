@@ -163,13 +163,12 @@ def fix_alignak_cfg(config):
     """
     Update daemons configuration files
      - get all .ini files in the arbiter/daemons folder
-     - update the $LOGSDIR$, $ETCDIR$ and $PLUGINSDIR$ macros with the real installation paths
+     - update the workdir, logdir and etcdir variables with the real installation paths
     """
     default_paths = {
         'workdir': 'RUN',
         'logdir': 'LOG',
-        'etcdir': 'ETC',
-        'pluginsdir': 'VAR'
+        'etcdir': 'ETC'
     }
     pattern = "|".join(default_paths.keys())
     changing_path = re.compile("^(%s) *= *" % pattern)
