@@ -90,10 +90,10 @@ def fix_alignak_cfg(config):
         'USER': 'alignak',
         'GROUP': 'alignak',
         'BIN': '/bin',
-        'ETC': '/alignak/etc',
-        'VAR': '/alignak/libexec',
-        'RUN': '/alignak/run',
-        'LOG': '/alignak/log'
+        'ETC': '/etc/alignak',
+        'VAR': '/var/libexec/alignak',
+        'RUN': '/var/run/alignak',
+        'LOG': '/var/log/alignak'
     }
     pattern = "|".join(alignak_cfg.keys())
     # Search from start of line something like ETC=qsdqsdqsd
@@ -115,9 +115,10 @@ def fix_alignak_cfg(config):
     else:
         print("Alignak shell configuration file not found: %s" % cfg_file_name)
         for path in alignak_cfg:
-            alignak_cfg[path] = os.path.join(
-                config.install_dir, alignak_cfg[path].strip("/")
-            )
+            if path not in ['USER', 'GROUP']:
+                alignak_cfg[path] = os.path.join(
+                    config.install_dir, alignak_cfg[path].strip("/")
+                )
 
     print("\n"
           "===================================================="
@@ -131,7 +132,8 @@ def fix_alignak_cfg(config):
           "====================================================")
     print("Alignak main configuration directories: ")
     for path in alignak_cfg:
-        print(" %s = %s" % (path, alignak_cfg[path]))
+        if path not in ['USER', 'GROUP']:
+            print(" %s = %s" % (path, alignak_cfg[path]))
     print("===================================================="
           "====================================================\n")
 
