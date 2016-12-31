@@ -340,6 +340,7 @@ class SatelliteLink(Item):
         if self.con is None:
             self.create_connection()
         try:
+            logger.warning("Arbiter wants me to wait for a new configuration")
             self.con.get('wait_new_conf')
             return True
         except HTTPEXCEPTIONS:

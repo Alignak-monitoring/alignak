@@ -215,6 +215,6 @@ class SchedulerInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
-            logger.debug("Arbiter wants me to wait for a new configuration")
+            logger.warning("Arbiter wants me to wait for a new configuration")
             self.app.sched.die()
             super(SchedulerInterface, self).wait_new_conf()
