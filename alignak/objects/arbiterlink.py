@@ -86,7 +86,7 @@ class ArbiterLink(SatelliteLink):
         :return: dictionary with information of the satellite
         :rtype: dict
         """
-        return {'port': self.port, 'address': self.address, 'name': self.arbiter_name,
+        return {'port': self.port, 'address': self.address, 'name': self.get_name(),
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def do_not_run(self):

@@ -230,6 +230,7 @@ class Alignak(BaseSatellite):
         """
         with self.conf_lock:
             new_c = self.new_conf
+            logger.warning("Sending us a configuration %s", new_c['push_flavor'])
             conf_raw = new_c['conf']
             override_conf = new_c['override_conf']
             modules = new_c['modules']
@@ -327,7 +328,6 @@ class Alignak(BaseSatellite):
             # We must update our Config dict macro with good value
             # from the config parameters
             self.sched.conf.fill_resource_macros_names_macros()
-            # print "DBG: got macros", self.sched.conf.macros
 
             # Creating the Macroresolver Class & unique instance
             m_solver = MacroResolver()

@@ -44,19 +44,104 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+from pprint import pprint
 from alignak_test import *
 
 
 class TestInheritanceAndPlus(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file('cfg/cfg_inheritance_and_plus.cfg')
+    def test_inheritance(self):
+        """Test properties inheritance
+        """
+        self.setup_with_file('cfg/cfg_inheritance.cfg')
         assert self.conf_is_correct
         self._sched = self.schedulers['scheduler-master'].sched
+
+        print("Hosts: ")
+        pprint(self._sched.hosts.__dict__)
+
+        print("Services: ")
+        pprint(self._sched.services.__dict__)
+
+        # common objects
+        tp_24x7 = self._sched.timeperiods.find_by_name("24x7")
+        tp_none = self._sched.timeperiods.find_by_name("none")
+        tptest = self._sched.timeperiods.find_by_name("testperiod")
+        cgtest = self._sched.contactgroups.find_by_name("test_contact")
+        cgadm = self._sched.contactgroups.find_by_name("admins")
+        cmdsvc = self._sched.commands.find_by_name("check_service")
+        cmdtest = self._sched.commands.find_by_name("dummy_command")
+
+        # Checks we got the objects we need
+        assert tp_24x7 is not None
+        assert tptest is not None
+        assert cgtest is not None
+        assert cgadm is not None
+        assert cmdsvc is not None
+        assert cmdtest is not None
+
+        # Hosts
+        test_host_0 = self._sched.hosts.find_by_name("test_host_0")
+        assert test_host_0 is not None
+        test_router_0 = self._sched.hosts.find_by_name("test_router_0")
+        assert test_router_0 is not None
+        hst1 = self._sched.hosts.find_by_name("test_host_01")
+        assert hst1 is not None
+        hst2 = self._sched.hosts.find_by_name("test_host_02")
+        assert hst2 is not None
+
+        # Services
+        # svc1 = self._sched.services.find_by_name("test_host_01/srv-svc")
+        # svc2 = self._sched.services.find_by_name("test_host_02/srv-svc")
+        # assert svc1 is not None
+        # assert svc2 is not None
+
+        # Inherited services (through hostgroup property)
+        # Those services are attached to all hosts of an hostgroup and they both
+        # inherit from the srv-from-hostgroup template
+        svc12 = self._sched.services.find_srv_by_name_and_hostname("test_host_01",
+                                                                   "srv-from-hostgroup")
+        assert svc12 is not None
+
+        # business_impact inherited
+        assert svc12.business_impact == 5
+        # maintenance_period none inherited from the service template
+        assert svc12.maintenance_period == tp_24x7.uuid
+
+        assert svc12.use == ['generic-service']
+        # Todo: explain why we do not have generic-service in tags ...
+        assert svc12.tags == set([])
+
+        svc22 = self._sched.services.find_srv_by_name_and_hostname("test_host_02",
+                                                                   "srv-from-hostgroup")
+        # business_impact inherited
+        assert svc22.business_impact == 5
+        # maintenance_period none inherited from the service template
+        assert svc22.maintenance_period == tp_24x7.uuid
+
+        assert svc22 is not None
+        assert svc22.use == ['generic-service']
+        assert svc22.tags == set([])
+        # maintenance_period none inherited...
+        assert svc22.maintenance_period == tp_24x7.uuid
+
+        # Duplicate for each services (generic services for each host inheriting from srv template)
+        svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
+        svc1proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
+        svc2proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
+        svc2proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
+        assert svc1proc1 is not None
+        assert svc1proc2 is not None
+        assert svc2proc1 is not None
+        assert svc2proc2 is not None
 
     def test_inheritance_and_plus(self):
         """Test properties inheritance with + sign
         """
+        self.setup_with_file('cfg/cfg_inheritance_and_plus.cfg')
+        assert self.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
+
         # Get the hostgroups
         linux = self._sched.hostgroups.find_by_name('linux')
         assert linux is not None

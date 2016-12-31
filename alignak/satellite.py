@@ -884,7 +884,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         with self.conf_lock:
             conf = self.new_conf
-            logger.debug("Sending us a configuration %s", conf)
             self.new_conf = None
             self.cur_conf = conf
             g_conf = conf['global']
@@ -916,6 +915,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 statsmgr.register(self.name, 'reactionner',
                                   statsd_prefix=self.statsd_prefix,
                                   statsd_enabled=self.statsd_enabled)
+
+            logger.info("[%s] Sending us a configuration", self.name)
 
             self.passive = g_conf['passive']
             if self.passive:

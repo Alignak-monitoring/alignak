@@ -1260,7 +1260,6 @@ class Hosts(SchedulingItems):
                     err = "the parent '%s' for the host '%s' is unknown!" % (parent,
                                                                              host.get_name())
                     self.configuration_errors.append(err)
-            # print "Me,", h.host_name, "define my parents", new_parents
             # We find the id, we replace the names
             host.parents = new_parents
 

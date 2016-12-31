@@ -51,6 +51,7 @@
 
 import time
 from alignak.misc.serialization import unserialize
+from alignak.downtime import Downtime
 
 from alignak_test import AlignakTest, unittest
 
@@ -77,6 +78,58 @@ class TestDowntime(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         assert len(self.configuration_warnings) == 0
+
+    def test_create_downtime(self):
+        """ Create a downtime object """
+        self.print_header()
+
+        now = int(time.time())
+
+        # With common parameters
+        data = {'ref': 'host.uuid', 'ref_type': 'host.my_type',
+                'start_time': now, 'end_time': now + 5,
+                'fixed': True, 'trigger_id': '',
+                'duration': 0, 'author': 'me', 'comment': 'created by me!'}
+        downtime = Downtime(data)
+
+        expected = {'uuid': downtime.uuid}
+        expected.update({
+            # Provided parameters
+            'ref': 'host.uuid',
+            'ref_type': 'host.my_type',
+            'start_time': now,
+            'end_time': now + 5,
+            'fixed': True,
+            'author': 'me',
+            'comment': 'created by me!',
+            'trigger_id': '',
+            'duration': 5.0,
+
+            # Object created properties
+            'can_be_deleted': False,
+            'has_been_triggered': False,
+            'is_in_effect': False,
+            'activate_me': [],
+
+            # Not defined but it would be better if it was
+            # 'comment_id': '',
+
+            'entry_time': downtime.entry_time,
+            'real_end_time': downtime.end_time,
+        })
+        assert expected == downtime.__dict__
+
+        assert str(downtime) == "inactive fixed Downtime id=%s %s - %s" \
+                                % (downtime.uuid,
+                                   time.ctime(downtime.start_time),
+                                   time.ctime(downtime.end_time))
+
+        # A serialized downtime is the same as the __dict__
+        assert downtime.__dict__ == downtime.serialize()
+
+        # Unserialize the serialized downtime
+        unserialized_item = Downtime(params=downtime.serialize())
+        assert downtime.__dict__ == unserialized_item.__dict__
 
     def test_schedule_fixed_svc_downtime(self):
         """ Schedule a fixed downtime for a service """
@@ -536,6 +589,9 @@ class TestDowntime(AlignakTest):
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []
+        assert host.enable_notifications
+        assert host.notifications_enabled
+        assert host.notification_period
         # Not any downtime yet !
         assert host.downtimes == []
         # Get service scheduled downtime depth
@@ -586,14 +642,14 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
 
-        # The downtime also exist in our scheduler
+        # The downtime also exists in our scheduler
         assert 1 == len(self._sched.downtimes)
         assert host.downtimes[0] in self._sched.downtimes
         assert self._sched.downtimes[host.downtimes[0]].fixed
         assert self._sched.downtimes[host.downtimes[0]].is_in_effect
         assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
 
-        # A comment exist in our scheduler and in our service
+        # A comment exists in our scheduler and in our service
         assert 1 == len(self._sched.comments)
         assert 1 == len(host.comments)
         assert host.comments[0] in self._sched.comments
