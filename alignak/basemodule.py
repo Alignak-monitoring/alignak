@@ -65,11 +65,11 @@ from alignak.misc.common import setproctitle
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
-# The `properties dict defines what the module can do and
+# The `properties` dict defines what the module can do and
 # if it's an external module or not.
 # pylint: disable=C0103
 properties = {
-    # name of the module type ; to distinguish between them:
+    # module type ; to distinguish between them:
     # retention, logs, configuration, livestate, ...
     'type': None,
 
@@ -123,10 +123,15 @@ class BaseModule(object):
 
     def init(self):  # pylint: disable=R0201
         """Handle this module "post" init ; just before it'll be started.
-        Like just open necessaries file(s), database(s),
-        or whatever the module will need.
 
-        :return: True / False according to initialization succeeds or not
+        This function initializes the module instance. If False is returned, the modules manager
+        will periodically retry an to initialize the module.
+        If an exception is raised, the module will be definitely considered as dead :/
+
+        This function must be present and return True for Alignak to consider the module as loaded
+        and fully functional.
+
+        :return: True / False according to initialization succeeded or not
         :rtype: bool
         """
         return True
@@ -191,7 +196,7 @@ class BaseModule(object):
         try:
             self._main()
         except Exception as exp:
-            logger.error('[%s] %s', self.alias, traceback.format_exc())
+            logger.exception('[%s] %s', self.alias, traceback.format_exc())
             raise exp
 
     def start(self, http_daemon=None):  # pylint: disable=W0613
@@ -303,18 +308,31 @@ class BaseModule(object):
 
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
-        There a lot of different possible broks to manage.
+        There are a lot of different possible broks to manage:
+        - monitoring_log
+
+        - notification_raise
+        - downtime_raise
+        - initial_host_status, initial_service_status, initial_contact_status
+        - initial_broks_done
+
+        - update_host_status, update_service_status, initial_contact_status
+        - host_check_result, service_check_result
+        - host_next_schedule, service_next_scheduler
+        - host_snapshot, service_snapshot
+        - unknown_host_check_result, unknown_service_check_result
+
+        - program_status
+        - clean_all_my_instance_id
+
+        - new_conf
 
         :param brok:
         :type brok:
         :return:
         :rtype:
         """
-        manage = getattr(self, 'manage_' + brok.type + '_brok', None)
-        if manage:
-            # Be sure the brok is prepared before call it
-            brok.prepare()
-            return manage(brok)
+        pass
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Generic function to handle signals
@@ -390,7 +408,14 @@ class BaseModule(object):
         logger.info("Process for module %s is now running (pid=%d)", self.alias, os.getpid())
 
         # Will block here!
-        self.main()
+        try:
+            self.main()
+        except EOFError:
+            pass
+            # logger.warning('[%s] EOF exception: %s', self.alias, traceback.format_exc())
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.exception('[%s] main function exception: %s', self.alias, exp)
+
         self.do_stop()
 
         logger.info("Process for module %s is now exiting (pid=%d)", self.alias, os.getpid())
