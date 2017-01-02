@@ -192,6 +192,5 @@ class CheckModulations(CommandCallItems):
             params = {}
 
         params['checkmodulation_name'] = name
-        # print "Asking a new inner checkmodulation from name %s with params %s" % (name, params)
         checkmodulation = CheckModulation(params)
         self.add_item(checkmodulation)

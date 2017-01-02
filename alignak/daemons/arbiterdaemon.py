@@ -589,9 +589,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if not self.new_conf:
                 logger.warning("Should not be here - I already got a configuration")
                 return
-
             logger.info("I received a new configuration from my master")
-
             try:
                 conf = unserialize(self.new_conf)
             except AlignakClassLookupException as exp:

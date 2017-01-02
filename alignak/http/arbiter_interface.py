@@ -91,6 +91,7 @@ class ArbiterInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
+            logger.warning("Arbiter wants me to wait for a new configuration")
             self.app.cur_conf = None
 
     @cherrypy.expose
