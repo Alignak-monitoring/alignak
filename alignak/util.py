@@ -1303,8 +1303,6 @@ def parse_daemon_args(arbiter=False):
                             help='Set the name of the arbiter to pick in the configuration files '
                                  'For a spare arbiter, this parameter must contain its name!')
 
-    parser.add_argument('-s', '--spare', dest='config_file',
-                        help='Daemon is a spare daemon')
     parser.add_argument('-c', '--config', dest='config_file',
                         help='Daemon configuration file')
     parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
