@@ -165,7 +165,7 @@ class ArbiterInterface(GenericInterface):
                     for prop in props:
                         if not hasattr(daemon, prop):
                             continue
-                        if prop in ["realms", "conf", "con", "tags"]:
+                        if prop in ["realms", "conf", "con", "tags", "modules", "conf_package"]:
                             continue
                         val = getattr(daemon, prop)
                         # give a try to a json able object
