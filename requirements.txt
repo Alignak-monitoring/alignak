@@ -9,3 +9,4 @@ setproctitle
 ujson
 numpy
 pyopenssl>=0.15
+docopt

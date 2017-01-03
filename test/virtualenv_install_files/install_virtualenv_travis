@@ -6,6 +6,7 @@
 755 VIRTUALENVPATH/bin/alignak-scheduler
 755 VIRTUALENVPATH/etc/alignak
 644 VIRTUALENVPATH/etc/alignak/alignak.cfg
+644 VIRTUALENVPATH/etc/alignak/alignak.ini
 755 VIRTUALENVPATH/etc/alignak/certs
 644 VIRTUALENVPATH/etc/alignak/certs/README
 755 VIRTUALENVPATH/etc/alignak/daemons
@@ -98,14 +99,6 @@
 644 VIRTUALENVPATH/etc/alignak/sample/sample/hosts/srv-oracle.cfg
 644 VIRTUALENVPATH/etc/alignak/sample/sample/hosts/srv-mongodb.cfg
 644 VIRTUALENVPATH/etc/alignak/sample/sample/hosts/br-erp.cfg
-644 VIRTUALENVPATH/etc/default/alignak
-755 VIRTUALENVPATH/etc/init.d/alignak
-755 VIRTUALENVPATH/etc/init.d/alignak-arbiter
-755 VIRTUALENVPATH/etc/init.d/alignak-broker
-755 VIRTUALENVPATH/etc/init.d/alignak-poller
-755 VIRTUALENVPATH/etc/init.d/alignak-reactionner
-755 VIRTUALENVPATH/etc/init.d/alignak-receiver
-755 VIRTUALENVPATH/etc/init.d/alignak-scheduler
 755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak
 755 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak-ALIGNAKVERSION-SHORTPYVERSION.egg-info
 644 VIRTUALENVPATH/lib/PYTHONVERSION/site-packages/alignak/__init__.py
