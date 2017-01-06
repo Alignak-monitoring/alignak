@@ -740,8 +740,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Check if the status is ok for impact
             if impact_id in hosts:
                 impact = hosts[impact_id]
-            else:
+            elif impact_id in services:
                 impact = services[impact_id]
+            else:
+                logger.warning("Problem with my impacts: %s", self)
             timeperiod = timeperiods[timeperiod_id]
             for stat in status:
                 if self.is_state(stat):
