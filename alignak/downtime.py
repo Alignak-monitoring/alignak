@@ -333,7 +333,8 @@ class Downtime(AlignakObject):
         :type comments: dict
         :return: None
         """
-        comments[self.comment_id].can_be_deleted = True
+        if self.comment_id in comments:
+            comments[self.comment_id].can_be_deleted = True
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
