@@ -2077,7 +2077,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Look that all scheduler got a broker that will take brok.
         # If not, raise an Error
         for scheduler in self.schedulers:
-            if scheduler.realm:
+            if scheduler.realm and scheduler.realm in self.realms:
                 if len(self.realms[scheduler.realm].potential_brokers) == 0:
                     logger.error(
                         "The scheduler %s got no broker in its realm or upper",

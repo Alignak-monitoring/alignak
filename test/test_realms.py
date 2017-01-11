@@ -154,6 +154,23 @@ class TestRealms(AlignakTest):
         test_host_realm1 = sched_realm2.conf.hosts.find_by_name("test_host_realm1")
         assert test_host_realm1 is None
 
+    def test_undefined_used_realm(self):
+        """ Test undefined realm used in daemons
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/realms/use_undefined_realm.cfg')
+        assert not self.conf_is_correct
+        assert "Configuration in scheduler::Scheduler-distant is incorrect; " \
+               "from: cfg/realms/use_undefined_realm.cfg:7" in \
+                      self.configuration_errors
+        assert "The scheduler Scheduler-distant got a unknown realm 'Distant'" in \
+                      self.configuration_errors
+        assert "schedulers configuration is incorrect!" in \
+                      self.configuration_errors
+
     def test_realm_hostgroup_assignation(self):
         """ Test realm hostgroup assignation
 
