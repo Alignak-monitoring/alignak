@@ -810,10 +810,9 @@ class Items(object):
         else:
             # Don't know which one to keep, lastly defined has precedence
             objcls = getattr(self.inner_class, "my_type", "[unknown]")
-            mesg = "duplicate %s name %s, from: %s, using lastly defined. You may " \
-                   "manually set the definition_order parameter to avoid " \
-                   "this message." % \
-                   (objcls, name, item.imported_from)
+            mesg = "duplicate %s '%s', from: '%s' and '%s', using lastly defined. " \
+                   "You may manually set the definition_order parameter to avoid this message." \
+                   % (objcls, name, item.imported_from, existing.imported_from)
             item.configuration_warnings.append(mesg)
         if item.is_tpl():
             self.remove_template(existing)
