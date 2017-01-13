@@ -156,8 +156,8 @@ class TestCommand(AlignakTest):
         assert 'command_name' not in b.data
         assert 'command_line' not in b.data
 
-    def test_command_internal(self):
-        """ Test internal command
+    def test_command_internal_host_up(self):
+        """ Test internal command _internal_host_up
 
         :return: None
         """
@@ -178,6 +178,35 @@ class TestCommand(AlignakTest):
         assert c.timeout == -1
         # Module type is the command name without the '_' prefix
         assert c.module_type == 'internal_host_up'
+        assert c.enable_environment_macros == False
+
+        b = c.get_initial_status_brok()
+        assert 'initial_command_status' == b.type
+        assert 'command_name' in b.data
+        assert 'command_line' in b.data
+
+    def test_command_internal_echo(self):
+        """ Test internal command _echo
+
+        :return: None
+        """
+        self.print_header()
+
+        t = {
+            'command_name': '_echo',
+            'command_line': '_echo'
+        }
+        c = Command(t)
+
+        assert c.command_name == '_echo'
+        assert c.get_name() == '_echo'
+        assert c.command_line == '_echo'
+
+        assert c.poller_tag == 'None'
+        assert c.reactionner_tag == 'None'
+        assert c.timeout == -1
+        # Module type is the command name without the '_' prefix
+        assert c.module_type == 'echo'
         assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()

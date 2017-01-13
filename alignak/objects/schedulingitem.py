@@ -2301,7 +2301,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 'ref': self.uuid,
                 'ref_type': self.my_type,
                 'dependency_check': True,
-                'internal': self.got_business_rule or c_in_progress.command.startswith('_internal')
+                'internal': self.got_business_rule or c_in_progress.command.startswith('_')
             }
             chk = Check(data)
 
@@ -2365,7 +2365,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 'depend_on_me': [ref_check] if ref_check else [],
                 'ref': self.uuid,
                 'ref_type': self.my_type,
-                'internal': self.got_business_rule or command_line.startswith('_internal')
+                'internal': self.got_business_rule or command_line.startswith('_')
             }
             chk = Check(data)
 
@@ -2645,12 +2645,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Set host %s as UP (internal check)", self.get_full_name())
         # Echo is just putting the same state again
         elif check.command == '_echo':
-            state = self.state
+            state = self.state_id
             check.execution_time = 0
             check.output = self.output
             if 'TEST_LOG_ACTIONS' in os.environ:
-                logger.info("Echo the current state (%d) for %s ",
-                            self.state, self.get_full_name())
+                logger.info("Echo the current state (%s - %d) for %s ",
+                            self.state, self.state_id, self.get_full_name())
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state
