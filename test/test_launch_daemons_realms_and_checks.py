@@ -176,7 +176,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
         os.environ['TEST_LOG_ACTIONS'] = 'Yes'
 
-        # Run deamons for 2 minutes
+        # Run daemons for 2 minutes
         self.run_and_check_alignak_daemons(120)
 
         # Expected logs from the daemons
@@ -241,7 +241,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'scheduler': [
                 # Internal host check
                 # "[alignak.objects.schedulingitem] Set host localhost as UP (internal check)",
-                # "[alignak.objects.schedulingitem] Got check result: 0 for 'localhost'",
                 # Check ok
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-all-00/dummy_ok'",
                 # Check warning
@@ -252,6 +251,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-all-00/dummy_unknown'",
                 # Check time
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-all-00/dummy_timeout'",
+                # Echo internal command
+                "[alignak.objects.schedulingitem] Echo the current state (OK - 0) for alignak-all-00/dummy_echo"
             ],
             'scheduler-north': [
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-north-00/dummy_ok'",
@@ -259,6 +260,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_critical'",
                 "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-north-00/dummy_unknown'",
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-north-00/dummy_timeout'",
+                "[alignak.objects.schedulingitem] Echo the current state (OK - 0) for alignak-north-00/dummy_echo"
             ],
             'scheduler-south': [
                 "[alignak.objects.schedulingitem] Got check result: 0 for 'alignak-south-00/dummy_ok'",
@@ -266,6 +268,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_critical'",
                 "[alignak.objects.schedulingitem] Got check result: 3 for 'alignak-south-00/dummy_unknown'",
                 "[alignak.objects.schedulingitem] Got check result: 2 for 'alignak-south-00/dummy_timeout'",
+                "[alignak.objects.schedulingitem] Echo the current state (OK - 0) for alignak-south-00/dummy_echo"
             ]
         }
 
@@ -278,6 +281,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 logs = []
                 for line in lines:
                     # Catches INFO logs
+                    if 'WARNING' in line:
+                        print("line: %s" % line)
+                    # Catches INFO logs
                     if 'INFO' in line:
                         line = line.split('INFO: ')
                         line = line[1]
@@ -286,5 +292,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                         logs.append(line)
 
             for log in expected_logs[name]:
+                print("Last log: %s" % log)
                 assert log in logs
 
