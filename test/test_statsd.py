@@ -28,7 +28,9 @@ import re
 import socket
 import threading
 
-from alignak.stats import Stats, statsmgr
+from alignak.brok import Brok
+
+from alignak.stats import *
 
 from alignak_test import AlignakTest
 
@@ -70,13 +72,6 @@ class FakeStatsdServer(threading.Thread):
     def handle_connection(self, sock):
         data = sock.recv(4096)
         print("Received: %s", data)
-        # a valid nrpe response:
-        # data = b'\x00'*4 + b'\x00'*4 + b'\x00'*2 + 'OK'.encode() + b'\x00'*1022
-        # sock.send(data)
-        # try:
-        #     sock.shutdown(socket.SHUT_RDWR)
-        # except Exception:
-        #     pass
         sock.close()
 
 
@@ -114,8 +109,33 @@ class TestStats(AlignakTest):
 
         # Register stats manager as disabled
         assert not self.statsmgr.register('arbiter-master', 'arbiter',
-                                           statsd_host='localhost', statsd_port=8125,
-                                           statsd_prefix='alignak', statsd_enabled=False)
+                                          statsd_host='localhost', statsd_port=8125,
+                                          statsd_prefix='alignak', statsd_enabled=False)
+        assert self.statsmgr.statsd_enabled is False
+        assert self.statsmgr.broks_enabled is False
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Alignak internal statistics are disabled.'
+        ), 0)
+
+    def test_statsmgr_register_disabled_broks(self):
+        """ Stats manager is registered as disabled, but broks are enabled
+        :return:
+        """
+        self.print_header()
+
+        # Setup a logger...
+        self.setup_logger()
+        self.clear_logs()
+
+        # Register stats manager as disabled
+        assert not self.statsmgr.register('arbiter-master', 'arbiter',
+                                          statsd_host='localhost', statsd_port=8125,
+                                          statsd_prefix='alignak', statsd_enabled=False,
+                                          broks_enabled=True)
+        assert self.statsmgr.statsd_enabled is False
+        assert self.statsmgr.broks_enabled is True
         assert self.statsmgr.statsd_sock is None
         assert self.statsmgr.statsd_addr is None
         self.assert_log_match(re.escape(
@@ -138,6 +158,40 @@ class TestStats(AlignakTest):
         assert self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8125,
                                           statsd_prefix='alignak', statsd_enabled=True)
+        assert self.statsmgr.statsd_enabled is True
+        assert self.statsmgr.broks_enabled is False
+        assert self.statsmgr.statsd_sock is not None
+        assert self.statsmgr.statsd_addr is not None
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
+            'to: localhost:8125, prefix: alignak'
+        ), 0)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
+        ), 1)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] StatsD server contacted'
+        ), 2)
+
+    def test_statsmgr_register_enabled_broks(self):
+        """ Stats manager is registered as enabled and broks are enabled
+        :return:
+        """
+        self.print_header()
+
+        # Setup a logger...
+        self.setup_logger()
+        self.clear_logs()
+
+        # Register stats manager as enabled
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.register('arbiter-master', 'arbiter',
+                                      statsd_host='localhost', statsd_port=8125,
+                                      statsd_prefix='alignak', statsd_enabled=True,
+                                      broks_enabled=True)
+        assert self.statsmgr.statsd_enabled is True
+        assert self.statsmgr.broks_enabled is True
         assert self.statsmgr.statsd_sock is not None
         assert self.statsmgr.statsd_addr is not None
         self.assert_log_match(re.escape(
@@ -209,8 +263,8 @@ class TestStats(AlignakTest):
         # "Connected" to StatsD server - even with a bad port number!
         self.assert_no_log_match('Cannot create StatsD socket')
 
-    def test_statsmgr_incr(self):
-        """ Test sending data
+    def test_statsmgr_timer(self):
+        """ Test sending data for a timer
         :return:
         """
         self.print_header()
@@ -222,32 +276,232 @@ class TestStats(AlignakTest):
         # Register stats manager as enabled
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_host='localhost', statsd_port=8125,
-                               statsd_prefix='alignak', statsd_enabled=True)
+                               statsd_prefix='alignak', statsd_enabled=True,
+                               broks_enabled=True)
+
+        assert self.statsmgr.stats == {}
 
         # Create a metric statistic
-        assert self.statsmgr.stats == {}
-        self.statsmgr.incr('test', 0)
+        brok = self.statsmgr.timer('test', 0)
         assert len(self.statsmgr.stats) == 1
-        # Get min, max, cout and sum
+        # Get min, max, count and sum
         assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:0|ms'
         # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 0, 'uom': 'ms'
+                                 }}
 
         # Increment
-        self.statsmgr.incr('test', 1)
+        brok = self.statsmgr.timer('test', 1)
         assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum
         assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
         # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 1000, 'uom': 'ms'
+                                 }}
 
         # Increment - the function is called 'incr' but it does not increment, it sets the value!
-        self.statsmgr.incr('test', 1)
+        brok = self.statsmgr.timer('test', 12)
         assert len(self.statsmgr.stats) == 1
-        assert self.statsmgr.stats['test'] == (0, 1, 3, 2)
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
         # self.assert_log_match(re.escape(
         #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
         # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 12000, 'uom': 'ms'
+                                 }}
 
+    def test_statsmgr_counter(self):
+        """ Test sending data for a counter
+        :return:
+        """
+        self.print_header()
 
+        # Setup a logger...
+        self.setup_logger()
+        self.clear_logs()
+
+        # Register stats manager as enabled
+        self.statsmgr.register('arbiter-master', 'arbiter',
+                               statsd_host='localhost', statsd_port=8125,
+                               statsd_prefix='alignak', statsd_enabled=True,
+                               broks_enabled=True)
+
+        assert self.statsmgr.stats == {}
+
+        # Create a metric statistic
+        brok = self.statsmgr.counter('test', 0)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count and sum
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:0|ms'
+        # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 0, 'uom': 'c'
+                                 }}
+
+        # Increment
+        brok = self.statsmgr.counter('test', 1)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 1, 'uom': 'c'
+                                 }}
+
+        # Increment - the function is called 'incr' but it does not increment, it sets the value!
+        brok = self.statsmgr.counter('test', 12)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 12, 'uom': 'c'
+                                 }}
+
+    def test_statsmgr_gauge(self):
+        """ Test sending data for a gauge
+        :return:
+        """
+        self.print_header()
+
+        # Setup a logger...
+        self.setup_logger()
+        self.clear_logs()
+
+        # Register stats manager as enabled
+        self.statsmgr.register('arbiter-master', 'arbiter',
+                               statsd_host='localhost', statsd_port=8125,
+                               statsd_prefix='alignak', statsd_enabled=True,
+                               broks_enabled=True)
+
+        assert self.statsmgr.stats == {}
+
+        # Create a metric statistic
+        brok = self.statsmgr.gauge('test', 0)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count and sum
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:0|ms'
+        # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 0, 'uom': 'g'
+                                 }}
+
+        # Increment
+        brok = self.statsmgr.gauge('test', 1)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 1, 'uom': 'g'
+                                 }}
+
+        # Increment - the function is called 'incr' but it does not increment, it sets the value!
+        brok = self.statsmgr.gauge('test', 12)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
+        # self.assert_log_match(re.escape(
+        #     'INFO: [alignak.stats] Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 12, 'uom': 'g'
+                                 }}

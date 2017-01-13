@@ -253,6 +253,18 @@ class Scheduler(object):  # pylint: disable=R0902
         self.triggers.load_objects(self)
         self.escalations = conf.escalations
 
+        # Internal statistics
+        statsmgr.gauge('configuration.hosts', len(self.hosts))
+        statsmgr.gauge('configuration.services', len(self.services))
+        statsmgr.gauge('configuration.hostgroups', len(self.hostgroups))
+        statsmgr.gauge('configuration.servicegroups', len(self.servicegroups))
+        statsmgr.gauge('configuration.contacts', len(self.contacts))
+        statsmgr.gauge('configuration.contactgroups', len(self.contactgroups))
+        statsmgr.gauge('configuration.timeperiods', len(self.timeperiods))
+        statsmgr.gauge('configuration.commands', len(self.commands))
+        statsmgr.gauge('configuration.notificationways', len(self.notificationways))
+        statsmgr.gauge('configuration.escalations', len(self.escalations))
+
         # self.status_file = StatusFile(self)
         #  External status file
         # From Arbiter. Use for Broker to differentiate schedulers
@@ -386,9 +398,11 @@ class Scheduler(object):  # pylint: disable=R0902
         :type cmds: list
         :return: None
         """
+        _t0 = time.time()
         logger.debug("Scheduler '%s' got %d commands", self.instance_name, len(cmds))
         for command in cmds:
             self.run_external_command(command)
+        statsmgr.timer('core.run_external_commands', time.time() - _t0)
 
     def run_external_command(self, command):
         """Run a single external command
@@ -541,6 +555,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return:None
         TODO: find a way to merge this and the version in daemon.py
         """
+        _t0 = time.time()
         for inst in self.sched_daemon.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
             logger.debug("hook_point: %s: %s %s",
@@ -559,6 +574,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
                     self.sched_daemon.modules_manager.set_to_restart(inst)
+        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
     def clean_queues(self):
         """Reduces internal list size to max allowed
@@ -1435,6 +1451,7 @@ class Scheduler(object):  # pylint: disable=R0902
             host = self.hosts.find_by_name(ret_h_name)
             if host is not None:
                 self.restore_retention_data_item(h_dict, host)
+        statsmgr.gauge('retention.hosts', len(ret_hosts))
 
         # Same for services
         ret_services = data['services']
@@ -1445,6 +1462,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             if serv is not None:
                 self.restore_retention_data_item(s_dict, serv)
+        statsmgr.gauge('retention.services', len(ret_services))
 
     def restore_retention_data_item(self, data, item):
         """
@@ -2144,7 +2162,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Ok, now all is initialized, we can make the initial broks
         logger.info("[%s] First scheduling launched", self.instance_name)
+        _t1 = time.time()
         self.schedule()
+        statsmgr.timer('first_scheduling', time.time() - _t1)
         logger.info("[%s] First scheduling done", self.instance_name)
 
         # Now connect to the passive satellites if needed
@@ -2183,6 +2203,9 @@ class Scheduler(object):  # pylint: disable=R0902
             load = min(100, 100.0 - self.load_one_min.get_load() * 100)
             logger.debug("Load: (sleep) %.2f (average: %.2f) -> %d%%",
                          self.sched_daemon.sleep_time, self.load_one_min.get_load(), load)
+            statsmgr.gauge('load.sleep', self.sched_daemon.sleep_time)
+            statsmgr.gauge('load.average', self.load_one_min.get_load())
+            statsmgr.gauge('load.load', load)
 
             self.sched_daemon.sleep_time = 0.0
 
@@ -2200,12 +2223,16 @@ class Scheduler(object):  # pylint: disable=R0902
                         # Call it and save the time spend in it
                         _t0 = time.time()
                         fun()
-                        statsmgr.incr('loop.%s' % name, time.time() - _t0)
-            statsmgr.incr('complete_loop', time.time() - _t1)
+                        statsmgr.timer('loop.%s' % name, time.time() - _t0)
+            statsmgr.timer('loop.whole', time.time() - _t1)
 
             # DBG: push actions to passives?
+            _t1 = time.time()
             self.push_actions_to_passives_satellites()
+            statsmgr.timer('push_actions_to_passives_satellites', time.time() - _t1)
+            _t1 = time.time()
             self.get_actions_from_passives_satellites()
+            statsmgr.timer('get_actions_from_passives_satellites', time.time() - _t1)
 
             # stats
             nb_scheduled = nb_inpoller = nb_zombies = 0
@@ -2221,6 +2248,11 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Checks: total %s, scheduled %s,"
                          "inpoller %s, zombies %s, notifications %s",
                          len(self.checks), nb_scheduled, nb_inpoller, nb_zombies, nb_notifications)
+            statsmgr.gauge('checks.total', len(self.checks))
+            statsmgr.gauge('checks.scheduled', nb_scheduled)
+            statsmgr.gauge('checks.inpoller', nb_inpoller)
+            statsmgr.gauge('checks.zombie', nb_zombies)
+            statsmgr.gauge('actions.notifications', nb_notifications)
 
             now = time.time()
 
@@ -2246,6 +2278,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
             self.hook_point('scheduler_tick')
 
-        # WE must save the retention at the quit BY OURSELVES
+        # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
         self.update_retention_file(True)

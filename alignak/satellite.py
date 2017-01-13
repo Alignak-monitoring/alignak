@@ -227,7 +227,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         _t0 = time.time()
         res = self.do_pynag_con_init(_id)
-        statsmgr.incr('con-init.scheduler', time.time() - _t0)
+        statsmgr.timer('con-init.scheduler', time.time() - _t0)
         return res
 
     def do_pynag_con_init(self, s_id):
@@ -336,7 +336,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         _t0 = time.time()
         self.do_manage_returns()
-        statsmgr.incr('core.manage-returns', time.time() - _t0)
+        statsmgr.timer('core.manage-returns', time.time() - _t0)
 
     def do_manage_returns(self):
         """Manage the checks and then
@@ -653,7 +653,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         _t0 = time.time()
         self.do_get_new_actions()
-        statsmgr.incr('core.get-new-actions', time.time() - _t0)
+        statsmgr.timer('core.get-new-actions', time.time() - _t0)
 
     def do_get_new_actions(self):
         """Get new actions from schedulers
@@ -806,7 +806,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                                  sched_id, sched['name'], mod,
                                  index, queue.qsize(), self.get_returns_queue_len())
                     # also update the stats module
-                    statsmgr.incr('core.worker-%s.queue-size' % mod, queue.qsize())
+                    statsmgr.gauge('core.worker-%s.queue-size' % mod, queue.qsize())
 
         # Before return or get new actions, see how we manage
         # old ones: are they still in queue (s)? If True, we
@@ -827,14 +827,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             self.wait_ratio.update_load(self.polling_interval)
         wait_ratio = self.wait_ratio.get_load()
         logger.debug("Wait ratio: %f", wait_ratio)
-        statsmgr.incr('core.wait-ratio', wait_ratio)
+        statsmgr.timer('core.wait-ratio', wait_ratio)
 
         # We can wait more than 1s if needed,
         # no more than 5s, but no less than 1
         timeout = self.timeout * wait_ratio
         timeout = max(self.polling_interval, timeout)
         self.timeout = min(5 * self.polling_interval, timeout)
-        statsmgr.incr('core.timeout', wait_ratio)
+        statsmgr.timer('core.wait-arbiter', self.timeout)
 
         # Maybe we do not have enough workers, we check for it
         # and launch the new ones if needed

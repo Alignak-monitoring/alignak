@@ -229,7 +229,7 @@ class Broker(BaseSatellite):
         """
         _t0 = time.time()
         res = self.do_pynag_con_init(_id, i_type)
-        statsmgr.incr('con-init.%s' % i_type, time.time() - _t0)
+        statsmgr.timer('con-init.%s' % i_type, time.time() - _t0)
         return res
 
     def do_pynag_con_init(self, s_id, i_type='scheduler'):
@@ -325,7 +325,9 @@ class Broker(BaseSatellite):
         # Call all modules if they catch the call
         for mod in self.modules_manager.get_internal_instances():
             try:
+                _t0 = time.time()
                 mod.manage_brok(brok)
+                statsmgr.timer('core.manage-broks.%s' % mod.get_name(), time.time() - _t0)
             except Exception as exp:  # pylint: disable=broad-except
                 logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
                                mod.get_name(), str(exp))
@@ -779,11 +781,16 @@ class Broker(BaseSatellite):
         if self.new_conf:
             self.setup_new_conf()
 
-        # Maybe the last loop we raised some broks internally
+        # Maybe the last loop we dir raised some broks internally
+        _t0 = time.time()
         # we should integrate them in broks
         self.interger_internal_broks()
+        statsmgr.timer('get-new-broks.broker', time.time() - _t0)
+
+        _t0 = time.time()
         # Also reap broks sent from the arbiters
         self.interger_arbiter_broks()
+        statsmgr.timer('get-new-broks.arbiter', time.time() - _t0)
 
         # Main job, go get broks in our distant daemons
         types = ['scheduler', 'poller', 'reactionner', 'receiver']
@@ -791,7 +798,7 @@ class Broker(BaseSatellite):
             _t0 = time.time()
             # And from schedulers
             self.get_new_broks(i_type=_type)
-            statsmgr.incr('get-new-broks.%s' % _type, time.time() - _t0)
+            statsmgr.timer('get-new-broks.%s' % _type, time.time() - _t0)
 
         # Sort the brok list by id
         self.broks.sort(sort_by_ids)
@@ -809,7 +816,9 @@ class Broker(BaseSatellite):
         # instead of killing ourselves :)
         for mod in ext_modules:
             try:
+                t000 = time.time()
                 mod.to_q.put(to_send)
+                statsmgr.timer('core.put-to-external-queue.%s' % mod.get_name(), time.time() - t000)
             except Exception as exp:  # pylint: disable=broad-except
                 # first we must find the modules
                 logger.warning("The mod %s queue raise an exception: %s, "
@@ -821,7 +830,7 @@ class Broker(BaseSatellite):
         # No more need to send them
         for brok in to_send:
             brok.need_send_to_ext = False
-        statsmgr.incr('core.put-to-external-queue', time.time() - t00)
+        statsmgr.timer('core.put-to-external-queue', time.time() - t00)
         logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t00)
 
         # We must had new broks at the end of the list, so we reverse the list
@@ -842,7 +851,7 @@ class Broker(BaseSatellite):
             brok.prepare()
             _t0 = time.time()
             self.manage_brok(brok)
-            statsmgr.incr('core.manage-brok', time.time() - _t0)
+            statsmgr.timer('core.manage-broks', time.time() - _t0)
 
             nb_broks = len(self.broks)
 
