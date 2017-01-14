@@ -1275,7 +1275,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         self.hook_point('load_retention')
 
-    def get_retention_data(self):  # pylint: disable=R0912
+    def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
         """Get all host and service data in order to store it after
         The module is in charge of that
 
@@ -1332,8 +1332,13 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the comments
             if 'comments' in h_dict and h_dict['comments'] != []:
                 comments = []
-                for comment_uuid in h_dict['comments']:
-                    comments.append(self.comments[comment_uuid].serialize())
+                try:
+                    for comment_uuid in h_dict['comments']:
+                        comments.append(self.comments[comment_uuid].serialize())
+                except KeyError as exp:
+                    logger.error("Saving host %s retention, "
+                                 "missing comment in the global comments", host.host_name)
+                    logger.exception("Exception: %s", exp)
                 h_dict['comments'] = comments
             # manage special properties: the notified_contacts
             if 'notified_contacts' in h_dict and h_dict['notified_contacts'] != []:
@@ -1770,7 +1775,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # which were marked for deletion (mostly by dt.exit())
         for downtime in self.downtimes.values():
             if downtime.can_be_deleted is True:
-                logger.error("Downtime to delete: %s", downtime.__dict__)
+                logger.info("Downtime to delete: %s", downtime.__dict__)
                 ref = self.find_item_by_id(downtime.ref)
                 self.del_downtime(downtime.uuid)
                 broks.append(ref.get_update_status_brok())
