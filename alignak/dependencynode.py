@@ -148,10 +148,14 @@ class DependencyNode(object):
         # hard state
         if self.operand == 'host':
             host = hosts[self.sons[0]]
-            return self.get_host_node_state(host.last_hard_state_id)
+            return self.get_host_node_state(host.last_hard_state_id,
+                                            host.problem_has_been_acknowledged,
+                                            host.in_scheduled_downtime)
         elif self.operand == 'service':
             service = services[self.sons[0]]
-            return self.get_service_node_state(service.last_hard_state_id)
+            return self.get_service_node_state(service.last_hard_state_id,
+                                               service.problem_has_been_acknowledged,
+                                               service.in_scheduled_downtime)
         elif self.operand == '|':
             return self.get_complex_or_node_state(hosts, services)
         elif self.operand == '&':
@@ -162,7 +166,7 @@ class DependencyNode(object):
         else:
             return 4  # We have an unknown node. Code is not reachable because we validate operands
 
-    def get_host_node_state(self, state):
+    def get_host_node_state(self, state, problem_has_been_acknowledged, in_scheduled_downtime):
         """Get host node state, simplest case ::
 
         * Handle not value (revert) for host and consider 1 as 2
@@ -173,12 +177,17 @@ class DependencyNode(object):
         # Make DOWN look as CRITICAL (2 instead of 1)
         if state == 1:
             state = 2
+
+        # If our node is acknowledged or in downtime, state is ok/up
+        if problem_has_been_acknowledged or in_scheduled_downtime:
+            state = 0
+
         # Maybe we are a NOT node, so manage this
         if self.not_value:
             return 0 if state else 2  # Keep the logic of return Down on NOT rules
         return state
 
-    def get_service_node_state(self, state):
+    def get_service_node_state(self, state, problem_has_been_acknowledged, in_scheduled_downtime):
         """Get service node state, simplest case ::
 
         * Handle not value (revert) for service
@@ -186,6 +195,10 @@ class DependencyNode(object):
         :return: 0, 1 or 2
         :rtype: int
         """
+        # If our node is acknowledged or in downtime, state is ok/up
+        if problem_has_been_acknowledged or in_scheduled_downtime:
+            state = 0
+
         # Maybe we are a NOT node, so manage this
         if self.not_value:
             # Critical -> OK

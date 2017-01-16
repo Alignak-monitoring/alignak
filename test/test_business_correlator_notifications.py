@@ -87,7 +87,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]])
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
-        assert 2 == svc_cor.business_rule.get_state(self._sched.hosts,
+        assert 0 == svc_cor.business_rule.get_state(self._sched.hosts,
                                                             self._sched.services)
         timeperiod = self._sched.timeperiods[svc_cor.notification_period]
         host = self._sched.hosts[svc_cor.host]
