@@ -180,6 +180,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -283,7 +284,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db1.last_hard_state_id
 
         # -----
-        # OK or CRITICAL -> OK
+        # CRITICAL or OK -> OK
         # -----
         # The rule must still be a 0 (or inside)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
@@ -304,7 +305,7 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
-        # And If we set one WARNING?
+        # And If we set db2 to WARNING?
         self.scheduler_loop(2, [
             [svc_db2, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -313,11 +314,42 @@ class TestBusinessCorrelator(AlignakTest):
         assert 1 == svc_db2.last_hard_state_id
 
         # -----
-        # WARNING or CRITICAL -> WARNING
+        # CRITICAL or WARNING -> WARNING
         # -----
         # Must be WARNING (better no 0 value)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 1 == state
+
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # CRITICAL or ACK(WARNING) -> OK
+        # -----
+        # Must be OK (ACK(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # CRITICAL or DOWNTIME(WARNING) -> OK
+        # -----
+        # Must be OK (DOWNTIME(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
     def test_simple_or_business_correlator_with_schedule(self):
         """ BR - try a simple services OR (db1 OR db2) with internal checks
@@ -327,6 +359,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -485,7 +518,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 'HARD' == svc_cor.state_type
         assert 2 == svc_cor.last_hard_state_id
 
-        # And If we set one WARNING?
+        # And If we set db2 to WARNING?
         self.scheduler_loop(2, [
             [svc_db2, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -510,6 +543,45 @@ class TestBusinessCorrelator(AlignakTest):
         # and db1 too
         assert svc_cor.uuid in svc_db1.impacts
 
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+       # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+       # And in a HARD
+       # Launch internal check"
+        self.launch_internal_check(svc_cor)
+        assert 'OK' == svc_cor.state
+        assert'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # db2 WARNING, db1 CRITICAL, we unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # And in a HARD
+        # Launch internal check
+        self.launch_internal_check(svc_cor)
+        assert 'OK' == svc_cor.state
+        assert 'HARD'== svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
     def test_simple_or_not_business_correlator(self):
         """ BR - try a simple services OR (db1 OR NOT db2)
 
@@ -518,6 +590,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -643,7 +716,7 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 0 == state
 
-        # And If we set one WARNING?
+        # And If we set db2 WARNING?
         self.scheduler_loop(2, [
             [svc_db2, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -652,11 +725,42 @@ class TestBusinessCorrelator(AlignakTest):
         assert 1 == svc_db2.last_hard_state_id
 
         # -----
-        # WARNING or NOT CRITICAL -> WARNING
+        # CRITICAL or NOT WARNING -> WARNING
         # -----
         # Must be WARNING (better no 0 value)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 1 == state
+
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # CRITICAL or NOT ACK(WARNING) -> CRITICAL
+        # -----
+        # Must be WARNING (ACK(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # CRITICAL or NOT DOWNTIME(WARNING) -> CRITICAL
+        # -----
+        # Must be CRITICAL (business_rule_downtime_as_ok -> DOWNTIME(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
     def test_simple_and_business_correlator(self):
         """ BR - try a simple services AND (db1 AND db2)
@@ -666,6 +770,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -770,7 +875,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db1.last_hard_state_id
 
         # -----
-        # OK and CRITICAL -> CRITICAL
+        # CRITICAL and OK -> CRITICAL
         # -----
         # The rule must go CRITICAL
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
@@ -785,13 +890,13 @@ class TestBusinessCorrelator(AlignakTest):
         assert 1 == svc_db2.last_hard_state_id
 
         # -----
-        # WARNING and CRITICAL -> CRITICAL
+        # CRITICAL and WARNING -> CRITICAL
         # -----
         # The state of the rule remains 2
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
-        # And If we set one WARNING too?
+        # And If we set db1 to WARNING too?
         self.scheduler_loop(2, [
             [svc_db1, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -806,12 +911,51 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 1 == state
 
+         # We set db2 CRITICAL then we acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # WARNING and ACK(CRITICAL) -> WARNING
+        # -----
+        # Must be WARNING (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # WARNING and DOWNTIME(CRITICAL) -> WARNING
+        # -----
+        # Must be OK (DOWNTIME(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
     def test_simple_and_not_business_correlator(self):
         """ BR - try a simple services AND NOT (db1 AND NOT db2)
 
         bp_rule!test_host_0,db1&!test_host_0,db2
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -933,7 +1077,7 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
-        # And If we set one WARNING too?
+        # And If we set db1 to WARNING too?
         self.scheduler_loop(2, [[svc_db1, 1, 'WARNING | value1=1 value2=2']])
         assert 'WARNING' == svc_db1.state
         assert 'HARD' == svc_db1.state_type
@@ -959,6 +1103,44 @@ class TestBusinessCorrelator(AlignakTest):
         # OK and not OK -> CRITICAL
         # -----
         # Must be CRITICAL (ok and not ok IS no OK :) )
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We set db2 CRITICAL then we acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # OK and not ACK(CRITICAL) -> CRITICAL
+        # -----
+        # Must be CRITICAL (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # OK and not DOWNTIME(CRITICAL) -> CRITICAL
+        # -----
+        # Must be CRITICAL (DOWNTIME(CRITICAL) is OK)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
@@ -998,6 +1180,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -1128,7 +1311,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db1.last_hard_state_id
 
         # -----
-        # OK 1of CRITICAL -> OK
+        # CRITCAL 1of OK -> OK
         # -----
         # The rule still be OK
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
@@ -1149,18 +1332,49 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
-        # And If we set one WARNING now?
+        # And If we set db1 WARNING now?
         self.scheduler_loop(2, [[svc_db1, 1, 'WARNING | value1=1 value2=2']])
         assert 'WARNING' == svc_db1.state
         assert 'HARD' == svc_db1.state_type
         assert 1 == svc_db1.last_hard_state_id
 
         # -----
-        # CRITICAL 1of WARNING -> WARNING
+        # WARNING 1of CRITICAL -> WARNING
         # -----
         # Must be WARNING (worse no 0 value for both, like for AND rule)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 1 == state
+
+        # We acknowledge bd2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # WARNING 1of ACK(CRITICAL) -> OK
+        # -----
+        # Must be OK (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # WARNING 1of DOWNTIME(CRITICAL) -> OK
+        # -----
+        # Must be OK (DOWNTIME(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
     def test_simple_1of_business_correlator_with_hosts(self):
         """ BR - simple 1of: test_router_0 OR/AND test_host_0"""
@@ -1272,7 +1486,6 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
-
         now = time.time()
         
         # Get the hosts
@@ -1466,7 +1679,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 'HARD' == svc_lvs2.state_type
 
         # -----
-        # OK and OK and OK -> OK
+        # (OK or OK) and (OK or OK) and (OK or OK) -> OK
         # -----
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 0 == state
@@ -1488,7 +1701,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db1.last_hard_state_id
 
         # -----
-        # OK and OK and OK -> OK
+        # (CRITICAL or OK) and (OK or OK) and (OK or OK) -> OK
         # 1st OK because OK or CRITICAL -> OK
         # -----
         # The rule must still be a 0 (or inside)
@@ -1513,7 +1726,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db2.last_hard_state_id
 
         # -----
-        # CRITICAL and OK and OK -> CRITICAL
+        # (CRITICAL or CRITICAL) and (OK or OK) and (OK or OK) -> OK
         # 1st CRITICAL because CRITICAL or CRITICAL -> CRITICAL
         # -----
         # And now the state of the rule must be 2
@@ -1538,7 +1751,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 'HARD' == svc_cor.state_type
         assert 2 == svc_cor.last_hard_state_id
 
-        # And If we set one WARNING?
+        # And If we set db2 to WARNING?
         self.scheduler_loop(2, [
             [svc_db2, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -1547,8 +1760,8 @@ class TestBusinessCorrelator(AlignakTest):
         assert 1 == svc_db2.last_hard_state_id
 
         # -----
-        # WARNING and OK and OK -> WARNING
-        # 1st WARNING because WARNING or CRITICAL -> WARNING
+        # (CRITICAL or WARNING) and (OK or OK) and (OK or OK) -> OK
+        # 1st WARNING because CRITICAL or WARNING -> WARNING
         # -----
         # Must be WARNING (better no 0 value)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
@@ -1598,13 +1811,53 @@ class TestBusinessCorrelator(AlignakTest):
         self.launch_internal_check(svc_cor)
 
         # -----
-        # OK and OK and OK -> OK
-        # All OK because OK or CRITICAL -> OK
+        # (CRITICAL or OK) and (OK or OK) and (OK or OK) -> OK
+        # All OK because CRITICAL or OK -> OK
         # -----
         # What is the svc_cor state now?
         assert 'OK' == svc_cor.state
         assert 'HARD' == svc_cor.state_type
         assert 0 == svc_cor.last_hard_state_id
+
+        # We set bd 2 to CRITICAL and acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # (CRITICAL or ACK(CRITICAL)) and (OK or OK) and (OK or OK) -> OK
+        # All OK because CRITICAL or ACK(CRITICAL) -> OK
+        # -----
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # (CRITICAL or DOWNTIME(CRITICAL)) and (OK or OK) and (OK or OK) -> OK
+        #  All OK because CRITICAL or DOWNTIME(CRITICAL) -> OK
+        # -----
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
     def test_complex_ABCof_business_correlator(self):
         """ BR - complex -bp_rule!5,1,1 of: test_host_0,A|test_host_0,B|test_host_0,C|
@@ -1623,6 +1876,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now =time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -1792,7 +2046,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
         ###* W C O O O
-        # 4 of: -> Crtitical (not 4 ok, so we take the worse state, the critical)
+        # 4 of: -> Critical (not 4 ok, so we take the worse state, the critical)
         # 4,1,1 -> Critical (2 states raise the waring, but on raise critical, so worse state is critical)
         self.scheduler_loop(2, [[A, 1, 'WARNING'], [B, 2, 'Crit']])
         # 4 of: -> 4,5,5
@@ -1837,6 +2091,65 @@ class TestBusinessCorrelator(AlignakTest):
         bp_rule.is_of_mul = True
         assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
+        ##* W ACK(C) C O O
+        # * 3 of: OK
+        # * 4,1,1 -> Critical (same as before)
+        # * 4,1,2 -> Warning
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;B;2;1;1;lausser;blablub" % (now)
+        self._sched.run_external_command(cmd)
+
+        if with_pct == False:
+            bp_rule.of_values = ('3', '5', '5')
+        else:
+            bp_rule.of_values = ('60%', '100%', '100%')
+        bp_rule.is_of_mul = False
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,1
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '1')
+        else:
+            bp_rule.of_values = ('80%', '20%', '20%')
+        bp_rule.is_of_mul = True
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,3
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '2')
+        else:
+            bp_rule.of_values = ('80%', '20%', '40%')
+        bp_rule.is_of_mul = True
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+
+        ##* W DOWNTIME(C) C O O
+        # * 3 of: OK
+        # * 4,1,1 -> Critical (same as before)
+        # * 4,1,2 -> Warning
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;B" % now
+        self._sched.run_external_command(cmd)
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;B;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        if with_pct == False:
+            bp_rule.of_values = ('3', '5', '5')
+        else:
+            bp_rule.of_values = ('60%', '100%', '100%')
+        bp_rule.is_of_mul = False
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,1
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '1')
+        else:
+            bp_rule.of_values = ('80%', '20%', '20%')
+        bp_rule.is_of_mul = True
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,3
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '2')
+        else:
+            bp_rule.of_values = ('80%', '20%', '40%')
+        bp_rule.is_of_mul = True
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+
     # We will try a simple db1 OR db2
     def test_multi_layers(self):
         """ BR - multi-levels rule
@@ -1846,6 +2159,7 @@ class TestBusinessCorrelator(AlignakTest):
         :return:
         """
         self.print_header()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
@@ -2045,7 +2359,7 @@ class TestBusinessCorrelator(AlignakTest):
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 2 == state
 
-        # And If we set one WARNING?
+        # And If we set db2 to WARNING?
         self.scheduler_loop(2, [
             [svc_db2, 1, 'WARNING | value1=1 value2=2']
         ])
@@ -2056,6 +2370,35 @@ class TestBusinessCorrelator(AlignakTest):
         # Must be WARNING (better no 0 value)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 1 == state
+
+        # Acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % (now)
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+
+        assert True == svc_db2.in_scheduled_downtime
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
+
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        self.assertEqual(0, state)
 
         # We should got now svc_db2 and svc_db1 as root problems
         assert svc_db1.uuid in svc_cor.source_problems
@@ -2132,5 +2475,35 @@ class TestBusinessCorrelator(AlignakTest):
         assert 1 == B.last_hard_state_id
 
         # And now the state of the rule must be 0 again! (strange rule isn't it?)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We set B as UP and acknowledge A
+        self.scheduler_loop(3, [[B, 0, 'UP']])
+        assert 'UP' == B.state
+        assert 'HARD' == B.state_type
+        assert 0 == B.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_HOST_PROBLEM;test_darthelmet_A;1;1;0;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert 'DOWN' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
+
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime A
+        duration = 300
+        cmd = "[%lu] REMOVE_HOST_ACKNOWLEDGEMENT;test_darthelmet_A" % now
+        self._sched.run_external_command(cmd)
+
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_darthelmet_A;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[B, None, None]])
+        assert 'DOWN' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
+
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         assert 0 == state
