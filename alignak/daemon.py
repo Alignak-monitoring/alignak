@@ -1169,7 +1169,7 @@ class Daemon(object):
                                    'and set it to restart later', inst.get_name(), str(exp))
                     logger.exception('Exception %s', exp)
                     self.modules_manager.set_to_restart(inst)
-        statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
+        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,

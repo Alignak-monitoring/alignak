@@ -482,7 +482,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
                 continue
-            statsmgr.incr('hook.get-objects', time.time() - _t0)
+            statsmgr.timer('core.hook.get_objects', time.time() - _t0)
             types_creations = self.conf.types_creations
             for type_c in types_creations:
                 (_, _, prop, dummy) = types_creations[type_c]
@@ -763,21 +763,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Now the dispatcher job
             _t0 = time.time()
             self.dispatcher.check_alive()
-            statsmgr.incr('core.check-alive', time.time() - _t0)
+            statsmgr.timer('core.check-alive', time.time() - _t0)
 
             _t0 = time.time()
             self.dispatcher.check_dispatch()
-            statsmgr.incr('core.check-dispatch', time.time() - _t0)
+            statsmgr.timer('core.check-dispatch', time.time() - _t0)
 
             # REF: doc/alignak-conf-dispatching.png (3)
             _t0 = time.time()
             self.dispatcher.prepare_dispatch()
             self.dispatcher.dispatch()
-            statsmgr.incr('core.dispatch', time.time() - _t0)
+            statsmgr.timer('core.dispatch', time.time() - _t0)
 
             _t0 = time.time()
             self.dispatcher.check_bad_dispatch()
-            statsmgr.incr('core.check-bad-dispatch', time.time() - _t0)
+            statsmgr.timer('core.check-bad-dispatch', time.time() - _t0)
 
             # Now get things from our module instances
             self.get_objects_from_from_queues()
@@ -798,7 +798,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             _t0 = time.time()
             self.push_external_commands_to_schedulers()
-            statsmgr.incr('core.push-external-commands', time.time() - _t0)
+            statsmgr.timer('core.push-external-commands', time.time() - _t0)
 
             # It's sent, do not keep them
             # TODO: check if really sent. Queue by scheduler?

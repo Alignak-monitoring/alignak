@@ -324,6 +324,7 @@ class Receiver(Satellite):
         commands_to_process = self.unprocessed_external_commands
         self.unprocessed_external_commands = []
         logger.debug("Commands: %s", commands_to_process)
+        statsmgr.gauge('external-commands.pushed', len(self.unprocessed_external_commands))
 
         # Now get all external commands and put them into the
         # good schedulers
@@ -363,10 +364,10 @@ class Receiver(Satellite):
                     logger.error("A satellite raised an unknown exception: %s (%s)", exp, type(exp))
                     raise
 
-            # Wether we sent the commands or not, clean the scheduler list
+            # Whether we sent the commands or not, clean the scheduler list
             self.schedulers[sched_id]['external_commands'] = []
 
-            # If we didn't send them, add the commands to the arbiter list
+            # If we didn't sent them, add the commands to the arbiter list
             if not sent:
                 for extcmd in extcmds:
                     self.external_commands.append(extcmd)
@@ -389,9 +390,13 @@ class Receiver(Satellite):
 
         # Maybe external modules raised 'objects'
         # we should get them
+        _t0 = time.time()
         self.get_objects_from_from_queues()
+        statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
 
+        _t0 = time.time()
         self.push_external_commands_to_schedulers()
+        statsmgr.timer('core.push-external-commands', time.time() - _t0)
 
         # Maybe we do not have something to do, so we wait a little
         if len(self.broks) == 0:
