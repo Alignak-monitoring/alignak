@@ -126,6 +126,7 @@ for raw_file in $(awk '{print $2}' $1); do
     if [[ "$exp_chmod" == "" ]]; then
         echo "Can't find file in conf after sed - RAWFILE:$raw_file, FILE:$file"
     fi
+    echo "Found the file: $file"
 
     cur_chmod=$(stat -c "%a" $file 2>> /tmp/stat.failure)
     if [[ $? -ne 0 ]];then
@@ -197,7 +198,7 @@ for pyenv in "root" "virtualenv"; do
         echo "Installing alignak..."
         $SUDO python setup.py $install_type 2>&1 >/dev/null
 
-        echo "Running test..."
+        echo "Running test (${install_type}_${pyenv}${SUFFIX_TESTFILE})..."
         test_setup "test/virtualenv_install_files/${install_type}_${pyenv}${SUFFIX_TESTFILE}"
 
         if [[ $? -ne 0 ]];then

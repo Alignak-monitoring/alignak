@@ -6,6 +6,7 @@
 755 /usr/local/bin/alignak-scheduler
 755 /usr/local/etc/alignak
 644 /usr/local/etc/alignak/alignak.cfg
+644 /usr/local/etc/alignak/alignak.ini
 755 /usr/local/etc/alignak/certs
 644 /usr/local/etc/alignak/certs/README
 755 /usr/local/etc/alignak/daemons
@@ -98,14 +99,6 @@
 644 /usr/local/etc/alignak/arbiter/resource.d/paths.cfg
 755 /usr/local/etc/alignak/arbiter/modules
 644 /usr/local/etc/alignak/arbiter/modules/readme.cfg
-644 /usr/local/etc/default/alignak
-755 /usr/local/etc/init.d/alignak
-755 /usr/local/etc/init.d/alignak-arbiter
-755 /usr/local/etc/init.d/alignak-broker
-755 /usr/local/etc/init.d/alignak-poller
-755 /usr/local/etc/init.d/alignak-reactionner
-755 /usr/local/etc/init.d/alignak-receiver
-755 /usr/local/etc/init.d/alignak-scheduler
 755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak
 755 /usr/local/lib/PYTHONVERSION/dist-packages/alignak-ALIGNAKVERSION.egg-info
 644 /usr/local/lib/PYTHONVERSION/dist-packages/alignak/__init__.py
