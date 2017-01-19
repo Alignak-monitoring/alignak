@@ -272,6 +272,8 @@ class ActionBase(AlignakObject):
         if self.log_actions:
             logger.info("Check result for '%s': %d, %s",
                         self.command, self.exit_status, self.output)
+            logger.info("Performance data for '%s': %s",
+                        self.command, self.perf_data)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
