@@ -187,15 +187,14 @@ class Downtime(AlignakObject):
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects to get item ref
         :type services: alignak.objects.service.Services
-        :return: [], always
-        :rtype: list
-        TODO: res is useless
+        :return: broks
+        :rtype: list of broks
         """
         if self.ref in hosts:
             item = hosts[self.ref]
         else:
             item = services[self.ref]
-        res = []
+        broks = []
         self.is_in_effect = True
         if self.fixed is False:
             now = time.time()
@@ -204,12 +203,16 @@ class Downtime(AlignakObject):
             item.raise_enter_downtime_log_entry()
             notif_period = timeperiods[item.notification_period]
             item.create_notifications('DOWNTIMESTART', notif_period, hosts, services)
+            if self.ref in hosts:
+                broks.append(self.get_raise_brok(item.get_name()))
+            else:
+                broks.append(self.get_raise_brok(item.host_name, item.get_name()))
         item.scheduled_downtime_depth += 1
         item.in_scheduled_downtime = True
         for downtime_id in self.activate_me:
             downtime = downtimes[downtime_id]
-            res.extend(downtime.enter(timeperiods, hosts, services, downtimes))
-        return res
+            broks.extend(downtime.enter(timeperiods, hosts, services, downtimes))
+        return broks
 
     def exit(self, timeperiods, hosts, services, comments):
         """Remove ref in scheduled downtime and raise downtime log entry (exit)
@@ -222,13 +225,12 @@ class Downtime(AlignakObject):
         :type comments: dict
         :return: [], always | None
         :rtype: list
-        TODO: res is useless
         """
         if self.ref in hosts:
             item = hosts[self.ref]
         else:
             item = services[self.ref]
-        res = []
+        broks = []
         if self.is_in_effect is True:
             # This was a fixed or a flexible+triggered downtime
             self.is_in_effect = False
@@ -238,6 +240,10 @@ class Downtime(AlignakObject):
                 notif_period = timeperiods[item.notification_period]
                 item.create_notifications('DOWNTIMEEND', notif_period, hosts, services)
                 item.in_scheduled_downtime = False
+                if self.ref in hosts:
+                    broks.append(self.get_expire_brok(item.get_name()))
+                else:
+                    broks.append(self.get_expire_brok(item.host_name, item.get_name()))
         else:
             # This was probably a flexible downtime which was not triggered
             # In this case it silently disappears
@@ -249,7 +255,7 @@ class Downtime(AlignakObject):
         # So we should set a flag here which signals consume_result
         # to send a notification
         item.in_scheduled_downtime_during_last_check = True
-        return res
+        return broks
 
     def cancel(self, timeperiods, hosts, services, comments=None):
         """Remove ref in scheduled downtime and raise downtime log entry (cancel)
@@ -262,18 +268,21 @@ class Downtime(AlignakObject):
         :type comments: dict
         :return: [], always
         :rtype: list
-        TODO: res is useless
         """
         if self.ref in hosts:
             item = hosts[self.ref]
         else:
             item = services[self.ref]
-        res = []
+        broks = []
         self.is_in_effect = False
         item.scheduled_downtime_depth -= 1
         if item.scheduled_downtime_depth == 0:
             item.raise_cancel_downtime_log_entry()
             item.in_scheduled_downtime = False
+            if self.ref in hosts:
+                broks.append(self.get_expire_brok(item.get_name()))
+            else:
+                broks.append(self.get_expire_brok(item.host_name, item.get_name()))
         if comments:
             self.del_automatic_comment(comments)
         self.can_be_deleted = True
@@ -282,8 +291,8 @@ class Downtime(AlignakObject):
         # res.extend(self.ref.create_notifications('DOWNTIMECANCELLED'))
         # Also cancel other downtimes triggered by me
         for downtime in self.activate_me:
-            res.extend(downtime.cancel(timeperiods, hosts, services))
-        return res
+            broks.extend(downtime.cancel(timeperiods, hosts, services))
+        return broks
 
     def add_automatic_comment(self, ref):
         """Add comment on ref for downtime
@@ -354,15 +363,34 @@ class Downtime(AlignakObject):
                 if brok_type in entry['fill_brok']:
                     data[prop] = getattr(self, prop)
 
-    def get_initial_status_brok(self):
-        """Get a initial status brok
+    def get_raise_brok(self, host_name, service_name=''):
+        """Get a start downtime brok
 
+        :param comment_type: 1 = host, 2 = service
+        :param host_name:
+        :param service_name:
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
-        TODO: Duplicate from Notification.fill_data_brok_from
         """
-        data = {'uuid': self.uuid}
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
 
-        self.fill_data_brok_from(data, 'full_status')
         brok = Brok({'type': 'downtime_raise', 'data': data})
+        return brok
+
+    def get_expire_brok(self, host_name, service_name=''):
+        """Get an expire downtime brok
+
+        :type item: item
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
+
+        brok = Brok({'type': 'downtime_expire', 'data': data})
         return brok

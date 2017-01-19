@@ -1,7 +1,7 @@
 # CherryPy >= 5.1.0 and PyOpenssl == 0.14 (16 seems broken) are required for proper HTTPS setup
 # They are not added as hard dependencie here so that packaging works fine
 # CherryPy is not packaged anymore since v3.5XX so we let it as is.
-CherryPy
+CherryPy<9.0.0
 requests>=2.7.0
 importlib
 termcolor==1.1.0

@@ -50,6 +50,7 @@ implements acknowledgment for notification. Basically used for parsing.
 
 """
 
+from alignak.brok import Brok
 from alignak.alignakobject import AlignakObject
 
 
@@ -96,3 +97,35 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
                 'end_time': self.end_time, 'author': self.author, 'comment': self.comment,
                 'persistent': self.persistent
                 }
+
+    def get_raise_brok(self, host_name, service_name=''):
+        """Get a start acknowledge brok
+
+        :param comment_type: 1 = host, 2 = service
+        :param host_name:
+        :param service_name:
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
+
+        brok = Brok({'type': 'acknowledge_raise', 'data': data})
+        return brok
+
+    def get_expire_brok(self, host_name, service_name=''):
+        """Get an expire acknowledge brok
+
+        :type item: item
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
+
+        brok = Brok({'type': 'acknowledge_expire', 'data': data})
+        return brok

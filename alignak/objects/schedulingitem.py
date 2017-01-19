@@ -1465,9 +1465,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     downtime.end_time >= self.last_chk and \
                     self.state_id != 0 and downtime.trigger_id in ['', '0']:
                 # returns downtimestart notifications
-                notif = downtime.enter(timeperiods, hosts, services, downtimes)
-                if notif is not None:
-                    self.actions.append(notif)
+                self.broks.extend(downtime.enter(timeperiods, hosts, services, downtimes))
                 status_updated = True
         if status_updated is True:
             self.broks.append(self.get_update_status_brok())
@@ -2718,8 +2716,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
+                self.broks.append(self.acknowledgement.get_raise_brok(self.get_name()))
             else:
                 comment_type = 2
+                self.broks.append(self.acknowledgement.get_raise_brok(self.host_name,
+                                                                      self.get_name()))
             data = {
                 'persistent': persistent, 'author': author, 'comment': comment,
                 'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
@@ -2758,6 +2759,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                          self.get_name(),
                          self.get_full_name())
             self.problem_has_been_acknowledged = False
+            if self.my_type == 'host':
+                self.broks.append(self.acknowledgement.get_expire_brok(self.get_name()))
+            else:
+                self.broks.append(self.acknowledgement.get_expire_brok(self.host_name,
+                                                                       self.get_name()))
+
             # Should not be deleted, a None is Good
             self.acknowledgement = None
             # del self.acknowledgement
