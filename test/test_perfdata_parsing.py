@@ -183,6 +183,32 @@ class TestPerfdataParsing(AlignakTest):
         assert 0 == metric.min
         assert 100 == metric.max
 
+        # Metrics name can contain special characters
+        perf_data_string = "'C: used'=13.06452GB;22.28832;25.2601;0;29.71777 " \
+                           "'C: used %'=44%;75;85;0;100"
+        perf_data = PerfDatas(perf_data_string)
+        # Get a metrics dictionary
+        assert isinstance(perf_data.metrics, dict)
+        assert 2 == len(perf_data)
+
+        metric = perf_data['C: used']
+        assert 'C: used' == metric.name
+        assert 13.06452 == metric.value
+        assert 'GB' == metric.uom
+        assert 22.28832 == metric.warning
+        assert 25.2601 == metric.critical
+        assert 0 is metric.min
+        assert 29.71777 == metric.max
+
+        metric = perf_data['C: used %']
+        assert 'C: used %' == metric.name
+        assert 44 == metric.value
+        assert '%' == metric.uom
+        assert 75 == metric.warning
+        assert 85 == metric.critical
+        assert 0 is metric.min
+        assert 100 == metric.max
+
     def test_perfdata_floating_value(self):
         """ Create a perfdata with complex floating value
         """
