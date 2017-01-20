@@ -1768,13 +1768,17 @@ class ExternalCommandManager:
         :type downtime_id: int
         :return: None
         """
+        broks = []
         if downtime_id in self.daemon.downtimes:
-            self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods, self.daemon.hosts,
-                                                      self.daemon.services)
+            broks.extend(self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods,
+                                                                   self.daemon.hosts,
+                                                                   self.daemon.services))
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_HOST_DOWNTIME: downtime_id id: %s does not exist '
-                                       'and cannot be deleted.' % downtime_id)
+            broks.append(make_monitoring_log(
+                'warning',
+                'DEL_HOST_DOWNTIME: downtime_id id: %s does not exist '
+                'and cannot be deleted.' % downtime_id))
+        for brok in broks:
             self.send_an_element(brok)
 
     def del_svc_comment(self, comment_id):
@@ -1805,13 +1809,18 @@ class ExternalCommandManager:
         :type downtime_id: int
         :return: None
         """
+        broks = []
         if downtime_id in self.daemon.downtimes:
-            self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods, self.daemon.hosts,
-                                                      self.daemon.services, self.daemon.comments)
+            broks.extend(self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods,
+                                                                   self.daemon.hosts,
+                                                                   self.daemon.services,
+                                                                   self.daemon.comments))
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_SVC_DOWNTIME: downtime_id id: %s does not exist '
-                                       'and cannot be deleted.' % downtime_id)
+            broks.append(make_monitoring_log(
+                'warning',
+                'DEL_SVC_DOWNTIME: downtime_id id: %s does not exist '
+                'and cannot be deleted.' % downtime_id))
+        for brok in broks:
             self.send_an_element(brok)
 
     def disable_all_notifications_beyond_host(self, host):

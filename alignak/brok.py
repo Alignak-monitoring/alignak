@@ -64,7 +64,10 @@ class Brok(object):
     - monitoring_log
 
     - notification_raise
+    - acknowledge_raise
     - downtime_raise
+    - acknowledge_expire
+    - downtime_expire
     - initial_host_status, initial_service_status, initial_contact_status
     - initial_broks_done
 
