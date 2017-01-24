@@ -183,6 +183,9 @@ def fix_alignak_cfg(config):
 
             # Handle daemon configuration file
             daemon_file = os.path.join(daemons_folder, d_file)
+            if not os.path.exists(daemon_file):
+                # Ignone not distributed ini files
+                continue
             for line in fileinput.input(daemon_file, inplace=True):
                 line = line.strip()
                 got_path = changing_path.match(line)
