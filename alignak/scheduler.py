@@ -1408,8 +1408,11 @@ class Scheduler(object):  # pylint: disable=R0902
                 downtimes = []
                 for downtime_uuid in s_dict['downtimes']:
                     downtime_ser = self.downtimes[downtime_uuid].serialize()
-                    downtime_ser['comment_id'] = \
-                        self.comments[downtime_ser['comment_id']].serialize()
+                    if downtime_ser['comment_id'] in self.comments:
+                        downtime_ser['comment_id'] = \
+                            self.comments[downtime_ser['comment_id']].serialize()
+                    else:
+                        logger.warning("Missing comment in downtime saved in retention")
                     downtimes.append(downtime_ser)
                 s_dict['downtimes'] = downtimes
             # manage special properties: the acknowledges
