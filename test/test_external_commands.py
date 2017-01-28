@@ -1193,7 +1193,6 @@ class TestExternalCommands(AlignakTest):
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
 
-    # @unittest.skip("Bug when raising contact downtimes!")
     def test_contact_downtimes(self):
         """ Test the downtime for hosts
         :return: None

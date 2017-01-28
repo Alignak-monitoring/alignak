@@ -231,11 +231,22 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert router.last_chk == past
 
         # Now with crappy characters, like é
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy character  èàçé   and spaces|rtt=9999' % int(time.time())
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy ' \
+                'characters  èàçé   and spaces|rtt=9999' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == router.state
-        assert u'Output contains crappy character  èàçé   and spaces' == router.output
+        assert u'Output contains crappy characters  èàçé   and spaces' == router.output
+        assert 'rtt=9999' == router.perf_data
+        assert False == router.problem_has_been_acknowledged
+
+        # Now with utf-8 encoded data
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy ' \
+                u'characters  èàçé   and spaces|rtt=9999' % int(time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'DOWN' == router.state
+        assert u'Output contains crappy characters  èàçé   and spaces' == router.output
         assert 'rtt=9999' == router.perf_data
         assert False == router.problem_has_been_acknowledged
 
@@ -362,7 +373,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Passive checks for services
         # ---------------------------------------------
         # Receive passive service check Warning
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;' \
+                'Service is WARNING' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
@@ -371,7 +383,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
-        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
+        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;' \
+                'Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'WARNING' == svc.state
@@ -385,7 +398,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert False == svc.problem_has_been_acknowledged
 
         # Receive passive service check Critical
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;' \
+                'Service is CRITICAL' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
@@ -394,14 +408,16 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
-        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
+        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;' \
+                'Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'CRITICAL' == svc.state
         assert True == svc.problem_has_been_acknowledged
 
         # Service is going ok ...
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is OK|rtt=9999;5;10;0;10000' % time.time()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
+                'Service is OK|rtt=9999;5;10;0;10000' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'OK' == svc.state
@@ -450,6 +466,16 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.external_command_loop()
         assert 'DOWN' == router.state
         assert u'Output contains crappy character  èàçé   and spaces' == router.output
+        assert 'rtt=9999' == router.perf_data
+        assert False == router.problem_has_been_acknowledged
+
+        # Now with utf-8 data
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Output contains crappy ' \
+                u'characters  èàçé   and spaces|rtt=9999' % int(time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'DOWN' == router.state
+        assert u'Output contains crappy characters  èàçé   and spaces' == router.output
         assert 'rtt=9999' == router.perf_data
         assert False == router.problem_has_been_acknowledged
 
