@@ -35,6 +35,27 @@ fi
 
 DAEMON_NAME="$1"
 
+# Alignak.ini file name
+echo "---"
+if [ ${ALIGNAKINI} ]; then
+    echo "Alignak ini configuration file is defined in the environment"
+    ALIGNAK_CONFIGURATION_INI="$ALIGNAKINI"
+else
+    if [ -f "/usr/local/etc/alignak/alignak.ini" ]; then
+        echo "Alignak ini configuration file found in /usr/local/etc/alignak folder"
+        ALIGNAK_CONFIGURATION_INI="/usr/local/etc/alignak/alignak.ini"
+    else
+        if [ -f "/etc/alignak/alignak.ini" ]; then
+            echo "Alignak ini configuration file found in /etc/alignak folder"
+            ALIGNAK_CONFIGURATION_INI="/etc/alignak/alignak.ini"
+        else
+            ALIGNAK_CONFIGURATION_INI="$DIR/../etc/alignak.ini"
+        fi
+    fi
+fi
+echo "Alignak ini configuration file: $ALIGNAK_CONFIGURATION_INI"
+echo "---"
+
 # Get the daemon's variables names (only the name, not the value)
 scr_var="${DAEMON_NAME}_DAEMON"
 proc_var="${DAEMON_NAME}_PROCESS"
@@ -46,7 +67,7 @@ while IFS=';' read -ra VAR; do
     for v in "${VAR[@]}"; do
         eval "$v"
     done
-done <<< "$($DIR/../alignak/bin/alignak_environment.py ../etc/alignak.ini)"
+done <<< "$(alignak-environment $ALIGNAK_CONFIGURATION_INI)"
 
 
 echo "---"

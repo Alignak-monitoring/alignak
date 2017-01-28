@@ -19,11 +19,11 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-set_alignak_env command line interface::
+alignak-environment command line interface::
 
     Usage:
-        set_alignak_env [-h]
-        set_alignak_env [-v] <cfg_file>
+        alignak-environment [-h]
+        alignak-environment [-v] <cfg_file>
 
     Options:
         -h, --help          Show this usage screen.
@@ -81,12 +81,12 @@ set_alignak_env command line interface::
 
     Use cases:
         Displays this usage screen
-            set_alignak_env (-h | --help)
+            alignak-environment (-h | --help)
 
-        Parse Alignak configuration files and define environment variables
+        Parse Alignak configuration file and define environment variables
             cfg_file ../etc/alignak.ini
 
-        Parse Alignak configuration files and define environment variables and print information
+        Parse Alignak configuration file and define environment variables and print information
             cfg_file -v ../etc/alignak.ini
 
         Exit code:
