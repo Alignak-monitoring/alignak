@@ -244,6 +244,27 @@ class TestNotificationWay(AlignakTest):
         assert False == email_in_day.want_service_notification(self._sched.timeperiods,
                                                                now, 'WARNING', 'PROBLEM', -1)
 
+        # Test the heritage for notification ways
+        host_template = self._sched.hosts.find_by_name("test_host_contact_template")
+        contact_template_1 = self._sched.contacts[host_template.contacts[0]]
+        commands_contact_template_1 = contact_template_1.get_notification_commands(self._sched.notificationways,'host')
+        contact_template_2 = self._sched.contacts[host_template.contacts[1]]
+        commands_contact_template_2 = contact_template_2.get_notification_commands(self._sched.notificationways,'host')
+
+        resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
+                       sorted([command.get_name() for command in commands_contact_template_2])])
+
+        assert sorted([['notify-host', 'notify-host-work'], ['notify-host-sms', 'notify-host-work']]) == resp
+
+        contact_template_1 = self._sched.contacts[host_template.contacts[0]]
+        commands_contact_template_1 = contact_template_1.get_notification_commands(self._sched.notificationways,'service')
+        contact_template_2 = self._sched.contacts[host_template.contacts[1]]
+        commands_contact_template_2 = contact_template_2.get_notification_commands(self._sched.notificationways,'service')
+        resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
+                       sorted([command.get_name() for command in commands_contact_template_2])])
+
+        assert sorted([['notify-service', 'notify-service-work'], ['notify-service-sms', 'notify-service-work']]) == resp
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -505,4 +505,5 @@ class Contacts(CommandCallItems):
                 if not hasattr(contact, 'notificationways'):
                     contact.notificationways = [nw_name]
                 else:
+                    contact.notificationways = list(contact.notificationways)
                     contact.notificationways.append(nw_name)
