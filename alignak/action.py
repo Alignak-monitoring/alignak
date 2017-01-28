@@ -238,7 +238,10 @@ class ActionBase(AlignakObject):
 
         # First line before | is output, strip it
         self.output = elts_line1[0].strip().replace('___PROTECT_PIPE___', '|')
-        self.output = self.output.decode('utf8', 'ignore')
+        try:
+            self.output = self.output.decode('utf8', 'ignore')
+        except UnicodeEncodeError:
+            pass
 
         # Init perfdata as empty
         self.perf_data = ''
