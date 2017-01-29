@@ -1496,7 +1496,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     setattr(item, prop, data[prop])
         # Now manage all linked objects load from previous run
         for notif_uuid, notif in item.notifications_in_progress.iteritems():
-            notif['ref'] = item.id
+            notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
             item.notifications_in_progress[notif_uuid] = mynotif
@@ -1506,10 +1506,10 @@ class Scheduler(object):  # pylint: disable=R0902
         # And also add downtimes and comments
         item_downtimes = []
         for downtime in item.downtimes:
-            downtime["ref"] = item.id
+            downtime["ref"] = item.uuid
             if "comment_id" in downtime and isinstance(downtime["comment_id"], dict):
                 if downtime["comment_id"]["uuid"] not in self.comments:
-                    downtime["comment_id"]["ref"] = item.id
+                    downtime["comment_id"]["ref"] = item.uuid
                     comm = Comment(downtime["comment_id"])
                     downtime["comment_id"] = comm.uuid
                     item.add_comment(comm.uuid)
@@ -1538,7 +1538,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # if it was loaded from the retention, it's now a list of contacts
         # names
         for comm in item_comments:
-            comm["ref"] = item.id
+            comm["ref"] = item.uuid
             if comm['uuid'] not in self.comments:
                 self.add(Comment(comm))
             # raises comment id to do not overlap ids
