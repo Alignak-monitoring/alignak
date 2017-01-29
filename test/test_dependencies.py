@@ -389,6 +389,7 @@ class TestDependencies(AlignakTest):
         host1 = self.schedulers['scheduler-master'].sched.hosts.find_by_name("host_o_B")
         assert 1 == len(host1.act_depend_of)
         assert host0.uuid == host1.act_depend_of[0][0]
+        print("Dep: %s" % host1.act_depend_of[0])
         assert ['d', 'x'] == host1.act_depend_of[0][1]
 
     def test_c_notright1(self):
