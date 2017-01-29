@@ -21,7 +21,12 @@
 DIR="$(cd $(dirname "$0"); pwd)"
 
 DAEMON_TYPE="POLLER"
-DAEMON_NAME="${DAEMON_TYPE}_MASTER"
+if [ $# -eq 0 ]; then
+    DAEMON_NAME="${DAEMON_TYPE}_MASTER"
+else
+    # Make parameter as uppercase for daemon name
+    DAEMON_NAME="${DAEMON_TYPE}_${1^^}"
+fi
 
 "$DIR/_launch_daemon.sh" $@ "$DAEMON_NAME"
 
