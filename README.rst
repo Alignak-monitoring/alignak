@@ -45,7 +45,7 @@ Alignak is licensed under the Gnu Affero General Public Licence version 3 (AGPLv
 Documentation
 -------------
 
-`Alignak Web Site <alignak-monitoring.github.io>`_ includes much documentation and introduces the Alignak main features, such as the backend, the webui, the tight integration with timeseries databases, ...
+`Alignak Web Site <http://www.alignak.net>`_ includes much documentation and introduces the Alignak main features, such as the backend, the webui, the tight integration with timeseries databases, ...
 
 Alignak project has `an online documentation page <http://alignak-monitoring.github.io/documentation/>`_. We try to have as much documentation as possible and to keep this documentation simple and understandable. For sure the documentation is not yet complete, but you can help us ;)
 
