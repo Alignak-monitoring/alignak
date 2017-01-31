@@ -88,21 +88,29 @@ class Item(AlignakObject):
     """
     properties = AlignakObject.properties.copy()
     properties.update({
-        'imported_from':            StringProp(default='unknown'),
-        'use':                      ListProp(default=[], split_on_coma=True),
-        'name':                     StringProp(default=''),
-        'definition_order':         IntegerProp(default=100),
+        'imported_from':
+            StringProp(default='unknown'),
+        'use':
+            ListProp(default=[], split_on_coma=True),
+        'name':
+            StringProp(default=''),
+        'definition_order':
+            IntegerProp(default=100),
         # TODO: find why we can't uncomment this line below.
-        'register':                 BoolProp(default=True),
+        'register':
+            BoolProp(default=True),
     })
 
     running_properties = {
         # All errors and warning raised during the configuration parsing
         # and that will raised real warning/errors during the is_correct
-        'configuration_warnings':   ListProp(default=[]),
-        'configuration_errors':     ListProp(default=[]),
+        'configuration_warnings':
+            ListProp(default=[]),
+        'configuration_errors':
+            ListProp(default=[]),
         # We save all template we asked us to load from
-        'tags': SetProp(default=set(), fill_brok=['full_status']),
+        'tags':
+            SetProp(default=set(), fill_brok=['full_status']),
     }
 
     macros = {
@@ -662,9 +670,12 @@ class Item(AlignakObject):
         :rtype: object
         """
         data = {
-            'snapshot_output':      snap_output,
-            'snapshot_time':        int(time.time()),
-            'snapshot_exit_status': exit_status,
+            'snapshot_output':
+                snap_output,
+            'snapshot_time':
+                int(time.time()),
+            'snapshot_exit_status':
+                exit_status,
         }
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
@@ -848,6 +859,8 @@ class Items(object):
         elif name in self.name_to_template:
             tpl = self.manage_conflict(tpl, name)
         self.name_to_template[name] = tpl
+        logger.debug("Indexed a %s template: %s, uses: %s",
+                     tpl.my_type, name, getattr(tpl, 'use', 'Nothing'))
         return tpl
 
     def remove_template(self, tpl):
