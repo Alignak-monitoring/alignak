@@ -1192,12 +1192,22 @@ class Services(SchedulingItems):
         """
         objcls = self.inner_class.my_type
         name = getattr(tpl, 'name', '')
+        sdesc = getattr(tpl, 'service_description', '')
         hname = getattr(tpl, 'host_name', '')
+        logger.debug("Adding a %s template: host_name: %s, name: %s, service_description: %s",
+                     objcls, hname, name, sdesc)
         if not name and not hname:
-            msg = "a %s template has been defined without name nor host_name. from: %s" % (
-                objcls, tpl.imported_from
-            )
+            msg = "a %s template has been defined without name nor host_name. from: %s" \
+                  % (objcls, tpl.imported_from)
             tpl.configuration_errors.append(msg)
+        elif not name and not sdesc:
+            msg = "a %s template has been defined without name nor service_description. from: %s" \
+                  % (objcls, tpl.imported_from)
+            tpl.configuration_errors.append(msg)
+        elif not name:
+            # If name is not defined, use the service_description as name
+            setattr(tpl, 'name', sdesc)
+            tpl = self.index_template(tpl)
         elif name:
             tpl = self.index_template(tpl)
         self.templates[tpl.uuid] = tpl
@@ -1579,6 +1589,7 @@ class Services(SchedulingItems):
         if not hname:
             return
 
+        logger.debug("Explode services from templates: %s", hname)
         # Now really create the services
         if is_complex_expr(hname):
             hnames = self.evaluate_hostgroup_expression(
