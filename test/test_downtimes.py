@@ -140,7 +140,7 @@ class TestDowntime(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
-        assert svc.downtimes == []
+        assert svc.downtimes == {}
         # Get service scheduled downtime depth
         assert svc.scheduled_downtime_depth == 0
         # No current notifications
@@ -162,9 +162,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime_id = svc.downtimes[0]
-        assert downtime_id in self._sched.downtimes
-        downtime = self._sched.downtimes[downtime_id]
+        downtime = svc.downtimes.values()[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -189,19 +187,8 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
 
-        # The downtime also exist in our scheduler
-        assert 1 == len(self._sched.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
-        assert self._sched.downtimes[svc.downtimes[0]].fixed
-        assert self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
-
-        # A comment exist in our scheduler and in our service
-        assert 1 == len(self._sched.comments)
+        # A comment exist in our service
         assert 1 == len(svc.comments)
-        assert svc.comments[0] in self._sched.comments
-        assert self._sched.comments[svc.comments[0]].uuid == \
-                         self._sched.downtimes[svc.downtimes[0]].comment_id
 
         # Make the service be OK after a while
         # time.sleep(1)
@@ -213,15 +200,15 @@ class TestDowntime(AlignakTest):
         # Still only 1
         self.assert_actions_count(1)
 
-        # The downtime still exist in our scheduler and in our service
-        assert 1 == len(self._sched.downtimes)
+        # The downtime still exist in our service
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
         # The service is currently in a downtime period
         assert svc.in_scheduled_downtime
-        assert self._sched.downtimes[svc.downtimes[0]].fixed
-        assert self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        downtime = svc.downtimes.values()[0]
+
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Make the service be CRITICAL/SOFT
         time.sleep(1)
@@ -233,14 +220,13 @@ class TestDowntime(AlignakTest):
         # Still only 1
         self.assert_actions_count(1)
 
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        assert self._sched.downtimes[svc.downtimes[0]].fixed
-        assert self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        downtime = svc.downtimes.values()[0]
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Make the service be CRITICAL/HARD
         time.sleep(1)
@@ -260,14 +246,13 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(1, 'PROBLEM', 'type')
         self.assert_actions_match(1, 'scheduled', 'status')
 
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        assert self._sched.downtimes[svc.downtimes[0]].fixed
-        assert self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        downtime = svc.downtimes.values()[0]
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Wait for a while, the service is back to OK but after the downtime expiry time
         time.sleep(5)
@@ -276,13 +261,11 @@ class TestDowntime(AlignakTest):
         assert "OK" == svc.state
 
         # No more downtime for the service nor the scheduler
-        assert 0 == len(self._sched.downtimes)
         assert 0 == len(svc.downtimes)
         # The service is not anymore in a scheduled downtime period
         assert not svc.in_scheduled_downtime
         assert svc.scheduled_downtime_depth < scheduled_downtime_depth
-        # No more comment for the service nor the scheduler
-        assert 0 == len(self._sched.comments)
+        # No more comment for the service
         assert 0 == len(svc.comments)
 
         assert 0 == svc.current_notification_number, 'Should not have any notification'
@@ -373,7 +356,7 @@ class TestDowntime(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
-        assert svc.downtimes == []
+        assert svc.downtimes == {}
         # Get service scheduled downtime depth
         assert svc.scheduled_downtime_depth == 0
         # No current notifications
@@ -398,9 +381,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime_id = svc.downtimes[0]
-        assert downtime_id in self._sched.downtimes
-        downtime = self._sched.downtimes[downtime_id]
+        downtime = svc.downtimes.values()[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -421,19 +402,8 @@ class TestDowntime(AlignakTest):
         # No notifications, downtime did not started !
         self.assert_actions_count(0)
 
-        # The downtime also exist in our scheduler
-        assert 1 == len(self._sched.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
-        assert not self._sched.downtimes[svc.downtimes[0]].fixed
-        assert not self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
-
-        # A comment exist in our scheduler and in our service
-        assert 1 == len(self._sched.comments)
+        # A comment exist in our service
         assert 1 == len(svc.comments)
-        assert svc.comments[0] in self._sched.comments
-        assert self._sched.comments[svc.comments[0]].uuid == \
-                         self._sched.downtimes[svc.downtimes[0]].comment_id
 
         #----------------------------------------------------------------
         # run the service and return an OK status
@@ -442,13 +412,12 @@ class TestDowntime(AlignakTest):
         self.scheduler_loop(2, [[svc, 0, 'OK']])
         assert "HARD" == svc.state_type
         assert "OK" == svc.state
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
         assert not svc.in_scheduled_downtime
-        assert not self._sched.downtimes[svc.downtimes[0]].fixed
-        assert not self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        downtime = svc.downtimes.values()[0]
+        assert not downtime.fixed
+        assert not downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # No notifications, downtime did not started !
         assert 0 == svc.current_notification_number, 'Should not have any notification'
@@ -462,13 +431,12 @@ class TestDowntime(AlignakTest):
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
         assert "SOFT" == svc.state_type
         assert "CRITICAL" == svc.state
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
+        downtime = svc.downtimes.values()[0]
         assert not svc.in_scheduled_downtime
-        assert not self._sched.downtimes[svc.downtimes[0]].fixed
-        assert not self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        assert not downtime.fixed
+        assert not downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # No notifications, downtime did not started !
         assert 0 == svc.current_notification_number, 'Should not have any notification'
@@ -483,13 +451,12 @@ class TestDowntime(AlignakTest):
         assert "HARD" == svc.state_type
         assert "CRITICAL" == svc.state
         time.sleep(1)
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(svc.downtimes)
-        assert svc.downtimes[0] in self._sched.downtimes
+        downtime = svc.downtimes.values()[0]
         assert svc.in_scheduled_downtime
-        assert not self._sched.downtimes[svc.downtimes[0]].fixed
-        assert self._sched.downtimes[svc.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[svc.downtimes[0]].can_be_deleted
+        assert not downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # 2 actions because the service is a problem and the downtime started
         self.assert_actions_count(2)
@@ -521,13 +488,11 @@ class TestDowntime(AlignakTest):
         assert "CRITICAL" == svc.state
 
         # No more downtime for the service nor the scheduler
-        assert 0 == len(self._sched.downtimes)
         assert 0 == len(svc.downtimes)
         # The service is not anymore in a scheduled downtime period
         assert not svc.in_scheduled_downtime
         assert svc.scheduled_downtime_depth < scheduled_downtime_depth
-        # No more comment for the service nor the scheduler
-        assert 0 == len(self._sched.comments)
+        # No more comment for the service
         assert 0 == len(svc.comments)
 
         # Now 4 actions because the service is no more a problem and the downtime ended
@@ -593,7 +558,7 @@ class TestDowntime(AlignakTest):
         assert host.notifications_enabled
         assert host.notification_period
         # Not any downtime yet !
-        assert host.downtimes == []
+        assert host.downtimes == {}
         # Get service scheduled downtime depth
         assert host.scheduled_downtime_depth == 0
         # No current notifications
@@ -615,9 +580,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime_id = host.downtimes[0]
-        assert downtime_id in self._sched.downtimes
-        downtime = self._sched.downtimes[downtime_id]
+        downtime = host.downtimes.values()[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -642,19 +605,8 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
 
-        # The downtime also exists in our scheduler
-        assert 1 == len(self._sched.downtimes)
-        assert host.downtimes[0] in self._sched.downtimes
-        assert self._sched.downtimes[host.downtimes[0]].fixed
-        assert self._sched.downtimes[host.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
-
-        # A comment exists in our scheduler and in our service
-        assert 1 == len(self._sched.comments)
+        # A comment exists in our host
         assert 1 == len(host.comments)
-        assert host.comments[0] in self._sched.comments
-        assert self._sched.comments[host.comments[0]].uuid == \
-                         self._sched.downtimes[host.downtimes[0]].comment_id
 
         # Make the host be OK after a while
         # time.sleep(1)
@@ -666,15 +618,14 @@ class TestDowntime(AlignakTest):
         # Still only 1
         self.assert_actions_count(1)
 
-        # The downtime still exist in our scheduler and in our service
-        assert 1 == len(self._sched.downtimes)
+        # The downtime still exist in our host
         assert 1 == len(host.downtimes)
-        assert host.downtimes[0] in self._sched.downtimes
+        downtime = host.downtimes.values()[0]
         # The host is currently in a downtime period
         assert host.in_scheduled_downtime
-        assert self._sched.downtimes[host.downtimes[0]].fixed
-        assert self._sched.downtimes[host.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Make the host be DOWN/SOFT
         time.sleep(1)
@@ -686,14 +637,13 @@ class TestDowntime(AlignakTest):
         # Still only 1
         self.assert_actions_count(1)
 
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(host.downtimes)
-        assert host.downtimes[0] in self._sched.downtimes
+        downtime = host.downtimes.values()[0]
         # The host is still in a downtime period
         assert host.in_scheduled_downtime
-        assert self._sched.downtimes[host.downtimes[0]].fixed
-        assert self._sched.downtimes[host.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Make the host be DOWN/HARD
         time.sleep(1)
@@ -713,14 +663,13 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(1, 'PROBLEM', 'type')
         self.assert_actions_match(1, 'scheduled', 'status')
 
-        assert 1 == len(self._sched.downtimes)
         assert 1 == len(host.downtimes)
-        assert host.downtimes[0] in self._sched.downtimes
+        downtime = host.downtimes.values()[0]
         # The service is still in a downtime period
         assert host.in_scheduled_downtime
-        assert self._sched.downtimes[host.downtimes[0]].fixed
-        assert self._sched.downtimes[host.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
+        assert downtime.fixed
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Wait for a while, the service is back to OK but after the downtime expiry time
         time.sleep(5)
@@ -729,13 +678,11 @@ class TestDowntime(AlignakTest):
         assert "UP" == host.state
 
         # No more downtime for the service nor the scheduler
-        assert 0 == len(self._sched.downtimes)
         assert 0 == len(host.downtimes)
         # The service is not anymore in a scheduled downtime period
         assert not host.in_scheduled_downtime
         assert host.scheduled_downtime_depth < scheduled_downtime_depth
-        # No more comment for the service nor the scheduler
-        assert 0 == len(self._sched.comments)
+        # No more comment for the host
         assert 0 == len(host.comments)
 
         assert 0 == host.current_notification_number, 'Should not have any notification'
@@ -825,7 +772,7 @@ class TestDowntime(AlignakTest):
         host.checks_in_progress = []
         host.act_depend_of = []
         # Not any downtime yet !
-        assert host.downtimes == []
+        assert host.downtimes == {}
         # Get service scheduled downtime depth
         assert host.scheduled_downtime_depth == 0
         # No current notifications
@@ -839,7 +786,7 @@ class TestDowntime(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
-        assert svc.downtimes == []
+        assert svc.downtimes == {}
         # Get service scheduled downtime depth
         assert svc.scheduled_downtime_depth == 0
         # No current notifications
@@ -861,9 +808,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime_id = host.downtimes[0]
-        assert downtime_id in self._sched.downtimes
-        downtime = self._sched.downtimes[downtime_id]
+        downtime = host.downtimes.values()[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -888,19 +833,8 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
 
-        # The downtime also exist in our scheduler
-        assert 1 == len(self._sched.downtimes)
-        assert host.downtimes[0] in self._sched.downtimes
-        assert self._sched.downtimes[host.downtimes[0]].fixed
-        assert self._sched.downtimes[host.downtimes[0]].is_in_effect
-        assert not self._sched.downtimes[host.downtimes[0]].can_be_deleted
-
-        # A comment exist in our scheduler and in our service
-        assert 1 == len(self._sched.comments)
+        # A comment exist in our host
         assert 1 == len(host.comments)
-        assert host.comments[0] in self._sched.comments
-        assert self._sched.comments[host.comments[0]].uuid == \
-                         self._sched.downtimes[host.downtimes[0]].comment_id
 
         # Make the host be DOWN/HARD
         time.sleep(1)
@@ -929,7 +863,7 @@ class TestDowntime(AlignakTest):
         assert "CRITICAL" == svc.state
 
         # Still only 1 downtime
-        assert 1 == len(self._sched.downtimes)
+        assert 1 == len(host.downtimes)
         # No downtime for the service
         assert 0 == len(svc.downtimes)
         assert not svc.in_scheduled_downtime

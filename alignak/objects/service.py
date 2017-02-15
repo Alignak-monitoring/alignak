@@ -934,8 +934,7 @@ class Service(SchedulingItem):
         """
         return [self.host, self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
-                                           notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -945,7 +944,7 @@ class Service(SchedulingItem):
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return not contact.want_service_notification(notifways, timeperiods, cdowntimes,
+        return not contact.want_service_notification(notifways, timeperiods,
                                                      self.last_chk,
                                                      self.state, notif.type, self.business_impact,
                                                      notif.command_call)

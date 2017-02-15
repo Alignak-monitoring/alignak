@@ -52,33 +52,25 @@ from alignak.property import StringProp, BoolProp, IntegerProp
 
 class Comment(AlignakObject):
     """Comment class implements comments for monitoring purpose.
-    It contains data like author, type, expire_time, persistent etc..
+    It contains data like author, type etc..
     """
 
     properties = {
         'entry_time':   IntegerProp(),
-        'persistent':   BoolProp(),
         'author':       StringProp(default='(Alignak)'),
         'comment':      StringProp(default='Automatic Comment'),
         'comment_type': IntegerProp(),
         'entry_type':   IntegerProp(),
         'source':       IntegerProp(),
         'expires':      BoolProp(),
-        'expire_time':  IntegerProp(),
-        'can_be_deleted': BoolProp(default=False),
         'ref':  StringProp(default='')
     }
 
-    def __init__(self, params):
-        """Adds a comment to a particular service. If the "persistent" field
-        is set to zero (0), the comment will be deleted the next time
-        Alignak is restarted. Otherwise, the comment will persist
-        across program restarts until it is deleted manually.
+    def __init__(self, params, parsing=True):
+        """Adds a comment to a particular service.
 
         :param ref: reference object (host / service)
         :type ref: alignak.object.schedulingitem.SchedulingItem
-        :param persistent: comment is persistent or not (stay after reboot)
-        :type persistent: bool
         :param author: Author of this comment
         :type author: str
         :param comment: text comment itself
@@ -105,12 +97,11 @@ class Comment(AlignakObject):
         :type source: int
         :param expires: comment expires or not
         :type expires: bool
-        :param expire_time: time of expiration
-        :type expire_time: int
         :return: None
         """
-        super(Comment, self).__init__(params)
-        self.entry_time = int(time.time())
+        super(Comment, self).__init__(params, parsing)
+        if not hasattr(self, 'entry_time'):
+            self.entry_time = int(time.time())
         self.fill_default()
 
     def __str__(self):

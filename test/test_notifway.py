@@ -105,6 +105,7 @@ class TestNotificationWay(AlignakTest):
             'customs': {},
             'plus': {},
             'tags': set([]),
+            'downtimes': {}
         })
         # creation_time and log_actions will not be modified! They are set
         # only if they do not yet exist
@@ -215,12 +216,10 @@ class TestNotificationWay(AlignakTest):
         # First is ok for warning in the email_in_day nw
         assert True == contact.want_service_notification(self._sched.notificationways,
                                                          self._sched.timeperiods,
-                                                         self._sched.downtimes,
                                                          now, 'WARNING', 'PROBLEM', huge_criticity)
         # Simple is not ok for it
         assert False == contact_simple.want_service_notification(self._sched.notificationways,
                                                                  self._sched.timeperiods,
-                                                                 self._sched.downtimes,
                                                                  now, 'WARNING', 'PROBLEM',
                                                                  huge_criticity)
 

@@ -82,7 +82,6 @@ from alignak.notification import Notification
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
 from alignak.downtime import Downtime
-from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.util import average_percentile
 from alignak.load import Load
@@ -176,9 +175,6 @@ class Scheduler(object):  # pylint: disable=R0902
         # Ours queues
         self.checks = {}
         self.actions = {}
-        self.downtimes = {}
-        self.contact_downtimes = {}
-        self.comments = {}
 
         # Our external commands manager
         self.external_commands_manager = None
@@ -200,7 +196,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """Reset scheduler::
 
         * Remove waiting results
-        * Clear check, actions, downtimes, comments, broks lists
+        * Clear check, actions, broks lists
 
         :return: None
         """
@@ -208,9 +204,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         with self.waiting_results.mutex:
             self.waiting_results.queue.clear()
-        for obj in self.checks, self.actions, self.downtimes,\
-                self.contact_downtimes, self.comments,\
-                self.brokers:
+        for obj in self.checks, self.actions, self.brokers:
             obj.clear()
 
     def iter_hosts_and_services(self):
@@ -473,36 +467,6 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         self.actions[action.uuid] = action
 
-    def add_downtime(self, downtime):
-        """Add a downtime into downtimes list
-
-        :param downtime: downtime to add
-        :type downtime: alignak.downtime.Downtime
-        :return: None
-        """
-        self.downtimes[downtime.uuid] = downtime
-
-    def add_contactdowntime(self, contact_dt):
-        """Add a contact downtime into contact_downtimes list
-
-        :param contact_dt: contact downtime to add
-        :type contact_dt: alignak.contactdowntime.ContactDowntime
-        :return: None
-        """
-        self.contact_downtimes[contact_dt.uuid] = contact_dt
-
-    def add_comment(self, comment):
-        """Add a comment into comments list
-
-        :param comment: comment to add
-        :type comment: alignak.comment.Comment
-        :return: None
-        """
-        self.comments[comment.uuid] = comment
-        item = self.find_item_by_id(comment.ref)
-        brok = item.get_update_status_brok()
-        self.add(brok)
-
     def add_externalcommand(self, ext_cmd):
         """Resolve external command
 
@@ -518,8 +482,6 @@ class Scheduler(object):  # pylint: disable=R0902
         Brok -> self.brokers
         Check -> self.checks
         Notification -> self.actions
-        Downtime -> self.downtimes
-        ContactDowntime -> self.contact_downtimes
 
         :param elt: element to add
         :type elt:
@@ -541,9 +503,6 @@ class Scheduler(object):  # pylint: disable=R0902
         Brok:               add_brok,
         Notification:       add_notification,
         EventHandler:       add_eventhandler,
-        Downtime:           add_downtime,
-        ContactDowntime:    add_contactdowntime,
-        Comment:            add_comment,
         ExternalCommand:    add_externalcommand,
     }
 
@@ -678,50 +637,13 @@ class Scheduler(object):  # pylint: disable=R0902
         brok = item.get_check_result_brok()
         self.add(brok)
 
-    def del_downtime(self, dt_id):
-        """Delete a downtime
-
-        :param dt_id: downtime id to delete
-        :type dt_id: int
-        :return: None
-        """
-        if dt_id in self.downtimes:
-            downtime = self.downtimes[dt_id]
-            ref = self.find_item_by_id(downtime.ref)
-            ref.del_downtime(dt_id, self.downtimes)
-            del self.downtimes[dt_id]
-
-    def del_contact_downtime(self, dt_id):
-        """Delete a contact downtime
-
-        :param dt_id: contact downtime id to delete
-        :type dt_id: int
-        :return: None
-        """
-        if dt_id in self.contact_downtimes:
-            contact = self.contact_downtimes[dt_id]
-            self.find_item_by_id(contact.ref).del_downtime(dt_id, self.contact_downtimes)
-            del self.contact_downtimes[dt_id]
-
-    def del_comment(self, c_id):
-        """Delete a comment
-
-        :param c_id: comment id to delete
-        :type c_id: int
-        :return: None
-        """
-        if c_id in self.comments:
-            comment = self.comments[c_id]
-            self.find_item_by_id(comment.ref).del_comment(c_id, self.comments)
-            del self.comments[c_id]
-
     def check_for_expire_acknowledge(self):
         """Iter over host and service and check if any acknowledgement has expired
 
         :return: None
         """
         for elt in self.iter_hosts_and_services():
-            elt.check_for_expire_acknowledge(self.comments)
+            elt.check_for_expire_acknowledge()
 
     def update_business_values(self):
         """Iter over host and service and update business_impact
@@ -782,7 +704,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         # a single notification for each contact of this item.
                         childnotifs = item.scatter_notification(
                             act, self.contacts, self.notificationways, self.timeperiods,
-                            self.macromodulations, self.escalations, self.contact_downtimes,
+                            self.macromodulations, self.escalations,
                             self.find_item_by_id(getattr(item, "host", None))
                         )
                         for notif in childnotifs:
@@ -1334,28 +1256,20 @@ class Scheduler(object):  # pylint: disable=R0902
                     notifs[notif_uuid] = notification.serialize()
                 h_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
-            if 'downtimes' in h_dict and h_dict['downtimes'] != []:
-                downtimes = []
-                for downtime_uuid in h_dict['downtimes']:
-                    downtime_ser = self.downtimes[downtime_uuid].serialize()
-                    downtime_ser['comment_id'] = \
-                        self.comments[downtime_ser['comment_id']].serialize()
-                    downtimes.append(downtime_ser)
-                h_dict['downtimes'] = downtimes
+            downtimes = []
+            if 'downtimes' in h_dict and h_dict['downtimes'] != {}:
+                for downtime in h_dict['downtimes'].values():
+                    downtimes.append(downtime.serialize())
+            h_dict['downtimes'] = downtimes
             # manage special properties: the acknowledges
             if 'acknowledgement' in h_dict and h_dict['acknowledgement'] is not None:
                 h_dict['acknowledgement'] = h_dict['acknowledgement'].serialize()
             # manage special properties: the comments
-            if 'comments' in h_dict and h_dict['comments'] != []:
-                comments = []
-                try:
-                    for comment_uuid in h_dict['comments']:
-                        comments.append(self.comments[comment_uuid].serialize())
-                except KeyError as exp:
-                    logger.error("Saving host %s retention, "
-                                 "missing comment in the global comments", host.host_name)
-                    logger.exception("Exception: %s", exp)
-                h_dict['comments'] = comments
+            comments = []
+            if 'comments' in h_dict and h_dict['comments'] != {}:
+                for comment in h_dict['comments'].values():
+                    comments.append(comment.serialize())
+            h_dict['comments'] = comments
             # manage special properties: the notified_contacts
             if 'notified_contacts' in h_dict and h_dict['notified_contacts'] != []:
                 ncontacts = []
@@ -1404,26 +1318,20 @@ class Scheduler(object):  # pylint: disable=R0902
                     notifs[notif_uuid] = notification.serialize()
                 s_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
-            if 'downtimes' in s_dict and s_dict['downtimes'] != []:
-                downtimes = []
-                for downtime_uuid in s_dict['downtimes']:
-                    downtime_ser = self.downtimes[downtime_uuid].serialize()
-                    if downtime_ser['comment_id'] in self.comments:
-                        downtime_ser['comment_id'] = \
-                            self.comments[downtime_ser['comment_id']].serialize()
-                    else:
-                        logger.warning("Missing comment in downtime saved in retention")
-                    downtimes.append(downtime_ser)
-                s_dict['downtimes'] = downtimes
+            downtimes = []
+            if 'downtimes' in s_dict and s_dict['downtimes'] != {}:
+                for downtime in s_dict['downtimes'].values():
+                    downtimes.append(downtime.serialize())
+            s_dict['downtimes'] = downtimes
             # manage special properties: the acknowledges
             if 'acknowledgement' in s_dict and s_dict['acknowledgement'] is not None:
                 s_dict['acknowledgement'] = s_dict['acknowledgement'].serialize()
             # manage special properties: the comments
-            if 'comments' in s_dict and s_dict['comments'] != []:
-                comments = []
-                for comment_uuid in s_dict['comments']:
-                    comments.append(self.comments[comment_uuid].serialize())
-                s_dict['comments'] = comments
+            comments = []
+            if 'comments' in s_dict and s_dict['comments'] != {}:
+                for comment in s_dict['comments'].values():
+                    comments.append(comment.serialize())
+            s_dict['comments'] = comments
             # manage special properties: the notified_contacts
             if 'notified_contacts' in s_dict and s_dict['notified_contacts'] != []:
                 ncontacts = []
@@ -1450,10 +1358,9 @@ class Scheduler(object):  # pylint: disable=R0902
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
             # We take the dict of our value to load
-            h_dict = data['hosts'][ret_h_name]
             host = self.hosts.find_by_name(ret_h_name)
             if host is not None:
-                self.restore_retention_data_item(h_dict, host)
+                self.restore_retention_data_item(data['hosts'][ret_h_name], host)
         statsmgr.gauge('retention.hosts', len(ret_hosts))
 
         # Same for services
@@ -1483,7 +1390,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if entry.retention:
                 # Maybe the saved one was not with this value, so
                 # we just bypass this
-                if prop in data:
+                if prop in data and prop not in ['downtimes', 'comments']:
                     setattr(item, prop, data[prop])
         # Ok, some are in properties too (like active check enabled
         # or not. Will OVERRIDE THE CONFIGURATION VALUE!
@@ -1494,54 +1401,25 @@ class Scheduler(object):  # pylint: disable=R0902
                 # we just bypass this
                 if prop in data:
                     setattr(item, prop, data[prop])
-        # Now manage all linked objects load from previous run
+        # Now manage all linked objects load from/ previous run
         for notif_uuid, notif in item.notifications_in_progress.iteritems():
             notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
             item.notifications_in_progress[notif_uuid] = mynotif
         item.update_in_checking()
-        item_comments = item.comments
-        item.comments = []
         # And also add downtimes and comments
-        item_downtimes = []
-        for downtime in item.downtimes:
-            downtime["ref"] = item.uuid
-            if "comment_id" in downtime and isinstance(downtime["comment_id"], dict):
-                if downtime["comment_id"]["uuid"] not in self.comments:
-                    downtime["comment_id"]["ref"] = item.uuid
-                    comm = Comment(downtime["comment_id"])
-                    downtime["comment_id"] = comm.uuid
-                    item.add_comment(comm.uuid)
-            if downtime['uuid'] not in self.downtimes:
-                down = Downtime(downtime)
-                self.add(down)
-                item_downtimes.append(down.uuid)
-            else:
-                item_downtimes.append(downtime['uuid'])
-        item.downtimes = item_downtimes
+        for down in data['downtimes']:
+            if down['uuid'] not in item.downtimes:
+                item.add_downtime(Downtime(down))
         if item.acknowledgement is not None:
             item.acknowledgement = Acknowledge(item.acknowledgement)
             item.acknowledgement.ref = item.uuid
-            # recreate the comment
-            if item.my_type == 'host':
-                comment_type = 1
-            else:
-                comment_type = 2
-            data = {
-                'persistent': item.acknowledgement.persistent,
-                'author': item.acknowledgement.author,
-                'comment': item.acknowledgement.comment, 'comment_type': comment_type,
-                'entry_type': 4, 'source': 0, 'expires': False, 'expire_time': 0, 'ref': item.uuid
-            }
         # Relink the notified_contacts as a set() of true contacts objects
         # if it was loaded from the retention, it's now a list of contacts
         # names
-        for comm in item_comments:
-            comm["ref"] = item.uuid
-            if comm['uuid'] not in self.comments:
-                self.add(Comment(comm))
-            # raises comment id to do not overlap ids
+        for comm in data['comments']:
+            item.add_comment(Comment(comm))
         new_notified_contacts = set()
         for cname in item.notified_contacts:
             comm = self.contacts.find_by_name(cname)
@@ -1685,8 +1563,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
                                               self.timeperiods, self.macromodulations,
                                               self.checkmodulations, self.businessimpactmodulations,
-                                              self.resultmodulations, self.triggers, self.checks,
-                                              self.downtimes, self.comments)
+                                              self.resultmodulations, self.triggers, self.checks)
                 for dep in depchks:
                     self.add(dep)
 
@@ -1717,7 +1594,7 @@ class Scheduler(object):  # pylint: disable=R0902
                                                   self.checkmodulations,
                                                   self.businessimpactmodulations,
                                                   self.resultmodulations, self.triggers,
-                                                  self.checks, self.downtimes, self.comments)
+                                                  self.checks)
                     for dep in depchks:
                         self.add(dep)
 
@@ -1777,56 +1654,49 @@ class Scheduler(object):  # pylint: disable=R0902
                                        "through a maintenance_period"}
                     downtime = Downtime(data)
                     self.add(downtime.add_automatic_comment(elt))
-                    elt.add_downtime(downtime.uuid)
+                    elt.add_downtime(downtime)
                     self.add(downtime)
                     self.get_and_register_status_brok(elt)
                     elt.in_maintenance = downtime.uuid
             else:
-                if elt.in_maintenance not in self.downtimes:
+                if elt.in_maintenance not in elt.downtimes:
                     # the main downtimes has expired or was manually deleted
                     elt.in_maintenance = -1
 
         #  Check the validity of contact downtimes
         for elt in self.contacts:
             for downtime_id in elt.downtimes:
-                downtime = self.contact_downtimes[downtime_id]
+                downtime = elt.downtimes[downtime_id]
                 downtime.check_activation(self.contacts)
 
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
-        for downtime in self.downtimes.values():
-            if downtime.can_be_deleted is True:
-                logger.info("Downtime to delete: %s", downtime.__dict__)
-                ref = self.find_item_by_id(downtime.ref)
-                self.del_downtime(downtime.uuid)
-                broks.append(ref.get_update_status_brok())
+        for elt in self.iter_hosts_and_services():
+            for downtime in elt.downtimes.values():
+                if downtime.can_be_deleted is True:
+                    logger.info("Downtime to delete: %s", downtime.__dict__)
+                    ref = self.find_item_by_id(downtime.ref)
+                    elt.del_downtime(downtime.uuid)
+                    broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
-        for downtime in self.contact_downtimes.values():
-            if downtime.can_be_deleted is True:
-                ref = self.find_item_by_id(downtime.ref)
-                self.del_contact_downtime(downtime.uuid)
-                broks.append(ref.get_update_status_brok())
-
-        # Downtimes are usually accompanied by a comment.
-        # An exiting downtime also invalidates it's comment.
-        for comm in self.comments.values():
-            if comm.can_be_deleted is True:
-                ref = self.find_item_by_id(comm.ref)
-                self.del_comment(comm.uuid)
-                broks.append(ref.get_update_status_brok())
+        for elt in self.contacts:
+            for downtime in elt.downtimes.values():
+                if downtime.can_be_deleted is True:
+                    ref = self.find_item_by_id(downtime.ref)
+                    elt.del_downtime(downtime.uuid)
+                    broks.append(ref.get_update_status_brok())
 
         # Check start and stop times
-        for downtime in self.downtimes.values():
-            if downtime.real_end_time < now:
-                # this one has expired
-                broks.extend(downtime.exit(self.timeperiods, self.hosts, self.services,
-                                           self.comments))
-            elif now >= downtime.start_time and downtime.fixed and not downtime.is_in_effect:
-                # this one has to start now
-                broks.extend(downtime.enter(self.timeperiods, self.hosts, self.services,
-                                            self.downtimes))
-                broks.append(self.find_item_by_id(downtime.ref).get_update_status_brok())
+        for elt in self.iter_hosts_and_services():
+            for downtime in elt.downtimes.values():
+                if downtime.real_end_time < now:
+                    # this one has expired
+                    broks.extend(downtime.exit(self.timeperiods, self.hosts, self.services))
+                elif now >= downtime.start_time and downtime.fixed and not downtime.is_in_effect:
+                    # this one has to start now
+                    broks.extend(downtime.enter(self.timeperiods, self.hosts, self.services))
+                    broks.append(self.find_item_by_id(downtime.ref).get_update_status_brok())
 
         for brok in broks:
             self.add(brok)
@@ -2031,8 +1901,8 @@ class Scheduler(object):  # pylint: disable=R0902
         if not isinstance(o_id, int) and not isinstance(o_id, basestring):
             return o_id
 
-        for items in [self.hosts, self.services, self.actions, self.checks, self.comments,
-                      self.hostgroups, self.servicegroups, self.contacts, self.contactgroups]:
+        for items in [self.hosts, self.services, self.actions, self.checks, self.hostgroups,
+                      self.servicegroups, self.contacts, self.contactgroups]:
             if o_id in items:
                 return items[o_id]
 
@@ -2085,10 +1955,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
         for what in ('actions', 'broks'):
             metrics.append('scheduler.%s.%s.queue %d %d' % (
-                self.instance_name, what, len(getattr(self, what)), now))
-
-        for what in ('downtimes', 'comments'):
-            metrics.append('scheduler.%s.%s %d %d' % (
                 self.instance_name, what, len(getattr(self, what)), now))
 
         metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name,

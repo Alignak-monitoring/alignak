@@ -68,7 +68,7 @@ import logging
 
 from copy import copy
 
-from alignak.property import (StringProp, ListProp, BoolProp, SetProp,
+from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
                               IntegerProp, ToGuessProp, PythonizeError)
 
 from alignak.alignakobject import AlignakObject
@@ -111,6 +111,10 @@ class Item(AlignakObject):
         # We save all template we asked us to load from
         'tags':
             SetProp(default=set(), fill_brok=['full_status']),
+        # used by host, service and contact
+        'downtimes':
+            DictProp(default={}, fill_brok=['full_status'], retention=True),
+
     }
 
     macros = {
@@ -493,9 +497,9 @@ class Item(AlignakObject):
         :type downtime: object
         :return: None
         """
-        self.downtimes.append(downtime)
+        self.downtimes[downtime.uuid] = downtime
 
-    def del_downtime(self, downtime_id, downtimes):
+    def del_downtime(self, downtime_id):
         """
         Delete a downtime in this object
 
@@ -503,14 +507,9 @@ class Item(AlignakObject):
         :type downtime_id: int
         :return: None
         """
-        d_to_del = None
-        for d_id in self.downtimes:
-            if d_id == downtime_id:
-                downtime = downtimes[d_id]
-                d_to_del = d_id
-                downtime.can_be_deleted = True
-        if d_to_del is not None:
-            self.downtimes.remove(d_to_del)
+        if downtime_id in self.downtimes:
+            self.downtimes[downtime_id].can_be_deleted = True
+            del self.downtimes[downtime_id]
 
     def add_comment(self, comment):
         """
@@ -520,9 +519,9 @@ class Item(AlignakObject):
         :type comment: object
         :return: None
         """
-        self.comments.append(comment)
+        self.comments[comment.uuid] = comment
 
-    def del_comment(self, comment_id, comments):
+    def del_comment(self, comment_id):
         """
         Delete a comment in this object
 
@@ -530,14 +529,7 @@ class Item(AlignakObject):
         :type comment_id: int
         :return: None
         """
-        c_to_del = None
-        for comm_id in self.comments:
-            if comm_id == comment_id:
-                comm = comments[comm_id]
-                c_to_del = comm_id
-                comm.can_be_deleted = True
-        if c_to_del is not None:
-            self.comments.remove(c_to_del)
+        del self.comments[comment_id]
 
     def prepare_for_conf_sending(self):
         """

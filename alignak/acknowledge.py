@@ -68,6 +68,7 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
         'end_time': None,
         'author': None,
         'comment': None,
+        'comment_id': str
     }
     # If the "sticky" option is set to one (1), the acknowledgement
     # will remain until the service returns to an OK state. Otherwise
@@ -78,11 +79,6 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
     # If the "notify" option is set to one (1), a notification will be
     # sent out to contacts indicating that the current service problem
     # has been acknowledged.
-    #
-    # If the "persistent" option is set to one (1), the comment
-    # associated with the acknowledgement will survive across restarts
-    # of the Alignak process. If not, the comment will be deleted the
-    # next time Alignak restarts.
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -94,9 +90,7 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
         :rtype: dict
         """
         return {'uuid': self.uuid, 'ref': self.ref, 'sticky': self.sticky, 'notify': self.notify,
-                'end_time': self.end_time, 'author': self.author, 'comment': self.comment,
-                'persistent': self.persistent
-                }
+                'end_time': self.end_time, 'author': self.author, 'comment': self.comment}
 
     def get_raise_brok(self, host_name, service_name=''):
         """Get a start acknowledge brok

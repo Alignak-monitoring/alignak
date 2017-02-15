@@ -895,8 +895,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return [self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
-                                           notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier

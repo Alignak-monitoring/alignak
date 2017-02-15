@@ -314,10 +314,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             ListProp(default=[]),
         # no broks because notifications are too linked
         'notifications_in_progress': DictProp(default={}, retention=True),
-        'downtimes':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
         'comments':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
+            DictProp(default={}, fill_brok=['full_status'], retention=True),
         'flapping_changes':
             ListProp(default=[], fill_brok=['full_status'], retention=True),
         'flapping_comment_id':
@@ -1443,7 +1441,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
 
-    def check_for_flexible_downtime(self, timeperiods, downtimes, hosts, services):
+    def check_for_flexible_downtime(self, timeperiods, hosts, services):
         """Enter in a downtime if necessary and raise start notification
         When a non Ok state occurs we try to raise a flexible downtime.
 
@@ -1457,7 +1455,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         status_updated = False
         for downtime_id in self.downtimes:
-            downtime = downtimes[downtime_id]
+            downtime = self.downtimes[downtime_id]
             # Activate flexible downtimes (do not activate triggered downtimes)
             # Note: only activate if we are between downtime start and end time!
             if not downtime.fixed and not downtime.is_in_effect and \
@@ -1465,7 +1463,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     downtime.end_time >= self.last_chk and \
                     self.state_id != 0 and downtime.trigger_id in ['', '0']:
                 # returns downtimestart notifications
-                self.broks.extend(downtime.enter(timeperiods, hosts, services, downtimes))
+                self.broks.extend(downtime.enter(timeperiods, hosts, services))
                 status_updated = True
         if status_updated is True:
             self.broks.append(self.get_update_status_brok())
@@ -1509,7 +1507,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def consume_result(self, chk, notif_period, hosts,  # pylint: disable=R0915,R0912,R0913
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
-                       res_modulations, triggers, checks, downtimes, comments):
+                       res_modulations, triggers, checks):
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
@@ -1544,10 +1542,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type triggers: alignak.objects.trigger.Triggers
         :param checks: checks dict, used to get checks_in_progress for the object
         :type checks: dict
-        :param downtimes: downtimes objects, used to find downtime for this host / service
-        :type downtimes:  dict
-        :param comments: comments objects, used to find comments for this host / service
-        :type comments: dict
         :return: Dependent checks
         :rtype list[alignak.check.Check]
         """
@@ -1655,7 +1649,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # from UP/OK/PENDING
         # to UP/OK
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
-            self.unacknowledge_problem(comments)
+            self.unacknowledge_problem()
             # action in return can be notification or other checks (dependencies)
             if (self.state_type == 'SOFT') and self.last_state != 'PENDING':
                 if self.is_max_attempts() and self.state_type == 'SOFT':
@@ -1669,7 +1663,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # from WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
         # to UP/OK
         elif chk.exit_status == 0 and self.last_state not in (ok_up, 'PENDING'):
-            self.unacknowledge_problem(comments)
+            self.unacknowledge_problem()
             if self.state_type == 'SOFT':
                 # previous check in SOFT
                 if not chk.is_dependent():
@@ -1705,7 +1699,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # status != 0 so add a log entry (before actions that can also raise log
             # it is smarter to log error before notification)
             self.raise_alert_log_entry()
-            self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
+            self.check_for_flexible_downtime(timeperiods, hosts, services)
             self.remove_in_progress_notifications()
             if enable_action:
                 self.create_notifications('PROBLEM', notif_period, hosts, services)
@@ -1725,7 +1719,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.remove_in_progress_notifications()
-                self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
+                self.check_for_flexible_downtime(timeperiods, hosts, services)
                 if enable_action:
                     self.create_notifications('PROBLEM', notif_period, hosts, services)
                 # Oh? This is the typical go for a event handler :)
@@ -1754,13 +1748,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 #  * warning soft => critical hard
                 #  * warning soft => critical soft
                 if self.state != self.last_state:
-                    self.unacknowledge_problem_if_not_sticky(comments)
+                    self.unacknowledge_problem_if_not_sticky()
                 if self.is_max_attempts():
                     # Ok here is when we just go to the hard state
                     self.state_type = 'HARD'
                     self.raise_alert_log_entry()
                     self.remove_in_progress_notifications()
-                    self.check_for_flexible_downtime(timeperiods, downtimes, hosts, services)
+                    self.check_for_flexible_downtime(timeperiods, hosts, services)
                     if enable_action:
                         self.create_notifications('PROBLEM', notif_period, hosts, services)
                     # So event handlers here too
@@ -1784,7 +1778,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     self.update_hard_unknown_phase_state()
                     if not self.in_hard_unknown_reach_phase and not \
                             self.was_in_hard_unknown_reach_phase:
-                        self.unacknowledge_problem_if_not_sticky(comments)
+                        self.unacknowledge_problem_if_not_sticky()
                         self.raise_alert_log_entry()
                         self.remove_in_progress_notifications()
                         if enable_action:
@@ -2140,7 +2134,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.actions.append(notif)
 
     def scatter_notification(self, notif, contacts, notifways, timeperiods, macromodulations,
-                             escalations, cdowntimes, host_ref=None):
+                             escalations, host_ref=None):
         """In create_notifications we created a notification "template". When it's
         time to hand it over to the reactionner, this master notification needs
         to be split in several child notifications, one for each contact
@@ -2159,8 +2153,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :param escalations: Esclations objects, used to get escalated contacts
         :type escalations: alignak.objects.escalation.Escalations
-        :param cdowntimes: Contact downtime objects, used to check if a notification is legit
-        :type cdowntimes: dict
         :param host_ref: reference host (used for a service)
         :type host_ref: alignak.object.host.Host
 
@@ -2227,8 +2219,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
                 }
                 child_n = Notification(data)
-                if not self.notification_is_blocked_by_contact(notifways, timeperiods, cdowntimes,
-                                                               child_n, contact):
+                if not self.notification_is_blocked_by_contact(notifways, timeperiods, child_n,
+                                                               contact):
                     # Update the notification with fresh status information
                     # of the item. Example: during the notification_delay
                     # the status of a service may have changed from WARNING to CRITICAL
@@ -2685,8 +2677,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if brok_type == 'check_result':
             data['command_name'] = self.check_command.command.command_name
 
-    def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, persistent,
-                            author, comment, end_time=0):
+    def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, author,
+                            comment, end_time=0):
         """
         Add an acknowledge
 
@@ -2694,8 +2686,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
-        :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
         :param author: name of the author or the acknowledge
         :type author: str
         :param comment: comment (description) of the acknowledge
@@ -2705,13 +2695,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None | alignak.comment.Comment
         """
         if self.state != self.ok_up:
+            # case have yet an acknowledge
+            if self.problem_has_been_acknowledged:
+                self.del_comment(self.acknowledgement.comment_id)
+
             if notify:
                 self.create_notifications('ACKNOWLEDGEMENT', notification_period, hosts, services)
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
 
-            data = {'ref': self.uuid, 'sticky': sticky, 'persistent': persistent, 'author': author,
-                    'comment': comment, 'end_time': end_time, 'notify': notify}
+            data = {'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
+                    'end_time': end_time, 'notify': notify}
             ack = Acknowledge(data)
             self.acknowledgement = ack
             if self.my_type == 'host':
@@ -2722,12 +2716,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.broks.append(self.acknowledgement.get_raise_brok(self.host_name,
                                                                       self.get_name()))
             data = {
-                'persistent': persistent, 'author': author, 'comment': comment,
-                'comment_type': comment_type, 'entry_type': 4, 'source': 0, 'expires': False,
-                'expire_time': 0, 'ref': self.uuid
+                'author': author, 'comment': comment, 'comment_type': comment_type, 'entry_type': 4,
+                'source': 0, 'expires': False, 'ref': self.uuid
             }
             comm = Comment(data)
-            self.add_comment(comm.uuid)
+            self.acknowledgement.comment_id = comm.uuid
+            self.comments[comm.uuid] = comm
             self.broks.append(self.get_update_status_brok())
             return comm
         else:
@@ -2736,7 +2730,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.my_type, self.get_name()
             )
 
-    def check_for_expire_acknowledge(self, comments):
+    def check_for_expire_acknowledge(self):
         """
         If have acknowledge and is expired, delete it
 
@@ -2745,12 +2739,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if (self.acknowledgement and
                 self.acknowledgement.end_time != 0 and
                 self.acknowledgement.end_time < time.time()):
-            self.unacknowledge_problem(comments)
+            self.unacknowledge_problem()
 
-    def unacknowledge_problem(self, comments):
+    def unacknowledge_problem(self):
         """
-        Remove the acknowledge, reset the flag. The comment is deleted except if the acknowledge
-        is defined to be persistent
+        Remove the acknowledge, reset the flag. The comment is deleted
 
         :return: None
         """
@@ -2765,17 +2758,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.broks.append(self.acknowledgement.get_expire_brok(self.host_name,
                                                                        self.get_name()))
 
+            # delete the comment of the item related with the acknowledge
+            del self.comments[self.acknowledgement.comment_id]
+
             # Should not be deleted, a None is Good
             self.acknowledgement = None
-            # del self.acknowledgement
-            # find comments of non-persistent ack-comments and delete them too
-            for comm_id in self.comments:
-                comm = comments[comm_id]
-                if comm.entry_type == 4 and not comm.persistent:
-                    self.del_comment(comm.uuid, comments)
             self.broks.append(self.get_update_status_brok())
 
-    def unacknowledge_problem_if_not_sticky(self, comments):
+    def unacknowledge_problem_if_not_sticky(self):
         """
         Remove the acknowledge if it is not sticky
 
@@ -2783,7 +2773,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         if hasattr(self, 'acknowledgement') and self.acknowledgement is not None:
             if not self.acknowledgement.sticky:
-                self.unacknowledge_problem(comments)
+                self.unacknowledge_problem()
 
     def raise_check_result(self):
         """Raise ACTIVE CHECK RESULT entry
@@ -3013,8 +3003,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def notification_is_blocked_by_contact(self, notifways, timeperiods, cdowntimes,
-                                           notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
