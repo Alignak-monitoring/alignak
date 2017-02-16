@@ -1066,6 +1066,10 @@ class ExternalCommandManager:
         notif_period = self.daemon.timeperiods[host.notification_period]
         self.send_an_element(host.acknowledge_problem(notif_period, self.hosts, self.services,
                                                       sticky, notify, persistent, author, comment))
+        for service_id in self.daemon.hosts[host.uuid].services:
+            if service_id in self.daemon.services:
+                self.acknowledge_svc_problem(self.daemon.services[service_id],
+                                             sticky, notify, persistent, author, comment)
 
     def acknowledge_svc_problem_expire(self, service, sticky, notify,
                                        persistent, end_time, author, comment):

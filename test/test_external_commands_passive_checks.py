@@ -1090,3 +1090,68 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Acknowledge disappeared because host went OK
         assert False == router.problem_has_been_acknowledged
 
+    def test_hosts_services_acknowledge(self):
+        """ Test hosts with some attached services acknowledge
+        :return:
+        """
+        # Get host
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host.checks_in_progress = []
+        host.act_depend_of = []
+        host.event_handler_enabled = False
+        host.active_checks_enabled = True
+        host.passive_checks_enabled = True
+        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
+        assert host is not None
+
+        # Get service
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0",
+            "test_ok_0")
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
+        svc.active_checks_enabled = True
+        svc.passive_checks_enabled = True
+        assert svc is not None
+        print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
+
+        # Passive checks for the host and its service
+        # ---------------------------------------------
+        # Service is WARNING
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
+        assert 'WARNING' == svc.state
+        assert 'Service is WARNING' == svc.output
+        # The service is not acknowledged
+        assert False == svc.problem_has_been_acknowledged
+
+        # Host is DOWN
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is DOWN' % int(time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.show_checks()
+        self.assert_checks_count(2)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_router_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
+        assert 'DOWN' == host.state
+        assert u'Host is DOWN' == host.output
+        assert False == host.problem_has_been_acknowledged
+
+        # Acknowledge router
+        excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_host_0;2;1;1;Big brother;test' % int(
+            time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        print "Host state", host.state, host.problem_has_been_acknowledged
+        assert 'DOWN' == host.state
+        assert True == host.problem_has_been_acknowledged
+
+        print "Service state", svc.state, svc.problem_has_been_acknowledged
+        assert 'WARNING' == svc.state
+        # The service has also been acknowledged!
+        assert True == svc.problem_has_been_acknowledged
