@@ -1549,6 +1549,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if comm is not None:
                 new_notified_contacts.add(comm.uuid)
         item.notified_contacts = new_notified_contacts
+        self.add_brok(item.get_retention_status_brok())
 
     def fill_initial_broks(self, bname, with_logs=False):
         """Create initial broks for a specific broker

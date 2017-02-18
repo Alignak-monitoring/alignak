@@ -172,3 +172,16 @@ class Testretention(AlignakTest):
         # acknowledge
         assert True == svcn.problem_has_been_acknowledged
 
+        self._sched = self.schedulers['scheduler-master'].sched
+        host_broks = []
+        service_broks = []
+        for brok in sorted(self._sched.brokers['broker-master']['broks'].itervalues(),
+                           key=lambda x: x.creation_time):
+            if brok.type == 'host_retention_status':
+                print("Host retention: %s" % brok)
+                host_broks.append(brok)
+            if brok.type == 'service_retention_status':
+                print("Service retention: %s" % brok)
+                service_broks.append(brok)
+        assert len(host_broks) == 2
+        assert len(service_broks) == 1

@@ -647,6 +647,17 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_check_result', 'data': data})
 
+    def get_retention_status_brok(self):
+        """
+        Create retention_status brok
+
+        :return: Brok object
+        :rtype: object
+        """
+        data = {}
+        self.fill_data_brok_from(data, 'check_result')
+        return Brok({'type': self.my_type + '_retention_status', 'data': data})
+
     def get_next_schedule_brok(self):
         """
         Create next_schedule (next check) brok

@@ -60,7 +60,7 @@ class Brok(object):
     Broker can do whatever he wants with it.
 
     Broks types:
-    - log
+    - log (deprecated)
     - monitoring_log
 
     - notification_raise
@@ -68,9 +68,12 @@ class Brok(object):
     - downtime_raise
     - acknowledge_expire
     - downtime_expire
+    
     - initial_host_status, initial_service_status, initial_contact_status
     - initial_broks_done
 
+    - host_retention_status, service_retention_status, contact_retention_status
+    
     - update_host_status, update_service_status, initial_contact_status
     - host_check_result, service_check_result
     - host_next_schedule, service_next_scheduler
