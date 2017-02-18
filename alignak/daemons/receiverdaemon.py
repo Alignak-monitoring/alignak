@@ -108,7 +108,6 @@ class Receiver(Satellite):
         self.unprocessed_external_commands = []
 
         self.host_assoc = {}
-        self.direct_routing = False
         self.accept_passive_unknown_check_results = False
 
         self.http_interface = ReceiverInterface(self)
@@ -224,7 +223,6 @@ class Receiver(Satellite):
                               statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                               statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 
-            self.direct_routing = conf['global']['direct_routing']
             self.accept_passive_unknown_check_results = \
                 conf['global']['accept_passive_unknown_check_results']
             # Update External Commands Manager
@@ -280,7 +278,7 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
 
                 # Do not connect if we are a passive satellite
-                if self.direct_routing and not old_sched_id:
+                if not old_sched_id:
                     # And then we connect to it :)
                     self.pynag_con_init(sched_id)
 
@@ -306,18 +304,10 @@ class Receiver(Satellite):
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
-        with external command list if the receiver is in direct routing.
-        If not in direct_routing just clear the unprocessed_external_command list and return
+        with external command list.
 
         :return: None
         """
-        # If we are not in a direct routing mode, just bailout after
-        # faking resolving the commands
-        if not self.direct_routing:
-            self.external_commands.extend(self.unprocessed_external_commands)
-            self.unprocessed_external_commands = []
-            return
-
         if not self.unprocessed_external_commands:
             return
 
@@ -441,7 +431,6 @@ class Receiver(Satellite):
            { 'metrics': ['%s.%s.external-commands.queue %d %d'],
              'version': VERSION,
              'name': self.name,
-             'direct_routing': self.direct_routing,
              'type': _type,
              'passive': self.passive,
              'modules':
@@ -455,8 +444,7 @@ class Receiver(Satellite):
         now = int(time.time())
         # call the daemon one
         res = super(Receiver, self).get_stats_struct()
-        res.update({'name': self.name, 'type': 'receiver',
-                    'direct_routing': self.direct_routing})
+        res.update({'name': self.name, 'type': 'receiver'})
         metrics = res['metrics']
         # metrics specific
         metrics.append('receiver.%s.external-commands.queue %d %d' % (

@@ -657,8 +657,6 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Our receiver
         self._receiver = Receiver(None, False, False, False, None)
-        # Set direct routing, else commands are not forwarded by the receiver to its scheduler
-        self._receiver.direct_routing = True
 
         # ----- first part
         # Our receiver External Commands Manager DOES ACCEPT unknown passive checks...
