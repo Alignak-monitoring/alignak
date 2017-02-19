@@ -71,20 +71,29 @@ class Testretention(AlignakTest):
                 'Acknowledge service' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
+
+        commentsh = []
+        ack_comment_uuid = ''
+        for comm_uuid, comment in host.comments.iteritems():
+            commentsh.append(comment.comment)
+
+        commentss = []
+        for comm_uuid, comment in svc.comments.iteritems():
+            commentss.append(comment.comment)
+            if comment.entry_type == 4:
+                ack_comment_uuid = comment.uuid
+
         assert True == svc.problem_has_been_acknowledged
         assert svc.acknowledgement.__dict__ == {
             "comment": "Acknowledge service",
             "uuid": svc.acknowledgement.uuid,
             "ref": svc.uuid,
             "author": "Big brother",
-            "persistent": True,
             "sticky": True,
             "end_time": 0,
-            "notify": True}
-
-        comments = []
-        for comm_uuid, comment in self.schedulers['scheduler-master'].sched.comments.iteritems():
-            comments.append(comment.comment)
+            "notify": True,
+            "comment_id": ack_comment_uuid
+        }
 
         retention = self.schedulers['scheduler-master'].sched.get_retention_data()
 
@@ -133,7 +142,7 @@ class Testretention(AlignakTest):
 
         self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
         time.sleep(0.1)
-        assert 0 == len(self.schedulers['scheduler-master'].sched.comments)
+        assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
 
         self.schedulers['scheduler-master'].sched.restore_retention_data(retention)
@@ -144,8 +153,8 @@ class Testretention(AlignakTest):
         assert host.uuid != hostn.uuid
 
         # check downtimes (only for host and not for service)
-        assert host.downtimes == hostn.downtimes
-        for down_uuid, downtime in self.schedulers['scheduler-master'].sched.downtimes.iteritems():
+        assert list(host.downtimes) == list(hostn.downtimes)
+        for down_uuid, downtime in hostn.downtimes.iteritems():
             assert 'My downtime' == downtime.comment
 
         # check notifications
@@ -156,12 +165,19 @@ class Testretention(AlignakTest):
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
                              notification.t_to_go
 
-        # check comments
-        assert 2 == len(self.schedulers['scheduler-master'].sched.comments)
-        commentsn = []
-        for comm_uuid, comment in self.schedulers['scheduler-master'].sched.comments.iteritems():
-            commentsn.append(comment.comment)
-        assert comments == commentsn
+        # check comments for host
+        assert len(host.comments) == len(hostn.comments)
+        commentshn = []
+        for comm_uuid, comment in hostn.comments.iteritems():
+            commentshn.append(comment.comment)
+        assert commentsh == commentshn
+
+        # check comments for service
+        assert len(svc.comments) == len(svcn.comments)
+        commentssn = []
+        for comm_uuid, comment in svcn.comments.iteritems():
+            commentssn.append(comment.comment)
+        assert commentss == commentssn
 
         # check notified_contacts
         assert isinstance(hostn.notified_contacts, set)

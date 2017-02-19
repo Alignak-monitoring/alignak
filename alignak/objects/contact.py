@@ -138,8 +138,6 @@ class Contact(Item):
             BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'broks':
             ListProp(default=[]),  # and here broks raised
-        'downtimes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
         'customs':
             DictProp(default={}, fill_brok=['full_status']),
     })
@@ -238,7 +236,7 @@ class Contact(Item):
             return ', '.join(self.contactgroups)
         return 'Unknown'
 
-    def want_service_notification(self, notifways, timeperiods, downtimes,
+    def want_service_notification(self, notifways, timeperiods,
                                   timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
 
@@ -260,7 +258,7 @@ class Contact(Item):
 
         # If we are in downtime, we do not want notification
         for downtime_id in self.downtimes:
-            downtime = downtimes[downtime_id]
+            downtime = self.downtimes[downtime_id]
             if downtime.is_in_effect:
                 self.in_scheduled_downtime = True
                 return False

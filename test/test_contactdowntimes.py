@@ -97,12 +97,11 @@ class TestContactDowntime(AlignakTest):
         self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
         print "downtime was scheduled. check its activity and the comment\n"*5
-        self.assertEqual(1, len(self._sched.contact_downtimes))
         self.assertEqual(1, len(test_contact.downtimes))
-        self.assertIn(test_contact.downtimes[0], self._sched.contact_downtimes)
 
-        assert self._sched.contact_downtimes[test_contact.downtimes[0]].is_in_effect
-        assert not self._sched.contact_downtimes[test_contact.downtimes[0]].can_be_deleted
+        downtime = test_contact.downtimes.values()[0]
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
@@ -112,7 +111,7 @@ class TestContactDowntime(AlignakTest):
         self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
         # Now we short the downtime a lot so it will be stop at now + 1 sec.
-        self._sched.contact_downtimes[test_contact.downtimes[0]].end_time = time.time() + 1
+        downtime.end_time = time.time() + 1
 
         time.sleep(2)
 
@@ -123,7 +122,6 @@ class TestContactDowntime(AlignakTest):
         self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STOPPED')
 
         print "\n\nDowntime was ended. Check it is really stopped"
-        self.assertEqual(0, len(self._sched.contact_downtimes))
         self.assertEqual(0, len(test_contact.downtimes))
 
         for n in svc.notifications_in_progress.values():
@@ -171,12 +169,11 @@ class TestContactDowntime(AlignakTest):
         self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
         print "downtime was scheduled. check its activity and the comment"
-        assert len(self._sched.contact_downtimes) == 1
         assert len(test_contact.downtimes) == 1
-        assert test_contact.downtimes[0] in self._sched.contact_downtimes
 
-        assert self._sched.contact_downtimes[test_contact.downtimes[0]].is_in_effect
-        assert not self._sched.contact_downtimes[test_contact.downtimes[0]].can_be_deleted
+        downtime = test_contact.downtimes.values()[0]
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         time.sleep(1)
         # Ok, we define the downtime like we should, now look at if it does the job: do not
@@ -186,13 +183,13 @@ class TestContactDowntime(AlignakTest):
         # We should NOT see any service notification
         self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
-        downtime_id = test_contact.downtimes[0]
+        downtime_id = list(test_contact.downtimes)[0]
         # OK, Now we cancel this downtime, we do not need it anymore
         cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
         self._sched.run_external_command(cmd)
 
         # We check if the downtime is tag as to remove
-        assert self._sched.contact_downtimes[downtime_id].can_be_deleted
+        assert downtime.can_be_deleted
 
         # We really delete it
         self.scheduler_loop(1, [])
@@ -201,7 +198,6 @@ class TestContactDowntime(AlignakTest):
         self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
 
         print "Downtime was cancelled"
-        assert len(self._sched.contact_downtimes) == 0
         assert len(test_contact.downtimes) == 0
 
         time.sleep(1)

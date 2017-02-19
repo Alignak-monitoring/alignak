@@ -92,7 +92,7 @@ class Downtime(AlignakObject):
         'comment_id': StringProp(default=''),
     }
 
-    def __init__(self, params):
+    def __init__(self, params, parsing=True):
 
         # TODO: Fix this if (un-serializing)
         if 'uuid' not in params:
@@ -127,7 +127,7 @@ class Downtime(AlignakObject):
             self.has_been_triggered = False  # another downtime has triggered me
             self.can_be_deleted = False
         else:
-            super(Downtime, self).__init__(params)
+            super(Downtime, self).__init__(params, parsing)
 
     def __str__(self):
         if self.is_in_effect is True:
@@ -180,7 +180,7 @@ class Downtime(AlignakObject):
         """
         return self.is_in_effect
 
-    def enter(self, timeperiods, hosts, services, downtimes):
+    def enter(self, timeperiods, hosts, services):
         """Set ref in scheduled downtime and raise downtime log entry (start)
 
         :param hosts: hosts objects to get item ref
@@ -210,19 +210,23 @@ class Downtime(AlignakObject):
         item.scheduled_downtime_depth += 1
         item.in_scheduled_downtime = True
         for downtime_id in self.activate_me:
-            downtime = downtimes[downtime_id]
-            broks.extend(downtime.enter(timeperiods, hosts, services, downtimes))
+            for host in hosts:
+                if downtime_id in host.downtimes:
+                    downtime = host.downtimes[downtime_id]
+                    broks.extend(downtime.enter(timeperiods, hosts, services))
+            for service in services:
+                if downtime_id in service.downtimes:
+                    downtime = service.downtimes[downtime_id]
+                    broks.extend(downtime.enter(timeperiods, hosts, services))
         return broks
 
-    def exit(self, timeperiods, hosts, services, comments):
+    def exit(self, timeperiods, hosts, services):
         """Remove ref in scheduled downtime and raise downtime log entry (exit)
 
         :param hosts: hosts objects to get item ref
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects to get item ref
         :type services: alignak.objects.service.Services
-        :param comments: comments objects to edit the wanted comment
-        :type comments: dict
         :return: [], always | None
         :rtype: list
         """
@@ -248,7 +252,7 @@ class Downtime(AlignakObject):
             # This was probably a flexible downtime which was not triggered
             # In this case it silently disappears
             pass
-        self.del_automatic_comment(comments)
+        item.del_comment(self.comment_id)
         self.can_be_deleted = True
         # when a downtime ends and the service was critical
         # a notification is sent with the next critical check
@@ -257,15 +261,13 @@ class Downtime(AlignakObject):
         item.in_scheduled_downtime_during_last_check = True
         return broks
 
-    def cancel(self, timeperiods, hosts, services, comments=None):
+    def cancel(self, timeperiods, hosts, services):
         """Remove ref in scheduled downtime and raise downtime log entry (cancel)
 
         :param hosts: hosts objects to get item ref
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects to get item ref
         :type services: alignak.objects.service.Services
-        :param comments: comments objects to edit the wanted comment
-        :type comments: dict
         :return: [], always
         :rtype: list
         """
@@ -283,8 +285,7 @@ class Downtime(AlignakObject):
                 broks.append(self.get_expire_brok(item.get_name()))
             else:
                 broks.append(self.get_expire_brok(item.host_name, item.get_name()))
-        if comments:
-            self.del_automatic_comment(comments)
+        self.del_automatic_comment(item)
         self.can_be_deleted = True
         item.in_scheduled_downtime_during_last_check = True
         # Nagios does not notify on canceled downtimes
@@ -327,23 +328,22 @@ class Downtime(AlignakObject):
         else:
             comment_type = 2
         data = {
-            'persistent': False, 'comment': text, 'comment_type': comment_type, 'entry_type': 2,
-            'source': 0, 'expires': False, 'expire_time': 0, 'ref': ref.uuid
+            'comment': text, 'comment_type': comment_type, 'entry_type': 2, 'source': 0,
+            'expires': False, 'ref': ref.uuid
         }
         comm = Comment(data)
         self.comment_id = comm.uuid
-        ref.add_comment(comm.uuid)
+        ref.comments[comm.uuid] = comm
         return comm
 
-    def del_automatic_comment(self, comments):
+    def del_automatic_comment(self, item):
         """Remove automatic comment on ref previously created
 
-        :param comments: comments objects to edit the wanted comment
-        :type comments: dict
+        :param item: item service or host
+        :type item: object
         :return: None
         """
-        if self.comment_id in comments:
-            comments[self.comment_id].can_be_deleted = True
+        item.del_comment(self.comment_id)
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type

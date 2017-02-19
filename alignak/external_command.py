@@ -106,19 +106,19 @@ class ExternalCommandManager:
         'change_contact_host_notification_timeperiod':
             {'global': True, 'args': ['contact', 'time_period']},
         'add_svc_comment':
-            {'global': False, 'args': ['service', 'to_bool', 'author', None]},
+            {'global': False, 'args': ['service', 'obsolete', 'author', None]},
         'add_host_comment':
-            {'global': False, 'args': ['host', 'to_bool', 'author', None]},
+            {'global': False, 'args': ['host', 'obsolete', 'author', None]},
         'acknowledge_svc_problem':
-            {'global': False, 'args': ['service', 'to_int', 'to_bool', 'to_bool', 'author', None]},
+            {'global': False, 'args': ['service', 'to_int', 'to_bool', 'obsolete', 'author', None]},
         'acknowledge_host_problem':
-            {'global': False, 'args': ['host', 'to_int', 'to_bool', 'to_bool', 'author', None]},
+            {'global': False, 'args': ['host', 'to_int', 'to_bool', 'obsolete', 'author', None]},
         'acknowledge_svc_problem_expire':
             {'global': False, 'args': ['service', 'to_int', 'to_bool',
-                                       'to_bool', 'to_int', 'author', None]},
+                                       'obsolete', 'to_int', 'author', None]},
         'acknowledge_host_problem_expire':
             {'global': False,
-             'args': ['host', 'to_int', 'to_bool', 'to_bool', 'to_int', 'author', None]},
+             'args': ['host', 'to_int', 'to_bool', 'obsolete', 'to_int', 'author', None]},
         'change_contact_svc_notification_timeperiod':
             {'global': True, 'args': ['contact', 'time_period']},
         'change_custom_contact_var':
@@ -399,9 +399,9 @@ class ExternalCommandManager:
                                       None, 'to_int', 'author', None]},
         'schedule_svc_check':
             {'global': False, 'args': ['service', 'to_int']},
-        'schedule_svc_downtime': {'global': False, 'args': ['service', 'to_int', 'to_int',
-                                                            'to_bool', None, 'to_int',
-                                                            'author', None]},
+        'schedule_svc_downtime':
+            {'global': False, 'args': ['service', 'to_int', 'to_int',
+                                       'to_bool', None, 'to_int', 'author', None]},
         'send_custom_host_notification':
             {'global': False, 'args': ['host', 'to_int', 'author', None]},
         'send_custom_svc_notification':
@@ -459,7 +459,6 @@ class ExternalCommandManager:
 
     def __init__(self, conf, mode, daemon, accept_unknown=False):
         """
-
         The command manager is initialized with a `mode` parameter specifying what is to be done
         with the managed commands. If mode is:
         - applyer, the user daemon is a scheduler that will execute the command
@@ -766,6 +765,7 @@ class ExternalCommandManager:
         i = 1
         in_service = False
         tmp_host = ''
+        obsolete_arg = 0
         try:
             for elt in elts[1:]:
                 logger.debug("Searching for a new arg: %s (%d)", elt, i)
@@ -812,6 +812,9 @@ class ExternalCommandManager:
                         timeperiod = self.timeperiods.find_by_name(val)
                         if timeperiod is not None:
                             args.append(timeperiod)
+
+                    elif type_searched == 'obsolete':
+                        obsolete_arg += 1
 
                     elif type_searched == 'to_bool':
                         args.append(to_bool(val))
@@ -892,7 +895,7 @@ class ExternalCommandManager:
                 # Send a brok to our arbiter else to our scheduler
                 self.send_an_element(brok)
         else:
-            if len(args) == len(entry['args']):
+            if len(args) == (len(entry['args']) - obsolete_arg):
                 return {'global': False, 'c_name': c_name, 'args': args}
 
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
@@ -968,16 +971,15 @@ class ExternalCommandManager:
         contact.host_notification_period = notification_timeperiod
         self.daemon.get_and_register_status_brok(contact)
 
-    def add_svc_comment(self, service, persistent, author, comment):
+    @staticmethod
+    def add_svc_comment(service, author, comment):
         """Add a service comment
         Format of the line that triggers function call::
 
-        ADD_SVC_COMMENT;<host_name>;<service_description>;<persistent>;<author>;<comment>
+        ADD_SVC_COMMENT;<host_name>;<service_description>;<persistent:obsolete>;<author>;<comment>
 
         :param service: service to add the comment
         :type service: alignak.objects.service.Service
-        :param persistent: is comment persistent (for reboot) or not
-        :type persistent: bool
         :param author: author name
         :type author: str
         :param comment: text comment
@@ -985,23 +987,21 @@ class ExternalCommandManager:
         :return: None
         """
         data = {
-            'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 2,
-            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref': service.uuid
+            'author': author, 'comment': comment, 'comment_type': 2, 'entry_type': 1, 'source': 1,
+            'expires': False, 'ref': service.uuid
         }
         comm = Comment(data)
-        service.add_comment(comm.uuid)
-        self.send_an_element(comm)
+        service.add_comment(comm)
 
-    def add_host_comment(self, host, persistent, author, comment):
+    @staticmethod
+    def add_host_comment(host, author, comment):
         """Add a host comment
         Format of the line that triggers function call::
 
-        ADD_HOST_COMMENT;<host_name>;<persistent>;<author>;<comment>
+        ADD_HOST_COMMENT;<host_name>;<persistent:obsolete>;<author>;<comment>
 
         :param host: host to add the comment
         :type host: alignak.objects.host.Host
-        :param persistent: is comment persistent (for reboot) or not
-        :type persistent: bool
         :param author: author name
         :type author: str
         :param comment: text comment
@@ -1009,19 +1009,18 @@ class ExternalCommandManager:
         :return: None
         """
         data = {
-            'persistent': persistent, 'author': author, 'comment': comment, 'comment_type': 1,
-            'entry_type': 1, 'source': 1, 'expires': False, 'expire_time': 0, 'ref': host.uuid
+            'author': author, 'comment': comment, 'comment_type': 1, 'entry_type': 1, 'source': 1,
+            'expires': False, 'ref': host.uuid
         }
         comm = Comment(data)
-        host.add_comment(comm.uuid)
-        self.send_an_element(comm)
+        host.add_comment(comm)
 
-    def acknowledge_svc_problem(self, service, sticky, notify, persistent, author, comment):
+    def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
         """Acknowledge a service problem
         Format of the line that triggers function call::
 
-        ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;<sticky>;<notify>;<persistent>;
-        <author>;<comment>
+        ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;<sticky>;<notify>;
+        <persistent:obsolete>;<author>;<comment>
 
         :param service: service to acknowledge the problem
         :type service: alignak.objects.service.Service
@@ -1029,8 +1028,6 @@ class ExternalCommandManager:
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
-        :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
         :param author: name of the author or the acknowledge
         :type author: str
         :param comment: comment (description) of the acknowledge
@@ -1038,15 +1035,15 @@ class ExternalCommandManager:
         :return: None
         """
         notif_period = self.daemon.timeperiods[service.notification_period]
-        self.send_an_element(service.acknowledge_problem(notif_period, self.hosts, self.services,
-                                                         sticky, notify, persistent,
-                                                         author, comment))
+        service.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
+                                    comment)
 
-    def acknowledge_host_problem(self, host, sticky, notify, persistent, author, comment):
+    def acknowledge_host_problem(self, host, sticky, notify, author, comment):
         """Acknowledge a host problem
         Format of the line that triggers function call::
 
-        ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent>;<author>;<comment>
+        ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent:obsolete>;<author>;
+        <comment>
 
         :param host: host to acknowledge the problem
         :type host: alignak.objects.host.Host
@@ -1054,8 +1051,6 @@ class ExternalCommandManager:
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
-        :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
         :param author: name of the author or the acknowledge
         :type author: str
         :param comment: comment (description) of the acknowledge
@@ -1064,20 +1059,19 @@ class ExternalCommandManager:
         TODO: add a better ACK management
         """
         notif_period = self.daemon.timeperiods[host.notification_period]
-        self.send_an_element(host.acknowledge_problem(notif_period, self.hosts, self.services,
-                                                      sticky, notify, persistent, author, comment))
+        host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
+                                 comment)
         for service_id in self.daemon.hosts[host.uuid].services:
             if service_id in self.daemon.services:
                 self.acknowledge_svc_problem(self.daemon.services[service_id],
-                                             sticky, notify, persistent, author, comment)
+                                             sticky, notify, author, comment)
 
-    def acknowledge_svc_problem_expire(self, service, sticky, notify,
-                                       persistent, end_time, author, comment):
+    def acknowledge_svc_problem_expire(self, service, sticky, notify, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
         Format of the line that triggers function call::
 
-        ACKNOWLEDGE_SVC_PROBLEM;<host_name>;<service_description>;<sticky>;<notify>;<persistent>;
-        <end_time>;<author>;<comment>
+        ACKNOWLEDGE_SVC_PROBLEM_EXPIRE;<host_name>;<service_description>;<sticky>;<notify>;
+        <persistent:obsolete>;<end_time>;<author>;<comment>
 
         :param service: service to acknowledge the problem
         :type service: alignak.objects.service.Service
@@ -1085,8 +1079,6 @@ class ExternalCommandManager:
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
-        :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
         :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
         :type end_time: int
         :param author: name of the author or the acknowledge
@@ -1096,17 +1088,15 @@ class ExternalCommandManager:
         :return: None
         """
         notif_period = self.daemon.timeperiods[service.notification_period]
-        self.send_an_element(service.acknowledge_problem(notif_period, self.hosts, self.services,
-                                                         sticky, notify, persistent,
-                                                         author, comment, end_time=end_time))
+        service.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
+                                    comment, end_time=end_time)
 
-    def acknowledge_host_problem_expire(self, host, sticky, notify,
-                                        persistent, end_time, author, comment):
+    def acknowledge_host_problem_expire(self, host, sticky, notify, end_time, author, comment):
         """Acknowledge a host problem with expire time for this acknowledgement
         Format of the line that triggers function call::
 
-        ACKNOWLEDGE_HOST_PROBLEM;<host_name>;<sticky>;<notify>;<persistent>;<end_time>;
-        <author>;<comment>
+        ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;<host_name>;<sticky>;<notify>;<persistent:obsolete>;
+        <end_time>;<author>;<comment>
 
         :param host: host to acknowledge the problem
         :type host: alignak.objects.host.Host
@@ -1114,8 +1104,6 @@ class ExternalCommandManager:
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
-        :param persistent: if 1, keep this acknowledge when Alignak restart
-        :type persistent: integer
         :param end_time: end (timeout) of this acknowledge in seconds(timestamp) (0 to never end)
         :type end_time: int
         :param author: name of the author or the acknowledge
@@ -1126,9 +1114,8 @@ class ExternalCommandManager:
         TODO: add a better ACK management
         """
         notif_period = self.daemon.timeperiods[host.notification_period]
-        self.send_an_element(host.acknowledge_problem(notif_period, self.hosts, self.services,
-                                                      sticky, notify, persistent, author, comment,
-                                                      end_time=end_time))
+        host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
+                                 comment, end_time=end_time)
 
     def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value
@@ -1674,7 +1661,8 @@ class ExternalCommandManager:
         for downtime in contact.downtimes:
             self.del_contact_downtime(downtime)
 
-    def del_all_host_comments(self, host):
+    @staticmethod
+    def del_all_host_comments(host):
         """Delete all host comments
         Format of the line that triggers function call::
 
@@ -1684,8 +1672,9 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        for comment in host.comments:
-            self.del_host_comment(comment)
+        comments = host.comments.keys()
+        for uuid in comments:
+            host.del_comment(uuid)
 
     def del_all_host_downtimes(self, host):
         """Delete all host downtimes
@@ -1700,7 +1689,8 @@ class ExternalCommandManager:
         for downtime in host.downtimes:
             self.del_host_downtime(downtime)
 
-    def del_all_svc_comments(self, service):
+    @staticmethod
+    def del_all_svc_comments(service):
         """Delete all service comments
         Format of the line that triggers function call::
 
@@ -1710,8 +1700,9 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        for comment in service.comments:
-            self.del_svc_comment(comment)
+        comments = service.comments.keys()
+        for uuid in comments:
+            service.del_comment(uuid)
 
     def del_all_svc_downtimes(self, service):
         """Delete all service downtime
@@ -1736,8 +1727,10 @@ class ExternalCommandManager:
         :type downtime_id: int
         :return: None
         """
-        if downtime_id in self.daemon.contact_downtimes:
-            self.daemon.contact_downtimes[downtime_id].cancel(self.daemon.contacts)
+        for item in self.daemon.contacts:
+            if downtime_id in item.downtimes:
+                item.downtimes[downtime_id].cancel(self.daemon.contacts)
+                break
         else:
             brok = make_monitoring_log('warning',
                                        'DEL_CONTACT_DOWNTIME: downtime_id id: %s does not exist '
@@ -1754,8 +1747,10 @@ class ExternalCommandManager:
         :type comment_id: int
         :return: None
         """
-        if comment_id in self.daemon.comments:
-            self.daemon.comments[comment_id].can_be_deleted = True
+        for item in self.daemon.hosts:
+            if comment_id in item.comments:
+                item.del_comment(comment_id)
+                break
         else:
             brok = make_monitoring_log('warning',
                                        'DEL_HOST_COMMENT: comment id: %s does not exist '
@@ -1773,10 +1768,12 @@ class ExternalCommandManager:
         :return: None
         """
         broks = []
-        if downtime_id in self.daemon.downtimes:
-            broks.extend(self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods,
-                                                                   self.daemon.hosts,
-                                                                   self.daemon.services))
+        for item in self.daemon.hosts:
+            if downtime_id in item.downtimes:
+                broks.extend(item.downtimes[downtime_id].cancel(self.daemon.timeperiods,
+                                                                self.daemon.hosts,
+                                                                self.daemon.services))
+                break
         else:
             broks.append(make_monitoring_log(
                 'warning',
@@ -1795,8 +1792,10 @@ class ExternalCommandManager:
         :type comment_id: int
         :return: None
         """
-        if comment_id in self.daemon.comments:
-            self.daemon.comments[comment_id].can_be_deleted = True
+        for svc in self.daemon.services:
+            if comment_id in svc.comments:
+                svc.del_comment(comment_id)
+                break
         else:
             brok = make_monitoring_log('warning',
                                        'DEL_SVC_COMMENT: comment id: %s does not exist '
@@ -1814,11 +1813,12 @@ class ExternalCommandManager:
         :return: None
         """
         broks = []
-        if downtime_id in self.daemon.downtimes:
-            broks.extend(self.daemon.downtimes[downtime_id].cancel(self.daemon.timeperiods,
-                                                                   self.daemon.hosts,
-                                                                   self.daemon.services,
-                                                                   self.daemon.comments))
+        for svc in self.daemon.services:
+            if downtime_id in svc.downtimes:
+                broks.extend(svc.downtimes[downtime_id].cancel(self.daemon.timeperiods,
+                                                               self.daemon.hosts,
+                                                               self.daemon.services))
+                break
         else:
             broks.append(make_monitoring_log(
                 'warning',
@@ -3107,7 +3107,8 @@ class ExternalCommandManager:
                                    'this command is not implemented!')
         self.send_an_element(brok)
 
-    def remove_host_acknowledgement(self, host):
+    @staticmethod
+    def remove_host_acknowledgement(host):
         """Remove an acknowledgment on a host
         Format of the line that triggers function call::
 
@@ -3117,9 +3118,10 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        host.unacknowledge_problem(self.daemon.comments)
+        host.unacknowledge_problem()
 
-    def remove_svc_acknowledgement(self, service):
+    @staticmethod
+    def remove_svc_acknowledgement(service):
         """Remove an acknowledgment on a service
         Format of the line that triggers function call::
 
@@ -3129,7 +3131,7 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        service.unacknowledge_problem(self.daemon.comments)
+        service.unacknowledge_problem()
 
     def restart_program(self):
         """Restart Alignak
@@ -3277,8 +3279,7 @@ class ExternalCommandManager:
         data = {'ref': contact.uuid, 'start_time': start_time,
                 'end_time': end_time, 'author': author, 'comment': comment}
         cdt = ContactDowntime(data)
-        contact.add_downtime(cdt.uuid)
-        self.send_an_element(cdt)
+        contact.add_downtime(cdt)
         self.daemon.get_and_register_status_brok(contact)
 
     def schedule_forced_host_check(self, host, check_time):
@@ -3448,12 +3449,13 @@ class ExternalCommandManager:
                 'end_time': end_time, 'fixed': fixed, 'trigger_id': trigger_id,
                 'duration': duration, 'author': author, 'comment': comment}
         downtime = Downtime(data)
-        self.send_an_element(downtime.add_automatic_comment(host))
-        host.add_downtime(downtime.uuid)
-        self.send_an_element(downtime)
+        downtime.add_automatic_comment(host)
+        host.add_downtime(downtime)
         self.daemon.get_and_register_status_brok(host)
-        if trigger_id != '' and trigger_id in self.daemon.downtimes:
-            self.daemon.downtimes[trigger_id].trigger_me(downtime.uuid)
+        if trigger_id != '' and trigger_id != 0:
+            for item in self.daemon.hosts:
+                if trigger_id in item.downtimes:
+                    host.downtimes[trigger_id].trigger_me(downtime.uuid)
 
     def schedule_host_svc_checks(self, host, check_time):
         """Schedule a check on all services of a host
@@ -3610,12 +3612,13 @@ class ExternalCommandManager:
                 'end_time': end_time, 'fixed': fixed, 'trigger_id': trigger_id,
                 'duration': duration, 'author': author, 'comment': comment}
         downtime = Downtime(data)
-        self.send_an_element(downtime.add_automatic_comment(service))
-        service.add_downtime(downtime.uuid)
-        self.send_an_element(downtime)
+        downtime.add_automatic_comment(service)
+        service.add_downtime(downtime)
         self.daemon.get_and_register_status_brok(service)
-        if trigger_id not in ['', '0'] and trigger_id in self.daemon.downtimes:
-            self.daemon.downtimes[trigger_id].trigger_me(downtime.uuid)
+        if trigger_id != '' and trigger_id != 0:
+            for item in self.daemon.services:
+                if trigger_id in item.downtimes:
+                    service.downtimes[trigger_id].trigger_me(downtime.uuid)
 
     def send_custom_host_notification(self, host, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
