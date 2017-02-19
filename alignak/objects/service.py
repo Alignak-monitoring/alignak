@@ -260,6 +260,8 @@ class Service(SchedulingItem):
             self.state = 'CRITICAL'
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
+        else:
+            self.state = 'OK'
 
     def __repr__(self):
         return '<Service host_name=%r desc=%r name=%r use=%r />' % (

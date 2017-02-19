@@ -308,6 +308,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = 'DOWN'
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
+        else:
+            self.state = 'UP'
 
     def is_correct(self):
         """Check if this object configuration is correct ::
