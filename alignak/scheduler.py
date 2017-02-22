@@ -1411,6 +1411,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # And also add downtimes and comments
         for down in data['downtimes']:
             if down['uuid'] not in item.downtimes:
+                down['ref'] = item.uuid
                 item.add_downtime(Downtime(down))
         if item.acknowledgement is not None:
             item.acknowledgement = Acknowledge(item.acknowledgement)
@@ -1419,6 +1420,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # if it was loaded from the retention, it's now a list of contacts
         # names
         for comm in data['comments']:
+            comm['ref'] = item.uuid
             item.add_comment(Comment(comm))
         new_notified_contacts = set()
         for cname in item.notified_contacts:
