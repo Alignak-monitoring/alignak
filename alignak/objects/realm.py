@@ -92,7 +92,8 @@ class Realm(Itemgroup):
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'serialized_confs': DictProp(default={}),
-        'unknown_higher_realms': ListProp(default=[])
+        'unknown_higher_realms': ListProp(default=[]),
+        'all_sub_members': ListProp(default=[]),
     })
 
     macros = {
@@ -129,9 +130,8 @@ class Realm(Itemgroup):
         :param member: realm name to add
         :type member:
         :return: None
-        TODO : Clean this self.members != self.realm_members?
         """
-        self.realm_members.append(member)
+        self.all_sub_members.extend(member)
 
     def add_string_unknown_higher(self, member):
         """
@@ -168,39 +168,37 @@ class Realm(Itemgroup):
         :type realms: alignak.objects.realm.Realms
         :return: list of members and add realm to realm_members attribute
         :rtype: list
-        TODO: Clean this function that silently edit realm_members.
         """
-        # First we tag the hg so it will not be explode
-        # if a son of it already call it
-        self.already_explode = True
-
-        # Now the recursive part
+        # The recursive part
         # rec_tag is set to False every HG we explode
         # so if True here, it must be a loop in HG
         # calls... not GOOD!
         if self.rec_tag:
             err = "Error: we've got a loop in realm definition %s" % self.get_name()
             self.configuration_errors.append(err)
-            if hasattr(self, 'members'):
-                return self.members
-            else:
-                return []
+            return None
 
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
+
+        # we have yet exploded this realm
+        if self.all_sub_members != []:
+            return self.all_sub_members
 
         p_mbrs = self.get_realm_members()
         for p_mbr in p_mbrs:
             realm = realms.find_by_name(p_mbr.strip())
             if realm is not None:
                 value = realm.get_realms_by_explosion(realms)
-                if len(value) > 0:
+                if value is None:
+                    # case loop problem
+                    self.all_sub_members = []
+                    self.realm_members = []
+                    return None
+                elif len(value) > 0:
                     self.add_string_member(value)
-
-        if hasattr(self, 'members'):
-            return self.members
-        else:
-            return []
+                self.add_string_member([realm.uuid])
+        return self.all_sub_members
 
     def get_all_subs_satellites_by_type(self, sat_type, realms):
         """Get all satellites of the wanted type in this realm recursively
@@ -214,7 +212,7 @@ class Realm(Itemgroup):
         TODO: Make this generic
         """
         res = copy.copy(getattr(self, sat_type))
-        for member in self.realm_members:
+        for member in self.all_sub_members:
             tmps = realms[member].get_all_subs_satellites_by_type(sat_type, realms)
             for mem in tmps:
                 res.append(mem)
@@ -468,13 +466,9 @@ class Realms(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
-        # so we tag it
-        for tmp_p in self.items.values():
-            tmp_p.already_explode = False
         for realm in self:
-            if hasattr(realm, 'realm_members') and not realm.already_explode:
-                # get_hosts_by_explosion is a recursive
+            if hasattr(realm, 'realm_members') and realm.realm_members != []:
+                # get_realms_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_p in self:
                     tmp_p.rec_tag = False
@@ -484,7 +478,6 @@ class Realms(Itemgroups):
         for tmp_p in self.items.values():
             if hasattr(tmp_p, 'rec_tag'):
                 del tmp_p.rec_tag
-            del tmp_p.already_explode
 
     def get_default(self):
         """Get the default realm
@@ -562,7 +555,8 @@ class Realms(Itemgroups):
                             elem = satellites[i][elem_id]
                             if not elem.spare and elem.manage_sub_realms:
                                 setattr(realm, "nb_%ss" % sat, getattr(realm, "nb_%ss" % sat) + 1)
-                            if elem.manage_sub_realms:
+                            if elem.manage_sub_realms and \
+                                    elem.uuid not in getattr(realm, 'potential_%ss' % sat):
                                 getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
 
                     high_realm = above_realm
@@ -608,7 +602,8 @@ class Realms(Itemgroups):
                     elem = satellites[elem_id]
                     if not elem.spare and elem.manage_sub_realms:
                         setattr(realm, "nb_%s" % sat_type, getattr(realm, "nb_%s" % sat_type) + 1)
-                    if elem.manage_sub_realms:
+                    if elem.manage_sub_realms and \
+                            elem.uuid not in getattr(realm, 'potential_%s' % sat_type):
                         getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
 
             high_realm = above_realm
