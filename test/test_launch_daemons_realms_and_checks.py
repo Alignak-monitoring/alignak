@@ -135,6 +135,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         print("Get information from log files...")
         nb_errors = 0
+        nb_warning = 0
         for daemon in ['arbiter'] + daemons_list:
             assert os.path.exists('/tmp/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
             daemon_errors = False
@@ -143,6 +144,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 for line in f:
                     if 'WARNING' in line or daemon_errors:
                         print(line)
+                        if daemon == 'arbiter':
+                            nb_warning += 1
                     if 'ERROR' in line or 'CRITICAL' in line:
                         if not daemon_errors:
                             print(line[:-1])
@@ -150,6 +153,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
                         nb_errors += 1
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons loaded the modules")
+
+        assert nb_warning == 0, "Warning logs raised!"
 
         print("Stopping the daemons...")
         for name, proc in self.procs.items():

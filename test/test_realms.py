@@ -278,8 +278,8 @@ class TestRealms(AlignakTest):
         assert len(europe.get_satellites_by_type('receiver')) == 0
         assert len(europe.get_satellites_by_type('reactionner')) == 0
 
-        assert europe.uuid in world.get_realms()
-        assert paris.uuid in europe.get_realms()
+        assert europe.uuid in world.all_sub_members
+        assert paris.uuid in europe.all_sub_members
 
     def test_sub_realms_assignations(self):
         """ Test realm / sub-realm for broker
@@ -366,9 +366,9 @@ class TestRealms(AlignakTest):
         assert Paris.all_sub_members == []
         assert France.all_sub_members == [Paris.uuid,Lyon.uuid]
 
-        assert Europe.all_sub_members == [Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid]
+        assert set(Europe.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid])
 
-        assert World.all_sub_members == [Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid,Europe.uuid,Tokyo.uuid,Osaka.uuid,Japan.uuid,Asia.uuid]
+        assert set(World.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid,Europe.uuid,Tokyo.uuid,Osaka.uuid,Japan.uuid,Asia.uuid])
 
         # check satellites defined in each realms
         broker_uuid = self.brokers['broker-master'].uuid
@@ -377,14 +377,21 @@ class TestRealms(AlignakTest):
         reactionner_uuid = self.reactionners['reactionner-master'].uuid
 
         for realm in [Osaka, Tokyo, Japan, Asia, Turin, Rome, Italy, Lyon, Paris, France, Europe, World]:
-            assert realm.brokers == [broker_uuid]
+            print 'Realm name: %s' % realm.realm_name
+            if realm.realm_name != 'France':
+                assert realm.brokers == [broker_uuid]
+                assert realm.potential_brokers == [broker_uuid]
+                assert realm.nb_brokers == 1
             assert realm.pollers == [poller_uuid]
             assert realm.receivers == [receiver_uuid]
             assert realm.reactionners == [reactionner_uuid]
-            assert realm.potential_brokers == [broker_uuid]
             assert realm.potential_pollers == [poller_uuid]
             assert realm.potential_receivers == [receiver_uuid]
             assert realm.potential_reactionners == [reactionner_uuid]
+
+        assert set(France.brokers) == set([broker_uuid, self.brokers['broker-france'].uuid])
+        assert set(France.potential_brokers) == set([broker_uuid, self.brokers['broker-france'].uuid])
+        assert France.nb_brokers == 2
 
     def test_sub_realms_multi_levels_loop(self):
         """ Test realm / sub-realm / sub-sub-realms... with a loop, so exit with error message
