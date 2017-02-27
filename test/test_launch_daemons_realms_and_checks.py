@@ -144,7 +144,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 for line in f:
                     if 'WARNING' in line or daemon_errors:
                         print(line)
-                        if daemon == 'arbiter' and 'Cannot call the additional groups setting with initgroups (Operation not permitted)' not in line:
+                        if daemon == 'arbiter' \
+                                and 'Cannot call the additional groups setting with initgroups (Operation not permitted)' not in line \
+                                and 'Cannot call the additional groups setting with setgroups' not in line:
                             nb_warning += 1
                     if 'ERROR' in line or 'CRITICAL' in line:
                         if not daemon_errors:
