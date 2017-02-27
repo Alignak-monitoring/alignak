@@ -503,19 +503,4 @@ class Realms(Itemgroups):
                  realm.nb_brokers, len(realm.potential_brokers),
                  realm.nb_receivers, len(realm.potential_receivers)
                  )
-
-    def fill_potential_satellites_by_type(self, sat_type, realm, satellites):
-        """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
-
-        :param sat_type: satellite type wanted
-        :type sat_type: str
-        :param realm: the realm we want to fill potential attribute
-        :type realm: alignak.objects.realm.Realm
-        :param satellites: items corresponding to the wanted type
-        :type satellites: alignak.objects.item.Items
-        :return: None
-        """
-        setattr(realm, 'potential_%s' % sat_type, [])
-        for elem_id in getattr(realm, sat_type):
-            elem = satellites[elem_id]
-            getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
+            logger.info(line)
