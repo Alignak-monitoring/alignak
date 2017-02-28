@@ -92,7 +92,8 @@ class Realm(Itemgroup):
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'serialized_confs': DictProp(default={}),
-        'unknown_higher_realms': ListProp(default=[])
+        'unknown_higher_realms': ListProp(default=[]),
+        'all_sub_members': ListProp(default=[]),
     })
 
     macros = {
@@ -113,38 +114,14 @@ class Realm(Itemgroup):
         """
         return self.realm_name
 
-    def get_realms(self):
-        """
-        Get list of members of this realm
-
-        :return: list of realm (members)
-        :rtype: list
-        TODO: Duplicate of get_realm_members
-        """
-        return self.realm_members
-
     def add_string_member(self, member):
-        """Add a realm to realm_members attribute
+        """Add a realm to all_sub_members attribute
 
-        :param member: realm name to add
-        :type member:
-        :return: None
-        TODO : Clean this self.members != self.realm_members?
-        """
-        self.realm_members.append(member)
-
-    def add_string_unknown_higher(self, member):
-        """
-        Add new entry(member) to unknown higher realms list
-
-        :param member: member name
-        :type member: str
+        :param member: realm names to add
+        :type member: list
         :return: None
         """
-        add_fun = list.extend if isinstance(member, list) else list.append
-        if not self.unknown_higher_realms:
-            self.unknown_higher_realms = []
-        add_fun(self.unknown_higher_realms, member)
+        self.all_sub_members.extend(member)
 
     def get_realm_members(self):
         """
@@ -161,46 +138,62 @@ class Realm(Itemgroup):
         else:
             return []
 
+    def fill_realm_members_with_higher_realms(self, realms):
+        """
+        if we have higher_realms defined, fill realm_members of the realm with my realm_name
+
+        :param realms: list of all realms objects
+        :type realms: list
+        :return: None
+        """
+        higher_realms = getattr(self, 'higher_realms', [])
+        for realm_nane in higher_realms:
+            realm = realms.find_by_name(realm_nane.strip())
+            if realm is not None:
+                if not hasattr(realm, 'realm_members'):
+                    realm.realm_members = []
+                realm.realm_members.append(self.realm_name)
+
     def get_realms_by_explosion(self, realms):
-        """Get all members of this realm including members of sub-realms
+        """Get all members of this realm including members of sub-realms on multi-levels
 
         :param realms: realms list, used to look for a specific one
         :type realms: alignak.objects.realm.Realms
         :return: list of members and add realm to realm_members attribute
         :rtype: list
-        TODO: Clean this function that silently edit realm_members.
         """
-        # First we tag the hg so it will not be explode
-        # if a son of it already call it
-        self.already_explode = True
-
-        # Now the recursive part
+        # The recursive part
         # rec_tag is set to False every HG we explode
         # so if True here, it must be a loop in HG
         # calls... not GOOD!
         if self.rec_tag:
             err = "Error: we've got a loop in realm definition %s" % self.get_name()
             self.configuration_errors.append(err)
-            if hasattr(self, 'members'):
-                return self.members
-            else:
-                return []
+            return None
 
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
+
+        # we have yet exploded this realm
+        if self.all_sub_members != []:
+            return self.all_sub_members
 
         p_mbrs = self.get_realm_members()
         for p_mbr in p_mbrs:
             realm = realms.find_by_name(p_mbr.strip())
             if realm is not None:
                 value = realm.get_realms_by_explosion(realms)
-                if len(value) > 0:
+                if value is None:
+                    # case loop problem
+                    self.all_sub_members = []
+                    self.realm_members = []
+                    return None
+                elif len(value) > 0:
                     self.add_string_member(value)
-
-        if hasattr(self, 'members'):
-            return self.members
-        else:
-            return []
+                self.add_string_member([realm.realm_name])
+            else:
+                self.add_string_unknown_member(p_mbr.strip())
+        return self.all_sub_members
 
     def get_all_subs_satellites_by_type(self, sat_type, realms):
         """Get all satellites of the wanted type in this realm recursively
@@ -214,7 +207,7 @@ class Realm(Itemgroup):
         TODO: Make this generic
         """
         res = copy.copy(getattr(self, sat_type))
-        for member in self.realm_members:
+        for member in self.all_sub_members:
             tmps = realms[member].get_all_subs_satellites_by_type(sat_type, realms)
             for mem in tmps:
                 res.append(mem)
@@ -366,19 +359,6 @@ class Realms(Itemgroups):
     name_property = "realm_name"  # is used for finding hostgroups
     inner_class = Realm
 
-    def get_members_by_name(self, pname):
-        """Get realm_members for a specific realm
-
-        :param pname: realm name
-        :type: str
-        :return: list of realm members
-        :rtype: list
-        """
-        realm = self.find_by_name(pname)
-        if realm is None:
-            return []
-        return realm.get_realms()
-
     def linkify(self):
         """Links sub-realms (parent / son),
         add new realm_members,
@@ -408,18 +388,15 @@ class Realms(Itemgroups):
 
     def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
-        Realm are links with two properties : realm_members and higher_realms
-        Each of them can be manually specified by the user.
-        For each entry in one of this two, a parent/son realm has to be edited also
+        Realm are links with all_sub_members
+        It's filled with realm_members and higher_realms defined in configuration file
 
-        Example : A realm foo with realm_members == [bar].
-        foo will be added into bar.higher_realms.
-
+        It convert name with uuid of realm members
 
         :return: None
         """
         for realm in self.items.values():
-            mbrs = realm.get_realm_members()
+            mbrs = realm.all_sub_members
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
@@ -430,51 +407,21 @@ class Realms(Itemgroups):
                 new_mbr = self.find_by_name(mbr)
                 if new_mbr is not None:
                     new_mbrs.append(new_mbr.uuid)
-                    # We need to recreate the list, otherwise we will append
-                    # to a global list. Default value and mutable are not a good mix
-                    if new_mbr.higher_realms == []:
-                        new_mbr.higher_realms = []
-                    new_mbr.higher_realms.append(realm.uuid)
                 else:
                     realm.add_string_unknown_member(mbr)
-            # Add son ids into parent
-            realm.realm_members = new_mbrs
-
-            # Now linkify the higher member, this variable is populated
-            # by user or during the previous loop (from another realm)
-            new_highers = []
-            for higher in realm.higher_realms:
-                if higher in self:
-                    # We have a uuid here not a name
-                    new_highers.append(higher)
-                    continue
-                new_higher = self.find_by_name(higher)
-                if new_higher is not None:
-                    new_highers.append(new_higher.uuid)
-                    # We need to recreate the list, otherwise we will append
-                    # to a global list. Default value and mutable are not a good mix
-                    if new_higher.realm_members == []:
-                        new_higher.realm_members = []
-                    # Higher realm can also be specifiec manually so we
-                    # need to add the son realm into members of the higher one
-                    new_higher.realm_members.append(realm.uuid)
-                else:
-                    realm.add_string_unknown_higher(higher)
-
-            realm.higher_realms = new_highers
+            realm.all_sub_members = new_mbrs
 
     def explode(self):
-        """Explode realms with each realm_members
+        """Explode realms with each realm_members to fill all_sub_members property
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
-        # so we tag it
-        for tmp_p in self.items.values():
-            tmp_p.already_explode = False
         for realm in self:
-            if hasattr(realm, 'realm_members') and not realm.already_explode:
-                # get_hosts_by_explosion is a recursive
+            realm.fill_realm_members_with_higher_realms(self)
+
+        for realm in self:
+            if hasattr(realm, 'realm_members') and realm.realm_members != []:
+                # get_realms_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_p in self:
                     tmp_p.rec_tag = False
@@ -484,7 +431,6 @@ class Realms(Itemgroups):
         for tmp_p in self.items.values():
             if hasattr(tmp_p, 'rec_tag'):
                 del tmp_p.rec_tag
-            del tmp_p.already_explode
 
     def get_default(self):
         """Get the default realm
@@ -534,7 +480,7 @@ class Realms(Itemgroups):
                 'receiver': {}
             }
 
-            # Generic loop to fil nb_* (counting) and fill potential_* attribute.
+            # Generic loop to fill nb_* (counting) and fill potential_* attribute.
             # Counting is not that difficult but as it's generic, getattr and setattr are required
             for i, sat in enumerate(["reactionner", "poller", "broker", "receiver"]):
                 setattr(realm, "nb_%ss" % sat, 0)  # Init nb_TYPE at 0
@@ -548,25 +494,6 @@ class Realms(Itemgroups):
                     # Append elem to realm.potential_TYPE
                     getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
 
-                # Now we look for potential_TYPE in higher realm
-                # if the TYPE manage sub realm then it's a potential TYPE
-                # We also need to count TYPE
-                # TODO: Change higher realm type because we are falsely looping on all higher realms
-                # higher_realms is usually of len 1 (no sense to have 2 higher realms)
-                high_realm = realm
-                above_realm = None
-                while getattr(high_realm, "higher_realms", []):
-                    for r_id in high_realm.higher_realms:
-                        above_realm = self[r_id]
-                        for elem_id in getattr(above_realm, "%ss" % sat):
-                            elem = satellites[i][elem_id]
-                            if not elem.spare and elem.manage_sub_realms:
-                                setattr(realm, "nb_%ss" % sat, getattr(realm, "nb_%ss" % sat) + 1)
-                            if elem.manage_sub_realms:
-                                getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
-
-                    high_realm = above_realm
-
             line = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d)" \
                    " (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
                 (realm.get_name(),
@@ -577,38 +504,3 @@ class Realms(Itemgroups):
                  realm.nb_receivers, len(realm.potential_receivers)
                  )
             logger.info(line)
-
-    def fill_potential_satellites_by_type(self, sat_type, realm, satellites):
-        """Edit potential_*sat_type* attribute to get potential satellite from upper level realms
-
-        :param sat_type: satellite type wanted
-        :type sat_type: str
-        :param realm: the realm we want to fill potential attribute
-        :type realm: alignak.objects.realm.Realm
-        :param satellites: items corresponding to the wanted type
-        :type satellites: alignak.objects.item.Items
-        :return: None
-        """
-        setattr(realm, 'potential_%s' % sat_type, [])
-        for elem_id in getattr(realm, sat_type):
-            elem = satellites[elem_id]
-            getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
-
-        # Now we look for potential_TYPE in higher realm
-        # if the TYPE manage sub realm then it's a potential TYPE
-        # We also need to count TYPE
-        # TODO: Change higher realm type because we are falsely looping on all higher realms
-        # higher_realms is usually of len 1 (no sense to have 2 higher realms)
-        high_realm = realm
-        above_realm = None
-        while getattr(high_realm, "higher_realms", []):
-            for r_id in high_realm.higher_realms:
-                above_realm = self[r_id]
-                for elem_id in getattr(above_realm, "%s" % sat_type):
-                    elem = satellites[elem_id]
-                    if not elem.spare and elem.manage_sub_realms:
-                        setattr(realm, "nb_%s" % sat_type, getattr(realm, "nb_%s" % sat_type) + 1)
-                    if elem.manage_sub_realms:
-                        getattr(realm, 'potential_%s' % sat_type).append(elem.uuid)
-
-            high_realm = above_realm

@@ -619,7 +619,7 @@ class SatelliteLinks(Items):
                 getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
                 # case SatelliteLink has manage_sub_realms
                 if getattr(satlink, 'manage_sub_realms', False):
-                    for r_uuid in realm.realm_members:
+                    for r_uuid in realm.all_sub_members:
                         getattr(realms[r_uuid], '%ss' % satlink.my_type).append(satlink.uuid)
             else:
                 err = "The %s %s got a unknown realm '%s'" % \

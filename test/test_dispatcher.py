@@ -45,6 +45,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
+        self.print_header()
         self.setup_with_file('cfg/cfg_dispatcher_simple.cfg')
         assert 1 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
@@ -127,6 +128,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
+        self.print_header()
         self.setup_with_file('cfg/cfg_dispatcher_realm.cfg')
         assert 2 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
@@ -172,6 +174,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
+        self.print_header()
         self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub.cfg')
         assert 3 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
@@ -194,29 +197,97 @@ class TestDispatcher(AlignakTest):
                                  'must have 1 scheduler in {0}'.format(satellite.get_name())
 
     def test_realms_with_sub_multi_scheduler(self):
-        """ Test with 2 realms but some satellites are sub_realms + multi schedulers
-        realm 1:
+        """ Test with 3 realms but some satellites are sub_realms + multi schedulers
+        realm All
+           |----- realm All1
+                     |----- realm All1a
+
+        realm All:
         * 2 scheduler
-        * 1 receiver
 
-        realm 2:
+        realm All1:
         * 3 scheduler
-        * 1 receiver
 
-        realm 1 + sub_realm:
+        realm All1a:
+        * 2 scheduler
+
+        realm All + sub_realm:
         * 1 poller
         * 1 reactionner
         * 1 broker
+        * 1 receiver
 
         :return: None
         """
-        pass
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub_multi_schedulers.cfg')
+        assert self.conf_is_correct
+
+        pollers = [self.pollers['poller-master'].uuid]
+        reactionners = [self.reactionners['reactionner-master'].uuid]
+
+        all_schedulers_uuid = []
+        # test schedulers
+        for name in ['scheduler-all-01', 'scheduler-all-02', 'scheduler-all1-01',
+                     'scheduler-all1-02', 'scheduler-all1-03', 'scheduler-all1a-01',
+                     'scheduler-all1a-02']:
+            assert self.schedulers[name].sched.pollers.keys() == pollers
+            assert self.schedulers[name].sched.reactionners.keys() == reactionners
+            assert self.schedulers[name].sched.brokers.keys() == ['broker-master']
+            all_schedulers_uuid.extend(self.schedulers[name].schedulers.keys())
+
+        # schedulers of realm All
+        gethosts = []
+        assert len(self.schedulers['scheduler-all-01'].sched.hosts) == 3
+        assert len(self.schedulers['scheduler-all-02'].sched.hosts) == 3
+        for h in self.schedulers['scheduler-all-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'test_router_0', 'test_host_0'])
+
+        # schedulers of realm All1
+        gethosts = []
+        assert len(self.schedulers['scheduler-all1-01'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1-02'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1-03'].sched.hosts) == 2
+        for h in self.schedulers['scheduler-all1-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1-03'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_101', 'srv_102', 'srv_103', 'srv_104', 'srv_105', 'srv_106'])
+
+        # schedulers of realm All1a
+        gethosts = []
+        assert len(self.schedulers['scheduler-all1a-01'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1a-02'].sched.hosts) == 2
+        for h in self.schedulers['scheduler-all1a-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1a-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_201', 'srv_202', 'srv_203', 'srv_204'])
+
+        # test the poller
+        assert set(self.pollers['poller-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
+
+        # test the receiver has all hosts of all realms (the 3 realms)
+        assert set(self.receivers['receiver-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
+        # test get all hosts
+        hosts = []
+        for sched in self.receivers['receiver-master'].cfg['schedulers'].values():
+            hosts.extend(sched['hosts'])
+        assert set(hosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'srv_101', 'srv_102',
+                                 'srv_103', 'srv_104', 'srv_105', 'srv_106', 'srv_201', 'srv_202',
+                                 'srv_203', 'srv_204', 'test_router_0', 'test_host_0'])
 
     def test_simple_scheduler_spare(self):
         """ Test simple but with spare of scheduler
 
         :return: None
         """
+        self.print_header()
         with requests_mock.mock() as mockreq:
             for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
                 mockreq.get('http://localhost:%s/ping' % port, json='pong')
@@ -388,6 +459,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
+        self.print_header()
         with requests_mock.mock() as mockreq:
             mockreq.get('http://localhost:8770/ping', json='pong')
             mockreq.get('http://localhost:8770/what_i_managed', json='{}')

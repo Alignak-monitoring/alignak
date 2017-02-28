@@ -144,7 +144,7 @@ class Itemgroup(Item):
         :return: None
         """
         add_fun = list.extend if isinstance(member, list) else list.append
-        if not self.unknown_members:
+        if not hasattr(self, 'unknown_members') or not self.unknown_members:
             self.unknown_members = []
         add_fun(self.unknown_members, member)
 

@@ -278,8 +278,8 @@ class TestRealms(AlignakTest):
         assert len(europe.get_satellites_by_type('receiver')) == 0
         assert len(europe.get_satellites_by_type('reactionner')) == 0
 
-        assert europe.uuid in world.get_realms()
-        assert paris.uuid in europe.get_realms()
+        assert europe.uuid in world.all_sub_members
+        assert paris.uuid in europe.all_sub_members
 
     def test_sub_realms_assignations(self):
         """ Test realm / sub-realm for broker
@@ -306,3 +306,100 @@ class TestRealms(AlignakTest):
         assert (bworld.uuid in europe.potential_brokers) is True
         # and in paris too
         assert (bworld.uuid in paris.potential_brokers) is True
+
+    def test_sub_realms_multi_levels(self):
+        """ Test realm / sub-realm / sub-sub-realms...
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_realms_sub_multi_levels.cfg')
+        assert self.conf_is_correct
+
+        Osaka = self.arbiter.conf.realms.find_by_name('Osaka')
+        assert Osaka is not None
+
+        Tokyo = self.arbiter.conf.realms.find_by_name('Tokyo')
+        assert Tokyo is not None
+
+        Japan = self.arbiter.conf.realms.find_by_name('Japan')
+        assert Japan is not None
+
+        Asia = self.arbiter.conf.realms.find_by_name('Asia')
+        assert Asia is not None
+
+        Turin = self.arbiter.conf.realms.find_by_name('Turin')
+        assert Turin is not None
+
+        Rome = self.arbiter.conf.realms.find_by_name('Rome')
+        assert Rome is not None
+
+        Italy = self.arbiter.conf.realms.find_by_name('Italy')
+        assert Italy is not None
+
+        Lyon = self.arbiter.conf.realms.find_by_name('Lyon')
+        assert Lyon is not None
+
+        Paris = self.arbiter.conf.realms.find_by_name('Paris')
+        assert Paris is not None
+
+        France = self.arbiter.conf.realms.find_by_name('France')
+        assert France is not None
+
+        Europe = self.arbiter.conf.realms.find_by_name('Europe')
+        assert Europe is not None
+
+        World = self.arbiter.conf.realms.find_by_name('World')
+        assert World is not None
+
+        # check property all_sub_members
+        assert Osaka.all_sub_members == []
+        assert Tokyo.all_sub_members == []
+        assert Japan.all_sub_members == [Tokyo.uuid,Osaka.uuid]
+        assert Asia.all_sub_members == [Tokyo.uuid,Osaka.uuid,Japan.uuid]
+
+        assert Turin.all_sub_members == []
+        assert Rome.all_sub_members == []
+        assert Italy.all_sub_members == [Rome.uuid,Turin.uuid]
+
+        assert Lyon.all_sub_members == []
+        assert Paris.all_sub_members == []
+        assert France.all_sub_members == [Paris.uuid,Lyon.uuid]
+
+        assert set(Europe.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid])
+
+        assert set(World.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid,Europe.uuid,Tokyo.uuid,Osaka.uuid,Japan.uuid,Asia.uuid])
+
+        # check satellites defined in each realms
+        broker_uuid = self.brokers['broker-master'].uuid
+        poller_uuid = self.pollers['poller-master'].uuid
+        receiver_uuid = self.receivers['receiver-master'].uuid
+        reactionner_uuid = self.reactionners['reactionner-master'].uuid
+
+        for realm in [Osaka, Tokyo, Japan, Asia, Turin, Rome, Italy, Lyon, Paris, France, Europe, World]:
+            print 'Realm name: %s' % realm.realm_name
+            if realm.realm_name != 'France':
+                assert realm.brokers == [broker_uuid]
+                assert realm.potential_brokers == [broker_uuid]
+                assert realm.nb_brokers == 1
+            assert realm.pollers == [poller_uuid]
+            assert realm.receivers == [receiver_uuid]
+            assert realm.reactionners == [reactionner_uuid]
+            assert realm.potential_pollers == [poller_uuid]
+            assert realm.potential_receivers == [receiver_uuid]
+            assert realm.potential_reactionners == [reactionner_uuid]
+
+        assert set(France.brokers) == set([broker_uuid, self.brokers['broker-france'].uuid])
+        assert set(France.potential_brokers) == set([broker_uuid, self.brokers['broker-france'].uuid])
+        assert France.nb_brokers == 2
+
+    def test_sub_realms_multi_levels_loop(self):
+        """ Test realm / sub-realm / sub-sub-realms... with a loop, so exit with error message
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/cfg_realms_sub_multi_levels_loop.cfg')
+        assert not self.conf_is_correct
+        self.show_configuration_logs()

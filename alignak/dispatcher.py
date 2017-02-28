@@ -356,22 +356,10 @@ class Dispatcher:
         for sched_id in realm.schedulers:
             scheds.append(self.schedulers[sched_id])
 
-        # now the spare scheds of higher realms
-        # they are after the sched of realm, so
-        # they will be used after the spare of
-        # the realm
-        for higher_r_id in realm.higher_realms:
-            higher_r = self.realms[higher_r_id]
-            for sched_id in higher_r.schedulers:
-                sched = self.schedulers[sched_id]
-                if sched.spare:
-                    scheds.append(sched)
-
         # Now we sort the scheds so we take master, then spare
         # the dead, but we do not care about them
         scheds.sort(alive_then_spare_then_deads)
         scheds.reverse()  # pop is last, I need first
-
         return scheds
 
     def prepare_dispatch(self):
