@@ -1412,6 +1412,10 @@ class Scheduler(object):  # pylint: disable=R0902
         for down in data['downtimes']:
             if down['uuid'] not in item.downtimes:
                 down['ref'] = item.uuid
+                # case comment_id has comment dict instead uuid
+                if 'uuid' in down['comment_id']:
+                    data['comments'].append(down['comment_id'])
+                    down['comment_id'] = down['comment_id']['uuid']
                 item.add_downtime(Downtime(down))
         if item.acknowledgement is not None:
             item.acknowledgement = Acknowledge(item.acknowledgement)
