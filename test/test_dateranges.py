@@ -48,7 +48,8 @@ class TestDataranges(AlignakTest):
         now = time.localtime()
         start = time.mktime((2015, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_start_of_day(2015, 7, 26)
-        assert start == timestamp
+        # time.timezone is the offset related of the current timezone of the system
+        assert start == (timestamp - time.timezone)
 
     def test_get_end_of_day(self):
         """ Test function get_end_of_day and return the timestamp of end of day
@@ -58,7 +59,8 @@ class TestDataranges(AlignakTest):
         now = time.localtime()
         start = time.mktime((2016, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_end_of_day(2016, 8, 20)
-        assert start == timestamp
+        # time.timezone is the offset related of the current timezone of the system
+        assert start == (timestamp - time.timezone)
 
     def test_find_day_by_weekday_offset(self):
         """ Test function find_day_by_weekday_offset to get day number.
