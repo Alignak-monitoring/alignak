@@ -154,58 +154,59 @@ class TestNotifications(AlignakTest):
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
+        svc.notification_interval = 0.01 # so it's 0.6 second
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        time.sleep(0.7)
+        assert svc.current_notification_number == 0, 'All OK no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        time.sleep(0.7)
         assert "SOFT" == svc.state_type
-        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        time.sleep(0.7)
         assert "HARD" == svc.state_type
-        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
-                                                             'notification'
         self.assert_actions_count(2)
+        assert svc.current_notification_number == 1, 'Critical HARD, must have 1 ' \
+                                                     'notification'
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert svc.current_notification_number == 2
+        time.sleep(0.7)
         self.assert_actions_count(3)
+        assert svc.current_notification_number == 2
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert svc.current_notification_number == 3
+        time.sleep(0.7)
         self.assert_actions_count(4)
+        assert svc.current_notification_number == 3
 
         now = time.time()
         cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert svc.current_notification_number == 3
+        time.sleep(0.7)
         self.assert_actions_count(4)
+        assert svc.current_notification_number == 3
 
         now = time.time()
         cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        assert svc.current_notification_number == 4
+        time.sleep(0.7)
         self.assert_actions_count(5)
+        assert svc.current_notification_number == 4
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        time.sleep(0.7)
         assert 0 == svc.current_notification_number
-        self.assert_actions_count(5)
+        self.assert_actions_count(6)
 
     def test_3_notifications(self):
         """ Test notifications of service states OK -> WARNING -> CRITICAL -> OK
