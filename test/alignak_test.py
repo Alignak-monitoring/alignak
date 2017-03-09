@@ -452,9 +452,9 @@ class AlignakTest(unittest.TestCase):
                 else:
                     hst = self.schedulers['scheduler-master'].sched.find_item_by_id(item.host)
                     ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s %s %s %s %s" % (a.uuid, ref, a.type,
+                print "NOTIFICATION %s %s %s %s %s %s" % (a.uuid, ref, a.type,
                                                        time.asctime(time.localtime(a.t_to_go)),
-                                                       a.status)
+                                                       a.status, a.contact_name)
             elif a.is_a == 'eventhandler':
                 print "EVENTHANDLER:", a
         print "--- actions >>>----------------------------------"
