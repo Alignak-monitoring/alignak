@@ -2127,6 +2127,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         }
         notif = Notification(data)
+        logger.debug("Created a %s notification: %s", self.my_type, n_type)
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif.uuid] = notif
@@ -2694,13 +2695,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type end_time: int
         :return: None | alignak.comment.Comment
         """
+        comm = None
+        logger.debug("Acknowledge requested for %s %s.", self.my_type, self.get_name())
+
         if self.state != self.ok_up:
             # case have yet an acknowledge
             if self.problem_has_been_acknowledged:
                 self.del_comment(self.acknowledgement.comment_id)
 
             if notify:
-                self.create_notifications('ACKNOWLEDGEMENT', notification_period, hosts, services)
+                self.create_notifications('ACKNOWLEDGEMENT',
+                                          notification_period, hosts, services)
+
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
 
@@ -2724,10 +2730,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.comments[comm.uuid] = comm
             self.broks.append(self.get_update_status_brok())
             self.raise_acknowledge_log_entry()
-            return comm
         else:
-            logger.warning("Acknowledge requested for %s %s but element state is OK/UP.",
-                           self.my_type, self.get_name())
+            logger.debug("Acknowledge requested for %s %s but element state is OK/UP.",
+                         self.my_type, self.get_name())
+
+        # For an host, acknowledge all its services that are problems
+        if self.my_type == 'host':
+            for service_uuid in self.services:
+                if service_uuid not in services:
+                    continue
+                services[service_uuid].acknowledge_problem(notification_period,
+                                                           hosts, services, sticky, notify,
+                                                           author, comment, end_time)
+        return comm
 
     def check_for_expire_acknowledge(self):
         """

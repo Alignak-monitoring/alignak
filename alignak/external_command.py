@@ -1029,8 +1029,8 @@ class ExternalCommandManager:
 
         :param service: service to acknowledge the problem
         :type service: alignak.objects.service.Service
-        :param sticky: acknowledge will be always present is host return in UP state
-        :type sticky: integer
+        :param sticky: if sticky == 2, the acknowledge will remain until the service returns to an
+        OK state else the acknowledge will be removed as soon as the service state changes
         :param notify: if to 1, send a notification
         :type notify: integer
         :param author: name of the author or the acknowledge
@@ -1052,7 +1052,8 @@ class ExternalCommandManager:
 
         :param host: host to acknowledge the problem
         :type host: alignak.objects.host.Host
-        :param sticky: acknowledge will be always present is host return in UP state
+        :param sticky: if sticky == 2, the acknowledge will remain until the host returns to an
+        UP state else the acknowledge will be removed as soon as the host state changes
         :type sticky: integer
         :param notify: if to 1, send a notification
         :type notify: integer
@@ -1066,14 +1067,6 @@ class ExternalCommandManager:
         notif_period = self.daemon.timeperiods[host.notification_period]
         host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
                                  comment)
-        brok = make_monitoring_log('info',
-                                   'HOST ACKNOWLEDGE: '
-                                   'this command is not implemented!')
-        self.send_an_element(brok)
-        for service_id in self.daemon.hosts[host.uuid].services:
-            if service_id in self.daemon.services:
-                self.acknowledge_svc_problem(self.daemon.services[service_id],
-                                             sticky, notify, author, comment)
 
     def acknowledge_svc_problem_expire(self, service, sticky, notify, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
@@ -3460,6 +3453,7 @@ class ExternalCommandManager:
         downtime = Downtime(data)
         downtime.add_automatic_comment(host)
         host.add_downtime(downtime)
+
         self.daemon.get_and_register_status_brok(host)
         if trigger_id != '' and trigger_id != 0:
             for item in self.daemon.hosts:
@@ -3485,7 +3479,7 @@ class ExternalCommandManager:
 
     def schedule_host_svc_downtime(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
-        """Schedule a service downtime for each service of a host
+        """Schedule a service downtime for each service of an host
         Format of the line that triggers function call::
 
         SCHEDULE_HOST_SVC_DOWNTIME;<host_name>;<start_time>;<end_time>;

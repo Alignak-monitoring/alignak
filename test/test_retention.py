@@ -62,15 +62,17 @@ class Testretention(AlignakTest):
         now = time.time()
         # downtime host
         excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime' \
-                % (now, now + 120, now + 1200)
+                % (now, now, now + 1200)
+        time.sleep(1)
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
 
-        # Acknowledge service
-        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;' \
-                'Acknowledge service' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        self.external_command_loop()
+        # # Acknowledge service
+        # No more necessary because scheduling a downtime for an host acknowledges its services
+        # excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;' \
+        #         'Acknowledge service' % time.time()
+        # self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        # self.external_command_loop()
 
         commentsh = []
         ack_comment_uuid = ''
@@ -85,11 +87,11 @@ class Testretention(AlignakTest):
 
         assert True == svc.problem_has_been_acknowledged
         assert svc.acknowledgement.__dict__ == {
-            "comment": "Acknowledge service",
+            "comment": "Acknowledged because of an host downtime",
             "uuid": svc.acknowledgement.uuid,
             "ref": svc.uuid,
-            "author": "Big brother",
-            "sticky": True,
+            "author": "Alignak",
+            "sticky": False,
             "end_time": 0,
             "notify": True,
             "comment_id": ack_comment_uuid
@@ -158,12 +160,13 @@ class Testretention(AlignakTest):
             assert 'My downtime' == downtime.comment
 
         # check notifications
-        assert 2 == len(hostn.notifications_in_progress)
         for notif_uuid, notification in hostn.notifications_in_progress.iteritems():
             assert host.notifications_in_progress[notif_uuid].command == \
                              notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
                              notification.t_to_go
+        # Notifications: host ack, service ack, host downtime
+        assert 3 == len(hostn.notifications_in_progress)
 
         # check comments for host
         assert len(host.comments) == len(hostn.comments)
