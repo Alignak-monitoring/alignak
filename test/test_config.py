@@ -918,34 +918,3 @@ class TestConfig(AlignakTest):
                       self.configuration_errors
         assert "businessimpactmodulations configuration is incorrect!" in \
                       self.configuration_errors
-
-    def test_checks_modulation(self):
-        """ Detect checks modulation configuration errors
-
-        :return: None
-        """
-        self.print_header()
-        with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/config/checks_modulation_broken.cfg')
-        assert not self.conf_is_correct
-
-        # CM without check_command definition
-        assert "Configuration in checkmodulation::MODULATION is incorrect; " \
-                      "from: cfg/config/checks_modulation_broken.cfg:9" in \
-                      self.configuration_errors
-        assert "[checkmodulation::MODULATION] check_command property is missing" in \
-                      self.configuration_errors
-
-        # MM without name
-        assert "Configuration in checkmodulation::Unnamed is incorrect; " \
-                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
-                      self.configuration_errors
-        assert "a checkmodulation item has been defined without checkmodulation_name, " \
-                      "from: cfg/config/checks_modulation_broken.cfg:2" in \
-                      self.configuration_errors
-        assert "The check_period of the checkmodulation 'Unnamed' named '24x7' is unknown!" in \
-                      self.configuration_errors
-        assert "[checkmodulation::Unnamed] checkmodulation_name property is missing" in \
-                      self.configuration_errors
-        assert "checkmodulations configuration is incorrect!" in \
-                      self.configuration_errors
