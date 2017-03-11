@@ -550,9 +550,7 @@ class ExternalCommandManager:
 
         if self.mode == 'applyer' and self.conf.log_external_commands:
             # I am a command dispatcher, notifies to my arbiter
-            brok = make_monitoring_log(
-                'info', 'EXTERNAL COMMAND: ' + command.rstrip()
-            )
+            brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command.rstrip())
             # Send a brok to our daemon
             self.send_an_element(brok)
 
@@ -1061,6 +1059,10 @@ class ExternalCommandManager:
         notif_period = self.daemon.timeperiods[host.notification_period]
         host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
                                  comment)
+        brok = make_monitoring_log('info',
+                                   'HOST ACKNOWLEDGE: '
+                                   'this command is not implemented!')
+        self.send_an_element(brok)
         for service_id in self.daemon.hosts[host.uuid].services:
             if service_id in self.daemon.services:
                 self.acknowledge_svc_problem(self.daemon.services[service_id],

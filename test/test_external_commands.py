@@ -936,6 +936,184 @@ class TestExternalCommands(AlignakTest):
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
 
+    def test_host_acknowledges(self):
+        """ Test the acknowledges for hosts
+        :return: None
+        """
+        # Our scheduler
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        # Our broker
+        self._broker = self._scheduler.brokers['broker-master']
+
+        # Get host
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+        host.active_checks_enabled = True
+        host.passive_checks_enabled = True
+        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
+        assert host is not None
+
+        # Get dependent host
+        router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.event_handler_enabled = False
+        router.active_checks_enabled = True
+        router.passive_checks_enabled = True
+        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
+        assert router is not None
+
+        now= int(time.time())
+
+        # Passive checks for hosts - special case
+        # ---------------------------------------------
+        # Host is DOWN
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Host is DOWN' % int(time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.show_checks()
+        self.assert_checks_count(2)
+        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
+        self.assert_checks_match(0, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
+        self.assert_checks_match(1, 'hostname test_host_0', 'command')
+        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
+        assert 'DOWN' == router.state
+        assert u'Host is DOWN' == router.output
+        assert False == router.problem_has_been_acknowledged
+
+        # Acknowledge router
+        excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(
+            time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        print "Host state", router.state, router.problem_has_been_acknowledged
+        assert 'DOWN' == router.state
+        assert True == router.problem_has_been_acknowledged
+
+        # Remove acknowledge router
+        excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        print "Host state", router.state, router.problem_has_been_acknowledged
+        assert 'DOWN' == router.state
+        assert False == router.problem_has_been_acknowledged
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in self._broker['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        expected_logs = [
+            (u'info', u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_router_0;2;'
+                      u'Host is DOWN' % (now)),
+            (u'info', u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;'
+                      u'Big brother;test' % (now)),
+            (u'info', u'HOST ACKNOWLEDGE STARTED: test_router_0;'
+                      u'Host problem has been acknowledged'),
+            (u'info', u'HOST NOTIFICATION: test_contact;test_router_0;ACKNOWLEDGEMENT (DOWN);'
+                      u'notify-host;Host is DOWN'),
+            (u'info', u'EXTERNAL COMMAND: [%s] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % now),
+            (u'info', u'HOST ACKNOWLEDGE EXPIRED: test_router_0;'
+                      u'Host problem acknowledge expired')
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
+
+    def test_service_acknowledges(self):
+        """ Test the acknowledges for services
+        :return: None
+        """
+        # Our scheduler
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        # Our broker
+        self._broker = self._scheduler.brokers['broker-master']
+
+        # Get host
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+        host.active_checks_enabled = True
+        host.passive_checks_enabled = True
+        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
+        assert host is not None
+
+        # Get dependent host
+        router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.event_handler_enabled = False
+        router.active_checks_enabled = True
+        router.passive_checks_enabled = True
+        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
+        assert router is not None
+
+        # Get service
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0",
+            "test_ok_0")
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
+        svc.active_checks_enabled = True
+        svc.passive_checks_enabled = True
+        assert svc is not None
+        print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
+
+        now= int(time.time())
+
+        # Passive checks for services
+        # ---------------------------------------------
+        # Receive passive service check Warning
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'Host is UP']])
+        assert 'WARNING' == svc.state
+        assert 'Service is WARNING' == svc.output
+        assert False == svc.problem_has_been_acknowledged
+
+        # Acknowledge service
+        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'WARNING' == svc.state
+        assert True == svc.problem_has_been_acknowledged
+
+        # Remove acknowledge service
+        excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'WARNING' == svc.state
+        assert False == svc.problem_has_been_acknowledged
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in self._broker['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        expected_logs = [
+            (u'info', u'EXTERNqsdAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;'
+                      u'test_host_0;test_ok_0;1;Service is WARNING' % now),
+            (u'warning', u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
+            (u'info', u'SERVICE ACKNOWLEDGE STARTED: test_host_0;test_ok_0;'
+                      u'Service problem has been acknowledged'),
+            (u'info', u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;'
+                      u'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
+            (u'info', u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;'
+                      u'test_host_0;test_ok_0' % now),
+            (u'info', u'SERVICE ACKNOWLEDGE EXPIRED: test_host_0;test_ok_0;'
+                      u'Service problem acknowledge expired')
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
+
     def test_host_downtimes(self):
         """ Test the downtime for hosts
         :return: None

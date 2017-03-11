@@ -800,6 +800,28 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                        "because there is not future valid time",
                        self.get_name())
 
+    def raise_acknowledge_log_entry(self):
+        """Raise HOST ACKNOWLEDGE STARTED entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "HOST ACKNOWLEDGE STARTED: %s;"
+                    "Host problem has been acknowledged" % self.get_name()
+        )
+        self.broks.append(brok)
+
+    def raise_unacknowledge_log_entry(self):
+        """Raise HOST ACKNOWLEDGE STOPPED entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "HOST ACKNOWLEDGE EXPIRED: %s;"
+                    "Host problem acknowledge expired" % self.get_name()
+        )
+        self.broks.append(brok)
+
     def raise_enter_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
         Format is : "HOST DOWNTIME ALERT: *get_name()*;STARTED;
