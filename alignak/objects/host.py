@@ -806,7 +806,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         brok = make_monitoring_log(
-            'info', "HOST ACKNOWLEDGE STARTED: %s;"
+            'info', "HOST ACKNOWLEDGE ALERT: %s;STARTED; "
                     "Host problem has been acknowledged" % self.get_name()
         )
         self.broks.append(brok)
@@ -817,7 +817,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         brok = make_monitoring_log(
-            'info', "HOST ACKNOWLEDGE EXPIRED: %s;"
+            'info', "HOST ACKNOWLEDGE ALERT: %s;EXPIRED; "
                     "Host problem acknowledge expired" % self.get_name()
         )
         self.broks.append(brok)

@@ -1012,12 +1012,12 @@ class TestExternalCommands(AlignakTest):
                       u'Host is DOWN' % (now)),
             (u'info', u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;'
                       u'Big brother;test' % (now)),
-            (u'info', u'HOST ACKNOWLEDGE STARTED: test_router_0;'
+            (u'info', u'HOST ACKNOWLEDGE ALERT: test_router_0;STARTED; '
                       u'Host problem has been acknowledged'),
             (u'info', u'HOST NOTIFICATION: test_contact;test_router_0;ACKNOWLEDGEMENT (DOWN);'
                       u'notify-host;Host is DOWN'),
             (u'info', u'EXTERNAL COMMAND: [%s] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % now),
-            (u'info', u'HOST ACKNOWLEDGE EXPIRED: test_router_0;'
+            (u'info', u'HOST ACKNOWLEDGE ALERT: test_router_0;EXPIRED; '
                       u'Host problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
@@ -1100,7 +1100,7 @@ class TestExternalCommands(AlignakTest):
             (u'info', u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;'
                       u'test_host_0;test_ok_0;1;Service is WARNING' % now),
             (u'warning', u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
-            (u'info', u'SERVICE ACKNOWLEDGE STARTED: test_host_0;test_ok_0;'
+            (u'info', u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
                       u'Service problem has been acknowledged'),
             (u'info', u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;'
                       u'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
@@ -1108,7 +1108,7 @@ class TestExternalCommands(AlignakTest):
                       u'ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
             (u'info', u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;'
                       u'test_host_0;test_ok_0' % now),
-            (u'info', u'SERVICE ACKNOWLEDGE EXPIRED: test_host_0;test_ok_0;'
+            (u'info', u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; '
                       u'Service problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:

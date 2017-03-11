@@ -839,7 +839,7 @@ class Service(SchedulingItem):
         :return: None
         """
         brok = make_monitoring_log(
-            'info', "SERVICE ACKNOWLEDGE STARTED: %s;%s;"
+            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;STARTED; "
                     "Service problem has been acknowledged" %
                     (self.host_name, self.get_name())
         )
@@ -851,7 +851,7 @@ class Service(SchedulingItem):
         :return: None
         """
         brok = make_monitoring_log(
-            'info', "SERVICE ACKNOWLEDGE EXPIRED: %s;%s;"
+            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;EXPIRED; "
                     "Service problem acknowledge expired" %
                     (self.host_name, self.get_name())
         )
