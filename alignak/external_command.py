@@ -969,8 +969,7 @@ class ExternalCommandManager:
         contact.host_notification_period = notification_timeperiod
         self.daemon.get_and_register_status_brok(contact)
 
-    @staticmethod
-    def add_svc_comment(service, author, comment):
+    def add_svc_comment(self, service, author, comment):
         """Add a service comment
         Format of the line that triggers function call::
 
@@ -990,9 +989,13 @@ class ExternalCommandManager:
         }
         comm = Comment(data)
         service.add_comment(comm)
+        brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
+                                   % (self.hosts[service.host].get_name(),
+                                      service.get_name(),
+                                      unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        self.send_an_element(brok)
 
-    @staticmethod
-    def add_host_comment(host, author, comment):
+    def add_host_comment(self, host, author, comment):
         """Add a host comment
         Format of the line that triggers function call::
 
@@ -1012,6 +1015,10 @@ class ExternalCommandManager:
         }
         comm = Comment(data)
         host.add_comment(comm)
+        brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
+                                   % (host.get_name(),
+                                      unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        self.send_an_element(brok)
 
     def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
         """Acknowledge a service problem

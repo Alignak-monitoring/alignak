@@ -1097,7 +1097,7 @@ class TestExternalCommands(AlignakTest):
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'info', u'EXTERNqsdAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;'
+            (u'info', u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;'
                       u'test_host_0;test_ok_0;1;Service is WARNING' % now),
             (u'warning', u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
             (u'info', u'SERVICE ACKNOWLEDGE STARTED: test_host_0;test_ok_0;'
