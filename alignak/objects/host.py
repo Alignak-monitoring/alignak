@@ -331,6 +331,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                     self.configuration_errors.append(msg)
                     state = False
 
+        # Ok now we manage special cases...
+        if self.notifications_enabled and self.contacts == []:
+            msg = "[%s::%s] notifications are enabled but no contacts nor contact_groups " \
+                  "property is defined for this host" % (self.my_type, self.get_name())
+            self.configuration_warnings.append(msg)
+
         return super(Host, self).is_correct() and state
 
     def get_services(self):

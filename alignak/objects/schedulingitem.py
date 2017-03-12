@@ -3051,13 +3051,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not hasattr(self, 'notification_period'):
             self.notification_period = None
 
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            msg = "[%s::%s] no contacts nor contact_groups property" % (
-                self.my_type, self.get_name()
-            )
-            self.configuration_warnings.append(msg)
-
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
             msg = "[%s::%s] event_handler '%s' is invalid" % (

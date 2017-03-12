@@ -138,6 +138,57 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
         self.assert_actions_match(1, 'serviceoutput OK', 'command')
 
+    def test_1_notifications_service_with_no_contacts(self):
+        """ Test notifications are sent to host contacts for a service with no defined contacts
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_nonotif.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_no_contacts")
+        # To make tests quicker we make notifications sent very quickly
+        svc.notification_interval = 0.1
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+        assert svc.notifications_enabled
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 notification'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'VOID', 'command')
+        self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
     def test_2_notifications(self):
         """ Test notifications sent in normal mode
 
