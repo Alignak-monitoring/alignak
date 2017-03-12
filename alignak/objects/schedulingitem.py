@@ -2723,12 +2723,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.acknowledgement.comment_id = comm.uuid
             self.comments[comm.uuid] = comm
             self.broks.append(self.get_update_status_brok())
+            self.raise_acknowledge_log_entry()
             return comm
         else:
-            logger.warning(
-                "Acknowledge requested for %s %s but element state is OK/UP.",
-                self.my_type, self.get_name()
-            )
+            logger.warning("Acknowledge requested for %s %s but element state is OK/UP.",
+                           self.my_type, self.get_name())
 
     def check_for_expire_acknowledge(self):
         """
@@ -2764,6 +2763,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Should not be deleted, a None is Good
             self.acknowledgement = None
             self.broks.append(self.get_update_status_brok())
+            self.raise_unacknowledge_log_entry()
 
     def unacknowledge_problem_if_not_sticky(self):
         """
@@ -2785,6 +2785,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def raise_alert_log_entry(self):
         """Raise ALERT entry
+        Function defined in inherited objects (Host and Service)
+
+        :return: None
+        """
+        pass
+
+    def raise_acknowledge_log_entry(self):
+        """Raise ACKNOWLEDGE STARTED entry
+        Function defined in inherited objects (Host and Service)
+
+        :return: None
+        """
+        pass
+
+    def raise_unacknowledge_log_entry(self):
+        """Raise ACKNOWLEDGE STOPPED entry
         Function defined in inherited objects (Host and Service)
 
         :return: None

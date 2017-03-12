@@ -833,6 +833,30 @@ class Service(SchedulingItem):
                        "host '%s' because there is not future valid time",
                        self.get_name(), self.host_name)
 
+    def raise_acknowledge_log_entry(self):
+        """Raise SERVICE ACKNOWLEDGE STARTED entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;STARTED; "
+                    "Service problem has been acknowledged" %
+                    (self.host_name, self.get_name())
+        )
+        self.broks.append(brok)
+
+    def raise_unacknowledge_log_entry(self):
+        """Raise SERVICE ACKNOWLEDGE STOPPED entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;EXPIRED; "
+                    "Service problem acknowledge expired" %
+                    (self.host_name, self.get_name())
+        )
+        self.broks.append(brok)
+
     def raise_enter_downtime_log_entry(self):
         """Raise SERVICE DOWNTIME ALERT entry (critical level)
         Format is : "SERVICE DOWNTIME ALERT: *host_name*;*get_name()*;STARTED;
