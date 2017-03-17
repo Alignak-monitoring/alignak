@@ -1220,7 +1220,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: dict containing host and service data
         :rtype: dict
         """
-        brok = make_monitoring_log('INFO', 'RETENTION SAVE')
+        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.instance_name)
         self.add(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
@@ -1352,7 +1352,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
-        brok = make_monitoring_log('INFO', 'RETENTION LOAD')
+        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.instance_name)
         self.add(brok)
 
         ret_hosts = data['hosts']

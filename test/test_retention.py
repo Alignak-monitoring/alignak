@@ -26,6 +26,8 @@ import time
 import json
 from alignak_test import AlignakTest
 
+from alignak.misc.serialization import unserialize
+
 
 class Testretention(AlignakTest):
     """
@@ -187,4 +189,17 @@ class Testretention(AlignakTest):
 
         # acknowledge
         assert True == svcn.problem_has_been_acknowledged
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        self._sched = self.schedulers['scheduler-master'].sched
+        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        expected_logs = [
+            (u'INFO', u'RETENTION LOAD: scheduler-master')
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
 
