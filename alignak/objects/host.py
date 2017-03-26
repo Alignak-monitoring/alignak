@@ -807,7 +807,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                        self.get_name())
 
     def raise_acknowledge_log_entry(self):
-        """Raise HOST ACKNOWLEDGE STARTED entry (critical level)
+        """Raise HOST ACKNOWLEDGE ALERT entry (critical level)
 
         :return: None
         """
@@ -960,6 +960,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
                                         n_type, t_wished=None):
+        # pylint: disable=too-many-return-statements
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -1002,44 +1003,76 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 'n' in self.notification_options or \
                 (notification_period is not None and
                  not notification_period.is_time_valid(t_wished)):
+            logger.debug("Host: %s, notification %s sending is blocked by globals",
+                         self.get_name(), n_type)
             return True
 
         if n_type in ('PROBLEM', 'RECOVERY') and (
                 self.state == 'DOWN' and 'd' not in self.notification_options or
                 self.state == 'UP' and 'r' not in self.notification_options or
                 self.state == 'UNREACHABLE' and 'x' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         self.get_name(), n_type)
             return True
+
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
-                'f' not in self.notification_options) or \
-            (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+                'f' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
+            return True
+
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
+            return True
+
+        # Flapping notifications are blocked when in scheduled downtime
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                self.scheduled_downtime_depth > 0):
+            logger.debug("Host: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        # Flapping
-        # TODO block if not notify_on_flapping
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
-                self.scheduled_downtime_depth > 0) or \
-                n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+            logger.debug("Host: %s, notification %s sending is blocked by current state",
+                         self.get_name(), n_type)
             return True
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
         if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by deep downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises
-        if self.scheduled_downtime_depth > 0 and n_type in ('PROBLEM', 'RECOVERY'):
+        if self.scheduled_downtime_depth > 0 and \
+                n_type in ('PROBLEM', 'RECOVERY', 'ACKNOWLEDGEMENT'):
+            logger.debug("Host: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if the status is SOFT
+        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
+            logger.debug("Host: %s, notification %s sending is blocked by soft state",
+                         self.get_name(), n_type)
+            return True
+
         # Block if the problem has already been acknowledged
-        if self.state_type == 'SOFT' and n_type == 'PROBLEM' or \
-                self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
+        if self.problem_has_been_acknowledged and n_type not in ('ACKNOWLEDGEMENT',
+                                                                 'DOWNTIMESTART',
+                                                                 'DOWNTIMEEND',
+                                                                 'DOWNTIMECANCELLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by acknowledged",
+                         self.get_name(), n_type)
             return True
 
         # Block if flapping
         if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by flapping",
+                         self.get_name(), n_type)
             return True
 
         # Block if business rule smart notifications is enabled and all its
@@ -1048,8 +1081,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
+            logger.debug("Host: %s, notification %s sending is blocked by business rules",
+                         self.get_name(), n_type)
             return True
 
+        logger.debug("Host: %s, notification %s sending is not blocked", self.get_name(), n_type)
         return False
 
     def get_total_services(self):

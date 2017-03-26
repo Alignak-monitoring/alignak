@@ -493,10 +493,7 @@ class Scheduler(object):  # pylint: disable=R0902
         if fun:
             fun(self, elt)
         else:
-            logger.warning(
-                "self.add(): Unmanaged object class: %s (object=%r)",
-                elt.__class__, elt
-            )
+            logger.warning("self.add(): Unmanaged object class: %s (object=%r)", elt.__class__, elt)
 
     __add_actions = {
         Check:              add_check,
@@ -561,6 +558,7 @@ class Scheduler(object):  # pylint: disable=R0902
             to_del_checks.sort(key=lambda x: x.creation_time)
             to_del_checks = to_del_checks[:-max_checks]
             nb_checks_drops = len(to_del_checks)
+            # todo: WTF is it? And not even a WARNING log for this !!!
             if nb_checks_drops > 0:
                 logger.debug("I have to del some checks (%d)..., sorry", nb_checks_drops)
             for chk in to_del_checks:
@@ -583,6 +581,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # or broks, manage global but also all brokers
         nb_broks_drops = 0
         for broker in self.brokers.values():
+            # todo: WTF is it? And not even a WARNING log for this !!!
             if len(broker['broks']) > max_broks:
                 logger.debug("I have to del some broks (%d)..., sorry", len(broker['broks']))
                 to_del_broks = [c for c in broker['broks'].values()]
@@ -592,6 +591,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 for brok in to_del_broks:
                     del broker['broks'][brok.uuid]
 
+        # todo: WTF is it? And not even a WARNING log for this !!!
         if len(self.actions) > max_actions:
             logger.debug("I have to del some actions (%d)..., sorry", len(self.actions))
             to_del_actions = [c for c in self.actions.values()]
@@ -688,7 +688,9 @@ class Scheduler(object):  # pylint: disable=R0902
             if act.is_a != 'notification':
                 continue
             if act.status == 'scheduled' and act.is_launchable(now):
+                logger.debug("Scheduler got a master notification: %s", repr(act))
                 if not act.contact:
+                    logger.debug("No contact for this notification")
                     # This is a "master" notification created by create_notifications.
                     # It wont sent itself because it has no contact.
                     # We use it to create "child" notifications (for the contacts and
@@ -708,6 +710,7 @@ class Scheduler(object):  # pylint: disable=R0902
                             self.find_item_by_id(getattr(item, "host", None))
                         )
                         for notif in childnotifs:
+                            logger.debug(" - child notification: %s", notif)
                             notif.status = 'scheduled'
                             self.add(notif)  # this will send a brok
 
@@ -734,14 +737,17 @@ class Scheduler(object):  # pylint: disable=R0902
                                                                           self.timeperiods)
 
                             act.notif_nb = item.current_notification_number + 1
+                            logger.debug("Repeat master notification: %s", str(act))
                             act.status = 'scheduled'
                         else:
                             # Wipe out this master notification. One problem notification is enough.
                             item.remove_in_progress_notification(act)
+                            logger.debug("Remove master notification (no repeat): %s", str(act))
                             self.actions[act.uuid].status = 'zombie'
 
                     else:
                         # Wipe out this master notification.
+                        logger.debug("Remove master notification (no repeat): %s", str(act))
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(act)
                         self.actions[act.uuid].status = 'zombie'
@@ -1733,6 +1739,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # ask for service and hosts their next check
         for elt in self.iter_hosts_and_services():
             for act in elt.actions:
+                logger.debug("Got a new action for %s: %s", elt, act)
                 self.add(act)
             # We take all, we can clear it
             elt.actions = []

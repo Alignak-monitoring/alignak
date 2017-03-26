@@ -159,13 +159,31 @@ class TestBrokAckDowntime(AlignakTest):
         for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
             'broks'].itervalues():
             if brok.type == 'acknowledge_raise':
+                print("Brok: %s" % brok)
                 brok_ack.append(brok)
 
-        assert len(brok_ack) == 1
+        # Got one brok for the host ack and one brok for the service ack
+        assert len(brok_ack) == 2
 
+        host_brok = False
+        service_brok = False
         hdata = unserialize(brok_ack[0].data)
         assert hdata['host'] == 'test_host_0'
-        assert 'service' not in hdata
+        if 'service' in hdata:
+            assert hdata['service'] == 'test_ok_0'
+            service_brok = True
+        else:
+            host_brok = True
+
+        hdata = unserialize(brok_ack[1].data)
+        assert hdata['host'] == 'test_host_0'
+        if 'service' in hdata:
+            assert hdata['service'] == 'test_ok_0'
+            service_brok = True
+        else:
+            host_brok = True
+
+        assert host_brok and service_brok
 
         # return host in UP mode, so the acknowledge will be removed by the scheduler
         self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'] = {}
@@ -179,11 +197,27 @@ class TestBrokAckDowntime(AlignakTest):
                 brok_ack_expire.append(brok)
 
         assert len(brok_ack_raise) == 0
-        assert len(brok_ack_expire) == 1
+        assert len(brok_ack_expire) == 2
 
+        host_brok = False
+        service_brok = False
         hdata = unserialize(brok_ack_expire[0].data)
         assert hdata['host'] == 'test_host_0'
-        assert 'service' not in hdata
+        if 'service' in hdata:
+            assert hdata['service'] == 'test_ok_0'
+            service_brok = True
+        else:
+            host_brok = True
+
+        hdata = unserialize(brok_ack_expire[1].data)
+        assert hdata['host'] == 'test_host_0'
+        if 'service' in hdata:
+            assert hdata['service'] == 'test_ok_0'
+            service_brok = True
+        else:
+            host_brok = True
+
+        assert host_brok and service_brok
 
         # Do same but end with external commands:
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])

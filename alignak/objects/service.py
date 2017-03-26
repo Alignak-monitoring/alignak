@@ -1039,6 +1039,7 @@ class Service(SchedulingItem):
     # pylint: disable=R0916
     def notification_is_blocked_by_item(self, notification_period, hosts, services,
                                         n_type, t_wished=None):
+        # pylint: disable=too-many-return-statements
         """Check if a notification is blocked by the service.
         Conditions are ONE of the following::
 
@@ -1084,6 +1085,8 @@ class Service(SchedulingItem):
                 (notification_period is not None and not
                     notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
+            logger.debug("Service: %s, notification %s sending is blocked by globals",
+                         self.get_name(), n_type)
             return True
 
         if n_type in ('PROBLEM', 'RECOVERY') and (
@@ -1093,27 +1096,46 @@ class Service(SchedulingItem):
             self.state == 'OK' and 'r' not in self.notification_options or
             self.state == 'UNREACHABLE' and 'x' not in self.notification_options
         ):  # pylint: disable=R0911
+            logger.debug("Service: %s, notification %s sending is blocked by options",
+                         self.get_name(), n_type)
             return True
+
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
+            logger.debug("Service: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
             return True
         if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
+            logger.debug("Service: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        # Block if host is in a scheduled downtime
-        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up or \
-                host.scheduled_downtime_depth > 0:
+        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+            logger.debug("Host: %s, notification %s sending is blocked by current state",
+                         self.get_name(), n_type)
             return True
 
-        # When in downtime, only allow end-of-downtime notifications
+        # Block if host is in a scheduled downtime
+        if host.scheduled_downtime_depth > 0:
+            logger.debug("Service: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
+            return True
+
+        # When in deep downtime, only allow end-of-downtime notifications
+        # In depth 1 the downtime just started and can be notified
         if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+            logger.debug("Service: %s, notification %s sending is blocked by deep downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
         if self.scheduled_downtime_depth > 0 and n_type in \
-                ('PROBLEM', 'RECOVERY', 'FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+                ('PROBLEM', 'RECOVERY', 'ACKNOWLEDGEMENT',
+                 'FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+            logger.debug("Service: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if the status is SOFT
@@ -1126,6 +1148,8 @@ class Service(SchedulingItem):
                                                     'FLAPPINGSTOP',
                                                     'FLAPPINGDISABLED') or \
                 host.state != host.ok_up:
+            logger.debug("Service: %s, notification %s sending is blocked by soft state, "
+                         "acknowledgement, flapping or host DOWN", self.get_name(), n_type)
             return True
 
         # Block if business rule smart notifications is enabled and all its
@@ -1134,8 +1158,11 @@ class Service(SchedulingItem):
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
+            logger.debug("Service: %s, notification %s sending is blocked by business rules",
+                         self.get_name(), n_type)
             return True
 
+        logger.debug("Service: %s, notification %s sending is not blocked", self.get_name(), n_type)
         return False
 
     def get_short_status(self, hosts, services):

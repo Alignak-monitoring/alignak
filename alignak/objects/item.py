@@ -529,7 +529,8 @@ class Item(AlignakObject):
         :type comment_id: int
         :return: None
         """
-        del self.comments[comment_id]
+        if comment_id in self.comments:
+            del self.comments[comment_id]
 
     def prepare_for_conf_sending(self):
         """
