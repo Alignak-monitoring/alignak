@@ -2758,7 +2758,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                                                        self.get_name()))
 
             # delete the comment of the item related with the acknowledge
-            del self.comments[self.acknowledgement.comment_id]
+            if hasattr(self.acknowledgement, 'comment_id') and \
+                    self.acknowledgement.comment_id in self.comments:
+                del self.comments[self.acknowledgement.comment_id]
 
             # Should not be deleted, a None is Good
             self.acknowledgement = None
