@@ -265,3 +265,33 @@ class TestHostGroup(AlignakTest):
                 "test_With another Spaces"
             ) is not \
             []
+
+    def test_service_hostgroup(self):
+        """Test hosts services inherited from a hostgroups property in service definition
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/hostgroup/hostgroups_from_service.cfg')
+        assert self.schedulers['scheduler-master'].conf.conf_is_correct
+
+        #  Search a hostgroup named tcp_hosts
+        hg = self.schedulers['scheduler-master'].sched.hostgroups.find_by_name("tcp_hosts")
+        assert isinstance(hg, Hostgroup)
+        print(hg.__dict__)
+
+        assert len(self.schedulers['scheduler-master'].sched.hostgroups.get_members_by_name("tcp_hosts")) == 3
+
+        assert len(hg.members) == 3
+        assert len(hg.hostgroup_members) == 0
+
+        assert len(hg.get_hosts()) == 3
+        print("Hostgroup hosts:")
+        for host_id in hg.members:
+            host = self.schedulers['scheduler-master'].sched.hosts[host_id]
+            print("- host: %s" % host.get_name())
+            assert len(host.services) > 0
+            for service_uuid in host.services:
+                service = self.schedulers['scheduler-master'].sched.services[service_uuid]
+                print("  has a service: %s" % service.get_name())
+                assert 'TCP' == service.get_name()
