@@ -229,6 +229,7 @@ class Alignak(BaseSatellite):
         :return: None
         """
         with self.conf_lock:
+            self.clean_previous_run()
             new_c = self.new_conf
             logger.warning("Sending us a configuration %s", new_c['push_flavor'])
             conf_raw = new_c['conf']
@@ -367,6 +368,16 @@ class Alignak(BaseSatellite):
             return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
         else:
             return {}
+
+    def clean_previous_run(self):
+        """Clean variables from previous configuration
+
+        :return: None
+        """
+        # Clean all lists
+        self.pollers.clear()
+        self.reactionners.clear()
+        self.brokers.clear()
 
     def main(self):
         """Main function for Scheduler, launch after the init::

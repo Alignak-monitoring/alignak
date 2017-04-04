@@ -883,6 +883,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         with self.conf_lock:
+            self.clean_previous_run()
             conf = self.new_conf
             self.new_conf = None
             self.cur_conf = conf
