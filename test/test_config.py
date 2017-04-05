@@ -636,7 +636,7 @@ class TestConfig(AlignakTest):
             "got hosts from another realm: Realm2"
         )
 
-    def test_bad_satellite_realm_conf(self):
+    def test_bad_satellite_broker_realm_conf(self):
         """ Configuration is not correct because a broker conf has an unknown realm
 
         :return: None
@@ -648,11 +648,36 @@ class TestConfig(AlignakTest):
         self.show_configuration_logs()
 
         self.assert_any_cfg_log_match(
-            "Configuration in broker::Broker-test is incorrect; from: "
-            "cfg/config/broker_bad_realm.cfg:1"
+            "Configuration in broker::Broker-test is incorrect; "
+            "from: cfg/config/bad_realm_broker.cfg:1"
         )
         self.assert_any_cfg_log_match(
             "The broker Broker-test got a unknown realm 'NoGood'"
+        )
+        self.assert_any_cfg_log_match(
+            "brokers configuration is incorrect!"
+        )
+
+    def test_bad_satellite_poller_realm_conf(self):
+        """ Configuration is not correct because a broker conf has an unknown realm
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/cfg_bad_realm_in_poller.cfg')
+        assert not self.conf_is_correct
+        self.show_configuration_logs()
+
+        self.assert_any_cfg_log_match(
+            "Configuration in poller::Poller-test is incorrect; "
+            "from: cfg/config/bad_realm_poller.cfg:1"
+        )
+        self.assert_any_cfg_log_match(
+            "The poller Poller-test got a unknown realm 'NoGood'"
+        )
+        self.assert_any_cfg_log_match(
+            "pollers configuration is incorrect!"
         )
 
     def test_bad_service_interval(self):

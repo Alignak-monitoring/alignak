@@ -2103,10 +2103,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
-            pollers_realms.add(self.realms[poller.realm])
-            if poller.manage_sub_realms:
-                for item in self.realms[poller.realm].all_sub_members:
-                    pollers_realms.add(self.realms[item])
+            if poller.realm and poller.realm in self.realms:
+                pollers_realms.add(self.realms[poller.realm])
+                if poller.manage_sub_realms:
+                    for item in self.realms[poller.realm].all_sub_members:
+                        pollers_realms.add(self.realms[item])
 
         if not hosts_realms.issubset(pollers_realms):
             for realm in hosts_realms.difference(pollers_realms):
