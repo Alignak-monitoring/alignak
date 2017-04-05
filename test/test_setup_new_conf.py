@@ -57,6 +57,19 @@ class TestSetupNewConf(AlignakTest):
         assert sched.modules[0].module_alias == 'Example'
         assert sched.modules[0].option_3 == 'foobar'
         assert 2 == len(sched.conf.hosts)
+        assert len(sched.pollers) == 1
+        assert len(sched.reactionners) == 1
+        assert len(sched.brokers) == 1
+
+        # send new conf, so it's the second time. This test the cleanup
+        self.setup_with_file('cfg/cfg_default.cfg')
+        for scheduler in self.arbiter.dispatcher.schedulers:
+            sched.new_conf = scheduler.conf_package
+        sched.setup_new_conf()
+        assert len(sched.pollers) == 1
+        assert len(sched.reactionners) == 1
+        assert len(sched.brokers) == 1
+
         # Stop launched modules
         sched.modules_manager.stop_all()
 
@@ -84,6 +97,16 @@ class TestSetupNewConf(AlignakTest):
         assert receiv.modules[0].option_3 == 'foobar'
         # check get hosts
         assert len(receiv.host_assoc) == 2
+        assert len(receiv.schedulers) == 1
+
+        # send new conf, so it's the second time. This test the cleanup
+        self.setup_with_file('cfg/cfg_default.cfg')
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'receiver':
+                receiv.new_conf = satellite.cfg
+        receiv.setup_new_conf()
+        assert len(receiv.schedulers) == 1
+
         # Stop launched modules
         receiv.modules_manager.stop_all()
 
@@ -109,6 +132,16 @@ class TestSetupNewConf(AlignakTest):
         assert 1 == len(poller.new_modules_conf)
         assert poller.new_modules_conf[0].module_alias == 'Example'
         assert poller.new_modules_conf[0].option_3 == 'foobar'
+        assert len(poller.schedulers) == 1
+
+        # send new conf, so it's the second time. This test the cleanup
+        self.setup_with_file('cfg/cfg_default.cfg')
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'poller':
+                poller.new_conf = satellite.cfg
+        poller.setup_new_conf()
+        assert len(poller.schedulers) == 1
+
         # Stop launched modules
         poller.modules_manager.stop_all()
 
@@ -134,6 +167,24 @@ class TestSetupNewConf(AlignakTest):
         assert 1 == len(broker.modules)
         assert broker.modules[0].module_alias == 'Example'
         assert broker.modules[0].option_3 == 'foobar'
+        assert len(broker.schedulers) == 1
+        assert len(broker.arbiters) == 1
+        assert len(broker.pollers) == 1
+        assert len(broker.reactionners) == 1
+        assert len(broker.receivers) == 1
+
+        # send new conf, so it's the second time. This test the cleanup
+        self.setup_with_file('cfg/cfg_default.cfg')
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'broker':
+                broker.new_conf = satellite.cfg
+        broker.setup_new_conf()
+        assert len(broker.schedulers) == 1
+        assert len(broker.arbiters) == 1
+        assert len(broker.pollers) == 1
+        assert len(broker.reactionners) == 1
+        assert len(broker.receivers) == 1
+
         # Stop launched modules
         broker.modules_manager.stop_all()
 
@@ -159,5 +210,15 @@ class TestSetupNewConf(AlignakTest):
         assert 1 == len(reac.new_modules_conf)
         assert reac.new_modules_conf[0].module_alias == 'Example'
         assert reac.new_modules_conf[0].option_3 == 'foobar'
+        assert len(reac.schedulers) == 1
+
+        # send new conf, so it's the second time. This test the cleanup
+        self.setup_with_file('cfg/cfg_default.cfg')
+        for satellite in self.arbiter.dispatcher.satellites:
+            if satellite.get_my_type() == 'reactionner':
+                reac.new_conf = satellite.cfg
+        reac.setup_new_conf()
+        assert len(reac.schedulers) == 1
+
         # Stop launched modules
         reac.modules_manager.stop_all()

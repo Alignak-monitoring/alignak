@@ -455,6 +455,7 @@ class Broker(BaseSatellite):
         """
 
         with self.conf_lock:
+            self.clean_previous_run()
             conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
@@ -712,7 +713,9 @@ class Broker(BaseSatellite):
         self.schedulers.clear()
         self.pollers.clear()
         self.reactionners.clear()
+        self.receivers.clear()
         self.broks = self.broks[:]
+        self.arbiters.clear()
         self.broks_internal_raised = self.broks_internal_raised[:]
         with self.arbiter_broks_lock:
             self.arbiter_broks = self.arbiter_broks[:]
@@ -760,21 +763,7 @@ class Broker(BaseSatellite):
         # Begin to clean modules
         self.check_and_del_zombie_modules()
 
-        # Maybe the arbiter ask us to wait for a new conf
-        # If true, we must restart all...
-        if self.cur_conf is None:
-            # Clean previous run from useless objects
-            # and close modules
-            self.clean_previous_run()
-
-            self.wait_for_initial_conf()
-            # we may have been interrupted or so; then
-            # just return from this loop turn
-            if not self.new_conf:
-                return
-            self.setup_new_conf()
-
-        # Now we check if arbiter speak to us.
+        # Now we check if arbiter speak to me.
         # If so, we listen for it
         # When it pushes conf to us, we reinit connections
         self.watch_for_new_conf(0.0)

@@ -202,6 +202,7 @@ class Receiver(Satellite):
         :return: None
         """
         with self.conf_lock:
+            self.clean_previous_run()
             conf = unserialize(self.new_conf, True)
             self.new_conf = None
             self.cur_conf = conf
