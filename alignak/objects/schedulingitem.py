@@ -681,7 +681,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             # And a new check
                             chk = self.launch_check(now, hosts, services, timeperiods,
                                                     macromodulations, checkmodulations, checks)
-                            chk.output = "Freshness period expired"
+                            expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                            chk.output = "Freshness period expired: %s" % expiry_date
                             chk.set_type_passive()
                             chk.freshness_expired = True
                             if self.my_type == 'host':
