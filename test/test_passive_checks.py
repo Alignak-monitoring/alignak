@@ -177,6 +177,7 @@ class TestPassiveChecks(AlignakTest):
         host.event_handler_enabled = False
 
         # Set the host UP - this will run the scheduler loop to check for freshness
+        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
 
@@ -195,7 +196,7 @@ class TestPassiveChecks(AlignakTest):
 
         items = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
         for item in items:
-            assert "Freshness period expired" == item.output
+            assert "Freshness period expired: %s" % expiry_date == item.output
 
         self.assert_actions_count(0)
         self.assert_checks_count(2)  # test_host_0 and test_router_0
