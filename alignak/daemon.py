@@ -537,6 +537,9 @@ class Daemon(object):
             logger.warning("pidfile is empty or has an invalid content: %s", self.pidfile)
             return
 
+        if pid == os.getpid():
+            return
+
         try:
             logger.info("Killing process: '%s'", pid)
             os.kill(pid, 0)
