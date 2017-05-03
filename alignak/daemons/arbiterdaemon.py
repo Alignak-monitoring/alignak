@@ -305,8 +305,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Call modules that manage this read configuration pass
         self.hook_point('read_configuration')
 
+        # Call modules get_alignak_configuration() to load Alignak configuration parameters
+        # (example modules: alignak_backend)
+        self.load_modules_alignak_configuration()
+
         # Call modules get_objects() to load new objects from them
-        # (example modules: glpi, mongodb, dummy_arbiter)
+        # (example modules: alignak_backend)
         self.load_modules_configuration_objects(raw_objects)
 
         # Resume standard operations
@@ -475,8 +479,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             try:
                 objs = inst.get_objects()
             except Exception, exp:  # pylint: disable=W0703
-                logger.error("Instance %s raised an exception %s. Log and continue to run",
-                             inst.get_name(), str(exp))
+                logger.error("Module %s get_objects raised an exception %s. "
+                             "Log and continue to run", inst.get_name(), str(exp))
                 output = cStringIO.StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
@@ -501,6 +505,50 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     raw_objects[type_c].append(obj)
                 logger.debug("Added %i objects to %s from module %s",
                              len(objs[prop]), type_c, inst.get_name())
+
+    def load_modules_alignak_configuration(self):
+        """Load Alignak configuration from the arbiter modules
+        If module implements get_alignak_configuration, call this function
+
+        :param raw_objects: raw objects we got from reading config files
+        :type raw_objects: dict
+        :return: None
+        """
+        alignak_cfg = {}
+        # Ask configured modules if they got configuration for us
+        for inst in self.modules_manager.instances:
+            if not hasattr(inst, 'get_alignak_configuration'):
+                return
+
+            _t0 = time.time()
+            try:
+                logger.info("Getting Alignak global configuration from module '%s'",
+                            inst.get_name())
+                cfg = inst.get_alignak_configuration()
+                alignak_cfg.update(cfg)
+            except Exception, exp:  # pylint: disable=W0703
+                logger.error("Module get_alignak_configuration %s raised an exception %s. "
+                             "Log and continue to run", inst.get_name(), str(exp))
+                output = cStringIO.StringIO()
+                traceback.print_exc(file=output)
+                logger.error("Back trace of this remove: %s", output.getvalue())
+                output.close()
+                continue
+            statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
+
+        params = []
+        logger.info("Got Alignak global configuration:")
+        for key, value in alignak_cfg.iteritems():
+            logger.info("- %s = %s", key, value)
+            # properties starting with an _ character are "transformed" to macro variables
+            if key.startswith('_'):
+                key = '$' + key[1:].upper()
+            # properties valued as None are filtered
+            if value is None:
+                continue
+            # set properties as legacy Shinken configuration files
+            params.append("%s=%s" % (key, value))
+        self.conf.load_params(params)
 
     def launch_analyse(self):  # pragma: no cover, not used currently (see #607)
         """ Dump the number of objects we have for each type to a JSON formatted file
