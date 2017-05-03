@@ -10,7 +10,7 @@ coverage
 # Report coverage results to coveralls.io
 coveralls
 # Static code analysis libraries
-pylint
+pylint<1.7
 pep8
 pep257
 # Tests time freeze
