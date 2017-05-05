@@ -156,8 +156,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
     properties = {
         # Used for the PREFIX macro
         # Alignak prefix does not axist as for Nagios meaning.
-        # It is better to set this value as an empty string rather than an meaningless information!
+        # It is better to set this value as an empty string rather than a meaningless information!
         'prefix':
+            StringProp(default=''),
+
+        # Used for the PREFIX macro
+        # Alignak instance name is set as tha arbiter name if it is not defined in the config
+        'alignak_name':
             StringProp(default=''),
 
         # Used for the MAINCONFIGFILE macro
@@ -648,6 +653,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     macros = {
         'PREFIX':               'prefix',
+        'ALIGNAK':              'alignak_name',
         'MAINCONFIGFILE':       'main_config_file',
         'STATUSDATAFILE':       '',
         'COMMENTDATAFILE':      '',
@@ -858,8 +864,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         clean_params = self.clean_params(params)
 
+        logger.info("Alignak parameters:")
         for key, value in clean_params.items():
-
             if key in self.properties:
                 val = self.properties[key].pythonize(clean_params[key])
             elif key in self.running_properties:
@@ -877,6 +883,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 val = ToGuessProp.pythonize(clean_params[key])
 
             setattr(self, key, val)
+            logger.info("- : %s = %s", key, val)
             # Maybe it's a variable as $USER$ or $ANOTHERVATRIABLE$
             # so look at the first character. If it's a $, it's a variable
             # and if it's end like it too
@@ -2029,10 +2036,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: True if the configuration is correct else False
         :rtype: bool
         """
-        logger.info(
-            'Running pre-flight check on configuration data, initial state: %s',
-            self.conf_is_correct
-        )
+        logger.info('Running pre-flight check on configuration data, initial state: %s',
+                    self.conf_is_correct)
         valid = self.conf_is_correct
 
         # Globally unmanaged parameters

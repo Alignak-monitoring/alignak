@@ -187,6 +187,9 @@ class Scheduler(object):  # pylint: disable=R0902
         # And a dummy push flavor
         self.push_flavor = 0
 
+        # Alignak instance name
+        self.alignak_name = None
+
         # Now fake initialize for our satellites
         self.brokers = {}
         self.pollers = {}
@@ -272,6 +275,8 @@ class Scheduler(object):  # pylint: disable=R0902
         self.instance_name = conf.instance_name
         # and push flavor
         self.push_flavor = conf.push_flavor
+        # and Alignak instance name
+        self.alignak_name = conf.alignak_name
 
         # Update our hosts/services freshness threshold
         if self.conf.check_host_freshness and self.conf.host_freshness_check_interval >= 0:
@@ -1522,8 +1527,13 @@ class Scheduler(object):  # pylint: disable=R0902
         TODO: GET REAL VALUES
         """
         now = int(time.time())
+        # todo: some information in this brok are unuseful: last_log_rotation, command_file
+        # Some others are unaccurate: last_command_check, modified_host_attributes,
+        # modified_service_attributes
+        # I do not remove yet because some modules may use them?
         data = {"is_running": 1,
                 "instance_id": self.instance_id,
+                "alignak_name": self.alignak_name,
                 "instance_name": self.instance_name,
                 "last_alive": now,
                 "interval_length": self.conf.interval_length,

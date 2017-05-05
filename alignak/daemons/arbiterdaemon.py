@@ -110,6 +110,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.verify_only = verify_only
         self.analyse = analyse
         self.arbiter_name = arbiter_name
+        self.alignak_name = None
 
         self.broks = {}
         self.is_master = False
@@ -245,6 +246,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             sys.exit(err)
 
         logger.info("I correctly loaded the configuration files")
+        self.alignak_name = getattr(self.conf, "alignak_name", self.arbiter_name)
+        logger.info("Configuration for Alignak: %s", self.alignak_name)
 
         # First we need to get arbiters and modules
         # so we can ask them for objects
@@ -545,6 +548,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 key = '$' + key[1:].upper()
             # properties valued as None are filtered
             if value is None:
+                continue
+            # properties valued as empty strings are filtered
+            if value == '':
                 continue
             # set properties as legacy Shinken configuration files
             params.append("%s=%s" % (key, value))

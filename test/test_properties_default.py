@@ -129,6 +129,7 @@ class TestConfig(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('prefix', ''),
+        ('alignak_name', ''),
         ('config_base_dir', ''),
         ('triggers_dir', ''),
         ('packs_dir', ''),
