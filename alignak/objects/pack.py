@@ -63,7 +63,7 @@ from alignak.property import StringProp
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Pack(Item):
+class Pack(Item):  # pragma: no cover, this class looks no more used - see #551
     """
     Class to manage a Pack
     A Pack contain multiple configuration files (like all checks for os 'FreeBSD')
@@ -90,7 +90,7 @@ class Pack(Item):
             return 'UnnamedPack'
 
 
-class Packs(Items):
+class Packs(Items):  # pragma: no cover, this class looks no more used - see #551
     """
     Class to manage all Pack
     """
