@@ -1,0 +1,11 @@
+define service {
+    service_description   TimeSync
+    use                   linux-service,12hours_short
+    register              0
+    host_name             linux-snmp
+    check_command         check_linux_time
+
+    _DETAILLEDESC         Compare system time with time where shinken operate. Both must be synchronized with a ntp source.
+    _IMPACT               Average: Log, database and all records on system with a wrong time. Timeperiod drift and false alerts at wrong time slots.
+    _FIXACTIONS           Synchronized systems with ntp. Set time to be slewed by ntpdate rather than stepped.
+}

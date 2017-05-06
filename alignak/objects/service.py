@@ -1224,15 +1224,6 @@ class Services(SchedulingItems):
     name_property = 'unique_key'  # only used by (un)indexitem (via 'name_property')
     inner_class = Service  # use for know what is in items
 
-    def add_items(self, items, index_items):
-
-        # We only index template, service need to apply inheritance first to be able to be indexed
-        for item in items:
-            if item.is_tpl():
-                self.add_template(item)
-            else:
-                self.items[item.uuid] = item
-
     def add_template(self, tpl):
         """
         Adds and index a template into the `templates` container.
@@ -1259,12 +1250,13 @@ class Services(SchedulingItems):
                   % (objcls, tpl.imported_from)
             tpl.configuration_errors.append(msg)
         elif not name:
-            # If name is not defined, use the service_description as name
-            setattr(tpl, 'name', sdesc)
+            # If name is not defined, use the host_name_service_description as name (fix #791)
+            setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
             tpl = self.index_template(tpl)
         elif name:
             tpl = self.index_template(tpl)
         self.templates[tpl.uuid] = tpl
+        logger.debug('\tAdded service template #%d %s', len(self.templates), tpl)
 
     def add_item(self, item, index=True):
         """

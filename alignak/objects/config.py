@@ -2030,7 +2030,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         #      r &= False
         return valid
 
-    def is_correct(self):  # pylint: disable=R0912, too-many-statements
+    def is_correct(self):  # pylint: disable=R0912, too-many-statements, too-many-locals
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2077,6 +2077,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                len(cur.configuration_warnings), len(self.configuration_warnings))
 
             if not self.read_config_silent:
+                if obj == 'services':
+                    dump_list = sorted(cur, key=lambda k: k.host_name)
+                else:
+                    try:
+                        dump_list = sorted(cur, key=lambda k: k.get_name())
+                    except AttributeError:
+                        dump_list = cur
+
+                for cur_obj in dump_list:
+                    if obj == 'services':
+                        logger.info('\t%s', cur_obj.get_full_name())
+                    else:
+                        logger.info('\t%s', cur_obj.get_name())
                 logger.info('\tChecked %d %s', len(cur), obj)
 
         # Look that all scheduler got a broker that will take brok.
