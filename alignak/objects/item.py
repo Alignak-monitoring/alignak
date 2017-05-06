@@ -763,7 +763,7 @@ class Items(object):
         :type index_items: bool
         :return: None
         """
-        count = 1
+        count = 0
         for i in items:
             if i.is_tpl():
                 self.add_template(i)

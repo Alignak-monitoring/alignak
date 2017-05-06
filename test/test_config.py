@@ -333,6 +333,9 @@ class TestConfig(AlignakTest):
         assert "services configuration is incorrect!" in \
                       self.configuration_errors
 
+        # No existing services in the loaded configuration
+        assert 0 == len(self.arbiter.conf.services.items)
+
     def test_bad_template_use_itself(self):
         """ Detect a template that uses itself as a template
 

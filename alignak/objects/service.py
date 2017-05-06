@@ -1588,8 +1588,8 @@ class Services(SchedulingItems):
         for hname in duplicate_for_hosts:
             host = hosts.find_by_name(hname)
             if host is None:
-                err = 'Error: The hostname %service is unknown for the ' \
-                      'service %service!' % (hname, service.get_name())
+                err = 'Error: The hostname %s is unknown for the service %s!' \
+                      % (hname, service.get_name())
                 service.configuration_errors.append(err)
                 continue
             if host.is_excluded_for(service):
@@ -1623,7 +1623,7 @@ class Services(SchedulingItems):
     def explode_services_from_templates(self, hosts, service):
         """
         Explodes services from templates. All hosts holding the specified
-        templates are bound the service.
+        templates are bound with the service.
 
         :param hosts: The hosts container.
         :type hosts: alignak.objects.host.Hosts
@@ -1664,10 +1664,9 @@ class Services(SchedulingItems):
         # the generator case, we must create several new services
         # we must find our host, and get all key:value we need
         host = hosts.find_by_name(hname.strip())
-
         if host is None:
-            err = 'Error: The hostname %service is unknown for the ' \
-                  'service %service!' % (hname, service.get_name())
+            err = 'Error: The hostname %s is unknown for the service %s!' \
+                  % (hname, service.get_name())
             service.configuration_errors.append(err)
             return
 
@@ -1753,7 +1752,7 @@ class Services(SchedulingItems):
         :type servicedependencies:
         :return: None
         """
-        # Then for every host create a copy of the service with just the host
+        # Then for every service create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
         itemkeys = self.items.keys()
         for s_id in itemkeys:
@@ -1776,9 +1775,11 @@ class Services(SchedulingItems):
             else:
                 if len(hnames) >= 2:
                     self.explode_services_from_hosts(hosts, serv, hnames)
-                # Delete expanded source service
-                if not serv.configuration_errors:
-                    self.remove_item(serv)
+                # Delete expanded source service, even if some errors exist
+                self.remove_item(serv)
+                # if not serv.configuration_errors:
+                #     print("Remove duplicated service!")
+                #     self.remove_item(serv)
 
         for s_id in self.templates:
             template = self.templates[s_id]
