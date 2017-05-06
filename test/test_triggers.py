@@ -215,7 +215,7 @@ class TestTriggers(AlignakTest):
         self.scheduler_loop(4, [[host, 0, 'Fake host output']])
         print "Output", svc.output
         print "Perf_Data", svc.perf_data
-        self.assertEqual("OK all is green", svc.output)
+        self.assertEqual("OK all is green, my host is gnulinux", svc.output)
         self.assertEqual("users=12", svc.perf_data)
 
     def test_trig_file_loading(self):
@@ -248,6 +248,32 @@ class TestTriggers(AlignakTest):
         self.assertEqual("not good!", svc.output)
         self.assertEqual("cpu=95", svc.perf_data)
 
+        # Set service output / perfdata
+        svc.output = 'I am OK'
+        svc.perf_data = 'cpu=80%'
+
+        # Run the service triggers
+        svc.eval_triggers(self._sched.triggers)
+
+        self.scheduler_loop(2, [])
+        self.external_command_loop()
+
+        self.assertEqual("not that bad!", svc.output)
+        self.assertEqual("cpu=80", svc.perf_data)
+
+        # Set service output / perfdata
+        svc.output = 'I am OK'
+        svc.perf_data = 'cpu=60%'
+
+        # Run the service triggers
+        svc.eval_triggers(self._sched.triggers)
+
+        self.scheduler_loop(2, [])
+        self.external_command_loop()
+
+        self.assertEqual("Ok!", svc.output)
+        self.assertEqual("cpu=60", svc.perf_data)
+
         # Set host output / perfdata
         host.output = 'I am OK'
         host.perf_data = 'cpu=95%'
@@ -260,6 +286,32 @@ class TestTriggers(AlignakTest):
 
         self.assertEqual("not good!", host.output)
         self.assertEqual("cpu=95", host.perf_data)
+
+        # Set host output / perfdata
+        host.output = 'I am OK'
+        host.perf_data = 'cpu=80%'
+
+        # Run the host triggers
+        host.eval_triggers(self._sched.triggers)
+
+        self.scheduler_loop(2, [])
+        self.external_command_loop()
+
+        self.assertEqual("not that bad!", host.output)
+        self.assertEqual("cpu=80", host.perf_data)
+
+        # Set host output / perfdata
+        host.output = 'I am OK'
+        host.perf_data = 'cpu=70%'
+
+        # Run the host triggers
+        host.eval_triggers(self._sched.triggers)
+
+        self.scheduler_loop(2, [])
+        self.external_command_loop()
+
+        self.assertEqual("Ok!", host.output)
+        self.assertEqual("cpu=70", host.perf_data)
 
     def test_simple_triggers(self):
         """ Test the simple triggers """

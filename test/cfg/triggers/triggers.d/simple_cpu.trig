@@ -1,4 +1,8 @@
 cpu = perf(self, 'cpu')
 print "Got cpu", cpu
 if cpu >= 95:
-   critical(self, 'not good! | cpu=%d' % cpu)
+    critical(self, 'not good! | cpu=%d' % cpu)
+elif cpu >= 75:
+    warning(self, 'not that bad! | cpu=%d' % cpu)
+else:
+    ok(self, 'Ok! | cpu=%d' % cpu)
