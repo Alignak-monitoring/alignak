@@ -246,9 +246,7 @@ def get_custom(obj_ref, cname, default=None):
     :return:
     :rtype:
     """
-    print obj_ref
     objs = get_objects(obj_ref)
-    print objs
     if len(objs) != 1:
         return default
     obj = objs[0]
