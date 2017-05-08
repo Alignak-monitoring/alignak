@@ -921,6 +921,7 @@ class ExternalCommandManager:
         :type value: str
         :return: None
         """
+        # todo: deprecate this
         contact.modified_service_attributes = long(value)
 
     @staticmethod
@@ -936,6 +937,7 @@ class ExternalCommandManager:
         :type value:str
         :return: None
         """
+        # todo: deprecate this
         contact.modified_host_attributes = long(value)
 
     @staticmethod
@@ -951,6 +953,7 @@ class ExternalCommandManager:
         :type value: str
         :return: None
         """
+        # todo: deprecate this
         contact.modified_attributes = long(value)
 
     def change_contact_host_notification_timeperiod(self, contact, notification_timeperiod):
@@ -965,6 +968,7 @@ class ExternalCommandManager:
         :type notification_timeperiod: alignak.objects.timeperiod.Timeperiod
         :return: None
         """
+        # todo: deprecate this
         contact.modified_host_attributes |= DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         contact.host_notification_period = notification_timeperiod
         self.daemon.get_and_register_status_brok(contact)
@@ -989,6 +993,7 @@ class ExternalCommandManager:
         }
         comm = Comment(data)
         service.add_comment(comm)
+        # todo: create and send a brok for service comment
         brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                    % (self.hosts[service.host].get_name(),
                                       service.get_name(),
@@ -1015,6 +1020,7 @@ class ExternalCommandManager:
         }
         comm = Comment(data)
         host.add_comment(comm)
+        # todo: create and send a brok for host comment
         brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
                                    % (host.get_name(),
                                       unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
@@ -1136,8 +1142,7 @@ class ExternalCommandManager:
         contact.service_notification_period = notification_timeperiod
         self.daemon.get_and_register_status_brok(contact)
 
-    @staticmethod
-    def change_custom_contact_var(contact, varname, varvalue):
+    def change_custom_contact_var(self, contact, varname, varvalue):
         """Change custom contact variable
         Format of the line that triggers function call::
 
@@ -1154,9 +1159,9 @@ class ExternalCommandManager:
         if varname.upper() in contact.customs:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             contact.customs[varname.upper()] = varvalue
+            self.daemon.get_and_register_status_brok(contact)
 
-    @staticmethod
-    def change_custom_host_var(host, varname, varvalue):
+    def change_custom_host_var(self, host, varname, varvalue):
         """Change custom host variable
         Format of the line that triggers function call::
 
@@ -1173,9 +1178,9 @@ class ExternalCommandManager:
         if varname.upper() in host.customs:
             host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             host.customs[varname.upper()] = varvalue
+            self.daemon.get_and_register_status_brok(host)
 
-    @staticmethod
-    def change_custom_svc_var(service, varname, varvalue):
+    def change_custom_svc_var(self, service, varname, varvalue):
         """Change custom service variable
         Format of the line that triggers function call::
 
@@ -1192,6 +1197,7 @@ class ExternalCommandManager:
         if varname.upper() in service.customs:
             service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             service.customs[varname.upper()] = varvalue
+            self.daemon.get_and_register_status_brok(service)
 
     def change_global_host_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global host event handler)
@@ -1212,6 +1218,7 @@ class ExternalCommandManager:
                                    'CHANGE_GLOBAL_HOST_EVENT_HANDLER: '
                                    'this command is not implemented!')
         self.send_an_element(brok)
+        # todo: #783 create a dedicated brok for global parameters
 
     def change_global_svc_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global service event handler)
@@ -1232,6 +1239,7 @@ class ExternalCommandManager:
                                    'CHANGE_GLOBAL_SVC_EVENT_HANDLER: '
                                    'this command is not implemented!')
         self.send_an_element(brok)
+        # todo: #783 create a dedicated brok for global parameters
 
     def change_host_check_command(self, host, check_command):
         """Modify host check command
@@ -1336,6 +1344,7 @@ class ExternalCommandManager:
         :type value: str
         :return: None
         """
+        # todo: deprecate this
         # We need to change each of the needed attributes.
         previous_value = host.modified_attributes
         changes = long(value)
@@ -1579,6 +1588,7 @@ class ExternalCommandManager:
         :type value: str
         :return: None
         """
+        # todo: deprecate this
         # We need to change each of the needed attributes.
         previous_value = service.modified_attributes
         changes = long(value)
@@ -1913,6 +1923,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if self.conf.enable_event_handlers:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             self.conf.enable_event_handlers = False
@@ -1927,6 +1938,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if self.conf.enable_flap_detection:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             self.conf.enable_flap_detection = False
@@ -2169,6 +2181,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if self.conf.enable_notifications:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             self.conf.enable_notifications = False
@@ -2213,6 +2226,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if self.conf.process_performance_data:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
             self.conf.process_performance_data = False
@@ -2477,6 +2491,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.enable_event_handlers:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             self.conf.enable_event_handlers = True
@@ -2491,6 +2506,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.enable_flap_detection:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             self.conf.enable_flap_detection = True
@@ -2718,6 +2734,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.enable_notifications:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             self.conf.enable_notifications = True
@@ -3740,6 +3757,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.accept_passive_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_host_checks = True
@@ -3754,6 +3772,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.accept_passive_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             self.conf.accept_passive_service_checks = True
@@ -3768,6 +3787,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.execute_host_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_host_checks = True
@@ -3782,6 +3802,7 @@ class ExternalCommandManager:
 
         :return: None
         """
+        # todo: #783 create a dedicated brok for global parameters
         if not self.conf.execute_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_service_checks = True
