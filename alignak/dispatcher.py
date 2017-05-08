@@ -449,6 +449,7 @@ class Dispatcher:
                         'conf': realm.serialized_confs[conf.uuid],
                         'override_conf': sched.get_override_configuration(),
                         'modules': sched.modules,
+                        'alignak_name': self.arbiter.arbiter_name,
                         'satellites': satellites,
                         'instance_name': sched.scheduler_name,
                         'push_flavor': conf.push_flavor,

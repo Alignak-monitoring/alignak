@@ -77,7 +77,8 @@ class Brok(object):
     - host_snapshot, service_snapshot
     - unknown_host_check_result, unknown_service_check_result
 
-    - program_status
+    - program_status, initial program status
+    - update_program_status, program status updated (raised on each scheduler loop)
     - clean_all_my_instance_id
 
     - new_conf

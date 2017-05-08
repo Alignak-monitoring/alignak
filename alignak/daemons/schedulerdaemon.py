@@ -220,7 +220,7 @@ class Alignak(BaseSatellite):
             return
         logger.info("New configuration received")
         self.setup_new_conf()
-        logger.info("New configuration loaded")
+        logger.info("New configuration loaded, scheduling Alignak: %s", self.sched.alignak_name)
         self.sched.run()
 
     def setup_new_conf(self):
@@ -268,6 +268,7 @@ class Alignak(BaseSatellite):
             # Tag the conf with our data
             self.conf = conf
             self.conf.push_flavor = new_c['push_flavor']
+            self.conf.alignak_name = new_c['alignak_name']
             self.conf.instance_name = instance_name
             self.conf.skip_initial_broks = new_c['skip_initial_broks']
             self.conf.accept_passive_unknown_check_results = \
