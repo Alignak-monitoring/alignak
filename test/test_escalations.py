@@ -212,7 +212,7 @@ class TestEscalations(AlignakTest):
             (u'error', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
                        u'CRITICAL;notify-service;BAD')
         ]
-        self.check_monitoring_logs(expected_logs)
+        self.check_monitoring_logs(expected_logs, dump=True)
 
         # ---
         # 2/

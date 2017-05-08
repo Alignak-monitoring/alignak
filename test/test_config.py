@@ -238,7 +238,7 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['Default-Scheduler'].sched
+        self._sched = self.schedulers['scheduler-master'].sched
 
         # Service linked to an host
         svc = self._sched.services.find_srv_by_name_and_hostname("MYHOST", "SSH")
@@ -254,7 +254,10 @@ class TestConfig(AlignakTest):
         # An host
         host = self._sched.hosts.find_by_name("test_host")
         assert host is not None
-        assert len(host.services) == 2
+        for service in host.services:
+            if service in self._sched.services:
+                print("Host service: %s" % (self._sched.services[service]))
+        assert len(host.services) == 3
 
         # Service template linked to an host template
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host", "svc_inherited")
@@ -269,7 +272,10 @@ class TestConfig(AlignakTest):
         # Another host
         host = self._sched.hosts.find_by_name("test_host2")
         assert host is not None
-        assert len(host.services) == 2
+        for service in host.services:
+            if service in self._sched.services:
+                print("Host service: %s" % (self._sched.services[service]))
+        assert len(host.services) == 3
 
         # Service template linked to an host template
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host2", "svc_inherited")
@@ -290,7 +296,7 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['Default-Scheduler'].sched
+        self._sched = self.schedulers['scheduler-master'].sched
 
         # An host
         host = self._sched.hosts.find_by_name("test.host.A")
