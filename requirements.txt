@@ -7,6 +7,7 @@ importlib
 termcolor==1.1.0
 setproctitle
 ujson
-numpy
+numpy<1.12.0; python_version < '2.7'
+numpy; python_version >= '2.7'
 pyopenssl>=0.15
 docopt
