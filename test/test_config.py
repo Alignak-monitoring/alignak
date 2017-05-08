@@ -238,22 +238,47 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
         assert self.conf_is_correct
+        self._sched = self.schedulers['Default-Scheduler'].sched
 
         # Service linked to an host
-        svc = self.schedulers['Default-Scheduler'].sched.services.find_srv_by_name_and_hostname(
-            "MYHOST", "SSH")
+        svc = self._sched.services.find_srv_by_name_and_hostname("MYHOST", "SSH")
         assert svc is not None
 
         # Service linked to several hosts
         for hname in ["MYHOST2", "MYHOST3"]:
-            svc = self.schedulers['Default-Scheduler'].sched.services.\
-                find_srv_by_name_and_hostname(hname, "SSH")
+            svc = self._sched.services.find_srv_by_name_and_hostname(hname, "SSH")
             assert svc is not None
 
+        # ---
+        # Test services created because service template linked to host template
+        # An host
+        host = self._sched.hosts.find_by_name("test_host")
+        assert host is not None
+        assert len(host.services) == 2
+
         # Service template linked to an host template
-        svc = self.schedulers['Default-Scheduler'].sched.services.find_srv_by_name_and_hostname(
-            "test_host", "svc_inherited")
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host", "svc_inherited")
         assert svc is not None
+        assert svc.uuid in host.services
+        assert 'check_ssh' == svc.check_command.command.command_name
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host", "svc_inherited2")
+        assert svc is not None
+        assert svc.uuid in host.services
+        assert 'check_ssh' == svc.check_command.command.command_name
+
+        # Another host
+        host = self._sched.hosts.find_by_name("test_host2")
+        assert host is not None
+        assert len(host.services) == 2
+
+        # Service template linked to an host template
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host2", "svc_inherited")
+        assert svc is not None
+        assert svc.uuid in host.services
+        assert 'check_ssh' == svc.check_command.command.command_name
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host2", "svc_inherited2")
+        assert svc is not None
+        assert svc.uuid in host.services
         assert 'check_ssh' == svc.check_command.command.command_name
 
     def test_service_templating_inheritance(self):

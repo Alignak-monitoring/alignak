@@ -180,6 +180,10 @@ class Service(SchedulingItem):
 
     })
 
+    special_properties = (
+        'service_description'
+    )
+
     # Mapping between Macros and properties (can be prop or a function)
     macros = SchedulingItem.macros.copy()
     macros.update({
