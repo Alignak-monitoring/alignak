@@ -239,13 +239,13 @@ class Worker(object):
                 self._idletime += 1
                 time.sleep(1)
         # Maybe the Queue() has been deleted by our master ?
-        except EOFError:
+        except EOFError:  # pragma: no cover, hardly testable with unit tests...
             logger.warning("[%s] My queue is no more available", self.uuid)
             self.interrupted = True
             return
         # Maybe the Queue() is not available, if so, just return
         # get back to work :)
-        except IOError:
+        except IOError:  # pragma: no cover, hardly testable with unit tests...
             logger.warning("[%s] My queue is not available", self.uuid)
             return
 
@@ -290,7 +290,7 @@ class Worker(object):
                 # msg = Message(_id=self.uuid, _type='Result', data=action)
                 try:
                     self.returns_queue.put(action)
-                except IOError, exp:
+                except IOError, exp:  # pragma: no cover, hardly testable with unit tests...
                     logger.error("[%s] Exiting: %s", self.uuid, exp)
                     sys.exit(2)
 
@@ -303,7 +303,7 @@ class Worker(object):
         # Little sleep
         time.sleep(wait_time)
 
-    def check_for_system_time_change(self):
+    def check_for_system_time_change(self):  # pragma: no cover, hardly testable with unit tests...
         """
         Check if our system time change. If so, change our
 
@@ -322,7 +322,7 @@ class Worker(object):
         else:
             return 0
 
-    def work(self, slave_q, returns_queue, control_q):
+    def work(self, slave_q, returns_queue, control_q):  # pragma: not with unit tests...
         """
         Wrapper function for work in order to catch the exception
         to see the real work, look at do_work
@@ -347,7 +347,7 @@ class Worker(object):
             # Ok I die now
             raise
 
-    def do_work(self, slave_q, returns_queue, control_q):
+    def do_work(self, slave_q, returns_queue, control_q):  # pragma: not with unit tests...
         """
         Main function of the worker.
         * Get checks

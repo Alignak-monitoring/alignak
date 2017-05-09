@@ -68,7 +68,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except AttributeError, exp:
+except AttributeError, exp:  # pragma: no cover, should not happen!
     logger.error('Encoding detection error for stdout = %s', exp)
     SAFE_STDOUT = False
 
@@ -142,7 +142,7 @@ def jsonify_r(obj):
     """
     res = {}
     cls = obj.__class__
-    if not hasattr(cls, 'properties'):
+    if not hasattr(cls, 'properties'):  # pragma: no cover, should not happen, simple protection.
         try:
             json.dumps(obj)
             return obj
@@ -171,7 +171,7 @@ def jsonify_r(obj):
                     if o_type == 'CommandCall':
                         try:
                             lst.append(subval.call)
-                        except AttributeError:
+                        except AttributeError:  # pragma: no cover, should not happen...
                             pass
                         continue
                     if o_type and hasattr(subval, o_type + '_name'):
@@ -184,7 +184,7 @@ def jsonify_r(obj):
                 if o_type == 'CommandCall':
                     try:
                         res[prop] = val.call
-                    except AttributeError:
+                    except AttributeError:  # pragma: no cover, should not happen...
                         pass
                     continue
                 if o_type and hasattr(val, o_type + '_name'):
@@ -490,7 +490,7 @@ def to_bool(val):
     return val in ['1', 'on', 'true', 'True']
 
 
-def from_bool_to_string(boolean):
+def from_bool_to_string(boolean):  # pragma: no cover, to be deprectaed?
     """Convert a bool to a string representation
 
     :param boolean: bool to convert
@@ -504,7 +504,7 @@ def from_bool_to_string(boolean):
         return '0'
 
 
-def from_bool_to_int(boolean):
+def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
     """Convert a bool to a int representation
 
     :param boolean: bool to convert
@@ -518,7 +518,7 @@ def from_bool_to_int(boolean):
         return 0
 
 
-def from_list_to_split(val):
+def from_list_to_split(val):  # pragma: no cover, to be deprectaed?
     """Convert list into a comma separated string
 
     :param val: value to convert
@@ -530,7 +530,7 @@ def from_list_to_split(val):
     return val
 
 
-def from_float_to_int(val):
+def from_float_to_int(val):  # pragma: no cover, to be deprectaed?
     """Convert float to int
 
     :param val: value to convert
@@ -547,7 +547,8 @@ def from_float_to_int(val):
 # ref is the item like a service, and value
 # if the value to preprocess
 
-def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
+def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
@@ -560,7 +561,8 @@ def to_list_string_of_names(ref, tab):  # pylint: disable=W0613
     return ",".join([e.get_name() for e in tab])
 
 
-def from_set_to_list(ref, tab):  # pylint: disable=W0613
+def from_set_to_list(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Convert set into a list of element name
 
     :param ref: Not used
@@ -573,7 +575,8 @@ def from_set_to_list(ref, tab):  # pylint: disable=W0613
     return list(tab)
 
 
-def to_name_if_possible(ref, value):  # pylint: disable=W0613
+def to_name_if_possible(ref, value):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Try to get value name (call get_name method)
 
     :param ref: Not used
@@ -588,7 +591,8 @@ def to_name_if_possible(ref, value):  # pylint: disable=W0613
     return ''
 
 
-def to_hostnames_list(ref, tab):  # pylint: disable=W0613
+def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
@@ -605,7 +609,8 @@ def to_hostnames_list(ref, tab):  # pylint: disable=W0613
     return res
 
 
-def to_svc_hst_distinct_lists(ref, tab):  # pylint: disable=W0613
+def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
+    # pylint: disable=W0613
     """create a dict with 2 lists::
 
     * services: all services of the tab
@@ -674,7 +679,7 @@ def get_obj_full_name(obj):
         return obj.get_name()
 
 
-def get_customs_keys(dic):
+def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?
     """Get a list of keys of the custom dict
     without the first char
 
@@ -688,7 +693,7 @@ def get_customs_keys(dic):
     return [k[1:] for k in dic.keys()]
 
 
-def get_customs_values(dic):
+def get_customs_values(dic):  # pragma: no cover, to be deprectaed?
     """Wrapper for values() method
 
     :param dic: dict

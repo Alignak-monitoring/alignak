@@ -17,5 +17,6 @@ source =
     alignak
 
 omit =
+    alignak/bin/*
     */mock/*
     */nose/*

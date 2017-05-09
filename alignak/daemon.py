@@ -312,7 +312,7 @@ class Daemon(object):
             logger.info("Joining http_thread...")
             # Add a timeout to join so that we can manually quit
             self.http_thread.join(timeout=15)
-            if self.http_thread.is_alive():
+            if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("http_thread failed to terminate. Calling _Thread__stop")
                 try:
                     self.http_thread._Thread__stop()  # pylint: disable=E1101
@@ -405,12 +405,12 @@ class Daemon(object):
                             ','.join([inst.get_name() for inst in self.modules_manager.instances]))
             else:
                 logger.info("I do not have any module")
-        else:
+        else:  # pragma: no cover, not with unit tests...
             logger.error("Errors were encountered when checking and loading modules:")
             for msg in self.modules_manager.configuration_errors:
                 logger.error(msg)
 
-        if len(self.modules_manager.configuration_warnings):
+        if len(self.modules_manager.configuration_warnings):  # pragma: no cover, not tested
             for msg in self.modules_manager.configuration_warning:
                 logger.warning(msg)
 
@@ -427,19 +427,14 @@ class Daemon(object):
     @staticmethod
     def dump_memory():
         """ Try to dump memory
-        Does not really work :/
+
+        Not currently implemented feature
 
         :return: None
-        TODO: Clean this
         """
-        try:
-            from guppy import hpy
-
-            logger.info("I dump my memory, it can take a while")
-            heap = hpy()
-            logger.info(heap.heap())
-        except ImportError:
-            logger.warning('I do not have the module guppy for memory dump, please install it')
+        logger.warning("Dumping daemon memory is not implemented. "
+                       "If you really need this features, please log "
+                       "an issue in the project repository;)")
 
     def load_modules_manager(self, daemon_name):
         """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
@@ -510,7 +505,7 @@ class Daemon(object):
         except Exception as err:
             raise InvalidPidFile(err)
 
-    def check_parallel_run(self):
+    def check_parallel_run(self):  # pragma: no cover, not with unit tests...
         """Check (in pid file) if there isn't already a daemon running.
         If yes and do_replace: kill it.
         Keep in self.fpid the File object to the pid file. Will be used by writepid.
@@ -586,7 +581,7 @@ class Daemon(object):
         del self.fpid  # no longer needed
 
     @staticmethod
-    def close_fds(skip_close_fds):
+    def close_fds(skip_close_fds):  # pragma: no cover, not with unit tests...
         """Close all the process file descriptors.
         Skip the descriptors present in the skip_close_fds list
 
@@ -808,7 +803,7 @@ class Daemon(object):
         if socks == []:
             time.sleep(timeout)
             return []
-        try:
+        try:  # pragma: no cover, not with unit tests on Travis...
             ins, _, _ = select.select(socks, [], [], timeout)
         except select.error, err:
             errnum, _ = err
@@ -835,7 +830,7 @@ class Daemon(object):
         """
         try:
             return getpwnam(self.user)[2]
-        except KeyError:
+        except KeyError:  # pragma: no cover, should not happen...
             logger.error("The user %s is unknown", self.user)
             return None
 
@@ -847,7 +842,7 @@ class Daemon(object):
         """
         try:
             return getgrnam(self.group)[2]
-        except KeyError:
+        except KeyError:  # pragma: no cover, should not happen
             logger.error("The group %s is unknown", self.group)
             return None
 
@@ -863,11 +858,11 @@ class Daemon(object):
             insane = not self.idontcareaboutsecurity
 
         # TODO: change user on nt
-        if os.name == 'nt':
+        if os.name == 'nt':  # pragma: no cover, no Windows implementation currently
             logger.warning("You can't change user on this system")
             return
 
-        if (self.user == 'root' or self.group == 'root') and not insane:
+        if (self.user == 'root' or self.group == 'root') and not insane:  # pragma: no cover
             logger.error("You want the application run under the root account?")
             logger.error("I do not agree with it. If you really want it, put:")
             logger.error("idontcareaboutsecurity=yes")
@@ -891,7 +886,7 @@ class Daemon(object):
             except OSError, err:
                 logger.warning('Cannot call the additional groups setting with initgroups (%s)',
                                err.strerror)
-        elif hasattr(os, 'setgroups'):
+        elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
             # Else try to call the setgroups if it exists...
             groups = [gid] + \
                      [group.gr_gid for group in get_all_groups() if self.user in group.gr_mem]
@@ -904,7 +899,7 @@ class Daemon(object):
             # First group, then user :)
             os.setregid(gid, gid)
             os.setreuid(uid, uid)
-        except OSError, err:
+        except OSError, err:  # pragma: no cover, not with unit tests...
             logger.error("cannot change user/group to %s/%s (%s [%d]). Exiting",
                          self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
@@ -934,7 +929,7 @@ class Daemon(object):
                     if key in properties:
                         value = properties[key].pythonize(value)
                     setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError as err:
+            except ConfigParser.InterpolationMissingOptionError as err:  # pragma: no cover,
                 err = str(err)
                 wrong_variable = err.split('\n')[3].split(':')[1].strip()
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
@@ -966,7 +961,7 @@ class Daemon(object):
         """
         properties = self.__class__.properties
         for prop, entry in properties.items():
-            if isinstance(entry, ConfigPathProp):
+            if isinstance(entry, ConfigPathProp):  # pragma: no cover, not with unit tests...
                 path = getattr(self, prop)
                 if not os.path.isabs(path):
                     new_path = os.path.join(reference_path, path)
@@ -1002,7 +997,7 @@ class Daemon(object):
         :return: None
         """
         func = self.manage_signal
-        if os.name == "nt":
+        if os.name == "nt":  # pragma: no cover, no Windows implementation currently
             try:
                 import win32api
                 win32api.SetConsoleCtrlHandler(func, True)
@@ -1116,7 +1111,7 @@ class Daemon(object):
         difference = now - self.t_each_loop
 
         # If we have more than 15 min time change, we need to compensate it
-        if abs(difference) > 900:
+        if abs(difference) > 900:  # pragma: no cover, not with unit tests...
             if hasattr(self, "sched"):
                 self.compensate_system_time_change(difference,
                                                    self.sched.timeperiods)  # pylint: disable=E1101
@@ -1134,7 +1129,6 @@ class Daemon(object):
 
         :return: None
         """
-
         logger.warning('A system time change of %s has been detected.  Compensating...', difference)
 
     def wait_for_initial_conf(self, timeout=1.0):
@@ -1308,12 +1302,12 @@ class Daemon(object):
                              when=self.log_rotation_when, interval=self.log_rotation_interval,
                              backup_count=self.log_rotation_count,
                              human_date_format=self.human_date_format)
-            except IOError, exp:
+            except IOError, exp:  # pragma: no cover, not with unit tests...
                 logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
                 sys.exit(2)
             logger.debug("Using the local log file '%s'", self.local_log)
             self.local_log_fds = get_logger_fds(None)
-        else:
+        else:  # pragma: no cover, not with unit tests...
             setup_logger(None, level=log_level, human_log=human_log_format,
                          log_console=True, log_file=None)
             logger.warning("No local log file")

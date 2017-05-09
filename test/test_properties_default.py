@@ -97,8 +97,7 @@ class PropertiesTester(object):
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
                 continue
-            assert name in prop_names, \
-                          'unknown property %r found' % name
+            assert name in prop_names, 'unknown property %r found' % name
 
 class TestConfig(PropertiesTester, AlignakTest):
 
@@ -357,6 +356,7 @@ class TestEscalation(PropertiesTester, AlignakTest):
     properties = dict([
         ('uuid', ''),
         ('host_name', ''),
+        ('hostgroup_name', ''),
         ('service_description', ''),
         ('contact_groups', []),
         ('contacts', []),

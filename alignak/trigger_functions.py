@@ -305,6 +305,12 @@ def get_object(ref):
     if not isinstance(ref, basestring):
         return ref
 
+    # If it is an object uuid, get the real object and return it :)
+    if ref in OBJS['hosts']:
+        return OBJS['hosts'][ref]
+    if ref in OBJS['services']:
+        return OBJS['services'][ref]
+
     # Ok it's a string
     name = ref
     if '/' not in name:
@@ -327,6 +333,12 @@ def get_objects(ref):
     # Maybe it's already a real object, if so, return it :)
     if not isinstance(ref, basestring):
         return [ref]
+
+    # If it is an object uuid, get the real object and return it :)
+    if ref in OBJS['hosts']:
+        return [OBJS['hosts'][ref]]
+    if ref in OBJS['services']:
+        return [OBJS['services'][ref]]
 
     name = ref
     # Maybe there is no '*'? if so, it's one element

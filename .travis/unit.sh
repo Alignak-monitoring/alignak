@@ -7,7 +7,7 @@ cd test
 coverage erase
 
 # Run test suite with py.test running its coverage plugin
-pytest --cov=alignak --cov-config .coveragerc test_*.py
+pytest -v --cov=alignak --cov-config .coveragerc test_*.py
 
 # Report about coverage
 coverage report -m

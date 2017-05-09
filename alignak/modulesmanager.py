@@ -141,7 +141,7 @@ class ModulesManager(object):
 
                 # Check existing module properties
                 # Todo: check all mandatory properties
-                if not hasattr(python_module, 'properties'):
+                if not hasattr(python_module, 'properties'):  # pragma: no cover
                     self.configuration_errors.append(
                         "Module %s is missing a 'properties' dictionary" % module.python_name
                     )
@@ -150,7 +150,7 @@ class ModulesManager(object):
 
                 # Check existing module get_instance method
                 if not hasattr(python_module, 'get_instance') or \
-                        not callable(getattr(python_module, 'get_instance')):
+                        not callable(getattr(python_module, 'get_instance')):  # pragma: no cover
                     self.configuration_errors.append(
                         "Module %s is missing a 'get_instance' function" % module.python_name
                     )
@@ -158,12 +158,12 @@ class ModulesManager(object):
 
                 self.modules_assoc.append((module, python_module))
                 logger.info("Imported '%s' for %s", module.python_name, module.module_alias)
-            except ImportError as exp:
+            except ImportError as exp:  # pragma: no cover, simple protection
                 self.configuration_errors.append(
                     "Module %s (%s) can't be loaded, Python importation error: %s" %
                     (module.python_name, module.module_alias, str(exp))
                 )
-            except AttributeError:
+            except AttributeError:  # pragma: no cover, simple protection
                 self.configuration_errors.append(
                     "Module %s (%s) can't be loaded, module configuration" %
                     (module.python_name, module.module_alias)
@@ -200,6 +200,7 @@ class ModulesManager(object):
             # The module instance init function says if initialization is ok
             result = instance.init()
         except Exception as exp:  # pylint: disable=W0703
+            # pragma: no cover, simple protection
             self.configuration_errors.append(
                 "The module instance %s raised an exception on initialization: %s, I remove it!" %
                 (instance.get_name(), str(exp))
@@ -251,7 +252,7 @@ class ModulesManager(object):
             mod_conf.properties = module.properties.copy()
             try:
                 instance = module.get_instance(mod_conf)
-                if not isinstance(instance, BaseModule):
+                if not isinstance(instance, BaseModule):  # pragma: no cover, simple protection
                     self.configuration_errors.append(
                         "Module %s instance is not a BaseModule instance: %s" %
                         (module.module_alias, type(instance))
@@ -264,6 +265,7 @@ class ModulesManager(object):
                     )
                     raise AttributeError
             except Exception as exp:  # pylint: disable=W0703
+                # pragma: no cover, simple protection
                 logger.error("The module %s raised an exception on loading, I remove it!",
                              mod_conf.get_name())
                 logger.exception("Exception: %s", exp)

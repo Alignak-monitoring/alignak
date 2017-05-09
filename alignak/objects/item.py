@@ -763,11 +763,14 @@ class Items(object):
         :type index_items: bool
         :return: None
         """
+        count = 0
         for i in items:
             if i.is_tpl():
                 self.add_template(i)
+                count = count + 1
             else:
                 self.add_item(i, index_items)
+        logger.info('Indexed %d %s templates', count, self.inner_class.my_type)
 
     def manage_conflict(self, item, name):
         """
