@@ -362,8 +362,8 @@ class Scheduler(object):  # pylint: disable=R0902
                 string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
             file_h.close()
-        except OSError, exp:
-            logger.error("Error in writing the dump file %s : %s", path, str(exp))
+        except OSError, exp:  # pragma: no cover, should never happen...
+            logger.critical("Error when writing the objects dump file %s : %s", path, str(exp))
 
     def dump_config(self):
         """Dump scheduler config into a dump (temp) file
@@ -378,8 +378,8 @@ class Scheduler(object):  # pylint: disable=R0902
             file_h.write('Scheduler config DUMP at %d\n' % time.time())
             self.conf.dump(file_h)
             file_h.close()
-        except (OSError, IndexError), exp:
-            logger.error("Error in writing the dump file %s : %s", path, str(exp))
+        except (OSError, IndexError), exp:  # pragma: no cover, should never happen...
+            logger.critical("Error when writing the config dump file %s : %s", path, str(exp))
 
     def set_external_commands_manager(self, ecm):
         """Setter for external_command_manager attribute
@@ -526,7 +526,8 @@ class Scheduler(object):  # pylint: disable=R0902
                 fun = getattr(inst, full_hook_name)
                 try:
                     fun(self)
-                except Exception, exp:  # pylint: disable=W0703
+                # pylint: disable=W0703
+                except Exception as exp:  # pragma: no cover, never happen during unit tests...
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
                                  inst.get_name(), str(exp))
@@ -963,6 +964,8 @@ class Scheduler(object):  # pylint: disable=R0902
         """Init or reinit connection to a poller or reactionner
         Used for passive daemons
 
+        TODO: add some unit tests for this function/feature.
+
         :param s_id: daemon s_id to connect to
         :type s_id: int
         :param s_type: daemon type to connect to
@@ -1018,6 +1021,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def push_actions_to_passives_satellites(self):
         """Send actions/checks to passive poller/reactionners
+
+        TODO: add some unit tests for this function/feature.
 
         :return: None
         """
@@ -1082,6 +1087,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def get_actions_from_passives_satellites(self):
         """Get actions/checks results from passive poller/reactionners
+
+        TODO: add some unit tests for this function/feature.
 
         :return: None
         """
@@ -1651,6 +1658,8 @@ class Scheduler(object):  # pylint: disable=R0902
     def update_downtimes_and_comments(self):
         """Iter over all hosts and services::
 
+        TODO: add some unit tests for the maintenance period feature.
+
         * Update downtime status (start / stop) regarding maintenance period
         * Register new comments in comments list
 
@@ -1931,8 +1940,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
         raise Exception("Item with id %s not found" % o_id)
 
-    def get_stats_struct(self):
+    def get_stats_struct(self):  # pragma: no cover, seems never called!
         """Get state of modules and create a scheme for stats data of daemon
+
+        TODO: confirm this method is useful because it is never called during the tests!
 
         :return: A dict with the following structure
         ::

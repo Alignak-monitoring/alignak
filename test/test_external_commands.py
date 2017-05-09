@@ -129,17 +129,6 @@ class TestExternalCommands(AlignakTest):
         self.clear_logs()
         self._broker['broks'] = {}
 
-        # # Command must have a timestamp
-        # excmd = 'command'
-        # ext_cmd = ExternalCommand(excmd)
-        # res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
-        # # Resolve command result is None because the command is mal formed
-        # self.assertIsNone(res)
-        # self.assert_any_log_match(
-        #     re.escape(
-        #         "WARNING: [alignak.external_command] Malformed command 'command'")
-        # )
-
         # Command may not have a timestamp
         excmd = 'shutdown_program'
         ext_cmd = ExternalCommand(excmd)
@@ -212,6 +201,39 @@ class TestExternalCommands(AlignakTest):
         assert len(broks) == 1
         # ...but no logs
         self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
+
+    def test_several_commands(self):
+        """ External command management - several commands at once
+        :return: None
+        """
+        # Our scheduler
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        # Our broker
+        self._broker = self._scheduler.brokers['broker-master']
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        now = int(time.time())
+
+        # Clear logs and broks
+        self.clear_logs()
+        self._broker['broks'] = {}
+
+        # Unknown command
+        excmds = []
+        excmds.append('[%d] DISABLE_EVENT_HANDLERS' % time.time())
+        excmds.append('[%d] ENABLE_EVENT_HANDLERS' % time.time())
+
+        # Call the scheduler method to run several commands at once
+        self._scheduler.run_external_commands(excmds)
+        self.external_command_loop()
+        # We get an 'monitoring_log' brok for logging to the monitoring logs...
+        broks = [b for b in self._broker['broks'].values()
+                 if b.type == 'monitoring_log']
+        assert len(broks) == 2
 
     def test_change_and_reset_host_modattr(self):
         """ Change and reset modified attributes for an host

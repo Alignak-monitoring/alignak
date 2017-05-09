@@ -122,7 +122,8 @@ class Brok(object):
         return str(self.__dict__) + '\n'
 
     @property
-    def id(self):  # pylint: disable=C0103
+    def id(self):  # pragma: no cover, should never happen...
+        # pylint: disable=C0103
         """Getter for id, raise deprecation warning
         :return: self.uuid
         """
@@ -131,7 +132,8 @@ class Brok(object):
         return self.uuid
 
     @id.setter
-    def id(self, value):  # pylint: disable=C0103
+    def id(self, value):  # pragma: no cover, should never happen...
+        # pylint: disable=C0103
         """Setter for id, raise deprecation warning
         :param value: value to set
         :return: None
@@ -150,7 +152,7 @@ class Brok(object):
         if hasattr(self, 'prepared') and not self.prepared:
             try:
                 self.data = unserialize(self.data)
-            except AlignakClassLookupException:
+            except AlignakClassLookupException:  # pragma: no cover, should never happen...
                 raise
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
