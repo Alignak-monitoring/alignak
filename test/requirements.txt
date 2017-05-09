@@ -6,7 +6,7 @@ mock
 pytest
 pytest-cov
 # Let coverage use the most recent version
-coverage
+coverage==4.3.4
 # Report coverage results to coveralls.io
 coveralls
 # Static code analysis libraries
