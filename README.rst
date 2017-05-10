@@ -33,11 +33,11 @@ Presentation of the Alignak project
     :alt: License AGPL v3
 
 
-Alignak is a modern monitoring framework based on Shinken. Its main goal is to give users a flexible and complete solution for their monitoring system.
+`Alignak <http://www.alignak.net>`_ is a modern monitoring framework based on Shinken.
 
-Alignak is designed to scale to large environments.
+Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large environments.
 
-Alignak is backwards-compatible with the Nagios configuration standard and plugins. It works on any operating system and architecture that supports Python, which includes Windows (not yet), GNU/Linux and FreeBSD.
+Alignak is backwards-compatible with the Nagios/Shinken configuration standard and plugins. It works on any operating system and architecture that supports Python, which includes Windows (not yet), GNU/Linux and FreeBSD.
 
 Alignak is licensed under the Gnu Affero General Public Licence version 3 (AGPLv3). Unless specified by another header, this licence applies to all the files in this repository.
 
