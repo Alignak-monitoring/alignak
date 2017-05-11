@@ -48,7 +48,7 @@ Usage: $0 [-h|--help] [-v|--version] [-d|--debug] [-a|--arbiter] [-n|--no-daemon
  -n (--no-daemon)   start requested daemon in console mode (do not daemonize)
  -a (--arbiter)     start requested daemon in arbiter mode
                     This option adds the monitoring configuration file(s) on the command line
-                    This option will raise an error if the the daemon is not an arbiter.
+                    This option will raise an error if the daemon is not an arbiter.
  -V (--verify)      start requested daemon in verify mode (only for the arbiter)
                     This option will raise an error if the the daemon is not an arbiter.
 

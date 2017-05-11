@@ -221,8 +221,11 @@ class TestDispatcher(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub_multi_schedulers.cfg')
+        self.show_logs()
         assert self.conf_is_correct
 
+        for poller in self.pollers:
+            print(poller)
         pollers = [self.pollers['poller-master'].uuid]
         reactionners = [self.reactionners['reactionner-master'].uuid]
 

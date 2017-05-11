@@ -774,7 +774,8 @@ class Items(object):
                 count = count + 1
             else:
                 self.add_item(i, index_items)
-        logger.info('Indexed %d %s templates', count, self.inner_class.my_type)
+        if count:
+            logger.info('Indexed %d %s templates', count, self.inner_class.my_type)
 
     def manage_conflict(self, item, name):
         """

@@ -103,15 +103,13 @@ class TestConfig(AlignakTest):
         # Scheduler configuration is ok
         assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
 
-        # Broker, Poller, Reactionner named as in the configuration
+        # Broker, Poller, Reactionner and Receiver named as in the configuration
         link = self.arbiter.conf.brokers.find_by_name('broker-master')
         assert link is not None
         link = self.arbiter.conf.pollers.find_by_name('poller-master')
         assert link is not None
         link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
         assert link is not None
-
-        # Receiver - no default receiver created
         link = self.arbiter.conf.receivers.find_by_name('receiver-master')
         assert link is not None
 
@@ -663,43 +661,76 @@ class TestConfig(AlignakTest):
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_realm_member.cfg')
         assert not self.conf_is_correct
-        self.show_configuration_logs()
+        # self.show_configuration_logs()
 
-        self.assert_any_cfg_log_match(
-            "Configuration in host::test_host_realm3 is incorrect; from: "
-            "cfg/config/host_bad_realm.cfg:31"
-        )
-        self.assert_any_cfg_log_match(
-            r"the host test_host_realm3 got an invalid realm \(Realm3\)!"
-        )
-        self.assert_any_cfg_log_match(
-            r"hosts configuration is incorrect!"
-        )
-        self.assert_any_cfg_log_match(
-            "Configuration in realm::Realm1 is incorrect; from: cfg/config/realm_bad_member.cfg:5"
-        )
-        self.assert_any_cfg_log_match(
-            r"\[realm::Realm1\] as realm, got unknown member 'UNKNOWNREALM'"
-        )
-        self.assert_any_cfg_log_match(
-            "realms configuration is incorrect!"
-        )
-        self.assert_any_cfg_log_match(
-            re.escape(
-                "Error: Hosts exist in the realm Realm2 but no poller in this realm"
-            )
-        )
-        self.assert_any_cfg_log_match(
-            re.escape(
-                "Error: Hosts exist in the realm Realm1 but no poller in this realm"
-            )
-        )
-        self.assert_any_cfg_log_match(
-            "Error: Hosts exist in the realm All but no poller in this realm"
-        )
-        self.assert_any_cfg_log_match(
-            "Error : More than one realm are set to the default realm"
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm1' but no scheduler is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a scheduler in the realm 'Realm1'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm3' but no scheduler is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a scheduler in the realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm2' but no scheduler is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a scheduler in the realm 'Realm2'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm1' but no poller is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a poller in the realm 'Realm1'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm3' but no poller is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a poller in the realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm2' but no poller is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a poller in the realm 'Realm2'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm1' but no broker is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a broker in the realm 'Realm1'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm3' but no broker is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a broker in the realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Some hosts exist in the realm 'Realm2' but no broker is defined for this realm"))
+        self.assert_any_cfg_log_match(re.escape(
+            u"Added a broker in the realm 'Realm2'"))
+        self.assert_any_cfg_log_match(re.escape(
+            'Error : More than one realm are set to be the default realm'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'Configuration in host::test_host_realm3 is incorrect; from: cfg/config/host_bad_realm.cfg:31'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'the host test_host_realm3 got an invalid realm (Realm3)!'))
+        self.assert_any_cfg_log_match(re.escape(
+            'hosts configuration is incorrect!'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'Configuration in realm::Realm1 is incorrect; from: cfg/config/realm_bad_member.cfg:5'))
+        self.assert_any_cfg_log_match(re.escape(
+            u"[realm::Realm1] as realm, got unknown member 'UNKNOWNREALM'"))
+        self.assert_any_cfg_log_match(re.escape(
+            'realms configuration is incorrect!'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'Configuration in scheduler::Scheduler-Realm3 is incorrect; from: unknown'))
+        self.assert_any_cfg_log_match(re.escape(
+            u"The scheduler Scheduler-Realm3 got a unknown realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            'schedulers configuration is incorrect!'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'Configuration in poller::Poller-Realm3 is incorrect; from: unknown'))
+        self.assert_any_cfg_log_match(re.escape(
+            u"The poller Poller-Realm3 got a unknown realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            'pollers configuration is incorrect!'))
+        self.assert_any_cfg_log_match(re.escape(
+            u'Configuration in broker::Broker-Realm3 is incorrect; from: unknown'))
+        self.assert_any_cfg_log_match(re.escape(
+            u"The broker Broker-Realm3 got a unknown realm 'Realm3'"))
+        self.assert_any_cfg_log_match(re.escape(
+            'brokers configuration is incorrect!'))
 
     def test_business_rules_incorrect(self):
         """ Business rules use services which don't exist.

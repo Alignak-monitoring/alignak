@@ -630,6 +630,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_multiprocesses_serializer':
             BoolProp(default=False),
 
+        # Self created daemons
+        'daemons_log_folder':
+            StringProp(default='/usr/local/var/log/alignak'),
+
+        'daemons_initial_port':
+            IntegerProp(default=7800),
+
         # Local statsd daemon for collecting Alignak internal statistics
         'statsd_host':
             StringProp(default='localhost',
@@ -794,6 +801,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.magic_hash = random.randint(1, 100000)
         self.triggers_dirs = []
         self.packs_dirs = []
+
+        # Store daemons detected as missing during the configuration check
+        self.missing_daemons = []
 
     def serialize(self):
         res = super(Config, self).serialize()
@@ -987,23 +997,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     self.packs_dirs.append(cfg_dir_name)
 
                     # Now walk for it.
-                    for root, _, files in os.walk(cfg_dir_name, followlinks=True):
-                        for c_file in files:
-                            if not re.search(r"\.cfg$", c_file):
+                    for root, _, walk_files in os.walk(cfg_dir_name, followlinks=True):
+                        for pack_file in walk_files:
+                            if not re.search(r"\.cfg$", pack_file):
                                 continue
                             if not self.read_config_silent:
                                 logger.info("Processing object config file '%s'",
-                                            os.path.join(root, c_file))
+                                            os.path.join(root, pack_file))
                             try:
                                 res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                          (os.path.join(root, c_file)) + os.linesep)
-                                file_d = open(os.path.join(root, c_file), 'rU')
+                                          (os.path.join(root, pack_file)) + os.linesep)
+                                file_d = open(os.path.join(root, pack_file), 'rU')
                                 res.write(file_d.read().decode('utf8', 'replace'))
                                 # Be sure to separate files data
                                 res.write(os.linesep)
                                 file_d.close()
                             except IOError as exp:  # pragma: no cover, simple protection
-                                msg = "[config] cannot open config file '%s' for reading: %s" % \
+                                msg = "[config] cannot open pack file '%s' for reading: %s" % \
                                       (os.path.join(root, c_file), exp)
                                 self.add_error(msg)
                 elif re.search("^triggers_dir", line):
@@ -1233,7 +1243,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
 
-        if len(self.arbiters) == 0:
+        if not self.arbiters:
             logger.warning("There is no arbiter, I add one in localhost:7770")
             arb = ArbiterLink({'arbiter_name': 'Default-Arbiter',
                                'host_name': socket.gethostname(),
@@ -1466,7 +1476,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     processes.append((i, proc))
 
                 # Here all sub-processes are launched for this realm, now wait for them to finish
-                while len(processes) != 0:
+                while processes:
                     to_del = []
                     for (i, proc) in processes:
                         if proc.exitcode is not None:
@@ -1552,7 +1562,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 else:
                     line = prop
                 unmanaged.append(line)
-        if len(unmanaged) != 0:
+        if unmanaged:
             logger.warning("The following parameter(s) are not currently managed.")
 
             for line in unmanaged:
@@ -1682,14 +1692,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.servicedependencies.fill_default()
         self.hostdependencies.fill_default()
 
-        # first we create missing sat, so no other sat will
+        # We have all monitored elements, we can create a default
+        # realm if none is defined
+        self.fill_default_realm()
+        self.realms.fill_default()
+
+        # Then we create missing satellites, so no other satellites will
         # be created after this point
         self.fill_default_satellites()
-        # now we have all elements, we can create a default
-        # realm if need and it will be tagged to sat that do
-        # not have an realm
-        self.fill_default_realm()
-        self.realms.fill_default()  # also put default inside the realms themselves
         self.reactionners.fill_default()
         self.pollers.fill_default()
         self.brokers.fill_default()
@@ -1720,49 +1730,150 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        if len(self.realms) == 0:
+        if not self.realms:
             # Create a default realm with default value =1
             # so all hosts without realm will be link with it
             default = Realm({
                 'realm_name': 'All', 'alias': 'Self created default realm', 'default': '1'
             })
             self.realms = Realms([default])
-            logger.warning("No realms defined, I add one at %s", default.get_name())
-            lists = [self.pollers, self.brokers, self.reactionners, self.receivers, self.schedulers]
-            for lst in lists:
-                for elt in lst:
-                    if not hasattr(elt, 'realm'):
-                        elt.realm = 'All'
-                        elt.realm_name = 'All'
-                        logger.info("Tagging %s with realm %s", elt.get_name(), default.get_name())
+            logger.warning("No realms defined, I added one as %s", default.get_name())
+
+        # Check that a default realm (and only one) is defined
+        default_realms = sum(1 for realm in self.realms
+                             if hasattr(realm, 'default') and realm.default)
+        if default_realms > 1:
+            self.add_error("Error : More than one realm are set to be the default realm")
+        elif default_realms < 1:
+            self.add_error("Error : No realm is set to be the default realm")
+
+    def log_daemons_list(self):
+        """Log Alignak daemons list
+
+        :return:
+        """
+        satellites = [self.schedulers, self.pollers, self.brokers,
+                      self.reactionners, self.receivers]
+        for satellites_list in satellites:
+            if not satellites_list:
+                logger.info("- %ss: None", satellites_list.inner_class.my_type)
+            else:
+                logger.info("- %ss: %s", satellites_list.inner_class.my_type,
+                            ','.join([daemon.get_name() for daemon in satellites_list]))
 
     def fill_default_satellites(self):
+        # pylint: disable=too-many-branches
         """If a satellite is missing, we add them in the localhost
         with defaults values
 
         :return: None
         """
-        if len(self.schedulers) == 0:
+
+        # Log all satellites list
+        logger.info("Alignak configured daemons list:")
+        self.log_daemons_list()
+
+        # Get realms names and ids
+        realms_names = []
+        realms_names_ids = {}
+        for realm in self.realms:
+            realms_names.append(realm.get_name())
+            realms_names_ids[realm.get_name()] = realm.uuid
+        default_realm = self.realms.get_default()
+
+        if not self.schedulers:
             logger.warning("No scheduler defined, I add one at localhost:7768")
-            scheduler = SchedulerLink({'scheduler_name': 'Default-Scheduler',
-                                       'address': 'localhost', 'port': '7768'})
-            self.schedulers = SchedulerLinks([scheduler])
-        if len(self.pollers) == 0:
+            daemon = SchedulerLink({'scheduler_name': 'Default-Scheduler',
+                                    'address': 'localhost', 'port': '7768'})
+            self.schedulers = SchedulerLinks([daemon])
+        if not self.pollers:
             logger.warning("No poller defined, I add one at localhost:7771")
             poller = PollerLink({'poller_name': 'Default-Poller',
                                  'address': 'localhost', 'port': '7771'})
             self.pollers = PollerLinks([poller])
-        if len(self.reactionners) == 0:
+        if not self.reactionners:
             logger.warning("No reactionner defined, I add one at localhost:7769")
             reactionner = ReactionnerLink({'reactionner_name': 'Default-Reactionner',
                                            'address': 'localhost', 'port': '7769'})
             self.reactionners = ReactionnerLinks([reactionner])
-        if len(self.brokers) == 0:
+        if not self.brokers:
             logger.warning("No broker defined, I add one at localhost:7772")
             broker = BrokerLink({'broker_name': 'Default-Broker',
                                  'address': 'localhost', 'port': '7772',
                                  'manage_arbiters': '1'})
             self.brokers = BrokerLinks([broker])
+
+        # Affect default realm to the satellites that do not have a defined realm
+        satellites = [self.pollers, self.brokers, self.reactionners,
+                      self.receivers, self.schedulers]
+        for satellites_list in satellites:
+            for satellite in satellites_list:
+                if not hasattr(satellite, 'realm'):
+                    satellite.realm = default_realm.get_name()
+                    satellite.realm_name = default_realm.get_name()
+                    logger.info("Tagging %s with realm %s", satellite.get_name(), satellite.realm)
+
+        # Parse hosts for realms and set host in the default realm is no realm is set
+        hosts_realms_names = set()
+        for host in self.hosts:
+            host_realm_name = getattr(host, 'realm', None)
+            if host_realm_name is None or not host_realm_name:
+                host.realm = default_realm.get_name()
+                host.got_default_realm = True
+            hosts_realms_names.add(host.realm)
+
+        # Check that all daemons and realms are coherent (scheduler, broker, poller)
+        satellites = [self.schedulers, self.pollers, self.brokers]
+        for satellites_list in satellites:
+            # Check that all schedulers and realms are coherent
+            daemons_class = satellites_list.inner_class
+            daemons_realms_names = set()
+            for daemon in satellites_list:
+                daemon_type = getattr(daemon, 'my_type', None)
+                daemon_realm_name = getattr(daemon, 'realm', None)
+                if daemon_realm_name is None:
+                    logger.warning("The %s %s do not have a defined realm",
+                                   daemon_type, daemon.get_name())
+                    continue
+
+                if daemon_realm_name not in realms_names:
+                    logger.warning("The %s %s is affected to an unknown realm: '%s' (%s)",
+                                   daemon_type, daemon.get_name(), daemon_realm_name, realms_names)
+                    continue
+                daemons_realms_names.add(daemon_realm_name)
+                # If the daemon manges sub realms, include the sub realms
+                if getattr(daemon, 'manage_sub_realms', None):
+                    for realm in self.realms[realms_names_ids[daemon_realm_name]].all_sub_members:
+                        daemons_realms_names.add(realm)
+
+            if not hosts_realms_names.issubset(daemons_realms_names):
+                for realm in hosts_realms_names.difference(daemons_realms_names):
+                    self.add_warning("Some hosts exist in the realm '%s' but no %s is "
+                                     "defined for this realm" % (realm, daemon_type))
+
+                    # Add a self-generated daemon
+                    logger.warning("Trying to add a %s for the realm: %s", daemon_type, realm)
+                    new_daemon = daemons_class({
+                        '%s_name' % daemon_type: '%s-%s' % (daemon_type.capitalize(), realm),
+                        'realm': realm, 'spare': '0',
+                        'address': 'localhost', 'port': self.daemons_initial_port,
+                        'manage_sub_realms': '0', 'manage_arbiters': '0',
+                    })
+                    self.daemons_initial_port = self.daemons_initial_port + 1
+                    self.missing_daemons.append(new_daemon)
+                    self.add_warning("Added a %s in the realm '%s'" % (daemon_type, realm))
+        # Now we have a list of the missing daemons, parse this list and
+        # add the daemons to their respective list
+        satellites = [self.schedulers, self.pollers, self.brokers]
+        for satellites_list in satellites:
+            daemons_class = satellites_list.inner_class
+            for daemon in self.missing_daemons:
+                if daemon.__class__ == daemons_class:
+                    satellites_list.add_item(daemon)
+
+        # Log all satellites list
+        logger.info("Alignak definitive daemons list:")
+        self.log_daemons_list()
 
     def got_broker_module_type_defined(self, module_type):
         """Check if a module type is defined in one of the brokers
@@ -2098,60 +2209,29 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         logger.info('\t%s', cur_obj.get_name())
                 logger.info('\tChecked %d %s', len(cur), obj)
 
-        # Look that all scheduler got a broker that will take brok.
-        # If not, raise an Error
-        for scheduler in self.schedulers:
-            if scheduler.realm and scheduler.realm in self.realms:
-                if len(self.realms[scheduler.realm].potential_brokers) == 0:
-                    logger.error(
-                        "The scheduler %s got no broker in its realm or upper",
-                        scheduler.get_name()
-                    )
-                    self.add_error(
-                        "Error: the scheduler %s got no broker "
-                        "in its realm or upper" % scheduler.get_name()
-                    )
-                    valid = False
-
-        # Check that for each poller_tag of a host, a poller exists with this tag
+        # Parse hosts and services for tags and realms
         hosts_tag = set()
-        hosts_realms = set()
         services_tag = set()
-        pollers_tag = set()
-        pollers_realms = set()
         for host in self.hosts:
             hosts_tag.add(host.poller_tag)
-            hosts_realms.add(self.realms[host.realm])
         for service in self.services:
             services_tag.add(service.poller_tag)
+
+        # Check that for each poller_tag of a host, a poller exists with this tag
+        pollers_tag = set()
         for poller in self.pollers:
             for tag in poller.poller_tags:
                 pollers_tag.add(tag)
-            if poller.realm and poller.realm in self.realms:
-                pollers_realms.add(self.realms[poller.realm])
-                if poller.manage_sub_realms:
-                    for item in self.realms[poller.realm].all_sub_members:
-                        pollers_realms.add(self.realms[item])
-
-        if not hosts_realms.issubset(pollers_realms):
-            for realm in hosts_realms.difference(pollers_realms):
-                logger.error("Hosts exist in the realm %s but no poller in this realm",
-                             realm.realm_name if realm else 'unknown')
-                self.add_error("Error: Hosts exist in the realm %s but no poller "
-                               "in this realm" % (realm.realm_name if realm else 'All'))
-                valid = False
 
         if not hosts_tag.issubset(pollers_tag):
             for tag in hosts_tag.difference(pollers_tag):
-                logger.error("Hosts exist with poller_tag %s but no poller got this tag", tag)
-                self.add_error("Error: hosts exist with poller_tag %s but no poller "
-                               "got this tag" % tag)
+                self.add_error("Error: some hosts have the poller_tag %s but no poller "
+                               "has this tag" % tag)
                 valid = False
         if not services_tag.issubset(pollers_tag):
             for tag in services_tag.difference(pollers_tag):
-                logger.error("Services exist with poller_tag %s but no poller got this tag", tag)
-                self.add_error("Error: services exist with poller_tag %s but no poller "
-                               "got this tag" % tag)
+                self.add_error("some services have the poller_tag %s but no poller "
+                               "has this tag" % tag)
                 valid = False
 
         # Check that all hosts involved in business_rules are from the same realm
@@ -2180,14 +2260,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                            "realm: %s" % (item.get_full_name(), elt_r))
                             valid = False
 
-        if sum(1 for realm in self.realms
-               if hasattr(realm, 'default') and realm.default) > 1:
-            err = "Error : More than one realm are set to the default realm"
-            logger.error(err)
-            self.add_error(err)
-            valid = False
-
-        if self.configuration_errors and len(self.configuration_errors):
+        if self.configuration_errors:
             valid = False
             logger.error("********** Configuration errors:")
             for msg in self.configuration_errors:
@@ -2221,17 +2294,27 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.timeperiods.remove_templates()
 
     def add_error(self, txt):
-        """Add an error in the configuration error list so we can print them
+        """Add a message in the configuration errors list so we can print them
          all in one place
 
          Set the configuration as not valid
 
-        :param txt: Text error
+        :param txt: error message
         :type txt: str
         :return: None
         """
         self.configuration_errors.append(txt)
         self.conf_is_correct = False
+
+    def add_warning(self, txt):
+        """Add a message in the configuration warnings list so we can print them
+         all in one place
+
+        :param txt: warning message
+        :type txt: str
+        :return: None
+        """
+        self.configuration_warnings.append(txt)
 
     def show_errors(self):
         """
@@ -2244,11 +2327,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return:  None
         """
-        if self.configuration_warnings and len(self.configuration_warnings):
+        if self.configuration_warnings:
             logger.info("Configuration warnings:")
             for msg in self.configuration_warnings:
                 logger.info(msg)
-        if self.configuration_errors and len(self.configuration_errors):
+        if self.configuration_errors:
             logger.info("Configuration errors:")
             for msg in self.configuration_errors:
                 logger.info(msg)
@@ -2257,7 +2340,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
-        services are link to the host. Dependencies are managed
+        services are linked to their host. Dependencies between hosts/services are managed.
         REF: doc/pack-creation.png
         TODO : Check why np_packs is not used.
 
@@ -2284,8 +2367,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for (dep, _, _, _, _) in host.chk_depend_of:
                 links.add((dep, host.uuid))
 
-        # For services: they are link with their own host but we need
-        # To have the hosts of service dep in the same pack too
+        # For services: they are linked with their own host but we need
+        # to have the hosts of the service dependency in the same pack too
         for serv in self.services:
             for (dep_id, _, _, _) in serv.act_depend_of:
                 if dep_id in self.services:
@@ -2304,8 +2387,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     dep = self.hosts[dep_id]
                 links.add((dep.host, serv.host))
 
-        # For host/service that are business based, we need to
-        # link them too
+        # For host/service that are business based, we need to link them too
         for serv in [srv for srv in self.services if srv.got_business_rule]:
             for elem_uuid in serv.business_rule.list_all_elements():
                 if elem_uuid in self.services:
@@ -2362,7 +2444,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if len(tmp_realms) == 1:  # Ok, good
                 realm = self.realms[tmp_realms.pop()]  # There is just one element
                 realm.packs.append(pack)
-            elif len(tmp_realms) == 0:  # Hum.. no realm value? So default Realm
+            elif not tmp_realms:  # Hum.. no realm value? So default Realm
                 if default_realm is not None:
                     default_realm.packs.append(pack)
                 else:
@@ -2464,7 +2546,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # Now in packs we have the number of packs [h1, h2, etc]
             # equal to the number of schedulers.
-            realm.packs = packs  # pylint: disable=R0204
+            realm.packs = packs  # pylint: disable=redefined-variable-type
 
         for what in (self.contacts, self.hosts, self.services, self.commands):
             logger.info("Number of %s : %d", type(what).__name__, len(what))

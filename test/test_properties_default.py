@@ -238,6 +238,10 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemon_thread_pool_size', 8),
         ('timeout_exit_status', 2),
 
+        # daemons part
+        ('daemons_initial_port', 7800),
+        ('daemons_log_folder', '/usr/local/var/log/alignak'),
+
         # statsd part
         ('statsd_host', 'localhost'),
         ('statsd_port', 8125),

@@ -67,8 +67,11 @@ import socket
 import cStringIO
 import json
 
+import subprocess
+
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
+from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
 from alignak.daemon import Daemon
@@ -100,16 +103,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             PathProp(default='arbiterd.log'),
     })
 
+    # pylint: disable=too-many-arguments
     def __init__(self, config_file, monitoring_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, arbiter_name, analyse=None):
+                 debug_file, alignak_name, analyse=None,
+                 port=None, local_log=None, daemon_name=None):
+        self.daemon_name = 'arbiter'
+        if daemon_name:
+            self.daemon_name = daemon_name
 
-        super(Arbiter, self).__init__('arbiter', config_file, is_daemon, do_replace,
-                                      debug, debug_file)
+        super(Arbiter, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
+                                      debug, debug_file, port, local_log)
 
         self.config_files = monitoring_files
         self.verify_only = verify_only
         self.analyse = analyse
-        self.arbiter_name = arbiter_name
+        self.arbiter_name = alignak_name
         self.alignak_name = None
 
         self.broks = {}
@@ -128,21 +136,23 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.http_interface = ArbiterInterface(self)
         self.conf = Config()
 
-    def add(self, b):
+    def add(self, elt):
         """Generic function to add objects to queues.
         Only manage Broks and ExternalCommand
 
         #Todo: does the arbiter still needs to manage external commands
 
-        :param b: objects to add
-        :type b: alignak.brok.Brok | alignak.external_command.ExternalCommand
+        :param elt: objects to add
+        :type elt: alignak.brok.Brok | alignak.external_command.ExternalCommand
         :return: None
         """
-        if isinstance(b, Brok):
-            self.broks[b.uuid] = b
-        elif isinstance(b, ExternalCommand):  # pragma: no cover, useful?
+        if isinstance(elt, Brok):
+            self.broks[elt.uuid] = elt
+        elif isinstance(elt, ExternalCommand):  # pragma: no cover, useful?
             # todo: does the arbiter will still manage external commands? It is the receiver job!
-            self.external_commands.append(b)
+            self.external_commands.append(elt)
+        else:
+            logger.warning('Cannot manage object type %s (%s)', type(elt), elt)
 
     def push_broks_to_broker(self):
         """Send all broks from arbiter internal list to broker
@@ -213,6 +223,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # the attribute name to get these differs for schedulers and arbiters
         return daemon_type + 's'
 
+    # pylint: disable=too-many-branches
     def load_monitoring_config_file(self):  # pylint: disable=R0915
         """Load main configuration file (alignak.cfg)::
 
@@ -396,6 +407,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Maybe some elements were not wrong, so we must clean if possible
         self.conf.clean()
 
+        # Dump Alignak macros
+        macro_resolver = MacroResolver()
+        macro_resolver.init(self.conf)
+
+        logger.info("Alignak global macros:")
+        for macro_name in sorted(self.conf.macros):
+            macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
+                                                                         None, None)
+            logger.info("- $%s$ = %s", macro_name, macro_value)
+
         # If the conf is not correct, we must get out now (do not try to split the configuration)
         if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
             err = "Configuration is incorrect, sorry, I bail out"
@@ -417,14 +438,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.conf.show_errors()
             sys.exit(err)
 
-        logger.info('Things look okay - No serious problems were detected '
-                    'during the pre-flight check')
-
         # Clean objects of temporary/unnecessary attributes for live work:
         self.conf.clean()
 
+        logger.info("Things look okay - "
+                    "No serious problems were detected during the pre-flight check")
+
         # Exit if we are just here for config checking
         if self.verify_only:
+            if self.conf.missing_daemons:
+                logger.warning("Some missing daemons were detected in the parsed configuration.")
+
             logger.info("Arbiter checked the configuration")
             # Display found warnings and errors
             self.conf.show_errors()
@@ -433,6 +457,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if self.analyse:  # pragma: no cover, not used currently (see #607)
             self.launch_analyse()
             sys.exit(0)
+
+        # Some errors like a realm with hosts and no schedulers for it may imply to run new daemons
+        if self.conf.missing_daemons:
+            logger.info("Trying to handle the missing daemons...")
+            if not self.manage_missing_daemons():
+                err = "Some detected as missing daemons did not started correctly. " \
+                      "Sorry, I bail out"
+                logger.error(err)
+                # Display found warnings and errors
+                self.conf.show_errors()
+                sys.exit(err)
 
         # Some properties need to be "flatten" (put in strings)
         # before being sent, like realms for hosts for example
@@ -455,7 +490,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Still a last configuration check because some things may have changed when
         # we prepared the configuration for sending
-        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
+        if not self.conf.conf_is_correct:
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
             # Display found warnings and errors
@@ -464,6 +499,62 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Display found warnings and errors
         self.conf.show_errors()
+
+    def manage_missing_daemons(self):
+        """Manage the list of detected missing daemons
+
+         If the daemon does not in exist `my_satellites`, then:
+          - prepare daemon start arguments (port, name and log file)
+          - start the daemon
+          - make sure it started correctly
+
+        :return: True if all daemons are running, else False
+        """
+        result = True
+        # Parse the list of the missing daemons and try to run the corresponding processes
+        satellites = [self.conf.schedulers, self.conf.pollers, self.conf.brokers]
+        self.my_satellites = {}
+        for satellites_list in satellites:
+            daemons_class = satellites_list.inner_class
+            for daemon in self.conf.missing_daemons:
+                if daemon.__class__ != daemons_class:
+                    continue
+
+                daemon_type = getattr(daemon, 'my_type', None)
+                daemon_log_folder = getattr(self.conf, 'daemons_log_folder', '/tmp')
+                daemon_arguments = getattr(self.conf, 'daemons_arguments', '')
+                daemon_name = daemon.get_name()
+
+                if daemon_name in self.my_satellites:
+                    logger.info("Daemon '%s' is still running.", daemon_name)
+                    continue
+
+                args = ["alignak-%s" % daemon_type, "--name", daemon_name,
+                        "--port", str(daemon.port),
+                        "--local_log", "%s/%s.log" % (daemon_log_folder, daemon_name)]
+                if daemon_arguments:
+                    args.append(daemon_arguments)
+                logger.info("Trying to launch daemon: %s...", daemon_name)
+                logger.info("... with arguments: %s", args)
+                self.my_satellites[daemon_name] = subprocess.Popen(args)
+                logger.info("%s launched (pid=%d)",
+                            daemon_name, self.my_satellites[daemon_name].pid)
+
+                # Wait at least one second for a correct start...
+                time.sleep(1)
+
+                ret = self.my_satellites[daemon_name].poll()
+                if ret is not None:
+                    logger.error("*** %s exited on start!", daemon_name)
+                    for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
+                        logger.error(">>> " + line.rstrip())
+                    for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
+                        logger.error(">>> " + line.rstrip())
+                    result = False
+                else:
+                    logger.info("%s running (pid=%d)",
+                                daemon_name, self.my_satellites[daemon_name].pid)
+        return result
 
     def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
         # not yet with unit tests.
@@ -498,7 +589,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for type_c in types_creations:
                 (_, _, prop, dummy) = types_creations[type_c]
                 if prop not in objs:
-                    logger.warning("Got unmanaged %s objects from module %s", prop, inst.get_name())
+                    logger.warning("Did not get '%s' objects from module %s", prop, inst.get_name())
                     continue
                 for obj in objs[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array
@@ -743,7 +834,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now for all alive schedulers, send the commands
         for scheduler in self.conf.schedulers:
             cmds = scheduler.external_commands
-            if len(cmds) > 0 and scheduler.alive:
+            if cmds and scheduler.alive:
                 logger.debug("Sending %d commands to scheduler %s", len(cmds), scheduler.get_name())
                 scheduler.run_external_commands(cmds)
             # clean them

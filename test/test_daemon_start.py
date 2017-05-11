@@ -130,7 +130,8 @@ class template_Daemon_Start():
         # is_daemon, do_replace, debug, debug_file
         return cls(daemons_config[cls], is_daemon, do_replace, False, None)
 
-    def get_daemon(self, is_daemon=False, do_replace=False, free_port=True):
+    def get_daemon(self, is_daemon=False, do_replace=False, free_port=True,
+                   port=None, local_log=None, daemon_name=None):
         """
 
         :param free_port: get a free port (True) or use the configuration defined port (False)
@@ -174,6 +175,60 @@ class template_Daemon_Start():
         daemon.unlink()
         daemon.do_stop()
 
+    def test_default_config_and_start_and_stop(self):
+        """ Test configuration loaded, daemon started and stopped - default daemon configuration
+
+        :return:
+        """
+        self.print_header()
+
+        # Start normally
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        assert os.path.exists(d.pidfile)
+
+        # Get daemon stratistics
+        stats = d.get_stats_struct()
+        assert 'metrics' in stats
+        assert 'version' in stats
+        assert 'name' in stats
+        assert stats['name'] == d.name
+        assert stats['type'] == d.daemon_type
+        assert 'modules' in stats
+
+        time.sleep(2)
+
+        # Stop the daemon
+        self.stop_daemon(d)
+        assert not os.path.exists(d.pidfile)
+
+        # Start as a daemon and replace if still exists
+        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        assert os.path.exists(d.pidfile)
+
+        time.sleep(2)
+
+        #  Stop the daemon
+        self.stop_daemon(d)
+        assert not os.path.exists(d.pidfile)
+
     def test_config_and_start_and_stop(self):
         """ Test configuration loaded, daemon started and stopped
 
@@ -182,7 +237,8 @@ class template_Daemon_Start():
         self.print_header()
 
         # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
+                            port=10000, local_log='my_logs', daemon_name=self.daemon_name)
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -432,26 +488,32 @@ class template_Daemon_Start():
 
 class Test_Broker_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Broker
+    daemon_name = 'my_broker'
 
 
 class Test_Scheduler_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Alignak
+    daemon_name = 'my_scheduler'
 
 
 class Test_Poller_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Poller
+    daemon_name = 'my_poller'
 
 
 class Test_Reactionner_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Reactionner
+    daemon_name = 'my_reactionner'
 
 
 class Test_Receiver_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Receiver
+    daemon_name = 'my_receiver'
 
 
 class Test_Arbiter_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Arbiter
+    daemon_name = 'my_arbiter'
 
     def create_daemon(self, is_daemon=False, do_replace=False):
         """ arbiter is always a bit special .. """

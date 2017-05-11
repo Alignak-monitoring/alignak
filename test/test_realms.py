@@ -46,7 +46,9 @@
 """
 This file is used to test realms usage
 """
+import os
 import re
+import shutil
 from alignak_test import AlignakTest
 import pytest
 
@@ -55,7 +57,6 @@ class TestRealms(AlignakTest):
     """
     This class test realms usage
     """
-
     def test_no_defined_realm(self):
         """ Test configuration with no defined realm
         Load a configuration with no realm defined:
@@ -66,13 +67,16 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/realms/no_defined_realms.cfg')
-        # self.logger.setLevel("INFO")  # We need Info level to assert on logs received
-        # self.assertTrue(self.conf_is_correct)
         assert self.conf_is_correct
         self.show_logs()
-        # The following log line is not available in the test catched log, because too early
-        # in the configuration load process
-        # self.assert_any_log_match("WARNING: [Alignak] No realms defined, I add one as Default")
+
+        self.assert_any_log_match(re.escape("No realms defined, I added one as All"))
+        self.assert_any_log_match(re.escape("No poller defined, I add one at localhost:7771"))
+        self.assert_any_log_match(re.escape("No reactionner defined, I add one at localhost:7769"))
+        self.assert_any_log_match(re.escape("No broker defined, I add one at localhost:7772"))
+        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
         self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         # Only one realm in the configuration
@@ -100,18 +104,171 @@ class TestRealms(AlignakTest):
             assert host.realm == default_realm.uuid
             assert host.realm_name == default_realm.get_name()
 
-    def test_no_broker_in_realm_warning(self):
+    def test_default_realm(self):
+        """ Test configuration with no defined realm
+        Load a configuration with no realm defined:
+        - Alignak defines a default realm
+        - All hosts with no realm defined are in this default realm
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/realms/two_default_realms.cfg')
+        assert self.conf_is_correct
+        self.show_logs()
+
+        self.assert_any_log_match(re.escape("No realms defined, I added one as All"))
+        self.assert_any_log_match(re.escape("No poller defined, I add one at localhost:7771"))
+        self.assert_any_log_match(re.escape("No reactionner defined, I add one at localhost:7769"))
+        self.assert_any_log_match(re.escape("No broker defined, I add one at localhost:7772"))
+        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
+        self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
+
+        # Only one realm in the configuration
+        assert len(self.arbiter.conf.realms) == 1
+
+        # All realm exists
+        realm = self.arbiter.conf.realms.find_by_name("All")
+        assert realm is not None
+        assert realm.realm_name == 'All'
+        assert realm.alias == 'Self created default realm'
+        assert realm.default
+
+        # All realm is the default realm
+        default_realm = self.arbiter.conf.realms.get_default()
+        assert realm == default_realm
+
+        # Default realm does not exist anymore
+        realm = self.arbiter.conf.realms.find_by_name("Default")
+        assert realm is None
+
+        # Hosts without realm definition are in the Default realm
+        hosts = self.arbiter.conf.hosts
+        assert len(hosts) == 2
+        for host in hosts:
+            assert host.realm == default_realm.uuid
+            assert host.realm_name == default_realm.get_name()
+
+    def test_no_defined_daemons(self):
+        """ Test configuration with no defined daemons
+        Load a configuration with no realm nor daemons defined:
+        - Alignak defines a default realm
+        - All hosts with no realm defined are in this default realm
+        - Alignak defines default daemons
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/realms/no_defined_daemons.cfg')
+        assert self.conf_is_correct
+        self.show_logs()
+
+        self.assert_any_log_match(re.escape("No realms defined, I added one as All"))
+        self.assert_any_log_match(re.escape("No scheduler defined, I add one at localhost:7768"))
+        self.assert_any_log_match(re.escape("No poller defined, I add one at localhost:7771"))
+        self.assert_any_log_match(re.escape("No reactionner defined, I add one at localhost:7769"))
+        self.assert_any_log_match(re.escape("No broker defined, I add one at localhost:7772"))
+        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
+        self.assert_any_log_match(re.escape("Tagging Default-Scheduler with realm All"))
+        self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
+
+        scheduler_link = self.arbiter.conf.schedulers.find_by_name('Default-Scheduler')
+        assert scheduler_link is not None
+        # Scheduler configuration is ok
+        assert self.schedulers['Default-Scheduler'].sched.conf.conf_is_correct
+
+        # Broker, Poller, Reactionner named as in the configuration
+        link = self.arbiter.conf.brokers.find_by_name('Default-Broker')
+        assert link is not None
+        link = self.arbiter.conf.pollers.find_by_name('Default-Poller')
+        assert link is not None
+        link = self.arbiter.conf.reactionners.find_by_name('Default-Reactionner')
+        assert link is not None
+
+        # Receiver - no default receiver created
+        assert not self.arbiter.conf.receivers
+        # link = self.arbiter.conf.receivers.find_by_name('Default-Receiver')
+        # assert link is not None
+
+        # Only one realm in the configuration
+        assert len(self.arbiter.conf.realms) == 1
+
+        # 'All' realm exists
+        realm = self.arbiter.conf.realms.find_by_name("All")
+        assert realm is not None
+        assert realm.realm_name == 'All'
+        assert realm.alias == 'Self created default realm'
+        assert realm.default
+
+        # 'All' realm is the default realm
+        default_realm = self.arbiter.conf.realms.get_default()
+        assert realm == default_realm
+
+        # Default realm does not exist anymore
+        realm = self.arbiter.conf.realms.find_by_name("Default")
+        assert realm is None
+
+        # Hosts without realm definition are in the Default realm
+        hosts = self.arbiter.conf.hosts
+        assert len(hosts) == 2
+        for host in hosts:
+            assert host.realm == default_realm.uuid
+            assert host.realm_name == default_realm.get_name()
+
+    def test_no_scheduler_in_realm(self):
+        """ Test missing scheduler in realm
+        A realm is defined but no scheduler, nor broker, nor poller exist for this realm
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/realms/no_scheduler_in_realm.cfg')
+        self.show_logs()
+        assert self.conf_is_correct
+
+        self.assert_any_log_match(re.escape("No scheduler defined, I add one at localhost:7768"))
+        self.assert_any_log_match(re.escape("No poller defined, I add one at localhost:7771"))
+        self.assert_any_log_match(re.escape("No reactionner defined, I add one at localhost:7769"))
+        self.assert_any_log_match(re.escape("No scheduler defined, I add one at localhost:7768"))
+        self.assert_any_log_match(re.escape("All: (in/potential) (schedulers:1) (pollers:1/1) "
+                                            "(reactionners:1/1) (brokers:1/1) (receivers:0/0)"))
+        self.assert_any_log_match(re.escape("Distant: (in/potential) (schedulers:1) (pollers:1/1) "
+                                            "(reactionners:0/0) (brokers:1/1) (receivers:0/0)"))
+
+        assert "Some hosts exist in the realm 'Distant' " \
+               "but no scheduler is defined for this realm" in self.configuration_warnings
+        assert "Some hosts exist in the realm 'Distant' " \
+               "but no poller is defined for this realm" in self.configuration_warnings
+
+        # Scheduler added for the realm
+        self.assert_any_log_match(re.escape("Trying to add a scheduler for the realm: Distant"))
+        scheduler_link = self.arbiter.conf.schedulers.find_by_name('Scheduler-Distant')
+        assert scheduler_link is not None
+
+        # Broker added for the realm
+        self.assert_any_log_match(re.escape("Trying to add a broker for the realm: Distant"))
+        broker_link = self.arbiter.conf.brokers.find_by_name('Broker-Distant')
+        assert broker_link is not None
+
+        # Poller added for the realm
+        self.assert_any_log_match(re.escape("Trying to add a poller for the realm: Distant"))
+        poller_link = self.arbiter.conf.pollers.find_by_name('Poller-Distant')
+        assert poller_link is not None
+
+    def test_no_broker_in_realm(self):
         """ Test missing broker in realm
         Test realms on each host
 
         :return: None
         """
         self.print_header()
-        with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/realms/no_broker_in_realm_warning.cfg')
-        assert not self.conf_is_correct
-        assert u"Error: the scheduler Scheduler-distant got no broker in its realm or upper" in \
-                      self.configuration_errors
+        self.setup_with_file('cfg/realms/no_broker_in_realm.cfg')
+        self.show_logs()
+        assert self.conf_is_correct
 
         dist = self.arbiter.conf.realms.find_by_name("Distant")
         assert dist is not None
@@ -130,6 +287,7 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms.cfg')
+        self.show_configuration_logs()
         assert self.conf_is_correct
 
         for scheduler in self.schedulers:
@@ -162,6 +320,7 @@ class TestRealms(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/realms/use_undefined_realm.cfg')
+        self.show_logs()
         assert not self.conf_is_correct
         assert "Configuration in scheduler::Scheduler-distant is incorrect; " \
                "from: cfg/realms/use_undefined_realm.cfg:7" in \

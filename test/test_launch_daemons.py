@@ -325,7 +325,7 @@ class DaemonsStartTest(AlignakTest):
         print("Launching arbiter in spare mode...")
         args = ["../alignak/bin/alignak_arbiter.py",
                 "-a", "cfg/run_test_launch_daemons/alignak.cfg",
-                "-n", "arbiter-spare"]
+                "-k", "arbiter-spare"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -371,7 +371,7 @@ class DaemonsStartTest(AlignakTest):
         print("Launching arbiter in spare mode...")
         args = ["../alignak/bin/alignak_arbiter.py",
                 "-a", "cfg/run_test_launch_daemons/alignak.cfg",
-                "-n", "arbiter-spare"]
+                "-k", "arbiter-spare"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
