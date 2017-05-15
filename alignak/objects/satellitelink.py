@@ -135,7 +135,6 @@ class SatelliteLink(Item):
                 self.arb_satmap['port'] = int(self.port)
             except ValueError:  # pragma: no cover, simple protection
                 logger.error("Satellite port must be an integer: %s", self.port)
-                pass
 
     def get_name(self):
         """Get the name of the link based on its type
