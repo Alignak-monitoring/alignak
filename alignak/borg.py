@@ -51,7 +51,11 @@ class Borg(object):  # pylint: disable=R0903
     """Borg class define a simple __shared_state class attribute.
     __dict__ points to this value when calling __init__
 
-    TODO: Is this class really needed? Only subclassed by MacroSolver
+    This is used to make a Singleton-like pattern with a python object that inherits from the Borg.
+
+    The Singleton design pattern (DP) has a catchy name, but the wrong focus -- on identity
+    rather than on state. The Borg design pattern has all instances share state instead,
+    and Python makes it, literally, a snap.
     """
     __shared_state = {}
 
