@@ -131,13 +131,15 @@ class Broker(BaseSatellite):
 
         self.http_interface = BrokerInterface(self)
 
-    def add(self, elt):
+    def add(self, elt):  # pragma: no cover, seems not to be used
         """Add elt to this broker
 
         Original comment : Schedulers have some queues. We can simplify the call by adding
           elements into the proper queue just by looking at their type  Brok -> self.broks
           TODO: better tag ID?
           External commands -> self.external_commands
+
+        TODO: is it useful?
 
         :param elt: object to add
         :type elt: object
@@ -274,7 +276,7 @@ class Broker(BaseSatellite):
             con = links[s_id]['con'] = HTTPClient(uri=uri,
                                                   strong_ssl=links[s_id]['hard_ssl_name_check'],
                                                   timeout=timeout, data_timeout=data_timeout)
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS, exp:  # pragma: no cover, simple protection
             # But the multiprocessing module is not compatible with it!
             # so we must disable it immediately after
             logger.warning("Connection problem to the %s %s: %s",
@@ -306,7 +308,7 @@ class Broker(BaseSatellite):
                            i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
-        except KeyError, exp:
+        except KeyError, exp:  # pragma: no cover, simple protection
             logger.info("the %s '%s' is not initialized: %s", i_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             traceback.print_stack()
@@ -387,7 +389,8 @@ class Broker(BaseSatellite):
                     tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
                     try:
                         tmp_broks = unserialize(tmp_broks, True)
-                    except AlignakClassLookupException as exp:
+                    except AlignakClassLookupException as exp:  # pragma: no cover,
+                        # simple protection
                         logger.error('Cannot un-serialize data received from "get_broks" call: %s',
                                      exp)
                         continue
@@ -409,7 +412,7 @@ class Broker(BaseSatellite):
                 # logger.exception(exp)
                 links[sched_id]['con'] = None
             # scheduler must not #be initialized
-            except AttributeError as exp:
+            except AttributeError as exp:  # pragma: no cover, simple protection
                 logger.warning("The %s %s should not be initialized: %s",
                                i_type, links[sched_id]['name'], str(exp))
                 logger.exception(exp)
@@ -420,16 +423,22 @@ class Broker(BaseSatellite):
                 logger.exception(exp)
                 sys.exit(1)
 
-    def get_retention_data(self):
+    def get_retention_data(self):  # pragma: no cover, useful?
         """Get all broks
+
+        TODO: using retention in the arbiter is dangerous and
+        do not seem of any utility with Alignak
 
         :return: broks container
         :rtype: object
         """
         return self.broks
 
-    def restore_retention_data(self, data):
+    def restore_retention_data(self, data):  # pragma: no cover, useful?
         """Add data to broks container
+
+        TODO: using retention in the arbiter is dangerous and
+        do not seem of any utility with Alignak
 
         :param data: broks to add
         :type data: list

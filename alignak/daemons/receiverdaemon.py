@@ -159,10 +159,12 @@ class Receiver(Satellite):
         sched = self.schedulers.get(item, None)
         return sched
 
-    def manage_brok(self, brok):
+    def manage_brok(self, brok):  # pragma: no cover, seems not to be used anywhere
         """Send brok to modules. Modules have to implement their own manage_brok function.
         They usually do if they inherits from basemodule
         REF: doc/receiver-modules.png (4-5)
+
+        TODO: why should this daemon manage a brok? It is the brokers job!!!
 
         :param brok: brok to manage
         :type brok: alignak.brok.Brok

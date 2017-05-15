@@ -109,7 +109,8 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.brokers = {}
 
-    def compensate_system_time_change(self, difference, timeperiods):
+    def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
+        # not with unit tests
         """Compensate a system time change of difference for all hosts/services/checks/notifs
 
         :param difference: difference in seconds
@@ -251,7 +252,7 @@ class Alignak(BaseSatellite):
             t00 = time.time()
             try:
                 conf = unserialize(conf_raw)
-            except AlignakClassLookupException as exp:
+            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                 logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
