@@ -68,9 +68,10 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-    def is_me(self):
-        """
-        Check if parameter name if same than name of this object
+    def is_me(self):  # pragma: no cover, seems not to be used anywhere
+        """Check if parameter name if same than name of this object
+
+        TODO: is it useful?
 
         :return: true if parameter name if same than this name
         :rtype: bool
@@ -80,8 +81,7 @@ class ArbiterLink(SatelliteLink):
         return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
 
     def give_satellite_cfg(self):
-        """
-        Get the config of this satellite
+        """Get the config of this satellite
 
         :return: dictionary with information of the satellite
         :rtype: dict
@@ -90,8 +90,7 @@ class ArbiterLink(SatelliteLink):
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def do_not_run(self):
-        """
-        Check if satellite running or not
+        """Check if satellite running or not
         If not, try to run
 
         :return: true if satellite not running
@@ -106,9 +105,10 @@ class ArbiterLink(SatelliteLink):
             self.con = None
             return False
 
-    def get_all_states(self):
-        """
-        Get states of all satellites
+    def get_all_states(self):  # pragma: no cover, seems not to be used anywhere
+        """Get states of all satellites
+
+        TODO: is it useful?
 
         :return: list of all states
         :rtype: list | None
@@ -122,9 +122,11 @@ class ArbiterLink(SatelliteLink):
             self.con = None
             return None
 
-    def get_objects_properties(self, table, properties=None):
-        """
-        Get properties of objects
+    def get_objects_properties(self, table, properties=None):  # pragma: no cover,
+        # seems not to be used anywhere
+        """Get properties of objects
+
+        TODO: is it useful?
 
         :param table: name of table
         :type table: str
@@ -154,8 +156,7 @@ class ArbiterLinks(SatelliteLinks):
     inner_class = ArbiterLink
 
     def linkify(self, modules, realms=None):
-        """
-        Link modules to Arbiter
+        """Link modules to Arbiter
 
         :param modules: list of modules
         :type modules: list

@@ -78,7 +78,7 @@ class SchedulerLink(SatelliteLink):
         'push_flavor': IntegerProp(default=0),
     })
 
-    def run_external_commands(self, commands):
+    def run_external_commands(self, commands):  # pragma: no cover, seems not to be used anywhere
         """
         Run external commands
 
@@ -86,7 +86,11 @@ class SchedulerLink(SatelliteLink):
         :type commands:
         :return: False, None
         :rtype: bool | None
-        TODO: need recode this function because return types are too many
+
+        TODO: this function seems to be used by the arbiter when it needs to make its schedulers
+        run external commands. Currently, it is not used, but will it be?
+
+        TODO: need to recode this function because return shouod always be boolean
         """
         if self.con is None:
             self.create_connection()
@@ -100,7 +104,7 @@ class SchedulerLink(SatelliteLink):
             logger.debug(exp)
             return False
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this reactionner to the realm
 

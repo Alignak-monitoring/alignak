@@ -58,7 +58,7 @@ class BrokerLink(SatelliteLink):
         'port': IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this broker to the realm
 
