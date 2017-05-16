@@ -52,8 +52,9 @@
 #
 import re
 import time
-import unittest2 as unittest
+import pytest
 from alignak_test import AlignakTest, time_hacker
+from alignak_test import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize
 from alignak.external_command import ExternalCommand
@@ -71,6 +72,7 @@ class TestExternalCommands(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_external_commands.cfg')
         assert self.conf_is_correct
+        self.show_logs()
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -79,7 +81,22 @@ class TestExternalCommands(AlignakTest):
 
         time_hacker.set_real_time()
 
-    def test__command_syntax(self):
+        # Set / reset as default applyer for external commands
+        self.ecm_mode = 'applyer'
+
+    def test__command_syntax_receiver(self):
+        self.ecm_mode = 'receiver'
+        self._command_syntax()
+
+    def test__command_syntax_dispatcher(self):
+        self.ecm_mode = 'dispatcher'
+        self._command_syntax()
+
+    def test__command_syntax_applyer(self):
+        self.ecm_mode = 'applyer'
+        self._command_syntax()
+
+    def _command_syntax(self):
         """ External command parsing - named as test__ to be the first executed test :)
         :return: None
         """
@@ -95,14 +112,9 @@ class TestExternalCommands(AlignakTest):
 
         now = int(time.time())
 
-        # Clear logs and broks
-        self.clear_logs()
-        self._broker['broks'] = {}
-
         # Lowercase command is allowed
         excmd = '[%d] command' % (now)
-        ext_cmd = ExternalCommand(excmd)
-        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        res = self.manage_external_command(excmd)
         # Resolve command result is None because the command is not recognized
         assert res is None
         self.assert_any_log_match(
@@ -116,14 +128,15 @@ class TestExternalCommands(AlignakTest):
 
         # Lowercase command is allowed
         excmd = '[%d] shutdown_program' % (now)
-        ext_cmd = ExternalCommand(excmd)
-        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
-        # Resolve command result is not None because the command is recognized
-        assert res is not None
-        self.assert_any_log_match(
-            re.escape("WARNING: [alignak.external_command] The external command "
-                      "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
-        )
+        res = self.manage_external_command(excmd)
+        if self.ecm_mode == 'applyer':
+            self.assert_any_log_match(
+                re.escape("WARNING: [alignak.external_command] The external command "
+                          "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
+            )
+        else:
+            # Resolve command result is not None because the command is recognized
+            assert res is not None
 
         # Clear logs and broks
         self.clear_logs()
@@ -131,14 +144,15 @@ class TestExternalCommands(AlignakTest):
 
         # Command may not have a timestamp
         excmd = 'shutdown_program'
-        ext_cmd = ExternalCommand(excmd)
-        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
-        # Resolve command result is not None because the command is recognized
-        assert res is not None
-        self.assert_any_log_match(
-            re.escape("WARNING: [alignak.external_command] The external command "
-                      "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
-        )
+        res = self.manage_external_command(excmd)
+        if self.ecm_mode == 'applyer':
+            self.assert_any_log_match(
+                re.escape("WARNING: [alignak.external_command] The external command "
+                          "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
+            )
+        else:
+            # Resolve command result is not None because the command is recognized
+            assert res is not None
 
         # Clear logs and broks
         self.clear_logs()
@@ -146,8 +160,7 @@ class TestExternalCommands(AlignakTest):
 
         # Timestamp must be an integer
         excmd = '[fake] shutdown_program'
-        ext_cmd = ExternalCommand(excmd)
-        res = self._scheduler.external_commands_manager.resolve_command(ext_cmd)
+        res = self.manage_external_command(excmd)
         # Resolve command result is not None because the command is recognized
         assert res is None
         self.assert_any_log_match(
@@ -161,13 +174,14 @@ class TestExternalCommands(AlignakTest):
 
         # Malformed command
         excmd = '[%d] MALFORMED COMMAND' % now
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        assert len(broks) == 1
-        # ...but no logs
+        res = self.manage_external_command(excmd)
+        assert res is None
+        if self.ecm_mode == 'applyer':
+            # We get 'monitoring_log' broks for logging to the monitoring logs...
+            broks = [b for b in self._broker['broks'].values()
+                     if b.type == 'monitoring_log']
+            assert len(broks) == 1
+        # ...and some logs
         self.assert_any_log_match("Malformed command")
         self.assert_any_log_match('MALFORMED COMMAND')
         self.assert_any_log_match("Malformed command exception: too many values to unpack")
@@ -177,15 +191,15 @@ class TestExternalCommands(AlignakTest):
         self._broker['broks'] = {}
 
         # Malformed command
-        excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1' % now
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        assert len(broks) == 1
-        # ...but no logs
-        self.assert_any_log_match("Sorry, the arguments for the command")
+        excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1;qdsqd' % now
+        res = self.manage_external_command(excmd)
+        if self.ecm_mode == 'applyer':
+            # We get an 'monitoring_log' brok for logging to the monitoring logs...
+            broks = [b for b in self._broker['broks'].values()
+                     if b.type == 'monitoring_log']
+            assert len(broks) == 1
+            # ...and some logs
+            self.assert_any_log_match("Sorry, the arguments for the command")
 
         # Clear logs and broks
         self.clear_logs()
@@ -193,14 +207,14 @@ class TestExternalCommands(AlignakTest):
 
         # Unknown command
         excmd = '[%d] UNKNOWN_COMMAND' % now
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
-                 if b.type == 'monitoring_log']
-        assert len(broks) == 1
-        # ...but no logs
-        self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
+        res = self.manage_external_command(excmd)
+        if self.ecm_mode == 'applyer':
+            # We get an 'monitoring_log' brok for logging to the monitoring logs...
+            broks = [b for b in self._broker['broks'].values()
+                     if b.type == 'monitoring_log']
+            assert len(broks) == 1
+            # ...and some logs
+            self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
 
     def test_several_commands(self):
         """ External command management - several commands at once
@@ -248,16 +262,14 @@ class TestExternalCommands(AlignakTest):
         # ---
         # External command: change host attribute
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert not getattr(host, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         assert 1 == host.modified_attributes
 
         # External command: change host attribute
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert getattr(host, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         assert 0 == host.modified_attributes
@@ -265,23 +277,20 @@ class TestExternalCommands(AlignakTest):
         # ---
         # External command: change host attribute (non boolean attribute)
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;65536' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert 65536 == host.modified_attributes
 
         # External command: change host attribute
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;65536' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert 0 == host.modified_attributes
 
         # ---
         # External command: change host attribute (several attributes in one command)
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;3' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert not getattr(host, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         # Active checks are now disabled
@@ -290,8 +299,7 @@ class TestExternalCommands(AlignakTest):
 
         # External command: change host attribute (several attributes in one command)
         excmd = '[%d] CHANGE_HOST_MODATTR;test_host_0;3' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert getattr(host, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         # Active checks are now enabled
@@ -311,16 +319,14 @@ class TestExternalCommands(AlignakTest):
         # ---
         # External command: change service attribute
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert not getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         assert 1 == svc.modified_attributes
 
         # External command: change service attribute
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         assert 0 == svc.modified_attributes
@@ -328,23 +334,20 @@ class TestExternalCommands(AlignakTest):
         # ---
         # External command: change service attribute (non boolean attribute)
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;65536' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert 65536 == svc.modified_attributes
 
         # External command: change service attribute
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;65536' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert 0 == svc.modified_attributes
 
         # ---
         # External command: change service attribute (several attributes in one command)
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;3' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now disabled
         assert not getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         # Active checks are now disabled
@@ -353,8 +356,7 @@ class TestExternalCommands(AlignakTest):
 
         # External command: change service attribute (several attributes in one command)
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;3' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # Notifications are now enabled
         assert getattr(svc, DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].attribute)
         # Active checks are now enabled
@@ -377,14 +379,12 @@ class TestExternalCommands(AlignakTest):
         # ---
         # External command: change contact attribute
         excmd = '[%d] CHANGE_CONTACT_MODATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         assert 1 == contact.modified_attributes
 
         # External command: change contact attribute
         excmd = '[%d] CHANGE_CONTACT_MODATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # No toggle
         assert 1 == contact.modified_attributes
 
@@ -392,14 +392,12 @@ class TestExternalCommands(AlignakTest):
         # External command: change contact attribute
         assert 0 == contact.modified_host_attributes
         excmd = '[%d] CHANGE_CONTACT_MODHATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         assert 1 == contact.modified_host_attributes
 
         # External command: change contact attribute
         excmd = '[%d] CHANGE_CONTACT_MODHATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # No toggle
         assert 1 == contact.modified_host_attributes
 
@@ -407,14 +405,12 @@ class TestExternalCommands(AlignakTest):
         # External command: change contact attribute
         assert 0 == contact.modified_service_attributes
         excmd = '[%d] CHANGE_CONTACT_MODSATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         assert 1 == contact.modified_service_attributes
 
         # External command: change contact attribute
         excmd = '[%d] CHANGE_CONTACT_MODSATTR;test_contact;1' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+        self.manage_external_command(excmd)
         # No toggle
         assert 1 == contact.modified_service_attributes
 
@@ -553,7 +549,7 @@ class TestExternalCommands(AlignakTest):
         assert host.first_notification_delay == 10
 
     def test_change_service_attributes(self):
-        """
+        """Change service attributes
 
         :return: None
         """

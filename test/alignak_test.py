@@ -280,12 +280,41 @@ class AlignakTest(unittest.TestCase):
         for broker in self.arbiter.dispatcher.brokers:
             self.brokers[broker.broker_name] = broker
 
-    def add(self, b):
-        if isinstance(b, Brok):
-            self.broks[b.uuid] = b
-            return
-        if isinstance(b, ExternalCommand):
-            self.schedulers['scheduler-master'].run_external_command(b.cmd_line)
+        # Initialize the Receiver with no daemon configuration file
+        self.receiver = Receiver(None, False, False, False, False)
+
+        # Initialize the Receiver with no daemon configuration file
+        self.broker = Broker(None, False, False, False, False)
+
+        # External commands manager default mode; default is tha pplyer (scheduler) mode
+        self.ecm_mode = 'applyer'
+
+        # Now we create an external commands manager in dispatcher mode
+        self.arbiter.external_commands_manager = ExternalCommandManager(self.arbiter.conf,
+                                                                        'dispatcher',
+                                                                        self.arbiter,
+                                                                        accept_unknown=True)
+
+        # Now we get the external commands manager of our scheduler
+        self.eca = None
+        if 'scheduler-master' in self.schedulers:
+            self._sched = self.schedulers['scheduler-master'].sched
+            self.eca = self.schedulers['scheduler-master'].sched.external_commands_manager
+
+        # Now we create an external commands manager in receiver mode
+        self.ecr = ExternalCommandManager(self.receiver.cur_conf, 'receiver', self.receiver,
+                                          accept_unknown=True)
+
+        # and an external commands manager in dispatcher mode
+        self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,
+                                          accept_unknown=True)
+
+    # def add(self, b):
+    #     if isinstance(b, Brok):
+    #         self.broks[b.uuid] = b
+    #         return
+    #     if isinstance(b, ExternalCommand):
+    #         self.schedulers['scheduler-master'].run_external_command(b.cmd_line)
 
     def fake_check(self, ref, exit_status, output="OK"):
         """
@@ -374,11 +403,50 @@ class AlignakTest(unittest.TestCase):
                 if nb_ticks == 1:
                     fun()
 
-    def external_command_loop(self):
-        """
-        Execute the scheduler actions for external commands.
+    def manage_external_command(self, external_command, run=True):
+        """Manage an external command.
 
-        Yes, why not, but the scheduler si not an ECM 'dispatcher' but an 'applyer' ...
+        :return: result of external command resolution
+        """
+        print("I have the %s role..." % self.ecm_mode)
+        ext_cmd = ExternalCommand(external_command)
+        if self.ecm_mode == 'applyer':
+            res = None
+            self._scheduler.run_external_command(external_command)
+            self.external_command_loop()
+        if self.ecm_mode == 'dispatcher':
+            res = self.ecd.resolve_command(ext_cmd)
+            if res and run:
+                self.arbiter.broks = {}
+                self.arbiter.add(ext_cmd)
+                self.arbiter.push_external_commands_to_schedulers()
+                # Our scheduler
+                self._scheduler = self.schedulers['scheduler-master'].sched
+                # Our broker
+                self._broker = self._scheduler.brokers['broker-master']
+                for brok in self.arbiter.broks:
+                    print("Brok: %s : %s" % (brok, self.arbiter.broks[brok]))
+                    self._broker['broks'][brok] = self.arbiter.broks[brok]
+        if self.ecm_mode == 'receiver':
+            res = self.ecr.resolve_command(ext_cmd)
+            if res and run:
+                self.receiver.broks = {}
+                self.receiver.add(ext_cmd)
+                self.receiver.push_external_commands_to_schedulers()
+                # Our scheduler
+                self._scheduler = self.schedulers['scheduler-master'].sched
+                # Our broker
+                self._broker = self._scheduler.brokers['broker-master']
+                for brok in self.receiver.broks:
+                    print("Brok: %s : %s" % (brok, self.receiver.broks[brok]))
+                    self._broker.broks[brok] = self.receiver.broks[brok]
+        return res
+
+    def external_command_loop(self):
+        """Execute the scheduler actions for external commands.
+
+        The scheduler is not an ECM 'dispatcher' but an 'applyer' ... so this function is on
+        the external command execution side of the problem.
 
         @verified
         :return:
@@ -406,8 +474,6 @@ class AlignakTest(unittest.TestCase):
 
     def launch_internal_check(self, svc_br):
         """ Launch an internal check for the business rule service provided """
-        self._sched = self.schedulers['scheduler-master'].sched
-
         # Launch an internal check
         now = time.time()
         self._sched.add(svc_br.launch_check(now - 1, self._sched.hosts, self._sched.services,
