@@ -59,7 +59,6 @@ len(host.services)
 
 import re
 import time
-# import warnings
 
 from alignak.borg import Borg
 
