@@ -172,6 +172,52 @@ class TestConfig(AlignakTest):
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('spaced-host')
         assert host is not None
 
+    def test_plus_syntax(self):
+        """ Test that plus (+) is not allowed for single value properties
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/host_bad_plus_syntax.cfg')
+        self.show_logs()
+        assert not self.conf_is_correct
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in host::test_host_1 is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "A + value for a single string (display_name) is not handled"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hosts configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 2
+
+    def test_underscore_syntax(self):
+        """ Test that underscore (_) is not allowed for list value properties
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/host_macro_is_a_list.cfg')
+        self.show_logs()
+        assert not self.conf_is_correct
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in host::test_host_1 is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "A + value for a single string (_macro_list_plus) is not handled"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hosts configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 2
+
     def test_definition_order(self):
         """ Test element definition order
         An element (host, service, ...) can be defined several times then the definition_order

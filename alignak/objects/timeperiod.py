@@ -240,10 +240,12 @@ class Timeperiod(Item):
         """
         return getattr(self, 'timeperiod_name', 'unknown_timeperiod')
 
-    def get_raw_import_values(self):
+    def get_raw_import_values(self):  # pragma: no cover, deprecation
         """
         Get some properties of timeperiod (timeperiod is a bit different
         from classic item)
+
+        TODO: never called anywhere, still useful?
 
         :return: a dictionnary of some properties
         :rtype: dict

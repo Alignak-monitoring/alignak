@@ -49,7 +49,7 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         print self.configuration_warnings
-        assert len(self.configuration_warnings) == 14
+        assert len(self.configuration_warnings) == 16
         assert self.configuration_warnings == [
             u'Guessing the property modules_dir type because it is not in Config object properties',
             u'Guessing the property ca_cert type because it is not in Config object properties',
@@ -64,7 +64,9 @@ class TestConfig(AlignakTest):
             u'Guessing the property use_ssl type because it is not in Config object properties',
             u'Host graphite use/inherit from an unknown template: graphite ! from: cfg/_shinken/hosts/graphite.cfg:1',
             u'Guessing the property hostgroup_name type because it is not in Escalation object properties',
-            u'Guessing the property direct_routing type because it is not in ReceiverLink object properties'
+            u"Guessed the property hostgroup_name type as a <type 'unicode'>",
+            u'Guessing the property direct_routing type because it is not in ReceiverLink object properties',
+            u"Guessed the property direct_routing type as a <type 'unicode'>"
         ]
 
         # Arbiter named as in the configuration
