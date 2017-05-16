@@ -876,10 +876,12 @@ class Scheduler(object):  # pylint: disable=R0902
                                    "(exit code=%d): '%s'",
                                    action.command, action.exit_status, action.output)
 
-            except KeyError, exp:  # bad number for notif, not that bad
+            except KeyError as exp:  # pragma: no cover, simple protection
+                #  bad number for notif, not that bad
                 logger.warning('put_results:: get unknown notification : %s ', str(exp))
 
-            except AttributeError, exp:  # bad object, drop it
+            except AttributeError as exp:  # pragma: no cover, simple protection
+                # bad object, drop it
                 logger.warning('put_results:: get bad notification : %s ', str(exp))
         elif action.is_a == 'check':
             try:
@@ -898,15 +900,20 @@ class Scheduler(object):  # pylint: disable=R0902
                                    int(action.execution_time))
                 self.checks[action.uuid].get_return_from(action)
                 self.checks[action.uuid].status = 'waitconsume'
-            except KeyError, exp:
-                pass
+            except KeyError as exp:  # pragma: no cover, simple protection
+                # bad object, drop it
+                logger.warning('put_results:: get bad check: %s ', str(exp))
 
         elif action.is_a == 'eventhandler':
             try:
                 old_action = self.actions[action.uuid]
                 old_action.status = 'zombie'
-            except KeyError:  # cannot find old action
+            except KeyError as exp:  # pragma: no cover, simple protection
+                # cannot find old action
+                # bad object, drop it
+                logger.warning('put_results:: get bad check: %s ', str(exp))
                 return
+
             if action.status == 'timeout':
                 _type = 'event handler'
                 if action.is_snapshot:
@@ -924,7 +931,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 s_item = self.find_item_by_id(old_action.ref)
                 brok = s_item.get_snapshot_brok(old_action.output, old_action.exit_status)
                 self.add(brok)
-        else:
+        else:  # pragma: no cover, simple protection, should not happen!
             logger.error("The received result type in unknown! %s", str(action.is_a))
 
     def get_links_from_type(self, s_type):
@@ -1512,6 +1519,8 @@ class Scheduler(object):  # pylint: disable=R0902
     def get_and_register_program_status_brok(self):
         """Create and add a program_status brok
 
+        TODO: check if used somewhere. Do not seem so...
+
         :return: None
         """
         brok = self.get_program_status_brok()
@@ -1938,6 +1947,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if o_id in items:
                 return items[o_id]
 
+        # pragma: no cover, simple protectionn this should never happen
         raise Exception("Item with id %s not found" % o_id)
 
     def get_stats_struct(self):  # pragma: no cover, seems never called!
