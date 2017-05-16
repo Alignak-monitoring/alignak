@@ -447,6 +447,76 @@ class TestConfig(AlignakTest):
             )
         )
 
+    def test_malformed_parameters(self):
+        """ Configuration is not correct because of malformed parameters
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/bad_parameters_syntax.cfg')
+        assert not self.conf_is_correct
+        self.show_logs()
+
+        # Error messages
+        assert len(self.configuration_errors) == 2
+        self.assert_any_cfg_log_match(re.escape(
+            "the parameter parameter2 is malformed! (no = sign)"
+        ))
+
+    def test_nagios_parameters(self):
+        """Configuration has some old nagios parameters
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/deprecated_configuration.cfg')
+        assert not self.conf_is_correct
+        self.show_logs()
+
+        # Error messages
+        assert len(self.configuration_errors) == 10
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'status_file = /tmp/status' and "
+            "'object_cache_file = /tmp/cache' need to use an external module such "
+            "as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'log_file = /tmp/log' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'use_syslog = True' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'host_perfdata_file = /tmp/host_perf' "
+            "and 'service_perfdata_file = /tmp/srv_perf' need to use an "
+            "external module such as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'state_retention_file = /tmp/retention' "
+            "and 'retention_update_interval = 10' need to use an "
+            "external module such as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'command_file = /tmp/command' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "use_regexp_matching parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ochp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ocsp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Check global parameters failed"
+        ))
+
     def test_broken_configuration_2(self):
         """ Configuration is not correct because of a non-existing path
 
