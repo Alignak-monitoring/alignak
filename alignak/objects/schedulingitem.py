@@ -433,15 +433,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     macros = {
         # Business rules output formatting related macros
-        'STATUS':            ('get_status', ['hosts', 'services']),
-        'SHORTSTATUS':       ('get_short_status', ['hosts', 'services']),
-        'FULLNAME':          'get_full_name',
+        'STATUS': ('get_status', ['hosts', 'services']),
+        'SHORTSTATUS': ('get_short_status', ['hosts', 'services']),
+        'FULLNAME': 'get_full_name',
     }
 
     old_properties = {
-        'normal_check_interval':    'check_interval',
-        'retry_check_interval':    'retry_interval',
-        'criticity':    'business_impact',
+        'normal_check_interval': 'check_interval',
+        'retry_check_interval': 'retry_interval',
+        'criticity': 'business_impact',
     }
 
     special_properties = []

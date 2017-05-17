@@ -170,7 +170,8 @@ class Scheduler(object):  # pylint: disable=R0902
             }
         }
 
-        self.instance_id = 0  # Temporary set. Will be erase later
+        # Temporary set. Will be updated with received configuration
+        self.instance_id = 0
 
         # Ours queues
         self.checks = {}
@@ -262,10 +263,9 @@ class Scheduler(object):  # pylint: disable=R0902
         statsmgr.gauge('configuration.notificationways', len(self.notificationways))
         statsmgr.gauge('configuration.escalations', len(self.escalations))
 
-        # self.status_file = StatusFile(self)
-        #  External status file
-        # From Arbiter. Use for Broker to differentiate schedulers
-        self.instance_id = conf.instance_id
+        # From the Arbiter configuration. Used for satellites to differentiate the schedulers
+        self.instance_id = conf.uuid
+        logger.info("Set my instance id as '%s'", self.instance_id)
         # Tag our hosts with our instance_id
         for host in self.hosts:
             host.instance_id = conf.instance_id
@@ -424,6 +424,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :type bname: str
         :return: None
         """
+        if brok.type == 'service_next_schedule':
+            logger.warning("Add a brok: %s", brok)
         # For brok, we TAG brok with our instance_id
         brok.instance_id = self.instance_id
         if bname:
@@ -457,11 +459,12 @@ class Scheduler(object):  # pylint: disable=R0902
         if check is None:
             return
         self.checks[check.uuid] = check
+
         # A new check means the host/service changes its next_check
         # need to be refreshed
         # TODO swich to uuid. Not working for simple id are we 1,2,3.. in host and services
-        brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
-        self.add(brok)
+        # brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
+        # self.add(brok)
 
     def add_eventhandler(self, action):
         """Add a event handler into actions list
@@ -494,6 +497,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         if elt is None:
             return
+        logger.debug("Add: %s / %s", elt.my_type, elt.__dict__)
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
             fun(self, elt)
@@ -749,14 +753,14 @@ class Scheduler(object):  # pylint: disable=R0902
                             # Wipe out this master notification. One problem notification is enough.
                             item.remove_in_progress_notification(act)
                             logger.debug("Remove master notification (no repeat): %s", str(act))
-                            self.actions[act.uuid].status = 'zombie'
+                            act.status = 'zombie'
 
                     else:
                         # Wipe out this master notification.
                         logger.debug("Remove master notification (no repeat): %s", str(act))
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(act)
-                        self.actions[act.uuid].status = 'zombie'
+                        act.status = 'zombie'
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
@@ -792,23 +796,41 @@ class Scheduler(object):  # pylint: disable=R0902
             module_types = ['fork']
         # If poller want to do checks
         if do_checks:
+            logger.debug("%d checks for poller tags: %s and module types: %s",
+                         len(self.checks), poller_tags, module_types)
             for chk in self.checks.values():
+                logger.debug("Check: %s (%s / %s)", chk.uuid, chk.poller_tag, chk.module_type)
                 #  If the command is untagged, and the poller too, or if both are tagged
                 #  with same name, go for it
                 # if do_check, call for poller, and so poller_tags by default is ['None']
                 # by default poller_tag is 'None' and poller_tags is ['None']
                 # and same for module_type, the default is the 'fork' type
-                if chk.poller_tag in poller_tags and chk.module_type in module_types:
-                    # must be ok to launch, and not an internal one (business rules based)
-                    if chk.status == 'scheduled' and chk.is_launchable(now) and not chk.internal:
-                        chk.status = 'inpoller'
-                        chk.worker = worker_name
-                        res.append(chk)
+                if chk.poller_tag not in poller_tags:
+                    logger.debug(" -> poller tag do not match")
+                    continue
+                if chk.module_type not in module_types:
+                    logger.debug(" -> module type do not match")
+                    continue
+
+                logger.debug(" -> : %s %s (%s)",
+                             'worker' if not chk.internal else 'internal',
+                             chk.status,
+                             'now' if chk.is_launchable(now) else 'not yet')
+                # must be ok to launch, and not an internal one (business rules based)
+                if chk.status == 'scheduled' and chk.is_launchable(now) and not chk.internal:
+                    logger.debug("Check to run: %s", chk)
+                    chk.status = 'inpoller'
+                    chk.worker = worker_name
+                    res.append(chk)
+            logger.debug("-> %d checks to start now" % (len(res)) if res
+                         else "-> no checks to start now")
 
         # If reactionner want to notify too
         if do_actions:
+            logger.debug("%d actions for reactionner tags: %s", len(self.actions), reactionner_tags)
             for act in self.actions.values():
                 is_master = (act.is_a == 'notification' and not act.contact)
+                logger.error("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
 
                 if not is_master:
                     # if do_action, call the reactionner,
@@ -816,19 +838,25 @@ class Scheduler(object):  # pylint: disable=R0902
                     # by default reactionner_tag is 'None' and reactionner_tags is ['None'] too
                     # So if not the good one, loop for next :)
                     if act.reactionner_tag not in reactionner_tags:
+                        logger.error(" -> reactionner tag do not match")
                         continue
 
                     # same for module_type
                     if act.module_type not in module_types:
+                        logger.error(" -> module type do not match")
                         continue
 
-                # And now look for can launch or not :)
+                # And now look if we can launch or not :)
+                logger.debug(" -> : worker %s (%s)",
+                             act.status, 'now' if act.is_launchable(now) else 'not yet')
                 if act.status == 'scheduled' and act.is_launchable(now):
                     if not is_master:
                         # This is for child notifications and eventhandlers
                         act.status = 'inpoller'
                         act.worker = worker_name
                         res.append(act)
+            logger.debug("-> %d actions to start now" % (len(res)) if res
+                         else "-> no actions to start now")
         return res
 
     def put_results(self, action):
@@ -998,7 +1026,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # Ok, we can now update it
         links[s_id]['last_connection'] = time.time()
 
-        logger.debug("Init connection with %s", links[s_id]['uri'])
+        logger.info("Initialize connection with %s", links[s_id]['uri'])
 
         uri = links[s_id]['uri']
         try:
@@ -1029,145 +1057,107 @@ class Scheduler(object):  # pylint: disable=R0902
     def push_actions_to_passives_satellites(self):
         """Send actions/checks to passive poller/reactionners
 
-        TODO: add some unit tests for this function/feature.
-
         :return: None
         """
         # We loop for our passive pollers or reactionners
-        # Todo: only do this if there is some actions to push!
-        for poll in self.pollers.values():
-            if not poll['passive']:
-                continue
-            logger.debug("I will send actions to the poller %s", str(poll))
-            con = poll['con']
-            poller_tags = poll['poller_tags']
-            if con is not None:
-                # get actions
-                lst = self.get_to_run_checks(True, False, poller_tags, worker_name=poll['name'])
-                try:
-                    logger.debug("Sending %s actions", len(lst))
-                    con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
-                    self.nb_checks_send += len(lst)
-                except HTTPEXCEPTIONS, exp:
-                    logger.warning("Connection problem to the %s %s: %s",
-                                   type, poll['name'], str(exp))
-                    poll['con'] = None
-                    return
-                except KeyError, exp:
-                    logger.warning("The %s '%s' is not initialized: %s",
-                                   type, poll['name'], str(exp))
-                    poll['con'] = None
-                    return
-            else:  # no connection? try to reconnect
-                self.pynag_con_init(poll['instance_id'], s_type='poller')
+        for satellites in [self.pollers, self.reactionners]:
+            sat_type = 'poller'
+            if satellites is self.reactionners:
+                sat_type = 'reactionner'
 
-        # TODO:factorize
-        # We loop for our passive reactionners
-        # Todo: only do this if there is some actions to push!
-        for poll in self.reactionners.values():
-            if not poll['passive']:
-                continue
-            logger.debug("I will send actions to the reactionner %s", str(poll))
-            con = poll['con']
-            reactionner_tags = poll['reactionner_tags']
-            if con is not None:
-                # get actions
-                lst = self.get_to_run_checks(False, True,
-                                             reactionner_tags=reactionner_tags,
-                                             worker_name=poll['name'])
+            for poll in [p for p in satellites.values() if p['passive']]:
+                logger.debug("Try to send actions to the %s '%s'", sat_type, poll['name'])
+                if not poll['con']:
+                    # No connection, try to re-initialize
+                    self.pynag_con_init(poll['instance_id'], s_type=sat_type)
+
+                con = poll['con']
+                if not con:
+                    continue
+
+                # Get actions to execute
+                lst = []
+                if sat_type == 'poller':
+                    lst = self.get_to_run_checks(do_checks=True, do_actions=False,
+                                                 poller_tags=poll['poller_tags'],
+                                                 worker_name=poll['name'])
+                elif sat_type == 'reactionner':
+                    lst = self.get_to_run_checks(do_checks=False, do_actions=True,
+                                                 reactionner_tags=poll['reactionner_tags'],
+                                                 worker_name=poll['name'])
+                if not lst:
+                    logger.debug("Nothing to do...")
+                    continue
+
                 try:
-                    logger.debug("Sending %d actions", len(lst))
+                    logger.debug("Sending %d actions to the %s '%s'",
+                                 len(lst), sat_type, poll['name'])
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
-                except HTTPEXCEPTIONS, exp:
-                    logger.warning("Connection problem to the %s %s: %s",
-                                   type, poll['name'], str(exp))
+                except HTTPEXCEPTIONS as exp:
+                    logger.warning("Connection problem with the %s '%s': %s",
+                                   sat_type, poll['name'], str(exp))
                     poll['con'] = None
                     return
-                except KeyError, exp:
+                except KeyError as exp:
                     logger.warning("The %s '%s' is not initialized: %s",
-                                   type, poll['name'], str(exp))
+                                   sat_type, poll['name'], str(exp))
                     poll['con'] = None
                     return
-            else:  # no connection? try to reconnect
-                self.pynag_con_init(poll['instance_id'], s_type='reactionner')
 
     def get_actions_from_passives_satellites(self):
         """Get actions/checks results from passive poller/reactionners
 
-        TODO: add some unit tests for this function/feature.
-
         :return: None
         """
-        # We loop for our passive pollers
-        for poll in [p for p in self.pollers.values() if p['passive']]:
-            logger.debug("I will get actions from the poller %s", str(poll))
-            con = poll['con']
-            if con is not None:
+        # We loop for our passive pollers or reactionners
+        for satellites in [self.pollers, self.reactionners]:
+            sat_type = 'poller'
+            if satellites is self.reactionners:
+                sat_type = 'reactionner'
+
+            for poll in [p for p in satellites.values() if p['passive']]:
+                logger.debug("Try to get results from the %s '%s'", sat_type, poll['name'])
+                if not poll['con']:
+                    # no connection, try reinit
+                    self.pynag_con_init(poll['instance_id'], s_type='poller')
+
+                con = poll['con']
+                if not con:
+                    continue
+
                 try:
                     results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
-                    try:
-                        results = str(results)
-                    except UnicodeEncodeError:  # ascii not working, switch to utf8 so
-                        # if not eally utf8 will be a real problem
-                        results = results.encode("utf8", 'ignore')
-
-                    try:
-                        results = unserialize(results)
-                    except AlignakClassLookupException as exp:
-                        logger.error('Cannot un-serialize passive results from satellite %s : %s',
-                                     poll['name'], exp)
-                        continue
-                    except Exception, exp:  # pylint: disable=W0703
-                        logger.error('Cannot load passive results from satellite %s : %s',
-                                     poll['name'], str(exp))
+                    if results:
+                        logger.debug("Got some results: %s", results)
+                    else:
+                        logger.debug("-> no passive results from %s", poll['name'])
                         continue
 
-                    nb_received = len(results)
-                    self.nb_check_received += nb_received
-                    logger.debug("Received %d passive results", nb_received)
-                    for result in results:
-                        result.set_type_passive()
-                        self.waiting_results.put(result)
-                except HTTPEXCEPTIONS, exp:
-                    logger.warning("Connection problem to the %s %s: %s",
-                                   type, poll['name'], str(exp))
-                    poll['con'] = None
-                    continue
-                except KeyError, exp:
-                    logger.warning("The %s '%s' is not initialized: %s",
-                                   type, poll['name'], str(exp))
-                    poll['con'] = None
-                    continue
-            else:  # no connection, try reinit
-                self.pynag_con_init(poll['instance_id'], s_type='poller')
+                    results = unserialize(results, no_load=True)
 
-        # We loop for our passive reactionners
-        for poll in [pol for pol in self.reactionners.values() if pol['passive']]:
-            logger.debug("I will get actions from the reactionner %s", str(poll))
-            con = poll['con']
-            if con is not None:
-                try:
-                    results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
-                    results = unserialize(str(results))
                     nb_received = len(results)
+                    logger.warning("Received %d passive results from %s", nb_received, poll['name'])
                     self.nb_check_received += nb_received
-                    logger.debug("Received %d passive results", nb_received)
                     for result in results:
+                        logger.warning("-> result: %s", result)
                         result.set_type_passive()
                         self.waiting_results.put(result)
-                except HTTPEXCEPTIONS, exp:
+                except HTTPEXCEPTIONS as exp:
                     logger.warning("Connection problem to the %s %s: %s",
-                                   type, poll['name'], str(exp))
+                                   sat_type, poll['name'], str(exp))
                     poll['con'] = None
-                    return
-                except KeyError, exp:
+                except KeyError as exp:
                     logger.warning("The %s '%s' is not initialized: %s",
-                                   type, poll['name'], str(exp))
+                                   sat_type, poll['name'], str(exp))
                     poll['con'] = None
-                    return
-            else:  # no connection, try reinit
-                self.pynag_con_init(poll['instance_id'], s_type='reactionner')
+                except AlignakClassLookupException as exp:
+                    logger.error('Cannot un-serialize passive results from satellite %s : %s',
+                                 poll['name'], exp)
+                except Exception as exp:  # pylint: disable=W0703
+                    logger.error('Cannot load passive results from satellite %s : %s',
+                                 poll['name'], str(exp))
+                    logger.exception(exp)
 
     def manage_internal_checks(self):
         """Run internal checks
@@ -1597,11 +1587,17 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
                 item = self.find_item_by_id(chk.ref)
+                if 'dummy_critical' in item.get_full_name():
+                    logger.warning("Consume for %s: %s", item.get_full_name(), item)
+
                 notif_period = self.timeperiods.items.get(item.notification_period, None)
                 depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
                                               self.timeperiods, self.macromodulations,
                                               self.checkmodulations, self.businessimpactmodulations,
                                               self.resultmodulations, self.triggers, self.checks)
+                if 'dummy_critical' in item.get_full_name():
+                    logger.warning("Actions for %s: %s", item.get_full_name(), item.actions)
+
                 for dep in depchks:
                     self.add(dep)
 
@@ -1820,7 +1816,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         * status == 'inpoller' and t_to_go < now - time_to_orphanage (300 by default)
 
-        if so raise a logger warning
+        if so raise a warning log.
 
         :return: None
         """
@@ -2158,8 +2154,8 @@ class Scheduler(object):  # pylint: disable=R0902
                     nb_zombies += 1
             nb_notifications = len(self.actions)
 
-            logger.debug("Checks: total %s, scheduled %s,"
-                         "inpoller %s, zombies %s, notifications %s",
+            logger.debug("Checks: total: %d, scheduled: %d, in poller: %d, "
+                         "zombies: %d, notifications: %d",
                          len(self.checks), nb_scheduled, nb_inpoller, nb_zombies, nb_notifications)
             statsmgr.gauge('checks.total', len(self.checks))
             statsmgr.gauge('checks.scheduled', nb_scheduled)

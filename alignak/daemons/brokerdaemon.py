@@ -148,7 +148,7 @@ class Broker(BaseSatellite):
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
-            elt.instance_id = 0
+            elt.instance_id = self.instance_id
             self.broks_internal_raised.append(elt)
             return
         elif cls_type == 'externalcommand':
@@ -426,7 +426,7 @@ class Broker(BaseSatellite):
     def get_retention_data(self):  # pragma: no cover, useful?
         """Get all broks
 
-        TODO: using retention in the arbiter is dangerous and
+        TODO: using retention in the broker is dangerous and
         do not seem of any utility with Alignak
 
         :return: broks container

@@ -400,12 +400,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # I do not know this scheduler?
         sched = self.schedulers.get(sched_id)
         if sched is None:
-            logger.debug("I do not know this scheduler: %s", sched_id)
+            logger.error("I do not know this scheduler: %s / %s", sched_id, self.schedulers)
             return []
 
         ret, sched['wait_homerun'] = sched['wait_homerun'], {}
-
-        logger.debug("Preparing to return %s results", len(ret))
+        logger.debug("Results: %s" % (ret.values()) if ret else "No results available")
 
         return ret.values()
 
@@ -502,7 +501,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':
             # For brok, we TAG brok with our instance_id
-            elt.instance_id = 0
+            elt.instance_id = self.instance_id
             self.broks[elt.uuid] = elt
             return
         elif cls_type == 'externalcommand':
@@ -626,9 +625,18 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         for act in lst:
-            # First we look if we do not already have it, if so
+            logger.debug("Request to add an action: %s", act)
+            # First we look if the action is identified
+            uuid = getattr(act, 'uuid', None)
+            if uuid is None:
+                try:
+                    act = unserialize(act, no_load=True)
+                except AlignakClassLookupException:
+                    logger.error('Cannot un-serialize action: %s', act)
+                    continue
+            # Then we look if we do not already have it, if so
             # do nothing, we are already working!
-            if act.uuid in self.schedulers[sched_id]['actions']:
+            if uuid in self.schedulers[sched_id]['actions']:
                 continue
             act.sched_id = sched_id
             act.status = 'queue'

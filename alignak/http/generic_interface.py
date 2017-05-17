@@ -204,6 +204,7 @@ class GenericInterface(object):
         :return: managed configuration ids
         :rtype: dict
         """
+        # todo: let this print here?
         print "The arbiter asked me what I manage. It's %s", self.app.what_i_managed()
         logger.debug("The arbiter asked me what I manage. It's %s", self.app.what_i_managed())
         return self.app.what_i_managed()
@@ -248,7 +249,7 @@ class GenericInterface(object):
         """
         results = cherrypy.request.json
         with self.app.lock:
-            self.app.add_actions(results['actions'], int(results['sched_id']))
+            self.app.add_actions(results['actions'], results['sched_id'])
     push_actions.method = 'post'
 
     @cherrypy.expose
@@ -263,7 +264,7 @@ class GenericInterface(object):
         :rtype: str
         """
         with self.app.lock:
-            ret = self.app.get_return_for_passive(int(sched_id))
+            ret = self.app.get_return_for_passive(sched_id)
             return serialize(ret, True)
 
     @cherrypy.expose

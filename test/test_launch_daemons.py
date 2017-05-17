@@ -644,14 +644,18 @@ class DaemonsStartTest(AlignakTest):
         #     self.assertIsInstance(elem, Check, "One elem of the list is not a Check!")
 
         print("Testing get_raw_stats")
+        scheduler_id = "XxX"
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
             data = raw_data.json()
             print("%s, raw stats: %s" % (name, data))
-            if name == 'broker':
-                assert isinstance(data, list), "Data is not a list!"
+            if name in ['reactionner', 'poller']:
+                for sched_uuid in data:
+                    print("- scheduler: %s / %s" % (sched_uuid, raw_data))
+                    scheduler_id = sched_uuid
             else:
                 assert isinstance(data, dict), "Data is not a dict!"
+        print("Got a scheduler uuid: %s" % scheduler_id)
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
@@ -753,10 +757,10 @@ class DaemonsStartTest(AlignakTest):
             assert isinstance(data, dict), "Data is not a dict!"
 
         print("Testing get_returns")
-        # get_return requested by scheduler to poller daemons
-        for name in ['reactionner', 'receiver', 'poller']:
+        # get_return requested by scheduler to potential passive daemons
+        for name in ['reactionner', 'poller']:
             raw_data = req.get("%s://localhost:%s/get_returns" %
-                               (http, satellite_map[name]), params={'sched_id': 0}, verify=False)
+                               (http, satellite_map[name]), params={'sched_id': scheduler_id}, verify=False)
             data = raw_data.json()
             assert isinstance(data, list), "Data is not a list!"
 

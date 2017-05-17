@@ -232,7 +232,7 @@ class Alignak(BaseSatellite):
         with self.conf_lock:
             self.clean_previous_run()
             new_c = self.new_conf
-            logger.warning("Sending us a configuration %s", new_c['push_flavor'])
+            logger.info("Sending us a configuration: %s", new_c['push_flavor'])
             conf_raw = new_c['conf']
             override_conf = new_c['override_conf']
             modules = new_c['modules']
