@@ -929,6 +929,30 @@ class TestConfig(AlignakTest):
         self.external_command_loop()
         assert 'DOWN' == host.state
 
+    def test_config_hosts_default_check_command(self):
+        """ Test hosts default check command
+            - Check that an host without declared command uses the default _internal_host_up
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/hosts_commands.cfg')
+        self.show_logs()
+        assert self.conf_is_correct
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        command = self.arbiter.conf.commands.find_by_name('_internal_host_up')
+        print("Command: %s" % command)
+        assert command
+
+        host = self.arbiter.conf.hosts.find_by_name('test_host')
+        assert '_internal_host_up' == host.check_command.get_name()
+
+
     def test_config_services(self):
         """ Test services initial states
         :return: None

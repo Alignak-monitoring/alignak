@@ -1256,7 +1256,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for path in self.triggers_dirs:
             self.triggers.load_file(path)
 
-    def load_packs(self):
+    def load_packs(self):  # pragma: no cover, not used, see #551
         """Load all packs .pack files from all packs_dirs
 
         :return: None

@@ -3085,17 +3085,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = False
 
         if not hasattr(self, 'check_command'):
-            msg = "[%s::%s] no check_command" % (
-                self.my_type, self.get_name()
-            )
+            msg = "[%s::%s] no check_command" % (self.my_type, self.get_name())
             self.configuration_errors.append(msg)
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
-                msg = "[%s::%s] check_command '%s' invalid" % (
-                    self.my_type, self.get_name(), self.check_command.command
-                )
+                msg = "[%s::%s] check_command '%s' invalid" % (self.my_type, self.get_name(),
+                                                               self.check_command.command)
                 self.configuration_errors.append(msg)
                 state = False
             if self.got_business_rule:

@@ -1105,6 +1105,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     return
 
     def get_actions_from_passives_satellites(self):
+        #  pylint: disable=W0703
         """Get actions/checks results from passive poller/reactionners
 
         :return: None
@@ -1154,7 +1155,6 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.error('Cannot un-serialize passive results from satellite %s : %s',
                                  poll['name'], exp)
                 except Exception as exp:  # pragma: no cover, simple protection
-                    #  pylint: disable=W0703
                     logger.error('Cannot load passive results from satellite %s : %s',
                                  poll['name'], str(exp))
                     logger.exception(exp)
