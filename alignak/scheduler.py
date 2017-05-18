@@ -137,8 +137,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # For NagVis like tools: update our status every 10s
             12: ('get_and_register_update_program_status_brok',
                  self.get_and_register_update_program_status_brok, 10),
-            # Check for system time change. And AFTER get new checks
-            # so they are changed too.
+            # Check for system time change. And AFTER get new checks so they are changed too.
             13: ('check_for_system_time_change', self.sched_daemon.check_for_system_time_change, 1),
             # launch if need all internal checks
             14: ('manage_internal_checks', self.manage_internal_checks, 1),
@@ -362,7 +361,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
             file_h.close()
-        except OSError, exp:  # pragma: no cover, should never happen...
+        except OSError as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the objects dump file %s : %s", path, str(exp))
 
     def dump_config(self):
@@ -378,7 +377,7 @@ class Scheduler(object):  # pylint: disable=R0902
             file_h.write('Scheduler config DUMP at %d\n' % time.time())
             self.conf.dump(file_h)
             file_h.close()
-        except (OSError, IndexError), exp:  # pragma: no cover, should never happen...
+        except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the config dump file %s : %s", path, str(exp))
 
     def set_external_commands_manager(self, ecm):
@@ -1032,7 +1031,7 @@ class Scheduler(object):  # pylint: disable=R0902
         try:
             links[s_id]['con'] = HTTPClient(uri=uri, strong_ssl=links[s_id]['hard_ssl_name_check'])
             con = links[s_id]['con']
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection
             logger.warning("Connection problem to the %s %s: %s",
                            s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
@@ -1041,12 +1040,12 @@ class Scheduler(object):  # pylint: disable=R0902
         try:
             # initial ping must be quick
             con.get('ping')
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection
             logger.warning("Connection problem to the %s %s: %s",
                            s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
             return
-        except KeyError, exp:
+        except KeyError as exp:  # pragma: no cover, simple protection
             logger.warning("The %s '%s' is not initialized: %s",
                            s_type, links[s_id]['name'], str(exp))
             links[s_id]['con'] = None
@@ -1067,12 +1066,12 @@ class Scheduler(object):  # pylint: disable=R0902
 
             for poll in [p for p in satellites.values() if p['passive']]:
                 logger.debug("Try to send actions to the %s '%s'", sat_type, poll['name'])
-                if not poll['con']:
+                if not poll['con']:  # pragma: no cover, simple protection
                     # No connection, try to re-initialize
                     self.pynag_con_init(poll['instance_id'], s_type=sat_type)
 
                 con = poll['con']
-                if not con:
+                if not con:  # pragma: no cover, simple protection
                     continue
 
                 # Get actions to execute
@@ -1094,12 +1093,12 @@ class Scheduler(object):  # pylint: disable=R0902
                                  len(lst), sat_type, poll['name'])
                     con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     self.nb_checks_send += len(lst)
-                except HTTPEXCEPTIONS as exp:
+                except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection
                     logger.warning("Connection problem with the %s '%s': %s",
                                    sat_type, poll['name'], str(exp))
                     poll['con'] = None
                     return
-                except KeyError as exp:
+                except KeyError as exp:  # pragma: no cover, simple protection
                     logger.warning("The %s '%s' is not initialized: %s",
                                    sat_type, poll['name'], str(exp))
                     poll['con'] = None
@@ -1118,12 +1117,12 @@ class Scheduler(object):  # pylint: disable=R0902
 
             for poll in [p for p in satellites.values() if p['passive']]:
                 logger.debug("Try to get results from the %s '%s'", sat_type, poll['name'])
-                if not poll['con']:
+                if not poll['con']:  # pragma: no cover, simple protection
                     # no connection, try reinit
                     self.pynag_con_init(poll['instance_id'], s_type='poller')
 
                 con = poll['con']
-                if not con:
+                if not con:  # pragma: no cover, simple protection
                     continue
 
                 try:
@@ -1143,18 +1142,19 @@ class Scheduler(object):  # pylint: disable=R0902
                         logger.warning("-> result: %s", result)
                         result.set_type_passive()
                         self.waiting_results.put(result)
-                except HTTPEXCEPTIONS as exp:
+                except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection
                     logger.warning("Connection problem to the %s %s: %s",
                                    sat_type, poll['name'], str(exp))
                     poll['con'] = None
-                except KeyError as exp:
+                except KeyError as exp:  # pragma: no cover, simple protection
                     logger.warning("The %s '%s' is not initialized: %s",
                                    sat_type, poll['name'], str(exp))
                     poll['con'] = None
-                except AlignakClassLookupException as exp:
+                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize passive results from satellite %s : %s',
                                  poll['name'], exp)
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pragma: no cover, simple protection
+                    #  pylint: disable=W0703
                     logger.error('Cannot load passive results from satellite %s : %s',
                                  poll['name'], str(exp))
                     logger.exception(exp)
@@ -1508,8 +1508,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def get_and_register_program_status_brok(self):
         """Create and add a program_status brok
-
-        TODO: check if used somewhere. Do not seem so...
 
         :return: None
         """
@@ -1943,8 +1941,8 @@ class Scheduler(object):  # pylint: disable=R0902
             if o_id in items:
                 return items[o_id]
 
-        # pragma: no cover, simple protectionn this should never happen
-        raise Exception("Item with id %s not found" % o_id)
+        raise Exception("Item with id %s not found" % o_id)  # pragma: no cover,
+        # simple protection this should never happen
 
     def get_stats_struct(self):  # pragma: no cover, seems never called!
         """Get state of modules and create a scheme for stats data of daemon
@@ -2072,6 +2070,9 @@ class Scheduler(object):  # pylint: disable=R0902
         # Ok, now all is initialized, we can make the initial broks
         logger.info("[%s] First scheduling launched", self.instance_name)
         _t1 = time.time()
+        # Program start brok
+        self.get_and_register_program_status_brok()
+        # First scheduling
         self.schedule()
         statsmgr.timer('first_scheduling', time.time() - _t1)
         logger.info("[%s] First scheduling done", self.instance_name)
