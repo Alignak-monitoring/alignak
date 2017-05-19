@@ -106,13 +106,12 @@ class TestExternalCommands(AlignakTest):
         # Our broker
         self._broker = self._scheduler.brokers['broker-master']
 
-        # Clear logs and broks
-        self.clear_logs()
-        self._broker['broks'] = {}
-
         now = int(time.time())
 
+        # ---
         # Lowercase command is allowed
+        self.clear_logs()
+        self._broker['broks'] = {}
         excmd = '[%d] command' % (now)
         res = self.manage_external_command(excmd)
         # Resolve command result is None because the command is not recognized
@@ -122,11 +121,10 @@ class TestExternalCommands(AlignakTest):
                       "is not recognized, sorry")
         )
 
-        # Clear logs and broks
+        # ---
+        # Some commands are not implemented
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Lowercase command is allowed
         excmd = '[%d] shutdown_program' % (now)
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -138,11 +136,10 @@ class TestExternalCommands(AlignakTest):
             # Resolve command result is not None because the command is recognized
             assert res is not None
 
-        # Clear logs and broks
+        # ---
+        # Command may not have a timestamp
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Command may not have a timestamp
         excmd = 'shutdown_program'
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -154,11 +151,10 @@ class TestExternalCommands(AlignakTest):
             # Resolve command result is not None because the command is recognized
             assert res is not None
 
-        # Clear logs and broks
+        # ---
+        # Timestamp must be an integer
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Timestamp must be an integer
         excmd = '[fake] shutdown_program'
         res = self.manage_external_command(excmd)
         # Resolve command result is not None because the command is recognized
@@ -168,11 +164,10 @@ class TestExternalCommands(AlignakTest):
                       "'[fake] shutdown_program'")
         )
 
-        # Clear logs and broks
+        # ---
+        # Malformed command
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Malformed command
         excmd = '[%d] MALFORMED COMMAND' % now
         res = self.manage_external_command(excmd)
         assert res is None
@@ -186,11 +181,10 @@ class TestExternalCommands(AlignakTest):
         self.assert_any_log_match('MALFORMED COMMAND')
         self.assert_any_log_match("Malformed command exception: too many values to unpack")
 
-        # Clear logs and broks
+        # ---
+        # Malformed command
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Malformed command
         excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1;qdsqd' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -201,11 +195,10 @@ class TestExternalCommands(AlignakTest):
             # ...and some logs
             self.assert_any_log_match("Sorry, the arguments for the command")
 
-        # Clear logs and broks
+        # ---
+        # Unknown command
         self.clear_logs()
         self._broker['broks'] = {}
-
-        # Unknown command
         excmd = '[%d] UNKNOWN_COMMAND' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -215,6 +208,28 @@ class TestExternalCommands(AlignakTest):
             assert len(broks) == 1
             # ...and some logs
             self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
+
+        #  ---
+        # External command: unknown host
+        self.clear_logs()
+        self._broker['broks'] = {}
+        excmd = '[%d] DISABLE_HOST_CHECK;not_found_host' % time.time()
+        self._scheduler.run_external_command(excmd)
+        self.external_command_loop()
+        if self.ecm_mode == 'applyer':
+            # No 'monitoring_log' brok
+            broks = [b for b in self._broker['broks'].values()
+                     if b.type == 'monitoring_log']
+            assert len(broks) == 0
+            # ...but an unknown check result brok is raised...
+            # todo: do not know how to catch this brok here :/
+            # broks = [b for b in self._broker['broks'].values()
+            #          if b.type == 'unknown_host_check_result']
+            # assert len(broks) == 1
+            # ...and a warning log!
+            self.assert_any_log_match("A command was received for the host 'not_found_host', "
+                                      "but the host could not be found!")
+
 
     def test_several_commands(self):
         """ External command management - several commands at once

@@ -793,16 +793,7 @@ class ExternalCommandManager:
                                                "but the host could not be found!", val)
                             return None
 
-                        if host is not None:
-                            args.append(host)
-                        elif self.accept_passive_unknown_check_results:
-                            brok = self.get_unknown_check_result_brok(command)
-                            self.daemon.add_brok(brok)
-                            return None
-                        else:
-                            logger.warning(
-                                "A command was received for the host '%s', "
-                                "but the host could not be found!", val)
+                        args.append(host)
 
                     elif type_searched == 'contact':
                         contact = self.contacts.find_by_name(val)
