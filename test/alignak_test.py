@@ -309,13 +309,6 @@ class AlignakTest(unittest.TestCase):
         self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,
                                           accept_unknown=True)
 
-    # def add(self, b):
-    #     if isinstance(b, Brok):
-    #         self.broks[b.uuid] = b
-    #         return
-    #     if isinstance(b, ExternalCommand):
-    #         self.schedulers['scheduler-master'].run_external_command(b.cmd_line)
-
     def fake_check(self, ref, exit_status, output="OK"):
         """
         Simulate a check execution and result
@@ -408,7 +401,6 @@ class AlignakTest(unittest.TestCase):
 
         :return: result of external command resolution
         """
-        print("I have the %s role..." % self.ecm_mode)
         ext_cmd = ExternalCommand(external_command)
         if self.ecm_mode == 'applyer':
             res = None

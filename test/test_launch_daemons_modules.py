@@ -49,26 +49,30 @@ class LaunchDaemons(AlignakTest):
         print("Test terminated!")
 
     def test_daemons_modules(self):
-        """Running the Alignak daemons with the default configuration
+        """Running the Alignak daemons with the default ../etc configuration
 
         :return: None
         """
         self._run_daemons_modules(cfg_folder='../etc',
-                                  tmp_folder='./cfg/run_test_launch_daemons_modules',
-                                  cfg_modules='Example')
+                                  tmp_folder='./cfg/run_test_launch_daemons_modules')
 
     def test_daemons_modules_1(self):
-        """Running the Alignak daemons with default configuration
+        """Running the Alignak daemons with a simple configuration
 
         :return: None
         """
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+            'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
+        }
         self._run_daemons_modules(cfg_folder='./cfg/alignak_full_run_daemons_1',
                                   tmp_folder='./cfg/run_test_launch_daemons_modules_1',
-                                  cfg_modules='Example')
+                                  cfg_modules=cfg_modules)
 
     def _run_daemons_modules(self, cfg_folder='../etc',
                              tmp_folder='./cfg/run_test_launch_daemons_modules',
-                             cfg_modules='Example'):
+                             cfg_modules=None):
         """Update the provided configuration with some informations on the run
         Run the Alignak daemons with configured modules
 
@@ -114,8 +118,8 @@ class LaunchDaemons(AlignakTest):
         if cfg_modules is None:
             shutil.copy('./cfg/default/mod-example.cfg', tmp_folder + '/arbiter/modules')
             cfg_modules = {
-                'arbiter': 'example', 'scheduler': 'example', 'broker': 'example',
-                'poller': 'example', 'reactionner': 'example', 'receiver': 'example',
+                'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+                'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
             }
 
         print("Setting up daemons modules configuration...")
