@@ -213,7 +213,10 @@ class ActionBase(AlignakObject):
 
         logger.debug("Launch command: '%s'", self.command)
         if self.log_actions:
-            logger.info("Launch command: '%s'", self.command)
+            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                logger.warning("Launch command: '%s'", self.command)
+            else:
+                logger.info("Launch command: '%s'", self.command)
 
         return self.execute__()  # OS specific part
 
@@ -273,10 +276,16 @@ class ActionBase(AlignakObject):
         logger.debug("Command result for '%s': %d, %s",
                      self.command, self.exit_status, self.output)
         if self.log_actions:
-            logger.info("Check result for '%s': %d, %s",
-                        self.command, self.exit_status, self.output)
-            if self.perf_data:
-                logger.info("Performance data for '%s': %s", self.command, self.perf_data)
+            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                logger.warning("Check result for '%s': %d, %s",
+                               self.command, self.exit_status, self.output)
+                if self.perf_data:
+                    logger.warning("Performance data for '%s': %s", self.command, self.perf_data)
+            else:
+                logger.info("Check result for '%s': %d, %s",
+                            self.command, self.exit_status, self.output)
+                if self.perf_data:
+                    logger.info("Performance data for '%s': %s", self.command, self.perf_data)
 
     def check_finished(self, max_plugins_output_length):
         """Handle action if it is finished (get stdout, stderr, exit code...)
@@ -316,8 +325,12 @@ class ActionBase(AlignakObject):
                 self.u_time = n_child_utime - child_utime
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
-                    logger.info("Check for '%s' exited on timeout (%d s)",
-                                self.command, self.timeout)
+                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                        logger.warning("Check for '%s' exited on timeout (%d s)",
+                                       self.command, self.timeout)
+                    else:
+                        logger.info("Check for '%s' exited on timeout (%d s)",
+                                    self.command, self.timeout)
                 return
             return
 
@@ -334,8 +347,12 @@ class ActionBase(AlignakObject):
 
         self.exit_status = self.process.returncode
         if self.log_actions:
-            logger.info("Check for '%s' exited with return code %d",
-                        self.command, self.exit_status)
+            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                logger.warning("Check for '%s' exited with return code %d",
+                               self.command, self.exit_status)
+            else:
+                logger.info("Check for '%s' exited with return code %d",
+                            self.command, self.exit_status)
 
         # we should not keep the process now
         del self.process

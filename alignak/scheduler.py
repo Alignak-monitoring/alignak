@@ -424,8 +424,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type bname: str
         :return: None
         """
-        if brok.type == 'service_next_schedule':
-            logger.warning("Add a brok: %s", brok)
         # For brok, we TAG brok with our instance_id
         brok.instance_id = self.instance_id
         if bname:
@@ -1596,16 +1594,12 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
                 item = self.find_item_by_id(chk.ref)
-                if 'dummy_critical' in item.get_full_name():
-                    logger.warning("Consume for %s: %s", item.get_full_name(), item)
 
                 notif_period = self.timeperiods.items.get(item.notification_period, None)
                 depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
                                               self.timeperiods, self.macromodulations,
                                               self.checkmodulations, self.businessimpactmodulations,
                                               self.resultmodulations, self.triggers, self.checks)
-                if 'dummy_critical' in item.get_full_name():
-                    logger.warning("Actions for %s: %s", item.get_full_name(), item.actions)
 
                 for dep in depchks:
                     self.add(dep)
