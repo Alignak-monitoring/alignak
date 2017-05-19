@@ -36,7 +36,47 @@ class TestConfig(AlignakTest):
     """
 
     def test_config_ok(self):
-        """ Default configuration has no loading problems ...
+        """ Default shipped configuration has no loading problems ...
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('../etc/alignak.cfg')
+        assert self.conf_is_correct
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        # Arbiter named as in the configuration
+        assert self.arbiter.conf.conf_is_correct
+        arbiter_link = self.arbiter.conf.arbiters.find_by_name('arbiter-master')
+        assert arbiter_link is not None
+        assert arbiter_link.configuration_errors == []
+        assert arbiter_link.configuration_warnings == []
+
+        # Scheduler named as in the configuration
+        assert self.arbiter.conf.conf_is_correct
+        scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
+        assert scheduler_link is not None
+        # Scheduler configuration is ok
+        assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
+
+        # Broker, Poller, Reactionner named as in the configuration
+        link = self.arbiter.conf.brokers.find_by_name('broker-master')
+        assert link is not None
+        link = self.arbiter.conf.pollers.find_by_name('poller-master')
+        assert link is not None
+        link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
+        assert link is not None
+
+        # Receiver - no default receiver created
+        link = self.arbiter.conf.receivers.find_by_name('receiver-master')
+        assert link is not None
+
+    def test_config_test_ok(self):
+        """ Default test configuration has no loading problems ...
 
         :return: None
         """
