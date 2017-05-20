@@ -442,21 +442,30 @@ class AlignakTest(unittest.TestCase):
         print "--- logs >>>----------------------------------"
 
     def show_actions(self):
+        """"Show the inner actions"""
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        macroresolver = MacroResolver()
+        macroresolver.init(self._scheduler.conf)
+
         print "--- actions <<<----------------------------------"
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
-        for a in actions:
-            if a.is_a == 'notification':
-                item = self.schedulers['scheduler-master'].sched.find_item_by_id(a.ref)
+        actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
+        for action in actions:
+            print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
+            if action.is_a == 'notification':
+                item = self._scheduler.find_item_by_id(action.ref)
                 if item.my_type == "host":
                     ref = "host: %s" % item.get_name()
                 else:
-                    hst = self.schedulers['scheduler-master'].sched.find_item_by_id(item.host)
-                    ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s %s %s %s %s %s" % (a.uuid, ref, a.type,
-                                                       time.asctime(time.localtime(a.t_to_go)),
-                                                       a.status, a.contact_name)
-            elif a.is_a == 'eventhandler':
-                print "EVENTHANDLER:", a
+                    hst = self._scheduler.find_item_by_id(item.host)
+                    ref = "svc: %s/%s" % (hst.get_name(), item.get_name())
+                print "NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
+                      % (action.type, action.uuid, action.status, ref,
+                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command)
+            elif action.is_a == 'eventhandler':
+                print "EVENTHANDLER:", action
+            else:
+                print "ACTION:", action
         print "--- actions >>>----------------------------------"
 
     def show_checks(self):
@@ -562,7 +571,7 @@ class AlignakTest(unittest.TestCase):
         """
         regex = re.compile(pattern)
         actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                         key=lambda x: x.creation_time)
+                         key=lambda x: (x.t_to_go, x.creation_time))
         if index != -1:
             myaction = actions[index]
             self.assertTrue(regex.search(getattr(myaction, field)),

@@ -534,8 +534,12 @@ class TestDependencies(AlignakTest):
         assert "CRITICAL" == svc.state
         assert 1 == svc.current_notification_number, 'Critical HARD'
         self.assert_actions_count(2)
-        self.assert_actions_match(0, 'VOID', 'command')
-        self.assert_actions_match(1, 'servicedesc test_ok_0', 'command')
+
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        self.assert_actions_match(1, 'VOID', 'command')
+
         self.assert_checks_count(10)
 
     def test_a_s_service_host_down(self):
@@ -902,23 +906,16 @@ class TestDependencies(AlignakTest):
         assert 1 == svc1.current_notification_number, '1 notification'
         assert 1 == svc2.current_notification_number, '1 notification'
         self.assert_actions_count(4)
-        self.assert_actions_match(0, 'VOID', 'command')
-        self.assert_actions_match(1, 'VOID', 'command')
 
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
-        num = 0
-        commands = []
-        for action in actions:
-            if num > 1:
-                commands.append(action.command)
-            num += 1
+        # Both services have a notification
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        if 'servicedesc test_ok_0' in commands[0]:
-            self.assert_actions_match(2, 'hostname test_host_00 --servicedesc test_ok_0', 'command')
-            self.assert_actions_match(3, 'hostname test_host_00 --servicedesc test_ok_1', 'command')
-        else:
-            self.assert_actions_match(3, 'hostname test_host_00 --servicedesc test_ok_0', 'command')
-            self.assert_actions_match(2, 'hostname test_host_00 --servicedesc test_ok_1', 'command')
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_1 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        self.assert_actions_match(2, 'VOID', 'command')
+        self.assert_actions_match(3, 'VOID', 'command')
 
     def test_p_s_service_not_check_passive_host(self):
         """ Test passive service critical not check the dependent host (passive)

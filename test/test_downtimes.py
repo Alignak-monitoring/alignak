@@ -182,10 +182,10 @@ class TestDowntime(AlignakTest):
         assert 0 == svc.current_notification_number, 'Should not have any notification'
         # Notification: downtime start
         self.assert_actions_count(1)
-        # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
+        self.show_actions()
+        # 1st notification for downtime start
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMESTART --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
 
         # A comment exist in our service
         assert 1 == len(svc.comments)
@@ -245,6 +245,7 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(1, 'VOID', 'command')
         self.assert_actions_match(1, 'PROBLEM', 'type')
         self.assert_actions_match(1, 'scheduled', 'status')
+        self.show_actions()
 
         assert 1 == len(svc.downtimes)
         # The service is still in a downtime period
@@ -272,20 +273,18 @@ class TestDowntime(AlignakTest):
         # Now 4 actions because the service is no more a problem and the downtime ended
         self.show_actions()
         self.assert_actions_count(4)
-        # The downtime started
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
+        # 1st notification for downtime start
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMESTART --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
         # The service is now a problem...
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'PROBLEM', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
-        # The downtime ended
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'DOWNTIMEEND', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput BAD', 'command')
+        self.assert_actions_match(1, 'PROBLEM', 'type')
+        self.assert_actions_match(1, 'scheduled', 'status')
+        # 1st notification for downtime start
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMEEND --servicestate CRITICAL --serviceoutput BAD', 'command')
+        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
         # The service is no more a problem...
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
         self.assert_actions_match(-1, 'RECOVERY', 'type')
         self.assert_actions_match(-1, 'scheduled', 'status')
 
@@ -304,11 +303,12 @@ class TestDowntime(AlignakTest):
 
         # The service is now a problem...
         # A problem notification is now raised...
-        self.assert_actions_match(0, 'VOID', 'command')
+        self.assert_actions_match(0, 'notification', 'is_a')
+        self.assert_actions_match(0, '/notifier.pl', 'command')
         self.assert_actions_match(0, 'PROBLEM', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, 'notification', 'is_a')
-        self.assert_actions_match(1, '/notifier.pl', 'command')
+        # VOID notification
+        self.assert_actions_match(1, 'VOID', 'command')
         self.assert_actions_match(1, 'PROBLEM', 'type')
         self.assert_actions_match(1, 'scheduled', 'status')
 
@@ -601,9 +601,9 @@ class TestDowntime(AlignakTest):
         # Notification: downtime start
         self.assert_actions_count(1)
         # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
+        self.show_actions()
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate UP --hostoutput UP', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
 
         # A comment exists in our host
         assert 1 == len(host.comments)
@@ -690,21 +690,19 @@ class TestDowntime(AlignakTest):
         self.show_actions()
         self.assert_actions_count(4)
         # The downtime started
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
-        # The service is now a problem...
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'PROBLEM', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate UP --hostoutput UP', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+        # The host is now a problem...
+        self.assert_actions_match(1, '/notifier.pl', 'command')
+        self.assert_actions_match(1, 'PROBLEM', 'type')
+        self.assert_actions_match(1, 'scheduled', 'status')
         # The downtime ended
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'DOWNTIMEEND', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
-        # The service is no more a problem...
-        self.assert_actions_match(-1, '/notifier.pl', 'command')
-        self.assert_actions_match(-1, 'RECOVERY', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput DOWN', 'command')
+        self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+        # The host is no more a problem...
+        self.assert_actions_match(3, '/notifier.pl', 'command')
+        self.assert_actions_match(3, 'RECOVERY', 'type')
+        self.assert_actions_match(3, 'scheduled', 'status')
 
         # Clear actions
         self.clear_actions()
@@ -721,11 +719,11 @@ class TestDowntime(AlignakTest):
 
         # The host is now a problem...
         # A problem notification is now raised...
-        self.assert_actions_match(0, 'VOID', 'command')
+        self.assert_actions_match(0, 'notification', 'is_a')
+        self.assert_actions_match(0, '/notifier.pl', 'command')
         self.assert_actions_match(0, 'PROBLEM', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, 'notification', 'is_a')
-        self.assert_actions_match(1, '/notifier.pl', 'command')
+        self.assert_actions_match(1, 'VOID', 'command')
         self.assert_actions_match(1, 'PROBLEM', 'type')
         self.assert_actions_match(1, 'scheduled', 'status')
 

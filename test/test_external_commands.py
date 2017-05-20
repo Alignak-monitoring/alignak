@@ -1318,14 +1318,13 @@ class TestExternalCommands(AlignakTest):
         time.sleep(1)
         self.external_command_loop()
         # Host problem only...
+        self.show_actions()
         self.assert_actions_count(2)
-        # The host problem
-        self.assert_actions_match(0, 'VOID', 'command')
-        self.assert_actions_match(0, 'PROBLEM', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, '/notifier.pl', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
+        # The host problem is notified
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        self.assert_actions_match(1, 'VOID', 'command')
 
         #  ---
         # The host is now a problem...
@@ -1359,20 +1358,16 @@ class TestExternalCommands(AlignakTest):
         time.sleep(2)
         self.external_command_loop()
         # Host problem only...
+        self.show_actions()
         self.assert_actions_count(3)
-        # The host problem
-        self.assert_actions_match(0, 'VOID', 'command')
-        self.assert_actions_match(0, 'PROBLEM', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, '/notifier.pl', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
-        # self.assert_actions_match(2, '/notifier.pl', 'command')
-        # self.assert_actions_match(2, 'ACKNOWLEDGEMENT', 'type')
-        # self.assert_actions_match(2, 'scheduled', 'status')
-        self.assert_actions_match(2, '/notifier.pl', 'command')
-        self.assert_actions_match(2, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(2, 'scheduled', 'status')
+        # The host problem is notified
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        # And the downtime
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        self.assert_actions_match(2, 'VOID', 'command')
 
         # Let the downtime start...
         time.sleep(2)
@@ -1392,22 +1387,18 @@ class TestExternalCommands(AlignakTest):
         self.show_actions()
         # Host problem and acknowledgement only...
         self.assert_actions_count(4)
-        # The host problem
-        self.assert_actions_match(0, 'VOID', 'command')
-        self.assert_actions_match(0, 'PROBLEM', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, '/notifier.pl', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
-        # self.assert_actions_match(2, '/notifier.pl', 'command')
-        # self.assert_actions_match(2, 'ACKNOWLEDGEMENT', 'type')
-        # self.assert_actions_match(2, 'scheduled', 'status')
-        self.assert_actions_match(2, '/notifier.pl', 'command')
-        self.assert_actions_match(2, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(2, 'scheduled', 'status')
-        self.assert_actions_match(3, '/notifier.pl', 'command')
-        self.assert_actions_match(3, 'DOWNTIMEEND', 'type')
-        self.assert_actions_match(3, 'scheduled', 'status')
+        # The host problem is notified
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        # And the downtime
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        # And the downtime end
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput Host is dead ', 'command')
+        self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        self.assert_actions_match(3, 'VOID', 'command')
 
         # Clear actions
         self.clear_actions()
