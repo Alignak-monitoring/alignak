@@ -2054,7 +2054,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         return list(contacts)
 
-    def create_notifications(self, n_type, notification_period, hosts, services, t_wished=None):
+    def create_notifications(self, n_type, notification_period, hosts, services,
+                             t_wished=None, author_data=None):
         """Create a "master" notification here, which will later
         (immediately before the reactionner gets it) be split up
         in many "child" notifications, one for each contact.
@@ -2069,13 +2070,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type services: alignak.objects.service.Services
         :param t_wished: time we want to notify
         :type t_wished: int
+        :param author_data: notification author data (eg. for a downtime notification)
+        :type author_data: dict (containing author, author_name ad a comment)
         :return: None
         """
         cls = self.__class__
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
-            now = time.time()
+            now = int(time.time())
             t_wished = now
             # if first notification, we must add first_notification_delay
             if self.current_notification_number == 0 and n_type == 'PROBLEM':
@@ -2087,7 +2090,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     t_wished = last_time_non_ok_or_up + \
                         self.first_notification_delay * cls.interval_length
             if notification_period is None:
-                new_t = int(now)
+                new_t = now
             else:
                 new_t = notification_period.get_next_valid_time_from_t(t_wished)
         else:
@@ -2127,6 +2130,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             'service_description': getattr(self, 'service_description', ''),
 
         }
+        if author_data and n_type in ['DOWNTIMESTART', 'DOWNTIMEEND']:
+            data.update(author_data)
+
         notif = Notification(data)
         logger.debug("Created a %s notification: %s", self.my_type, n_type)
 
@@ -2202,7 +2208,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             notif_commands = contact.get_notification_commands(notifways, cls.my_type)
 
             for cmd in notif_commands:
-                reac_tag = cmd.reactionner_tag
+                # Get the notification recipients list
+                recipients = ','.join([contacts[c_uuid].contact_name for c_uuid in notif_contacts])
                 data = {
                     'type': notif.type,
                     'command': 'VOID',
@@ -2210,15 +2217,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     'ref': self.uuid,
                     'contact': contact.uuid,
                     'contact_name': contact.contact_name,
+                    'recipients': recipients,
                     't_to_go': notif.t_to_go,
                     'escalated': escalated,
                     'timeout': cls.notification_timeout,
                     'notif_nb': notif.notif_nb,
-                    'reactionner_tag': reac_tag,
+                    'reactionner_tag': cmd.reactionner_tag,
                     'enable_environment_macros': cmd.enable_environment_macros,
                     'host_name': getattr(self, 'host_name', ''),
                     'service_description': getattr(self, 'service_description', ''),
-
+                    'author': notif.author,
+                    'author_name': notif.author_name,
+                    'author_alias': notif.author_alias,
+                    'author_comment': notif.author_comment
                 }
                 child_n = Notification(data)
                 if not self.notification_is_blocked_by_contact(notifways, timeperiods, child_n,

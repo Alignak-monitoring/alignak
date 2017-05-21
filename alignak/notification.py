@@ -55,7 +55,7 @@ import time
 
 from alignak.action import Action
 from alignak.brok import Brok
-from alignak.property import BoolProp, IntegerProp, StringProp, SetProp
+from alignak.property import BoolProp, IntegerProp, StringProp, SetProp, ListProp
 from alignak.autoslots import AutoSlots
 
 
@@ -95,6 +95,14 @@ class Notification(Action):  # pylint: disable=R0902
         'already_start_escalations':  SetProp(default=set()),
         'type':               StringProp(default='PROBLEM'),
 
+        # For authored notifications (eg. downtime...)
+        'author': StringProp(default='n/a', fill_brok=['full_status']),
+        'author_name': StringProp(default='n/a', fill_brok=['full_status']),
+        'author_alias': StringProp(default='n/a', fill_brok=['full_status']),
+        'author_comment': StringProp(default='n/a', fill_brok=['full_status']),
+
+        # All contacts that were notified
+        'recipients': ListProp(default=None)
     })
 
     macros = {
@@ -104,7 +112,7 @@ class Notification(Action):  # pylint: disable=R0902
         'NOTIFICATIONAUTHOR':       'author',
         'NOTIFICATIONAUTHORNAME':   'author_name',
         'NOTIFICATIONAUTHORALIAS':  'author_alias',
-        'NOTIFICATIONCOMMENT':      'comment',
+        'NOTIFICATIONCOMMENT':      'author_comment',
         'HOSTNOTIFICATIONNUMBER':   'notif_nb',
         'HOSTNOTIFICATIONID':       'uuid',
         'SERVICENOTIFICATIONNUMBER': 'notif_nb',

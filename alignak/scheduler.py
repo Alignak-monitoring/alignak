@@ -598,8 +598,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     del broker['broks'][brok.uuid]
 
         # todo: WTF is it? And not even a WARNING log for this !!!
+        # @mohierf: I am adding an ERROR log if this happen!
         if len(self.actions) > max_actions:
-            logger.debug("I have to del some actions (%d)..., sorry", len(self.actions))
+            logger.error("I have to del some actions (currently: %d, max: %d)..., sorry :(",
+                         len(self.actions), max_actions)
             to_del_actions = [c for c in self.actions.values()]
             to_del_actions.sort(key=lambda x: x.creation_time)
             to_del_actions = to_del_actions[:-max_actions]
@@ -1680,9 +1682,9 @@ class Scheduler(object):  # pylint: disable=R0902
                     end_dt = timeperiod.get_next_invalid_time_from_t(start_dt + 1) - 1
                     data = {'ref': elt.uuid, 'ref_type': elt.my_type, 'start_time': start_dt,
                             'end_time': end_dt, 'fixed': 1, 'trigger_id': '',
-                            'duration': 0, 'author': "system",
-                            'comment': "this downtime was automatically scheduled "
-                                       "through a maintenance_period"}
+                            'duration': 0, 'author': "Alignak",
+                            'comment': "This downtime was automatically scheduled by Alignak "
+                                       "because of a maintenance period."}
                     downtime = Downtime(data)
                     self.add(downtime.add_automatic_comment(elt))
                     elt.add_downtime(downtime)

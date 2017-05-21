@@ -204,7 +204,14 @@ class Downtime(AlignakObject):
         if item.scheduled_downtime_depth == 1:
             item.raise_enter_downtime_log_entry()
             notif_period = timeperiods[item.notification_period]
-            item.create_notifications('DOWNTIMESTART', notif_period, hosts, services)
+            # Notification author data
+            # todo: note that alias and name are not implemented yet
+            author_data = {
+                'author': self.author, 'author_name': 'Not available',
+                'author_alias': 'Not available', 'author_comment': self.comment
+            }
+            item.create_notifications('DOWNTIMESTART', notif_period, hosts, services,
+                                      author_data=author_data)
             if self.ref in hosts:
                 broks.append(self.get_raise_brok(item.get_name()))
 
@@ -248,7 +255,14 @@ class Downtime(AlignakObject):
             if item.scheduled_downtime_depth == 0:
                 item.raise_exit_downtime_log_entry()
                 notif_period = timeperiods[item.notification_period]
-                item.create_notifications('DOWNTIMEEND', notif_period, hosts, services)
+                # Notification author data
+                # todo: note that alias and name are not implemented yet
+                author_data = {
+                    'author': self.author, 'author_name': 'Not available',
+                    'author_alias': 'Not available', 'author_comment': self.comment
+                }
+                item.create_notifications('DOWNTIMEEND', notif_period, hosts, services,
+                                          author_data=author_data)
                 item.in_scheduled_downtime = False
                 if self.ref in hosts:
                     broks.append(self.get_expire_brok(item.get_name()))
