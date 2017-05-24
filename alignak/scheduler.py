@@ -1750,6 +1750,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # ask for service and hosts their next check
         for elt in elems:
+            logger.debug("Add check for: %s", elt)
             self.add_check(elt.schedule(self.hosts, self.services, self.timeperiods,
                                         self.macromodulations, self.checkmodulations, self.checks))
 

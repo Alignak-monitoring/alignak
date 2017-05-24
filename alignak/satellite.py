@@ -102,9 +102,10 @@ class BaseSatellite(Daemon):
 
     """
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
-        super(BaseSatellite, self).__init__(name, config_file, is_daemon,
-                                            do_replace, debug, debug_file)
+    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file,
+                 port, local_log):
+        super(BaseSatellite, self).__init__(name, config_file, is_daemon, do_replace, debug,
+                                            debug_file, port, local_log)
         # Ours schedulers
         self.schedulers = {}
 
@@ -196,10 +197,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     do_actions = False
     my_type = ''
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
+    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file,
+                 port, local_log):
 
         super(Satellite, self).__init__(name, config_file, is_daemon, do_replace,
-                                        debug, debug_file)
+                                        debug, debug_file, port, local_log)
 
         # Keep broks so they can be eaten by a broker
         self.broks = {}

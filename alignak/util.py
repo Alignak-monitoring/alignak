@@ -1303,11 +1303,13 @@ def parse_daemon_args(arbiter=False):
                                  'to make a global configuration file)')
         parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
                             help='Verify configuration file(s) and exit')
-        parser.add_argument('-n', '--arbiter-name', dest='arbiter_name',
+        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
                             default='arbiter-master',
                             help='Set the name of the arbiter to pick in the configuration files '
                                  'For a spare arbiter, this parameter must contain its name!')
 
+    parser.add_argument('-n', '--name', dest='daemon_name',
+                        help='Daemon unique name. Must be unique for the same daemon type.')
     parser.add_argument('-c', '--config', dest='config_file',
                         help='Daemon configuration file')
     parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
@@ -1316,5 +1318,9 @@ def parse_daemon_args(arbiter=False):
                         help='Replace previous running daemon')
     parser.add_argument('-f', '--debugfile', dest='debug_file',
                         help='File to dump debug logs')
+    parser.add_argument('-p', '--port', dest='port',
+                        help='Port used by the daemon')
+    parser.add_argument('-l', '--local_log', dest='local_log',
+                        help='File to use for daemon log')
 
     return parser.parse_args()

@@ -78,8 +78,20 @@ class TestMacroResolver(AlignakTest):
         return (svc, hst)
 
     def test_resolv_simple(self):
+        """Test a simple macro resolution
+        :return:
         """
-        Test a simple command resolution
+        self.print_header()
+        mr = self.get_mr()
+        (svc, hst) = self.get_hst_svc()
+        data = [hst, svc]
+        result = mr.resolve_simple_macros_in_string("$ALIGNAK$", [], None, None, None)
+        assert result == "arbiter-master"
+        result = mr.resolve_simple_macros_in_string("$PREFIX$", [], None, None, None)
+        assert result == ""
+
+    def test_resolv_simple_command(self):
+        """Test a simple command resolution
         :return:
         """
         self.print_header()

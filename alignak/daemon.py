@@ -223,7 +223,8 @@ class Daemon(object):
             IntegerProp(default=8),
     }
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
+    def __init__(self, name, config_file, is_daemon, do_replace,
+                 debug, debug_file, port=None, local_log=None):
         """
 
         :param name:
@@ -242,13 +243,23 @@ class Daemon(object):
         self.debug = debug
         self.debug_file = debug_file
         self.interrupted = False
-        self.pidfile = None
+        self.pidfile = "%s.pid" % self.name
+
+        if port:
+            self.port = int(port)
+            print("Daemon '%s' is started with an overidden port number: %d"
+                  % (self.name, self.port))
+
+        if local_log:
+            self.local_log = local_log
+            print("Daemon '%s' is started with an overidden log file: %s"
+                  % (self.name, self.local_log))
 
         if self.debug:
-            print("Daemon %s is in debug mode" % self.name)
+            print("Daemon '%s' is in debug mode" % self.name)
 
         if self.is_daemon:
-            print("Daemon %s is in daemon mode" % self.name)
+            print("Daemon '%s' is in daemon mode" % self.name)
 
         # Track time
         now = time.time()
@@ -290,7 +301,8 @@ class Daemon(object):
         # Fill the properties
         properties = self.__class__.properties
         for prop, entry in properties.items():
-            setattr(self, prop, entry.pythonize(entry.default))
+            if getattr(self, prop, None) is None:
+                setattr(self, prop, entry.pythonize(entry.default))
 
     # At least, lose the local log file if needed
     def do_stop(self):
@@ -524,7 +536,7 @@ class Daemon(object):
             pid_var = self.fpid.readline().strip(' \r\n')
             if pid_var:
                 pid = int(pid_var)
-                logger.info("Found an existing pid: '%s'", pid_var)
+                logger.info("Found an existing pid (%s): '%s'", self.pidfile, pid_var)
             else:
                 logger.debug("Not found an existing pid: %s", self.pidfile)
                 return

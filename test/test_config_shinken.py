@@ -63,10 +63,12 @@ class TestConfig(AlignakTest):
             u'Guessing the property local_log type because it is not in Config object properties',
             u'Guessing the property use_ssl type because it is not in Config object properties',
             u'Host graphite use/inherit from an unknown template: graphite ! from: cfg/_shinken/hosts/graphite.cfg:1',
-            u'Guessing the property hostgroup_name type because it is not in Escalation object properties',
-            u"Guessed the property hostgroup_name type as a <type 'unicode'>",
+            'Guessing the property hostgroup_name type because it is not in Escalation object properties',
+            "Guessed the property hostgroup_name type as a <type 'unicode'>",
             u'Guessing the property direct_routing type because it is not in ReceiverLink object properties',
-            u"Guessed the property direct_routing type as a <type 'unicode'>"
+            u"Guessed the property direct_routing type as a <type 'unicode'>",
+            # u"Some hosts exist in the realm 'France' but no broker is defined for this realm",
+            # u"Added a broker in the realm 'France'",
         ]
 
         # Arbiter named as in the configuration

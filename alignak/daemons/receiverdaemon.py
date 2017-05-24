@@ -86,10 +86,14 @@ class Receiver(Satellite):
             PathProp(default='receiverd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
+                 port=None, local_log=None, daemon_name=None):
+        self.daemon_name = 'receiver'
+        if daemon_name:
+            self.daemon_name = daemon_name
 
-        super(Receiver, self).__init__(
-            'receiver', config_file, is_daemon, do_replace, debug, debug_file)
+        super(Receiver, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
+                                       debug, debug_file, port, local_log)
 
         # Our arbiters
         self.arbiters = {}
