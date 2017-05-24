@@ -36,7 +36,47 @@ class TestConfig(AlignakTest):
     """
 
     def test_config_ok(self):
-        """ Default configuration has no loading problems ...
+        """ Default shipped configuration has no loading problems ...
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('../etc/alignak.cfg')
+        assert self.conf_is_correct
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        # Arbiter named as in the configuration
+        assert self.arbiter.conf.conf_is_correct
+        arbiter_link = self.arbiter.conf.arbiters.find_by_name('arbiter-master')
+        assert arbiter_link is not None
+        assert arbiter_link.configuration_errors == []
+        assert arbiter_link.configuration_warnings == []
+
+        # Scheduler named as in the configuration
+        assert self.arbiter.conf.conf_is_correct
+        scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
+        assert scheduler_link is not None
+        # Scheduler configuration is ok
+        assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
+
+        # Broker, Poller, Reactionner named as in the configuration
+        link = self.arbiter.conf.brokers.find_by_name('broker-master')
+        assert link is not None
+        link = self.arbiter.conf.pollers.find_by_name('poller-master')
+        assert link is not None
+        link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
+        assert link is not None
+
+        # Receiver - no default receiver created
+        link = self.arbiter.conf.receivers.find_by_name('receiver-master')
+        assert link is not None
+
+    def test_config_test_ok(self):
+        """ Default test configuration has no loading problems ...
 
         :return: None
         """
@@ -171,6 +211,52 @@ class TestConfig(AlignakTest):
 
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('spaced-host')
         assert host is not None
+
+    def test_plus_syntax(self):
+        """ Test that plus (+) is not allowed for single value properties
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/host_bad_plus_syntax.cfg')
+        self.show_logs()
+        assert not self.conf_is_correct
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in host::test_host_1 is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "A + value for a single string (display_name) is not handled"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hosts configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 2
+
+    def test_underscore_syntax(self):
+        """ Test that underscore (_) is not allowed for list value properties
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/host_macro_is_a_list.cfg')
+        self.show_logs()
+        assert not self.conf_is_correct
+
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in host::test_host_1 is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "A + value for a single string (_macro_list_plus) is not handled"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hosts configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 2
 
     def test_definition_order(self):
         """ Test element definition order
@@ -400,6 +486,76 @@ class TestConfig(AlignakTest):
                 "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
             )
         )
+
+    def test_malformed_parameters(self):
+        """ Configuration is not correct because of malformed parameters
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/bad_parameters_syntax.cfg')
+        assert not self.conf_is_correct
+        self.show_logs()
+
+        # Error messages
+        assert len(self.configuration_errors) == 2
+        self.assert_any_cfg_log_match(re.escape(
+            "the parameter parameter2 is malformed! (no = sign)"
+        ))
+
+    def test_nagios_parameters(self):
+        """Configuration has some old nagios parameters
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/config/deprecated_configuration.cfg')
+        assert not self.conf_is_correct
+        self.show_logs()
+
+        # Error messages
+        assert len(self.configuration_errors) == 10
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'status_file = /tmp/status' and "
+            "'object_cache_file = /tmp/cache' need to use an external module such "
+            "as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'log_file = /tmp/log' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'use_syslog = True' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'host_perfdata_file = /tmp/host_perf' "
+            "and 'service_perfdata_file = /tmp/srv_perf' need to use an "
+            "external module such as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameters 'state_retention_file = /tmp/retention' "
+            "and 'retention_update_interval = 10' need to use an "
+            "external module such as 'retention' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Your configuration parameter 'command_file = /tmp/command' needs to use an "
+            "external module such as 'logs' but I did not found one!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "use_regexp_matching parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ochp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ocsp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Check global parameters failed"
+        ))
 
     def test_broken_configuration_2(self):
         """ Configuration is not correct because of a non-existing path
@@ -812,6 +968,30 @@ class TestConfig(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(command)
         self.external_command_loop()
         assert 'DOWN' == host.state
+
+    def test_config_hosts_default_check_command(self):
+        """ Test hosts default check command
+            - Check that an host without declared command uses the default _internal_host_up
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/hosts_commands.cfg')
+        self.show_logs()
+        assert self.conf_is_correct
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        command = self.arbiter.conf.commands.find_by_name('_internal_host_up')
+        print("Command: %s" % command)
+        assert command
+
+        host = self.arbiter.conf.hosts.find_by_name('test_host')
+        assert '_internal_host_up' == host.check_command.get_name()
+
 
     def test_config_services(self):
         """ Test services initial states

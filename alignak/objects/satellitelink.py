@@ -133,8 +133,8 @@ class SatelliteLink(Item):
         if hasattr(self, 'port'):
             try:
                 self.arb_satmap['port'] = int(self.port)
-            except ValueError:
-                pass
+            except ValueError:  # pragma: no cover, simple protection
+                logger.error("Satellite port must be an integer: %s", self.port)
 
     def get_name(self):
         """Get the name of the link based on its type
@@ -194,7 +194,7 @@ class SatelliteLink(Item):
         try:
             self.con.post('put_conf', {'conf': conf}, wait='long')
             return True
-        except IOError as exp:
+        except IOError as exp:  # pragma: no cover, simple protection
             self.con = None
             logger.error("IOError for %s: %s", self.get_name(), str(exp))
             return False
@@ -335,8 +335,11 @@ class SatelliteLink(Item):
         except HTTPEXCEPTIONS, exp:
             self.add_failed_check_attempt(reason=str(exp))
 
-    def wait_new_conf(self):
+    def wait_new_conf(self):  # pragma: no cover, no more used
         """Send a HTTP request to the satellite (GET /wait_new_conf)
+
+        TODO: is it still useful, wait_new_conf is implemented in the
+        HTTP interface of each daemon
 
         :return: True if wait new conf, otherwise False
         :rtype: bool
@@ -379,9 +382,12 @@ class SatelliteLink(Item):
             self.con = None
             return False
 
-    def remove_from_conf(self, sched_id):
+    def remove_from_conf(self, sched_id):  # pragma: no cover, no more used
         """Send a HTTP request to the satellite (GET /remove_from_conf)
         Tell a satellite to remove a scheduler from conf
+
+        TODO: is it still useful, remove_from_conf is implemented in the HTTP
+        interface of each daemon
 
         :param sched_id: scheduler id to remove
         :type sched_id: int
@@ -432,12 +438,14 @@ class SatelliteLink(Item):
             for (key, val) in tab.iteritems():
                 try:
                     tab_cleaned[key] = val
-                except ValueError:
+                except ValueError:  # pragma: no cover, simple protection
+                    # TODO: make it a log?
                     print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
                           self.get_name(), tab
             # We can update our list now
             self.managed_confs = tab_cleaned
-        except HTTPEXCEPTIONS, exp:
+        except HTTPEXCEPTIONS, exp:  # pragma: no cover, simple protection
+            # TODO: make it a log?
             print "EXCEPTION IN what_i_managed", str(exp)
             # A timeout is not a crime, put this case aside
             # TODO : fix the timeout part?
@@ -511,13 +519,13 @@ class SatelliteLink(Item):
                 self.con = None
                 return []
             return tab
-        except HTTPEXCEPTIONS:
+        except HTTPEXCEPTIONS:  # pragma: no cover, simple protection
             self.con = None
             return []
-        except AttributeError:
+        except AttributeError:  # pragma: no cover, simple protection
             self.con = None
             return []
-        except AlignakClassLookupException as exp:
+        except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
             logger.error('Cannot un-serialize external commands received: %s', exp)
 
     def prepare_for_conf(self):

@@ -22,6 +22,7 @@
 This file test the dependencies between services, hosts
 """
 
+import re
 import time
 from copy import copy
 from nose.tools import nottest
@@ -393,7 +394,7 @@ class TestDependencies(AlignakTest):
         assert ['d', 'x'] == host1.act_depend_of[0][1]
 
     def test_c_notright1(self):
-        """ Test that the arbiter raises an error when have an orphan dependency in config files
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
         in hostdependency, dependent_host_name is unknown
 
         :return: None
@@ -401,7 +402,17 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
-        assert len(self.configuration_errors) == 4
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Configuration in hostdependency::unknown/unknown is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "Error: the host dependency got a bad dependent_host_name definition"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "hostdependencies configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
     def test_c_notright2(self):
@@ -413,8 +424,17 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
-        # TODO: improve test
-        assert len(self.configuration_errors) == 4
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Configuration in hostdependency::unknown/unknown is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "Error: the host dependency got a bad host_name definition"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "hostdependencies configuration is incorrect!"
+        ))
+        assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
     def test_c_notright3(self):
@@ -426,11 +446,18 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad3.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "the parent 'test_router_notexist' for the host 'test_host_11' is unknown!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "hosts configuration is incorrect!"
+        ))
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 8
 
     def test_c_notright4(self):
-        """ Test that the arbiter raises an error when have an orphan dependency in config files
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, dependent_service_description is unknown
 
         :return: None
@@ -438,11 +465,18 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad4.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Service test_ok_1_notfound not found for host test_host_00"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "servicedependencies configuration is incorrect!"
+        ))
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
     def test_c_notright5(self):
-        """ Test that the arbiter raises an error when have an orphan dependency in config files
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, dependent_host_name is unknown
 
         :return: None
@@ -450,11 +484,18 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad5.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Service test_ok_1 not found for host test_host_00_notfound"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "servicedependencies configuration is incorrect!"
+        ))
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
     def test_c_notright6(self):
-        """ Test that the arbiter raises an error when have an orphan dependency in config files
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, host_name unknown
 
         :return: None
@@ -462,11 +503,18 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad6.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Service test_ok_0 not found for host test_host_00_notfound"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "servicedependencies configuration is incorrect!"
+        ))
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
     def test_c_notright7(self):
-        """ Test that the arbiter raises an error when have an orphan dependency in config files
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, service_description unknown
 
         :return: None
@@ -474,7 +522,39 @@ class TestDependencies(AlignakTest):
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad7.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Service test_ok_0_notknown not found for host test_host_00"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "Service test_ok_0_notknown not found for host test_host_11"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "servicedependencies configuration is incorrect!"
+        ))
         # Service test_ok_0_notknown not found for 2 hosts.
+        assert len(self.configuration_errors) == 3
+        assert len(self.configuration_warnings) == 0
+
+    def test_c_notright8(self):
+        """ Test that the arbiter raises an error when there is orphan dependency in config files
+        in hostdependency, dependent_hostgroup_name is unknown
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/dependencies/cfg_dependencies_bad8.cfg')
+        self.show_logs()
+        self.assert_any_cfg_log_match(re.escape(
+                "Configuration in hostdependency::unknown/unknown is incorrect"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "Error: the host dependency got a bad dependent_host_name definition 'test_host_X'"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+                "hostdependencies configuration is incorrect!"
+        ))
         assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
@@ -1081,6 +1161,7 @@ class TestDependencies(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_explode_hostgroup.cfg')
+        self.show_logs()
         assert self.conf_is_correct
 
 

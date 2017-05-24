@@ -66,7 +66,7 @@ class ReceiverLink(SatelliteLink):
                                                          fill_brok=['full_status'], to_send=True),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this reactionner to the realm
 
@@ -74,9 +74,12 @@ class ReceiverLink(SatelliteLink):
         """
         self.realm.receivers.append(self)
 
-    def push_host_names(self, sched_id, hnames):
+    def push_host_names(self, sched_id, hnames):  # pragma: no cover, seems not to be used anywhere
         """
         Send host names to receiver
+
+        TODO: remove this function, because the receiver daemon implements its own push function
+        because of code refactoring
 
         :param sched_id: id of the scheduler
         :type sched_id: int

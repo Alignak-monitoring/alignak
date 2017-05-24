@@ -156,6 +156,25 @@ class TestCommand(AlignakTest):
         assert 'command_name' not in b.data
         assert 'command_line' not in b.data
 
+    def test_command_with_tags(self):
+        """ Test command with poller/reactionner tag
+
+        :return: None
+        """
+        self.print_header()
+
+        # Get a command
+        c = self._sched.commands.find_by_name("command_poller_tag")
+        assert c is not None
+        assert c.poller_tag == 'tag1'
+        assert c.reactionner_tag == 'None'
+
+        # Get a command
+        c = self._sched.commands.find_by_name("command_reactionner_tag")
+        assert c is not None
+        assert c.poller_tag == 'None'
+        assert c.reactionner_tag == 'tag2'
+
     def test_command_internal_host_up(self):
         """ Test internal command _internal_host_up
 

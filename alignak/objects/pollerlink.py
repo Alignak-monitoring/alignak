@@ -65,7 +65,7 @@ class PollerLink(SatelliteLink):
         'poller_tags':  ListProp(default=['None'], to_send=True),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this relation to the realm
 

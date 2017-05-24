@@ -49,13 +49,19 @@ class BrokerInterface(GenericInterface):
         :rtype: list
         """
         app = self.app
-        res = []
+        res = {
+            'modules_count': len(app.modules_manager.instances)
+        }
 
         insts = [inst for inst in app.modules_manager.instances if inst.is_external]
         for inst in insts:
             try:
-                res.append({'module_alias': inst.get_name(), 'queue_size': inst.to_q.qsize()})
+                res[inst.uuid] = {'module_alias': inst.get_name(),
+                                  'module_types': inst.get_types(),
+                                  'queue_size': inst.to_q.qsize()}
             except Exception:  # pylint: disable=W0703
-                res.append({'module_alias': inst.get_name(), 'queue_size': 0})
+                res[inst.uuid] = {'module_alias': inst.get_name(),
+                                  'module_types': inst.get_types(),
+                                  'queue_size': 0}
 
         return res

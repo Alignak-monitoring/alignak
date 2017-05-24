@@ -140,10 +140,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         if isinstance(b, Brok):
             self.broks[b.uuid] = b
-        elif isinstance(b, ExternalCommand):
+        elif isinstance(b, ExternalCommand):  # pragma: no cover, useful?
+            # todo: does the arbiter will still manage external commands? It is the receiver job!
             self.external_commands.append(b)
-        else:
-            logger.warning('Cannot manage object type %s (%s)', type(b), b)
 
     def push_broks_to_broker(self):
         """Send all broks from arbiter internal list to broker
@@ -158,8 +157,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # They are gone, we keep none!
                     self.broks.clear()
 
-    def get_external_commands_from_satellites(self):
+    def get_external_commands_from_satellites(self):  # pragma: no cover, useful?
         """Get external commands from all other satellites
+
+        TODO: does the arbiter will still manage external commands? It is the receiver job!
 
         :return: None
         """
@@ -199,8 +200,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 self.add(brok)
 
     @staticmethod
-    def get_daemon_links(daemon_type):
+    def get_daemon_links(daemon_type):  # pragma: no cover, not used anywhere
         """Get the name of arbiter link (here arbiters)
+
+        TODO: use or remove this function!
 
         :param daemon_type: daemon type
         :type daemon_type: str
@@ -394,7 +397,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.clean()
 
         # If the conf is not correct, we must get out now (do not try to split the configuration)
-        if not self.conf.conf_is_correct:
+        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
             # Display found warnings and errors
@@ -407,7 +410,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # The conf can be incorrect here if the cut into parts see errors like
         # a realm with hosts and no schedulers for it
-        if not self.conf.conf_is_correct:
+        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
             # Display found warnings and errors
@@ -452,7 +455,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Still a last configuration check because some things may have changed when
         # we prepared the configuration for sending
-        if not self.conf.conf_is_correct:
+        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
             err = "Configuration is incorrect, sorry, I bail out"
             logger.error(err)
             # Display found warnings and errors
@@ -462,7 +465,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Display found warnings and errors
         self.conf.show_errors()
 
-    def load_modules_configuration_objects(self, raw_objects):
+    def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
+        # not yet with unit tests.
         """Load configuration objects from arbiter modules
         If module implements get_objects arbiter will call it and add create
         objects
@@ -509,7 +513,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.debug("Added %i objects to %s from module %s",
                              len(objs[prop]), type_c, inst.get_name())
 
-    def load_modules_alignak_configuration(self):
+    def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
         """Load Alignak configuration from the arbiter modules
         If module implements get_alignak_configuration, call this function
 
@@ -874,8 +878,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # shouldn't the 'daemon_types' (whatever it is above) be always present?
         return getattr(self.conf, daemon_type + 's', None)
 
-    def get_retention_data(self):
+    def get_retention_data(self):  # pragma: no cover, useful?
         """Get data for retention
+
+        TODO: using retention in the arbiter is dangerous and
+        do not seem of any utility with Alignak
 
         :return: broks and external commands in a dict
         :rtype: dict
@@ -886,8 +893,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         }
         return res
 
-    def restore_retention_data(self, data):
+    def restore_retention_data(self, data):  # pragma: no cover, useful?
         """Restore data from retention (broks, and external commands)
+
+        TODO: using retention in the arbiter is dangerous and
+        do not seem of any utility with Alignak
 
         :param data: data to restore
         :type data: dict

@@ -433,15 +433,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     macros = {
         # Business rules output formatting related macros
-        'STATUS':            ('get_status', ['hosts', 'services']),
-        'SHORTSTATUS':       ('get_short_status', ['hosts', 'services']),
-        'FULLNAME':          'get_full_name',
+        'STATUS': ('get_status', ['hosts', 'services']),
+        'SHORTSTATUS': ('get_short_status', ['hosts', 'services']),
+        'FULLNAME': 'get_full_name',
     }
 
     old_properties = {
-        'normal_check_interval':    'check_interval',
-        'retry_check_interval':    'retry_interval',
-        'criticity':    'business_impact',
+        'normal_check_interval': 'check_interval',
+        'retry_check_interval': 'retry_interval',
+        'criticity': 'business_impact',
     }
 
     special_properties = []
@@ -590,10 +590,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # They can be from self, or class
         (low_flap_threshold, high_flap_threshold) = (self.low_flap_threshold,
                                                      self.high_flap_threshold)
-        if low_flap_threshold == -1:
+        # TODO: no more useful because a default value is defined, but is it really correct?
+        if low_flap_threshold == -1:  # pragma: no cover, never used
             cls = self.__class__
             low_flap_threshold = cls.global_low_flap_threshold
-        if high_flap_threshold == -1:
+        if high_flap_threshold == -1:  # pragma: no cover, never used
             cls = self.__class__
             high_flap_threshold = cls.global_high_flap_threshold
 
@@ -1254,7 +1255,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference):  # pragma: no cover,
+        # not with unit tests
         """If a system time change occurs we have to update
         properties time related to reflect change
 
@@ -1379,7 +1381,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # ok we can put it in our temp action queue
         self.actions.append(event_h)
 
-    def get_snapshot(self, hosts, macromodulations, timeperiods):
+    def get_snapshot(self, hosts, macromodulations, timeperiods):  # pragma: no cover, not yet!
         """
         Raise snapshot event handlers if NONE of the following conditions is met::
 
@@ -1589,7 +1591,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # so if <0, set 0
         try:
             self.latency = max(0, chk.check_time - chk.t_to_go)
-        except TypeError:
+        except TypeError:  # pragma: no cover, simple protection
             pass
 
         # Ok, the first check is done
@@ -2669,11 +2671,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             trigger = triggers[trigger_id]
             try:
                 trigger.eval(self)
-            except Exception:  # pylint: disable=W0703
-                logger.error(
-                    "We got an exception from a trigger on %s for %s",
-                    self.get_full_name().decode('utf8', 'ignore'), str(traceback.format_exc())
-                )
+            # pylint: disable=W0703
+            except Exception:  # pragma: no cover, simple protection
+                logger.error("We got an exception from a trigger on %s for %s",
+                             self.get_full_name().decode('utf8', 'ignore'),
+                             str(traceback.format_exc()))
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data brok dependent on the brok_type
@@ -2804,7 +2806,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if not self.acknowledgement.sticky:
                 self.unacknowledge_problem()
 
-    def raise_check_result(self):
+    def raise_check_result(self):  # pragma: no cover, base function
         """Raise ACTIVE CHECK RESULT entry
         Function defined in inherited objects (Host and Service)
 
@@ -2812,7 +2814,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_alert_log_entry(self):
+    def raise_alert_log_entry(self):  # pragma: no cover, base function
         """Raise ALERT entry
         Function defined in inherited objects (Host and Service)
 
@@ -2820,7 +2822,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_acknowledge_log_entry(self):
+    def raise_acknowledge_log_entry(self):  # pragma: no cover, base function
         """Raise ACKNOWLEDGE STARTED entry
         Function defined in inherited objects (Host and Service)
 
@@ -2828,7 +2830,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_unacknowledge_log_entry(self):
+    def raise_unacknowledge_log_entry(self):  # pragma: no cover, base function
         """Raise ACKNOWLEDGE STOPPED entry
         Function defined in inherited objects (Host and Service)
 
@@ -2836,7 +2838,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def is_state(self, status):
+    def is_state(self, status):  # pragma: no cover, base function
         """Return if status match the current item status
 
         :param status: status to compare. Usually comes from config files
@@ -2846,7 +2848,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_freshness_log_entry(self, t_stale_by, t_threshold):
+    def raise_freshness_log_entry(self, t_stale_by, t_threshold):  # pragma: no cover, base function
         """Raise freshness alert entry (warning level)
         Format is : "The results of item '*get_name()*' are stale by *t_stale_by*
                      (threshold=*t_threshold*).  I'm forcing an immediate check of the item."
@@ -2861,7 +2863,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_snapshot_log_entry(self, command):
+    def raise_snapshot_log_entry(self, command):  # pragma: no cover, base function
         """Raise item SNAPSHOT entry (critical level)
         Format is : "ITEM SNAPSHOT: *self.get_name()*;*state*;*state_type*;*attempt*;
                     *command.get_name()*"
@@ -2873,7 +2875,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_flapping_start_log_entry(self, change_ratio, threshold):
+    def raise_flapping_start_log_entry(self, change_ratio, threshold):  # pragma: no cover,
+        # base function
         """Raise FLAPPING ALERT START entry (critical level)
 
         :param change_ratio: percent of changing state
@@ -2884,7 +2887,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_event_handler_log_entry(self, command):
+    def raise_event_handler_log_entry(self, command):  # pragma: no cover, base function
         """Raise EVENT HANDLER entry (critical level)
 
         :param command: Handler launched
@@ -2893,7 +2896,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_flapping_stop_log_entry(self, change_ratio, threshold):
+    def raise_flapping_stop_log_entry(self, change_ratio, threshold):  # pragma: no cover,
+        # base function
         """Raise FLAPPING ALERT STOPPED entry (critical level)
 
         :param change_ratio: percent of changing state
@@ -2904,7 +2908,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_notification_log_entry(self, notif, contact, host_ref):
+    def raise_notification_log_entry(self, notif, contact, host_ref):  # pragma: no cover,
+        # base function
         """Raise NOTIFICATION entry (critical level)
         :param notif: notification object created by service alert
         :type notif: alignak.objects.notification.Notification
@@ -2912,7 +2917,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def get_data_for_checks(self):
+    def get_data_for_checks(self):  # pragma: no cover, base function
         """Get data for a check
 
         :return: list containing the service and the linked host
@@ -2920,7 +2925,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def get_data_for_event_handler(self):
+    def get_data_for_event_handler(self):  # pragma: no cover, base function
         """Get data for an event handler
 
         :return: list containing a single item (this one)
@@ -2928,7 +2933,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def get_data_for_notifications(self, contact, notif):
+    def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
         """Get data for a notification
 
         :param contact: The contact to return
@@ -2966,7 +2971,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state = self.state_before_impact
             self.state_id = self.state_id_before_impact
 
-    def last_time_non_ok_or_up(self):
+    def last_time_non_ok_or_up(self):  # pragma: no cover, base function
         """Get the last time the item was in a non-OK state
 
         :return: return 0
@@ -2985,7 +2990,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.state = 'UNREACHABLE'
         self.last_time_unreachable = int(now)
 
-    def manage_stalking(self, check):
+    def manage_stalking(self, check):  # pragma: no cover, base function
         """Check if the item need stalking or not (immediate recheck)
 
         :param check: finished check (check.status == 'waitconsume')
@@ -3019,6 +3024,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 or not getattr(self, 'obsess_over_host', True):
             return
 
+        # todo: to be deprecated Nagios feature
+        # pragma: no cover, to be deprecated
         macroresolver = MacroResolver()
         if self.my_type == "service":
             data = [hosts[self.host], self]
@@ -3036,7 +3043,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.actions.append(event_h)
 
     def notification_is_blocked_by_item(self, notification_period, hosts, services, n_type,
-                                        t_wished=None):
+                                        t_wished=None):  # pragma: no cover, base function
         """Check if a notification is blocked by item
 
         :param n_type: notification type
@@ -3048,7 +3055,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif,
+                                           contact):  # pragma: no cover, base function
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -3082,24 +3090,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            msg = "[%s::%s] event_handler '%s' is invalid" % (
-                self.my_type, self.get_name(), self.event_handler.command
-            )
+            msg = "[%s::%s] event_handler '%s' is invalid" \
+                  % (self.my_type, self.get_name(), self.event_handler.command)
             self.configuration_errors.append(msg)
             state = False
 
         if not hasattr(self, 'check_command'):
-            msg = "[%s::%s] no check_command" % (
-                self.my_type, self.get_name()
-            )
+            msg = "[%s::%s] no check_command" % (self.my_type, self.get_name())
             self.configuration_errors.append(msg)
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
-                msg = "[%s::%s] check_command '%s' invalid" % (
-                    self.my_type, self.get_name(), self.check_command.command
-                )
+                msg = "[%s::%s] check_command '%s' invalid" % (self.my_type, self.get_name(),
+                                                               self.check_command.command)
                 self.configuration_errors.append(msg)
                 state = False
             if self.got_business_rule:
@@ -3114,7 +3118,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     state = False
 
         if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:
+                and self.notifications_enabled is True:  # pragma: no cover, should never happen
             msg = "[%s::%s] no notification_interval but notifications enabled" % (
                 self.my_type, self.get_name()
             )
@@ -3192,8 +3196,10 @@ class SchedulingItems(CommandCallItems):
         son.parent_dependencies.add(parent_id)
         parent.child_dependencies.add(son_id)
 
-    def del_act_dependency(self, son_id, parent_id):
+    def del_act_dependency(self, son_id, parent_id):  # pragma: no cover, not yet tested
         """Remove act_dependency between two hosts or services.
+
+        TODO: do we really intend to remove dynamically ?
 
         :param son_id: uuid of son host/service
         :type son_id: str

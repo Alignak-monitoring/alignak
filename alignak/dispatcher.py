@@ -354,6 +354,8 @@ class Dispatcher:
         # get scheds, alive and no spare first
         scheds = []
         for sched_id in realm.schedulers:
+            # Update the scheduler instance id with the scheduler uuid
+            self.schedulers[sched_id].instance_id = sched_id
             scheds.append(self.schedulers[sched_id])
 
         # Now we sort the scheds so we take master, then spare

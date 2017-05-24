@@ -1002,7 +1002,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 # Be sure to separate files data
                                 res.write(os.linesep)
                                 file_d.close()
-                            except IOError, exp:
+                            except IOError as exp:  # pragma: no cover, simple protection
                                 msg = "[config] cannot open config file '%s' for reading: %s" % \
                                       (os.path.join(root, c_file), exp)
                                 self.add_error(msg)
@@ -1256,7 +1256,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for path in self.triggers_dirs:
             self.triggers.load_file(path)
 
-    def load_packs(self):
+    def load_packs(self):  # pragma: no cover, not used, see #551
         """Load all packs .pack files from all packs_dirs
 
         :return: None
@@ -1429,7 +1429,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.whole_conf_pack = whole_conf_pack
             logger.debug("[config]serializing total: %s", (time.time() - t01))
 
-        else:
+        else:  # pragma: no cover, not currently the default processing method
             logger.info('Using the multiprocessing serialization pass')
             t01 = time.time()
 
@@ -2020,14 +2020,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         valid = True
         if self.use_regexp_matching:
-            logger.error("use_regexp_matching parameter is not managed.")
+            msg = "use_regexp_matching parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
             valid &= False
-        # if self.ochp_command != '':
-        #      logger.error("ochp_command parameter is not managed.")
-        #      r &= False
-        # if self.ocsp_command != '':
-        #      logger.error("ocsp_command parameter is not managed.")
-        #      r &= False
+        if self.ochp_command:
+            msg = "ochp_command parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
+        if self.ocsp_command:
+            msg = "ocsp_command parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
         return valid
 
     def is_correct(self):  # pylint: disable=R0912, too-many-statements, too-many-locals
@@ -2058,7 +2064,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             try:
                 cur = getattr(self, obj)
-            except AttributeError:
+            except AttributeError:  # pragma: no cover, simple protection
                 logger.info("\t%s are not present in the configuration", obj)
                 continue
 
@@ -2082,7 +2088,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 else:
                     try:
                         dump_list = sorted(cur, key=lambda k: k.get_name())
-                    except AttributeError:
+                    except AttributeError:  # pragma: no cover, simple protection
                         dump_list = cur
 
                 for cur_obj in dump_list:
@@ -2650,11 +2656,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                          ):
             try:
                 objs = [jsonify_r(i) for i in getattr(self, category)]
-            except TypeError:
+            except TypeError:  # pragma: no cover, simple protection
                 logger.warning("Dumping configuration, '%s' not present in the configuration",
                                category)
                 continue
-            except AttributeError:
+            except AttributeError:  # pragma: no cover, simple protection
                 logger.warning("Dumping configuration, '%s' not present in the configuration",
                                category)
                 continue

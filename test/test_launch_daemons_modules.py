@@ -49,7 +49,32 @@ class LaunchDaemons(AlignakTest):
         print("Test terminated!")
 
     def test_daemons_modules(self):
-        """ Running the Alignak daemons with configured modules
+        """Running the Alignak daemons with the default ../etc configuration
+
+        :return: None
+        """
+        self._run_daemons_modules(cfg_folder='../etc',
+                                  tmp_folder='./cfg/run_test_launch_daemons_modules')
+
+    def test_daemons_modules_1(self):
+        """Running the Alignak daemons with a simple configuration
+
+        :return: None
+        """
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+            'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
+        }
+        self._run_daemons_modules(cfg_folder='./cfg/alignak_full_run_daemons_1',
+                                  tmp_folder='./cfg/run_test_launch_daemons_modules_1',
+                                  cfg_modules=cfg_modules)
+
+    def _run_daemons_modules(self, cfg_folder='../etc',
+                             tmp_folder='./cfg/run_test_launch_daemons_modules',
+                             cfg_modules=None):
+        """Update the provided configuration with some informations on the run
+        Run the Alignak daemons with configured modules
 
         :return: None
         """
@@ -57,23 +82,23 @@ class LaunchDaemons(AlignakTest):
 
         # copy etc config files in test/cfg/run_test_launch_daemons_modules and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons_modules'):
-            shutil.rmtree('./cfg/run_test_launch_daemons_modules')
+        if os.path.exists(tmp_folder):
+            shutil.rmtree(tmp_folder)
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons_modules')
-        files = ['cfg/run_test_launch_daemons_modules/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons_modules/daemons/brokerd.ini',
-                 'cfg/run_test_launch_daemons_modules/daemons/pollerd.ini',
-                 'cfg/run_test_launch_daemons_modules/daemons/reactionnerd.ini',
-                 'cfg/run_test_launch_daemons_modules/daemons/receiverd.ini',
-                 'cfg/run_test_launch_daemons_modules/daemons/schedulerd.ini',
-                 'cfg/run_test_launch_daemons_modules/alignak.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/arbiter-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/broker-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/poller-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/reactionner-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/receiver-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/scheduler-master.cfg']
+        shutil.copytree(cfg_folder, tmp_folder)
+        files = [tmp_folder + '/daemons/arbiterd.ini',
+                 tmp_folder + '/daemons/brokerd.ini',
+                 tmp_folder + '/daemons/pollerd.ini',
+                 tmp_folder + '/daemons/reactionnerd.ini',
+                 tmp_folder + '/daemons/receiverd.ini',
+                 tmp_folder + '/daemons/schedulerd.ini',
+                 tmp_folder + '/alignak.cfg',
+                 tmp_folder + '/arbiter/daemons/arbiter-master.cfg',
+                 tmp_folder + '/arbiter/daemons/broker-master.cfg',
+                 tmp_folder + '/arbiter/daemons/poller-master.cfg',
+                 tmp_folder + '/arbiter/daemons/reactionner-master.cfg',
+                 tmp_folder + '/arbiter/daemons/receiver-master.cfg',
+                 tmp_folder + '/arbiter/daemons/scheduler-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -90,17 +115,20 @@ class LaunchDaemons(AlignakTest):
                     outfile.write(line)
 
         # declare modules in the daemons configuration
-        shutil.copy('./cfg/default/mod-example.cfg', './cfg/run_test_launch_daemons_modules/arbiter/modules')
-        files = ['cfg/run_test_launch_daemons_modules/arbiter/daemons/arbiter-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/broker-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/poller-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/reactionner-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/receiver-master.cfg',
-                 'cfg/run_test_launch_daemons_modules/arbiter/daemons/scheduler-master.cfg']
-        replacements = {
-            'modules': 'modules Example'
-        }
-        for filename in files:
+        if cfg_modules is None:
+            shutil.copy('./cfg/default/mod-example.cfg', tmp_folder + '/arbiter/modules')
+            cfg_modules = {
+                'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+                'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
+            }
+
+        print("Setting up daemons modules configuration...")
+        for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            if daemon not in cfg_modules:
+                continue
+
+            filename = tmp_folder + '/arbiter/daemons/%s-master.cfg' % daemon
+            replacements = {'modules': 'modules ' + cfg_modules[daemon]}
             lines = []
             with open(filename) as infile:
                 for line in infile:
@@ -111,14 +139,8 @@ class LaunchDaemons(AlignakTest):
                 for line in lines:
                     outfile.write(line)
 
-        self.setup_with_file('cfg/run_test_launch_daemons_modules/alignak.cfg')
+        self.setup_with_file(tmp_folder + '/alignak.cfg')
         assert self.conf_is_correct
-
-        self.procs = {}
-        satellite_map = {
-            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
-            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
-        }
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
@@ -130,12 +152,13 @@ class LaunchDaemons(AlignakTest):
                 print("- removed /tmp/%sd.log" % daemon)
 
         print("Launching the daemons...")
+        self.procs = {}
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             args = ["../alignak/bin/alignak_%s.py" %daemon,
-                    "-c", "./cfg/run_test_launch_daemons_modules/daemons/%sd.ini" % daemon]
+                    "-c", tmp_folder + "/daemons/%sd.ini" % daemon]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            sleep(1)
+            sleep(0.1)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
 
         sleep(1)
@@ -152,8 +175,8 @@ class LaunchDaemons(AlignakTest):
             assert ret is None, "Daemon %s not started!" % name
             print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
 
-        # Let the daemons start ...
-        sleep(5)
+        # Let the daemons initialize ...
+        sleep(3)
 
         print("Testing pid files and log files...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
@@ -164,13 +187,13 @@ class LaunchDaemons(AlignakTest):
 
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/run_test_launch_daemons_modules/daemons/arbiterd.ini",
-                "-a", "cfg/run_test_launch_daemons_modules/alignak.cfg"]
+                "-c", tmp_folder + "/daemons/arbiterd.ini",
+                "-a", tmp_folder + "/alignak.cfg"]
         self.procs['arbiter'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
 
-        sleep(5)
+        sleep(1)
 
         name = 'arbiter'
         print("Testing Arbiter start %s" % name)

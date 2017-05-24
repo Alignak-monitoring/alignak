@@ -322,7 +322,7 @@ class Worker(object):
         else:
             return 0
 
-    def work(self, slave_q, returns_queue, control_q):  # pragma: not with unit tests...
+    def work(self, slave_q, returns_queue, control_q):  # pragma: no cover, not with unit tests
         """
         Wrapper function for work in order to catch the exception
         to see the real work, look at do_work
@@ -347,7 +347,7 @@ class Worker(object):
             # Ok I die now
             raise
 
-    def do_work(self, slave_q, returns_queue, control_q):  # pragma: not with unit tests...
+    def do_work(self, slave_q, returns_queue, control_q):  # pragma: no cover, not with unit tests
         """
         Main function of the worker.
         * Get checks
@@ -416,7 +416,7 @@ class Worker(object):
             if timeout < 0:
                 timeout = 1.0
 
-    def set_proctitle(self):
+    def set_proctitle(self):  # pragma: no cover, not with unit tests
         """
         Set the proctitle of this worker for readability purpose
 

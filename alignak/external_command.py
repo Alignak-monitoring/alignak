@@ -534,7 +534,7 @@ class ExternalCommandManager:
         # Maybe the command is invalid. Bailout
         try:
             command = excmd.cmd_line
-        except AttributeError as exp:
+        except AttributeError as exp:  # pragma: no cover, simple protection
             logger.warning("resolve_command, error with command %s", excmd)
             logger.exception("Exception: %s", exp)
             return None
@@ -607,7 +607,12 @@ class ExternalCommandManager:
         if not host_found:
             if self.accept_passive_unknown_check_results:
                 brok = self.get_unknown_check_result_brok(command)
-                self.send_an_element(brok)
+                if brok:
+                    self.send_an_element(brok)
+                else:
+                    logger.warning("External command received for the host '%s', "
+                                   "but the host could not be found! Command is: %s",
+                                   host_name, command)
             else:
                 logger.warning("Passive check result was received for host '%s', "
                                "but the host could not be found!", host_name)
@@ -648,9 +653,7 @@ class ExternalCommandManager:
             data['output'] = match.group(5)
             data['perf_data'] = match.group(6)
 
-        brok = Brok({'type': 'unknown_%s_check_result' % match.group(2).lower(), 'data': data})
-
-        return brok
+        return Brok({'type': 'unknown_%s_check_result' % match.group(2).lower(), 'data': data})
 
     def dispatch_global_command(self, command):
         """Send command to scheduler, it's a global one
@@ -790,16 +793,7 @@ class ExternalCommandManager:
                                                "but the host could not be found!", val)
                             return None
 
-                        if host is not None:
-                            args.append(host)
-                        elif self.accept_passive_unknown_check_results:
-                            brok = self.get_unknown_check_result_brok(command)
-                            self.daemon.add_brok(brok)
-                            return None
-                        else:
-                            logger.warning(
-                                "A command was received for the host '%s', "
-                                "but the host could not be found!", val)
+                        args.append(host)
 
                     elif type_searched == 'contact':
                         contact = self.contacts.find_by_name(val)

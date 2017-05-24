@@ -233,8 +233,10 @@ class Hostdependencies(Items):
                     err = "Error: the host dependency got " \
                           "a bad dependent_host_name definition '%s'" % dh_name
                     hostdep.configuration_errors.append(err)
-                hostdep.host_name = host.uuid
-                hostdep.dependent_host_name = dephost.uuid
+                if host:
+                    hostdep.host_name = host.uuid
+                if dephost:
+                    hostdep.dependent_host_name = dephost.uuid
             except AttributeError, exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.configuration_errors.append(err)
@@ -254,7 +256,7 @@ class Hostdependencies(Items):
                     hostdep.dependency_period = timeperiod.uuid
                 else:
                     hostdep.dependency_period = ''
-            except AttributeError, exp:
+            except AttributeError as exp:  # pragma: no cover, simple protectionn
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
     def linkify_h_by_hd(self, hosts):
@@ -265,6 +267,10 @@ class Hostdependencies(Items):
         :return: None
         """
         for hostdep in self:
+            # Only used for debugging purpose when loops are detected
+            setattr(hostdep, "host_name_string", "undefined")
+            setattr(hostdep, "dependent_host_name_string", "undefined")
+
             # if the host dep conf is bad, pass this one
             if getattr(hostdep, 'host_name', None) is None or\
                     getattr(hostdep, 'dependent_host_name', None) is None:

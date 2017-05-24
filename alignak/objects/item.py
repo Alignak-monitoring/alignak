@@ -160,11 +160,14 @@ class Item(AlignakObject):
                         val = macro
                     # a list for a custom macro is not managed (conceptually invalid)
                     # so take the first defined
-                    elif isinstance(macro, list) and len(macro) > 0:
+                    elif isinstance(macro, list) and macro:
                         val = macro[0]
                     # not a list of void? just put void string so
                     else:
+                        warning = "Set the macro property '%s' as empty string" % key
+                        self.configuration_warnings.append(warning)
                         val = ''
+                    # After this a macro is always containing a string value!
                 else:
                     warning = "Guessing the property %s type because " \
                               "it is not in %s object properties" % \
@@ -172,6 +175,9 @@ class Item(AlignakObject):
                     self.configuration_warnings.append(warning)
                     self.properties[key] = ToGuessProp(default='')
                     val = ToGuessProp.pythonize(params[key])
+                    warning = "Guessed the property %s type as a %s" % \
+                              (key, type(val))
+                    self.configuration_warnings.append(warning)
             except (PythonizeError, ValueError) as expt:
                 err = "Error while pythonizing parameter '%s': %s" % (key, expt)
                 self.configuration_errors.append(err)
@@ -179,8 +185,8 @@ class Item(AlignakObject):
 
             # checks for attribute value special syntax (+ or _)
             # we can have '+param' or ['+template1' , 'template2']
-            if isinstance(val, str) and len(val) >= 1 and val[0] == '+':
-                err = "A + value for a single string is not handled"
+            if isinstance(val, basestring) and len(val) >= 1 and val[0] == '+':
+                err = "A + value for a single string (%s) is not handled" % key
                 self.configuration_errors.append(err)
                 continue
 
@@ -189,26 +195,18 @@ class Item(AlignakObject):
                     isinstance(val[0], unicode) and
                     len(val[0]) >= 1 and
                     val[0][0] == '+'):
-                # Special case: a _MACRO can be a plus. so add to plus
-                # but upper the key for the macro name
+                # We manage a list property which first element is a string that starts with +
                 val[0] = val[0][1:]
-                if key[0] == "_":
-
-                    self.plus[key.upper()] = val  # we remove the +
-                else:
-                    self.plus[key] = val   # we remove the +
+                self.plus[key] = val   # we remove the +
             elif key[0] == "_":
-                if isinstance(val, list):
-                    err = "no support for _ syntax in multiple valued attributes"
-                    self.configuration_errors.append(err)
-                    continue
                 custom_name = key.upper()
                 self.customs[custom_name] = val
             else:
                 setattr(self, key, val)
 
     @property
-    def id(self):  # pylint: disable=C0103
+    def id(self):  # pragma: no cover, deprecation
+        # pylint: disable=C0103
         """Getter for id, raise deprecation warning
 
         :return: self.uuid
@@ -218,7 +216,8 @@ class Item(AlignakObject):
         return self.uuid
 
     @id.setter
-    def id(self, value):  # pylint: disable=C0103
+    def id(self, value):  # pragma: no cover, deprecation
+        # pylint: disable=C0103
         """Setter for id, raise deprecation warning
 
         :param value: value to set
@@ -272,6 +271,8 @@ class Item(AlignakObject):
         """
         Clean properties only need when initialize & configure
 
+        TODO: never called anywhere, still useful?
+
         :return: None
         """
         for name in ('imported_from', 'use', 'plus', 'templates',):
@@ -283,6 +284,8 @@ class Item(AlignakObject):
     def get_name(self):
         """
         Get the name of the item
+
+        TODO: never called anywhere, still useful?
 
         :return: the object name string
         :rtype: str
@@ -470,9 +473,11 @@ class Item(AlignakObject):
                 setattr(self, new_name, value)
                 delattr(self, old_name)
 
-    def get_raw_import_values(self):
+    def get_raw_import_values(self):  # pragma: no cover, never used
         """
         Get properties => values of this object
+
+        TODO: never called anywhere, still useful?
 
         :return: dictionary of properties => values
         :rtype: dict
@@ -673,9 +678,12 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
-    def dump(self, dfile=None):  # pylint: disable=W0613
+    def dump(self, dfile=None):  # pragma: no cover, never called
+        # pylint: disable=W0613
         """
         Dump properties
+
+        TODO: still useful?
 
         :return: dictionary with properties
         :rtype: dict
@@ -694,17 +702,12 @@ class Item(AlignakObject):
         return dmp
 
     def _get_name(self):
-        """
-        Get the name of the object
+        """Get the name of the object
 
         :return: the object name string
         :rtype: str
         """
-        if hasattr(self, 'get_name'):
-            return self.get_name()
-        name = getattr(self, 'name', None)
-        host_name = getattr(self, 'host_name', None)
-        return '%s(host_name=%s)' % (name or 'no-name', host_name or '')
+        return self.get_name()
 
     def get_full_name(self):
         """Accessor to name attribute
@@ -738,9 +741,10 @@ class Items(object):
             self.add_items(items, index_items)
 
     @staticmethod
-    def get_source(item):
-        """
-        Get source, so with what system we import this item
+    def get_source(item):  # pragma: no cover, never called
+        """Get source, so with what system we import this item
+
+        TODO: still useful?
 
         :param item: item object
         :type item: object
@@ -869,7 +873,7 @@ class Items(object):
         """
         try:
             del self.templates[tpl.uuid]
-        except KeyError:
+        except KeyError:  # pragma: no cover, simple protection
             pass
         self.unindex_template(tpl)
 
@@ -884,7 +888,7 @@ class Items(object):
         name = getattr(tpl, 'name', '')
         try:
             del self.name_to_template[name]
-        except KeyError:
+        except KeyError:  # pragma: no cover, simple protection
             pass
 
     def add_item(self, item, index=True):
@@ -1014,9 +1018,10 @@ class Items(object):
         for i in self:
             i.prepare_for_conf_sending()
 
-    def old_properties_names_to_new(self):
-        """
-        Convert old Nagios2 names to Nagios3 new names
+    def old_properties_names_to_new(self):  # pragma: no cover, never called
+        """Convert old Nagios2 names to Nagios3 new names
+
+        TODO: still useful?
 
         :return: None
         """
@@ -1167,9 +1172,10 @@ class Items(object):
         """
         del self.templates
 
-    def clean(self):
-        """
-        Request to remove the unnecessary attributes/others from our items
+    def clean(self):  # pragma: no cover, never called
+        """Request to remove the unnecessary attributes/others from our items
+
+        TODO: still useful?
 
         :return: None
         """
@@ -1221,7 +1227,7 @@ class Items(object):
             try:
                 if getattr(i, prop) == 'null':
                     delattr(i, prop)
-            except AttributeError:
+            except AttributeError:  # pragma: no cover, simple protection
                 pass
 
     def apply_inheritance(self):
@@ -1396,9 +1402,10 @@ class Items(object):
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod.uuid)
 
-    def linkify_with_triggers(self, triggers):
-        """
-        Link triggers
+    def linkify_with_triggers(self, triggers):  # pragma: no cover, never called
+        """Link triggers
+
+        TODO: still useful?
 
         :param triggers: triggers object
         :type triggers: object
@@ -1557,7 +1564,7 @@ class Items(object):
             try:
                 hnames_list.extend(
                     self.get_hosts_from_hostgroups(hgnames, hostgroups))
-            except ValueError, err:
+            except ValueError, err:  # pragma: no cover, simple protection
                 item.configuration_errors.append(str(err))
 
         # Expands host names
@@ -1583,9 +1590,10 @@ class Items(object):
 
         item.host_name = ','.join(hnames)
 
-    def explode_trigger_string_into_triggers(self, triggers):
-        """
-        Get al trigger in triggers and manage them
+    def explode_trigger_string_into_triggers(self, triggers):  # pragma: no cover, never called
+        """Get al trigger in triggers and manage them
+
+        TODO: still useful?
 
         :param triggers: triggers object
         :type triggers: object

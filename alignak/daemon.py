@@ -780,9 +780,9 @@ class Daemon(object):
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                           use_ssl, ca_cert, ssl_key,
                                           ssl_cert, server_dh, self.daemon_thread_pool_size)
-        except PortNotFree as exp:
-            logger.error('The HTTP daemon port is not free...')
-            logger.exception('The HTTP daemon port is not free: %s', exp)
+        except PortNotFree:
+            logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
+            # logger.exception('The HTTP daemon port is not free: %s', exp)
             return False
 
         return True
@@ -1049,8 +1049,8 @@ class Daemon(object):
         try:
             self.http_daemon.run()
         except PortNotFree as exp:
-            print("Exception: %s" % str(exp))
-            logger.exception('The HTTP daemon port is not free: %s', exp)
+            # print("Exception: %s" % str(exp))
+            # logger.exception('The HTTP daemon port is not free: %s', exp)
             raise exp
         except Exception as exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
