@@ -174,6 +174,8 @@ Alignak daemons statistics dictionary:
 
 """
 
+import os
+import datetime
 import socket
 import logging
 
@@ -189,6 +191,15 @@ class Stats(object):
     Same behavior as::
 
         echo "foo:1|c" | nc -u -w0 127.0.0.1 8125
+
+    If some environment variables exist the metrics will be logged to a file in append mode:
+        'ALIGNAK_STATS_FILE'
+            the file name
+        'ALIGNAK_STATS_FILE_LINE_FMT'
+            defaults to [#date#] #counter# #value# #uom#\n'
+        'ALIGNAK_STATS_FILE_DATE_FMT'
+            defaults to '%Y-%m-%d %H:%M:%S'
+            date is UTC
 
     """
     def __init__(self):
@@ -211,6 +222,18 @@ class Stats(object):
         # Statsd daemon parameters
         self.statsd_sock = None
         self.statsd_addr = None
+
+        # File part
+        self.stats_file = None
+        self.file_d = None
+        if 'ALIGNAK_STATS_FILE' in os.environ:
+            self.stats_file = os.environ['ALIGNAK_STATS_FILE']
+        self.line_fmt = '[#date#] #counter# #value# #uom#\n'
+        if 'ALIGNAK_STATS_FILE_LINE_FMT' in os.environ:
+            self.line_fmt = os.environ['ALIGNAK_STATS_FILE_LINE_FMT']
+        self.date_fmt = '%Y-%m-%d %H:%M:%S'
+        if 'ALIGNAK_STATS_FILE_DATE_FMT' in os.environ:
+            self.date_fmt = os.environ['ALIGNAK_STATS_FILE_DATE_FMT']
 
     def register(self, name, _type,
                  statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
@@ -245,13 +268,23 @@ class Stats(object):
         # local broks part
         self.broks_enabled = broks_enabled
 
-        if self.statsd_enabled:
+        if self.statsd_enabled and self.statsd_host is not None:
             logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
                         self.type, self.name,
                         self.statsd_host, self.statsd_port, self.statsd_prefix)
-            self.load_statsd()
-        else:
-            logger.info('Alignak internal statistics are disabled.')
+            if self.load_statsd():
+                logger.info('Alignak internal statistics are sent to StatsD.')
+            else:
+                logger.info('StatsD server is not available.')
+
+        if self.stats_file:
+            try:
+                self.file_d = open(self.stats_file, 'a')
+                logger.info("Alignak internal statistics are written in the file %s",
+                            self.stats_file)
+            except OSError as exp:  # pragma: no cover, should never happen...
+                logger.exception("Error when opening the file '%s' : %s", self.stats_file, exp)
+                self.file_d = None
 
         return self.statsd_enabled
 
@@ -315,6 +348,22 @@ class Stats(object):
                 # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
 
+        # Manage file part
+        if self.statsd_enabled and self.file_d:
+            packet = self.line_fmt
+            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            packet = packet.replace("#date#", date)
+            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
+            packet = packet.replace("#value#", '%d' % (value * 1000))
+            packet = packet.replace("#uom#", 'ms')
+            # Do not log because it is spamming the log file, but leave this code in place
+            # for it may be restored easily if more tests are necessary... ;)
+            # logger.info("Sending data: %s", packet)
+            try:
+                self.file_d.write(packet)
+            except IOError:
+                logger.warning("Could not write to the file: %s", packet)
+
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
             return Brok({'type': 'alignak_stat',
@@ -359,6 +408,22 @@ class Stats(object):
                 pass
                 # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
+
+        # Manage file part
+        if self.statsd_enabled and self.file_d:
+            packet = self.line_fmt
+            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            packet = packet.replace("#date#", date)
+            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
+            packet = packet.replace("#value#", '%d' % (value * 1000))
+            packet = packet.replace("#uom#", 'c')
+            # Do not log because it is spamming the log file, but leave this code in place
+            # for it may be restored easily if more tests are necessary... ;)
+            # logger.info("Sending data: %s", packet)
+            try:
+                self.file_d.write(packet)
+            except IOError:
+                logger.warning("Could not write to the file: %s", packet)
 
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
@@ -405,6 +470,22 @@ class Stats(object):
                 # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
 
+        # Manage file part
+        if self.statsd_enabled and self.file_d:
+            packet = self.line_fmt
+            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            packet = packet.replace("#date#", date)
+            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
+            packet = packet.replace("#value#", '%d' % (value * 1000))
+            packet = packet.replace("#uom#", 'g')
+            # Do not log because it is spamming the log file, but leave this code in place
+            # for it may be restored easily if more tests are necessary... ;)
+            # logger.info("Sending data: %s", packet)
+            try:
+                self.file_d.write(packet)
+            except IOError:
+                logger.warning("Could not write to the file: %s", packet)
+
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
             return Brok({'type': 'alignak_stat',
@@ -415,10 +496,6 @@ class Stats(object):
                                   }})
 
         return None
-
-    def incr(self, key, value):
-        """Calls the timer function"""
-        return self.timer(key, value)
 
 # pylint: disable=C0103
 statsmgr = Stats()
