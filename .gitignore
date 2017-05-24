@@ -48,8 +48,8 @@ docs/tools/pages/
 test/.coverage
 test/.coverage.*
 
-test/cfg/run_test_launch_daemons
-test/cfg/run_test_launch_daemons_modules
+test/run/
+test_run/run/
 
 # Pbr
 pbr-*.egg/

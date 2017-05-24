@@ -7,6 +7,8 @@ python:
 
 env:
   - TEST_SUITE=unit
+  # Alignak daemons run tests
+  - TEST_SUITE=run
   - TEST_SUITE=codingstandard
   - TEST_SUITE=virtualenv
 
@@ -29,7 +31,7 @@ script:
   # so to help eventual debug: know what exact versions are in use can be rather useful.
   - pip freeze
   # run test suite (wait no more than 30 minutes)
-  - travis_wait 30 ./.travis/$TEST_SUITE.sh
+  - travis_wait 60 ./.travis/$TEST_SUITE.sh
 
 # specific call to launch coverage data into coveralls.io
 after_success:

@@ -1,10 +1,10 @@
 # This configuration is built as such:
-# - the 6 standard alignak daemons have each one a spare daemon
+# - the 6 standard alignak daemons
 # - a localhost host that is checked with _internal host check and that has no services
 # - this host is in the only existing realm (All)
 # - this host has 5 services that each run the script ./dummy_command.sh
 # - services are: ok, warning, critical, unknown and timeout, thus to check that poller workers
-# run correctly the checks action
+# run correctly the checks action and that the reactionner daemon run correctly its actions
 # - the 4 first services are run normally, the last one raises a timeout alert
 # - one more service that uses the internal _echo command that set the same state as the current
 # one, thus the default initial state
