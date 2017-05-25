@@ -2,6 +2,8 @@
 -r ../requirements.txt
 unittest2
 mock
+# Use psutil
+psutil
 # Use py.test as test-runner
 pytest
 pytest-cov

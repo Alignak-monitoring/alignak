@@ -2102,7 +2102,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_check_received = 0
 
         self.load_one_min = Load(initial_value=1)
-        logger.debug("First loop at %d", time.time())
+        logger.info("[%s] starting scheduler loop: %2f", self.instance_name, sch_start_ts)
         while self.must_run:
             # Before answer to brokers, we send our broks to modules
             # Ok, go to send our broks to our external modules
@@ -2193,7 +2193,59 @@ class Scheduler(object):  # pylint: disable=R0902
                 self.need_objects_dump = False
 
             self.hook_point('scheduler_tick')
+            statsmgr.timer('loop.hook-tick', time.time() - _ts)
 
+            loop_end_ts = time.time()
+            loop_duration = loop_end_ts - loop_start_ts
+
+            pause = maximum_loop_duration - loop_duration
+            if loop_duration > maximum_loop_duration:
+                logger.warning("The scheduler loop exceeded the maximum expected loop "
+                               "duration: %2f. The last loop needed %2f seconds to execute. "
+                               "You should update your configuration to reduce the load on "
+                               "this scheduler.",
+                               maximum_loop_duration, loop_duration)
+                # Make a very very short pause ...
+                pause = 0.1
+
+            # Pause the scheduler execution to avoid too much load on the system
+            logger.info("Before pause: sleep time: %s", pause)
+            work, time_changed = self.sched_daemon.make_a_pause(pause)
+            logger.info("After pause: %2f / %2f, sleep time: %2f", work, time_changed,
+                        self.sched_daemon.sleep_time)
+            if work > pause_duration:
+                logger.warning("Too much work during the pause (%2f out of %2f)! "
+                               "The scheduler should rest for a while... but one need to change "
+                               "its code for this. Please log an issue in the project repository;",
+                               work, pause_duration)
+                pause_duration += 0.1
+            self.sched_daemon.sleep_time = 0.0
+
+            # And now, the whole average time spent
+            elapsed_time = loop_end_ts - sch_start_ts
+            logger.info("Elapsed time, current loop: %2f, from start: %2f (%d loops)",
+                        loop_duration, elapsed_time, loop_count)
+            statsmgr.gauge('loop.count', loop_count)
+            statsmgr.timer('loop.duration', loop_duration)
+            statsmgr.timer('run.duration', elapsed_time)
+            logger.info("Check average (loop) = %d checks results, %d dropped, %2f checks/s",
+                        self.nb_checks_results,
+                        self.nb_checks_dropped,
+                        self.nb_checks_results / loop_duration)
+            logger.info("Check average (total) = %d checks results, %d dropped, %2f checks/s",
+                        self.nb_checks_results, self.nb_checks_dropped,
+                        self.nb_checks_results / elapsed_time)
+
+            if self.nb_checks_dropped > 0 or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
+                logger.warning("We dropped %d checks, %d broks and %d actions",
+                               self.nb_checks_dropped, self.nb_broks_dropped,
+                               self.nb_actions_dropped)
+
+            logger.info("+++ %d", loop_count)
+        logger.info("[%s] stopping scheduler loop: %2f, elapsed: %2f seconds",
+                    self.instance_name, sch_start_ts, elapsed_time)
+
+        statsmgr.file_d.close()
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
         self.update_retention_file(True)

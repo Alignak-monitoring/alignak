@@ -992,7 +992,7 @@ class Daemon(object):
         :type frame:
         :return: None
         """
-        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.warning("process %d received a signal: %s", os.getpid(), str(sig))
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
