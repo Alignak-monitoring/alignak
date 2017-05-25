@@ -46,7 +46,7 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
-from alignak.http.client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -99,7 +99,14 @@ class ReceiverLink(SatelliteLink):
 
             # r = self.con.push_host_names(sched_id, hnames)
             self.con.post('push_host_names', {'sched_id': sched_id, 'hnames': hnames}, wait='long')
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when pushing hosts names: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when pushing hosts names: %s", self.get_name(), str(exp))
             self.add_failed_check_attempt(reason=str(exp))
 
 

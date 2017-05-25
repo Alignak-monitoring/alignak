@@ -279,7 +279,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60)
         assert errors_raised == 0
 
     def test_passive_daemons_100_host_5mn(self):
@@ -295,7 +295,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         os.environ['ALIGNAK_STATS_FILE_LINE_FMT'] = '[#date#] #counter# #value# #uom#\n'
         os.environ['ALIGNAK_STATS_FILE_DATE_FMT'] = '%Y-%m-%d %H:%M:%S'
 
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0
 
     def test_passive_daemons_1000_host_15mn(self):
@@ -304,5 +304,5 @@ class TestDaemonsSingleInstance(AlignakTest):
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0

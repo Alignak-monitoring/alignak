@@ -61,7 +61,8 @@ from alignak.misc.serialization import unserialize
 from alignak.satellite import Satellite
 from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.external_command import ExternalCommand, ExternalCommandManager
-from alignak.http.client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException
+from alignak.http.client import HTTPClientTimeoutException
 from alignak.stats import statsmgr
 from alignak.http.receiver_interface import ReceiverInterface
 
@@ -220,6 +221,12 @@ class Receiver(Satellite):
             self.name = name
             # Set my own process title
             self.set_proctitle(self.name)
+
+            logger.info("[%s] Received a new configuration, containing:", self.name)
+            for key in conf:
+                logger.info("[%s] - %s", self.name, key)
+            logger.info("[%s] global configuration part: %s", self.name, conf['global'])
+
             # local statsd
             self.statsd_host = conf['global']['statsd_host']
             self.statsd_port = conf['global']['statsd_port']
@@ -237,8 +244,6 @@ class Receiver(Satellite):
                 conf['global']['accept_passive_unknown_check_results']
 
             g_conf = conf['global']
-
-            logger.info("[%s] Sending us a configuration", self.name)
 
             # If we've got something in the schedulers, we do not want it anymore
             self.host_assoc = {}
@@ -283,6 +288,8 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['active'] = sched['active']
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                self.schedulers[sched_id]['last_connection'] = 0
+                self.schedulers[sched_id]['connection_attempt'] = 0
 
                 # Do not connect if we are a passive satellite
                 if not old_sched_id:
@@ -332,15 +339,54 @@ class Receiver(Satellite):
         # Now for all alive schedulers, send the commands
         for sched_id in self.schedulers:
             sched = self.schedulers[sched_id]
+
+            is_active = sched['active']
+            if not is_active:
+                logger.warning("The scheduler '%s' is not active, it is not possible to get broks "
+                               "from its connection!", sched.get_name())
+                return
+
+            # If there are some commands...
             extcmds = sched['external_commands']
             cmds = [extcmd.cmd_line for extcmd in extcmds]
-            con = sched.get('con', None)
-            sent = False
-            if not con:
-                logger.warning("The scheduler is not connected %s", sched)
-                self.pynag_con_init(sched_id)
-                con = sched.get('con', None)
+            if not cmds:
+                continue
 
+            # ...and the scheduler is alive
+            con = sched['con']
+            if con is None:
+                self.pynag_con_init(sched_id, s_type='scheduler')
+
+            if con is None:
+                logger.warning("The connection for the scheduler '%s' cannot be established, it is "
+                               "not possible to push external commands.", sched.get_name())
+                continue
+
+            sent = False
+
+            logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
+            try:
+                # con.run_external_commands(cmds)
+                con.post('run_external_commands', {'cmds': cmds})
+                sent = True
+            except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+                logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+                self.set_dead()
+            except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+                logger.warning("Connection timeout with the scheduler '%s' when "
+                               "sending external commands: %s", sched.scheduler_name, str(exp))
+            except HTTPClientException as exp:  # pragma: no cover, simple protection
+                logger.error("Error with the scheduler '%s' when "
+                             "sending external commands: %s", sched.scheduler_name, str(exp))
+                sched['con'] = None
+                continue
+            except AttributeError as exp:  # pragma: no cover, simple protection
+                logger.warning("The scheduler %s should not be initialized: %s",
+                               sched.get_name(), str(exp))
+                logger.exception(exp)
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
+                raise
             # If there are commands and the scheduler is alive
             if cmds and con:
                 logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
@@ -411,6 +457,10 @@ class Receiver(Satellite):
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
 
+            # todo:
+            # This function returns False if some problem is detected during initialization
+            # (eg. communication port not free)
+            # Perharps we should stop the initialization process and exit?
             self.do_daemon_init_and_start()
 
             self.load_modules_manager(self.name)

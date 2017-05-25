@@ -74,7 +74,7 @@ from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.util import sort_by_ids
 from alignak.stats import statsmgr
-from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientTimeoutException
+from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
 from alignak.http.broker_interface import BrokerInterface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -260,6 +260,8 @@ class Broker(BaseSatellite):
             con = link['con'] = HTTPClient(uri=link['uri'],
                                            strong_ssl=link['hard_ssl_name_check'],
                                            timeout=timeout, data_timeout=data_timeout)
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when creating client: %s",
                            s_type, link['name'], str(exp))
@@ -292,6 +294,8 @@ class Broker(BaseSatellite):
                     statsmgr.timer('con-fill-initial-broks.%s' % s_type, time.time() - _t0)
             # Ok all is done, we can save this new running s_id
             link['running_id'] = new_run_id
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when getting running id: %s",
                            s_type, link['name'], str(exp))
@@ -416,6 +420,8 @@ class Broker(BaseSatellite):
                 _t0 = time.time()
                 self.add_broks_to_queue(tmp_broks.values())
                 statsmgr.timer('con-broks-add.%s' % s_type, time.time() - _t0)
+            except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+                logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the %s '%s' when getting broks: %s",
                                s_type, link['name'], str(exp))

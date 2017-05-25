@@ -64,6 +64,8 @@ from alignak.macroresolver import MacroResolver
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
+from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.satellite import BaseSatellite
@@ -106,6 +108,19 @@ class Alignak(BaseSatellite):
         # Now the interface
         self.uri = None
         self.uri2 = None
+
+        # stats part
+        # --- copied from scheduler.py
+        self.nb_pulled_checks = 0
+        self.nb_pulled_actions = 0
+        # self.nb_checks_send = 0
+
+        self.nb_pushed_checks = 0
+        self.nb_pushed_actions = 0
+
+        self.nb_broks_send = 0
+        self.nb_pulled_broks = 0
+        # ---
 
         # And possible links for satellites
         # from now only pollers
@@ -213,6 +228,115 @@ class Alignak(BaseSatellite):
             self.must_run = False
             Daemon.manage_signal(self, sig, frame)
 
+    def get_links_from_type(self, s_type):
+        """Get poller link or reactionner link depending on the wanted type
+
+        :param s_type: type we want
+        :type s_type: str
+        :return: links wanted
+        :rtype: alignak.objects.pollerlink.PollerLinks |
+                alignak.objects.reactionnerlink.ReactionnerLinks | None
+        """
+        t_dict = {'poller': self.pollers, 'reactionner': self.reactionners}
+        if s_type in t_dict:
+            return t_dict[s_type]
+        return None
+
+    def pynag_con_init(self, s_id, s_type='scheduler'):
+        """Wrapper function for the real function do_
+        just for timing the connection
+
+        :param s_id: id
+        :type s_id: int
+        :param s_type: type of item
+        :type s_type: str
+        :return: do_pynag_con_init return always True, so we return always True
+        :rtype: bool
+        """
+        _t0 = time.time()
+        res = self.do_pynag_con_init(s_id, s_type)
+        statsmgr.timer('con-init.%s' % s_type, time.time() - _t0)
+        return res
+
+    def do_pynag_con_init(self, s_id, s_type='scheduler'):
+        """Init or reinit connection to a poller or reactionner
+        Used for passive daemons
+
+        TODO: add some unit tests for this function/feature.
+
+        :param s_id: daemon s_id to connect to
+        :type s_id: int
+        :param s_type: daemon type to connect to
+        :type s_type: str
+        :return: None
+        """
+        # Get good links tab for looping..
+        links = self.get_links_from_type(s_type)
+        if links is None:
+            logger.critical("Unknown '%s' type for connection!", s_type)
+            return
+
+        # We want only to initiate connections to the passive
+        # pollers and reactionners
+        passive = links[s_id]['passive']
+        if not passive:
+            return
+
+        # If we try to connect too much, we slow down our tests
+        if self.is_connection_try_too_close(links[s_id]):
+            return
+
+        logger.info("Initializing connection with %s (%s)", links[s_id]['name'], s_id)
+        link = links[s_id]
+        logger.debug("Link: %s", link)
+
+        # Get timeout for the daemon link (default defined in the satellite link...)
+        timeout = link['timeout']
+        data_timeout = link['data_timeout']
+
+        # Ok, we now update our last connection attempt
+        # and we increment the number of connection attempts
+        link['connection_attempt'] += 1
+        link['last_connection'] = time.time()
+
+        uri = link['uri']
+        try:
+            con = link['con'] = HTTPClient(uri=uri,
+                                           strong_ssl=link['hard_ssl_name_check'],
+                                           timeout=timeout, data_timeout=data_timeout)
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+            logger.warning("Connection timeout with the %s '%s' when creating client: %s",
+                           s_type, link['name'], str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("Error with the %s '%s' when creating client: %s",
+                         s_type, link['name'], str(exp))
+            link['con'] = None
+            return
+
+        try:
+            # initial ping must be quick
+            con.get('ping')
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+            logger.warning("Connection timeout with the %s '%s' when pinging: %s",
+                           s_type, link['name'], str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("Error with the %s '%s' when pinging: %s",
+                         s_type, link['name'], str(exp))
+            link['con'] = None
+            return
+        except KeyError as exp:  # pragma: no cover, simple protection
+            logger.warning("con_init(schedduler): The %s '%s' is not initialized: %s",
+                           s_type, link['name'], str(exp))
+            link['con'] = None
+            return
+
+        link['connection_attempt'] = 0
+        logger.info("Connection OK to the %s: %s", s_type, link['name'])
+
     def do_loop_turn(self):
         """Scheduler loop turn
         Basically wait initial conf and run
@@ -223,9 +347,9 @@ class Alignak(BaseSatellite):
         self.wait_for_initial_conf()
         if not self.new_conf:
             return
-        logger.info("New configuration received")
         self.setup_new_conf()
-        logger.info("New configuration loaded, scheduling Alignak: %s", self.sched.alignak_name)
+        logger.info("[%s] New configuration loaded, scheduling for Alignak: %s",
+                    self.name, self.sched.alignak_name)
         self.sched.run()
 
     def setup_new_conf(self):
@@ -235,13 +359,13 @@ class Alignak(BaseSatellite):
         """
         with self.conf_lock:
             self.clean_previous_run()
-            new_c = self.new_conf
-            logger.info("Sending us a configuration: %s", new_c['push_flavor'])
-            conf_raw = new_c['conf']
-            override_conf = new_c['override_conf']
-            modules = new_c['modules']
-            satellites = new_c['satellites']
-            instance_name = new_c['instance_name']
+            new_conf = self.new_conf
+            logger.info("[%s] Sending us a configuration", self.name)
+            conf_raw = new_conf['conf']
+            override_conf = new_conf['override_conf']
+            modules = new_conf['modules']
+            satellites = new_conf['satellites']
+            instance_name = new_conf['instance_name']
 
             # Ok now we can save the retention data
             if hasattr(self.sched, 'conf'):
@@ -249,9 +373,10 @@ class Alignak(BaseSatellite):
 
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(instance_name, 'scheduler',
-                              statsd_host=new_c['statsd_host'], statsd_port=new_c['statsd_port'],
-                              statsd_prefix=new_c['statsd_prefix'],
-                              statsd_enabled=new_c['statsd_enabled'])
+                              statsd_host=new_conf['statsd_host'],
+                              statsd_port=new_conf['statsd_port'],
+                              statsd_prefix=new_conf['statsd_prefix'],
+                              statsd_enabled=new_conf['statsd_enabled'])
 
             t00 = time.time()
             try:
@@ -261,8 +386,8 @@ class Alignak(BaseSatellite):
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
-            if 'scheduler_name' in new_c:
-                name = new_c['scheduler_name']
+            if 'scheduler_name' in new_conf:
+                name = new_conf['scheduler_name']
             else:
                 name = instance_name
             self.name = name
@@ -270,14 +395,20 @@ class Alignak(BaseSatellite):
             # Set my own process title
             self.set_proctitle(self.name)
 
+            logger.info("[%s] Received a new configuration, containing: ", self.name)
+            for key in new_conf:
+                logger.info("[%s] - %s", self.name, key)
+            logger.info("[%s] configuration identifiers: %s (%s)",
+                        self.name, new_conf['conf_uuid'], new_conf['push_flavor'])
+
             # Tag the conf with our data
             self.conf = conf
-            self.conf.push_flavor = new_c['push_flavor']
-            self.conf.alignak_name = new_c['alignak_name']
+            self.conf.push_flavor = new_conf['push_flavor']
+            self.conf.alignak_name = new_conf['alignak_name']
             self.conf.instance_name = instance_name
-            self.conf.skip_initial_broks = new_c['skip_initial_broks']
+            self.conf.skip_initial_broks = new_conf['skip_initial_broks']
             self.conf.accept_passive_unknown_check_results = \
-                new_c['accept_passive_unknown_check_results']
+                new_conf['accept_passive_unknown_check_results']
 
             self.cur_conf = conf
             self.override_conf = override_conf
@@ -306,6 +437,7 @@ class Alignak(BaseSatellite):
 
                     sats[sat_id]['uri'] = uri
                     sats[sat_id]['last_connection'] = 0
+                    sats[sat_id]['connection_attempt'] = 0
                     setattr(self, sat_type, sats)
                 logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
                 logger.info("We have our %s:", sat_type)
@@ -365,6 +497,7 @@ class Alignak(BaseSatellite):
             self.sched.add_brok(brok)
 
     def what_i_managed(self):
+        # pylint: disable=no-member
         """Get my managed dict (instance id and push_flavor)
 
         :return: dict containing instance_id key and push flavor value
@@ -372,8 +505,8 @@ class Alignak(BaseSatellite):
         """
         if hasattr(self, 'conf'):
             return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
-
-        return {}
+        else:
+            return {}
 
     def clean_previous_run(self):
         """Clean variables from previous configuration
@@ -401,6 +534,10 @@ class Alignak(BaseSatellite):
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
 
+            # todo:
+            # This function returns False if some problem is detected during initialization
+            # (eg. communication port not free)
+            # Perharps we should stop the initialization process and exit?
             self.do_daemon_init_and_start()
 
             self.load_modules_manager(self.name)

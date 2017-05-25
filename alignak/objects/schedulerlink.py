@@ -47,7 +47,7 @@ import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
 
-from alignak.http.client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -92,17 +92,28 @@ class SchedulerLink(SatelliteLink):
 
         TODO: need to recode this function because return shouod always be boolean
         """
+        logger.debug("[%s] run_external_commands", self.get_name())
+
         if self.con is None:
             self.create_connection()
         if not self.alive:
             return None
-        logger.debug("[SchedulerLink] Sending %d commands", len(commands))
+        logger.debug("[%s] Sending %d commands", self.get_name(), len(commands))
         try:
             self.con.post('run_external_commands', {'cmds': commands})
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:
+            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending run_external_commands: %s",
+                           self.get_name(), str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending run_external_commands: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            logger.debug(exp)
-            return False
+        else:
+            return True
+
+        return False
 
     def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
@@ -123,6 +134,7 @@ class SchedulerLink(SatelliteLink):
                 'name': self.get_name(), 'instance_id': self.uuid,
                 'active': self.conf is not None, 'push_flavor': self.push_flavor,
                 'timeout': self.timeout, 'data_timeout': self.data_timeout,
+                'max_check_attempts': self.max_check_attempts,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def get_override_configuration(self):

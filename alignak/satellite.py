@@ -68,11 +68,13 @@ from multiprocessing import active_children, cpu_count
 import os
 import copy
 import logging
+import warnings
 import time
 import traceback
 import threading
 
-from alignak.http.client import HTTPClient, HTTPEXCEPTIONS
+from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientConnectionException
+from alignak.http.client import HTTPClientTimeoutException
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
@@ -133,7 +135,7 @@ class BaseSatellite(Daemon):
 
         :return: a dict of scheduler id as key and push_flavor as values
         :rtype: dict
-"""
+        """
         res = {}
         for (key, val) in self.schedulers.iteritems():
             res[key] = val['push_flavor']
@@ -148,6 +150,119 @@ class BaseSatellite(Daemon):
         res = self.external_commands
         self.external_commands = []
         return res
+
+    @staticmethod
+    def is_connection_try_too_close(link, delay=5):
+        """Check if last_connection has been made very recently
+
+        :param link: connection with an Alignak daemon
+        :type link: list
+        :delay link: minimum delay between two connections
+        :type dealay: int
+        :return: True if last connection has been made less than `delay` seconds
+        :rtype: bool
+        """
+        if time.time() - link['last_connection'] < delay:
+            return True
+        return False
+
+    def pynag_con_init(self, s_id, s_type='scheduler'):
+        """Wrapper function for the real function do_
+        just for timing the connection
+
+        :param s_id: id
+        :type s_id: int
+        :param s_type: type of item
+        :type s_type: str
+        :return: do_pynag_con_init return always True, so we return always True
+        :rtype: bool
+        """
+        _t0 = time.time()
+        res = self.do_pynag_con_init(s_id, s_type)
+        statsmgr.timer('con-init.%s' % s_type, time.time() - _t0)
+        return res
+
+    def do_pynag_con_init(self, s_id, s_type='scheduler'):
+        """Initialize a connection with scheduler having 'uuid'
+        Return the new connection to the scheduler if it succeeded,
+            else: any error OR sched is inactive: return None.
+        NB: if sched is inactive then None is directly returned.
+
+
+        :param s_id: scheduler s_id to connect to
+        :type s_id: int
+        :return: scheduler connection object or None
+        :rtype: alignak.http.client.HTTPClient
+        """
+        sched = self.schedulers[s_id]
+        if not sched['active']:
+            logger.warning('Scheduler is not active, '
+                           'do not initalize its connection! Link: %s', sched)
+            return
+
+        logger.info("Initializing connection with %s (%s)", sched['name'], s_id)
+        link = sched
+        logger.debug("Link: %s", link)
+
+        # Get timeout for the daemon link (default defined in the satellite link...)
+        timeout = sched['timeout']
+        data_timeout = sched['data_timeout']
+
+        # Ok, we now update our last connection attempt
+        # and we increment the number of connection attempts
+        link['connection_attempt'] += 1
+        link['last_connection'] = time.time()
+
+        running_id = sched['running_id']
+
+        # Create the HTTP client for the connection
+        try:
+            link['con'] = HTTPClient(uri=sched['uri'],
+                                     strong_ssl=link['hard_ssl_name_check'],
+                                     timeout=timeout, data_timeout=data_timeout)
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+            logger.warning("Connection timeout with the %s '%s' when creating client: %s",
+                           s_type, link['name'], str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("Error with the %s '%s' when creating client: %s",
+                         s_type, link['name'], str(exp))
+            link['con'] = None
+            return
+
+        # Get the connection running identifier
+        try:
+            new_run_id = link['con'].get('get_running_id')
+            new_run_id = float(new_run_id)
+
+            # The schedulers have been restarted: it has a new run_id.
+            # So we clear all verifications, they are obsolete now.
+            if link['running_id'] != 0 and new_run_id != running_id:
+                logger.info("[%s] The running id of the scheduler %s changed, "
+                            "we must clear its actions", self.name, link['name'])
+                link['wait_homerun'].clear()
+
+            # Ok all is done, we can save this new running s_id
+            link['running_id'] = new_run_id
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+            logger.warning("Connection timeout with the %s '%s' when getting running id: %s",
+                           s_type, link['name'], str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("Error with the %s '%s' when getting running id: %s",
+                         s_type, link['name'], str(exp))
+            link['con'] = None
+            return
+        except KeyError, exp:  # pragma: no cover, simple protection
+            logger.warning("con_init: The %s '%s' is not initialized: %s", s_type, link['name'], str(exp))
+            link['con'] = None
+            traceback.print_stack()
+            return
+
+        link['connection_attempt'] = 0
+        logger.info("Connection OK to the %s: %s", s_type, link['name'])
 
     def do_loop_turn(self):
         """Abstract method for satellite loop turn.
@@ -219,74 +334,20 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # round robin queue ic
         self.rr_qid = 0
 
-    def pynag_con_init(self, _id):
-        """Wrapped function for do_pynag_con_init
+    def is_connection_try_too_close(self, link, delay=5):
+        warnings.warn("Access to bad class related method: is_connection_try_too_close",
+                      DeprecationWarning, stacklevel=2)
+        super(Satellite, self).is_connection_try_too_close(link, delay)
 
-        :param _id: scheduler _id to connect to
-        :type _id: int
-        :return: scheduler connection object or None
-        :rtype: alignak.http.client.HTTPClient
-        """
-        _t0 = time.time()
-        res = self.do_pynag_con_init(_id)
-        statsmgr.timer('con-init.scheduler', time.time() - _t0)
-        return res
+    def pynag_con_init(self, s_id, s_type='scheduler'):
+        warnings.warn("Access to bad class related method: pynag_con_init",
+                      DeprecationWarning, stacklevel=2)
+        super(Satellite, self).pynag_con_init(s_id, s_type)
 
-    def do_pynag_con_init(self, s_id):
-        """Initialize a connection with scheduler having 'uuid'
-        Return the new connection to the scheduler if it succeeded,
-            else: any error OR sched is inactive: return None.
-        NB: if sched is inactive then None is directly returned.
-
-
-        :param s_id: scheduler s_id to connect to
-        :type s_id: int
-        :return: scheduler connection object or None
-        :rtype: alignak.http.client.HTTPClient
-        """
-        sched = self.schedulers[s_id]
-        if not sched['active']:
-            return
-
-        sname = sched['name']
-        uri = sched['uri']
-        running_id = sched['running_id']
-        timeout = sched['timeout']
-        data_timeout = sched['data_timeout']
-        logger.info("[%s] Init connection with %s at %s (%ss,%ss)",
-                    self.name, sname, uri, timeout, data_timeout)
-
-        try:
-            sch_con = sched['con'] = HTTPClient(
-                uri=uri, strong_ssl=sched['hard_ssl_name_check'],
-                timeout=timeout, data_timeout=data_timeout)
-        except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
-                           self.name, sname, str(exp))
-            sched['con'] = None
-            return
-
-        # timeout of 3s by default (short one)
-        # and get the running s_id
-        try:
-            new_run_id = sch_con.get('get_running_id')
-            new_run_id = float(new_run_id)
-        except (HTTPEXCEPTIONS, KeyError) as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Scheduler %s is not initialized or has network problem: %s",
-                           self.name, sname, str(exp))
-            sched['con'] = None
-            return
-
-        # The schedulers have been restarted: it has a new run_id.
-        # So we clear all verifications, they are obsolete now.
-        if sched['running_id'] != 0 and new_run_id != running_id:
-            logger.info("[%s] The running id of the scheduler %s changed, "
-                        "we must clear its actions",
-                        self.name, sname)
-            sched['wait_homerun'].clear()
-        sched['running_id'] = new_run_id
-        logger.info("[%s] Connection OK with scheduler %s", self.name, sname)
-        return sch_con
+    def do_pynag_con_init(self, s_id, s_type='scheduler'):
+        warnings.warn("Access to bad class related method: do_pynag_con_init",
+                      DeprecationWarning, stacklevel=2)
+        super(Satellite, self).do_pynag_con_init(s_id, s_type)
 
     def manage_action_return(self, action):
         """Manage action return from Workers
@@ -297,7 +358,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :type action: alignak.action.Action
         :return: None
         """
-        # Maybe our workers end us something else than an action
+        # Maybe our workers send us something else than an action
         # if so, just add this in other queues and return
         cls_type = action.__class__.my_type
         if cls_type not in ['check', 'notification', 'eventhandler']:
@@ -370,16 +431,22 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             send_ok = False
             try:
-                con = sched.get('con')
+                con = sched.get('con', None)
                 if con is None:  # None = not initialized
-                    con = self.pynag_con_init(sched_id)
+                    self.pynag_con_init(sched_id)
+                    sched['con'] = con
+
                 if con:
-                    con.post('put_results',
-                             {'results': results.values()})
+                    con.post('put_results', {'from': self.name, 'results': results.values()})
                     send_ok = True
-            except HTTPEXCEPTIONS as err:  # pragma: no cover, simple protection
-                logger.error('Could not send results to scheduler %s : %s',
-                             sched['name'], err)
+            except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+                logger.warning("[%s] Server is not available: %s", sched['name'], str(exp))
+            except HTTPClientTimeoutException as exp:
+                logger.warning("Connection timeout with the scheduler '%s' "
+                               "when putting results: %s", sched['name'], str(exp))
+            except HTTPClientException as exp:  # pragma: no cover, simple protection
+                logger.error("Error with the scheduler '%s' when putting results: %s",
+                             sched['name'], str(exp))
             except Exception as err:  # pragma: no cover, simple protection
                 logger.exception("Unhandled exception trying to send results "
                                  "to scheduler %s: %s", sched['name'], err)
@@ -691,11 +758,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 continue
 
             try:
-                try:
-                    con = sched['con']
-                except KeyError:  # pragma: no cover, simple protection
-                    con = None
-                if con is not None:  # None = not initialized
+                con = sched.get('con', None)
+                if con is None:  # None = not initialized
+                    self.pynag_con_init(sched_id)
+                    sched['con'] = con
+
+                if con:
                     # OK, go for it :)
                     tmp = con.get('get_checks', {
                         'do_checks': do_checks, 'do_actions': do_actions,
@@ -703,21 +771,23 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         'reactionner_tags': self.reactionner_tags,
                         'worker_name': self.name,
                         'module_types': self.q_by_mod.keys()
-                    },
-                        wait='long')
+                    }, wait='long')
                     # Explicit serialization
                     tmp = unserialize(tmp, True)
                     logger.debug("Ask actions to %s, got %d", sched_id, len(tmp))
                     # We 'tag' them with sched_id and put into queue for workers
                     # REF: doc/alignak-action-queues.png (2)
                     self.add_actions(tmp, sched_id)
-                else:  # no con? make the connection
-                    self.pynag_con_init(sched_id)
-            # Ok, con is unknown, so we create it
-            # Or maybe is the connection lost, we recreate it
-            except (HTTPEXCEPTIONS, KeyError) as exp:  # pragma: no cover, simple protection
-                logger.exception('get_new_actions HTTP exception:: %s', exp)
-                self.pynag_con_init(sched_id)
+            except HTTPClientConnectionException as exp:
+                logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+                self.set_dead()
+            except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+                logger.warning("Connection timeout with the scheduler '%s' "
+                               "when getting checks: %s", sched['name'], str(exp))
+            except HTTPClientException as exp:  # pragma: no cover, simple protection
+                logger.error("Error with the scheduler '%s' when getting checks: %s",
+                             sched['name'], str(exp))
+                sched['con'] = None
             # scheduler must not be initialized
             # or scheduler must not have checks
             except AttributeError as exp:  # pragma: no cover, simple protection
@@ -728,7 +798,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # What the F**k? We do not know what happened,
             # log the error message if possible.
             except Exception as exp:  # pragma: no cover, simple protection
-                logger.exception('A satellite raised an unknown exception:: %s', exp)
+                logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
                 raise
 
     def get_returns_queue_len(self):
@@ -914,6 +984,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # Set my own process title
             self.set_proctitle(self.name)
 
+            logger.info("[%s] Received a new configuration, containing:", self.name)
+            for key in conf:
+                logger.info("[%s] - %s", self.name, key)
+            logger.info("[%s] global configuration part: %s", self.name, conf['global'])
+
             # local statsd
             self.statsd_host = g_conf['statsd_host']
             self.statsd_port = g_conf['statsd_port']
@@ -930,8 +1005,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 statsmgr.register(self.name, 'reactionner',
                                   statsd_prefix=self.statsd_prefix,
                                   statsd_enabled=self.statsd_enabled)
-
-            logger.info("[%s] Sending us a configuration", self.name)
 
             self.passive = g_conf['passive']
             if self.passive:
@@ -969,6 +1042,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 self.schedulers[sched_id]['active'] = sched['active']
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                self.schedulers[sched_id]['last_connection'] = 0
+                self.schedulers[sched_id]['connection_attempt'] = 0
 
                 # Do not connect if we are a passive satellite
                 if not self.passive and not old_sched_id:
@@ -1072,6 +1147,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
+
+            # todo:
+            # This function returns False if some problem is detected during initialization
+            # (eg. communication port not free)
+            # Perharps we should stop the initialization process and exit?
             self.do_daemon_init_and_start()
 
             self.do_post_daemon_init()
