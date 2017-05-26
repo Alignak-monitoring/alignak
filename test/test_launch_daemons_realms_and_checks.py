@@ -147,8 +147,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
                     if 'WARNING' in line or daemon_errors:
                         print(line[:-1])
                         if daemon == 'arbiter' \
-                                and 'Cannot call the additional groups setting with initgroups (Operation not permitted)' not in line \
-                                and 'Cannot call the additional groups setting with setgroups' not in line:
+                                and 'Cannot call the additional groups setting ' not in line:
                             nb_warning += 1
                     if 'ERROR' in line or 'CRITICAL' in line:
                         if not daemon_errors:
@@ -182,11 +181,11 @@ class TestLaunchDaemonsRealms(AlignakTest):
         self.print_header()
 
         # Set an environment variable to activate the logging of checks execution
-        # With this the pollers/schedulers will raise WARNING logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        # With this the pollers/schedulers will raise INFO logs about the checks execution
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Run daemons for 2 minutes
-        self.run_and_check_alignak_daemons(120)
+        self.run_and_check_alignak_daemons(240)
 
         # Expected logs from the daemons
         expected_logs = {
@@ -281,6 +280,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             ]
         }
 
+        errors_raised = 0
         for name in ['poller', 'poller-north', 'poller-south',
                      'scheduler', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
@@ -289,11 +289,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 lines = f.readlines()
                 logs = []
                 for line in lines:
-                    # Catches INFO logs
-                    if 'WARNING' in line:
+                    # Catches WARNING and ERROR logs
+                    if 'WARNING:' in line:
                         print("line: %s" % line)
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
+                        errors_raised += 1
+                        print("error: %s" % line)
                     # Catches INFO logs
-                    if 'INFO' in line:
+                    if 'INFO:' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
@@ -301,6 +304,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                         logs.append(line)
 
             for log in expected_logs[name]:
-                print("Last log: %s" % log)
+                print("Last checked log %s: %s" % (name, log))
                 assert log in logs
 

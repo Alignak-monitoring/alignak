@@ -302,10 +302,12 @@ class DaemonsStartTest(AlignakTest):
             if 'CRITICAL:' in line:
                 ok = False
         assert ok
+        ok = True
         for line in iter(arbiter.stderr.readline, b''):
+            ok = False
             print("*** " + line.rstrip())
-            if sys.version_info > (2, 7):
-                assert False, "stderr output!"
+        if not ok and sys.version_info > (2, 7):
+            assert False, "stderr output!"
 
     @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_spare_missing_configuration(self):

@@ -57,6 +57,8 @@
  dead one to the spare
 """
 
+import sys
+import cPickle
 import logging
 import time
 import random
@@ -205,9 +207,11 @@ class Dispatcher:
                         logger.info("Scheduler configuration %s is unmanaged!!", conf_uuid)
                     self.dispatch_ok = False
                 else:
+                    logger.debug("Realm %s - Checking Scheduler %s configuration: %s",
+                                 realm.name, sched.scheduler_name, conf_uuid)
                     if not sched.alive:
                         self.dispatch_ok = False  # so we ask a new dispatching
-                        logger.warning("Scheduler %s had the configuration %s but is dead, "
+                        logger.warning("Scheduler %s has the configuration '%s' but it is dead, "
                                        "I am not happy.", sched.get_name(), conf_uuid)
                         sched.conf.assigned_to = None
                         sched.conf.is_assigned = False
@@ -219,7 +223,7 @@ class Dispatcher:
                     # really managing, and if not, put the conf unassigned
                     if not sched.do_i_manage(conf_uuid, push_flavor):
                         self.dispatch_ok = False  # so we ask a new dispatching
-                        logger.warning("Scheduler %s did not managed its configuration %s, "
+                        logger.warning("Scheduler '%s' do not manage this configuration: %s, "
                                        "I am not happy.", sched.get_name(), conf_uuid)
                         if sched.conf:
                             sched.conf.assigned_to = None
@@ -229,9 +233,9 @@ class Dispatcher:
                         sched.need_conf = True
                         sched.conf = None
 
-        self.check_disptach_other_satellites()
+        self.check_dispatch_other_satellites()
 
-    def check_disptach_other_satellites(self):
+    def check_dispatch_other_satellites(self):
         """
         Check the dispatch in other satellites: reactionner, poller, broker, receiver
 
@@ -435,7 +439,7 @@ class Dispatcher:
                             realm.to_satellites_managed_by[sat_type][cfg_id] = []
                         break
 
-                    logger.info('[%s] Preparing configuration %s for the scheduler %s',
+                    logger.info("[%s] Preparing configuration '%s' for the scheduler %s",
                                 realm.get_name(), conf.uuid, sched.get_name())
                     if not sched.need_conf:
                         logger.info('[%s] The scheduler %s do not need any configuration, sorry',
@@ -454,6 +458,7 @@ class Dispatcher:
                         'alignak_name': self.arbiter.arbiter_name,
                         'satellites': satellites,
                         'instance_name': sched.scheduler_name,
+                        'conf_uuid': conf.uuid,
                         'push_flavor': conf.push_flavor,
                         'skip_initial_broks': sched.skip_initial_broks,
                         'accept_passive_unknown_check_results':
@@ -473,7 +478,12 @@ class Dispatcher:
                     conf.is_assigned = True
                     conf.assigned_to = sched
 
-                    # We update all data for this scheduler
+                    # We updated all data for this scheduler
+                    pickled_conf = cPickle.dumps(conf_package)
+                    logger.info('[%s] scheduler configuration %s size: %d bytes',
+                                realm.get_name(), sched.scheduler_name, sys.getsizeof(pickled_conf))
+                    logger.info('[%s] configuration %s (%s) assigned to %s',
+                                realm.get_name(), conf.uuid, conf.push_flavor, sched.scheduler_name)
                     sched.managed_confs = {conf.uuid: conf.push_flavor}
 
                     # Now we generate the conf for satellites:
@@ -513,6 +523,9 @@ class Dispatcher:
         :return:
         """
 
+        if cfg.uuid not in realm.to_satellites_need_dispatch[sat_type]:
+            return
+
         if not realm.to_satellites_need_dispatch[sat_type][cfg.uuid]:
             return
 
@@ -536,6 +549,8 @@ class Dispatcher:
         for sat in satellites:
             if nb_cfg_prepared >= realm.get_nb_of_must_have_satellites(sat_type):
                 continue
+            logger.info('[%s] Preparing configuration for the %s: %s',
+                        realm.get_name(), sat_type, sat.get_name())
             sat.cfg['schedulers'][conf_uuid] = realm.to_satellites[sat_type][conf_uuid]
             if sat.manage_arbiters:
                 sat.cfg['arbiters'] = arbiters_cfg
@@ -577,7 +592,7 @@ class Dispatcher:
             is_sent = scheduler.put_conf(scheduler.conf_package)
             logger.debug("Conf is sent in %d", time.time() - t01)
             if not is_sent:
-                logger.warning('Configuration sending error to scheduler %s', scheduler.get_name())
+                logger.warning('Configuration sending error for scheduler %s', scheduler.get_name())
                 self.dispatch_ok = False
             else:
                 logger.info('Configuration sent to scheduler %s',
@@ -592,7 +607,7 @@ class Dispatcher:
                     is_sent = satellite.put_conf(satellite.cfg)
                     satellite.is_sent = is_sent
                     if not is_sent:
-                        logger.warning('Configuration sending error to %s %s',
+                        logger.warning("Configuration sending error for %s '%s'",
                                        sat_type, satellite.get_name())
                         self.dispatch_ok = False
                         continue

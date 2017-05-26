@@ -2196,11 +2196,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     except AttributeError:  # pragma: no cover, simple protection
                         dump_list = cur
 
+                # Dump at DEBUG level because some tests break with INFO level, and it is not
+                # really necessary to have information about each object ;
                 for cur_obj in dump_list:
                     if obj == 'services':
-                        logger.info('\t%s', cur_obj.get_full_name())
+                        logger.debug('\t%s', cur_obj.get_full_name())
                     else:
-                        logger.info('\t%s', cur_obj.get_name())
+                        logger.debug('\t%s', cur_obj.get_name())
                 logger.info('\tChecked %d %s', len(cur), obj)
 
         # Parse hosts and services for tags and realms

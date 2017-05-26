@@ -145,7 +145,7 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Run daemons for 2 minutes
         self.run_and_check_alignak_daemons(240)
@@ -208,13 +208,13 @@ class TestLaunchDaemonsPassive(AlignakTest):
                 logs = []
                 for line in lines:
                     # Catches WARNING and ERROR logs
-                    if 'WARNING' in line:
+                    if 'WARNING:' in line:
                         print("line: %s" % line)
-                    if 'ERROR' in line or 'CRITICAL' in line:
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
                         errors_raised += 1
                         print("error: %s" % line)
                     # Catches INFO logs
-                    if 'INFO' in line:
+                    if 'INFO:' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()

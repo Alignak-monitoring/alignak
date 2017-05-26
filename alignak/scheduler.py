@@ -85,7 +85,8 @@ from alignak.downtime import Downtime
 from alignak.comment import Comment
 from alignak.util import average_percentile
 from alignak.load import Load
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
@@ -113,6 +114,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # The actions results returned by satelittes or fetched from
         # passive satellites are store in this queue
         self.waiting_results = Queue()  # satellites returns us results
+
+        self.log_loop = 'TEST_LOG_LOOP' in os.environ
 
         # Every N seconds we call functions like consume, del zombies
         # etc. All of theses functions are in recurrent_works with the
@@ -182,7 +185,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
             },
-            "event_handler": {
+            "eventhandler": {
                 "total": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
@@ -217,10 +220,17 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_actions_launched_passive = 0
 
         self.nb_checks = 0
+        self.nb_checks_total = 0
         self.nb_broks = 0
+        self.nb_broks_total = 0
+        self.nb_internal_checks = 0
+        self.nb_internal_checks_total = 0
         self.nb_notifications = 0
+        self.nb_notifications_total = 0
         self.nb_event_handlers = 0
+        self.nb_event_handlers_total = 0
         self.nb_external_commands = 0
+        self.nb_external_commands_total = 0
 
         # Checks results received
         self.nb_checks_results = 0
@@ -279,6 +289,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         self.must_run = True
+        # self.interrupted = False
 
         with self.waiting_results.mutex:  # pylint: disable=not-context-manager
             self.waiting_results.queue.clear()
@@ -417,7 +428,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        logger.debug("Asking me to die...")
         self.must_run = False
+        # self.sched_daemon.interrupted = True
 
     def dump_objects(self):
         """Dump scheduler objects into a dump (temp) file
@@ -528,6 +541,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :type notif: alignak.notification.Notification
         :return: None
         """
+        if notif.uuid in self.actions:
+            logger.debug("Already existing notification: %s", notif)
+            return
+
         self.actions[notif.uuid] = notif
         self.nb_notifications += 1
 
@@ -537,7 +554,7 @@ class Scheduler(object):  # pylint: disable=R0902
             self.add(brok)
 
     def add_check(self, check):
-        """Add a check into checks list
+        """Add a check into the scheduler checks list
 
         :param check: check to add
         :type check: alignak.check.Check
@@ -545,6 +562,10 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         if check is None:
             return
+        if check.uuid in self.checks:
+            logger.debug("Already existing check: %s", check)
+            return
+
         self.checks[check.uuid] = check
 
         self.nb_checks += 1
@@ -563,6 +584,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :type action: alignak.eventhandler.EventHandler
         :return: None
         """
+        if action.uuid in self.actions:
+            logger.debug("Already existing eventhandler: %s", action)
+            return
+
         self.actions[action.uuid] = action
         self.nb_event_handlers += 1
 
@@ -694,7 +719,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_actions_dropped = 0
         if len(self.actions) > max_actions:
             logger.warning("I have to del some actions (currently: %d, max: %d)..., sorry :(",
-                         len(self.actions), max_actions)
+                           len(self.actions), max_actions)
             to_del_actions = [c for c in self.actions.values()]
             to_del_actions.sort(key=lambda x: x.creation_time)
             to_del_actions = to_del_actions[:-max_actions]
@@ -911,7 +936,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     res.append(chk)
 
                     self.nb_checks_launched += 1
-                    
+
                     self.counters["check"]["total"]["launched"] += 1
                     self.counters["check"]["loop"]["launched"] += 1
                     self.counters["check"]["active"]["launched"] += 1
@@ -924,7 +949,7 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("%d actions for reactionner tags: %s", len(self.actions), reactionner_tags)
             for act in self.actions.values():
                 is_master = (act.is_a == 'notification' and not act.contact)
-                logger.error("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
+                logger.debug("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
 
                 if not is_master:
                     # if do_action, call the reactionner,
@@ -955,12 +980,12 @@ class Scheduler(object):  # pylint: disable=R0902
                         self.counters[act.is_a]["total"]["launched"] += 1
                         self.counters[act.is_a]["loop"]["launched"] += 1
                         self.counters[act.is_a]["active"]["launched"] += 1
-            
+
             logger.debug("-> %d actions to start now" % (len(res)) if res
                          else "-> no actions to start now")
         return res
 
-    def put_results(self, action):
+    def put_results(self, action):  # pylint: disable=too-many-branches,too-many-statements
         """Get result from pollers/reactionners (actives ones)
 
         :param action: check / action / eventhandler to handle
@@ -1060,10 +1085,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["total"]["timeout"] += 1
                     self.counters[action.is_a]["loop"]["timeout"] += 1
 
-                    logger.info("Timeout raised for '%s' (check command for the %s '%s')"
-                                ", check status code: %d, execution time: %d seconds",
-                                action.command, ref.my_type, ref.get_full_name(),
-                                action.exit_status, int(action.execution_time))
+                    logger.warning("Timeout raised for '%s' (check command for the %s '%s'), "
+                                   "check status code: %d, execution time: %d seconds",
+                                   action.command, ref.my_type, ref.get_full_name(),
+                                   action.exit_status, int(action.execution_time))
                 else:
                     self.nb_checks_results += 1
                     self.counters[action.is_a]["total"]["executed"] += 1
@@ -1085,6 +1110,18 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.warning('put_results:: get bad check: %s ', str(exp))
                 return
 
+            self.counters[action.is_a]["total"]["results"]["total"] += 1
+            if action.status not in \
+                    self.counters[action.is_a]["total"]["results"]:
+                self.counters[action.is_a]["total"]["results"][action.status] = 0
+            self.counters[action.is_a]["total"]["results"][action.status] += 1
+
+            self.counters[action.is_a]["loop"]["results"]["total"] += 1
+            if action.status not in \
+                    self.counters[action.is_a]["loop"]["results"]:
+                self.counters[action.is_a]["loop"]["results"][action.status] = 0
+            self.counters[action.is_a]["loop"]["results"][action.status] += 1
+
             if action.status == 'timeout':
                 _type = 'event handler'
                 if action.is_snapshot:
@@ -1094,7 +1131,15 @@ class Scheduler(object):  # pylint: disable=R0902
                             ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
                             _type, self.actions[action.uuid].command, int(action.execution_time))
 
-            # If it's a snapshot we should get the output an export it
+                self.nb_checks_results_timeout += 1
+                self.counters[action.is_a]["total"]["timeout"] += 1
+                self.counters[action.is_a]["loop"]["timeout"] += 1
+            else:
+                self.nb_checks_results += 1
+                self.counters[action.is_a]["total"]["executed"] += 1
+                self.counters[action.is_a]["loop"]["executed"] += 1
+
+            # If it's a snapshot we should get the output and export it
             if action.is_snapshot:
                 old_action.get_return_from(action)
                 s_item = self.find_item_by_id(old_action.ref)
@@ -1149,7 +1194,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         self.nb_actions_launched += len(lst)
                         self.nb_actions_launched_passive += len(lst)
                 except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+                    logger.warning("[%s] %s", link['name'], str(exp))
                 except HTTPClientTimeoutException as exp:
                     logger.warning("Connection timeout with the %s '%s' when pushing actions: %s",
                                    s_type, link['name'], str(exp))
@@ -1216,7 +1261,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         # Append to the scheduler result queue
                         self.waiting_results.put(result)
                 except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+                    logger.warning("[%s] %s", link['name'], str(exp))
                 except HTTPClientTimeoutException as exp:
                     logger.warning("Connection timeout with the %s '%s' when pushing results: %s",
                                    s_type, link['name'], str(exp))
@@ -2179,10 +2224,10 @@ class Scheduler(object):  # pylint: disable=R0902
         loop_duration = 0
         # For the scheduler pause duration
         pause_duration = 0.5
-        logger.info("Scheduler pause duration: %2f", pause_duration)
+        logger.info("Scheduler pause duration: %.2f", pause_duration)
         # For the scheduler maximum expected loop duration
         maximum_loop_duration = 1.0
-        logger.info("Scheduler maximum expected loop duration: %2f", maximum_loop_duration)
+        logger.info("Scheduler maximum expected loop duration: %.2f", maximum_loop_duration)
 
         # Scheduler start timestamp
         sch_start_ts = time.time()
@@ -2211,6 +2256,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Broks, notifications, ... counters
         self.nb_broks_total = 0
         self.nb_broks = 0
+        self.nb_internal_checks = 0
+        self.nb_internal_checks_total = 0
         self.nb_notifications_total = 0
         self.nb_notifications = 0
         self.nb_event_handlers_total = 0
@@ -2219,7 +2266,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_external_commands = 0
 
         self.load_one_min = Load(initial_value=1)
-        logger.info("[%s] starting scheduler loop: %2f", self.instance_name, sch_start_ts)
+        logger.info("[%s] starting scheduler loop: %.2f", self.instance_name, sch_start_ts)
         while self.must_run:
             # Scheduler load
             # fixme: measuring the scheduler load with this method is a non-sense ...
@@ -2233,7 +2280,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # Increment loop count
             loop_count += 1
-            logger.info("--- %d", loop_count)
+            if self.log_loop:
+                logger.info("--- %d", loop_count)
 
             # Increment ticks count
             ticks += 1
@@ -2259,7 +2307,40 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.timer('loop.get_actions_from_passives_satellites', time.time() - _ts)
 
             # Scheduler statistics
-            # checks / actions counters
+            # - broks / notifications counters
+            if self.log_loop:
+                logger.info("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
+                            "checks: %d, event handlers: %d, external commands: %d",
+                            self.nb_broks, self.nb_notifications, self.nb_checks,
+                            self.nb_internal_checks, self.nb_event_handlers,
+                            self.nb_external_commands)
+            statsmgr.gauge('checks', self.nb_checks)
+            statsmgr.gauge('broks', self.nb_broks)
+            statsmgr.gauge('internal_checks', self.nb_internal_checks)
+            statsmgr.gauge('notifications', self.nb_notifications)
+            statsmgr.gauge('event_handlers', self.nb_event_handlers)
+            statsmgr.gauge('external_commands', self.nb_external_commands)
+            self.nb_checks_total += self.nb_checks
+            self.nb_broks_total += self.nb_broks
+            self.nb_internal_checks_total += self.nb_internal_checks
+            self.nb_notifications_total += self.nb_notifications
+            self.nb_event_handlers_total += self.nb_event_handlers
+            self.nb_external_commands_total += self.nb_external_commands
+            if self.log_loop:
+                logger.info("Items (total): broks: %d, notifications: %d, checks: %d, internal "
+                            "checks: %d, event handlers: %d, external commands: %d",
+                            self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
+                            self.nb_internal_checks_total, self.nb_event_handlers_total,
+                            self.nb_external_commands_total)
+            # Reset on each loop
+            # self.nb_checks = 0 not yet for this one!
+            self.nb_broks = 0
+            self.nb_internal_checks = 0
+            self.nb_notifications = 0
+            self.nb_event_handlers = 0
+            self.nb_external_commands = 0
+
+            # - checks / actions counters
             for action_type in self.counters:
                 for action_group in ['total', 'active', 'passive', 'loop']:
                     # Actions launched
@@ -2276,9 +2357,9 @@ class Scheduler(object):  # pylint: disable=R0902
                                    self.counters[action_type][action_group]["executed"])
 
                     # Reset loop counters
-                    if action_group == 'loop':
-                        logger.info("Actions '%s': launched: %d, timeout: %d, executed: %d",
-                                    action_group,
+                    if action_group == 'loop' and self.log_loop:
+                        logger.info("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                                    action_type, action_group,
                                     self.counters[action_type][action_group]["launched"],
                                     self.counters[action_type][action_group]["timeout"],
                                     self.counters[action_type][action_group]["executed"])
@@ -2287,37 +2368,29 @@ class Scheduler(object):  # pylint: disable=R0902
                         self.counters[action_type][action_group]["timeout"] = 0
                         self.counters[action_type][action_group]["executed"] = 0
 
+                    # Reset loop counters
+                    if action_group == 'total' and self.log_loop:
+                        logger.info("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                                    action_type, action_group,
+                                    self.counters[action_type][action_group]["launched"],
+                                    self.counters[action_type][action_group]["timeout"],
+                                    self.counters[action_type][action_group]["executed"])
+
                     # Actions results
-                    dump_result = "Results '%s': " % action_group
+                    dump_result = "Results '%s/%s': " % (action_type, action_group)
                     for result in self.counters[action_type][action_group]["results"]:
                         my_result = self.counters[action_type][action_group]["results"][result]
                         statsmgr.gauge('actions.%s.%s.result.%s'
                                        % (action_type, action_group, result), my_result)
                         dump_result += "%s: %d, " % (result, my_result)
-                    if action_group == 'loop':
+                    if action_group in ['loop', 'total'] and self.log_loop:
                         logger.info(dump_result)
 
-            logger.info("Items: broks: %d, notifications: %d, "
-                        "event handlers: %d, external commands: %d",
-                        self.nb_broks, self.nb_notifications,
-                        self.nb_event_handlers, self.nb_external_commands)
-            statsmgr.gauge('broks', self.nb_broks)
-            statsmgr.gauge('notifications', self.nb_notifications)
-            statsmgr.gauge('event_handlers', self.nb_event_handlers)
-            statsmgr.gauge('external_commands', self.nb_external_commands)
-            self.nb_broks_total += self.nb_broks
-            self.nb_notifications_total += self.nb_notifications
-            self.nb_event_handlers_total += self.nb_event_handlers
-            self.nb_external_commands_total += self.nb_external_commands
-            # Reset on each loop
-            self.nb_broks = 0
-            self.nb_notifications = 0
-            self.nb_event_handlers = 0
-            self.nb_external_commands = 0
-
             # - current state
-            nb_scheduled = nb_launched = nb_timeout = nb_done = nb_inpoller = nb_zombies = 0
+            nb_checks = nb_scheduled = nb_launched = 0
+            nb_timeout = nb_done = nb_inpoller = nb_zombies = 0
             for chk in self.checks.itervalues():
+                nb_checks += 1
                 if chk.status == 'scheduled':
                     nb_scheduled += 1
                 elif chk.status == 'launched':
@@ -2330,13 +2403,17 @@ class Scheduler(object):  # pylint: disable=R0902
                     nb_inpoller += 1
                 elif chk.status == 'zombie':
                     nb_zombies += 1
-            logger.info("Checks (loop): total: %d (%d) (scheduled: %d, launched: %d, "
-                        "in poller: %d, timeout: %d, done: %d, zombies: %d)",
-                        self.nb_checks, len(self.checks), nb_scheduled, nb_launched,
-                        nb_inpoller, nb_timeout, nb_done, nb_zombies)
-            statsmgr.gauge('checks.total', len(self.checks))
+            if self.log_loop:
+                logger.info("Checks (loop): total: %d (scheduled: %d, launched: %d, "
+                            "in poller: %d, timeout: %d, done: %d, zombies: %d)",
+                            nb_checks, nb_scheduled, nb_launched,
+                            nb_inpoller, nb_timeout, nb_done, nb_zombies)
+            statsmgr.gauge('checks.total', nb_checks)
             statsmgr.gauge('checks.scheduled', nb_scheduled)
+            statsmgr.gauge('checks.launched', nb_launched)
             statsmgr.gauge('checks.inpoller', nb_inpoller)
+            statsmgr.gauge('checks.timeout', nb_timeout)
+            statsmgr.gauge('checks.done', nb_done)
             statsmgr.gauge('checks.zombie', nb_zombies)
 
             if self.need_dump_memory:
@@ -2364,20 +2441,19 @@ class Scheduler(object):  # pylint: disable=R0902
             pause = maximum_loop_duration - loop_duration
             if loop_duration > maximum_loop_duration:
                 logger.warning("The scheduler loop exceeded the maximum expected loop "
-                               "duration: %2f. The last loop needed %2f seconds to execute. "
+                               "duration: %.2f. The last loop needed %.2f seconds to execute. "
                                "You should update your configuration to reduce the load on "
-                               "this scheduler.",
-                               maximum_loop_duration, loop_duration)
+                               "this scheduler.", maximum_loop_duration, loop_duration)
                 # Make a very very short pause ...
                 pause = 0.1
 
             # Pause the scheduler execution to avoid too much load on the system
-            logger.info("Before pause: sleep time: %s", pause)
+            logger.debug("Before pause: sleep time: %s", pause)
             work, time_changed = self.sched_daemon.make_a_pause(pause)
-            logger.info("After pause: %2f / %2f, sleep time: %2f", work, time_changed,
-                        self.sched_daemon.sleep_time)
+            logger.debug("After pause: %.2f / %.2f, sleep time: %.2f",
+                         work, time_changed, self.sched_daemon.sleep_time)
             if work > pause_duration:
-                logger.warning("Too much work during the pause (%2f out of %2f)! "
+                logger.warning("Too much work during the pause (%.2f out of %.2f)! "
                                "The scheduler should rest for a while... but one need to change "
                                "its code for this. Please log an issue in the project repository;",
                                work, pause_duration)
@@ -2386,29 +2462,31 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # And now, the whole average time spent
             elapsed_time = loop_end_ts - sch_start_ts
-            logger.info("Elapsed time, current loop: %2f, from start: %2f (%d loops)",
-                        loop_duration, elapsed_time, loop_count)
+            if self.log_loop:
+                logger.info("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
+                            loop_duration, elapsed_time, loop_count)
             statsmgr.gauge('loop.count', loop_count)
             statsmgr.timer('loop.duration', loop_duration)
             statsmgr.timer('run.duration', elapsed_time)
-            logger.info("Check average (loop) = %d checks results, %d dropped, %2f checks/s",
-                        self.nb_checks_results,
-                        self.nb_checks_dropped,
-                        self.nb_checks_results / loop_duration)
-            logger.info("Check average (total) = %d checks results, %d dropped, %2f checks/s",
-                        self.nb_checks_results, self.nb_checks_dropped,
-                        self.nb_checks_results / elapsed_time)
+            if self.log_loop:
+                logger.info("Check average (loop) = %d checks results, %.2f checks/s",
+                            self.nb_checks, self.nb_checks / loop_duration)
+                logger.info("Check average (total) = %d checks results, %.2f checks/s",
+                            self.nb_checks_total, self.nb_checks_total / elapsed_time)
+            self.nb_checks = 0
 
-            if self.nb_checks_dropped > 0 or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
+            if self.nb_checks_dropped > 0 \
+                    or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
                 logger.warning("We dropped %d checks, %d broks and %d actions",
                                self.nb_checks_dropped, self.nb_broks_dropped,
                                self.nb_actions_dropped)
 
-            logger.info("+++ %d", loop_count)
-        logger.info("[%s] stopping scheduler loop: %2f, elapsed: %2f seconds",
+            if self.log_loop:
+                logger.info("+++ %d", loop_count)
+        logger.info("[%s] stopping scheduler loop: started: %.2f, elapsed time: %.2f seconds",
                     self.instance_name, sch_start_ts, elapsed_time)
 
-        statsmgr.file_d.close()
+        # statsmgr.file_d.close()
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
         self.update_retention_file(True)

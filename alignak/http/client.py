@@ -55,14 +55,49 @@ from alignak.misc.serialization import serialize
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class HTTPException(Exception):
-    """Simple HTTP Exception
-
-    """
+class HTTPClientException(Exception):
+    """Simple HTTP Exception - raised for all requests exception except for a timeout"""
     pass
 
 
-HTTPEXCEPTIONS = (HTTPException,)
+class HTTPClientTimeoutException(Exception):
+    """HTTP Timeout Exception - raised when no response issued by the server in the specified
+    time frame.
+    This specific exception is raised when a requests Timeout exception is catched.
+
+    Its attribute are:
+    - uri: the requested URI,
+    - timeout: the duration of the timeout.
+    """
+    def __init__(self, timeout, uri):
+        # Call the base class constructor with the parameters it needs
+        super(HTTPClientTimeoutException, self).__init__()
+
+        self.timeout = timeout
+        self.uri = uri
+
+    def __str__(self):
+        """Exception to String"""
+        return "Request timeout (%d seconds) for %s" % (self.timeout, self.uri)
+
+
+class HTTPClientConnectionException(Exception):
+    """HTTP Connection Exception - raised when connection fails with the server.
+    This specific exception is raised when a requests Timeout exception is catched.
+
+    Its attribute are:
+    - uri: the requested URI,
+    - timeout: the duration of the timeout.
+    """
+    def __init__(self, uri):
+        # Call the base class constructor with the parameters it needs
+        super(HTTPClientConnectionException, self).__init__()
+
+        self.uri = uri
+
+    def __str__(self):
+        """Exception to String"""
+        return "Server not available: %s" % (self.uri)
 
 
 class HTTPClient(object):
@@ -86,7 +121,7 @@ class HTTPClient(object):
         self.set_proxy(proxy)
 
     @property
-    def con(self):
+    def con(self):  # pragma: no cover, deprecated
         """Deprecated property of HTTPClient
 
         :return: connection
@@ -160,8 +195,12 @@ class HTTPClient(object):
             if rsp.status_code != 200:
                 raise Exception('HTTP GET not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
             return rsp.json()
+        except (requests.Timeout, requests.ConnectTimeout):
+            raise HTTPClientTimeoutException(timeout, uri)
+        except requests.ConnectionError:
+            raise HTTPClientConnectionException(uri)
         except Exception as err:
-            raise HTTPException('Request error to %s: %s' % (uri, err))
+            raise HTTPClientException('Request error to %s: %s' % (uri, err))
 
     def post(self, path, args, wait='short'):
         """Do a POST HTTP request
@@ -183,8 +222,12 @@ class HTTPClient(object):
             rsp = self._requests_con.post(uri, json=args, timeout=timeout, verify=self.strong_ssl)
             if rsp.status_code != 200:
                 raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
+        except (requests.Timeout, requests.ConnectTimeout):
+            raise HTTPClientTimeoutException(timeout, uri)
+        except requests.ConnectionError:
+            raise HTTPClientConnectionException(uri)
         except Exception as err:
-            raise HTTPException('Request error to %s: %s' % (uri, err))
+            raise HTTPClientException('Request error to %s: %s' % (uri, err))
         return rsp.content
 
     def put(self, path, data, wait='short'):
@@ -205,6 +248,10 @@ class HTTPClient(object):
             rsp = self._requests_con.put(uri, data, timeout=timeout, verify=self.strong_ssl)
             if rsp.status_code != 200:
                 raise Exception('HTTP PUT not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
+        except (requests.Timeout, requests.ConnectTimeout):
+            raise HTTPClientTimeoutException(timeout, uri)
+        except requests.ConnectionError:
+            raise HTTPClientConnectionException(uri)
         except Exception as err:
-            raise HTTPException('Request error to %s: %s' % (uri, err))
+            raise HTTPClientException('Request error to %s: %s' % (uri, err))
         return rsp.content

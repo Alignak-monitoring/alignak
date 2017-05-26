@@ -50,7 +50,8 @@ import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -106,7 +107,7 @@ class ArbiterLink(SatelliteLink):
         try:
             self.con.get('do_not_run')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when sending do_not_run: %s",
                            self.get_name(), str(exp))
@@ -135,7 +136,7 @@ class ArbiterLink(SatelliteLink):
         try:
             res = self.con.get('get_all_states')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when sending get_all_states: %s",
                            self.get_name(), str(exp))
@@ -171,7 +172,7 @@ class ArbiterLink(SatelliteLink):
         try:
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when sending get_objects_properties: %s",
                            self.get_name(), str(exp))

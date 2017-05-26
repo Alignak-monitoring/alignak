@@ -370,8 +370,7 @@ class Receiver(Satellite):
                 con.post('run_external_commands', {'cmds': cmds})
                 sent = True
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
-                self.set_dead()
+                logger.warning("[%s] %s", sched.scheduler_name, str(exp))
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the scheduler '%s' when "
                                "sending external commands: %s", sched.scheduler_name, str(exp))

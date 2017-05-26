@@ -59,7 +59,7 @@
 """
 This module provides abstraction for creating daemon in Alignak
 """
-# pylint: disable=R0904
+# pylint: disable=too-many-public-methods, unused-import
 from __future__ import print_function
 import os
 import errno
@@ -70,6 +70,7 @@ import select
 import ConfigParser
 import threading
 import logging
+import warnings
 from Queue import Empty
 from multiprocessing.managers import SyncManager
 
@@ -800,7 +801,7 @@ class Daemon(object):
         return True
 
     @staticmethod
-    def get_socks_activity(socks, timeout):
+    def get_socks_activity(socks, timeout):  # pylint: disable=unused-argument
         """ Global loop part : wait for socket to be ready
 
         :param socks: a socket file descriptor list
@@ -810,19 +811,24 @@ class Daemon(object):
         :return: A list of socket file descriptor ready to read
         :rtype: list
         """
-        # some os are not managing void socks list, so catch this
-        # and just so a simple sleep instead
-        if socks == []:
-            time.sleep(timeout)
-            return []
-        try:  # pragma: no cover, not with unit tests on Travis...
-            ins, _, _ = select.select(socks, [], [], timeout)
-        except select.error, err:
-            errnum, _ = err
-            if errnum == errno.EINTR:
-                return []
-            raise
-        return ins
+        warnings.warn("get_socks_activity is now deprecated. No daemon needs to use this function.",
+                      DeprecationWarning, stacklevel=2)
+        return []
+
+        # @mohierf: did not yet remove the former code...
+        # # some os are not managing void socks list, so catch this
+        # # and just so a simple sleep instead
+        # if socks == []:
+        #     time.sleep(timeout)
+        #     return []
+        # try:  # pragma: no cover, not with unit tests on Travis...
+        #     ins, _, _ = select.select(socks, [], [], timeout)
+        # except select.error, err:
+        #     errnum, _ = err
+        #     if errnum == errno.EINTR:
+        #         return []
+        #     raise
+        # return ins
 
     def check_and_del_zombie_modules(self):
         """Check alive instance and try to restart the dead ones
@@ -891,12 +897,12 @@ class Daemon(object):
 
         # Maybe the os module got the initgroups function. If so, try to call it.
         # Do this when we are still root
+        logger.info('Trying to initialize additional groups for the daemon')
         if hasattr(os, 'initgroups'):
-            logger.info('Trying to initialize additional groups for the daemon')
             try:
                 os.initgroups(self.user, gid)
-            except OSError, err:
-                logger.warning('Cannot call the additional groups setting with initgroups (%s)',
+            except OSError as err:
+                logger.warning('Cannot call the additional groups setting with initgroups: %s',
                                err.strerror)
         elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
             # Else try to call the setgroups if it exists...
@@ -904,20 +910,20 @@ class Daemon(object):
                      [group.gr_gid for group in get_all_groups() if self.user in group.gr_mem]
             try:
                 os.setgroups(groups)
-            except OSError, err:
-                logger.warning('Cannot call the additional groups setting with setgroups (%s)',
+            except OSError as err:
+                logger.warning('Cannot call the additional groups setting with setgroups: %s',
                                err.strerror)
         try:
             # First group, then user :)
             os.setregid(gid, gid)
             os.setreuid(uid, uid)
-        except OSError, err:  # pragma: no cover, not with unit tests...
-            logger.error("cannot change user/group to %s/%s (%s [%d]). Exiting",
+        except OSError as err:  # pragma: no cover, not with unit tests...
+            logger.error("Cannot change user/group to %s/%s (%s [%d]). Exiting...",
                          self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
 
     def load_config_file(self):
-        """ Parse daemon configuration file
+        """Parse daemon configuration file
 
         Parse self.config_file and get all its variables.
         If some properties need a pythonization, do it.
@@ -992,7 +998,7 @@ class Daemon(object):
         :type frame:
         :return: None
         """
-        logger.warning("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
@@ -1038,7 +1044,7 @@ class Daemon(object):
             setproctitle("alignak-%s" % self.daemon_type)
 
     def get_header(self):
-        """ Get the log file header
+        """Get the log file header
 
         :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
@@ -1063,15 +1069,22 @@ class Daemon(object):
         except PortNotFree as exp:
             # print("Exception: %s" % str(exp))
             # logger.exception('The HTTP daemon port is not free: %s', exp)
-            raise PortNotFree(exp)
+            raise
         except Exception as exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            raise Exception(exp)
+            raise
         logger.info("HTTP main thread exiting")
 
     def handle_requests(self, timeout, suppl_socks=None):
+        # pylint: disable=no-self-use, unused-argument
         """ Wait up to timeout to handle the requests.
         If suppl_socks is given it also looks for activity on that list of fd.
+
+        @mohierf, this function is never called with `suppl_socks`! Its behavior is
+         to replace the select on the sockets by a time.sleep() for the duration of
+         the provided timoeut... resulting in the caller daemon to sleep!
+         So I remove this useless parameter and the get_socks_activity function to
+         replace with a time.sleep(timeout) call.
 
         :param timeout: timeout to wait for activity
         :type timeout: float
@@ -1085,35 +1098,78 @@ class Daemon(object):
             - third arg is possible system time change value, or 0 if no change
         :rtype: tuple
         """
-        if suppl_socks is None:
-            suppl_socks = []
-        before = time.time()
-        socks = []
-        if suppl_socks:
-            socks.extend(suppl_socks)
+        warnings.warn("handle_requests is now deprecated. The daemon using this function "
+                      "must use the make_a_pause function instead.",
+                      DeprecationWarning, stacklevel=2)
+        time.sleep(timeout)
+        return timeout, [], 0
 
-        # Ok give me the socks that moved during the timeout max
-        ins = self.get_socks_activity(socks, timeout)
-        # Ok now get back the global lock!
-        tcdiff = self.check_for_system_time_change()
-        before += tcdiff
-        # Increase our sleep time for the time go in select
+        # @mohierf: did not yet remove the former code...
+        # if suppl_socks is None:
+        #     suppl_socks = []
+        # before = time.time()
+        # socks = []
+        # if suppl_socks:
+        #     socks.extend(suppl_socks)
+        #
+        # # Ok give me the socks that moved during the timeout max
+        # ins = self.get_socks_activity(socks, timeout)
+        # # Ok now get back the global lock!
+        # tcdiff = self.check_for_system_time_change()
+        # before += tcdiff
+        # # Increase our sleep time for the time go in select
+        # self.sleep_time += time.time() - before
+        # if len(ins) == 0:  # trivial case: no fd activity:
+        #     return 0, [], tcdiff
+        # # HERE WAS THE HTTP, but now it's managed in an other thread
+        # # for sock in socks:
+        # #    if sock in ins and sock not in suppl_socks:
+        # #        ins.remove(sock)
+        # # Track in elapsed the WHOLE time, even with handling requests
+        # elapsed = time.time() - before
+        # if elapsed == 0:  # we have done a few instructions in 0 second exactly!? quantum
+        # computer?
+        #     elapsed = 0.01  # but we absolutely need to return!= 0 to indicate that we got
+        # activity
+        # return elapsed, ins, tcdiff
+
+    def make_a_pause(self, timeout):
+        """ Wait up to timeout and check for system time change.
+
+        This function checks if the system time changed since the last call. If so,
+        the difference is returned to the caller.
+        The duration of this call is removed from the timeout. If this duration is
+        greater than the required timeout, no sleep is executed and the extra time
+        is returned to the caller
+
+        If the required timeout was overlapped, then the first return value will be
+        greater than the required timeout.
+
+        :param timeout: timeout to wait for activity
+        :type timeout: float
+        :return:Returns a 2-tuple:
+        * first value is the time spent for the time change chekc
+        * second value is the time change difference
+        :rtype: tuple
+        """
+        # Check is system time changed
+        before = time.time()
+        time_changed = self.check_for_system_time_change()
+        after = time.time()
+
+        if after - before > timeout:
+            return after - before, time_changed
+        # Time to sleep
+        time.sleep(timeout)
+
+        # Increase our sleep time for the time we slept
+        before += time_changed
         self.sleep_time += time.time() - before
-        if not ins:  # trivial case: no fd activity:
-            return 0, [], tcdiff
-        # HERE WAS THE HTTP, but now it's managed in an other thread
-        # for sock in socks:
-        #    if sock in ins and sock not in suppl_socks:
-        #        ins.remove(sock)
-        # Track in elapsed the WHOLE time, even with handling requests
-        elapsed = time.time() - before
-        if elapsed == 0:  # we have done a few instructions in 0 second exactly!? quantum computer?
-            elapsed = 0.01  # but we absolutely need to return!= 0 to indicate that we got activity
-        return elapsed, ins, tcdiff
+
+        return after - before, time_changed
 
     def check_for_system_time_change(self):
-        """
-        Check if our system time change. If so, change our
+        """Check if our system time change. If so, change our
 
         :return: 0 if the difference < 900, difference else
         :rtype: int
@@ -1123,6 +1179,7 @@ class Daemon(object):
         difference = now - self.t_each_loop
 
         # If we have more than 15 min time change, we need to compensate it
+        # todo: confirm that 15 minutes is a good choice...
         if abs(difference) > 900:  # pragma: no cover, not with unit tests...
             if hasattr(self, "sched"):
                 self.compensate_system_time_change(difference,
@@ -1144,7 +1201,7 @@ class Daemon(object):
         logger.warning('A system time change of %s has been detected.  Compensating...', difference)
 
     def wait_for_initial_conf(self, timeout=1.0):
-        """Wait conf from arbiter.
+        """Wait initial configuration from the arbiter.
         Basically sleep 1.0 and check if new_conf is here
 
         :param timeout: timeout to wait from socket read
@@ -1154,13 +1211,17 @@ class Daemon(object):
         """
         logger.info("Waiting for initial configuration")
         # Arbiter do not already set our have_conf param
+        _ts = time.time()
         while not self.new_conf and not self.interrupted:
             # This is basically sleep(timeout) and returns 0, [], int
             # We could only paste here only the code "used" but it could be
             # harder to maintain.
-            _ = self.handle_requests(timeout)
+            # _ = self.handle_requests(timeout)
+            _, _ = self.make_a_pause(timeout)
             sys.stdout.write(".")
             sys.stdout.flush()
+        logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
+        statsmgr.timer('initial-configuration', time.time() - _ts)
 
     def hook_point(self, hook_name):
         """Used to call module function that may define a hook function

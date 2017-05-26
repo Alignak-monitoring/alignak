@@ -217,13 +217,14 @@ class Alignak(BaseSatellite):
         :return: None
         TODO: Refactor with Daemon one
         """
-        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.info("scheduler process %d received a signal: %s", os.getpid(), str(sig))
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
             self.sched.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # usr2, dump objects
             self.sched.need_objects_dump = True
         else:  # if not, die :)
+            logger.info("scheduler process %d is dying...", os.getpid())
             self.sched.die()
             self.must_run = False
             Daemon.manage_signal(self, sig, frame)
@@ -305,7 +306,7 @@ class Alignak(BaseSatellite):
                                            strong_ssl=link['hard_ssl_name_check'],
                                            timeout=timeout, data_timeout=data_timeout)
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+            logger.warning("[%s] %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when creating client: %s",
                            s_type, link['name'], str(exp))
@@ -319,7 +320,7 @@ class Alignak(BaseSatellite):
             # initial ping must be quick
             con.get('ping')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+            logger.warning("[%s] %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when pinging: %s",
                            s_type, link['name'], str(exp))
@@ -347,6 +348,7 @@ class Alignak(BaseSatellite):
         self.wait_for_initial_conf()
         if not self.new_conf:
             return
+        logger.info("New configuration received")
         self.setup_new_conf()
         logger.info("[%s] New configuration loaded, scheduling for Alignak: %s",
                     self.name, self.sched.alignak_name)

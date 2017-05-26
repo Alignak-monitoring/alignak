@@ -67,6 +67,9 @@ class ColorStreamHandler(StreamHandler):
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:
             print msg.encode('ascii', 'ignore')
+        except IOError:
+            # May happen when process are closing
+            pass
         except TypeError:
             self.handleError(record)
 

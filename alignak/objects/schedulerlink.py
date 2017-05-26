@@ -47,7 +47,8 @@ import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
 
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, HTTPClientTimeoutException
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -102,7 +103,7 @@ class SchedulerLink(SatelliteLink):
         try:
             self.con.post('run_external_commands', {'cmds': commands})
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when sending run_external_commands: %s",
                            self.get_name(), str(exp))

@@ -214,7 +214,7 @@ class SatelliteLink(Item):
             self.con.post('put_conf', {'conf': conf}, wait='long')
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when sending configuration: %s",
@@ -225,7 +225,7 @@ class SatelliteLink(Item):
             self.con = None
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] put_conf - Connection does not exist!", self.get_name())
 
         return False
 
@@ -247,8 +247,8 @@ class SatelliteLink(Item):
         """
         was_alive = self.alive
         self.alive = True
-        self.attempt = 0
         self.reachable = True
+        self.attempt = 0
 
         # We came from dead to alive! We must propagate the good news
         if not was_alive:
@@ -268,6 +268,7 @@ class SatelliteLink(Item):
         """
         was_alive = self.alive
         self.alive = False
+        self.reachable = False
         self.con = None
 
         # We are dead now! ! We must propagate the sad news
@@ -314,7 +315,6 @@ class SatelliteLink(Item):
         self.last_check = now
 
         # We ping and update the managed list
-        logger.info("Pinging %s", self.get_name())
         self.ping()
         if not self.alive:
             logger.info("Not alive for ping: %s", self.get_name())
@@ -371,7 +371,7 @@ class SatelliteLink(Item):
             logger.warning("[%s] I responded '%s' to ping! WTF is it?", self.get_name(), res)
             self.add_failed_check_attempt('pinog / NOT pong')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when pinging: %s", self.get_name(), str(exp))
@@ -383,7 +383,7 @@ class SatelliteLink(Item):
             self.add_failed_check_attempt(reason=str(exp))
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] ping - Connection does not exist!", self.get_name())
 
         return False
 
@@ -405,7 +405,7 @@ class SatelliteLink(Item):
             self.con.get('wait_new_conf')
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when waiting new configuration: %s",
@@ -416,7 +416,7 @@ class SatelliteLink(Item):
                          self.get_name(), str(exp))
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] wait_new_conf - Connection does not exist!", self.get_name())
 
         return False
 
@@ -429,19 +429,14 @@ class SatelliteLink(Item):
         :return: Boolean indicating if the satellite has a (specific) configuration
         :type: bool
         """
-        # print("Conf: %s" % self.conf)
         if not self.reachable:
             logger.warning("Not reachable for have_conf: %s", self.get_name())
             return False
 
         try:
-            res = self.con.get('have_conf', {'magic_hash': magic_hash})
-            # todo: get method returns a unicode string! May be some unexpected result here!!!
-            if not isinstance(res, bool):
-                return False
-            return res
+            return self.con.get('have_conf', {'magic_hash': magic_hash})
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when testing if has configuration: %s",
@@ -452,7 +447,7 @@ class SatelliteLink(Item):
                          self.get_name(), str(exp))
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] have_conf - Connection does not exist! - %s", self.get_name(), exp)
 
         return False
 
@@ -478,7 +473,7 @@ class SatelliteLink(Item):
             # todo: do not handle the result to confirm?
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when removing from configuration: %s",
@@ -489,7 +484,7 @@ class SatelliteLink(Item):
                          self.get_name(), str(exp))
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] remove_from_conf - Connection does not exist!", self.get_name())
 
         return False
 
@@ -531,7 +526,7 @@ class SatelliteLink(Item):
             # We can update our list now
             # self.managed_confs = tab_cleaned
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when getting what I manage: %s",
@@ -544,7 +539,7 @@ class SatelliteLink(Item):
             logger.exception("Raised exception: %s", exp)
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] update_managed_conf - Connection does not exist!", self.get_name())
 
         return False
 
@@ -592,7 +587,7 @@ class SatelliteLink(Item):
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when pushing broks: %s",
@@ -602,7 +597,7 @@ class SatelliteLink(Item):
             logger.error("[%s] Error when pushing broks: %s", self.get_name(), str(exp))
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] push_broks - Connection does not exist!", self.get_name())
 
         return False
 
@@ -628,7 +623,7 @@ class SatelliteLink(Item):
                 return []
             return tab
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
+            logger.warning("[%s] %s", self.get_name(), str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when getting external commands: %s",
@@ -640,7 +635,7 @@ class SatelliteLink(Item):
             self.con = None
         except AttributeError as exp:  # pragma: no cover, simple protection
             # Connection is not created
-            logger.error("[%s] Connection does not exist!", self.get_name())
+            logger.error("[%s] get_external_commands - Connection does not exist!", self.get_name())
         except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
             logger.error('Cannot un-serialize external commands received: %s', exp)
 

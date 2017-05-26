@@ -105,6 +105,12 @@ class GenericInterface(object):
         :return: boolean indicating if the daemon has a conf
         :rtype: bool
         """
+        if magic_hash is not None:
+            # Beware, we got an str in entry, not an int
+            magic_hash = int(magic_hash)
+            # I've got a conf and a good one
+            return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
+
         return self.app.cur_conf is not None
 
     @cherrypy.expose
@@ -204,9 +210,6 @@ class GenericInterface(object):
         :return: managed configuration ids
         :rtype: dict
         """
-        # todo: let this print here?
-        print "The arbiter asked me what I manage. It's %s", self.app.what_i_managed()
-        logger.debug("The arbiter asked me what I manage. It's %s", self.app.what_i_managed())
         return self.app.what_i_managed()
 
     @cherrypy.expose

@@ -221,7 +221,7 @@ class BaseSatellite(Daemon):
                                      strong_ssl=link['hard_ssl_name_check'],
                                      timeout=timeout, data_timeout=data_timeout)
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+            logger.warning("[%s] %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when creating client: %s",
                            s_type, link['name'], str(exp))
@@ -246,7 +246,7 @@ class BaseSatellite(Daemon):
             # Ok all is done, we can save this new running s_id
             link['running_id'] = new_run_id
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Server is not available: %s", link['name'], str(exp))
+            logger.warning("[%s] %s", link['name'], str(exp))
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when getting running id: %s",
                            s_type, link['name'], str(exp))
@@ -256,7 +256,8 @@ class BaseSatellite(Daemon):
             link['con'] = None
             return
         except KeyError, exp:  # pragma: no cover, simple protection
-            logger.warning("con_init: The %s '%s' is not initialized: %s", s_type, link['name'], str(exp))
+            logger.warning("con_init: The %s '%s' is not initialized: %s",
+                           s_type, link['name'], str(exp))
             link['con'] = None
             traceback.print_stack()
             return
@@ -440,7 +441,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     con.post('put_results', {'from': self.name, 'results': results.values()})
                     send_ok = True
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("[%s] Server is not available: %s", sched['name'], str(exp))
+                logger.warning("[%s] %s", sched['name'], str(exp))
             except HTTPClientTimeoutException as exp:
                 logger.warning("Connection timeout with the scheduler '%s' "
                                "when putting results: %s", sched['name'], str(exp))
@@ -469,7 +470,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # I do not know this scheduler?
         sched = self.schedulers.get(sched_id)
         if sched is None:
-            logger.error("I do not know this scheduler: %s / %s", sched_id, self.schedulers)
+            logger.warning("I do not know this scheduler: %s / %s", sched_id, self.schedulers)
             return []
 
         ret, sched['wait_homerun'] = sched['wait_homerun'], {}
@@ -779,8 +780,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     # REF: doc/alignak-action-queues.png (2)
                     self.add_actions(tmp, sched_id)
             except HTTPClientConnectionException as exp:
-                logger.warning("[%s] Server is not available: %s", self.get_name(), str(exp))
-                self.set_dead()
+                logger.warning("[%s] %s", sched['name'], str(exp))
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the scheduler '%s' "
                                "when getting checks: %s", sched['name'], str(exp))

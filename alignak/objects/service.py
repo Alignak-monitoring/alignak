@@ -67,6 +67,7 @@
 If you look at the scheduling part, look at the scheduling item class"""
 # pylint: disable=C0302
 # pylint: disable=R0904
+import os
 import logging
 import time
 import re
@@ -640,6 +641,15 @@ class Service(SchedulingItem):
             )
         )
         self.broks.append(brok)
+        self.broks.append(brok)
+
+        if 'TEST_LOG_ALERTS' in os.environ:
+            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+                logger.warning('SERVICE ALERT: %s;%s;%s;%s;%d;%s', self.host_name, self.get_name(),
+                               self.state, self.state_type, self.attempt, self.output)
+            else:
+                logger.info('SERVICE ALERT: %s;%s;%s;%s;%d;%s', self.host_name, self.get_name(),
+                            self.state, self.state_type, self.attempt, self.output)
 
     def raise_initial_state(self):
         """Raise SERVICE HOST ALERT entry (info level)
@@ -719,6 +729,16 @@ class Service(SchedulingItem):
             )
         )
         self.broks.append(brok)
+
+        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+                logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
+                               host_ref.get_name(), self.get_name(), state,
+                               command.get_name(), self.output)
+            else:
+                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
+                            host_ref.get_name(), self.get_name(), state,
+                            command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
