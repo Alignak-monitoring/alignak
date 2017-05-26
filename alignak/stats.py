@@ -53,6 +53,16 @@ As such it:
 - tries to establish a connection if the StatsD sending is enabled
 - creates an inner dictionary for the registered metrics
 
+If some environment variables exist the metrics will be logged to a file in append mode:
+    'ALIGNAK_STATS_FILE'
+        the file name
+    'ALIGNAK_STATS_FILE_LINE_FMT'
+        defaults to [#date#] #counter# #value# #uom#\n'
+    'ALIGNAK_STATS_FILE_DATE_FMT'
+        defaults to '%Y-%m-%d %H:%M:%S'
+        date is UTC
+        if configured as an empty string, the date will be output as a UTC timestamp
+
 Every time a metric is updated thanks to the provided functions, the inner dictionary
 is updated according to keep the last value, the minimum/maximum values, to update an
 internal count of each update and to sum the collected values.
@@ -71,7 +81,7 @@ creates an internal brok.
 
 Alignak daemons statistics dictionary:
 
-* scheduler:
+* scheduler: (some more exist but hereunder are the main metrics)
     - configuration objects count (gauge)
         - configuration.hosts
         - configuration.services
@@ -175,6 +185,7 @@ Alignak daemons statistics dictionary:
 """
 
 import os
+import time
 import datetime
 import socket
 import logging
@@ -191,15 +202,6 @@ class Stats(object):
     Same behavior as::
 
         echo "foo:1|c" | nc -u -w0 127.0.0.1 8125
-
-    If some environment variables exist the metrics will be logged to a file in append mode:
-        'ALIGNAK_STATS_FILE'
-            the file name
-        'ALIGNAK_STATS_FILE_LINE_FMT'
-            defaults to [#date#] #counter# #value# #uom#\n'
-        'ALIGNAK_STATS_FILE_DATE_FMT'
-            defaults to '%Y-%m-%d %H:%M:%S'
-            date is UTC
 
     """
     def __init__(self):
@@ -268,7 +270,7 @@ class Stats(object):
         # local broks part
         self.broks_enabled = broks_enabled
 
-        if self.statsd_enabled and self.statsd_host is not None:
+        if self.statsd_enabled and self.statsd_host is not None and self.statsd_host is not 'None':
             logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
                         self.type, self.name,
                         self.statsd_host, self.statsd_port, self.statsd_prefix)
@@ -351,14 +353,18 @@ class Stats(object):
         # Manage file part
         if self.statsd_enabled and self.file_d:
             packet = self.line_fmt
-            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            if not self.date_fmt:
+                date = "%s" % time.time()
+            else:
+                date = datetime.datetime.utcnow().strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
-            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
+            packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
+            # beware, we are sending ms here, timer is in seconds
             packet = packet.replace("#value#", '%d' % (value * 1000))
             packet = packet.replace("#uom#", 'ms')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
+            # logger.debug("Writing data: %s", packet)
             try:
                 self.file_d.write(packet)
             except IOError:
@@ -412,14 +418,17 @@ class Stats(object):
         # Manage file part
         if self.statsd_enabled and self.file_d:
             packet = self.line_fmt
-            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            if not self.date_fmt:
+                date = "%s" % time.time()
+            else:
+                date = datetime.datetime.utcnow().strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
-            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
-            packet = packet.replace("#value#", '%d' % (value * 1000))
+            packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
+            packet = packet.replace("#value#", '%d' % value)
             packet = packet.replace("#uom#", 'c')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
+            # logger.debug("Writing data: %s", packet)
             try:
                 self.file_d.write(packet)
             except IOError:
@@ -473,14 +482,17 @@ class Stats(object):
         # Manage file part
         if self.statsd_enabled and self.file_d:
             packet = self.line_fmt
-            date = datetime.datetime.utcnow().strftime(self.date_fmt)
+            if not self.date_fmt:
+                date = "%s" % time.time()
+            else:
+                date = datetime.datetime.utcnow().strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
-            packet = packet.replace("#counter#", '%s.%s' % (self.statsd_prefix, self.name))
-            packet = packet.replace("#value#", '%d' % (value * 1000))
+            packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
+            packet = packet.replace("#value#", '%d' % value)
             packet = packet.replace("#uom#", 'g')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
+            # logger.debug("Writing data: %s", packet)
             try:
                 self.file_d.write(packet)
             except IOError:
