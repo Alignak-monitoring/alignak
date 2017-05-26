@@ -30,7 +30,7 @@ from time import sleep
 import requests
 import shutil
 
-from alignak_test import unittest
+import pytest
 from alignak_test import AlignakTest
 
 from alignak.http.generic_interface import GenericInterface
@@ -63,14 +63,14 @@ class DaemonsStartTest(AlignakTest):
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        if os.path.exists('./run/test_launch_daemons'):
+            shutil.rmtree('./run/test_launch_daemons')
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', './run/test_launch_daemons')
+        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
+                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -89,8 +89,8 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter with bad configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/run_test_launch_daemons/daemons/fake.ini",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+                "-c", "run/test_launch_daemons/daemons/fake.ini",
+                "-a", "run/test_launch_daemons/alignak.cfg"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -108,14 +108,14 @@ class DaemonsStartTest(AlignakTest):
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        if os.path.exists('./run/test_launch_daemons'):
+            shutil.rmtree('./run/test_launch_daemons')
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', './run/test_launch_daemons')
+        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
+                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -134,7 +134,7 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter with bad formatted configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/run_test_launch_daemons/daemons/arbiterd.ini",
+                "-c", "run/test_launch_daemons/daemons/arbiterd.ini",
                 "-a", "cfg/alignak_broken_2.cfg"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
@@ -168,14 +168,14 @@ class DaemonsStartTest(AlignakTest):
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        if os.path.exists('./run/test_launch_daemons'):
+            shutil.rmtree('./run/test_launch_daemons')
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', './run/test_launch_daemons')
+        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
+                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -195,7 +195,7 @@ class DaemonsStartTest(AlignakTest):
         print("Launching arbiter with configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
                 "-V",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+                "-a", "run/test_launch_daemons/alignak.cfg"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -220,14 +220,14 @@ class DaemonsStartTest(AlignakTest):
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        if os.path.exists('./run/test_launch_daemons'):
+            shutil.rmtree('./run/test_launch_daemons')
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', './run/test_launch_daemons')
+        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
+                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -246,7 +246,7 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter with bad configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+                "-a", "run/test_launch_daemons/alignak.cfg"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -274,16 +274,30 @@ class DaemonsStartTest(AlignakTest):
                 # Only WARNING because of missing daemons...
                 if 'Cannot call the additional groups setting ' in line:
                     ok = True
-                if 'Add failed attempt to ' in line:
+                if 'Connection failed ' in line:
+                    ok = True
+                if 'Connection timeout ' in line:
+                    ok = True
+                if 'Not reachable for ' in line:
+                    ok = True
+                if 'Add failed attempt ' in line:
+                    ok = True
+                if 'Server is not available' in line:
                     ok = True
                 if 'Missing satellite ' in line:
                     ok = True
+                if 'Setting the satellite ' in line:
+                    ok = True
                 if 'Configuration sending error ' in line:
+                    ok = True
+                if 'There are no alive schedulers in this realm!' in line:
+                    ok = True
+                if 'All schedulers configurations are not dispatched, 1 are missing':
                     ok = True
                 assert ok
             if 'ERROR:' in line:
                 # Only ERROR because of configuration sending failures...
-                if 'ERROR: [alignak.objects.satellitelink] Failed sending configuration for ' not in line:
+                if 'Connection does not exist!' not in line and 'Error when pinging: ' not in line and 'Failed sending configuration for ' not in line:
                     ok = False
             if 'CRITICAL:' in line:
                 ok = False
@@ -293,23 +307,27 @@ class DaemonsStartTest(AlignakTest):
             if sys.version_info > (2, 7):
                 assert False, "stderr output!"
 
+    @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_spare_missing_configuration(self):
         """ Run the Alignak Arbiter in spare mode - missing spare configuration
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons')
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        if os.path.exists(cfg_folder):
+            shutil.rmtree(cfg_folder)
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', cfg_folder)
+        files = [cfg_folder + '/daemons/arbiterd.ini',
+                 cfg_folder + '/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
+            '/usr/local/etc/alignak': '/tmp',
+            'arbiterd.log': 'arbiter-spare-configuration.log',
         }
         self.files_update(files, replacements)
 
@@ -324,36 +342,41 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter in spare mode...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg",
-                "-k", "arbiter-spare"]
+                "-a", cfg_folder + "/alignak.cfg",
+                "-c", cfg_folder + "/daemons/arbiterd.ini",
+                "-n", "arbiter-spare"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
         sleep(5)
 
         ret = arbiter.poll()
-        print("*** Arbiter exited with code: %d" % ret)
+        print("*** Arbiter exited with code: %s" % ret)
         assert ret is not None, "Arbiter is still running!"
         # Arbiter process must exit with a return code == 1
         assert ret == 1
 
+    @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_spare(self):
         """ Run the Alignak Arbiter in spare mode - missing spare configuration
 
         :return:
         """
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
+        # copy etc config files in test/run/test_launch_daemons and change folder
         # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons')
+        if os.path.exists(cfg_folder):
+            shutil.rmtree(cfg_folder)
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        shutil.copytree('../etc', cfg_folder)
+        files = [cfg_folder + '/daemons/arbiterd.ini',
+                 cfg_folder + '/arbiter/daemons/arbiter-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
             '/usr/local/etc/alignak': '/tmp',
+            'arbiterd.log': 'arbiter-spare.log',
             'arbiter-master': 'arbiter-spare',
             'spare                   0': 'spare                   1'
         }
@@ -370,8 +393,9 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter in spare mode...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg",
-                "-k", "arbiter-spare"]
+                "-a", cfg_folder + "/alignak.cfg",
+                "-c", cfg_folder + "/daemons/arbiterd.ini",
+                "-n", "arbiter-spare"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -436,25 +460,28 @@ class DaemonsStartTest(AlignakTest):
         """
         req = requests.Session()
 
-        # copy etc config files in test/cfg/run_test_launch_daemons and change folder
-        # in the files for pid and log files
-        if os.path.exists('./cfg/run_test_launch_daemons'):
-            shutil.rmtree('./cfg/run_test_launch_daemons')
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons')
 
-        shutil.copytree('../etc', './cfg/run_test_launch_daemons')
-        files = ['cfg/run_test_launch_daemons/daemons/arbiterd.ini',
-                 'cfg/run_test_launch_daemons/daemons/brokerd.ini',
-                 'cfg/run_test_launch_daemons/daemons/pollerd.ini',
-                 'cfg/run_test_launch_daemons/daemons/reactionnerd.ini',
-                 'cfg/run_test_launch_daemons/daemons/receiverd.ini',
-                 'cfg/run_test_launch_daemons/daemons/schedulerd.ini',
-                 'cfg/run_test_launch_daemons/alignak.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/arbiter-master.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/broker-master.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/poller-master.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/reactionner-master.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/receiver-master.cfg',
-                 'cfg/run_test_launch_daemons/arbiter/daemons/scheduler-master.cfg']
+        # copy etc config files in test/run/test_launch_daemons and change folder
+        # in the files for pid and log files
+        if os.path.exists(cfg_folder):
+            shutil.rmtree(cfg_folder)
+
+        shutil.copytree('../etc', cfg_folder)
+        files = [cfg_folder + '/daemons/arbiterd.ini',
+                 cfg_folder + '/daemons/brokerd.ini',
+                 cfg_folder + '/daemons/pollerd.ini',
+                 cfg_folder + '/daemons/reactionnerd.ini',
+                 cfg_folder + '/daemons/receiverd.ini',
+                 cfg_folder + '/daemons/schedulerd.ini',
+                 cfg_folder + '/alignak.cfg',
+                 cfg_folder + '/arbiter/daemons/arbiter-master.cfg',
+                 cfg_folder + '/arbiter/daemons/broker-master.cfg',
+                 cfg_folder + '/arbiter/daemons/poller-master.cfg',
+                 cfg_folder + '/arbiter/daemons/reactionner-master.cfg',
+                 cfg_folder + '/arbiter/daemons/receiver-master.cfg',
+                 cfg_folder + '/arbiter/daemons/scheduler-master.cfg']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -494,7 +521,7 @@ class DaemonsStartTest(AlignakTest):
         print("Launching the daemons...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             args = ["../alignak/bin/alignak_%s.py" %daemon,
-                    "-c", "./cfg/run_test_launch_daemons/daemons/%sd.ini" % daemon]
+                    "-c", cfg_folder + "/daemons/%sd.ini" % daemon]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             sleep(0.1)
@@ -526,8 +553,8 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/run_test_launch_daemons/daemons/arbiterd.ini",
-                "-a", "cfg/run_test_launch_daemons/alignak.cfg"]
+                "-c", cfg_folder + "/daemons/arbiterd.ini",
+                "-a", cfg_folder + "/alignak.cfg"]
         self.procs['arbiter'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
@@ -647,6 +674,7 @@ class DaemonsStartTest(AlignakTest):
         scheduler_id = "XxX"
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
+            print("%s, raw stats: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, raw stats: %s" % (name, data))
             if name in ['reactionner', 'poller']:
@@ -659,6 +687,7 @@ class DaemonsStartTest(AlignakTest):
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
+            print("%s, what I manage?" % (name))
             raw_data = req.get("%s://localhost:%s/what_i_managed" % (http, port), verify=False)
             data = raw_data.json()
             print("%s, what I manage: %s" % (name, data))
@@ -738,6 +767,7 @@ class DaemonsStartTest(AlignakTest):
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
             data = raw_data.json()
+            print("%s, my running id: %s" % (name, data))
             assert isinstance(data, unicode), "Data is not an unicode!"
 
         print("Testing fill_initial_broks")

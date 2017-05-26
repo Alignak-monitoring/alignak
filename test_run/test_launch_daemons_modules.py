@@ -54,24 +54,26 @@ class LaunchDaemons(AlignakTest):
         :return: None
         """
         self._run_daemons_modules(cfg_folder='../etc',
-                                  tmp_folder='./cfg/run_test_launch_daemons_modules')
+                                  tmp_folder='./run/test_launch_daemons_modules')
 
     def test_daemons_modules_1(self):
         """Running the Alignak daemons with a simple configuration
 
         :return: None
         """
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_daemons_1')
+
         # Currently it is the same as the default execution ... to be modified later.
         cfg_modules = {
             'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
             'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
         }
-        self._run_daemons_modules(cfg_folder='./cfg/alignak_full_run_daemons_1',
-                                  tmp_folder='./cfg/run_test_launch_daemons_modules_1',
+        self._run_daemons_modules(cfg_folder=cfg_folder,
+                                  tmp_folder='./run/test_launch_daemons_modules_1',
                                   cfg_modules=cfg_modules)
 
     def _run_daemons_modules(self, cfg_folder='../etc',
-                             tmp_folder='./cfg/run_test_launch_daemons_modules',
+                             tmp_folder='./run/test_launch_daemons_modules',
                              cfg_modules=None):
         """Update the provided configuration with some informations on the run
         Run the Alignak daemons with configured modules
@@ -80,7 +82,7 @@ class LaunchDaemons(AlignakTest):
         """
         self.print_header()
 
-        # copy etc config files in test/cfg/run_test_launch_daemons_modules and change folder
+        # copy etc config files in test/run/test_launch_daemons_modules and change folder
         # in the files for pid and log files
         if os.path.exists(tmp_folder):
             shutil.rmtree(tmp_folder)

@@ -85,7 +85,9 @@ class TestLaunchDaemonsSpare(AlignakTest):
         :return: None
         """
         # Load and test the configuration
-        self.setup_with_file('cfg/alignak_full_run_spare/alignak.cfg')
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_spare')
+
+        self.setup_with_file(cfg_folder + '/alignak.cfg')
         assert self.conf_is_correct
 
         self.procs = {}
@@ -104,13 +106,13 @@ class TestLaunchDaemonsSpare(AlignakTest):
                 os.remove('/tmp/%s.log' % daemon)
                 print("- removed /tmp/%s.log" % daemon)
 
-        shutil.copy('./cfg/alignak_full_run_spare/dummy_command.sh', '/tmp/dummy_command.sh')
+        shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
 
         print("Launching the daemons...")
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-c", "./cfg/alignak_full_run_spare/daemons/%s.ini" % daemon]
+            args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
@@ -131,8 +133,8 @@ class TestLaunchDaemonsSpare(AlignakTest):
 
         print("Launching master arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/alignak_full_run_spare/daemons/arbiter.ini",
-                "-a", "cfg/alignak_full_run_spare/alignak.cfg"]
+                "-c", cfg_folder + "/daemons/arbiter.ini",
+                "-a", cfg_folder + "/alignak.cfg"]
         self.procs['arbiter-master'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("- %s launched (pid=%d)" % ('arbiter-master', self.procs['arbiter-master'].pid))

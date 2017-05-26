@@ -831,7 +831,7 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("%d actions for reactionner tags: %s", len(self.actions), reactionner_tags)
             for act in self.actions.values():
                 is_master = (act.is_a == 'notification' and not act.contact)
-                logger.error("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
+                logger.debug("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
 
                 if not is_master:
                     # if do_action, call the reactionner,
@@ -1139,10 +1139,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     results = unserialize(results, no_load=True)
 
                     nb_received = len(results)
-                    logger.warning("Received %d passive results from %s", nb_received, poll['name'])
+                    logger.debug("Received %d passive results from %s", nb_received, poll['name'])
                     self.nb_check_received += nb_received
                     for result in results:
-                        logger.warning("-> result: %s", result)
+                        logger.debug("-> result: %s", result)
                         result.set_type_passive()
                         self.waiting_results.put(result)
                 except HTTPEXCEPTIONS as exp:  # pragma: no cover, simple protection

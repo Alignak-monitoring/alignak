@@ -31,17 +31,6 @@ from alignak_test import AlignakTest
 
 
 class TestLaunchDaemonsPassive(AlignakTest):
-    def _get_subproc_data(self, name):
-        try:
-            print("Polling %s" % name)
-            if self.procs[name].poll():
-                print("Killing %s..." % name)
-                os.kill(self.procs[name].pid, signal.SIGKILL)
-            print("%s terminated" % name)
-
-        except Exception as err:
-            print("Problem on terminate and wait subproc %s: %s" % (name, err))
-
     def setUp(self):
         self.procs = {}
 
@@ -83,11 +72,12 @@ class TestLaunchDaemonsPassive(AlignakTest):
         :return: None
         """
         # Load and test the configuration
-        self.setup_with_file('cfg/alignak_full_run_passive/alignak.cfg')
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_passive')
+        self.setup_with_file(cfg_folder + '/alignak.cfg')
         assert self.conf_is_correct
 
         self.procs = {}
-        daemons_list = ['broker', 'poller', 'reactionner', 'receiver', 'scheduler']
+        daemons_list = ['poller', 'reactionner', 'receiver', 'broker', 'scheduler']
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter-master'] + daemons_list:
@@ -98,13 +88,13 @@ class TestLaunchDaemonsPassive(AlignakTest):
                 os.remove('/tmp/%s.log' % daemon)
                 print("- removed /tmp/%s.log" % daemon)
 
-        shutil.copy('./cfg/alignak_full_run_passive/dummy_command.sh', '/tmp/dummy_command.sh')
+        shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
 
         print("Launching the daemons...")
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-c", "./cfg/alignak_full_run_passive/daemons/%s.ini" % daemon]
+            args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
@@ -114,8 +104,8 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         print("Launching master arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "cfg/alignak_full_run_passive/daemons/arbiter.ini",
-                "-a", "cfg/alignak_full_run_passive/alignak.cfg"]
+                "-c", cfg_folder + "/daemons/arbiter.ini",
+                "-a", cfg_folder + "/alignak.cfg"]
         self.procs['arbiter-master'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("- %s launched (pid=%d)" % ('arbiter-master', self.procs['arbiter-master'].pid))
@@ -155,10 +145,10 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'Yes'
+        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
 
         # Run daemons for 2 minutes
-        self.run_and_check_alignak_daemons(360)
+        self.run_and_check_alignak_daemons(240)
 
         # Expected logs from the daemons
         expected_logs = {
