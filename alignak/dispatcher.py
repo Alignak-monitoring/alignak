@@ -420,8 +420,8 @@ class Dispatcher:
 
                 # If there is no alive schedulers, not good...
                 if not scheds:
-                    logger.warning('[%s] There are no alive schedulers in this realm!',
-                                   realm.get_name())
+                    logger.error('[%s] There are no alive schedulers in this realm!',
+                                 realm.get_name())
                     break
 
                 # we need to loop until the conf is assigned

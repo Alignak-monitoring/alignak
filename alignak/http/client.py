@@ -89,15 +89,16 @@ class HTTPClientConnectionException(Exception):
     - uri: the requested URI,
     - timeout: the duration of the timeout.
     """
-    def __init__(self, uri):
+    def __init__(self, uri, message):
         # Call the base class constructor with the parameters it needs
         super(HTTPClientConnectionException, self).__init__()
 
         self.uri = uri
+        self.message = message
 
     def __str__(self):
         """Exception to String"""
-        return "Server not available: %s" % (self.uri)
+        return "Server not available: %s - %s" % (self.uri, self.message)
 
 
 class HTTPClient(object):
@@ -197,8 +198,8 @@ class HTTPClient(object):
             return rsp.json()
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError:
-            raise HTTPClientConnectionException(uri)
+        except requests.ConnectionError as exp:
+            raise HTTPClientConnectionException(uri, exp.message)
         except Exception as err:
             raise HTTPClientException('Request error to %s: %s' % (uri, err))
 
@@ -224,8 +225,8 @@ class HTTPClient(object):
                 raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError:
-            raise HTTPClientConnectionException(uri)
+        except requests.ConnectionError as exp:
+            raise HTTPClientConnectionException(uri, exp.message)
         except Exception as err:
             raise HTTPClientException('Request error to %s: %s' % (uri, err))
         return rsp.content
@@ -250,8 +251,8 @@ class HTTPClient(object):
                 raise Exception('HTTP PUT not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError:
-            raise HTTPClientConnectionException(uri)
+        except requests.ConnectionError as exp:
+            raise HTTPClientConnectionException(uri, exp.message)
         except Exception as err:
             raise HTTPClientException('Request error to %s: %s' % (uri, err))
         return rsp.content

@@ -327,23 +327,13 @@ class TestDaemonsSingleInstance(AlignakTest):
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
     def test_run_1000_host_5mn(self):
         """Run Alignak with 1000 hosts during 5 minutes"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
-        assert errors_raised == 0
-
-    def test_run_3000_host_5mn(self):
-        """Run Alignak with 3000 hosts during 5 minutes"""
-
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 3000)
 
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0
@@ -378,21 +368,12 @@ class TestDaemonsSingleInstance(AlignakTest):
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
     def test_passive_daemons_1000_host_15mn(self):
         """Run Alignak with 1000 hosts during 15 minutes - passive daemons"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
-        assert errors_raised == 0
-
-    def test_passive_daemons_3000_host_5mn(self):
-        """Run Alignak with 10000 hosts during 5 minutes - passive daemons"""
-
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  './cfg/passive_daemons')
-        self.prepare_alignak_configuration(cfg_folder, 3000)
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
         assert errors_raised == 0
