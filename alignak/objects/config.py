@@ -1808,7 +1808,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       self.receivers, self.schedulers]
         for satellites_list in satellites:
             for satellite in satellites_list:
-                if not hasattr(satellite, 'realm'):
+                if not hasattr(satellite, 'realm') or getattr(satellite, 'realm') == '':
                     satellite.realm = default_realm.get_name()
                     satellite.realm_name = default_realm.get_name()
                     logger.info("Tagging %s with realm %s", satellite.get_name(), satellite.realm)
