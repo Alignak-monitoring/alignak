@@ -606,12 +606,12 @@ class DaemonsStartTest(AlignakTest):
         # Arbiter only
         raw_data = req.get("%s://localhost:%s/get_satellite_list" %
                            (http, satellite_map['arbiter']), verify=False)
-        expected_data ={"reactionner": ["reactionner-master"],
-                        "broker": ["broker-master"],
-                        "arbiter": ["arbiter-master"],
-                        "scheduler": ["scheduler-master"],
-                        "receiver": ["receiver-master"],
-                        "poller": ["poller-master"]}
+        expected_data = {"reactionner": ["reactionner-master"],
+                         "broker": ["broker-master"],
+                         "arbiter": ["arbiter-master"],
+                         "scheduler": ["scheduler-master"],
+                         "receiver": ["receiver-master"],
+                         "poller": ["poller-master"]}
         data = raw_data.json()
         assert isinstance(data, dict), "Data is not a dict!"
         for k, v in expected_data.iteritems():
@@ -673,19 +673,39 @@ class DaemonsStartTest(AlignakTest):
         #     self.assertIsInstance(elem, Check, "One elem of the list is not a Check!")
 
         print("Testing get_raw_stats")
-        scheduler_id = "XxX"
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
-            print("%s, raw stats: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, raw stats: %s" % (name, data))
+            assert isinstance(data, dict), "Data is not a dict!"
+
             if name in ['reactionner', 'poller']:
+                scheduler_id = "XxX"
                 for sched_uuid in data:
-                    print("- scheduler: %s / %s" % (sched_uuid, raw_data))
+                    print("- scheduler: %s / %s" % (sched_uuid, data))
                     scheduler_id = sched_uuid
-            else:
-                assert isinstance(data, dict), "Data is not a dict!"
-        print("Got a scheduler uuid: %s" % scheduler_id)
+                    assert 'scheduler_name' in data[sched_uuid][0]
+                    assert 'queue_number' in data[sched_uuid][0]
+                    assert 'queue_size' in data[sched_uuid][0]
+                    assert 'return_queue_len' in data[sched_uuid][0]
+                    assert 'module' in data[sched_uuid][0]
+                print("Got a scheduler uuid: %s" % scheduler_id)
+                assert scheduler_id != "XxX"
+
+            if name in ['arbiter']:
+                assert data == {}
+
+            if name in ['broker']:
+                assert 'modules_count' in data
+
+            if name in ['scheduler']:
+                assert 'latency_average' in data
+                assert 'latency_maximum' in data
+                assert 'latency_minimum' in data
+                assert 'counters' in data
+
+            if name in ['receiver']:
+                assert data == {"command_buffer_size": 0}
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
@@ -708,7 +728,9 @@ class DaemonsStartTest(AlignakTest):
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
-            assert raw_data.json() == 'INFO'
+            data = raw_data.json()
+            print("%s, log level: %s" % (name, data))
+            assert data == 'INFO'
 
         print("Testing set_log_level")
         for name, port in satellite_map.items():
@@ -716,15 +738,19 @@ class DaemonsStartTest(AlignakTest):
                                 data=json.dumps({'loglevel': 'DEBUG'}),
                                 headers={'Content-Type': 'application/json'},
                                 verify=False)
-            assert raw_data.json() == 'DEBUG'
+            data = raw_data.json()
+            print("%s, log level set as : %s" % (name, data))
+            assert data == 'DEBUG'
 
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
+            data = raw_data.json()
+            print("%s, log level: %s" % (name, data))
             if sys.version_info < (2, 7):
-                assert raw_data.json() == 'UNKNOWN' # Cannot get log level with python 2.6
+                assert data == 'UNKNOWN' # Cannot get log level with python 2.6
             else:
-                assert raw_data.json() == 'DEBUG'
+                assert data == 'DEBUG'
 
         print("Testing get_all_states")
         # Arbiter only
@@ -786,6 +812,7 @@ class DaemonsStartTest(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_broks" % (http, satellite_map[name]),
                                params={'bname': 'broker-master'}, verify=False)
             data = raw_data.json()
+            print("%s, broks: %s" % (name, data))
             assert isinstance(data, dict), "Data is not a dict!"
 
         print("Testing get_returns")
@@ -804,7 +831,7 @@ class DaemonsStartTest(AlignakTest):
             # SIGUSR2: objects dump
             self.procs[name].send_signal(signal.SIGUSR2)
             # SIGHUP: reload configuration
-            self.procs[name].send_signal(signal.SIGUSR2)
+            # self.procs[name].send_signal(signal.SIGHUP)
 
             # Other signals is considered as a request to stop...
 

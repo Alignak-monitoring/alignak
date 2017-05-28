@@ -2041,7 +2041,9 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         if checks is None:
             checks = self.checks
+
         res = defaultdict(int)
+        res["total"] = len(checks)
         for chk in checks.itervalues():
             res[chk.status] += 1
         return res
@@ -2386,35 +2388,18 @@ class Scheduler(object):  # pylint: disable=R0902
                     if action_group in ['loop', 'total'] and self.log_loop:
                         logger.info(dump_result)
 
-            # - current state
-            nb_checks = nb_scheduled = nb_launched = 0
-            nb_timeout = nb_done = nb_inpoller = nb_zombies = 0
+            # - current state - this should perharps be removed because the checks status got
+            # already pushed to the stats with the previous treatment?
+            checks_status = defaultdict(int)
+            checks_status["total"] = len(self.checks)
             for chk in self.checks.itervalues():
-                nb_checks += 1
-                if chk.status == 'scheduled':
-                    nb_scheduled += 1
-                elif chk.status == 'launched':
-                    nb_launched += 1
-                elif chk.status == 'timeout':
-                    nb_timeout += 1
-                elif chk.status == 'done':
-                    nb_done += 1
-                elif chk.status == 'inpoller':
-                    nb_inpoller += 1
-                elif chk.status == 'zombie':
-                    nb_zombies += 1
+                checks_status[chk.status] += 1
+            dump_result = "Checks count (loop): "
+            for status, count in checks_status.iteritems():
+                dump_result += "%s: %d, " % (status, count)
+                statsmgr.gauge('checks.%s' % status, count)
             if self.log_loop:
-                logger.info("Checks (loop): total: %d (scheduled: %d, launched: %d, "
-                            "in poller: %d, timeout: %d, done: %d, zombies: %d)",
-                            nb_checks, nb_scheduled, nb_launched,
-                            nb_inpoller, nb_timeout, nb_done, nb_zombies)
-            statsmgr.gauge('checks.total', nb_checks)
-            statsmgr.gauge('checks.scheduled', nb_scheduled)
-            statsmgr.gauge('checks.launched', nb_launched)
-            statsmgr.gauge('checks.inpoller', nb_inpoller)
-            statsmgr.gauge('checks.timeout', nb_timeout)
-            statsmgr.gauge('checks.done', nb_done)
-            statsmgr.gauge('checks.zombie', nb_zombies)
+                logger.info(dump_result)
 
             if self.need_dump_memory:
                 _ts = time.time()

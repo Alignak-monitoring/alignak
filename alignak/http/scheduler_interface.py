@@ -179,14 +179,7 @@ class SchedulerInterface(GenericInterface):
         """
         sched = self.app.sched
 
-        res = sched.get_checks_status_counts()
-
-        res = {
-            'nb_scheduled': res['scheduled'],
-            'nb_inpoller': res['inpoller'],
-            'nb_zombies': res['zombie'],
-            'nb_notifications': len(sched.actions)
-        }
+        res = {'counters': sched.counters}
 
         # Spare schedulers do not have such properties
         if hasattr(sched, 'services'):
