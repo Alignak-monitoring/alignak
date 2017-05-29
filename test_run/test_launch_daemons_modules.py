@@ -20,28 +20,21 @@
 #
 
 import os
+import sys
 import time
 import signal
+
+import psutil
 
 import subprocess
 from time import sleep
 import shutil
 
+import pytest
 from alignak_test import AlignakTest
 
 
 class LaunchDaemons(AlignakTest):
-    def _get_subproc_data(self, name):
-        try:
-            print("Polling %s" % name)
-            if self.procs[name].poll():
-                print("Killing %s..." % name)
-                os.kill(self.procs[name].pid, signal.SIGKILL)
-            print("%s terminated" % name)
-
-        except Exception as err:
-            print("Problem on terminate and wait subproc %s: %s" % (name, err))
-
     def setUp(self):
         self.procs = {}
 
@@ -49,23 +42,44 @@ class LaunchDaemons(AlignakTest):
         print("Test terminated!")
 
     def kill_daemons(self):
+        """Kill the running daemons
+
+        :return:
+        """
         print("Stopping the daemons...")
+        start = time.time()
         for name, proc in self.procs.items():
-            print("Asking %s to end..." % name)
-            os.kill(self.procs[name].pid, signal.SIGTERM)
-
-        time.sleep(1)
-
-        for name, proc in self.procs.items():
-            data = self._get_subproc_data(name)
-            print("%s stdout:" % (name))
-            for line in iter(proc.stdout.readline, b''):
-                print(">>> " + line.rstrip())
-            print("%s stderr:" % (name))
-            for line in iter(proc.stderr.readline, b''):
-                print(">>> " + line.rstrip())
-
-        print("Daemons stopped")
+            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+            try:
+                daemon_process = psutil.Process(proc.pid)
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                continue
+            children = daemon_process.children(recursive=True)
+            daemon_process.terminate()
+            try:
+                daemon_process.wait(10)
+            except psutil.TimeoutExpired:
+                print("timeout!")
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                pass
+            for child in children:
+                try:
+                    print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    print("-> still dead: %s" % child)
+                    pass
+            gone, still_alive = psutil.wait_procs(children, timeout=10)
+            for process in still_alive:
+                try:
+                    print("Killing %s (pid=%d)!" % (child.name(), child.pid))
+                    process.kill()
+                except psutil.NoSuchProcess:
+                    pass
+            print("%s terminated" % (name))
+        print("Stopping daemons duration: %d seconds" % (time.time() - start))
 
     def _run_daemons_modules(self, cfg_folder='../etc',
                              tmp_folder='./run/test_launch_daemons_modules',
@@ -260,6 +274,7 @@ class LaunchDaemons(AlignakTest):
                                   cfg_modules=cfg_modules)
         self.kill_daemons()
 
+    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), "Not available for Python < 2.7")
     def test_daemons_modules_logs(self):
         """Running the Alignak daemons with the monitoring logs module
 
@@ -293,3 +308,130 @@ class LaunchDaemons(AlignakTest):
         """
         assert count == 2
         self.kill_daemons()
+
+    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), "Not available for Python < 2.7")
+    def test_daemons_modules_logs_restart_module(self):
+        """Running the Alignak daemons with the monitoring logs module - stop and restart the module
+
+        :return: None
+        """
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'cfg/run_daemons_logs')
+        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons_modules_logs')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': '', 'scheduler': '', 'broker': 'logs',
+            'poller': '', 'reactionner': '', 'receiver': ''
+        }
+        self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        """
+        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
+        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        """
+        assert count == 2
+
+        # Kill the logs module
+        module_pid = None
+        for proc in psutil.process_iter():
+            if "module: logs" in proc.name():
+                print("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                module_pid = proc.pid
+        assert module_pid is not None
+
+        print("Asking pid=%d to end..." % (module_pid))
+        daemon_process = psutil.Process(module_pid)
+        daemon_process.terminate()
+        try:
+            daemon_process.wait(10)
+        except psutil.TimeoutExpired:
+            assert False, "Timeout!"
+        except psutil.NoSuchProcess:
+            print("not existing!")
+            pass
+
+        # Wait for the module to restart
+        time.sleep(5)
+
+        self.kill_daemons()
+
+        # Search for some specific logs in the broker daemon logs
+        expected_logs = {
+            'broker': [
+                "[alignak.modulesmanager] Importing Python module 'alignak_module_logs' for logs...",
+                "[alignak.modulesmanager] Module properties: {'daemons': ['broker'], 'phases': ['running'], 'type': 'logs', 'external': True}",
+                "[alignak.modulesmanager] Imported 'alignak_module_logs' for logs",
+                "[alignak.modulesmanager] Loaded Python module 'alignak_module_logs' (logs)",
+                "[alignak.module] Give an instance of alignak_module_logs for alias: logs",
+                "[alignak.module.logs] logger default configuration:",
+                "[alignak.module.logs]  - rotating logs in /tmp/monitoring-logs.log",
+                "[alignak.module.logs]  - log level: 20",
+                "[alignak.module.logs]  - rotation every 1 midnight, keeping 365 files",
+                "[alignak.basemodule] Process for module logs received a signal: 15",
+                "[alignak.module.logs] stopping...",
+                "[alignak.module.logs] stopped",
+                "[alignak.modulesmanager] The external module logs died unexpectedly!",
+                "[alignak.modulesmanager] Setting the module logs to restart",
+                "[alignak.basemodule] Starting external process for module logs..."
+            ]
+        }
+
+        errors_raised = 0
+        for name in ['broker']:
+            assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
+            print("-----\n%s log file\n" % name)
+            with open('/tmp/%sd.log' % name) as f:
+                lines = f.readlines()
+                logs = []
+                for line in lines:
+                    # Catches WARNING and ERROR logs
+                    if 'WARNING' in line:
+                        line = line.split('WARNING: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("--- %s" % line[:-1])
+                    if 'ERROR' in line:
+                        if "The external module logs died unexpectedly!" not in line:
+                            errors_raised += 1
+                        line = line.split('ERROR: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("*** %s" % line[:-1])
+                    # Catches INFO logs
+                    if 'INFO' in line:
+                        line = line.split('INFO: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("    %s" % line)
+                    logs.append(line)
+
+            print(logs)
+            for log in expected_logs[name]:
+                print("Last checked log %s: %s" % (name, log))
+                assert log in logs, logs
+
+        # Still only two logs
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        """
+        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
+        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        """
+        assert count == 2
