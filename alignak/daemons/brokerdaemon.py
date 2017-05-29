@@ -412,8 +412,8 @@ class Broker(BaseSatellite):
                                  exp)
                     continue
                 if tmp_broks:
-                    logger.info("Got %d Broks from %s in %s",
-                                len(tmp_broks), link['name'], time.time() - _t0)
+                    logger.debug("Got %d Broks from %s in %s",
+                                 len(tmp_broks), link['name'], time.time() - _t0)
                 statsmgr.timer('con-broks-get.%s' % (link['name']), time.time() - _t0)
                 statsmgr.gauge('con-broks-count.%s' % (link['name']), len(tmp_broks.values()))
                 for brok in tmp_broks.values():

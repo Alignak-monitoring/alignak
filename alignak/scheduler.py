@@ -319,10 +319,10 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.debug("Properties:")
         for key in sorted(self.conf.properties):
             logger.debug("- %s: %s", key, getattr(self.conf, key, []))
-            logger.debug("Macros:")
+        logger.debug("Macros:")
         for key in sorted(self.conf.macros):
             logger.debug("- %s: %s", key, getattr(self.conf.macros, key, []))
-            logger.debug("Objects types:")
+        logger.debug("Objects types:")
         for key in sorted(self.conf.types_creations):
             logger.debug("- %s: %s", key, getattr(self.conf.types_creations, key, []))
 
@@ -1691,11 +1691,21 @@ class Scheduler(object):  # pylint: disable=R0902
                 'global_service_event_handler': self.conf.global_service_event_handler.get_name()
                 if self.conf.global_service_event_handler else '',
 
-                'check_external_commands': self.conf.check_external_commands,
-                'check_service_freshness': self.conf.check_service_freshness,
-                'check_host_freshness': self.conf.check_host_freshness,
-                'command_file': self.conf.command_file
-                }
+            # Flapping
+            "enable_flap_detection": self.conf.enable_flap_detection,
+            "flap_history": self.conf.flap_history,
+            "low_host_flap_threshold": self.conf.low_host_flap_threshold,
+            "low_service_flap_threshold": self.conf.low_service_flap_threshold,
+            "high_host_flap_threshold": self.conf.high_host_flap_threshold,
+            "high_service_flap_threshold": self.conf.high_service_flap_threshold,
+
+            # Stats
+            "statsd_enabled": self.conf.statsd_enabled,
+            "statsd_host": self.conf.statsd_host,
+            "statsd_port": self.conf.statsd_port,
+            "statsd_prefix": self.conf.statsd_prefix,
+        }
+        logger.debug("Program status brok data: %s", data)
         brok = Brok({'type': 'program_status', 'data': data})
         return brok
 
