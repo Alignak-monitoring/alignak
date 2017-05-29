@@ -48,62 +48,24 @@ class LaunchDaemons(AlignakTest):
     def tearDown(self):
         print("Test terminated!")
 
-    def test_daemons_modules(self):
-        """Running the Alignak daemons with the default ../etc configuration
+    def kill_daemons(self):
+        print("Stopping the daemons...")
+        for name, proc in self.procs.items():
+            print("Asking %s to end..." % name)
+            os.kill(self.procs[name].pid, signal.SIGTERM)
 
-        :return: None
-        """
-        self._run_daemons_modules(cfg_folder='../etc',
-                                  tmp_folder='./run/test_launch_daemons_modules')
+        time.sleep(1)
 
-    def test_daemons_modules_1(self):
-        """Running the Alignak daemons with a simple configuration
+        for name, proc in self.procs.items():
+            data = self._get_subproc_data(name)
+            print("%s stdout:" % (name))
+            for line in iter(proc.stdout.readline, b''):
+                print(">>> " + line.rstrip())
+            print("%s stderr:" % (name))
+            for line in iter(proc.stderr.readline, b''):
+                print(">>> " + line.rstrip())
 
-        :return: None
-        """
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_daemons_1')
-
-        # Currently it is the same as the default execution ... to be modified later.
-        cfg_modules = {
-            'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
-            'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
-        }
-        self._run_daemons_modules(cfg_folder=cfg_folder,
-                                  tmp_folder='./run/test_launch_daemons_modules_1',
-                                  cfg_modules=cfg_modules)
-
-    def test_daemons_modules_logs(self):
-        """Running the Alignak daemons with the monitoring logs module
-
-        :return: None
-        """
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
-
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'cfg/run_daemons_logs')
-        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'run/test_launch_daemons_modules_logs')
-
-        # Currently it is the same as the default execution ... to be modified later.
-        cfg_modules = {
-            'arbiter': '', 'scheduler': '', 'broker': 'logs',
-            'poller': '', 'reactionner': '', 'receiver': ''
-        }
-        self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
-
-        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
-        count = 0
-        print("Monitoring logs:")
-        with open('/tmp/monitoring-logs.log') as f:
-            for line in f:
-                print("- : %s" % line)
-                count += 1
-        """
-        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
-        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
-        """
-        assert count == 2
+        print("Daemons stopped")
 
     def _run_daemons_modules(self, cfg_folder='../etc',
                              tmp_folder='./run/test_launch_daemons_modules',
@@ -272,20 +234,62 @@ class LaunchDaemons(AlignakTest):
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons loaded the modules")
 
-        print("Stopping the daemons...")
-        for name, proc in self.procs.items():
-            print("Asking %s to end..." % name)
-            os.kill(self.procs[name].pid, signal.SIGTERM)
+    def test_daemons_modules(self):
+        """Running the Alignak daemons with the default ../etc configuration
 
-        time.sleep(1)
+        :return: None
+        """
+        self._run_daemons_modules(cfg_folder='../etc',
+                                  tmp_folder='./run/test_launch_daemons_modules')
+        self.kill_daemons()
 
-        for name, proc in self.procs.items():
-            data = self._get_subproc_data(name)
-            print("%s stdout:" % (name))
-            for line in iter(proc.stdout.readline, b''):
-                print(">>> " + line.rstrip())
-            print("%s stderr:" % (name))
-            for line in iter(proc.stderr.readline, b''):
-                print(">>> " + line.rstrip())
+    def test_daemons_modules_1(self):
+        """Running the Alignak daemons with a simple configuration
 
-        print("Daemons stopped")
+        :return: None
+        """
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_daemons_1')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+            'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
+        }
+        self._run_daemons_modules(cfg_folder=cfg_folder,
+                                  tmp_folder='./run/test_launch_daemons_modules_1',
+                                  cfg_modules=cfg_modules)
+        self.kill_daemons()
+
+    def test_daemons_modules_logs(self):
+        """Running the Alignak daemons with the monitoring logs module
+
+        :return: None
+        """
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'cfg/run_daemons_logs')
+        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons_modules_logs')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': '', 'scheduler': '', 'broker': 'logs',
+            'poller': '', 'reactionner': '', 'receiver': ''
+        }
+        self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        """
+        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
+        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        """
+        assert count == 2
+        self.kill_daemons()
