@@ -15,8 +15,6 @@ pep8
 pep257
 # Tests time freeze
 freezegun
-# Alignak modules and checks packs installer
-#alignak_setup
 # Alignak example module (develop branch)
 -e git+git://github.com/Alignak-monitoring/alignak-module-example.git@develop#egg=alignak-module-example
 ordereddict==1.1

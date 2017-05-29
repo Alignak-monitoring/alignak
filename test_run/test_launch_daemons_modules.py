@@ -72,9 +72,42 @@ class LaunchDaemons(AlignakTest):
                                   tmp_folder='./run/test_launch_daemons_modules_1',
                                   cfg_modules=cfg_modules)
 
+    def test_daemons_modules_logs(self):
+        """Running the Alignak daemons with the monitoring logs module
+
+        :return: None
+        """
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'cfg/run_daemons_logs')
+        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons_modules_logs')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': '', 'scheduler': '', 'broker': 'logs',
+            'poller': '', 'reactionner': '', 'receiver': ''
+        }
+        self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        """
+        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
+        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        """
+        assert count == 2
+
     def _run_daemons_modules(self, cfg_folder='../etc',
                              tmp_folder='./run/test_launch_daemons_modules',
-                             cfg_modules=None):
+                             cfg_modules=None, runtime=5):
         """Update the provided configuration with some informations on the run
         Run the Alignak daemons with configured modules
 
@@ -217,9 +250,9 @@ class LaunchDaemons(AlignakTest):
             assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         # Let the arbiter build and dispatch its configuration
-        sleep(5)
+        sleep(runtime)
 
-        print("Get module information from log files...")
+        print("Check if some errors were raised...")
         nb_errors = 0
         for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
@@ -227,8 +260,6 @@ class LaunchDaemons(AlignakTest):
             print("-----\n%s log file\n-----\n" % daemon)
             with open('/tmp/%sd.log' % daemon) as f:
                 for line in f:
-                    if '***' in line:
-                        print("Coverage log: %s" % line)
                     if 'Example' in line:
                         print("Example module log: %s" % line)
                     if 'WARNING' in line or daemon_errors:
