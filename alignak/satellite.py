@@ -606,7 +606,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         queues = self.q_by_mod[mod].items()
 
         # Maybe there is no more queue, it's very bad!
-        if len(queues) == 0:
+        if not queues:
             return (0, None)
 
         # if not get action round robin index to get action queue based

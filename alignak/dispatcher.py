@@ -318,7 +318,7 @@ class Dispatcher:
             cfg_ids = satellite.managed_confs  # what_i_managed()
             # I do not care about satellites that do nothing, they already
             # do what I want :)
-            if len(cfg_ids) == 0:
+            if not cfg_ids:
                 continue
             id_to_delete = []
             for cfg_id in cfg_ids:
@@ -415,7 +415,7 @@ class Dispatcher:
                 logger.info('[%s] Dispatching configuration %s', realm.get_name(), conf.uuid)
 
                 # If there is no alive schedulers, not good...
-                if len(scheds) == 0:
+                if not scheds:
                     logger.warning('[%s] There are no alive schedulers in this realm!',
                                    realm.get_name())
                     break

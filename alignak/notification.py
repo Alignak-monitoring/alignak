@@ -137,8 +137,8 @@ class Notification(Action):  # pylint: disable=R0902
         """
         if self.type in ('PROBLEM', 'RECOVERY'):
             return False
-        else:
-            return True
+
+        return True
 
     def __str__(self):
         return "Notification %s type:%s status:%s command:%s ref:%s t_to_go:%s" % \

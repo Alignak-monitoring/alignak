@@ -197,7 +197,7 @@ class BaseModule(object):
             self._main()
         except Exception as exp:
             logger.exception('[%s] %s', self.alias, traceback.format_exc())
-            raise exp
+            raise Exception(exp)
 
     def start(self, http_daemon=None):  # pylint: disable=W0613
         """Actually restart the process if the module is external

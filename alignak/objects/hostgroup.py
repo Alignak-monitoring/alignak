@@ -109,8 +109,8 @@ class Hostgroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return self.members
-        else:
-            return []
+
+        return []
 
     def get_hostgroup_members(self):
         """
@@ -121,8 +121,8 @@ class Hostgroup(Itemgroup):
         """
         if hasattr(self, 'hostgroup_members'):
             return self.hostgroup_members
-        else:
-            return []
+
+        return []
 
     def get_hosts_by_explosion(self, hostgroups):
         """
@@ -167,7 +167,7 @@ class Hostgroups(Itemgroups):
     name_property = "hostgroup_name"  # is used for finding hostgroups
     inner_class = Hostgroup
 
-    def get_members_by_name(self, hgname):
+    def get_members_by_name(self, gname):
         """
         Get all members by name given in parameter
 
@@ -176,7 +176,7 @@ class Hostgroups(Itemgroups):
         :return: list of hosts with this name
         :rtype: list
         """
-        hostgroup = self.find_by_name(hgname)
+        hostgroup = self.find_by_name(gname)
         if hostgroup is None:
             return []
         return hostgroup.get_hosts()

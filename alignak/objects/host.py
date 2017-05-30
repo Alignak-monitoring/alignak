@@ -1228,8 +1228,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         }
         if self.got_business_rule:
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
-        else:
-            return mapping.get(self.state_id, "n/a")
+
+        return mapping.get(self.state_id, "n/a")
 
     def get_status(self, hosts, services):
         """Get the status of this host
@@ -1244,8 +1244,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 4: "UNREACHABLE",
             }
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
-        else:
-            return self.state
+
+        return self.state
 
     def get_downtime(self):
         """Accessor to scheduled_downtime_depth attribute
@@ -1477,7 +1477,7 @@ class Hosts(SchedulingItems):
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
-        if len(loop) > 0:
+        if loop:
             msg = "Loop detected while checking hosts "
             self.configuration_errors.append(msg)
             state = False

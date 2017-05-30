@@ -212,10 +212,10 @@ class MacroResolver(Borg):
                     for arg in args:
                         real_args.append(getattr(self, arg, None))
                     return unicode(value(*real_args))
-                else:
-                    return unicode(value())
-            else:
-                return unicode(value)
+
+                return unicode(value())
+
+            return unicode(value)
         except AttributeError:
             # Todo: there is too much macros that are not resolved that this log is spamming :/
             # # Raise a warning and return a strange value when macro cannot be resolved
@@ -227,8 +227,8 @@ class MacroResolver(Borg):
         except UnicodeError:
             if isinstance(value, str):
                 return unicode(value, 'utf8', errors='ignore')
-            else:
-                return 'n/a'
+
+            return 'n/a'
 
     def _delete_unwanted_caracters(self, chain):
         """Remove not wanted char from chain
@@ -306,7 +306,9 @@ class MacroResolver(Borg):
             macros = self._get_macros(c_line)
 
             # We can get out if we do not have macros this loop
-            still_got_macros = (len(macros) != 0)
+            still_got_macros = False
+            if macros:
+                still_got_macros = True
 
             # Put in the macros the type of macro for all macros
             self._get_type_of_macro(macros, data)

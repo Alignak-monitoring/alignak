@@ -422,7 +422,7 @@ class Daemon(object):
             for msg in self.modules_manager.configuration_errors:
                 logger.error(msg)
 
-        if len(self.modules_manager.configuration_warnings):  # pragma: no cover, not tested
+        if self.modules_manager.configuration_warnings:  # pragma: no cover, not tested
             for msg in self.modules_manager.configuration_warning:
                 logger.warning(msg)
 
@@ -1063,10 +1063,10 @@ class Daemon(object):
         except PortNotFree as exp:
             # print("Exception: %s" % str(exp))
             # logger.exception('The HTTP daemon port is not free: %s', exp)
-            raise exp
+            raise PortNotFree(exp)
         except Exception as exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            raise exp
+            raise Exception(exp)
         logger.info("HTTP main thread exiting")
 
     def handle_requests(self, timeout, suppl_socks=None):
@@ -1099,7 +1099,7 @@ class Daemon(object):
         before += tcdiff
         # Increase our sleep time for the time go in select
         self.sleep_time += time.time() - before
-        if len(ins) == 0:  # trivial case: no fd activity:
+        if not ins:  # trivial case: no fd activity:
             return 0, [], tcdiff
         # HERE WAS THE HTTP, but now it's managed in an other thread
         # for sock in socks:

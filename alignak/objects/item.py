@@ -381,8 +381,8 @@ class Item(AlignakObject):
         use = getattr(self, 'use', '')
         if isinstance(use, list):
             return [n.strip() for n in use if n.strip()]
-        else:
-            return [n.strip() for n in use.split(',') if n.strip()]
+
+        return [n.strip() for n in use.split(',') if n.strip()]
 
     def has_plus(self, prop):
         """
@@ -754,8 +754,8 @@ class Items(object):
         source = getattr(item, 'imported_from', None)
         if source:
             return " in %s" % source
-        else:
-            return ""
+
+        return ""
 
     def add_items(self, items, index_items):
         """
@@ -1119,6 +1119,8 @@ class Items(object):
         valid = True
         # Some class do not have twins, because they do not have names
         # like servicedependencies
+        # todo: seems not used anywhere else!
+        # pylint: disable=not-an-iterable
         twins = getattr(self, 'twins', None)
         if twins is not None:
             # Ok, look at no twins (it's bad!)
@@ -1775,7 +1777,7 @@ class Items(object):
         for t_id in obj.templates:
             template = self.templates[t_id]
             tpl_cv = self.get_customs_properties_by_inheritance(template)
-            if tpl_cv is not {}:
+            if tpl_cv:
                 for prop in tpl_cv:
                     if prop not in obj.customs:
                         value = tpl_cv[prop]

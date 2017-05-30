@@ -1255,7 +1255,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.arbiters.fill_default()
         self.modules.fill_default()
 
-        self.arbiters.linkify(self.modules)
+        self.arbiters.linkify(modules=self.modules)
         self.modules.linkify()
 
     def load_triggers(self):
@@ -2546,7 +2546,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # Now in packs we have the number of packs [h1, h2, etc]
             # equal to the number of schedulers.
-            realm.packs = packs  # pylint: disable=redefined-variable-type
+            realm.packs = packs
 
         for what in (self.contacts, self.hosts, self.services, self.commands):
             logger.info("Number of %s : %d", type(what).__name__, len(what))

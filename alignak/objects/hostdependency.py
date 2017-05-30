@@ -307,7 +307,7 @@ class Hostdependencies(Items):
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("host_name", "dependent_host_name")
-        if len(loop) > 0:
+        if loop:
             msg = "Loop detected while checking host dependencies"
             self.configuration_errors.append(msg)
             state = False

@@ -94,8 +94,8 @@ class Servicegroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return self.members
-        else:
-            return []
+
+        return []
 
     def get_name(self):
         """
@@ -115,8 +115,8 @@ class Servicegroup(Itemgroup):
         """
         if hasattr(self, 'servicegroup_members'):
             return self.servicegroup_members
-        else:
-            return []
+
+        return []
 
     def get_services_by_explosion(self, servicegroups):
         """
@@ -140,8 +140,8 @@ class Servicegroup(Itemgroup):
                          self.get_name())
             if hasattr(self, 'members'):
                 return self.members
-            else:
-                return ''
+
+            return ''
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
 
@@ -155,8 +155,8 @@ class Servicegroup(Itemgroup):
 
         if hasattr(self, 'members'):
             return self.members
-        else:
-            return ''
+
+        return ''
 
 
 class Servicegroups(Itemgroups):

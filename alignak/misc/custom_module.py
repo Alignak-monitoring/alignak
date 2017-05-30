@@ -31,6 +31,7 @@
 from types import ModuleType
 
 
+# pylint: disable=super-on-old-class,too-few-public-methods
 class CustomModule(ModuleType):
     """Custom module that can be used to customize a module namespace,
 

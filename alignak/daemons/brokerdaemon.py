@@ -839,7 +839,7 @@ class Broker(BaseSatellite):
         self.broks.reverse()
 
         start = time.time()
-        while len(self.broks) != 0:
+        while self.broks:
             now = time.time()
             # Do not 'manage' more than 1s, we must get new broks
             # every 1s
@@ -872,7 +872,7 @@ class Broker(BaseSatellite):
 
         # Maybe we do not have something to do, so we wait a little
         # TODO: redone the diff management....
-        if len(self.broks) == 0:
+        if not self.broks:
             while self.timeout > 0:
                 begin = time.time()
                 self.watch_for_new_conf(1.0)

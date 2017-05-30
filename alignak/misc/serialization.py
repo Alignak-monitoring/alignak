@@ -52,7 +52,7 @@ def serialize(obj, no_dump=False):
         for key, value in obj.iteritems():
             o_dict[key] = serialize(value, True)
 
-    elif isinstance(obj, list) or isinstance(obj, set):
+    elif isinstance(obj, (list, set)):
         o_dict = [serialize(item, True) for item in obj]
 
     else:

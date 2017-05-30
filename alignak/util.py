@@ -500,8 +500,8 @@ def from_bool_to_string(boolean):  # pragma: no cover, to be deprectaed?
     """
     if boolean:
         return '1'
-    else:
-        return '0'
+
+    return '0'
 
 
 def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
@@ -514,8 +514,8 @@ def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
     """
     if boolean:
         return 1
-    else:
-        return 0
+
+    return 0
 
 
 def from_list_to_split(val):  # pragma: no cover, to be deprectaed?
@@ -719,10 +719,10 @@ def unique_value(val):
     if isinstance(val, list):
         if val:
             return val[-1]
-        else:
-            return ''
-    else:
-        return val
+
+        return ''
+
+    return val
 
 
 # ##################### Sorting ################
