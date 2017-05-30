@@ -26,3 +26,9 @@ cd $BASE_PATH
 
 # Install run daemons tests requirements :
 pip install --upgrade -r test_run/requirements.txt
+
+pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
+if test -e "test/requirements.py${pyversion}.txt"
+then
+    pip install -r "test/requirements.py${pyversion}.txt"
+fi
