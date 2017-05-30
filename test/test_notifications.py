@@ -338,37 +338,35 @@ class TestNotifications(AlignakTest):
         assert 1 == svc.current_notification_number, 'Warning HARD, must have 1 notification'
         self.assert_actions_count(1)
         self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        print("Last hard state: %s" % svc.last_hard_state)
+        assert "WARNING" == svc.last_hard_state
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        # assert False
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
-        # See #821, should be 2
-        # assert 2 == svc.current_notification_number, 'Critical HARD,  must have 2 ' \
-        # self.assert_actions_count(2)
-        # self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
-        # self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
-        #                                                      'notification'
-        assert 1 == svc.current_notification_number, 'Critical HARD,  must have 1 notification'
-        self.assert_actions_count(1)
+        assert "CRITICAL" == svc.last_hard_state
+        assert 2 == svc.current_notification_number, 'Critical HARD,  must have 2 notifications'
+        self.assert_actions_count(2)
         self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
         assert 0 == svc.current_notification_number
         self.show_actions()
-        self.assert_actions_count(2)
+        self.assert_actions_count(3)
         # 1st notification for service warning
         self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate WARNING --serviceoutput WARNING', 'command')
         self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        # See #821
         # # 2nd notification for service critical
-        # self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        # self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
 
         # 1st recovery notification for service recovery
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
-        self.assert_actions_match(1, 'NOTIFICATIONTYPE=RECOVERY, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(2, 'NOTIFICATIONTYPE=RECOVERY, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
 
     def test_4_notifications(self):
         """ Test notifications of service states OK -> CRITICAL -> WARNING -> OK
