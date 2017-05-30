@@ -278,6 +278,7 @@ def get_start_of_day(year, month_id, day):
 
     TODO: Missing timezone
     """
+    # DST is not known
     start_time = (year, month_id, day, 00, 00, 00, 0, 0, -1)
     try:
         start_time_epoch = time.mktime(start_time)

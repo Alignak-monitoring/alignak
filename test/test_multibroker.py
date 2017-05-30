@@ -143,8 +143,10 @@ class TestMultibroker(AlignakTest):
             self.assert_any_log_match('Configuration sent to broker broker-master2')
 
             history = mockreq.request_history
+            print("History: %s" % history)
             for index, hist in enumerate(history):
-                if hist.url == 'http://localhost:7772/put_conf':
+                print("- : %s" % (hist.url))
+                if hist.url == 'http://127.0.0.1:7772/put_conf':
                     broker_conf = hist.json()
                 elif hist.url == 'http://localhost:10772/put_conf':
                     broker2_conf = hist.json()
