@@ -1329,7 +1329,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         for notif in self.notifications_in_progress.values():
             self.remove_in_progress_notification(notif)
 
-    def get_event_handlers(self, hosts, macromodulations, timeperiods, externalcmd=False):
+    def get_event_handlers(self, hosts, macromodulations, timeperiods, ext_cmd=False):
         """Raise event handlers if NONE of the following conditions is met::
 
         * externalcmd is False and event_handlers are disabled (globally or locally)
@@ -1342,21 +1342,23 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :param timeperiods: Timeperiods objects, used for macros evaluation
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
-        :param externalcmd: tells if this function was called when handling an external_command.
-        :type externalcmd: bool
+        :param ext_cmd: tells if this function was called when handling an external_command.
+        :type ext_cmd: bool
         :return: None
         """
         cls = self.__class__
 
         # The external command always pass
         # if not, only if we enable them (auto launch)
-        if (not self.event_handler_enabled or not cls.enable_event_handlers) and not externalcmd:
+        if not ext_cmd and (not self.event_handler_enabled or not cls.enable_event_handlers):
+            logger.debug("Event handler is disabled for %s", self.get_full_name())
             return
 
         # If we do not force and we are in downtime, bailout
         # if the no_event_handlers_during_downtimes is 1 in conf
-        if cls.no_event_handlers_during_downtimes and \
-                not externalcmd and self.in_scheduled_downtime:
+        if not ext_cmd and self.in_scheduled_downtime and cls.no_event_handlers_during_downtimes:
+            logger.debug("Event handler wilkl not be launched. "
+                         "The item %s is in a scheduled downtime", self.get_full_name())
             return
 
         if self.event_handler is not None:
@@ -1366,16 +1368,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             return
 
-        macroresolver = MacroResolver()
+        data = [self]
         if getattr(self, "host", None):
             data = [hosts[self.host], self]
-        else:
-            data = [self]
 
+        macroresolver = MacroResolver()
         cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
-        reac_tag = event_handler.reactionner_tag
+
         event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
-                               'ref': self.uuid, 'reactionner_tag': reac_tag})
+                               'ref': self.uuid, 'reactionner_tag': event_handler.reactionner_tag})
         self.raise_event_handler_log_entry(event_handler)
 
         # ok we can put it in our temp action queue
