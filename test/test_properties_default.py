@@ -53,6 +53,7 @@ import alignak.daemon
 from alignak_test import *
 from alignak.property import *
 
+
 class PropertiesTester(object):
 
     def test_unused_properties(self):
@@ -98,6 +99,7 @@ class PropertiesTester(object):
             if name.startswith('$') and name.endswith('$'):
                 continue
             assert name in prop_names, 'unknown property %r found' % name
+
 
 class TestConfig(PropertiesTester, AlignakTest):
 

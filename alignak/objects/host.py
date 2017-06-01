@@ -238,8 +238,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'TOTALHOSTSERVICES': 'get_total_services',
         'TOTALHOSTSERVICESOK': ('get_total_services_ok', ['services']),
         'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', ['services']),
-        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
         'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', ['services']),
+        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
+        'TOTALHOSTSERVICESUNREACHABLE': ('get_total_services_unreachable', ['services']),
         'HOSTBUSINESSIMPACT':  'business_impact',
     })
     # Todo: really unuseful ... should be removed, but let's discuss!
@@ -1108,8 +1109,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                        if services[s].state_id == state))
 
     def get_total_services_ok(self, services):
-        """
-        Get number of services ok
+        """Get number of services ok
 
         :param services:
         :type services:
@@ -1119,8 +1119,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 0)
 
     def get_total_services_warning(self, services):
-        """
-        Get number of services warning
+        """Get number of services warning
 
         :param services:
         :type services:
@@ -1130,8 +1129,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 1)
 
     def get_total_services_critical(self, services):
-        """
-        Get number of services critical
+        """Get number of services critical
 
         :param services:
         :type services:
@@ -1141,8 +1139,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 2)
 
     def get_total_services_unknown(self, services):
-        """
-        Get number of services unknown
+        """Get number of services unknown
 
         :param services:
         :type services:
@@ -1150,6 +1147,16 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: int
         """
         return self._tot_services_by_state(services, 3)
+
+    def get_total_services_unreachable(self, services):
+        """Get number of services unreachable
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 4)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement

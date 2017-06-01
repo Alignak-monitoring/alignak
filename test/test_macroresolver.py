@@ -54,15 +54,8 @@ from alignak.macroresolver import MacroResolver
 from alignak.commandcall import CommandCall
 
 
-class TestMacroResolver(AlignakTest):
-    # setUp is inherited from AlignakTest
-
-    def setUp(self):
-        self.maxDiff = None
-        self.setup_with_file('cfg/cfg_macroresolver.cfg')
-        assert self.conf_is_correct
-        
-        self._sched = self.schedulers['scheduler-master'].sched
+class MacroResolverTester(object):
+    """Test without enabled environment macros"""
 
     def get_mr(self):
         """ Get an initialized macro resolver object """
@@ -485,8 +478,7 @@ class TestMacroResolver(AlignakTest):
         assert 'plugins/nothing first=second' == com
 
     def test_ondemand_macros(self):
-        """
-        Test on-demand macros
+        """Test on-demand macros
         :return:
         """
         self.print_header()
@@ -495,6 +487,12 @@ class TestMacroResolver(AlignakTest):
         data = [hst, svc]
         hst.state = 'UP'
         svc.state = 'UNKNOWN'
+
+        # Get another service
+        svc2 = self._sched.conf.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_another_service"
+        )
+        svc2.output = 'you should not pass'
 
         # Request a not existing macro
         dummy_call = "special_macro!$HOSTXXX:test_host_0$"
@@ -529,12 +527,6 @@ class TestMacroResolver(AlignakTest):
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         assert 'plugins/nothing UP' == com
 
-        # Now prepare another service
-        svc2 = self._sched.conf.services.find_srv_by_name_and_hostname(
-            "test_host_0", "test_another_service"
-        )
-        svc2.output = 'you should not pass'
-
         # Now call this data from our previous service - get service state
         data = [hst, svc2]
         dummy_call = "special_macro!$SERVICESTATE:test_host_0:test_another_service$"
@@ -556,6 +548,123 @@ class TestMacroResolver(AlignakTest):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         assert 'plugins/nothing you should not pass' == com
+
+    def test_host_count_services_macros(self):
+        """Test services count for an hostmacros
+        :return:
+        """
+        self.print_header()
+        mr = self.get_mr()
+        (svc, hst) = self.get_hst_svc()
+        data = [hst, svc]
+        hst.state = 'UP'
+
+        # Get another service
+        svc2 = self._sched.conf.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_another_service"
+        )
+        svc2.output = 'you should not pass'
+
+        # Total
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICES$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 2' == com
+
+        # Services states
+        svc.state_id = 0
+        svc.state = 'OK'
+        svc2.state_id = 1
+        svc2.state = 'WARNING'
+
+        # Ok
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESOK$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 1' == com
+
+        # Warning
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESWARNING$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 1' == com
+
+        # Critical
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESCRITICAL$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
+        # Unknown
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESUNKNOWN$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
+        # Unreachable
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESUNREACHABLE$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
+        # Change states
+        svc.state_id = 2
+        svc.state = 'CRITICAL'
+        svc2.state_id = 3
+        svc2.state = 'UNKNOWN'
+
+        # Ok
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESOK$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
+        # Warning
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESWARNING$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
+        # Critical
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESCRITICAL$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 1' == com
+
+        # Unknown
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESUNKNOWN$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 1' == com
+
+        # Unreachable
+        svc.output = 'you should not pass'
+        data = [hst, svc]
+        dummy_call = "special_macro!$TOTALHOSTSERVICESUNREACHABLE$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert 'plugins/nothing 0' == com
+
 
     def test_contact_custom_macros(self):
         """
@@ -654,3 +763,25 @@ class TestMacroResolver(AlignakTest):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         assert 'plugins/nothing 127.0.0.1' == com
+
+
+class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
+    """Test without enabled environment macros"""
+
+    def setUp(self):
+        self.maxDiff = None
+        self.setup_with_file('cfg/cfg_macroresolver.cfg')
+        assert self.conf_is_correct
+
+        self._sched = self.schedulers['scheduler-master'].sched
+
+
+class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
+    """Test without enabled environment macros"""
+
+    def setUp(self):
+        self.maxDiff = None
+        self.setup_with_file('cfg/cfg_macroresolver_environment.cfg')
+        assert self.conf_is_correct
+
+        self._sched = self.schedulers['scheduler-master'].sched
