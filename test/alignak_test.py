@@ -240,13 +240,8 @@ class AlignakTest(unittest.TestCase):
             self.configuration_errors = self.arbiter.conf.configuration_errors
         except SystemExit:
             self.configuration_warnings = self.arbiter.conf.configuration_warnings
-            print("Configuration warnings:")
-            for msg in self.configuration_warnings:
-                print(" - %s" % msg)
             self.configuration_errors = self.arbiter.conf.configuration_errors
-            print("Configuration errors:")
-            for msg in self.configuration_errors:
-                print(" - %s" % msg)
+            self.show_configuration_logs()
             raise
 
         for arb in self.arbiter.conf.arbiters:
@@ -898,10 +893,6 @@ class AlignakTest(unittest.TestCase):
         print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
         print "#" + string.center(self.id(), 78) + "#"
         print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
-
-    def xtest_conf_is_correct(self):
-        self.print_header()
-        self.assertTrue(self.conf.conf_is_correct)
 
     def show_configuration_logs(self):
         """
