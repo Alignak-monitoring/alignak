@@ -216,6 +216,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTPERCENTCHANGE': 'percent_state_change',
         'HOSTGROUPNAME':     ('get_groupname', ['hostgroups']),
         'HOSTGROUPNAMES':    ('get_groupnames', ['hostgroups']),
+        'HOSTGROUPALIAS':    ('get_groupalias', ['hostgroups']),
+        'HOSTGROUPALIASES':  ('get_groupaliases', ['hostgroups']),
         'LASTHOSTCHECK':     'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
         'LASTHOSTUP':        'last_time_up',
@@ -367,32 +369,48 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 return 'UNNAMEDHOSTTEMPLATE'
 
     def get_groupname(self, hostgroups):
-        """Get alias of the host's hostgroup
+        """Get name of the first host's hostgroup (alphabetic sort)
 
         :return: host group name
         :rtype: str
-        TODO: Clean this. It returns the last hostgroup encountered
+        TODO: Clean this. It returns the first hostgroup (alphabetic sort)
         """
-        groupname = ''
-        for hostgroup_id in self.hostgroups:
-            hostgroup = hostgroups[hostgroup_id]
-            groupname = "%s" % (hostgroup.alias)
-        return groupname
+        group_names = self.get_groupnames(hostgroups).split(',')
+        return group_names[0]
+
+    def get_groupalias(self, hostgroups):
+        """Get alias of the first host's hostgroup (alphabetic sort on group alias)
+
+        :return: host group alias
+        :rtype: str
+        TODO: Clean this. It returns the first hostgroup alias (alphabetic sort)
+        """
+        group_aliases = self.get_groupaliases(hostgroups).split(',')
+        return group_aliases[0]
 
     def get_groupnames(self, hostgroups):
-        """Get aliases of the host's hostgroups
+        """Get names of the host's hostgroups
 
-        :return: comma separated aliases of hostgroups
+        :return: comma separated names of hostgroups alphabetically sorted
         :rtype: str
         """
-        groupnames = ''
+        group_names = []
         for hostgroup_id in self.hostgroups:
             hostgroup = hostgroups[hostgroup_id]
-            if groupnames == '':
-                groupnames = hostgroup.get_name()
-            else:
-                groupnames = "%s, %s" % (groupnames, hostgroup.get_name())
-        return groupnames
+            group_names.append(hostgroup.get_name())
+        return ','.join(sorted(group_names))
+
+    def get_groupaliases(self, hostgroups):
+        """Get aliases of the host's hostgroups
+
+        :return: comma separated aliases of hostgroups alphabetically sorted
+        :rtype: str
+        """
+        group_aliases = []
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
+            group_aliases.append(hostgroup.alias)
+        return ','.join(sorted(group_aliases))
 
     def get_full_name(self):
         """Accessor to host_name attribute

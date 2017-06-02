@@ -549,6 +549,39 @@ class MacroResolverTester(object):
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         assert 'plugins/nothing you should not pass' == com
 
+    def test_host_macros(self):
+        """Test host macros
+        :return:
+        """
+        self.print_header()
+        mr = self.get_mr()
+        (svc, hst) = self.get_hst_svc()
+        data = [hst, svc]
+
+        # First group name
+        dummy_call = "special_macro!$HOSTGROUPNAME$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert com == 'plugins/nothing allhosts'
+
+        # All group names
+        dummy_call = "special_macro!$HOSTGROUPNAMES$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert com == 'plugins/nothing allhosts,hostgroup_01,up'
+
+        # First group alias
+        dummy_call = "special_macro!$HOSTGROUPALIAS$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert com == 'plugins/nothing All Hosts'
+
+        # All group aliases
+        dummy_call = "special_macro!$HOSTGROUPALIASES$"
+        cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
+        assert com == 'plugins/nothing All Hosts,All Up Hosts,hostgroup_alias_01'
+
     def test_host_count_services_macros(self):
         """Test services count for an hostmacros
         :return:
@@ -664,7 +697,6 @@ class MacroResolverTester(object):
         cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
         assert 'plugins/nothing 0' == com
-
 
     def test_contact_custom_macros(self):
         """
