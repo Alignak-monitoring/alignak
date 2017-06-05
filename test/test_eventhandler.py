@@ -28,11 +28,125 @@ import time
 
 from alignak_test import AlignakTest
 
+from alignak.misc.serialization import unserialize
+
 
 class TestEventhandler(AlignakTest):
     """
     This class test the eventhandler
     """
+
+    def test_global_event_handler(self):
+        """ Test global event handler scenario 1:
+        * check OK              OK HARD
+        * check CRITICAL x4     CRITICAL SOFT x1 then CRITICAL HARD
+        * check OK x2           OK HARD
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_global_event_handlers.cfg')
+
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        host = self._sched.hosts.find_by_name("test_host_1")
+        print host.event_handler_enabled
+        assert host.event_handler_enabled is True
+        print "host: %s" % host.event_handler
+        print "global: %s" % host.__class__.global_event_handler
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+
+        svc = self._sched.services.find_srv_by_name_and_hostname(
+            "test_host_1", "test_ok_0")
+        assert svc.event_handler_enabled is True
+        print "svc: %s" % svc.event_handler
+        print "global: %s" % svc.__class__.global_event_handler
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.enable_notifications = False
+        svc.notification_interval = 0
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'test_global_service_eventhandler.pl CRITICAL SOFT', 'command')
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'test_global_service_eventhandler.pl CRITICAL SOFT', 'command')
+        self.assert_actions_match(1, 'test_global_service_eventhandler.pl CRITICAL HARD', 'command')
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(2)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(2)
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        self.assert_actions_count(3)
+        self.assert_actions_match(0, 'test_global_service_eventhandler.pl CRITICAL SOFT', 'command')
+        self.assert_actions_match(1, 'test_global_service_eventhandler.pl CRITICAL HARD', 'command')
+        self.assert_actions_match(2, 'test_global_service_eventhandler.pl OK HARD', 'command')
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        # Do not change
+        self.assert_actions_count(3)
+
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
+        self.show_actions()
+        self.assert_actions_count(4)
+        self.assert_actions_match(0, 'test_global_service_eventhandler.pl CRITICAL SOFT', 'command')
+        self.assert_actions_match(1, 'test_global_service_eventhandler.pl CRITICAL HARD', 'command')
+        self.assert_actions_match(2, 'test_global_service_eventhandler.pl OK HARD', 'command')
+        self.assert_actions_match(3, 'test_global_host_eventhandler.pl', 'command')
+
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(0.1)
+        self.show_actions()
+        self.assert_actions_count(5)
+        self.assert_actions_match(0, 'test_global_service_eventhandler.pl CRITICAL SOFT', 'command')
+        self.assert_actions_match(1, 'test_global_service_eventhandler.pl CRITICAL HARD', 'command')
+        self.assert_actions_match(2, 'test_global_service_eventhandler.pl OK HARD', 'command')
+        self.assert_actions_match(3, 'test_global_host_eventhandler.pl DOWN SOFT', 'command')
+        self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
+
+        monitoring_logs = []
+        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        print(monitoring_logs)
+        expected_logs = [
+            (u'info', u'SERVICE ALERT: test_host_1;test_ok_0;OK;HARD;2;OK'),
+            (u'error', u'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
+            (u'error', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;SOFT;'
+                       u'1;global_service_eventhandler'),
+            (u'info', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;OK;HARD;'
+                      u'2;global_service_eventhandler'),
+            (u'error', u'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
+            (u'error', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;HARD;'
+                       u'2;global_service_eventhandler'),
+            (u'error', u'HOST ALERT: test_host_1;DOWN;SOFT;1;DOWN'),
+            (u'error', u'HOST EVENT HANDLER: test_host_1;DOWN;SOFT;1;global_host_eventhandler'),
+            (u'info', u'HOST ALERT: test_host_1;UP;SOFT;2;UP'),
+            (u'info', u'HOST EVENT HANDLER: test_host_1;UP;SOFT;2;global_host_eventhandler')
+        ]
+
+        for log_level, log_message in expected_logs:
+            print(log_message)
+            assert (log_level, log_message) in monitoring_logs
 
     def test_ok_critical_ok(self):
         """ Test event handler scenario 1:

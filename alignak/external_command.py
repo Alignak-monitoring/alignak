@@ -3986,7 +3986,7 @@ class ExternalCommandManager:
         :return: None
         """
         service.get_event_handlers(self.hosts, self.daemon.macromodulations,
-                                   self.daemon.timeperiods, externalcmd=True)
+                                   self.daemon.timeperiods, ext_cmd=True)
 
     def launch_host_event_handler(self, host):
         """Launch event handler for a service
@@ -3999,4 +3999,4 @@ class ExternalCommandManager:
         :return: None
         """
         host.get_event_handlers(self.hosts, self.daemon.macromodulations, self.daemon.timeperiods,
-                                externalcmd=True)
+                                ext_cmd=True)
