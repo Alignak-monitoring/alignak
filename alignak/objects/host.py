@@ -216,6 +216,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'HOSTPERCENTCHANGE': 'percent_state_change',
         'HOSTGROUPNAME':     ('get_groupname', ['hostgroups']),
         'HOSTGROUPNAMES':    ('get_groupnames', ['hostgroups']),
+        'HOSTGROUPALIAS':    ('get_groupalias', ['hostgroups']),
+        'HOSTGROUPALIASES':  ('get_groupaliases', ['hostgroups']),
         'LASTHOSTCHECK':     'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
         'LASTHOSTUP':        'last_time_up',
@@ -238,8 +240,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'TOTALHOSTSERVICES': 'get_total_services',
         'TOTALHOSTSERVICESOK': ('get_total_services_ok', ['services']),
         'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', ['services']),
-        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
         'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', ['services']),
+        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
+        'TOTALHOSTSERVICESUNREACHABLE': ('get_total_services_unreachable', ['services']),
         'HOSTBUSINESSIMPACT':  'business_impact',
     })
     # Todo: really unuseful ... should be removed, but let's discuss!
@@ -366,32 +369,48 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 return 'UNNAMEDHOSTTEMPLATE'
 
     def get_groupname(self, hostgroups):
-        """Get alias of the host's hostgroup
+        """Get name of the first host's hostgroup (alphabetic sort)
 
         :return: host group name
         :rtype: str
-        TODO: Clean this. It returns the last hostgroup encountered
+        TODO: Clean this. It returns the first hostgroup (alphabetic sort)
         """
-        groupname = ''
-        for hostgroup_id in self.hostgroups:
-            hostgroup = hostgroups[hostgroup_id]
-            groupname = "%s" % (hostgroup.alias)
-        return groupname
+        group_names = self.get_groupnames(hostgroups).split(',')
+        return group_names[0]
+
+    def get_groupalias(self, hostgroups):
+        """Get alias of the first host's hostgroup (alphabetic sort on group alias)
+
+        :return: host group alias
+        :rtype: str
+        TODO: Clean this. It returns the first hostgroup alias (alphabetic sort)
+        """
+        group_aliases = self.get_groupaliases(hostgroups).split(',')
+        return group_aliases[0]
 
     def get_groupnames(self, hostgroups):
-        """Get aliases of the host's hostgroups
+        """Get names of the host's hostgroups
 
-        :return: comma separated aliases of hostgroups
+        :return: comma separated names of hostgroups alphabetically sorted
         :rtype: str
         """
-        groupnames = ''
+        group_names = []
         for hostgroup_id in self.hostgroups:
             hostgroup = hostgroups[hostgroup_id]
-            if groupnames == '':
-                groupnames = hostgroup.get_name()
-            else:
-                groupnames = "%s, %s" % (groupnames, hostgroup.get_name())
-        return groupnames
+            group_names.append(hostgroup.get_name())
+        return ','.join(sorted(group_names))
+
+    def get_groupaliases(self, hostgroups):
+        """Get aliases of the host's hostgroups
+
+        :return: comma separated aliases of hostgroups alphabetically sorted
+        :rtype: str
+        """
+        group_aliases = []
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
+            group_aliases.append(hostgroup.alias)
+        return ','.join(sorted(group_aliases))
 
     def get_full_name(self):
         """Accessor to host_name attribute
@@ -1108,8 +1127,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                        if services[s].state_id == state))
 
     def get_total_services_ok(self, services):
-        """
-        Get number of services ok
+        """Get number of services ok
 
         :param services:
         :type services:
@@ -1119,8 +1137,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 0)
 
     def get_total_services_warning(self, services):
-        """
-        Get number of services warning
+        """Get number of services warning
 
         :param services:
         :type services:
@@ -1130,8 +1147,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 1)
 
     def get_total_services_critical(self, services):
-        """
-        Get number of services critical
+        """Get number of services critical
 
         :param services:
         :type services:
@@ -1141,8 +1157,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         return self._tot_services_by_state(services, 2)
 
     def get_total_services_unknown(self, services):
-        """
-        Get number of services unknown
+        """Get number of services unknown
 
         :param services:
         :type services:
@@ -1150,6 +1165,16 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: int
         """
         return self._tot_services_by_state(services, 3)
+
+    def get_total_services_unreachable(self, services):
+        """Get number of services unreachable
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 4)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement
