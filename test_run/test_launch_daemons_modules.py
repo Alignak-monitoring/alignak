@@ -189,7 +189,7 @@ class LaunchDaemons(AlignakTest):
         # Let the daemons initialize ...
         sleep(3)
 
-        print("Testing pid files and log files...")
+        print("Testing that pid files and log files exist...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
             assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
             assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
@@ -220,7 +220,7 @@ class LaunchDaemons(AlignakTest):
 
         sleep(1)
 
-        print("Testing pid files and log files...")
+        print("Testing that pid files and log files exist...")
         for daemon in ['arbiter']:
             assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
             assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
@@ -247,19 +247,8 @@ class LaunchDaemons(AlignakTest):
         return nb_errors
 
     def test_daemons_modules(self):
-        """Running the Alignak daemons with the default ../etc configuration
-
-        :return: None
-        """
-        nb_errors = self._run_daemons_modules(cfg_folder='../etc',
-                                              tmp_folder='./run/test_launch_daemons_modules')
-        assert nb_errors == 0, "Error logs raised!"
-        print("No error logs raised when daemons started and loaded the modules")
-
-        self.kill_daemons()
-
-    def test_daemons_modules_1(self):
-        """Running the Alignak daemons with a simple configuration
+        """Running the Alignak daemons with a simple configuration using the Example daemon
+        configured on all the default daemons
 
         :return: None
         """
@@ -310,8 +299,9 @@ class LaunchDaemons(AlignakTest):
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
         [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
         """
-        assert count == 2
+        assert count >= 2
         self.kill_daemons()
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
@@ -347,8 +337,9 @@ class LaunchDaemons(AlignakTest):
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
         [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
         """
-        assert count == 2
+        assert count >= 2
 
         # Kill the logs module
         module_pid = None
@@ -440,8 +431,9 @@ class LaunchDaemons(AlignakTest):
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
         [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
         """
-        assert count == 2
+        assert count >= 2
 
     def test_daemons_modules_ws(self):
         """Running the Alignak daemons with the Web services module
@@ -544,7 +536,7 @@ class LaunchDaemons(AlignakTest):
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'cfg/run_daemons_backend')
         tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'run/test_launch_daemons_modules_ws')
+                                  'run/test_launch_daemons_modules_backend')
 
         # Currently it is the same as the default execution ... to be modified later.
         cfg_modules = {
@@ -579,7 +571,9 @@ class LaunchDaemons(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_backend.arbiter' (backend_arbiter)",
                 "[alignak.module] Give an instance of alignak_module_backend.arbiter for alias: backend_arbiter",
                 "[alignak.module.backend_arbiter] Number of processes used by backend client: 1",
-                "[alignak.module.backend_arbiter] Alignak backend is not available for login. No backend connection.",
+                "[alignak.module.backend_arbiter] Alignak backend is not available for login. No backend connection, attempt: 1",
+                "[alignak.module.backend_arbiter] Alignak backend is not available for login. No backend connection, attempt: 2",
+                "[alignak.module.backend_arbiter] Alignak backend is not available for login. No backend connection, attempt: 3",
                 "[alignak.module.backend_arbiter] bypass objects loading when Arbiter is in verify mode: False",
                 "[alignak.module.backend_arbiter] configuration reload check period: 5 minutes",
                 "[alignak.module.backend_arbiter] actions check period: 15 seconds",
@@ -587,8 +581,8 @@ class LaunchDaemons(AlignakTest):
                 "[alignak.modulesmanager] Trying to initialize module: backend_arbiter",
                 "[alignak.daemon] I correctly loaded my modules: [backend_arbiter]",
                 "[alignak.daemons.arbiterdaemon] Getting Alignak global configuration from module 'backend_arbiter'",
-                "[alignak.module.backend_arbiter] Alignak backend is not available for login. No backend connection.",
                 "[alignak.module.backend_arbiter] Alignak backend connection is not available. Skipping Alignak configuration load and provide an empty configuration to the Arbiter.",
+                "[alignak.module.backend_arbiter] Alignak backend connection is not available. Skipping objects load and provide an empty list to the Arbiter."
             ],
             'broker': [
                 "[alignak.modulesmanager] Importing Python module 'alignak_module_backend.broker' for backend_broker...",
@@ -597,7 +591,8 @@ class LaunchDaemons(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_backend.broker' (backend_broker)",
                 "[alignak.module] Give an instance of alignak_module_backend.broker for alias: backend_broker",
                 "[alignak.module.backend_broker] Number of processes used by backend client: 1",
-                "[alignak.module.backend_broker] Alignak backend is not available for login. No backend connection.",
+                "[alignak.module.backend_broker] Alignak backend is not available for login. No backend connection, attempt: 1",
+                "[alignak.module.backend_broker] Alignak backend connection is not available. Checking if livestate update is allowed is not possible.",
                 "[alignak.modulesmanager] Trying to initialize module: backend_broker",
                 "[alignak.daemon] I correctly loaded my modules: [backend_broker]",
             ],
@@ -608,7 +603,7 @@ class LaunchDaemons(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_backend.scheduler' (backend_scheduler)",
                 "[alignak.module] Give an instance of alignak_module_backend.scheduler for alias: backend_scheduler",
                 "[alignak.module.backend_scheduler] Number of processes used by backend client: 1",
-                "[alignak.module.backend_scheduler] Alignak backend is not available for login. No backend connection.",
+                "[alignak.module.backend_scheduler] Alignak backend is not available for login. No backend connection, attempt: 1",
                 "[alignak.modulesmanager] Trying to initialize module: backend_scheduler",
                 "[alignak.daemon] I correctly loaded my modules: [backend_scheduler]",
             ]
@@ -623,20 +618,20 @@ class LaunchDaemons(AlignakTest):
                 logs = []
                 for line in lines:
                     # Catches WARNING and ERROR logs
-                    if 'WARNING' in line:
+                    if 'WARNING:' in line:
                         line = line.split('WARNING: ')
                         line = line[1]
                         line = line.strip()
                         print("--- %s" % line[:-1])
-                    if 'ERROR' in line:
+                    if 'ERROR:' in line:
                         print("*** %s" % line[:-1])
-                        if "The external module logs died unexpectedly!" not in line:
+                        if "Alignak backend connection is not available. " not in line:
                             errors_raised += 1
                         line = line.split('ERROR: ')
                         line = line[1]
                         line = line.strip()
                     # Catches INFO logs
-                    if 'INFO' in line:
+                    if 'INFO:' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
@@ -648,3 +643,4 @@ class LaunchDaemons(AlignakTest):
             for log in expected_logs[name]:
                 print("Last checked log %s: %s" % (name, log))
                 assert log in logs, logs
+        assert errors_raised == 0
