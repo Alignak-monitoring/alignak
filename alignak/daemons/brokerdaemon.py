@@ -263,9 +263,13 @@ class Broker(BaseSatellite):
                                            timeout=timeout, data_timeout=data_timeout)
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] %s", link['name'], str(exp))
+            link['con'] = None
+            return
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("Connection timeout with the %s '%s' when creating client: %s",
                            s_type, link['name'], str(exp))
+            link['con'] = None
+            return
         except HTTPClientException as exp:  # pragma: no cover, simple protection
             logger.error("Error with the %s '%s' when creating client: %s",
                          s_type, link['name'], str(exp))

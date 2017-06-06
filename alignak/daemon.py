@@ -1148,7 +1148,7 @@ class Daemon(object):
         :param timeout: timeout to wait for activity
         :type timeout: float
         :return:Returns a 2-tuple:
-        * first value is the time spent for the time change chekc
+        * first value is the time spent for the time change check
         * second value is the time change difference
         :rtype: tuple
         """
@@ -1156,11 +1156,12 @@ class Daemon(object):
         before = time.time()
         time_changed = self.check_for_system_time_change()
         after = time.time()
+        elapsed = after - before
 
-        if after - before > timeout:
-            return after - before, time_changed
+        if elapsed > timeout:
+            return elapsed, time_changed
         # Time to sleep
-        time.sleep(timeout)
+        time.sleep(timeout - elapsed)
 
         # Increase our sleep time for the time we slept
         before += time_changed

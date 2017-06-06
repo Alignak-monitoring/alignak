@@ -136,9 +136,7 @@ class SchedulerInterface(GenericInterface):
 
         # Now get the broks for this specific broker
         res = self.app.sched.get_broks(bname)
-        # # got only one global counter for broks
-        # self.app.sched.nb_broks_send += len(res)
-        # self.app.sched.nb_pulled_broks += len(res)
+
         # we do not more have a full broks in queue
         self.app.sched.brokers[bname]['has_full_broks'] = False
         return serialize(res, True)

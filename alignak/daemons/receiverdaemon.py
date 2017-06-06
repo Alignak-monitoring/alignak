@@ -342,8 +342,8 @@ class Receiver(Satellite):
 
             is_active = sched['active']
             if not is_active:
-                logger.warning("The scheduler '%s' is not active, it is not possible to get broks "
-                               "from its connection!", sched.get_name())
+                logger.warning("The scheduler '%s' is not active, it is not possible to push "
+                               "external commands from its connection!", sched.get_name())
                 return
 
             # If there are some commands...
@@ -371,9 +371,13 @@ class Receiver(Satellite):
                 sent = True
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
                 logger.warning("[%s] %s", sched.scheduler_name, str(exp))
+                sched['con'] = None
+                continue
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the scheduler '%s' when "
                                "sending external commands: %s", sched.scheduler_name, str(exp))
+                sched['con'] = None
+                continue
             except HTTPClientException as exp:  # pragma: no cover, simple protection
                 logger.error("Error with the scheduler '%s' when "
                              "sending external commands: %s", sched.scheduler_name, str(exp))
