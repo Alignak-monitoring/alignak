@@ -168,14 +168,16 @@ class BaseSatellite(Daemon):
 
     def pynag_con_init(self, s_id, s_type='scheduler'):
         """Wrapper function for the real function do_
-        just for timing the connection
+        Only for timing the connection
+
+        This function returns None, but the scheduler connection is initialized if everything
+        goes as expected.
 
         :param s_id: id
         :type s_id: int
         :param s_type: type of item
         :type s_type: str
-        :return: do_pynag_con_init return always True, so we return always True
-        :rtype: bool
+        :return: the same as do_pynag_con_init returns
         """
         _t0 = time.time()
         res = self.do_pynag_con_init(s_id, s_type)
@@ -183,16 +185,17 @@ class BaseSatellite(Daemon):
         return res
 
     def do_pynag_con_init(self, s_id, s_type='scheduler'):
-        """Initialize a connection with scheduler having 'uuid'
-        Return the new connection to the scheduler if it succeeded,
-            else: any error OR sched is inactive: return None.
-        NB: if sched is inactive then None is directly returned.
+        """Initialize a connection with the scheduler having 's_id'.
 
+        Initialize the connection to the scheduler if it succeeds,
+            else if any error occur or the scheduler is inactive it returns None.
+        NB: if sched is inactive then None is directly returned.
 
         :param s_id: scheduler s_id to connect to
         :type s_id: int
-        :return: scheduler connection object or None
-        :rtype: alignak.http.client.HTTPClient
+        :param s_type: 'scheduler', else daemon type
+        :type s_type: str
+        :return: None
         """
         sched = self.schedulers[s_id]
         if not sched['active']:
@@ -762,7 +765,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 con = sched.get('con', None)
                 if con is None:  # None = not initialized
                     self.pynag_con_init(sched_id)
-                    sched['con'] = con
+                    con = sched['con']
 
                 if con:
                     # OK, go for it :)
