@@ -1020,11 +1020,12 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         self.show_checks()
         self.assert_checks_count(2)
-        self.assert_checks_match(0, 'test_hostcheck.pl', 'command')
-        self.assert_checks_match(0, 'hostname test_host_0', 'command')
-        self.assert_checks_match(1, 'test_servicecheck.pl', 'command')
-        self.assert_checks_match(1, 'hostname test_host_0', 'command')
-        self.assert_checks_match(1, 'servicedesc test_ok_0', 'command')
+        # Host check and service may happen in any order... because launched almost simultaneously!
+        self.assert_any_check_match('test_hostcheck.pl', 'command')
+        self.assert_any_check_match('hostname test_host_0', 'command')
+        self.assert_any_check_match('test_servicecheck.pl', 'command')
+        self.assert_any_check_match('hostname test_host_0', 'command')
+        self.assert_any_check_match('servicedesc test_ok_0', 'command')
         assert 'DOWN' == router.state
         assert u'Host is DOWN' == router.output
         assert False == router.problem_has_been_acknowledged

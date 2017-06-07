@@ -175,7 +175,8 @@ class Testretention(AlignakTest):
         commentshn = []
         for comm_uuid, comment in hostn.comments.iteritems():
             commentshn.append(comment.comment)
-        assert commentsh == commentshn
+        # Compare sorted comments because dictionairies are not ordered
+        assert sorted(commentsh) == sorted(commentshn)
 
         # check comments for service
         assert len(svc.comments) == len(svcn.comments)
