@@ -52,7 +52,10 @@
 #
 import re
 import time
+import datetime
 import pytest
+from freezegun import freeze_time
+
 from alignak_test import AlignakTest, time_hacker
 from alignak_test import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
@@ -229,7 +232,6 @@ class TestExternalCommands(AlignakTest):
             # ...and a warning log!
             self.assert_any_log_match("A command was received for the host 'not_found_host', "
                                       "but the host could not be found!")
-
 
     def test_several_commands(self):
         """ External command management - several commands at once
@@ -781,6 +783,7 @@ class TestExternalCommands(AlignakTest):
         assert contact.customs['_VAR1'] == '20'
         assert 32768 == contact.modified_attributes
 
+    @freeze_time("2017-06-01 18:30:00")
     def test_host_comments(self):
         """ Test the comments for hosts
         :return: None
@@ -860,11 +863,14 @@ class TestExternalCommands(AlignakTest):
 
         expected_logs = [
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;test_host_0;1;test_contact;My comment' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
+             u'test_host_0;1;test_contact;My comment' % now),
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;test_host_0;1;test_contact;My comment 2' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
+             u'test_host_0;1;test_contact;My comment 2' % now),
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;test_host_0;1;test_contact;My accented é"{|:âàç comment' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
+             u'test_host_0;1;test_contact;My accented é"{|:âàç comment' % now),
             (u'info',
              u'EXTERNAL COMMAND: [%s] DEL_HOST_COMMENT;qsdqszerzerzd' % now),
             (u'warning',
@@ -873,8 +879,10 @@ class TestExternalCommands(AlignakTest):
              u'EXTERNAL COMMAND: [%s] DEL_ALL_HOST_COMMENTS;test_host_0' % now),
         ]
         for log_level, log_message in expected_logs:
+            print("Last checked log %s: %s" % (log_level, log_message))
             assert (log_level, log_message) in monitoring_logs
 
+    @freeze_time("2017-06-01 18:30:00")
     def test_service_comments(self):
         """ Test the comments for services
         :return: None
@@ -892,7 +900,7 @@ class TestExternalCommands(AlignakTest):
         assert svc.customs['_CUSTNAME'] == 'custvalue'
         assert svc.comments == {}
 
-        now= int(time.time())
+        now = int(time.time())
 
         #  ---
         # External command: add an host comment
@@ -954,11 +962,14 @@ class TestExternalCommands(AlignakTest):
 
         expected_logs = [
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;test_host_0;test_ok_0;1;test_contact;My comment' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
+             u'test_host_0;test_ok_0;1;test_contact;My comment' % now),
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;test_host_0;test_ok_0;1;test_contact;My comment 2' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
+             u'test_host_0;test_ok_0;1;test_contact;My comment 2' % now),
             (u'info',
-             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;test_host_0;test_ok_0;1;test_contact;My accented é"{|:âàç comment' % now),
+             u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
+             u'test_host_0;test_ok_0;1;test_contact;My accented é"{|:âàç comment' % now),
             (u'info',
              u'EXTERNAL COMMAND: [%s] DEL_SVC_COMMENT;qsdqszerzerzd' % now),
             (u'warning',
@@ -967,8 +978,10 @@ class TestExternalCommands(AlignakTest):
              u'EXTERNAL COMMAND: [%s] DEL_ALL_SVC_COMMENTS;test_host_0;test_ok_0' % now),
         ]
         for log_level, log_message in expected_logs:
+            print("Last checked log %s: %s" % (log_level, log_message))
             assert (log_level, log_message) in monitoring_logs
 
+    @freeze_time("2017-06-01 18:30:00")
     def test_host_acknowledges(self):
         """ Test the acknowledges for hosts
         :return: None
@@ -980,7 +993,7 @@ class TestExternalCommands(AlignakTest):
         self._broker = self._scheduler.brokers['broker-master']
 
         # Get host
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host = self._scheduler.hosts.find_by_name('test_host_0')
         host.checks_in_progress = []
         host.event_handler_enabled = False
         host.active_checks_enabled = True
@@ -989,7 +1002,7 @@ class TestExternalCommands(AlignakTest):
         assert host is not None
 
         # Get dependent host
-        router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        router = self._scheduler.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.event_handler_enabled = False
         router.active_checks_enabled = True
@@ -997,13 +1010,13 @@ class TestExternalCommands(AlignakTest):
         print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
         assert router is not None
 
-        now= int(time.time())
+        now = int(time.time())
 
         # Passive checks for hosts - special case
         # ---------------------------------------------
         # Host is DOWN
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_router_0;2;Host is DOWN' % int(time.time())
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.show_checks()
         self.assert_checks_count(2)
@@ -1017,17 +1030,16 @@ class TestExternalCommands(AlignakTest):
         assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
-        excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(
-            time.time())
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % now
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
         # Remove acknowledge router
-        excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % now
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         print "Host state", router.state, router.problem_has_been_acknowledged
         assert 'DOWN' == router.state
@@ -1055,9 +1067,10 @@ class TestExternalCommands(AlignakTest):
                       u'Host problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
-            print(log_message)
+            print("Last checked log %s: %s" % (log_level, log_message))
             assert (log_level, log_message) in monitoring_logs
 
+    @freeze_time("2017-06-01 18:30:00")
     def test_service_acknowledges(self):
         """ Test the acknowledges for services
         :return: None
@@ -1069,7 +1082,7 @@ class TestExternalCommands(AlignakTest):
         self._broker = self._scheduler.brokers['broker-master']
 
         # Get host
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host = self._scheduler.hosts.find_by_name('test_host_0')
         host.checks_in_progress = []
         host.event_handler_enabled = False
         host.active_checks_enabled = True
@@ -1078,7 +1091,7 @@ class TestExternalCommands(AlignakTest):
         assert host is not None
 
         # Get dependent host
-        router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        router = self._scheduler.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.event_handler_enabled = False
         router.active_checks_enabled = True
@@ -1087,9 +1100,7 @@ class TestExternalCommands(AlignakTest):
         assert router is not None
 
         # Get service
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
-            "test_host_0",
-            "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
@@ -1097,12 +1108,13 @@ class TestExternalCommands(AlignakTest):
         assert svc is not None
         print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
-        now= int(time.time())
+        now = int(time.time())
 
         # Passive checks for services
         # ---------------------------------------------
         # Receive passive service check Warning
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING' % time.time()
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;' \
+                'test_host_0;test_ok_0;1;Service is WARNING' % now
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
@@ -1111,14 +1123,15 @@ class TestExternalCommands(AlignakTest):
         assert False == svc.problem_has_been_acknowledged
 
         # Acknowledge service
-        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
+        excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;' \
+                'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'WARNING' == svc.state
         assert True == svc.problem_has_been_acknowledged
 
         # Remove acknowledge service
-        excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % time.time()
+        excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
         assert 'WARNING' == svc.state
@@ -1147,8 +1160,10 @@ class TestExternalCommands(AlignakTest):
                       u'Service problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
+            print("Last checked log %s: %s" % (log_level, log_message))
             assert (log_level, log_message) in monitoring_logs
 
+    @freeze_time("2017-06-01 18:30:00")
     def test_host_downtimes_host_up(self):
         """ Test the downtime for hosts - host is UP
         :return: None
@@ -1172,112 +1187,120 @@ class TestExternalCommands(AlignakTest):
         svc.act_depend_of = []  # ignore the host which we depend of
         svc.event_handler_enabled = False
 
-        now= int(time.time())
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2017, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
+            now = int(time.time())
 
-        # ---------------------------------------------
-        # Receive passive host check Host is up and alive
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        self.external_command_loop()
-        assert 'UP' == host.state
-        assert 'HARD' == host.state_type
-        assert 'Host is alive' == host.output
+            # ---------------------------------------------
+            # Receive passive host check Host is up and alive
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % now
+            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self.external_command_loop()
+            assert 'UP' == host.state
+            assert 'HARD' == host.state_type
+            assert 'Host is alive' == host.output
 
-        #  ---
-        # External command: add an host downtime
-        assert host.downtimes == {}
-        # Host is not currently a problem
-        assert False == host.is_problem
-        assert False == host.problem_has_been_acknowledged
-        # Host service is not currently a problem
-        assert False == svc.is_problem
-        assert False == svc.problem_has_been_acknowledged
-        excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
-                'test_contact;My first downtime' % (now, now, now + 2)
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        # Host is still not a problem - the downtime do not change anything to this
-        # because no acknowledge has been set in this case
-        assert False == host.is_problem
-        assert False == host.problem_has_been_acknowledged
-        # Host service is neither impacted
-        assert False == svc.is_problem
-        assert False == svc.problem_has_been_acknowledged
-        assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
-        assert downtime.comment == "My first downtime"
-        assert downtime.author == "test_contact"
-        assert downtime.start_time == now
-        assert downtime.end_time == now + 2
-        assert downtime.duration == 2
-        assert downtime.fixed == True
-        assert downtime.trigger_id == "0"
+            #  ---
+            # External command: add an host downtime
+            assert host.downtimes == {}
+            # Host is not currently a problem
+            assert False == host.is_problem
+            assert False == host.problem_has_been_acknowledged
+            # Host service is not currently a problem
+            assert False == svc.is_problem
+            assert False == svc.problem_has_been_acknowledged
+            excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
+                    'test_contact;My first downtime' % (now, now, now + 2)
+            self._scheduler.run_external_command(excmd)
+            self.external_command_loop()
+            # Host is still not a problem - the downtime do not change anything to this
+            # because no acknowledge has been set in this case
+            assert False == host.is_problem
+            assert False == host.problem_has_been_acknowledged
+            # Host service is neither impacted
+            assert False == svc.is_problem
+            assert False == svc.problem_has_been_acknowledged
+            assert len(host.downtimes) == 1
+            downtime = host.downtimes.values()[0]
+            assert downtime.comment == "My first downtime"
+            assert downtime.author == "test_contact"
+            assert downtime.start_time == now
+            assert downtime.end_time == now + 2
+            assert downtime.duration == 2
+            assert downtime.fixed == True
+            assert downtime.trigger_id == "0"
 
-        time.sleep(1)
-        self.external_command_loop()
-        # Notification: downtime start only...
-        self.assert_actions_count(1)
-        # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
+            # Time warp 1 second
+            frozen_datetime.tick()
 
-        time.sleep(2)
-        self.external_command_loop()
-        # Notification: downtime start and end
-        # todo: Where are the host notifications for the downtime start and stop ????
-        # thos notifications exist in the monitoring logs but not in the scheduler actions list!
-        self.show_actions()
-        self.assert_actions_count(2)
-        # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        # The downtime stopped
-        self.assert_actions_match(1, '/notifier.pl', 'command')
-        self.assert_actions_match(1, 'DOWNTIMEEND', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
+            self.external_command_loop()
+            # Notification: downtime start only...
+            self.assert_actions_count(1)
+            # The downtime started
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
 
-        # Clear actions
-        self.clear_actions()
-        self.show_actions()
-        time.sleep(1)
+            # Time warp 2 seconds
+            frozen_datetime.tick()
+            frozen_datetime.tick()
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+            self.external_command_loop()
+            # Notification: downtime start and end
+            self.show_actions()
+            self.assert_actions_count(2)
+            # The downtime started
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            # The downtime stopped
+            self.assert_actions_match(1, '/notifier.pl', 'command')
+            self.assert_actions_match(1, 'DOWNTIMEEND', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
 
-        expected_logs = [
-            # Host UP
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] '
-             u'PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % now),
+            # Clear actions
+            self.clear_actions()
+            self.show_actions()
+            time.sleep(1)
 
-            # First downtime
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] '
-             u'SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My first downtime'
-             % (now, now, now + 2)),
+            # We got 'monitoring_log' broks for logging to the monitoring logs...
+            monitoring_logs = []
+            for brok in self._broker['broks'].itervalues():
+                if brok.type == 'monitoring_log':
+                    data = unserialize(brok.data)
+                    monitoring_logs.append((data['level'], data['message']))
 
-            (u'info',
-             u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
-             u'Host has entered a period of scheduled downtime'),
-            (u'info',
-             u'HOST NOTIFICATION: test_contact;test_host_0;'
-             u'DOWNTIMESTART (UP);notify-host;Host is alive'),
-            (u'info',
-             u'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
-             u'Host has exited from a period of scheduled downtime'),
-            (u'info',
-             u'HOST NOTIFICATION: test_contact;test_host_0;'
-             u'DOWNTIMEEND (UP);notify-host;Host is alive'),
-        ]
-        for log_level, log_message in expected_logs:
-            print log_message
-            assert (log_level, log_message) in monitoring_logs
+            expected_logs = [
+                # Host UP
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] '
+                 u'PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % now),
+
+                # First downtime
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] '
+                 u'SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My first downtime'
+                 % (now, now, now + 2)),
+
+                (u'info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
+                 u'Host has entered a period of scheduled downtime'),
+                (u'info',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;'
+                 u'DOWNTIMESTART (UP);notify-host;Host is alive'),
+                (u'info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
+                 u'Host has exited from a period of scheduled downtime'),
+                (u'info',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;'
+                 u'DOWNTIMEEND (UP);notify-host;Host is alive'),
+            ]
+            for log_level, log_message in expected_logs:
+                print("Last checked log %s: %s" % (log_level, log_message))
+                assert (log_level, log_message) in monitoring_logs
 
     def test_host_downtimes_host_down(self):
         """ Test the downtime for hosts - host is DOWN
@@ -1302,170 +1325,167 @@ class TestExternalCommands(AlignakTest):
         svc.act_depend_of = []  # ignore the host which we depend of
         svc.event_handler_enabled = False
 
-        now= int(time.time())
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2017, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
+            now = int(time.time())
 
-        # Passive checks for hosts
-        # ---------------------------------------------
-        # Receive passive host check Down
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'SOFT' == host.state_type
-        assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'SOFT' == host.state_type
-        assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'HARD' == host.state_type
-        assert 'Host is dead' == host.output
+            # Passive checks for hosts
+            # ---------------------------------------------
+            # Receive passive host check Down
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
+            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'SOFT' == host.state_type
+            assert 'Host is dead' == host.output
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
+            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'SOFT' == host.state_type
+            assert 'Host is dead' == host.output
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
+            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'HARD' == host.state_type
+            assert 'Host is dead' == host.output
 
-        time.sleep(1)
-        self.external_command_loop()
-        # Host problem only...
-        self.show_actions()
-        self.assert_actions_count(2)
-        # The host problem is notified
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # Time warp 1 second
+            frozen_datetime.tick()
 
-        self.assert_actions_match(1, 'VOID', 'command')
+            self.external_command_loop()
+            # Host problem only...
+            self.show_actions()
+            self.assert_actions_count(2)
+            # The host problem is notified
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        #  ---
-        # The host is now a problem...
-        assert True == host.is_problem
-        # and the problem is not yet acknowledged
-        assert False == host.problem_has_been_acknowledged
-        # Simulate that the host service is also a problem
-        svc.is_problem = True
-        svc.problem_has_been_acknowledged = False
-        svc.state_id = 2
-        svc.state = 'CRITICAL'
-        # External command: add an host downtime
-        excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
-                'test_contact;My first downtime' % (now, now + 2, now + 10)
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
+            self.assert_actions_match(1, 'VOID', 'command')
 
-        assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
-        assert downtime.comment == "My first downtime"
-        assert downtime.author == "test_contact"
-        assert downtime.start_time == now + 2
-        assert downtime.end_time == now + 10
-        assert downtime.duration == 8
-        assert downtime.fixed == True
-        assert downtime.trigger_id == "0"
+            #  ---
+            # The host is now a problem...
+            assert True == host.is_problem
+            # and the problem is not yet acknowledged
+            assert False == host.problem_has_been_acknowledged
+            # Simulate that the host service is also a problem
+            svc.is_problem = True
+            svc.problem_has_been_acknowledged = False
+            svc.state_id = 2
+            svc.state = 'CRITICAL'
+            # External command: add an host downtime
+            excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
+                    'test_contact;My first downtime' % (now, now + 2, now + 10)
+            self._scheduler.run_external_command(excmd)
+            self.external_command_loop()
 
-        time.sleep(2)
-        self.external_command_loop()
+            assert len(host.downtimes) == 1
+            downtime = host.downtimes.values()[0]
+            assert downtime.comment == "My first downtime"
+            assert downtime.author == "test_contact"
+            assert downtime.start_time == now + 2
+            assert downtime.end_time == now + 10
+            assert downtime.duration == 8
+            assert downtime.fixed == True
+            assert downtime.trigger_id == "0"
 
-        time.sleep(2)
-        self.external_command_loop()
-        # Host problem only...
-        self.show_actions()
-        self.assert_actions_count(3)
-        # The host problem is notified
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
-        # And the downtime
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # Time warp 1 second
+            frozen_datetime.tick()
+            self.external_command_loop()
 
-        self.assert_actions_match(2, 'VOID', 'command')
+            # Host problem only...
+            self.show_actions()
+            self.assert_actions_count(3)
+            # The host problem is notified
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # And the downtime
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        # Let the downtime start...
-        time.sleep(2)
-        self.external_command_loop()
+            self.assert_actions_match(2, 'VOID', 'command')
 
-        # Let the downtime start...
-        time.sleep(2)
-        self.external_command_loop()
+            # Let the downtime start...
+            # Time warp 10 seconds
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=10))
+            self.external_command_loop()
 
-        # Let the downtime start...
-        time.sleep(2)
-        self.external_command_loop()
+            # Notification: downtime start and end
+            self.show_actions()
+            # Host problem and acknowledgement only...
+            self.assert_actions_count(4)
+            # The host problem is notified
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # And the downtime
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        # Notification: downtime start and end
-        # todo: Where are the host notifications for the downtime start and stop ????
-        # those notifications exist in the monitoring logs but not in the scheduler actions list!
-        self.show_actions()
-        # Host problem and acknowledgement only...
-        self.assert_actions_count(4)
-        # The host problem is notified
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
-        # And the downtime
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # And the downtime end
+            self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput Host is dead ', 'command')
+            self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
 
-        # And the downtime end
-        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput Host is dead ', 'command')
-        self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(3, 'VOID', 'command')
 
-        self.assert_actions_match(3, 'VOID', 'command')
+            # Clear actions
+            self.clear_actions()
+            self.show_actions()
 
-        # Clear actions
-        self.clear_actions()
-        self.show_actions()
-        time.sleep(1)
+            # Time warp 1 second
+            frozen_datetime.tick()
 
+            # We got 'monitoring_log' broks for logging to the monitoring logs...
+            monitoring_logs = []
+            for brok in self._broker['broks'].itervalues():
+                if brok.type == 'monitoring_log':
+                    data = unserialize(brok.data)
+                    monitoring_logs.append((data['level'], data['message']))
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+            expected_logs = [
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
 
-        print(monitoring_logs)
-        expected_logs = [
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+                (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
+                (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
+                (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
+                (u'error', u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;'
+                           u'notify-host;Host is dead'),
 
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
-            (u'error', u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;'
-                       u'notify-host;Host is dead'),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;'
+                 u'1200;test_contact;My first downtime'
+                 % (now, now + 2, now + 10)),
 
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;'
-             u'1200;test_contact;My first downtime'
-             % (now, now + 2, now + 10)),
+                # Host acknowledgement notifications are blocked by the downtime state of the host
+                # (u'info',
+                #  u'HOST NOTIFICATION: test_contact;test_host_0;ACKNOWLEDGEMENT (DOWN);'
+                #  u'notify-host;Host is dead'),
 
-            # Host acknowledgement notifications are blocked by the downtime state of the host
-            # (u'info',
-            #  u'HOST NOTIFICATION: test_contact;test_host_0;ACKNOWLEDGEMENT (DOWN);'
-            #  u'notify-host;Host is dead'),
+                # (u'info',
+                #  u'HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged'),
+                # (u'info',
+                #  u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
+                #  u'Service problem has been acknowledged'),
 
-            # (u'info',
-            #  u'HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged'),
-            # (u'info',
-            #  u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
-            #  u'Service problem has been acknowledged'),
+                (u'info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
+                 u'Host has entered a period of scheduled downtime'),
+                (u'info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
+                 u'Host has exited from a period of scheduled downtime'),
+            ]
 
-            (u'info',
-             u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
-             u'Host has entered a period of scheduled downtime'),
-            (u'info',
-             u'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
-             u'Host has exited from a period of scheduled downtime'),
-        ]
-
-        for log_level, log_message in expected_logs:
-            print log_message
-            assert (log_level, log_message) in monitoring_logs
+            for log_level, log_message in expected_logs:
+                print("Last checked log %s: %s" % (log_level, log_message))
+                assert (log_level, log_message) in monitoring_logs
 
     def test_host_downtimes_host_delete(self):
         """ Test the downtime for hosts - host is DOWN
@@ -1490,7 +1510,7 @@ class TestExternalCommands(AlignakTest):
         svc.act_depend_of = []  # ignore the host which we depend of
         svc.event_handler_enabled = False
 
-        now= int(time.time())
+        now = int(time.time())
 
         # Passive checks for hosts
         # ---------------------------------------------
