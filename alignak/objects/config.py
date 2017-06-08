@@ -1731,21 +1731,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         if not self.realms:
-            # Create a default realm with default value =1
-            # so all hosts without realm will be link with it
+            # Create a default realm so all hosts without realm will be link with it
             default = Realm({
                 'realm_name': 'All', 'alias': 'Self created default realm', 'default': '1'
             })
             self.realms = Realms([default])
             logger.warning("No realms defined, I added one as %s", default.get_name())
 
-        # Check that a default realm (and only one) is defined
-        default_realms = sum(1 for realm in self.realms
-                             if hasattr(realm, 'default') and realm.default)
-        if default_realms > 1:
-            self.add_error("Error : More than one realm are set to be the default realm")
-        elif default_realms < 1:
-            self.add_error("Error : No realm is set to be the default realm")
+        # Check that a default realm (and only one) is defined and get this default realm
+        self.realms.get_default(check=True)
 
     def log_daemons_list(self):
         """Log Alignak daemons list

@@ -432,16 +432,51 @@ class Realms(Itemgroups):
             if hasattr(tmp_p, 'rec_tag'):
                 del tmp_p.rec_tag
 
-    def get_default(self):
+    def get_default(self, check=False):
         """Get the default realm
 
+        :param check: check correctness if True
+        :type check: bool
         :return: Default realm of Alignak configuration
         :rtype: alignak.objects.realm.Realm | None
         """
+        found = []
         for realm in self:
             if getattr(realm, 'default', False):
-                return realm
-        return None
+                found.append(realm)
+
+        if not found:
+            # Retain as default realm the first realm in name alphabetical order
+            found_names = sorted([r.get_name() for r in self])
+            default_realm_name = found_names[0]
+            default_realm = self.find_tpl_by_name(default_realm_name)
+            default_realm.default = True
+            found.append(default_realm)
+
+            if check:
+                msg = "No realm is defined as the default one! I set %s as the default realm" \
+                      % (default_realm_name)
+                self.configuration_errors.append(msg)
+
+        default_realm = found[0]
+        if len(found) > 1:
+            # Retain as default realm the first so-called default realms in name alphabetical order
+            found_names = sorted([r.get_name() for r in found])
+            default_realm_name = found_names[0]
+            default_realm = self.find_tpl_by_name(default_realm_name)
+
+            # Set all found realms as non-default realms
+            for realm in found:
+                if realm.get_name() != default_realm_name:
+                    realm.default = False
+
+            if check:
+                msg = "More than one realm is defined as the default one: %s. " \
+                      "I set %s as the temporary default realm." \
+                  % (','.join(found_names), default_realm_name)
+                self.configuration_errors.append(msg)
+
+        return default_realm
 
     def prepare_for_satellites_conf(self, satellites):
         """Init the following attributes for each realm::

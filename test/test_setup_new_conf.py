@@ -41,7 +41,7 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
         sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False,
                                 '/tmp/scheduler.log')
@@ -53,16 +53,21 @@ class TestSetupNewConf(AlignakTest):
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched.new_conf = scheduler.conf_package
         sched.setup_new_conf()
+        self.show_logs()
         assert 1 == len(sched.modules)
         assert sched.modules[0].module_alias == 'Example'
         assert sched.modules[0].option_3 == 'foobar'
-        assert 2 == len(sched.conf.hosts)
+        for host in sched.conf.hosts:
+            print("Host: %s" % host)
+        # Two hosts declared in the configuration
+        # On host provided by the Example module loaded in the arbiter
+        assert 3 == len(sched.conf.hosts)
         assert len(sched.pollers) == 1
         assert len(sched.reactionners) == 1
         assert len(sched.brokers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         for scheduler in self.arbiter.dispatcher.schedulers:
             sched.new_conf = scheduler.conf_package
         sched.setup_new_conf()
@@ -79,9 +84,9 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        receiv = receiverdaemon('cfg/setup_new_conf/daemons/receiverd.ini', False, False, False,
+        receiv = receiverdaemon('cfg/setup_new_conf/daemons/receiverd.ini', False, False, True,
                                 '/tmp/receiver.log')
         receiv.load_config_file()
         receiv.load_modules_manager('receiver-name')
@@ -92,15 +97,18 @@ class TestSetupNewConf(AlignakTest):
             if satellite.get_my_type() == 'receiver':
                 receiv.new_conf = satellite.cfg
         receiv.setup_new_conf()
+        self.show_logs()
         assert 1 == len(receiv.modules)
         assert receiv.modules[0].module_alias == 'Example'
         assert receiv.modules[0].option_3 == 'foobar'
         # check get hosts
-        assert len(receiv.host_assoc) == 2
+        # Two hosts declared in the configuration
+        # On host provided by the Example module loaded in the arbiter
+        assert len(receiv.host_assoc) == 3
         assert len(receiv.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'receiver':
                 receiv.new_conf = satellite.cfg
@@ -116,7 +124,7 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
         poller = pollerdaemon('cfg/setup_new_conf/daemons/pollerd.ini', False, False, False,
                               '/tmp/poller.log')
@@ -135,7 +143,7 @@ class TestSetupNewConf(AlignakTest):
         assert len(poller.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'poller':
                 poller.new_conf = satellite.cfg
@@ -151,7 +159,7 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
         broker = brokerdaemon('cfg/setup_new_conf/daemons/brokerd.ini', False, False, False,
                               '/tmp/broker.log')
@@ -174,7 +182,7 @@ class TestSetupNewConf(AlignakTest):
         assert len(broker.receivers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'broker':
                 broker.new_conf = satellite.cfg
@@ -194,7 +202,7 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
         reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False,
                                  False, '/tmp/reactionner.log')
@@ -213,7 +221,7 @@ class TestSetupNewConf(AlignakTest):
         assert len(reac.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         for satellite in self.arbiter.dispatcher.satellites:
             if satellite.get_my_type() == 'reactionner':
                 reac.new_conf = satellite.cfg

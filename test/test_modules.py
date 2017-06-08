@@ -70,13 +70,13 @@ class TestModules(AlignakTest):
         :return:
         """
         self.print_header()
-        self.setup_with_file('./cfg/cfg_default.cfg')
+        self.setup_with_file('./cfg/cfg_default_with_modules.cfg')
         assert self.conf_is_correct
         self.show_configuration_logs()
 
         # No arbiter modules created
         modules = [m.module_alias for m in self.arbiter.myself.modules]
-        assert modules == []
+        assert modules == ['Example']
 
         # The only existing broker module is Example declared in the configuration
         modules = [m.module_alias for m in self.brokers['broker-master'].modules]
@@ -186,7 +186,7 @@ class TestModules(AlignakTest):
 
         # No arbiter modules created
         modules = [m.module_alias for m in self.arbiter.myself.modules]
-        assert modules == []
+        assert modules == ['Example']
 
         # The only existing broker module is Example declared in the configuration
         modules = [m.module_alias for m in self.brokers['broker-master'].modules]
@@ -215,7 +215,7 @@ class TestModules(AlignakTest):
         :return:
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         assert self.conf_is_correct
 
         time_hacker.set_real_time()

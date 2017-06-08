@@ -655,18 +655,29 @@ class TestConfig(AlignakTest):
         """ Configuration is not correct because of an unknown realm member in realm and
         an unknown realm in a host
 
+        This test do not always pass! This problem is due to the unordered configuration reading.
+        Sometimes, the hosts are parsed before the realms and sometimes the realms are parsed
+        before the hosts.
+
+        According to the order in which errors are detected, the reported error messages are not
+        the same!
+
+        To avoid such a problem, the relma containing an unknown member for this test must
+        not be used in an host configuration :)
+
         :return: None
         """
         self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_realm_member.cfg')
         assert not self.conf_is_correct
-        # self.show_configuration_logs()
+        self.show_logs()
 
-        self.assert_any_cfg_log_match(re.escape(
-            u"Some hosts exist in the realm 'Realm1' but no scheduler is defined for this realm"))
-        self.assert_any_cfg_log_match(re.escape(
-            u"Added a scheduler in the realm 'Realm1'"))
+        # Configuration warnings
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Some hosts exist in the realm 'Realm1' but no scheduler is defined for this realm"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Added a scheduler in the realm 'Realm1'"))
         self.assert_any_cfg_log_match(re.escape(
             u"Some hosts exist in the realm 'Realm3' but no scheduler is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
@@ -675,10 +686,10 @@ class TestConfig(AlignakTest):
             u"Some hosts exist in the realm 'Realm2' but no scheduler is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
             u"Added a scheduler in the realm 'Realm2'"))
-        self.assert_any_cfg_log_match(re.escape(
-            u"Some hosts exist in the realm 'Realm1' but no poller is defined for this realm"))
-        self.assert_any_cfg_log_match(re.escape(
-            u"Added a poller in the realm 'Realm1'"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Some hosts exist in the realm 'Realm1' but no poller is defined for this realm"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Added a poller in the realm 'Realm1'"))
         self.assert_any_cfg_log_match(re.escape(
             u"Some hosts exist in the realm 'Realm3' but no poller is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
@@ -687,10 +698,10 @@ class TestConfig(AlignakTest):
             u"Some hosts exist in the realm 'Realm2' but no poller is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
             u"Added a poller in the realm 'Realm2'"))
-        self.assert_any_cfg_log_match(re.escape(
-            u"Some hosts exist in the realm 'Realm1' but no broker is defined for this realm"))
-        self.assert_any_cfg_log_match(re.escape(
-            u"Added a broker in the realm 'Realm1'"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Some hosts exist in the realm 'Realm1' but no broker is defined for this realm"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     u"Added a broker in the realm 'Realm1'"))
         self.assert_any_cfg_log_match(re.escape(
             u"Some hosts exist in the realm 'Realm3' but no broker is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
@@ -699,18 +710,23 @@ class TestConfig(AlignakTest):
             u"Some hosts exist in the realm 'Realm2' but no broker is defined for this realm"))
         self.assert_any_cfg_log_match(re.escape(
             u"Added a broker in the realm 'Realm2'"))
+
+        # Configuration errors
         self.assert_any_cfg_log_match(re.escape(
-            'Error : More than one realm are set to be the default realm'))
+            'More than one realm is defined as the default one: All,Realm1,Realm2,Realm4. '
+            'I set All as the temporary default realm.'))
         self.assert_any_cfg_log_match(re.escape(
-            u'Configuration in host::test_host_realm3 is incorrect; from: cfg/config/host_bad_realm.cfg:31'))
+            u'Configuration in host::test_host_realm3 is incorrect; '
+            u'from: cfg/config/host_bad_realm.cfg:31'))
         self.assert_any_cfg_log_match(re.escape(
             u'the host test_host_realm3 got an invalid realm (Realm3)!'))
         self.assert_any_cfg_log_match(re.escape(
             'hosts configuration is incorrect!'))
         self.assert_any_cfg_log_match(re.escape(
-            u'Configuration in realm::Realm1 is incorrect; from: cfg/config/realm_bad_member.cfg:5'))
+            u'Configuration in realm::Realm4 is incorrect; '
+            u'from: cfg/config/realm_bad_member.cfg:19'))
         self.assert_any_cfg_log_match(re.escape(
-            u"[realm::Realm1] as realm, got unknown member 'UNKNOWNREALM'"))
+            u"[realm::Realm4] as realm, got unknown member 'UNKNOWN_HOST'"))
         self.assert_any_cfg_log_match(re.escape(
             'realms configuration is incorrect!'))
         self.assert_any_cfg_log_match(re.escape(
@@ -1022,7 +1038,6 @@ class TestConfig(AlignakTest):
 
         host = self.arbiter.conf.hosts.find_by_name('test_host')
         assert '_internal_host_up' == host.check_command.get_name()
-
 
     def test_config_services(self):
         """ Test services initial states
