@@ -163,8 +163,8 @@ class DependencyNode(object):
         #  It's an Xof rule
         elif self.operand == 'of:':
             return self.get_complex_xof_node_state(hosts, services)
-        else:
-            return 4  # We have an unknown node. Code is not reachable because we validate operands
+
+        return 4  # We have an unknown node. Code is not reachable because we validate operands
 
     def get_host_node_state(self, state, problem_has_been_acknowledged, in_scheduled_downtime):
         """Get host node state, simplest case ::
@@ -436,9 +436,8 @@ class DependencyNodeFactory(object):
         if complex_node is False:
             return self.eval_simple_cor_pattern(pattern, hosts, services,
                                                 hostgroups, servicegroups, running)
-        else:
-            return self.eval_complex_cor_pattern(pattern, hosts, services,
-                                                 hostgroups, servicegroups, running)
+        return self.eval_complex_cor_pattern(pattern, hosts, services,
+                                             hostgroups, servicegroups, running)
 
     @staticmethod
     def eval_xof_pattern(node, pattern):
@@ -788,8 +787,8 @@ class DependencyNodeFactory(object):
             return [filter_host_by_bp_rule_label(expr)]
         elif "t" in flags:
             return [filter_host_by_tag(expr)]
-        else:
-            return [filter_none]
+
+        return [filter_none]
 
     def get_srv_host_filters(self, expr):
         """Generates service filter list corresponding to the expression ::
@@ -822,8 +821,8 @@ class DependencyNodeFactory(object):
             return [filter_service_by_host_bp_rule_label(expr)]
         elif "t" in flags:
             return [filter_service_by_host_tag_name(expr)]
-        else:
-            return [filter_none]
+
+        return [filter_none]
 
     def get_srv_service_filters(self, expr):
         """Generates service filter list corresponding to the expression ::
@@ -854,5 +853,5 @@ class DependencyNodeFactory(object):
             return [filter_service_by_regex_name(expr)]
         elif "l" in flags:
             return [filter_service_by_bp_rule_label(expr)]
-        else:
-            return [filter_none]
+
+        return [filter_none]

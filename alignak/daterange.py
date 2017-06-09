@@ -118,8 +118,8 @@ def find_day_by_offset(year, month, offset):
     (_, days_in_month) = calendar.monthrange(year, month)
     if offset >= 0:
         return min(offset, days_in_month)
-    else:
-        return max(1, days_in_month + offset + 1)
+
+    return max(1, days_in_month + offset + 1)
 
 
 class Timerange(AlignakObject):
@@ -368,8 +368,8 @@ class AbstractDaterange(AlignakObject):
         (start_time, end_time) = self.get_start_and_end_time(timestamp)
         if start_time <= timestamp <= end_time:
             return False
-        else:
-            return True
+
+        return True
 
     def get_next_future_timerange_valid(self, timestamp):
         """Get the next valid timerange (next timerange start in timeranges attribute)
@@ -387,8 +387,8 @@ class AbstractDaterange(AlignakObject):
                 starts.append(tr_start)
         if starts != []:
             return min(starts)
-        else:
-            return None
+
+        return None
 
     def get_next_future_timerange_invalid(self, timestamp):
         """Get next invalid time for timeranges
@@ -409,8 +409,8 @@ class AbstractDaterange(AlignakObject):
                 ends.append(tr_end)
         if ends != []:
             return min(ends)
-        else:
-            return None
+
+        return None
 
     def get_next_valid_day(self, timestamp):
         """Get next valid day for timerange
@@ -465,11 +465,12 @@ class AbstractDaterange(AlignakObject):
         sec_from_morning = self.get_next_future_timerange_valid(t_day2)
         if t_day2 is not None and sec_from_morning is not None:
             return t_day2 + sec_from_morning
-        else:
-            # I'm not find any valid time
-            return None
+
+        # I did not found any valid time
+        return None
 
     def get_next_invalid_day(self, timestamp):
+        # pylint: disable=no-else-return
         """Get next day where timerange is not active
 
         :param timestamp: time we compute from
@@ -548,9 +549,9 @@ class AbstractDaterange(AlignakObject):
 
         if t_day2 is not None and sec_from_morning is None:
             return t_day2
-        else:
-            # I'm not find any valid time
-            return None
+
+        # I did not found any valid time
+        return None
 
 
 class Daterange(AbstractDaterange):

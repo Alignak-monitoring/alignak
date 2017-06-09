@@ -116,7 +116,7 @@ class NotificationWay(Item):
         # At deserialization, thoses are dict
         # TODO: Separate parsing instance from recreated ones
         for prop in ['service_notification_commands', 'host_notification_commands']:
-            if prop in params and isinstance(params[prop], list) and len(params[prop]) > 0 \
+            if prop in params and isinstance(params[prop], list) and params[prop] \
                     and isinstance(params[prop][0], dict):
                 new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
                 # We recreate the object

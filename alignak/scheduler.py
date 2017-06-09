@@ -196,6 +196,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.reactionners = {}
 
     def reset(self):
+        # pylint: disable=not-context-manager
         """Reset scheduler::
 
         * Remove waiting results
@@ -729,7 +730,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     # the next notification (problems only)
                     if act.type == 'PROBLEM':
                         # Update the ref notif number after raise the one of the notification
-                        if len(childnotifs) != 0:
+                        if childnotifs:
                             # notif_nb of the master notification
                             # was already current_notification_number+1.
                             # If notifications were sent,
@@ -1623,7 +1624,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # Now, reinteger dep checks
             for chk in self.checks.values():
-                if chk.status == 'waitdep' and len(chk.depend_on) == 0:
+                if chk.status == 'waitdep' and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
                     notif_period = self.timeperiods.items.get(item.notification_period, None)
                     depchks = item.consume_result(chk, notif_period, self.hosts, self.services,

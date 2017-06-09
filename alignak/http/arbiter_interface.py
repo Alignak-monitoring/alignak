@@ -75,12 +75,12 @@ class ArbiterInterface(GenericInterface):
             logger.warning("Received message to not run. "
                            "I am the Master, ignore and continue to run.")
             return False
+
         # Else, I'm just a spare, so I listen to my master
-        else:
-            logger.debug("Received message to not run. I am the spare, stopping.")
-            self.app.last_master_speack = time.time()
-            self.app.must_run = False
-            return True
+        logger.debug("Received message to not run. I am the spare, stopping.")
+        self.app.last_master_speack = time.time()
+        self.app.must_run = False
+        return True
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -196,7 +196,7 @@ class ArbiterInterface(GenericInterface):
             logger.debug('ASK:: table= %s', str(table))
             objs = getattr(self.app.conf, table, None)
             logger.debug("OBJS:: %s", str(objs))
-            if objs is None or len(objs) == 0:
+            if objs is None or not objs:
                 return []
             res = []
             for obj in objs:

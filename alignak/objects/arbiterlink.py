@@ -155,9 +155,11 @@ class ArbiterLinks(SatelliteLinks):
     name_property = "arbiter_name"
     inner_class = ArbiterLink
 
-    def linkify(self, modules, realms=None):
+    def linkify(self, realms=None, modules=None):
         """Link modules to Arbiter
 
+        :param realms: Realm object list (always None for an arbiter)
+        :type realms: list
         :param modules: list of modules
         :type modules: list
         :return: None

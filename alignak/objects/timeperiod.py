@@ -175,7 +175,7 @@ class Timeperiod(Item):
                                   if k not in self.__class__.properties])
 
         if 'dateranges' in standard_params and isinstance(standard_params['dateranges'], list) \
-                and len(standard_params['dateranges']) > 0 \
+                and standard_params['dateranges'] \
                 and isinstance(standard_params['dateranges'][0], dict):
             new_list = []
             for elem in standard_params['dateranges']:
@@ -503,7 +503,7 @@ class Timeperiod(Item):
                         cont = False
                     if timestamp > original_t + (3600 * 24 * 365):
                         cont = False
-        if len(dr_mins) == 0:
+        if not dr_mins:
             periods_exclude = []
         else:
             periods_exclude = merge_periods(dr_mins)

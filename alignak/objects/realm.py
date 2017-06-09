@@ -135,8 +135,8 @@ class Realm(Itemgroup):
             # more over it should already be decoded/parsed to its final type:
             # a list of strings (being the names of the members)
             return [r.strip() for r in self.realm_members]
-        else:
-            return []
+
+        return []
 
     def fill_realm_members_with_higher_realms(self, realms):
         """
@@ -188,7 +188,7 @@ class Realm(Itemgroup):
                     self.all_sub_members = []
                     self.realm_members = []
                     return None
-                elif len(value) > 0:
+                elif value:
                     self.add_string_member(value)
                 self.add_string_member([realm.realm_name])
             else:
@@ -225,9 +225,9 @@ class Realm(Itemgroup):
 
         if hasattr(self, s_type + 's'):
             return getattr(self, s_type + 's')
-        else:
-            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
-            return []
+
+        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
+        return []
 
     def get_potential_satellites_by_type(self, s_type):
         """Generic function to access one of the potential satellite attribute
@@ -240,9 +240,9 @@ class Realm(Itemgroup):
         """
         if hasattr(self, 'potential_' + s_type + 's'):
             return getattr(self, 'potential_' + s_type + 's')
-        else:
-            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
-            return []
+
+        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
+        return []
 
     def get_nb_of_must_have_satellites(self, s_type):
         """Generic function to access one of the number satellite attribute
@@ -255,9 +255,9 @@ class Realm(Itemgroup):
         """
         if hasattr(self, 'nb_' + s_type + 's'):
             return getattr(self, 'nb_' + s_type + 's')
-        else:
-            logger.debug("[realm] do not have this kind of satellites: %s", s_type)
-            return 0
+
+        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
+        return 0
 
     def fill_broker_with_poller_reactionner_links(self, broker, pollers, reactionners, receivers,
                                                   realms):

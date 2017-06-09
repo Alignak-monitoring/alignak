@@ -342,7 +342,7 @@ class Receiver(Satellite):
                 con = sched.get('con', None)
 
             # If there are commands and the scheduler is alive
-            if len(cmds) > 0 and con:
+            if cmds and con:
                 logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
                 try:
                     # con.run_external_commands(cmds)
@@ -396,7 +396,7 @@ class Receiver(Satellite):
         statsmgr.timer('core.push-external-commands', time.time() - _t0)
 
         # Maybe we do not have something to do, so we wait a little
-        if len(self.broks) == 0:
+        if not self.broks:
             self.watch_for_new_conf(1.0)
 
     def main(self):

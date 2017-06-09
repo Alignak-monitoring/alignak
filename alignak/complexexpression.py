@@ -66,8 +66,8 @@ class ComplexExpressionNode(object):
         if not self.leaf:
             return "Op:'%s' Leaf:%s Sons:'[%s] IsNot:%s'" % \
                    (self.operand, self.leaf, ','.join([str(s) for s in self.sons]), self.not_value)
-        else:
-            return 'IS LEAF %s' % self.content
+
+        return 'IS LEAF %s' % self.content
 
     def resolve_elements(self):
         """Get element of this node recursively

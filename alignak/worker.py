@@ -235,7 +235,7 @@ class Worker(object):
                 if msg is not None:
                     self.checks.append(msg.get_data())
         except Empty:
-            if len(self.checks) == 0:
+            if not self.checks:
                 self._idletime += 1
                 time.sleep(1)
         # Maybe the Queue() has been deleted by our master ?
@@ -319,8 +319,8 @@ class Worker(object):
         # return the diff if it need, of just 0
         if abs(difference) > 900:
             return difference
-        else:
-            return 0
+
+        return 0
 
     def work(self, slave_q, returns_queue, control_q):  # pragma: no cover, not with unit tests
         """
@@ -403,7 +403,7 @@ class Worker(object):
             # Look if we are dying, and if we finish all current checks
             # if so, we really die, our master poller will launch a new
             # worker because we were too weak to manage our job :(
-            if len(self.checks) == 0 and self.i_am_dying:
+            if not self.checks and self.i_am_dying:
                 logger.warning("[%s] I die because I cannot do my job as I should "
                                "(too many open files?)... forgive me please.", self.uuid)
                 break

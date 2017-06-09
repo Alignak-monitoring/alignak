@@ -428,7 +428,7 @@ class Servicedependencies(Items):
 
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")
-        if len(loop) > 0:
+        if loop:
             msg = "Loop detected while checking service dependencies"
             self.configuration_errors.append(msg)
             state = False

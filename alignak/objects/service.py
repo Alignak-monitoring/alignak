@@ -593,7 +593,7 @@ class Service(SchedulingItem):
                                     self.last_time_critical,
                                     self.last_time_unknown]
                         if x > self.last_time_ok]
-        if len(non_ok_times) == 0:
+        if not non_ok_times:
             last_time_non_ok = 0  # program_start would be better
         else:
             last_time_non_ok = min(non_ok_times)
@@ -1184,8 +1184,8 @@ class Service(SchedulingItem):
         }
         if self.got_business_rule:
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
-        else:
-            return mapping.get(self.state_id, "n/a")
+
+        return mapping.get(self.state_id, "n/a")
 
     def get_status(self, hosts, services):
         """Get the status of this host
@@ -1204,8 +1204,8 @@ class Service(SchedulingItem):
                 4: "UNREACHABLE",
             }
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
-        else:
-            return self.state
+
+        return self.state
 
     def get_downtime(self):
         """Accessor to scheduled_downtime_depth attribute

@@ -89,7 +89,7 @@ class Itemgroup(Item):
 
         # Copy all properties
         for prop in cls.properties:
-            if prop is not 'members':
+            if prop not in ['members']:
                 if hasattr(self, prop):
                     val = getattr(self, prop)
                     setattr(new_i, prop, val)

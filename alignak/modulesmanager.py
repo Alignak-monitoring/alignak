@@ -258,7 +258,7 @@ class ModulesManager(object):
                         (module.module_alias, type(instance))
                     )
 
-                if instance.modules and len(instance.modules) > 0:
+                if instance.modules and instance.modules:
                     self.configuration_warnings.append(
                         "Module %s instance defines some sub-modules. "
                         "This feature is not currently supported" % (module.module_alias)

@@ -270,7 +270,7 @@ class Stats(object):
         # local broks part
         self.broks_enabled = broks_enabled
 
-        if self.statsd_enabled and self.statsd_host is not None and self.statsd_host is not 'None':
+        if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
             logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
                         self.type, self.name,
                         self.statsd_host, self.statsd_port, self.statsd_prefix)

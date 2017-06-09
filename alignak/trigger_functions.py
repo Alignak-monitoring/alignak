@@ -315,9 +315,9 @@ def get_object(ref):
     name = ref
     if '/' not in name:
         return OBJS['hosts'].find_by_name(name)
-    else:
-        elts = name.split('/', 1)
-        return OBJS['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
+
+    elts = name.split('/', 1)
+    return OBJS['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
 
 
 @declared

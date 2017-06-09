@@ -372,8 +372,8 @@ class Alignak(BaseSatellite):
         """
         if hasattr(self, 'conf'):
             return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
-        else:
-            return {}
+
+        return {}
 
     def clean_previous_run(self):
         """Clean variables from previous configuration

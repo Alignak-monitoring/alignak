@@ -91,8 +91,8 @@ class Contactgroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return [m.strip() for m in self.members]
-        else:
-            return []
+
+        return []
 
     def get_name(self):
         """
@@ -112,8 +112,8 @@ class Contactgroup(Itemgroup):
         """
         if hasattr(self, 'contactgroup_members'):
             return self.contactgroup_members
-        else:
-            return []
+
+        return []
 
     def get_contacts_by_explosion(self, contactgroups):
         """
@@ -137,8 +137,8 @@ class Contactgroup(Itemgroup):
                          self.get_name())
             if hasattr(self, 'members'):
                 return self.members
-            else:
-                return ''
+
+            return ''
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
 
@@ -151,8 +151,8 @@ class Contactgroup(Itemgroup):
                     self.add_string_member(value)
         if hasattr(self, 'members'):
             return self.members
-        else:
-            return ''
+
+        return ''
 
 
 class Contactgroups(Itemgroups):
@@ -163,7 +163,7 @@ class Contactgroups(Itemgroups):
     name_property = "contactgroup_name"  # is used for finding contactgroup
     inner_class = Contactgroup
 
-    def get_members_by_name(self, cgname):
+    def get_members_by_name(self, gname):
         """
         Get all members by name given in parameter
 
@@ -172,7 +172,7 @@ class Contactgroups(Itemgroups):
         :return: list of contacts with this name
         :rtype: list[alignak.objects.contact.Contact]
         """
-        contactgroup = self.find_by_name(cgname)
+        contactgroup = self.find_by_name(gname)
         if contactgroup is None:
             return []
         return contactgroup.get_contacts()

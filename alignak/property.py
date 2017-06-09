@@ -330,10 +330,10 @@ class ListProp(Property):
             return [s.strip() if hasattr(s, "strip") else s
                     for s in list_split(val, self.split_on_coma)
                     if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
-        else:
-            return [s.strip() if hasattr(s, "strip") else s
-                    for s in to_split(val, self.split_on_coma)
-                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
+
+        return [s.strip() if hasattr(s, "strip") else s
+                for s in to_split(val, self.split_on_coma)
+                if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
 
 class SetProp(ListProp):
@@ -475,9 +475,9 @@ class ToGuessProp(Property):
         if isinstance(val, list) and len(set(val)) == 1:
             # If we have a list with a unique value just use it
             return val[0]
-        else:
-            # Well, can't choose to remove something.
-            return val
+
+        # Well, can't choose to remove something.
+        return val
 
 
 class IntListProp(ListProp):

@@ -805,7 +805,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # If we truly have impacts, we get the max business_impact
         # if it's huge than ourselves
-        if len(self.impacts) != 0:
+        if self.impacts:
             bp_impacts = [hosts[elem].business_impact for elem in self.impacts if elem in hosts]
             bp_impacts.extend([services[elem].business_impact for elem in self.impacts
                                if elem in services])
@@ -947,7 +947,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # For know if we are still an impact, maybe our dependencies
         # are not aware of the remove of the impact state because it's not ordered
         # so we can just look at if we still have some problem in our list
-        if len(self.source_problems) == 0:
+        if not self.source_problems:
             self.is_impact = False
             # No more an impact, we can unset the impact state
             self.unset_impact_state()
@@ -1041,13 +1041,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Ok, I do not raise dep, but my dep maybe raise me
         now = time.time()
-        for (dep_id, status, _, timeperiod_id, inh_parent) in self.chk_depend_of:
+        for (dep_id, dep_status, _, timeperiod_id, inh_parent) in self.chk_depend_of:
             if dep_id in hosts:
                 dep = hosts[dep_id]
             else:
                 dep = services[dep_id]
             timeperiod = timeperiods[timeperiod_id]
-            if dep.do_i_raise_dependency(status, inh_parent, hosts, services, timeperiods):
+            if dep.do_i_raise_dependency(dep_status, inh_parent, hosts, services, timeperiods):
                 if timeperiod is None or timeperiod.is_time_valid(now):
                     return True
 
@@ -1129,7 +1129,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             if newchk is not None:
                                 new_checks.append(newchk)
                         else:
-                            if len(dep_item.checks_in_progress) > 0:
+                            if dep_item.checks_in_progress:
                                 check_uuid = dep_item.checks_in_progress[0]
                                 checks[check_uuid].depend_on_me.append(ref_check)
                                 checking_checks.append(check_uuid)
@@ -1558,7 +1558,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
-        if chk.exit_status != 0 and chk.status == 'waitconsume' and len(self.act_depend_of) != 0:
+        if chk.exit_status != 0 and chk.status == 'waitconsume' and self.act_depend_of:
             chk.status = 'waitdep'
             # Make sure the check know about his dep
             # C is my check, and he wants dependencies
@@ -2177,7 +2177,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # only master notifications can be split up
             return []
         if notif.type == 'RECOVERY':
-            if self.first_notification_delay != 0 and len(self.notified_contacts) == 0:
+            if self.first_notification_delay != 0 and not self.notified_contacts:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
                 notif_contacts = []
@@ -2527,7 +2527,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Extracts children template strings
         elts = re.findall(r"\$\((.*)\)\$", output_template)
-        if not len(elts):
+        if not elts:
             child_template_string = ""
         else:
             child_template_string = elts[0]
