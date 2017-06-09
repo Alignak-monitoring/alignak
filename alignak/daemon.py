@@ -1104,36 +1104,7 @@ class Daemon(object):
         time.sleep(timeout)
         return timeout, [], 0
 
-        # @mohierf: did not yet remove the former code...
-        # if suppl_socks is None:
-        #     suppl_socks = []
-        # before = time.time()
-        # socks = []
-        # if suppl_socks:
-        #     socks.extend(suppl_socks)
-        #
-        # # Ok give me the socks that moved during the timeout max
-        # ins = self.get_socks_activity(socks, timeout)
-        # # Ok now get back the global lock!
-        # tcdiff = self.check_for_system_time_change()
-        # before += tcdiff
-        # # Increase our sleep time for the time go in select
-        # self.sleep_time += time.time() - before
-        # if len(ins) == 0:  # trivial case: no fd activity:
-        #     return 0, [], tcdiff
-        # # HERE WAS THE HTTP, but now it's managed in an other thread
-        # # for sock in socks:
-        # #    if sock in ins and sock not in suppl_socks:
-        # #        ins.remove(sock)
-        # # Track in elapsed the WHOLE time, even with handling requests
-        # elapsed = time.time() - before
-        # if elapsed == 0:  # we have done a few instructions in 0 second exactly!? quantum
-        # computer?
-        #     elapsed = 0.01  # but we absolutely need to return!= 0 to indicate that we got
-        # activity
-        # return elapsed, ins, tcdiff
-
-    def make_a_pause(self, timeout):
+    def make_a_pause(self, timeout=0.0001, check_time_change=True):
         """ Wait up to timeout and check for system time change.
 
         This function checks if the system time changed since the last call. If so,
@@ -1145,13 +1116,27 @@ class Daemon(object):
         If the required timeout was overlapped, then the first return value will be
         greater than the required timeout.
 
+        If the required timeout is null, then the timeout value is set as a very short time
+        to keep a nice behavior to the system CPU ;)
+
         :param timeout: timeout to wait for activity
         :type timeout: float
+        :param check_time_change: True (default) to check if the system time changed
+        :type check_time_change: bool
         :return:Returns a 2-tuple:
         * first value is the time spent for the time change check
         * second value is the time change difference
         :rtype: tuple
         """
+        if timeout == 0:
+            timeout = 0.0001
+
+        if not check_time_change:
+            # Time to sleep
+            time.sleep(timeout)
+            self.sleep_time += timeout
+            return 0, 0
+
         # Check is system time changed
         before = time.time()
         time_changed = self.check_for_system_time_change()
@@ -1167,7 +1152,7 @@ class Daemon(object):
         before += time_changed
         self.sleep_time += time.time() - before
 
-        return after - before, time_changed
+        return elapsed, time_changed
 
     def check_for_system_time_change(self):
         """Check if our system time change. If so, change our
@@ -1208,19 +1193,15 @@ class Daemon(object):
         :param timeout: timeout to wait from socket read
         :type timeout: int
         :return: None
-        TODO: Clean this
         """
         logger.info("Waiting for initial configuration")
         # Arbiter do not already set our have_conf param
         _ts = time.time()
         while not self.new_conf and not self.interrupted:
-            # This is basically sleep(timeout) and returns 0, [], int
-            # We could only paste here only the code "used" but it could be
-            # harder to maintain.
-            # _ = self.handle_requests(timeout)
-            _, _ = self.make_a_pause(timeout)
-            sys.stdout.write(".")
-            sys.stdout.flush()
+            # Make a pause and check if the system time changed
+            _, _ = self.make_a_pause(timeout, check_time_change=True)
+            # sys.stdout.write(".")
+            # sys.stdout.flush()
         logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
         statsmgr.timer('initial-configuration', time.time() - _ts)
 

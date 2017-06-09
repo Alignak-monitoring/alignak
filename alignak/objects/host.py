@@ -64,6 +64,7 @@ about the configuration part. for the running one, it's better
 to look at the schedulingitem class that manage all
 scheduling/consume check smart things :)
 """
+# pylint: disable=too-many-lines
 
 import os
 import time

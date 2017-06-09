@@ -45,14 +45,17 @@ def enqueue_output(out, queue):
 class TestDaemonsSingleInstance(AlignakTest):
     def setUp(self):
         # Alignak logs actions and results
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Alignak logs alerts and notifications
         os.environ['TEST_LOG_ALERTS'] = 'WARNING'
         os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak logs actions and results
-        # os.environ['TEST_LOG_LOOP'] = 'Yes'
+        os.environ['TEST_LOG_LOOP'] = 'Yes'
+
+        # Alignak system self-monitoring
+        os.environ['TEST_LOG_MONITORING'] = 'Yes'
 
         # Declare environment to send stats to a file
         os.environ['ALIGNAK_STATS_FILE'] = '/tmp/alignak.stats'
@@ -129,7 +132,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         """
         print("Stopping the daemons...")
         start = time.time()
-        for daemon in list(reversed(self.procs)):
+        for daemon in list(self.procs):
             proc = daemon['pid']
             name = daemon['name']
             print("Asking %s (pid=%d) to end..." % (name, proc.pid))
@@ -345,7 +348,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/default')
         self.prepare_alignak_configuration(cfg_folder, 1000)
 
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -385,5 +388,5 @@ class TestDaemonsSingleInstance(AlignakTest):
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30)
         assert errors_raised == 0

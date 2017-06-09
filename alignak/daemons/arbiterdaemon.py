@@ -796,11 +796,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.info("I'll wait master for %d seconds", master_timeout)
 
         while not self.interrupted:
-            # This is basically sleep(timeout) and returns 0, [], int
-            # We could only paste here only the code "used" but it could be
-            # harder to maintain.
-            _, _, tcdiff = self.handle_requests(timeout)
-            # if there was a system Time Change (tcdiff) then we have to adapt last_master_ping:
+            # Make a pause and check if the system time changed
+            _, tcdiff = self.make_a_pause(timeout)
+            # If there was a system time change then we have to adapt last_master_ping:
             if tcdiff:
                 self.last_master_ping += tcdiff
 
@@ -891,13 +889,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         timeout = 1.0
 
         while self.must_run and not self.interrupted and not self.need_config_reload:
-            # This is basically sleep(timeout) and returns 0, [], int
-            # We could only paste here only the code "used" but it could be
-            # harder to maintain.
-            _ = self.handle_requests(timeout)
-
-            # Timeout
-            timeout = 1.0  # reset the timeout value
+            # Make a pause and check if the system time changed
+            self.make_a_pause(timeout)
 
             # Try to see if one of my module is dead, and
             # try to restart previously dead modules :)

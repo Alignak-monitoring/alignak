@@ -207,6 +207,7 @@ class TestLaunchDaemonsSpare(AlignakTest):
 
         assert errors_raised == 0, "Some error logs were raised!"
 
+    @pytest.mark.skip("Currently no spare daemons tests")
     def test_daemons_spare(self):
         """ Running the Alignak daemons for a spare configuration
 

@@ -1251,6 +1251,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Nagios do not raise it, I'm wondering if we should
             return None
 
+        logger.debug("-> schedule: %s / %s", self.get_full_name(), self.next_chk)
         # Get the command to launch, and put it in queue
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)

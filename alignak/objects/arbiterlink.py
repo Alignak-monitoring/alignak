@@ -107,10 +107,9 @@ class ArbiterLink(SatelliteLink):
         try:
             self.con.get('do_not_run')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when sending do_not_run", self.get_name())
         except HTTPClientTimeoutException as exp:
-            logger.warning("[%s] Connection timeout when sending do_not_run: %s",
-                           self.get_name(), str(exp))
+            logger.warning("[%s] Connection timeout when sending do_not_run", self.get_name())
         except HTTPClientException as exp:  # pragma: no cover, simple protection
             logger.error("[%s] Error when sending do_not_run: %s",
                          self.get_name(), str(exp))

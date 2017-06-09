@@ -213,13 +213,15 @@ class SatelliteLink(Item):
         try:
             self.con.post('put_conf', {'conf': conf}, wait='long')
             return True
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Connection error when sending configuration: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when sending configuration: %s",
                            self.get_name(), str(exp))
-            self.add_failed_check_attempt('time out')
+            self.add_failed_check_attempt(reason=str(exp))
         except HTTPClientException as exp:  # pragma: no cover, simple protection
             logger.error("[%s] Error when sending configuration: %s", self.get_name(), str(exp))
             self.con = None
@@ -371,10 +373,13 @@ class SatelliteLink(Item):
             logger.warning("[%s] I responded '%s' to ping! WTF is it?", self.get_name(), res)
             self.add_failed_check_attempt('pinog / NOT pong')
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when pinging: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
-        except HTTPClientTimeoutException as exp:
-            logger.warning("[%s] Connection timeout when pinging: %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Connection timeout when pinging: %s",
+                           self.get_name(), str(exp))
             self.add_failed_check_attempt(reason=str(exp))
         except HTTPClientException as exp:
             logger.error("[%s] Error when pinging: %s", self.get_name(), str(exp))
@@ -405,7 +410,9 @@ class SatelliteLink(Item):
             self.con.get('wait_new_conf')
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when waiting new configuration: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when waiting new configuration: %s",
@@ -436,7 +443,9 @@ class SatelliteLink(Item):
         try:
             return self.con.get('have_conf', {'magic_hash': magic_hash})
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when testing if has configuration: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when testing if has configuration: %s",
@@ -473,7 +482,9 @@ class SatelliteLink(Item):
             # todo: do not handle the result to confirm?
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when removing from configuration: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when removing from configuration: %s",
@@ -506,27 +517,10 @@ class SatelliteLink(Item):
             self.managed_confs = res
             # self.managed_confs = unserialize(str(res))
             return True
-
-            # @mohierf: all this stuff is not useful! Daemons return dictionaries !!!
-            # # Protect against bad return
-            # if not isinstance(tab, dict):
-            #     self.con = None
-            #     self.managed_confs = {}
-            #     return
-            #
-            # # Ok protect against json that is changing keys as string instead of int
-            # tab_cleaned = {}
-            # for (key, val) in tab.iteritems():
-            #     try:
-            #         tab_cleaned[key] = val
-            #     except ValueError:  # pragma: no cover, simple protection
-            #         # TODO: make it a log?
-            #         print "[%s] What I managed: Got exception: bad what_i_managed returns" % \
-            #               self.get_name(), tab
-            # We can update our list now
-            # self.managed_confs = tab_cleaned
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when getting what I manage: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when getting what I manage: %s",
@@ -587,7 +581,9 @@ class SatelliteLink(Item):
             self.con.post('push_broks', {'broks': broks}, wait='long')
             return True
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when pushing broks: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when pushing broks: %s",
@@ -623,7 +619,9 @@ class SatelliteLink(Item):
                 return []
             return tab
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when getting external commands: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
             self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when getting external commands: %s",

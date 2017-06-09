@@ -100,13 +100,18 @@ class SchedulerLink(SatelliteLink):
         if not self.alive:
             return None
         logger.debug("[%s] Sending %d commands", self.get_name(), len(commands))
+
         try:
             self.con.post('run_external_commands', {'cmds': commands})
         except HTTPClientConnectionException as exp:
-            logger.warning("[%s] %s", self.get_name(), str(exp))
+            logger.warning("[%s] Connection error when sending run_external_commands",
+                           self.get_name())
+            self.add_failed_check_attempt(reason=str(exp))
+            self.set_dead()
         except HTTPClientTimeoutException as exp:
             logger.warning("[%s] Connection timeout when sending run_external_commands: %s",
                            self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
         except HTTPClientException as exp:  # pragma: no cover, simple protection
             logger.error("[%s] Error when sending run_external_commands: %s",
                          self.get_name(), str(exp))

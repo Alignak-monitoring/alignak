@@ -74,7 +74,7 @@ from alignak.satellite import BaseSatellite
 from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.util import sort_by_ids
 from alignak.stats import statsmgr
-from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientConnectionException, \
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
     HTTPClientTimeoutException
 from alignak.http.broker_interface import BrokerInterface
 
@@ -190,135 +190,6 @@ class Broker(BaseSatellite):
 
                 # The module death will be looked for elsewhere and restarted.
 
-    def get_links_from_type(self, d_type):
-        """If d_type parameter is in list, return this object linked, else None
-
-        :param d_type: name of object
-        :type d_type: str
-        :return: return the object linked
-        :rtype: alignak.objects.satellitelink.SatelliteLinks
-        """
-        s_type = {'scheduler': self.schedulers,
-                  'arbiter': self.arbiters,
-                  'poller': self.pollers,
-                  'reactionner': self.reactionners,
-                  'receiver': self.receivers
-                  }
-        if d_type in s_type:
-            return s_type[d_type]
-        return None
-
-    def do_pynag_con_init(self, s_id, s_type='scheduler'):  # pylint: disable=duplicate-code
-        """Initialize or re-initialize connection with scheduler or arbiter if type == arbiter
-
-        :param s_id: linked satellite id
-        :type s_id: str
-        :param s_type: linked satellite type
-        :type s_type: str
-        :return: None
-        """
-        # Get the good links tab for looping..
-        links = self.get_links_from_type(s_type)
-        if links is None:
-            logger.warning("Unknown type '%s' for the connection!", s_type)
-            return
-        if s_id not in links:
-            logger.warning("Unknown identifier '%s' for the %s connection!", s_id, s_type)
-            return
-
-        link = links[s_id]
-        logger.debug("- found: %s", link)
-
-        if s_type == 'scheduler':
-            # If sched is not active, I do not try to init
-            # it is just useless
-            is_active = link['active']
-            if not is_active:
-                logger.warning('Scheduler is not active, '
-                               'do not initalize its connection! Link: %s', link)
-                return
-
-        # If we try to connect too much, we slow down our tests
-        if self.is_connection_try_too_close(link, delay=5):
-            logger.debug("Too close connection retry, postponed")
-            return
-
-        logger.info("Initializing connection with %s (%s)", link['name'], s_id)
-
-        # Get timeout for the daemon link (default defined in the satellite link...)
-        timeout = link['timeout']
-        data_timeout = link['data_timeout']
-
-        # Ok, we now update our last connection attempt
-        # and we increment the number of connection attempts
-        link['connection_attempt'] += 1
-        link['last_connection'] = time.time()
-
-        running_id = link['running_id']
-
-        # Create the HTTP client for the connection
-        try:
-            con = link['con'] = HTTPClient(uri=link['uri'],
-                                           strong_ssl=link['hard_ssl_name_check'],
-                                           timeout=timeout, data_timeout=data_timeout)
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] %s", link['name'], str(exp))
-            link['con'] = None
-            return
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("Connection timeout with the %s '%s' when creating client: %s",
-                           s_type, link['name'], str(exp))
-            link['con'] = None
-            return
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("Error with the %s '%s' when creating client: %s",
-                         s_type, link['name'], str(exp))
-            link['con'] = None
-            return
-
-        # Get the connection running identifier
-        try:
-            new_run_id = con.get('get_running_id')
-            new_run_id = float(new_run_id)
-            # data transfer can be longer
-
-            # The schedulers have been restarted: it has a new run_id.
-            # So we clear all verifs, they are obsolete now.
-            if new_run_id != running_id:
-                logger.debug("[%s] New running s_id for the %s %s: %s (was %s)",
-                             self.name, s_type, link['name'], new_run_id, running_id)
-                link['broks'].clear()
-
-                # we must ask for a new full broks if
-                # it's a scheduler
-                if s_type == 'scheduler':
-                    _t0 = time.time()
-                    logger.debug("[%s] I ask for a broks generation to the scheduler %s",
-                                 self.name, link['name'])
-                    con.get('fill_initial_broks', {'bname': self.name}, wait='long')
-                    statsmgr.timer('con-fill-initial-broks.%s' % s_type, time.time() - _t0)
-            # Ok all is done, we can save this new running s_id
-            link['running_id'] = new_run_id
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] %s", link['name'], str(exp))
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("Connection timeout with the %s '%s' when getting running id: %s",
-                           s_type, link['name'], str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("Error with the %s '%s' when getting running id: %s",
-                         s_type, link['name'], str(exp))
-            link['con'] = None
-            return
-        except KeyError, exp:  # pragma: no cover, simple protection
-            logger.info("con_init(broker): The %s '%s' is not initialized: %s",
-                        s_type, link['name'], str(exp))
-            link['con'] = None
-            traceback.print_stack()
-            return
-
-        link['connection_attempt'] = 0
-        logger.info("Connection OK to the %s: %s", s_type, link['name'])
-
     def manage_brok(self, brok):
         """Get a brok.
         We put brok data to the modules
@@ -388,26 +259,21 @@ class Broker(BaseSatellite):
             logger.debug("Getting broks from %s", links[s_id]['name'])
             link = links[s_id]
             logger.debug("Link: %s", link)
-            is_active = link['active']
-            if not is_active:
-                logger.warning("The %s '%s' is set as a passive daemon, do not get broks "
-                               "from its connection!", s_type, link['name'])
+            if not link['active']:
+                logger.debug("The %s '%s' is not active, "
+                             "do not get broks from its connection!", s_type, link['name'])
                 continue
 
-            con = link.get('con', None)
-            if con is None:  # pragma: no cover, simple protection
-                # No connection, try to re-initialize
-                self.pynag_con_init(link['instance_id'], s_type=s_type)
-
-            con = link.get('con', None)
-            if con is None:  # pragma: no cover, simple protection
-                logger.error("The connection for the %s '%s' cannot be established, it is "
-                             "not possible to get broks from this daemon.", s_type, link['name'])
-                continue
+            if link['con'] is None:
+                if not self.daemon_connection_init(s_id, s_type=s_type):
+                    logger.error("The connection for the %s '%s' cannot be established, "
+                                 "it is not possible to get broks from this daemon.",
+                                 s_type, link['name'])
+                    continue
 
             try:
                 _t0 = time.time()
-                tmp_broks = con.get('get_broks', {'bname': self.name}, wait='long')
+                tmp_broks = link['con'].get('get_broks', {'bname': self.name}, wait='long')
                 try:
                     tmp_broks = unserialize(tmp_broks, True)
                 except AlignakClassLookupException as exp:  # pragma: no cover,
@@ -428,22 +294,18 @@ class Broker(BaseSatellite):
                 statsmgr.timer('con-broks-add.%s' % s_type, time.time() - _t0)
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
                 logger.warning("[%s] %s", link['name'], str(exp))
+                link['con'] = None
+                return
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the %s '%s' when getting broks: %s",
                                s_type, link['name'], str(exp))
+                link['con'] = None
+                return
             except HTTPClientException as exp:  # pragma: no cover, simple protection
                 logger.error("Error with the %s '%s' when getting broks: %s",
                              s_type, link['name'], str(exp))
                 link['con'] = None
                 return
-            except KeyError as exp:
-                logger.debug("Key error for get_broks : %s", str(exp))
-                self.pynag_con_init(s_id, s_type=s_type)
-            # scheduler must not #be initialized
-            except AttributeError as exp:  # pragma: no cover, simple protection
-                logger.warning("The %s %s should not be initialized: %s",
-                               s_type, link['name'], str(exp))
-                logger.exception(exp)
             # scheduler must not have checks
             #  What the F**k? We do not know what happened,
             # so.. bye bye :)
@@ -509,7 +371,7 @@ class Broker(BaseSatellite):
             logger.info("[%s] Received a new configuration, containing:", self.name)
             for key in conf:
                 logger.info("[%s] - %s", self.name, key)
-            logger.info("[%s] global configuration part: %s", self.name, conf['global'])
+            logger.debug("[%s] global configuration part: %s", self.name, conf['global'])
 
             # local statsd
             self.statsd_host = g_conf['statsd_host']
@@ -559,6 +421,7 @@ class Broker(BaseSatellite):
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
 
@@ -593,6 +456,7 @@ class Broker(BaseSatellite):
                 self.arbiters[arb_id]['broks'] = broks
                 self.arbiters[arb_id]['instance_id'] = 0  # No use so all to 0
                 self.arbiters[arb_id]['running_id'] = 0
+                self.arbiters[arb_id]['con'] = None
                 self.arbiters[arb_id]['last_connection'] = 0
                 self.arbiters[arb_id]['connection_attempt'] = 0
 
@@ -634,6 +498,7 @@ class Broker(BaseSatellite):
                     self.pollers[pol_id]['broks'] = broks
                     self.pollers[pol_id]['instance_id'] = 0  # No use so all to 0
                     self.pollers[pol_id]['running_id'] = running_id
+                    self.pollers[pol_id]['con'] = None
                     self.pollers[pol_id]['last_connection'] = 0
                     self.pollers[pol_id]['connection_attempt'] = 0
             else:
@@ -675,6 +540,7 @@ class Broker(BaseSatellite):
                     self.reactionners[rea_id]['broks'] = broks
                     self.reactionners[rea_id]['instance_id'] = 0  # No use so all to 0
                     self.reactionners[rea_id]['running_id'] = running_id
+                    self.reactionners[rea_id]['con'] = None
                     self.reactionners[rea_id]['last_connection'] = 0
                     self.reactionners[rea_id]['connection_attempt'] = 0
             else:
@@ -716,6 +582,7 @@ class Broker(BaseSatellite):
                     self.receivers[rec_id]['broks'] = broks
                     self.receivers[rec_id]['instance_id'] = rec['instance_id']
                     self.receivers[rec_id]['running_id'] = running_id
+                    self.receivers[rec_id]['con'] = None
                     self.receivers[rec_id]['last_connection'] = 0
                     self.receivers[rec_id]['connection_attempt'] = 0
             else:
@@ -744,13 +611,13 @@ class Broker(BaseSatellite):
 
             # Initialize connection with Schedulers, Pollers and Reactionners
             for sched_id in self.schedulers:
-                self.pynag_con_init(sched_id, s_type='scheduler')
+                self.daemon_connection_init(sched_id, s_type='scheduler')
 
             for pol_id in self.pollers:
-                self.pynag_con_init(pol_id, s_type='poller')
+                self.daemon_connection_init(pol_id, s_type='poller')
 
             for rea_id in self.reactionners:
-                self.pynag_con_init(rea_id, s_type='reactionner')
+                self.daemon_connection_init(rea_id, s_type='reactionner')
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)
@@ -811,14 +678,12 @@ class Broker(BaseSatellite):
         # Begin to clean modules
         self.check_and_del_zombie_modules()
 
-        # Now we check if arbiter speak to me.
-        # If so, we listen for it
-        # When it pushes conf to us, we reinit connections
-        self.watch_for_new_conf(0.0)
+        # Now we check if we received a new configuration - no sleep time, we will sleep later...
+        self.watch_for_new_conf()
         if self.new_conf:
             self.setup_new_conf()
 
-        # Maybe the last loop we dir raised some broks internally
+        # Maybe the last loop we did raised some broks internally
         _t0 = time.time()
         # we should integrate them in broks
         self.interger_internal_broks()
@@ -870,7 +735,7 @@ class Broker(BaseSatellite):
         statsmgr.timer('core.put-to-external-queue', time.time() - t00)
         logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t00)
 
-        # We must had new broks at the end of the list, so we reverse the list
+        # We must add new broks at the end of the list, so we reverse the list
         self.broks.reverse()
 
         start = time.time()
@@ -892,8 +757,8 @@ class Broker(BaseSatellite):
 
             nb_broks = len(self.broks)
 
-            # Ok we manage brok, but we still want to listen to arbiter
-            self.watch_for_new_conf(0.0)
+            # Ok we manage brok, but we still want to listen to arbiter even for a very short time
+            self.make_a_pause(0.01, check_time_change=False)
 
             # if we got new broks here from arbiter, we should break the loop
             # because such broks will not be managed by the

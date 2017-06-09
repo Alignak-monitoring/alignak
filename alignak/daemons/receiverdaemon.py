@@ -225,7 +225,7 @@ class Receiver(Satellite):
             logger.info("[%s] Received a new configuration, containing:", self.name)
             for key in conf:
                 logger.info("[%s] - %s", self.name, key)
-            logger.info("[%s] global configuration part: %s", self.name, conf['global'])
+            logger.debug("[%s] global configuration part: %s", self.name, conf['global'])
 
             # local statsd
             self.statsd_host = conf['global']['statsd_host']
@@ -288,13 +288,14 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['active'] = sched['active']
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
+                self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
 
                 # Do not connect if we are a passive satellite
                 if not old_sched_id:
                     # And then we connect to it :)
-                    self.pynag_con_init(sched_id)
+                    self.daemon_connection_init(sched_id)
 
             logger.debug("We have our schedulers: %s", self.schedulers)
             logger.info("We have our schedulers:")
@@ -355,7 +356,7 @@ class Receiver(Satellite):
             # ...and the scheduler is alive
             con = sched['con']
             if con is None:
-                self.pynag_con_init(sched_id, s_type='scheduler')
+                self.daemon_connection_init(sched_id, s_type='scheduler')
 
             if con is None:
                 logger.warning("The connection for the scheduler '%s' cannot be established, it is "
@@ -390,25 +391,6 @@ class Receiver(Satellite):
             except Exception as exp:  # pylint: disable=broad-except
                 logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
                 raise
-            # If there are commands and the scheduler is alive
-            if cmds and con:
-                logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
-                try:
-                    # con.run_external_commands(cmds)
-                    con.post('run_external_commands', {'cmds': cmds})
-                    sent = True
-                # Not connected or sched is gone
-                except (HTTPEXCEPTIONS, KeyError), exp:
-                    logger.warning('manage_returns exception:: %s,%s ', type(exp), str(exp))
-                    logger.warning("Connection problem to the scheduler %s: %s",
-                                   sched, str(exp))
-                    self.pynag_con_init(sched_id)
-                    return
-                except AttributeError, exp:  # the scheduler must  not be initialized
-                    logger.debug('manage_returns exception:: %s,%s ', type(exp), str(exp))
-                except Exception, exp:
-                    logger.error("A satellite raised an unknown exception: %s (%s)", exp, type(exp))
-                    raise
 
             # Whether we sent the commands or not, clean the scheduler list
             self.schedulers[sched_id]['external_commands'] = []
@@ -427,10 +409,8 @@ class Receiver(Satellite):
         # Begin to clean modules
         self.check_and_del_zombie_modules()
 
-        # Now we check if arbiter speak to us.
-        # If so, we listen for it
-        # When it push us conf, we reinit connections
-        self.watch_for_new_conf(0.0)
+        # Now we check if we received a new configuration - no sleep time, we will sleep later...
+        self.watch_for_new_conf()
         if self.new_conf:
             self.setup_new_conf()
 
@@ -445,6 +425,7 @@ class Receiver(Satellite):
         statsmgr.timer('core.push-external-commands', time.time() - _t0)
 
         # Maybe we do not have something to do, so we wait a little
+        # todo: check broks in the receiver ???
         if not self.broks:
             self.watch_for_new_conf(1.0)
 

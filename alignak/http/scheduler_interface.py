@@ -117,7 +117,7 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_broks(self, bname):
-        """Get checks from scheduler, used by brokers
+        """Get broks from scheduler, used by brokers
 
         :param bname: broker name, used to filter broks
         :type bname: str

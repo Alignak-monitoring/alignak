@@ -574,8 +574,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # need to be refreshed
         # TODO swich to uuid. Not working for simple id are we 1,2,3.. in host and services
         # Commented to fix #789
-        # brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
-        # self.add(brok)
+        brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
+        self.add(brok)
 
     def add_eventhandler(self, action):
         """Add a event handler into actions list
@@ -1160,14 +1160,15 @@ class Scheduler(object):  # pylint: disable=R0902
                 s_type = 'reactionner'
 
             for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to send actions to the %s '%s'", s_type, link['name'])
-                if not link['con']:  # pragma: no cover, simple protection
-                    # No connection, try to re-initialize
-                    self.sched_daemon.pynag_con_init(link['instance_id'], s_type=s_type)
+                logger.info("Try to send actions to the %s '%s'", s_type, link['name'])
 
-                con = link['con']
-                if not con:  # pragma: no cover, simple protection
-                    continue
+                if link['con'] is None:
+                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
+                                                                    s_type=s_type):
+                        logger.error("The connection for the %s '%s' cannot be established, "
+                                     "it is not possible to get actions for this %s.",
+                                     s_type, link['name'], s_type)
+                        continue
 
                 # Get actions to execute
                 lst = []
@@ -1186,7 +1187,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 try:
                     logger.debug("Sending %d actions to the %s '%s'",
                                  len(lst), s_type, link['name'])
-                    con.post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
+                    link['con'].post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     if s_type == 'poller':
                         self.nb_checks_launched += len(lst)
                         self.nb_checks_launched_passive += len(lst)
@@ -1194,10 +1195,13 @@ class Scheduler(object):  # pylint: disable=R0902
                         self.nb_actions_launched += len(lst)
                         self.nb_actions_launched_passive += len(lst)
                 except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("[%s] %s", link['name'], str(exp))
+                    logger.warning("Connection error with the %s '%s' when pushing actions: %s",
+                                   s_type, link['name'], str(exp))
+                    link['con'] = None
                 except HTTPClientTimeoutException as exp:
                     logger.warning("Connection timeout with the %s '%s' when pushing actions: %s",
                                    s_type, link['name'], str(exp))
+                    link['con'] = None
                 except HTTPClientException as exp:  # pragma: no cover, simple protection
                     logger.error("Connection error with the %s '%s' when pushing actions: %s",
                                  s_type, link['name'], str(exp))
@@ -1220,17 +1224,19 @@ class Scheduler(object):  # pylint: disable=R0902
                 s_type = 'reactionner'
 
             for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to get results from the %s '%s'", s_type, link['name'])
-                if not link['con']:  # pragma: no cover, simple protection
-                    # no connection, try reinit
-                    self.sched_daemon.pynag_con_init(link['instance_id'], s_type='poller')
+                logger.info("Try to get results from the %s '%s'", s_type, link['name'])
 
-                con = link['con']
-                if not con:  # pragma: no cover, simple protection
-                    continue
+                if link['con'] is None:
+                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
+                                                                    s_type=s_type):
+                        logger.error("The connection for the %s '%s' cannot be established, "
+                                     "it is not possible to get results for this %s.",
+                                     s_type, link['name'], s_type)
+                        continue
 
                 try:
-                    results = con.get('get_returns', {'sched_id': self.instance_id}, wait='long')
+                    results = link['con'].get('get_returns', {'sched_id': self.instance_id},
+                                              wait='long')
                     if results:
                         who_sent = link['name']
                         logger.debug("Got some results: %d results from %s", len(results), who_sent)
@@ -1261,10 +1267,13 @@ class Scheduler(object):  # pylint: disable=R0902
                         # Append to the scheduler result queue
                         self.waiting_results.put(result)
                 except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("[%s] %s", link['name'], str(exp))
+                    logger.warning("Connection error with the %s '%s' when pushing results: %s",
+                                   s_type, link['name'], str(exp))
+                    link['con'] = None
                 except HTTPClientTimeoutException as exp:
                     logger.warning("Connection timeout with the %s '%s' when pushing results: %s",
                                    s_type, link['name'], str(exp))
+                    link['con'] = None
                 except HTTPClientException as exp:  # pragma: no cover, simple protection
                     logger.error("Error with the %s '%s' when pushing results: %s",
                                  s_type, link['name'], str(exp))
@@ -2220,12 +2229,12 @@ class Scheduler(object):  # pylint: disable=R0902
         for s_id in self.pollers:
             if not self.pollers[s_id]['passive']:
                 continue
-            self.sched_daemon.pynag_con_init(s_id, 'poller')
+            self.sched_daemon.daemon_connection_init(s_id, 'poller')
 
         for s_id in self.reactionners:
             if not self.reactionners[s_id]['passive']:
                 continue
-            self.sched_daemon.pynag_con_init(s_id, 'reactionner')
+            self.sched_daemon.daemon_connection_init(s_id, 'reactionner')
 
         # Ticks are for recurrent function call like consume, del zombies etc
         ticks = 0
@@ -2243,6 +2252,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Scheduler start timestamp
         sch_start_ts = time.time()
+        elapsed_time = 0
 
         # We must reset it if we received a new conf from the Arbiter.
         # Otherwise, the stat check average won't be correct
