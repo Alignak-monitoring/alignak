@@ -488,7 +488,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/etc/alignak': '/tmp'
         }
         if ssl:
-            shutil.copy('./cfg/ssl/server.csr', '/tmp/')
+            shutil.copy('./cfg/ssl/server.crt', '/tmp/')
             shutil.copy('./cfg/ssl/server.key', '/tmp/')
             shutil.copy('./cfg/ssl/server.pem', '/tmp/')
             # Set daemons configuration to use SSL
