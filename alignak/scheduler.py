@@ -1563,9 +1563,9 @@ class Scheduler(object):  # pylint: disable=R0902
                 "modified_host_attributes": 0,
                 "modified_service_attributes": 0,
                 "global_host_event_handler": self.conf.global_host_event_handler.get_name()
-                if self.conf.global_host_event_handler else None,
+                if self.conf.global_host_event_handler else '',
                 'global_service_event_handler': self.conf.global_service_event_handler.get_name()
-                if self.conf.global_service_event_handler else None,
+                if self.conf.global_service_event_handler else '',
 
                 'check_external_commands': self.conf.check_external_commands,
                 'check_service_freshness': self.conf.check_service_freshness,
