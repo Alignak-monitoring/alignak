@@ -145,8 +145,11 @@ class HTTPDaemon(object):
             }
         }
         # disable console logging of cherrypy when not in DEBUG
+        cherrypy.log.screen = True
         if getattr(logger, 'level') != logging.DEBUG:
             cherrypy.log.screen = False
+            cherrypy.log.access_file = ''
+            cherrypy.log.error_file = ''
 
         if use_ssl:
             CherryPyWSGIServer.ssl_adapter = Pyopenssl(ssl_cert, ssl_key, ca_cert, server_dh)
