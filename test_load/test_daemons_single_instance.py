@@ -104,6 +104,29 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         return nb_errors
 
+    def checkDaemonsLogsForAlerts(self, daemons_list):
+        """Check that the daemons log contain ALERT and NOTIFICATION logs
+        Print the found logs
+        :return:
+        """
+        nb_alerts = 0
+        nb_notifications = 0
+        # Filter other daemons log
+        for daemon in daemons_list:
+            print("-----\n%s log file\n-----\n" % daemon)
+            with open('/tmp/%s.log' % daemon) as f:
+                for line in f:
+                    if 'SERVICE ALERT:' in line:
+                        nb_alerts += 1
+                        print(line[:-1])
+                    if 'SERVICE NOTIFICATION:' in line:
+                        nb_notifications += 1
+                        print(line[:-1])
+        print("Found: %d service alerts" % nb_alerts)
+        print("Found: %d service notifications" % nb_notifications)
+
+        return nb_alerts, nb_notifications
+
     def prepare_alignak_configuration(self, cfg_folder, hosts_count=10):
         """Prepare the Alignak configuration
         :return: the count of errors raised in the log files
@@ -276,6 +299,12 @@ class TestDaemonsSingleInstance(AlignakTest):
         # Check daemons log
         errors_raised = self.checkDaemonsLogsForErrors(daemons_list)
 
+        # Check daemons log for alerts and notifications
+        alerts, notifications = self.checkDaemonsLogsForAlerts(['scheduler'])
+
+        if not alerts or not notifications:
+            errors_raised += 1
+
         self.kill_running_daemons()
 
         return errors_raised
@@ -348,7 +377,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/default')
         self.prepare_alignak_configuration(cfg_folder, 1000)
 
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -388,5 +417,5 @@ class TestDaemonsSingleInstance(AlignakTest):
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
         self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
         assert errors_raised == 0
