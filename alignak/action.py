@@ -142,7 +142,7 @@ class ActionBase(AlignakObject):
             DictProp(default={}),
         'module_type':
             StringProp(default='fork', fill_brok=['full_status']),
-        'worker':
+        'worker_id':
             StringProp(default='none'),
         'command':
             StringProp(),
@@ -211,7 +211,7 @@ class ActionBase(AlignakObject):
         self.stdoutdata = ''
         self.stderrdata = ''
 
-        logger.debug("Launch command: '%s'", self.command)
+        logger.debug("Launch command: '%s', ref: %s", self.command, self.ref)
         if self.log_actions:
             if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Launch command: '%s'", self.command)
@@ -301,7 +301,9 @@ class ActionBase(AlignakObject):
         self.last_poll = time.time()
 
         _, _, child_utime, child_stime, _ = os.times()
+
         if self.process.poll() is None:
+            logger.debug("Process pid=%d is still alive", self.process.pid)
             # polling every 1/2 s ... for a timeout in seconds, this is enough
             self.wait_time = min(self.wait_time * 2, 0.5)
             now = time.time()
@@ -314,11 +316,14 @@ class ActionBase(AlignakObject):
                 self.stderrdata += no_block_read(self.process.stderr)
 
             if (now - self.check_time) > self.timeout:
+                logger.warning("Process pid=%d spent too much time: %d s",
+                               self.process.pid, now - self.check_time)
                 self.kill__()
                 self.status = 'timeout'
                 self.execution_time = now - self.check_time
                 self.exit_status = 3
                 # Do not keep a pointer to the process
+                # todo: ???
                 del self.process
                 # Get the user and system time
                 _, _, n_child_utime, n_child_stime, _ = os.times()
@@ -326,35 +331,37 @@ class ActionBase(AlignakObject):
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
                     if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
-                        logger.warning("Check for '%s' exited on timeout (%d s)",
+                        logger.warning("Action '%s' exited on timeout (%d s)",
                                        self.command, self.timeout)
                     else:
-                        logger.info("Check for '%s' exited on timeout (%d s)",
+                        logger.info("Action '%s' exited on timeout (%d s)",
                                     self.command, self.timeout)
                 return
             return
 
+        logger.debug("Process pid=%d exited with %d", self.process.pid, self.process.returncode)
         # Get standards outputs from the communicate function if we do
         # not have the fcntl module (Windows, and maybe some special
         # unix like AIX)
         if not fcntl:
             (self.stdoutdata, self.stderrdata) = self.process.communicate()
         else:
-            # The command was to quick and finished even before we can
-            # polled it first. So finish the read.
+            # The command was too quick and finished even before we can
+            # poll it first. So finish the read.
             self.stdoutdata += no_block_read(self.process.stdout)
             self.stderrdata += no_block_read(self.process.stderr)
 
         self.exit_status = self.process.returncode
         if self.log_actions:
             if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Check for '%s' exited with return code %d",
+                logger.warning("Action '%s' exited with return code %d",
                                self.command, self.exit_status)
             else:
-                logger.info("Check for '%s' exited with return code %d",
+                logger.info("Action '%s' exited with return code %d",
                             self.command, self.exit_status)
 
         # we should not keep the process now
+        # todo: ???
         del self.process
 
         if (  # check for bad syntax in command line:
@@ -362,6 +369,7 @@ class ActionBase(AlignakObject):
             ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata) or
             'Syntax error: Unterminated quoted string' in self.stderrdata
         ):
+            logger.warning("Return bad syntax in command line!")
             # Very, very ugly. But subprocess._handle_exitstatus does
             # not see a difference between a regular "exit 1" and a
             # bailing out shell. Strange, because strace clearly shows
@@ -444,7 +452,11 @@ if os.name != 'nt':
         def execute__(self, force_shell=sys.version_info < (2, 7)):
             """Execute action in a subprocess
 
-            :return: None or str 'toomanyopenfiles'
+            :return: None or str:
+                'toomanyopenfiles' if too many opened files on the system
+                'no_process_launched' if arguments parsing failed
+                'process_launch_failed': if the process launch failed
+
             TODO: Clean this
             """
             # We allow direct launch only for 2.7 and higher version
@@ -455,6 +467,8 @@ if os.name != 'nt':
             # in a shell mode. So look at theses parameters
             force_shell |= self.got_shell_characters()
 
+            logger.debug("Action execute, force shell: %s", force_shell)
+
             # 2.7 and higher Python version need a list of args for cmd
             # and if not force shell (if, it's useless, even dangerous)
             # 2.4->2.6 accept just the string command
@@ -463,15 +477,16 @@ if os.name != 'nt':
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=W0703
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
                     self.execution_time = time.time() - self.check_time
-                    return
+                    return 'no_process_launched'
 
             # Now: GO for launch!
             # logger.debug("Launching: %s" % (self.command.encode('utf8', 'ignore')))
+            logger.debug("Action execute, cmd: %s", cmd)
 
             # The preexec_fn=os.setsid is set to give sons a same
             # process group. See
@@ -482,13 +497,17 @@ if os.name != 'nt':
                     cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     close_fds=True, shell=force_shell, env=self.local_env,
                     preexec_fn=os.setsid)
-            except OSError, exp:
-                logger.error("Fail launching command: %s %s %s",
-                             self.command, exp, force_shell)
+
+                logger.debug("Action execute, process: %s", self.process.pid)
+            except OSError as exp:
+                logger.error("Fail launching command: %s, force shell: %s, OSError: %s",
+                             self.command, force_shell, exp)
                 # Maybe it's just a shell we try to exec. So we must retry
                 if (not force_shell and exp.errno == 8 and
                         exp.strerror == 'Exec format error'):
+                    logger.info("Retrying with forced shell...")
                     return self.execute__(True)
+
                 self.output = exp.__str__()
                 self.exit_status = 2
                 self.status = 'done'
@@ -497,12 +516,21 @@ if os.name != 'nt':
                 # Maybe we run out of file descriptor. It's not good at all!
                 if exp.errno == 24 and exp.strerror == 'Too many open files':
                     return 'toomanyopenfiles'
+                return 'process_launch_failed'
+            except Exception as exp:  # pylint: disable=W0703
+                logger.error("Fail launching command: %s, force shell: %s, exception: %s",
+                             self.command, force_shell, exp)
+                return 'process_launch_failed'
+
+            return self.process
 
         def kill__(self):
             """Kill the action and close fds
 
             :return: None
             """
+            logger.debug("Action kill, cmd: %s", self.process.pid)
+
             # We kill a process group because we launched them with
             # preexec_fn=os.setsid and so we can launch a whole kill
             # tree instead of just the first one
@@ -511,8 +539,9 @@ if os.name != 'nt':
             for file_d in [self.process.stdout, self.process.stderr]:
                 try:
                     file_d.close()
-                except Exception:  # pylint: disable=W0703
-                    pass
+                except Exception as exp:  # pylint: disable=W0703
+                    logger.error("Exception stopping command: %s %s",
+                                 self.command, exp)
 
 
 else:  # pragma: no cover, not currently tested with Windows...

@@ -446,12 +446,12 @@ class Scheduler(object):  # pylint: disable=R0902
             for chk in self.checks.values():
                 string = 'CHECK: %s:%s:%s:%s:%s:%s\n' % \
                          (chk.uuid, chk.status, chk.t_to_go,
-                          chk.poller_tag, chk.command, chk.worker)
+                          chk.poller_tag, chk.command, chk.worker_id)
                 file_h.write(string)
             for act in self.actions.values():
                 string = '%s: %s:%s:%s:%s:%s:%s\n' % \
                     (act.__class__.my_type.upper(), act.uuid, act.status,
-                     act.t_to_go, act.reactionner_tag, act.command, act.worker)
+                     act.t_to_go, act.reactionner_tag, act.command, act.worker_id)
                 file_h.write(string)
             broks = {}
             for broker in self.brokers.values():
@@ -932,7 +932,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 if chk.status == 'scheduled' and chk.is_launchable(now) and not chk.internal:
                     logger.debug("Check to run: %s", chk)
                     chk.status = 'inpoller'
-                    chk.worker = worker_name
+                    chk.worker_id = worker_name
                     res.append(chk)
 
                     self.nb_checks_launched += 1
@@ -941,8 +941,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters["check"]["loop"]["launched"] += 1
                     self.counters["check"]["active"]["launched"] += 1
 
-            logger.debug("-> %d checks to start now" % (len(res)) if res
-                         else "-> no checks to start now")
+            if res:
+                logger.debug("-> %d checks to start now", len(res))
+            else:
+                logger.debug("-> no checks to start now")
 
         # If a reactionner wants its actions
         if do_actions:
@@ -972,7 +974,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     if not is_master:
                         # This is for child notifications and eventhandlers
                         act.status = 'inpoller'
-                        act.worker = worker_name
+                        act.worker_id = worker_name
                         res.append(act)
 
                         self.nb_actions_launched += 1
@@ -981,8 +983,11 @@ class Scheduler(object):  # pylint: disable=R0902
                         self.counters[act.is_a]["loop"]["launched"] += 1
                         self.counters[act.is_a]["active"]["launched"] += 1
 
-            logger.debug("-> %d actions to start now" % (len(res)) if res
-                         else "-> no actions to start now")
+            if res:
+                logger.info("-> %d actions to start now", len(res))
+            else:
+                logger.debug("-> no actions to start now")
+
         return res
 
     def put_results(self, action):  # pylint: disable=too-many-branches,too-many-statements
@@ -992,7 +997,15 @@ class Scheduler(object):  # pylint: disable=R0902
         :type action:
         :return: None
         """
+        logger.debug('put_results: %s ', action)
         if action.is_a == 'notification':
+            try:
+                _ = self.actions[action.uuid]
+            except KeyError as exp:  # pragma: no cover, simple protection
+                # Cannot find notification - drop it
+                logger.warning('put_results:: get unknown notification : %s ', str(exp))
+                return
+
             # We will only see childnotifications here
             try:
                 timeout = False
@@ -1052,14 +1065,17 @@ class Scheduler(object):  # pylint: disable=R0902
                                        "(exit code=%d): '%s'",
                                        action.command, action.exit_status, action.output)
 
-            except KeyError as exp:  # pragma: no cover, simple protection
-                #  bad number for notif, not that bad
-                logger.warning('put_results:: get unknown notification : %s ', str(exp))
-
             except AttributeError as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: get bad notification : %s ', str(exp))
         elif action.is_a == 'check':
+            try:
+                self.checks[action.uuid]
+            except KeyError as exp:  # pragma: no cover, simple protection
+                # Cannot find check - drop it
+                logger.warning('put_results:: get unknown check : %s ', str(exp))
+                return
+
             try:
                 self.counters[action.is_a]["total"]["results"]["total"] += 1
                 if action.status not in \
@@ -1160,7 +1176,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 s_type = 'reactionner'
 
             for link in [p for p in satellites.values() if p['passive']]:
-                logger.info("Try to send actions to the %s '%s'", s_type, link['name'])
+                logger.debug("Try to send actions to the %s '%s'", s_type, link['name'])
 
                 if link['con'] is None:
                     if not self.sched_daemon.daemon_connection_init(link['instance_id'],
@@ -1185,8 +1201,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     continue
 
                 try:
-                    logger.debug("Sending %d actions to the %s '%s'",
-                                 len(lst), s_type, link['name'])
+                    logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link['name'])
                     link['con'].post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
                     if s_type == 'poller':
                         self.nb_checks_launched += len(lst)
@@ -1224,7 +1239,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 s_type = 'reactionner'
 
             for link in [p for p in satellites.values() if p['passive']]:
-                logger.info("Try to get results from the %s '%s'", s_type, link['name'])
+                logger.debug("Try to get results from the %s '%s'", s_type, link['name'])
 
                 if link['con'] is None:
                     if not self.sched_daemon.daemon_connection_init(link['instance_id'],
@@ -1246,8 +1261,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
                     results = unserialize(results, no_load=True)
                     if results:
-                        logger.debug("Received %d passive results from %s",
-                                     len(results), link['name'])
+                        logger.info("Received %d passive results from %s",
+                                    len(results), link['name'])
                     self.nb_checks_results += len(results)
 
                     for result in results:
@@ -1299,6 +1314,17 @@ class Scheduler(object):  # pylint: disable=R0902
         for chk in self.checks.values():
             # must be ok to launch, and not an internal one (business rules based)
             if chk.internal and chk.status == 'scheduled' and chk.is_launchable(now):
+                self.nb_internal_checks += 1
+                self.counters["check"]["total"]["results"]["total"] += 1
+                if "internal" not in self.counters["check"]["total"]["results"]:
+                    self.counters["check"]["total"]["results"]["internal"] = 0
+                self.counters["check"]["total"]["results"]["internal"] += 1
+
+                self.counters["check"]["loop"]["results"]["total"] += 1
+                if "internal" not in self.counters["check"]["loop"]["results"]:
+                    self.counters["check"]["loop"]["results"]["internal"] = 0
+                self.counters["check"]["loop"]["results"]["internal"] += 1
+
                 item = self.find_item_by_id(chk.ref)
                 # Only if active checks are enabled
                 if item.active_checks_enabled:
@@ -1671,7 +1697,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Some others are unaccurate: last_command_check, modified_host_attributes,
         # modified_service_attributes
         # I do not remove yet because some modules may use them?
-        data = {"is_running": 1,
+        data = {
+            "is_running": 1,
             "instance_id": self.instance_id,
             "alignak_name": self.alignak_name,
             "instance_name": self.instance_name,
@@ -1964,32 +1991,37 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        worker_names = {}
+        orphans_count = {}
         now = int(time.time())
         for chk in self.checks.values():
             if chk.status == 'inpoller':
                 time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if chk.t_to_go < now - time_to_orphanage:
+                        logger.info("Orphaned check (%d s / %s / %s) check for: %s (%s)",
+                                    time_to_orphanage, chk.t_to_go, now,
+                                    self.find_item_by_id(chk.ref).get_full_name(), chk)
                         chk.status = 'scheduled'
-                        if chk.worker not in worker_names:
-                            worker_names[chk.worker] = 1
-                            continue
-                        worker_names[chk.worker] += 1
+                        if chk.worker_id not in orphans_count:
+                            orphans_count[chk.worker_id] = 0
+                        orphans_count[chk.worker_id] += 1
         for act in self.actions.values():
             if act.status == 'inpoller':
                 time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if act.t_to_go < now - time_to_orphanage:
+                        logger.info("Orphaned action (%d s / %s / %s) action for: %s (%s)",
+                                    time_to_orphanage, act.t_to_go, now,
+                                    self.find_item_by_id(act.ref).get_full_name(), act)
                         act.status = 'scheduled'
-                        if act.worker not in worker_names:
-                            worker_names[act.worker] = 1
-                            continue
-                        worker_names[act.worker] += 1
+                        if act.worker_id not in orphans_count:
+                            orphans_count[act.worker_id] = 0
+                        orphans_count[act.worker_id] += 1
 
-        for w_id in worker_names:
-            logger.warning("%d actions never came back for the satellite '%s'."
-                           "I reenable them for polling", worker_names[w_id], w_id)
+        for sta_name in orphans_count:
+            logger.warning("%d actions never came back for the satellite '%s'. "
+                           "I reenable them for polling.",
+                           orphans_count[sta_name], sta_name)
 
     def send_broks_to_modules(self):
         """Put broks into module queues
@@ -2303,7 +2335,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # Increment loop count
             loop_count += 1
             if self.log_loop:
-                logger.info("--- %d", loop_count)
+                logger.debug("--- %d", loop_count)
 
             # Increment ticks count
             ticks += 1
@@ -2331,11 +2363,11 @@ class Scheduler(object):  # pylint: disable=R0902
             # Scheduler statistics
             # - broks / notifications counters
             if self.log_loop:
-                logger.info("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
-                            "checks: %d, event handlers: %d, external commands: %d",
-                            self.nb_broks, self.nb_notifications, self.nb_checks,
-                            self.nb_internal_checks, self.nb_event_handlers,
-                            self.nb_external_commands)
+                logger.debug("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
+                             "checks: %d, event handlers: %d, external commands: %d",
+                             self.nb_broks, self.nb_notifications, self.nb_checks,
+                             self.nb_internal_checks, self.nb_event_handlers,
+                             self.nb_external_commands)
             statsmgr.gauge('checks', self.nb_checks)
             statsmgr.gauge('broks', self.nb_broks)
             statsmgr.gauge('internal_checks', self.nb_internal_checks)
@@ -2349,11 +2381,11 @@ class Scheduler(object):  # pylint: disable=R0902
             self.nb_event_handlers_total += self.nb_event_handlers
             self.nb_external_commands_total += self.nb_external_commands
             if self.log_loop:
-                logger.info("Items (total): broks: %d, notifications: %d, checks: %d, internal "
-                            "checks: %d, event handlers: %d, external commands: %d",
-                            self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
-                            self.nb_internal_checks_total, self.nb_event_handlers_total,
-                            self.nb_external_commands_total)
+                logger.debug("Items (total): broks: %d, notifications: %d, checks: %d, internal "
+                             "checks: %d, event handlers: %d, external commands: %d",
+                             self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
+                             self.nb_internal_checks_total, self.nb_event_handlers_total,
+                             self.nb_external_commands_total)
             # Reset on each loop
             # self.nb_checks = 0 not yet for this one!
             self.nb_broks = 0
@@ -2380,11 +2412,11 @@ class Scheduler(object):  # pylint: disable=R0902
 
                     # Reset loop counters
                     if action_group == 'loop' and self.log_loop:
-                        logger.info("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                                    action_type, action_group,
-                                    self.counters[action_type][action_group]["launched"],
-                                    self.counters[action_type][action_group]["timeout"],
-                                    self.counters[action_type][action_group]["executed"])
+                        logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                                     action_type, action_group,
+                                     self.counters[action_type][action_group]["launched"],
+                                     self.counters[action_type][action_group]["timeout"],
+                                     self.counters[action_type][action_group]["executed"])
 
                         self.counters[action_type][action_group]["launched"] = 0
                         self.counters[action_type][action_group]["timeout"] = 0
@@ -2392,11 +2424,11 @@ class Scheduler(object):  # pylint: disable=R0902
 
                     # Reset loop counters
                     if action_group == 'total' and self.log_loop:
-                        logger.info("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                                    action_type, action_group,
-                                    self.counters[action_type][action_group]["launched"],
-                                    self.counters[action_type][action_group]["timeout"],
-                                    self.counters[action_type][action_group]["executed"])
+                        logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                                     action_type, action_group,
+                                     self.counters[action_type][action_group]["launched"],
+                                     self.counters[action_type][action_group]["timeout"],
+                                     self.counters[action_type][action_group]["executed"])
 
                     # Actions results
                     dump_result = "Results '%s/%s': " % (action_type, action_group)
@@ -2406,7 +2438,7 @@ class Scheduler(object):  # pylint: disable=R0902
                                        % (action_type, action_group, result), my_result)
                         dump_result += "%s: %d, " % (result, my_result)
                     if action_group in ['loop', 'total'] and self.log_loop:
-                        logger.info(dump_result)
+                        logger.debug(dump_result)
 
             # - current state - this should perharps be removed because the checks status got
             # already pushed to the stats with the previous treatment?
@@ -2419,7 +2451,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 dump_result += "%s: %d, " % (status, count)
                 statsmgr.gauge('checks.%s' % status, count)
             if self.log_loop:
-                logger.info(dump_result)
+                logger.debug(dump_result)
 
             if self.need_dump_memory:
                 _ts = time.time()
@@ -2468,16 +2500,16 @@ class Scheduler(object):  # pylint: disable=R0902
             # And now, the whole average time spent
             elapsed_time = loop_end_ts - sch_start_ts
             if self.log_loop:
-                logger.info("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
-                            loop_duration, elapsed_time, loop_count)
+                logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
+                             loop_duration, elapsed_time, loop_count)
             statsmgr.gauge('loop.count', loop_count)
             statsmgr.timer('loop.duration', loop_duration)
             statsmgr.timer('run.duration', elapsed_time)
             if self.log_loop:
-                logger.info("Check average (loop) = %d checks results, %.2f checks/s",
-                            self.nb_checks, self.nb_checks / loop_duration)
-                logger.info("Check average (total) = %d checks results, %.2f checks/s",
-                            self.nb_checks_total, self.nb_checks_total / elapsed_time)
+                logger.debug("Check average (loop) = %d checks results, %.2f checks/s",
+                             self.nb_checks, self.nb_checks / loop_duration)
+                logger.debug("Check average (total) = %d checks results, %.2f checks/s",
+                             self.nb_checks_total, self.nb_checks_total / elapsed_time)
             self.nb_checks = 0
 
             if self.nb_checks_dropped > 0 \
@@ -2487,11 +2519,11 @@ class Scheduler(object):  # pylint: disable=R0902
                                self.nb_actions_dropped)
 
             if self.log_loop:
-                logger.info("+++ %d", loop_count)
+                logger.debug("+++ %d", loop_count)
+
         logger.info("[%s] stopping scheduler loop: started: %.2f, elapsed time: %.2f seconds",
                     self.instance_name, sch_start_ts, elapsed_time)
 
-        # statsmgr.file_d.close()
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
         self.update_retention_file(True)

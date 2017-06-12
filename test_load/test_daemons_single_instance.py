@@ -45,20 +45,23 @@ def enqueue_output(out, queue):
 class TestDaemonsSingleInstance(AlignakTest):
     def setUp(self):
         # Alignak logs actions and results
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        # os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Alignak logs alerts and notifications
         os.environ['TEST_LOG_ALERTS'] = 'WARNING'
         os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak logs actions and results
-        os.environ['TEST_LOG_LOOP'] = 'Yes'
+        # os.environ['TEST_LOG_LOOP'] = 'Yes'
+
+        # Alignak do not run plugins but only simulate
+        # os.environ['TEST_FAKE_ACTION'] = 'Yes'
 
         # Alignak system self-monitoring
-        os.environ['TEST_LOG_MONITORING'] = 'Yes'
+        # os.environ['TEST_LOG_MONITORING'] = 'Yes'
 
         # Declare environment to send stats to a file
-        os.environ['ALIGNAK_STATS_FILE'] = '/tmp/alignak.stats'
+        # os.environ['ALIGNAK_STATS_FILE'] = '/tmp/alignak.stats'
         # Those are the same as the default values:
         os.environ['ALIGNAK_STATS_FILE_LINE_FMT'] = '[#date#] #counter# #value# #uom#\n'
         os.environ['ALIGNAK_STATS_FILE_DATE_FMT'] = '%Y-%m-%d %H:%M:%S'
@@ -111,6 +114,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         """
         nb_alerts = 0
         nb_notifications = 0
+        nb_problems = 0
         # Filter other daemons log
         for daemon in daemons_list:
             print("-----\n%s log file\n-----\n" % daemon)
@@ -122,10 +126,14 @@ class TestDaemonsSingleInstance(AlignakTest):
                     if 'SERVICE NOTIFICATION:' in line:
                         nb_notifications += 1
                         print(line[:-1])
+                    if 'actions never came back for the satellite' in line:
+                        nb_problems += 1
+                        print(line[:-1])
         print("Found: %d service alerts" % nb_alerts)
         print("Found: %d service notifications" % nb_notifications)
+        print("Found: %d problems" % nb_problems)
 
-        return nb_alerts, nb_notifications
+        return nb_alerts, nb_notifications, nb_problems
 
     def prepare_alignak_configuration(self, cfg_folder, hosts_count=10):
         """Prepare the Alignak configuration
@@ -169,27 +177,28 @@ class TestDaemonsSingleInstance(AlignakTest):
             try:
                 daemon_process.wait(10)
             except psutil.TimeoutExpired:
-                print("%s: timeout..." % (datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z")))
+                print("***** timeout 10 seconds...")
+                daemon_process.kill()
             except psutil.NoSuchProcess:
                 print("not existing!")
                 pass
-            for child in children:
-                try:
-                    print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
-                    child.terminate()
-                except psutil.NoSuchProcess:
-                    pass
-            gone, still_alive = psutil.wait_procs(children, timeout=10)
-            for process in still_alive:
-                try:
-                    print("Killing %s (pid=%d)!" % (child.name(), child.pid))
-                    process.kill()
-                except psutil.NoSuchProcess:
-                    pass
+            # for child in children:
+            #     try:
+            #         print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
+            #         child.terminate()
+            #     except psutil.NoSuchProcess:
+            #         pass
+            # gone, still_alive = psutil.wait_procs(children, timeout=10)
+            # for process in still_alive:
+            #     try:
+            #         print("Killing %s (pid=%d)!" % (child.name(), child.pid))
+            #         process.kill()
+            #     except psutil.NoSuchProcess:
+            #         pass
             print("%s terminated" % (name))
         print("Stopping daemons duration: %d seconds" % (time.time() - start))
 
-    def run_and_check_alignak_daemons(self, cfg_folder, runtime=10):
+    def run_and_check_alignak_daemons(self, cfg_folder, runtime=10, hosts_count=10):
         """Start and stop the Alignak daemons
 
         Let the daemons run for the number of seconds defined in the runtime parameter and
@@ -202,6 +211,14 @@ class TestDaemonsSingleInstance(AlignakTest):
         # Load and test the configuration
         self.setup_with_file(cfg_folder + '/alignak.cfg')
         assert self.conf_is_correct
+
+        if os.path.exists("/tmp/checks.log"):
+            os.remove('/tmp/checks.log')
+            print("- removed /tmp/checks.log")
+
+        if os.path.exists("/tmp/notifications.log"):
+            os.remove('/tmp/notifications.log')
+            print("- removed /tmp/notifications.log")
 
         self.procs = []
         daemons_list = ['poller', 'reactionner', 'receiver', 'broker', 'scheduler']
@@ -225,7 +242,7 @@ class TestDaemonsSingleInstance(AlignakTest):
             args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
             self.procs.append({
                 'name': daemon,
-                'pid': psutil.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                'pid': psutil.Popen(args)
             })
             print("%s: %s launched (pid=%d)" % (
                   datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
@@ -241,7 +258,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         # Prepend the arbiter process into the list
         self.procs= [{
             'name': 'arbiter',
-            'pid': psutil.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            'pid': psutil.Popen(args)
         }] + self.procs
         print("%s: %s launched (pid=%d)" % (
             datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
@@ -271,6 +288,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         # Let the arbiter build and dispatch its configuration
         # Let the schedulers get their configuration and run the first checks
+        time.sleep(2)
 
         # Start a communication thread with the scheduler
         scheduler_stdout_queue = Queue()
@@ -300,9 +318,18 @@ class TestDaemonsSingleInstance(AlignakTest):
         errors_raised = self.checkDaemonsLogsForErrors(daemons_list)
 
         # Check daemons log for alerts and notifications
-        alerts, notifications = self.checkDaemonsLogsForAlerts(['scheduler'])
+        alerts, notifications, problems = self.checkDaemonsLogsForAlerts(['scheduler'])
+        print("Alerts: %d" % alerts)
+        if alerts < 6 * hosts_count:
+            print("***** Not enough alerts, expected: %d!" % 6 * hosts_count)
+            errors_raised += 1
+        print("Notifications: %d" % notifications)
+        if notifications < 3 * hosts_count:
+            print("***** Not enough notifications, expected: %d!" % 3 * hosts_count)
+            errors_raised += 1
+        print("Problems: %d" % problems)
 
-        if not alerts or not notifications:
+        if not alerts or not notifications or problems:
             errors_raised += 1
 
         self.kill_running_daemons()
@@ -315,8 +342,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 1)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60)
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -325,8 +353,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 1)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -335,8 +364,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 1)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -345,39 +375,42 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 10)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 10
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
-    def test_run_100_host_5mn(self):
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    def test_run_100_host_10mn(self):
         """Run Alignak with 100 hosts during 5 minutes"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 100)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 100
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
         assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    @pytest.mark.skip("Too much load - do not run on Travis build")
     def test_run_1000_host_5mn(self):
         """Run Alignak with 1000 hosts during 5 minutes"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 1000)
-
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 1000
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
+    @pytest.mark.skip("Too much load  - do not run on Travis build")
     def test_run_1000_host_15mn(self):
         """Run Alignak with 1000 hosts during 15 minutes"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        self.prepare_alignak_configuration(cfg_folder, 1000)
-
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        hosts_count = 1000
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -386,8 +419,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
-        self.prepare_alignak_configuration(cfg_folder, 1)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -396,26 +430,29 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
-        self.prepare_alignak_configuration(cfg_folder, 1)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900, hosts_count)
         assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
     def test_passive_daemons_100_host_5mn(self):
         """Run Alignak with 100 hosts during 5 minutes - passive daemons"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
-        self.prepare_alignak_configuration(cfg_folder, 100)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300)
+        hosts_count = 100
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
-    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
-    def test_passive_daemons_1000_host_15mn(self):
+    @pytest.mark.skip("Too much load - do not run on Travis build")
+    def test_passive_daemons_1000_host_10mn(self):
         """Run Alignak with 1000 hosts during 15 minutes - passive daemons"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
-        self.prepare_alignak_configuration(cfg_folder, 1000)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 900)
+        hosts_count = 1000
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
         assert errors_raised == 0

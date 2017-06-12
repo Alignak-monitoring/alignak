@@ -63,7 +63,8 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
  Schedulers (and actions into) and takes the new ones.
 """
 
-from multiprocessing import active_children, cpu_count
+from Queue import Empty, Full
+from multiprocessing import Queue, active_children, cpu_count
 
 import os
 import copy
@@ -436,29 +437,29 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # Ok, it's a result. We get it, and fill verifs of the good sched_id
         sched_id = action.sched_id
+        logger.debug("Got action return: %s / %s", sched_id, action.uuid)
 
-        # Now we now where to put action, we do not need sched_id anymore
-        del action.sched_id
-
-        # Unset the tag of the worker_id too
         try:
+            # Now that we know where to put the action result, we do not need sched_id anymore
+            # Unset the tag of the worker_id too
+            del action.sched_id
             del action.worker_id
         except AttributeError:  # pragma: no cover, simple protection
-            pass
+            logger.error("AttributeError Got action return: %s / %s", sched_id, action)
 
         # And we remove it from the actions queue of the scheduler too
         try:
             del self.schedulers[sched_id]['actions'][action.uuid]
-        except KeyError:
-            pass
+        except KeyError as exp:
+            logger.error("KeyError del scheduler action: %s / %s - %s",
+                         sched_id, action.uuid, str(exp))
+
         # We tag it as "return wanted", and move it in the wait return queue
-        # Stop, if it is "timeout" we need this information later
-        # in the scheduler
-        # action.status = 'waitforhomerun'
         try:
             self.schedulers[sched_id]['wait_homerun'][action.uuid] = action
         except KeyError:  # pragma: no cover, simple protection
-            pass
+            logger.error("KeyError Add home run action: %s / %s - %s",
+                         sched_id, action.uuid, str(exp))
 
     def manage_returns(self):
         """ Wrapper function of do_manage_returns()
@@ -507,7 +508,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                                  "it is not possible to send results to this scheduler.",
                                  sched['name'])
                     continue
-            logger.debug("do_manage_returns, connection: %s", sched['con'])
+            logger.debug("manage returns, scheduler: %s", sched['name'])
 
             try:
                 sched['con'].post('put_results', {'from': self.name, 'results': results.values()})
@@ -549,8 +550,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         return ret.values()
 
-    def create_and_launch_worker(self, module_name='fork', mortal=True,  # pylint: disable=W0102
-                                 __warned=set()):
+    def create_and_launch_worker(self, module_name='fork'):
         """Create and launch a new worker, and put it into self.workers
          It can be mortal or not
 
@@ -558,30 +558,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                             default is "fork" for no module
                             Indeed, it is actually the module 'python_name'
         :type module_name: str
-        :param mortal: make the Worker mortal or not. Default True
-        :type mortal: bool
-        :param __warned: Remember the module we warned about.
-                         This param is a tuple and as it is only init once (the default value)
-                         we use this python behavior that make this set grows with module_name
-                         not found on previous call
-        :type __warned: set
         :return: None
         """
-        # create the input queue of this worker
-        try:
-            queue = self.sync_manager.Queue()
-        # If we got no /dev/shm on linux-based system, we can got problem here.
-        # Must raise with a good message
-        except OSError as exp:  # pragma: no cover, simple protection
-            # We look for the "Function not implemented" under Linux
-            if exp.errno == 38 and os.name == 'posix':
-                logger.critical("Got an exception (%s). If you are under Linux, "
-                                "please check that your /dev/shm directory exists and"
-                                " is read-write.", str(exp))
-            raise
+        logger.info("[%s] Allocating new '%s' worker...", self.name, module_name)
 
         # If we are in the fork module, we do not specify a target
         target = None
+        __warned = []
         if module_name == 'fork':
             target = None
         else:
@@ -594,39 +577,48 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     target = module.work
             if target is None:
                 if module_name not in __warned:
-                    logger.warning("No target found for %s, NOT creating a worker for it..",
+                    logger.warning("No target found for %s, NOT creating a worker for it...",
                                    module_name)
-                    __warned.add(module_name)
+                    __warned.append(module_name)
                 return
         # We give to the Worker the instance name of the daemon (eg. poller-master)
         # and not the daemon type (poller)
-        worker = Worker(1, queue, self.returns_queue, self.processes_by_worker,
-                        mortal=mortal, max_plugins_output_length=self.max_plugins_output_length,
-                        target=target, loaded_into=self.name, http_daemon=self.http_daemon)
-        worker.module_name = module_name
+        queue = Queue()
+        worker = Worker(module_name, queue, self.returns_queue, self.processes_by_worker,
+                        max_plugins_output_length=self.max_plugins_output_length,
+                        target=target, loaded_into=self.name)
+        # worker.module_name = module_name
         # save this worker
-        self.workers[worker.uuid] = worker
+        self.workers[worker.get_id()] = worker
 
         # And save the Queue of this worker, with key = worker id
-        self.q_by_mod[module_name][worker.uuid] = queue
-        logger.info("[%s] Allocating new %s Worker: %s", self.name, module_name, worker.uuid)
+        # self.q_by_mod[module_name][worker.uuid] = queue
+        self.q_by_mod[module_name][worker.get_id()] = queue
 
         # Ok, all is good. Start it!
         worker.start()
 
+        logger.info("[%s] Started '%s' worker: %s (pid=%d)",
+                    self.name, module_name, worker.get_id(), worker.get_pid())
+
     def do_stop(self):
-        """Stop all workers modules and sockets
+        """Stop all workers
 
         :return: None
         """
-        logger.info("[%s] Stopping all workers", self.name)
+        logger.info("[%s] Stopping all workers (%d)", self.name, len(self.workers))
         for worker in self.workers.values():
             try:
+                logger.info("[%s] - stopping '%s'", self.name, worker.get_id())
                 worker.terminate()
                 worker.join(timeout=1)
+                logger.info("[%s] - stopped", self.name)
             # A already dead worker or in a worker
             except (AttributeError, AssertionError):
                 pass
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.error("[%s] exception: %s", self.name, str(exp))
+
         super(Satellite, self).do_stop()
 
     def add(self, elt):  # pragma: no cover, is it useful?
@@ -676,8 +668,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # If a worker goes down and we did not ask him, it's not
             # good: we can think that we have a worker and it's not True
             # So we del it
-            if not worker.is_alive():
-                logger.warning("[%s] The worker %s goes down unexpectedly!", self.name, worker.uuid)
+            logger.debug("[%s] checking if worker %s (pid=%d) is alive",
+                         self.name, worker.get_id(), worker.get_pid())
+            if not self.interrupted and not worker.is_alive():
+                logger.warning("[%s] The worker %s (pid=%d) went down unexpectedly!",
+                               self.name, worker.uuid, worker.get_pid())
                 # Terminate immediately
                 worker.terminate()
                 worker.join(timeout=1)
@@ -689,14 +684,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             worker = self.workers[w_id]
 
             # Del the queue of the module queue
-            del self.q_by_mod[worker.module_name][worker.uuid]
+            del self.q_by_mod[worker.module_name][worker.get_id()]
 
             for sched_id in self.schedulers:
                 sched = self.schedulers[sched_id]
                 for act in sched['actions'].values():
                     if act.status == 'queue' and act.worker_id == w_id:
-                        # Got a check that will NEVER return if we do not
-                        # restart it
+                        # Got a check that will NEVER return if we do not restart it
                         self.assign_to_a_queue(act)
 
             # So now we can really forgot it
@@ -707,9 +701,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
+        if self.interrupted:
+            logger.debug("[%s] Trying to adjust worker number. Ignoring because we are stopping.",
+                         self.name)
+            return
+
         to_del = []
-        logger.debug("[%s] Trying to adjust worker number."
-                     " Actual number : %d, min per module : %d, max per module : %d",
+        logger.debug("[%s] checking worker count."
+                     " Currently: %d workers, min per module : %d, max per module : %d",
                      self.name, len(self.workers), self.min_workers, self.max_workers)
 
         # I want at least min_workers by module then if I can, I add worker for load balancing
@@ -726,12 +725,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     break
 
         for mod in to_del:
-            logger.debug("[%s] The module %s is not a worker one, "
-                         "I remove it from the worker list", self.name, mod)
+            logger.warning("[%s] The module %s is not a worker one, "
+                           "I remove it from the worker list.", self.name, mod)
             del self.q_by_mod[mod]
         # TODO: if len(workers) > 2*wish, maybe we can kill a worker?
 
-    def _got_queue_from_action(self, action):
+    def _get_queue_for_the_action(self, action):
         """Find action queue for the action depending on the module.
         The id is found with action modulo on action id
 
@@ -751,51 +750,59 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # if not get action round robin index to get action queue based
         # on the action id
         self.rr_qid = (self.rr_qid + 1) % len(queues)
-        (index, queue) = queues[self.rr_qid]
+        (worker_id, queue) = queues[self.rr_qid]
 
         # return the id of the worker (i), and its queue
-        return (index, queue)
+        return (worker_id, queue)
 
-    def add_actions(self, lst, sched_id):
+    def add_actions(self, actions_list, sched_id):
         """Add a list of actions to the satellite queues
 
-        :param lst: Action list
-        :type lst: list
+        :param actions_list: Actions list to add
+        :type actions_list: list
         :param sched_id: sheduler id to assign to
         :type sched_id: int
         :return: None
         """
-        for act in lst:
-            logger.debug("Request to add an action: %s", act)
+        for action in actions_list:
             # First we look if the action is identified
-            uuid = getattr(act, 'uuid', None)
+            uuid = getattr(action, 'uuid', None)
             if uuid is None:
                 try:
-                    act = unserialize(act, no_load=True)
+                    action = unserialize(action, no_load=True)
+                    uuid = action.uuid
                 except AlignakClassLookupException:
-                    logger.error('Cannot un-serialize action: %s', act)
+                    logger.error('Cannot un-serialize action: %s', action)
                     continue
-            # Then we look if we do not already have it, if so
-            # do nothing, we are already working!
+
+            # If we already have this action, we are already working for it!
             if uuid in self.schedulers[sched_id]['actions']:
                 continue
-            act.sched_id = sched_id
-            act.status = 'queue'
-            self.assign_to_a_queue(act)
+            # Action is attached to a scheduler
+            action.sched_id = sched_id
+            self.schedulers[sched_id]['actions'][action.uuid] = action
+            self.assign_to_a_queue(action)
+            logger.debug("Added action %s to a worker queue", action.uuid)
 
     def assign_to_a_queue(self, action):
-        """Take an action and put it to action queue
+        """Take an action and put it to a worker actions queue
 
         :param action: action to put
         :type action: alignak.action.Action
         :return: None
         """
-        msg = Message(_id=0, _type='Do', data=action)
-        (index, queue) = self._got_queue_from_action(action)
+        (worker_id, queue) = self._get_queue_for_the_action(action)
+        if not worker_id:
+            return
+
         # Tag the action as "in the worker i"
-        action.worker_id = index
-        if queue is not None:
-            queue.put(msg)
+        action.worker_id = worker_id
+        action.status = 'queue'
+
+        msg = Message(_type='Do', data=action, source=self.name)
+        logger.debug("Queuing message: %s", msg)
+        queue.put_nowait(msg)
+        logger.debug("Queued")
 
     def get_new_actions(self):
         """ Wrapper function for do_get_new_actions
@@ -823,9 +830,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         do_actions = self.__class__.do_actions
 
         # We check for new check in each schedulers and put the result in new_checks
-        for sched_id in self.schedulers:
-            sched = self.schedulers[sched_id]
-            # todo: perharps a warning log here?
+        for sched_id, sched in self.schedulers.iteritems():
             if not sched['active']:
                 logger.debug("My scheduler '%s' is not active currently", sched['name'])
                 continue
@@ -836,7 +841,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                                  "it is not possible to get checks from this scheduler.",
                                  sched['name'])
                     continue
-            logger.debug("do_get_new_actions, connection: %s", sched['con'])
+            logger.debug("get new actions, scheduler: %s", sched['name'])
 
             try:
                 # OK, go for it :)
@@ -849,10 +854,10 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 }, wait='long')
                 # Explicit serialization
                 tmp = unserialize(tmp, True)
-                logger.debug("Ask actions to %s, got %d", sched_id, len(tmp))
-                # We 'tag' them with sched_id and put into queue for workers
-                # REF: doc/alignak-action-queues.png (2)
-                self.add_actions(tmp, sched_id)
+                if tmp:
+                    logger.debug("Got %d actions from %s", len(tmp), sched['name'])
+                    # We 'tag' them with sched_id and put into queue for workers
+                    self.add_actions(tmp, sched_id)
             except HTTPClientConnectionException as exp:
                 logger.warning("Connection error with the scheduler '%s' when getting checks",
                                sched['name'])
@@ -878,22 +883,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
                 raise
 
-    def get_returns_queue_len(self):
-        """Wrapper for returns_queue.qsize method. Return queue length
-
-        :return: queue length
-        :rtype: int
-        """
-        return self.returns_queue.qsize()
-
-    def get_returns_queue_item(self):
-        """Wrapper for returns_queue.get method. Return an queue element
-
-        :return: queue Message
-        :rtype: alignak.message.Message
-        """
-        return self.returns_queue.get()
-
     def clean_previous_run(self):
         """Clean variables from previous configuration,
         such as schedulers, broks and external commands
@@ -918,7 +907,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.debug("Loop turn")
         # Maybe the arbiter ask us to wait for a new conf
         # If true, we must restart all...
         if self.cur_conf is None:
@@ -933,59 +921,69 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             self.setup_new_conf()
 
         # Now we check if we received a new configuration
+        logger.debug("loop pause: %s", self.timeout)
+
         _t0 = time.time()
         self.watch_for_new_conf(self.timeout)
         statsmgr.timer('core.paused-loop', time.time() - _t0)
         if self.new_conf:
             self.setup_new_conf()
 
-        logger.debug(" ======================== ")
-
         # Check if zombies workers are among us :)
         # If so: KILL THEM ALL!!!
         self.check_and_del_zombie_workers()
 
-        # But also modules
+        # And also modules
         self.check_and_del_zombie_modules()
 
         # Print stats for debug
-        for sched_id in self.schedulers:
-            sched = self.schedulers[sched_id]
+        for _, sched in self.schedulers.iteritems():
             for mod in self.q_by_mod:
                 # In workers we've got actions sent to queue - queue size
-                for (index, queue) in self.q_by_mod[mod].items():
-                    logger.debug("[%s][%s][%s] Stats: Workers:%s (Queued:%d TotalReturnWait:%d)",
-                                 sched_id, sched['name'], mod,
-                                 index, queue.qsize(), self.get_returns_queue_len())
-                    # also update the stats module
-                    statsmgr.gauge('core.worker-%s.queue-size' % mod, queue.qsize())
+                for (worker_id, queue) in self.q_by_mod[mod].items():
+                    try:
+                        actions_count = queue.qsize()
+                        results_count = self.returns_queue.qsize()
+                        logger.debug("[%s][%s][%s] actions queued: %d, results queued: %d",
+                                     sched['name'], mod, worker_id, actions_count, results_count)
+                        # Update the statistics
+                        statsmgr.gauge('core.worker-%s.actions-queue-size' % worker_id,
+                                       actions_count)
+                        statsmgr.gauge('core.worker-%s.results-queue-size' % worker_id,
+                                       results_count)
+                    except (IOError, EOFError):
+                        pass
 
-        # Before return or get new actions, see how we manage
-        # old ones: are they still in queue(s)? If so, we
-        # must wait more or at least have more workers
-        wait_ratio = self.wait_ratio.get_load()
-        total_q = 0
-        for mod in self.q_by_mod:
-            for queue in self.q_by_mod[mod].values():
-                total_q += queue.qsize()
-        if total_q != 0 and wait_ratio < 2 * self.polling_interval:
-            logger.debug("I decide to increase the wait ratio")
-            self.wait_ratio.update_load(wait_ratio * 2)
-            # self.wait_ratio.update_load(self.polling_interval)
-        else:
-            # Go to self.polling_interval on normal run, if wait_ratio
-            # was >2*self.polling_interval,
-            # it make it come near 2 because if < 2, go up :)
-            self.wait_ratio.update_load(self.polling_interval)
-        wait_ratio = self.wait_ratio.get_load()
-        logger.debug("Wait ratio: %f", wait_ratio)
-        statsmgr.timer('core.wait-ratio', wait_ratio)
+        # # Before return or get new actions, see how we managed
+        # # the former ones: are they still in queue(s)? If so, we
+        # # must wait more or at least have more workers
+        # wait_ratio = self.wait_ratio.get_load()
+        # total_q = 0
+        # try:
+        #     for mod in self.q_by_mod:
+        #         for queue in self.q_by_mod[mod].values():
+        #             total_q += queue.qsize()
+        # except (IOError, EOFError):
+        #     pass
+        # if total_q != 0 and wait_ratio < 2 * self.polling_interval:
+        #     logger.debug("I decide to increase the wait ratio")
+        #     self.wait_ratio.update_load(wait_ratio * 2)
+        #     # self.wait_ratio.update_load(self.polling_interval)
+        # else:
+        #     # Go to self.polling_interval on normal run, if wait_ratio
+        #     # was >2*self.polling_interval,
+        #     # it make it come near 2 because if < 2, go up :)
+        #     self.wait_ratio.update_load(self.polling_interval)
+        # wait_ratio = self.wait_ratio.get_load()
+        # statsmgr.timer('core.wait-ratio', wait_ratio)
+        # if self.log_loop:
+        #     logger.debug("[%s] wait ratio: %f", self.name, wait_ratio)
 
-        # We can wait more than 1s if needed, no more than 5s, but no less than 1s
-        timeout = self.timeout * wait_ratio
-        timeout = max(self.polling_interval, timeout)
-        self.timeout = min(5 * self.polling_interval, timeout)
-        statsmgr.timer('core.pause-loop', self.timeout)
+        # # We can wait more than 1s if needed, no more than 5s, but no less than 1s
+        # timeout = self.timeout * wait_ratio
+        # timeout = max(self.polling_interval, timeout)
+        # self.timeout = min(5 * self.polling_interval, timeout)
+        # statsmgr.timer('core.pause-loop', self.timeout)
 
         # Maybe we do not have enough workers, we check for it
         # and launch the new ones if needed
@@ -993,20 +991,44 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # Manage all messages we've got in the last timeout
         # for queue in self.return_messages:
-        while self.get_returns_queue_len() != 0:
-            self.manage_action_return(self.get_returns_queue_item())
+        try:
+            logger.debug("[%s] manage action results: %d results",
+                         self.name, self.returns_queue.qsize())
+            while self.returns_queue.qsize():
+                msg = self.returns_queue.get_nowait()
+                if msg is not None:
+                    logger.debug("Got a message: %s", msg)
+                    if msg.get_type() == 'Done':
+                        logger.debug("Got an action result: %s", msg.get_data())
+                        self.manage_action_return(msg.get_data())
+                        logger.debug("Managed action result")
+                    else:
+                        logger.warning("Ignoring message of type: %s", msg.get_type())
+        except Full:
+            logger.warning("Returns queue is full")
+        except Empty:
+            logger.debug("Returns queue is empty")
+        except (IOError, EOFError) as exp:
+            logger.warning("My returns queue is no more available: %s", str(exp))
+        except Exception as exp:  # pylint: disable=W0703
+            logger.error("Failed getting messages in returns queue: %s", str(exp))
+
+        for _, sched in self.schedulers.iteritems():
+            logger.debug("[%s] scheduler home run: %d results",
+                         self.name, len(sched['wait_homerun']))
 
         # If we are passive, we do not initiate the check getting
         # and return
         if not self.passive:
+            # We send all finished checks
+            self.manage_returns()
+
             # Now we can get new actions from schedulers
             self.get_new_actions()
 
-            # We send all finished checks
-            # REF: doc/alignak-action-queues.png (6)
-            self.manage_returns()
-
-        # Get objects from our modules that are not worker based
+        # Get objects from our modules that are not Worker based
+        if self.log_loop:
+            logger.debug("[%s] get objects from queues", self.name)
         self.get_objects_from_from_queues()
 
         # Say to modules it's a new tick :)
@@ -1021,12 +1043,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # We can open the Queue for fork AFTER
         self.q_by_mod['fork'] = {}
 
-        self.returns_queue = self.sync_manager.Queue()
+        # self.returns_queue = self.sync_manager.Queue()
+        self.returns_queue = Queue()
 
-        # For multiprocess things, we should not have
-        # socket timeouts.
-        import socket
-        socket.setdefaulttimeout(None)
+        # # For multiprocess things, we should not have
+        # # socket timeouts.
+        # import socket
+        # socket.setdefaulttimeout(None)
 
     def setup_new_conf(self):  # pylint: disable=R0915,R0912
         """Setup new conf received from Arbiter
@@ -1131,14 +1154,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     self.max_workers = cpu_count()
                 except NotImplementedError:  # pragma: no cover, simple protection
                     self.max_workers = 4
-            logger.info("Using max workers: %s", self.max_workers)
             self.min_workers = g_conf['min_workers']
             if self.min_workers == 0:
                 try:
                     self.min_workers = cpu_count()
                 except NotImplementedError:  # pragma: no cover, simple protection
                     self.min_workers = 4
-            logger.info("Using min workers: %s", self.min_workers)
+            logger.info("Using minimum %d workers, maximum %d workers",
+                        self.min_workers, self.max_workers)
 
             self.processes_by_worker = g_conf['processes_by_worker']
             self.polling_interval = g_conf['polling_interval']
@@ -1238,20 +1261,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             self.modules_manager.start_external_instances()
 
             # Allocate Mortal Threads
-            for _ in xrange(1, self.min_workers):
-                to_del = []
-                for mod in self.q_by_mod:
-                    try:
-                        self.create_and_launch_worker(module_name=mod)
-                    # Maybe this modules is not a true worker one.
-                    # if so, just delete if from q_by_mod
-                    except NotWorkerMod:
-                        to_del.append(mod)
-
-                for mod in to_del:
-                    logger.debug("The module %s is not a worker one, "
-                                 "I remove it from the worker list", mod)
-                    del self.q_by_mod[mod]
+            self.adjust_worker_number_by_load()
 
             # Now main loop
             self.do_mainloop()

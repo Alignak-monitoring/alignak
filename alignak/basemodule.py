@@ -416,7 +416,7 @@ class BaseModule(object):
         # Will block here!
         try:
             self.main()
-        except EOFError:
+        except (IOError, EOFError):
             pass
             # logger.warning('[%s] EOF exception: %s', self.alias, traceback.format_exc())
         except Exception as exp:  # pylint: disable=broad-except

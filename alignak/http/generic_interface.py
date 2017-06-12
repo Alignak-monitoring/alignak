@@ -136,6 +136,8 @@ class GenericInterface(object):
     def get_log_level(self):  # pylint: disable=R0201
         """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
+        TODO: I am quite sure that this function does not return
+        the real log level of the current daemon :(
         :return: current log level
         :rtype: str
         """
@@ -295,17 +297,25 @@ class GenericInterface(object):
         res = {}
 
         if hasattr(app, 'schedulers'):
-            for sched_id in app.schedulers:
-                sched = app.schedulers[sched_id]
-                lst = []
-                res[sched_id] = lst
-                for mod in app.q_by_mod:
-                    # In workers we've got actions send to queue - queue size
-                    for (q_id, queue) in app.q_by_mod[mod].items():
-                        lst.append({
-                            'scheduler_name': sched['name'],
-                            'module': mod,
-                            'queue_number': q_id,
-                            'queue_size': queue.qsize(),
-                            'return_queue_len': app.get_returns_queue_len()})
+            try:
+                # Get queue stats
+                for sched_id, sched in app.schedulers.iteritems():
+                    lst = []
+                    res[sched_id] = lst
+                    for mod in app.q_by_mod:
+                        # In workers we've got actions sent to queue - queue size
+                        for (worker_id, queue) in app.q_by_mod[mod].items():
+                            try:
+                                lst.append({
+                                    'scheduler_name': sched['name'],
+                                    'module': mod,
+                                    'worker': worker_id,
+                                    'worker_queue_size': queue.qsize(),
+                                    'return_queue_size': app.returns_queue.qsize()})
+                            except (IOError, EOFError):
+                                pass
+
+            except Exception:  # pylint: disable=broad-except
+                pass
+
         return res

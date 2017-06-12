@@ -137,6 +137,10 @@ from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, Int
 from alignak.misc.common import setproctitle
 from alignak.version import VERSION
 
+# Friendly names for the system signals
+SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
+                             if v.startswith('SIG') and not v.startswith('SIG_'))
+
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 IS_PY26 = sys.version_info[:2] < (2, 7)
@@ -288,6 +292,9 @@ class Daemon(object):
         # Keep a trace of the file descriptors allocated by the logger
         self.local_log_fds = None
 
+        # Log loop turns if environment variable is set
+        self.log_loop = 'TEST_LOG_LOOP' in os.environ
+
         # Put in queue some debug output we will raise
         # when we will be in daemon
         self.debug_output = []
@@ -318,11 +325,11 @@ class Daemon(object):
         logger.info("Stopping %s...", self.name)
 
         if self.http_daemon:
-            logger.info("Shutting down http_daemon...")
+            logger.info("Shutting down the HTTP daemon...")
             self.http_daemon.request_stop()
 
         if self.http_thread:
-            logger.info("Joining http_thread...")
+            logger.debug("Joining HTTP thread...")
             # Add a timeout to join so that we can manually quit
             self.http_thread.join(timeout=15)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
@@ -337,19 +344,20 @@ class Daemon(object):
             self.http_daemon = None
 
         if self.sync_manager:
-            logger.info("Shutting down manager...")
+            logger.info("Shutting down synchronization manager...")
             self.sync_manager.shutdown()
             self.sync_manager = None
 
         # Maybe the modules manager is not even created!
         if getattr(self, 'modules_manager', None):
+            # todo: clean this!
             # We save what we can but NOT for the scheduler
             # because the current sched object is a dummy one
             # and the old one has already done it!
             if not hasattr(self, 'sched'):
                 self.hook_point('save_retention')
             # And we quit
-            logger.info('Stopping all modules...')
+            logger.info('Shutting down modules...')
             self.modules_manager.stop_all()
 
     def request_stop(self):  # pragma: no cover, not used during test because of sys.exit !
@@ -385,7 +393,13 @@ class Daemon(object):
 
         :return: None
         """
+        # Increased on each loop turn
+        self.loop_count = 0
         while True:
+            # Increment loop count
+            self.loop_count += 1
+            if self.log_loop:
+                logger.debug("[%s] --- %d", self.name, self.loop_count)
             self.do_loop_turn()
             # If ask us to dump memory, do it
             if self.need_dump_memory:
@@ -398,8 +412,12 @@ class Daemon(object):
             if self.need_config_reload:
                 logger.debug('Ask for configuration reloading')
                 return
+
+            if self.log_loop:
+                logger.debug("[%s] +++ %d", self.name, self.loop_count)
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
+                logger.info("[%s] Someone asked us to stop", self.name)
                 break
         self.request_stop()
 
@@ -446,7 +464,7 @@ class Daemon(object):
         :return: None
         """
         logger.warning("Dumping daemon memory is not implemented. "
-                       "If you really need this features, please log "
+                       "If you really need this feature, please log "
                        "an issue in the project repository;)")
 
     def load_modules_manager(self, daemon_name):
@@ -998,7 +1016,8 @@ class Daemon(object):
         :type frame:
         :return: None
         """
-        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.info("process '%s' (pid=%d) received a signal: %s",
+                    self.name, os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
@@ -1006,6 +1025,7 @@ class Daemon(object):
         elif sig == signal.SIGHUP:  # if HUP, reload configuration in arbiter
             self.need_config_reload = True
         else:  # Ok, really ask us to die :)
+            logger.info("request to stop the daemon")
             self.interrupted = True
 
     def set_exit_handler(self):
@@ -1315,10 +1335,10 @@ class Daemon(object):
                 while True:
                     try:
                         obj = queue.get(block=False)
-                    except (Empty, IOError, EOFError) as err:
-                        if not isinstance(err, Empty):
-                            logger.error("An external module queue got a problem '%s'", str(exp))
+                    except Empty:
                         break
+                    except Exception as exp:  # pylint: disable=W0703
+                        logger.error("An external module queue got a problem '%s'", str(exp))
                     else:
                         had_some_objects = True
                         self.add(obj)

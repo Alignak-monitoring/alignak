@@ -38,6 +38,7 @@ class template_DaemonLink_get_name():
 
         print("Name: %s / %s" % (link.get_my_type(), link.get_name()))
         print("Config: %s" % (link.give_satellite_cfg()))
+        print("Config: %s" % (link.have_conf()))
         assert False == link.have_conf()
         try:
             self.assertEqual("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())

@@ -48,6 +48,48 @@ class TestLaunchDaemonsRealms(AlignakTest):
     def tearDown(self):
         print("Test terminated!")
 
+    def kill_running_daemons(self):
+        """Kill the running daemons
+
+        :return:
+        """
+        print("Stopping the daemons...")
+        start = time.time()
+        for daemon in list(self.procs):
+            proc = daemon['pid']
+            name = daemon['name']
+            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+            try:
+                daemon_process = psutil.Process(proc.pid)
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                continue
+            children = daemon_process.children(recursive=True)
+            daemon_process.terminate()
+            try:
+                daemon_process.wait(10)
+            except psutil.TimeoutExpired:
+                print("***** timeout 10 seconds...")
+                daemon_process.kill()
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                pass
+            # for child in children:
+            #     try:
+            #         print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
+            #         child.terminate()
+            #     except psutil.NoSuchProcess:
+            #         pass
+            # gone, still_alive = psutil.wait_procs(children, timeout=10)
+            # for process in still_alive:
+            #     try:
+            #         print("Killing %s (pid=%d)!" % (child.name(), child.pid))
+            #         process.kill()
+            #     except psutil.NoSuchProcess:
+            #         pass
+            print("%s terminated" % (name))
+        print("Stopping daemons duration: %d seconds" % (time.time() - start))
+
     def run_and_check_alignak_daemons(self, runtime=10):
         """ Run the Alignak daemons for a 3 realms configuration
 
@@ -185,66 +227,66 @@ class TestLaunchDaemonsRealms(AlignakTest):
         os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Run daemons for 2 minutes
-        self.run_and_check_alignak_daemons(240)
+        self.run_and_check_alignak_daemons(120)
 
         # Expected logs from the daemons
         expected_logs = {
             'poller': [
                 # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 # Check warning
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 # Check critical
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 # Check timeout
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-north': [
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-south': [
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
             ],
             'scheduler': [
                 # Internal host check
