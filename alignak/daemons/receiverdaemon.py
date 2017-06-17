@@ -291,6 +291,7 @@ class Receiver(Satellite):
                 self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
+                self.schedulers[sched_id]['max_failed_connections'] = 3
 
                 # Do not connect if we are a passive satellite
                 if not old_sched_id:

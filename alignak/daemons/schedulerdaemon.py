@@ -331,6 +331,7 @@ class Alignak(BaseSatellite):
                     sats[sat_id]['running_id'] = 0
                     sats[sat_id]['last_connection'] = 0
                     sats[sat_id]['connection_attempt'] = 0
+                    sats[sat_id]['max_failed_connections'] = 3
                     setattr(self, sat_type, sats)
                 logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
                 logger.info("We have our %s:", sat_type)

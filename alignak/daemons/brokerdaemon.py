@@ -266,9 +266,14 @@ class Broker(BaseSatellite):
 
             if link['con'] is None:
                 if not self.daemon_connection_init(s_id, s_type=s_type):
-                    logger.error("The connection for the %s '%s' cannot be established, "
-                                 "it is not possible to get broks from this daemon.",
-                                 s_type, link['name'])
+                    if link['connection_attempt'] <= link['max_failed_connections']:
+                        logger.warning("The connection for the %s '%s' cannot be established, "
+                                       "it is not possible to get broks from this daemon.",
+                                       s_type, link['name'])
+                    else:
+                        logger.error("The connection for the %s '%s' cannot be established, "
+                                     "it is not possible to get broks from this daemon.",
+                                     s_type, link['name'])
                     continue
 
             try:
@@ -424,6 +429,7 @@ class Broker(BaseSatellite):
                 self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
+                self.schedulers[sched_id]['max_failed_connections'] = 3
 
             logger.debug("We have our schedulers: %s", self.schedulers)
             logger.info("We have our schedulers:")
@@ -459,6 +465,7 @@ class Broker(BaseSatellite):
                 self.arbiters[arb_id]['con'] = None
                 self.arbiters[arb_id]['last_connection'] = 0
                 self.arbiters[arb_id]['connection_attempt'] = 0
+                self.arbiters[arb_id]['max_failed_connections'] = 3
 
                 # We do not connect to the arbiter. Connection hangs
 
@@ -501,6 +508,7 @@ class Broker(BaseSatellite):
                     self.pollers[pol_id]['con'] = None
                     self.pollers[pol_id]['last_connection'] = 0
                     self.pollers[pol_id]['connection_attempt'] = 0
+                    self.pollers[pol_id]['max_failed_connections'] = 3
             else:
                 logger.warning("[%s] no pollers in the received configuration", self.name)
 
@@ -543,6 +551,7 @@ class Broker(BaseSatellite):
                     self.reactionners[rea_id]['con'] = None
                     self.reactionners[rea_id]['last_connection'] = 0
                     self.reactionners[rea_id]['connection_attempt'] = 0
+                    self.reactionners[rea_id]['max_failed_connections'] = 3
             else:
                 logger.warning("[%s] no reactionners in the received configuration", self.name)
 
@@ -585,6 +594,7 @@ class Broker(BaseSatellite):
                     self.receivers[rec_id]['con'] = None
                     self.receivers[rec_id]['last_connection'] = 0
                     self.receivers[rec_id]['connection_attempt'] = 0
+                    self.receivers[rec_id]['max_failed_connections'] = 3
             else:
                 logger.warning("[%s] no receivers in the received configuration", self.name)
 

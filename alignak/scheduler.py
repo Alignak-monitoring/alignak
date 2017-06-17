@@ -1181,9 +1181,14 @@ class Scheduler(object):  # pylint: disable=R0902
                 if link['con'] is None:
                     if not self.sched_daemon.daemon_connection_init(link['instance_id'],
                                                                     s_type=s_type):
-                        logger.error("The connection for the %s '%s' cannot be established, "
-                                     "it is not possible to get actions for this %s.",
-                                     s_type, link['name'], s_type)
+                        if link['connection_attempt'] <= link['max_failed_connections']:
+                            logger.warning("The connection for the %s '%s' cannot be established, "
+                                           "it is not possible to get actions for this %s.",
+                                           s_type, link['name'], s_type)
+                        else:
+                            logger.error("The connection for the %s '%s' cannot be established, "
+                                         "it is not possible to get actions for this %s.",
+                                         s_type, link['name'], s_type)
                         continue
 
                 # Get actions to execute
@@ -1244,9 +1249,14 @@ class Scheduler(object):  # pylint: disable=R0902
                 if link['con'] is None:
                     if not self.sched_daemon.daemon_connection_init(link['instance_id'],
                                                                     s_type=s_type):
-                        logger.error("The connection for the %s '%s' cannot be established, "
-                                     "it is not possible to get results for this %s.",
-                                     s_type, link['name'], s_type)
+                        if link['connection_attempt'] <= link['max_failed_connections']:
+                            logger.warning("The connection for the %s '%s' cannot be established, "
+                                           "it is not possible to get results for this %s.",
+                                           s_type, link['name'], s_type)
+                        else:
+                            logger.error("The connection for the %s '%s' cannot be established, "
+                                         "it is not possible to get results for this %s.",
+                                         s_type, link['name'], s_type)
                         continue
 
                 try:

@@ -120,6 +120,9 @@ class SatelliteLink(Item):
         # the number of failed attempt for the connection
         'connection_attempt':
             IntegerProp(default=0, fill_brok=['full_status']),
+        # the number of failed attempt for the connection
+        'max_failed_connections':
+            IntegerProp(default=3, fill_brok=['full_status']),
 
         # can be network ask or not (dead or check in timeout or error)
         'reachable':

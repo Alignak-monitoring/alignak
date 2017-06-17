@@ -259,8 +259,8 @@ class BaseSatellite(Daemon):
                                "do not initalize its connection!", link['name'])
                 return False
 
-        logger.info("Initializing connection with %s (%s), attempt: %d",
-                    link['name'], s_id, link['connection_attempt'])
+        logger.info("Initializing connection with %s (%s), attempt: %d / %d",
+                    link['name'], s_id, link['connection_attempt'], link['max_failed_connections'])
 
         # # If we try to connect too much, we slow down our connection tries...
         # if self.is_connection_try_too_close(link, delay=5):
@@ -504,9 +504,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             if sched['con'] is None:
                 if not self.daemon_connection_init(sched_id, s_type='scheduler'):
-                    logger.error("The connection for the scheduler '%s' cannot be established, "
-                                 "it is not possible to send results to this scheduler.",
-                                 sched['name'])
+                    if sched['connection_attempt'] <= sched['max_failed_connections']:
+                        logger.warning("The connection for the scheduler '%s' cannot be "
+                                       "established, it is not possible to send results to "
+                                       "this scheduler.", sched['name'])
+                    else:
+                        logger.error("The connection for the scheduler '%s' cannot be "
+                                     "established, it is not possible to send results to "
+                                     "this scheduler.", sched['name'])
                     continue
             logger.debug("manage returns, scheduler: %s", sched['name'])
 
@@ -837,9 +842,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             if sched['con'] is None:
                 if not self.daemon_connection_init(sched_id, s_type='scheduler'):
-                    logger.error("The connection for the scheduler '%s' cannot be established, "
-                                 "it is not possible to get checks from this scheduler.",
-                                 sched['name'])
+                    if sched['connection_attempt'] <= sched['max_failed_connections']:
+                        logger.warning("The connection for the scheduler '%s' cannot be "
+                                       "established, it is not possible to get checks from "
+                                       "this scheduler.", sched['name'])
+                    else:
+                        logger.error("The connection for the scheduler '%s' cannot be "
+                                     "established, it is not possible to get checks from "
+                                     "this scheduler.", sched['name'])
                     continue
             logger.debug("get new actions, scheduler: %s", sched['name'])
 
@@ -1135,6 +1145,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
+                self.schedulers[sched_id]['max_failed_connections'] = 3
                 #
                 # # Do not connect if we are a passive satellite
                 # if not self.passive and not old_sched_id:

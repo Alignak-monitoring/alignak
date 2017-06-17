@@ -125,7 +125,7 @@ class Worker(object):
             target = self.work
         self._process = Process(target=self._prework,
                                 args=(target, actions_queue, returns_queue))
-        logger.info("[%s] created a process: %s", self.get_id(), self._process.pid)
+        logger.debug("[%s] created a new process", self.get_id())
         # self.returns_queue = returns_queue
         self.max_plugins_output_length = max_plugins_output_length
         self.i_am_dying = False
