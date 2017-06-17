@@ -677,11 +677,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                          self.name, worker.get_id(), worker.get_pid())
             if not self.interrupted and not worker.is_alive():
                 logger.warning("[%s] The worker %s (pid=%d) went down unexpectedly!",
-                               self.name, worker.uuid, worker.get_pid())
+                               self.name, worker.get_id(), worker.get_pid())
                 # Terminate immediately
                 worker.terminate()
                 worker.join(timeout=1)
-                w_to_del.append(worker.uuid)
+                w_to_del.append(worker.get_id())
 
         # OK, now really del workers from queues
         # And requeue the actions it was managed

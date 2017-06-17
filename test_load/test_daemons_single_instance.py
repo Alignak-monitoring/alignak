@@ -388,7 +388,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/default')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")
