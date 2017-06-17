@@ -291,7 +291,8 @@ class Worker(object):
                     logger.error("I am dying because of too many open files: %s", chk)
                     self.i_am_dying = True
                 else:
-                    logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
+                    if not isinstance(process, basestring):
+                        logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
     def manage_finished_checks(self, queue):
         """Check the status of checks
