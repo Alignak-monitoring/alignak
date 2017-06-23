@@ -24,6 +24,20 @@ DIR="$(cd $(dirname "$0"); pwd)"
 # Run this script with the -d parameter to start all the daemons in debug mode
 #
 
+#REQUESTS_CA_BUNDLE=/usr/local/etc/alignak/certs/ca.pem
+#export REQUESTS_CA_BUNDLE
+#echo "# -----------------------------------------------------------------------------"
+#echo "# Info: REQUESTS_CA_BUNDLE=$REQUESTS_CA_BUNDLE"
+#echo "#       export REQUESTS_CA_BUNDLE"
+#echo "# -----------------------------------------------------------------------------"
+
+#TEST_LOG_ACTIONS=1
+#export TEST_LOG_ACTIONS
+#echo "# -----------------------------------------------------------------------------"
+#echo "# Info: TEST_LOG_ACTIONS=$TEST_LOG_ACTIONS"
+#echo "#       export TEST_LOG_ACTIONS"
+#echo "# -----------------------------------------------------------------------------"
+
 "$DIR"/launch_scheduler.sh $@
 "$DIR"/launch_poller.sh $@
 "$DIR"/launch_reactionner.sh $@
