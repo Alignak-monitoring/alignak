@@ -1295,6 +1295,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     ncontacts.append(self.contacts[contact_uuid].get_name())
                 h_dict['notified_contacts'] = ncontacts
             all_data['hosts'][host.host_name] = h_dict
+        logger.info('%d hosts sent to retention', len(all_data['hosts']))
 
         # Same for services
         for serv in self.services:
@@ -1357,6 +1358,8 @@ class Scheduler(object):  # pylint: disable=R0902
                     ncontacts.append(self.contacts[contact_uuid].get_name())
                 s_dict['notified_contacts'] = ncontacts
             all_data['services'][(serv.host_name, serv.service_description)] = s_dict
+        logger.info('%d services sent to retention', len(all_data['services']))
+
         return all_data
 
     def restore_retention_data(self, data):
@@ -1380,6 +1383,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if host is not None:
                 self.restore_retention_data_item(data['hosts'][ret_h_name], host)
         statsmgr.gauge('retention.hosts', len(ret_hosts))
+        logger.info('%d hosts restored from retention', len(ret_hosts))
 
         # Same for services
         ret_services = data['services']
@@ -1391,6 +1395,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if serv is not None:
                 self.restore_retention_data_item(s_dict, serv)
         statsmgr.gauge('retention.services', len(ret_services))
+        logger.info('%d services restored from retention', len(ret_services))
 
     def restore_retention_data_item(self, data, item):
         """
