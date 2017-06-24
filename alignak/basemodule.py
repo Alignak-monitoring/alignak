@@ -212,7 +212,9 @@ class BaseModule(object):
 
         if not self.is_external:
             return
-        self.stop_process()
+
+        if self.process:
+            self.stop_process()
         logger.info("Starting external process for module %s...", self.alias)
         proc = Process(target=self.start_module, args=())
 
@@ -336,7 +338,10 @@ class BaseModule(object):
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Generic function to handle signals
-        Set interrupted attribute to True and return
+
+        Only called when the module process received SIGINT or SIGKILL.
+
+        Set interrupted attribute to True, self.process to None and returns
 
         :param sig: signal sent
         :type sig:
@@ -344,8 +349,9 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
-        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.info("Process for module %s received a signal: %s", self.alias, str(sig))
         self.interrupted = True
+        self.process = None
 
     def set_signal_handler(self, sigs=None):
         """Set the signal handler function (manage_signal)

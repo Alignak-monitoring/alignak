@@ -177,16 +177,24 @@ class TestDispatcher(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub.cfg')
+        # Got 3 realms
         assert 3 == len(self.arbiter.dispatcher.realms)
         for realm in self.arbiter.dispatcher.realms:
             assert 1 == len(realm.confs)
             for cfg in realm.confs.values():
                 assert cfg.is_assigned
+        # 3 schedulers
         assert 3 == len(self.arbiter.dispatcher.schedulers)
-        assert 10 == len(self.arbiter.dispatcher.satellites), \
-                         self.arbiter.dispatcher.satellites
+        for satellite in self.arbiter.dispatcher.satellites:
+            print("Satellite: %s" % (satellite))
+        # 2 reactionners
+        # 3 pollers
+        # 3 receivers
+        # 2 brokers
+        assert 10 == len(self.arbiter.dispatcher.satellites), self.arbiter.dispatcher.satellites
 
         for satellite in self.arbiter.dispatcher.satellites:
+            print("Satellite: %s, schedulers: %s" % (satellite, satellite.cfg['schedulers']))
             if satellite.get_name() in ['poller-master', 'reactionner-master', 'broker-master']:
                 assert {} != satellite.cfg['schedulers'], satellite.get_name()
                 assert 2 == len(satellite.cfg['schedulers']), \

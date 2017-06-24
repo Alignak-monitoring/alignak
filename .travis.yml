@@ -25,6 +25,8 @@ install:
   # command to install dependencies
   # some are only used for travis/coveralls so we are installing them here only
   - ./test/setup_test.sh
+  # some are specific for daemons run tests
+  - ./test_run/setup_test.sh
 
 # command to run tests
 script:
