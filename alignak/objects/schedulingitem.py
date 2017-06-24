@@ -2198,13 +2198,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         for contact_id in notif_contacts:
             contact = contacts[contact_id]
-            # We do not want to notify again a contact with
-            # notification interval == 0 that has been already
-            # notified. Can happen when a service exit a downtime
-            # and still in critical/warning (and not acknowledge)
+            # We do not want to notify again a contact with notification interval == 0
+            # if has been already notified except if the item hard state changed!
+            # This can happen when a service exits a downtime and it is still in
+            # critical/warning (and not acknowledge)
             if notif.type == "PROBLEM" and \
                     self.notification_interval == 0 \
+                    and self.state_type == 'HARD' and self.last_state_type == self.state_type \
+                    and self.state == self.last_state \
                     and contact.uuid in self.notified_contacts:
+                # Do not send notification
                 continue
             # Get the property name for notification commands, like
             # service_notification_commands for service
