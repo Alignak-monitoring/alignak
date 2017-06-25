@@ -52,7 +52,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak logs actions and results
-        # os.environ['TEST_LOG_LOOP'] = 'Yes'
+        os.environ['TEST_LOG_LOOP'] = 'Yes'
 
         # Alignak do not run plugins but only simulate
         # os.environ['TEST_FAKE_ACTION'] = 'Yes'
@@ -386,9 +386,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        hosts_count = 100
+        hosts_count = 2
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")

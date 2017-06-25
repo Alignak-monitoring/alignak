@@ -2452,16 +2452,16 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # - current state - this should perharps be removed because the checks status got
             # already pushed to the stats with the previous treatment?
-            checks_status = defaultdict(int)
-            checks_status["total"] = len(self.checks)
-            for chk in self.checks.itervalues():
-                checks_status[chk.status] += 1
-            dump_result = "Checks count (loop): "
-            for status, count in checks_status.iteritems():
-                dump_result += "%s: %d, " % (status, count)
-                statsmgr.gauge('checks.%s' % status, count)
-            if self.log_loop:
-                logger.debug(dump_result)
+            # checks_status = defaultdict(int)
+            # checks_status["total"] = len(self.checks)
+            # for chk in self.checks.itervalues():
+            #     checks_status[chk.status] += 1
+            # dump_result = "Checks count (loop): "
+            # for status, count in checks_status.iteritems():
+            #     dump_result += "%s: %d, " % (status, count)
+            #     statsmgr.gauge('checks.%s' % status, count)
+            # if self.log_loop:
+            #     logger.debug(dump_result)
 
             if self.need_dump_memory:
                 _ts = time.time()
