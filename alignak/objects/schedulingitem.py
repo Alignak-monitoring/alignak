@@ -2718,8 +2718,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if self.state != self.ok_up:
             # case have yet an acknowledge
-            if self.problem_has_been_acknowledged:
-                self.del_comment(self.acknowledgement.comment_id)
+            if self.problem_has_been_acknowledged and self.acknowledgement:
+                self.del_comment(getattr(self.acknowledgement, 'comment_id', None))
 
             if notify:
                 self.create_notifications('ACKNOWLEDGEMENT',
