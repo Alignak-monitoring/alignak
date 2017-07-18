@@ -345,7 +345,7 @@ class Receiver(Satellite):
             is_active = sched['active']
             if not is_active:
                 logger.warning("The scheduler '%s' is not active, it is not possible to push "
-                               "external commands from its connection!", sched.get_name())
+                               "external commands from its connection!", sched.scheduler_name)
                 return
 
             # If there are some commands...
@@ -361,7 +361,7 @@ class Receiver(Satellite):
 
             if con is None:
                 logger.warning("The connection for the scheduler '%s' cannot be established, it is "
-                               "not possible to push external commands.", sched.get_name())
+                               "not possible to push external commands.", sched.scheduler_name)
                 continue
 
             sent = False
