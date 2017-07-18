@@ -386,7 +386,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        hosts_count = 2
+        hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 30, hosts_count)
         assert errors_raised == 0
