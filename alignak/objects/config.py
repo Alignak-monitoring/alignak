@@ -154,6 +154,49 @@ class Config(Item):  # pylint: disable=R0904,R0902
     #  in Alignak
     # *usage_text: if present, will print it to explain why it's no more useful
     properties = {
+        'program_start':
+            IntegerProp(default=0),
+        'last_alive':
+            IntegerProp(default=0),
+        'last_log_rotation':
+            IntegerProp(default=0),
+        'last_command_check':
+            IntegerProp(default=0),
+        'pid':
+            IntegerProp(default=0),
+        'is_running':
+            BoolProp(default=True),
+
+        'modified_host_attributes':
+            IntegerProp(default=0),
+        'modified_service_attributes':
+            IntegerProp(default=0),
+
+        'passive_host_checks_enabled':
+            BoolProp(default=True),
+        'passive_service_checks_enabled':
+            BoolProp(default=True),
+        'active_host_checks_enabled':
+            BoolProp(default=True),
+        'active_service_checks_enabled':
+            BoolProp(default=True),
+        'event_handlers_enabled':
+            BoolProp(default=True),
+        'failure_prediction_enabled':
+            BoolProp(default=False),
+        'flap_detection_enabled':
+            BoolProp(default=True),
+        'notifications_enabled':
+            BoolProp(default=True),
+        'daemon_mode':
+            BoolProp(default=True),
+        'instance_name':
+            StringProp(default=''),
+        'instance_id':
+            StringProp(default=''),
+        'name':
+            StringProp(default=''),
+
         # Used for the PREFIX macro
         # Alignak prefix does not axist as for Nagios meaning.
         # It is better to set this value as an empty string rather than a meaningless information!
