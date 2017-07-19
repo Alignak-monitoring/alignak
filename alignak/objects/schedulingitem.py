@@ -665,6 +665,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not self.in_checking and cls.global_check_freshness:
             if self.freshness_threshold != 0:
                 # If we start alignak, we begin the freshness period
+                logger.info("Freshness check (%s), last state update: %s, now: %s.",
+                            self, self.last_state_update, now)
                 if self.last_state_update == 0.0:
                     self.last_state_update = now
                 if self.last_state_update < now - \

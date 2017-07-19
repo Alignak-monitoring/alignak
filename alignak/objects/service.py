@@ -109,7 +109,7 @@ class Service(SchedulingItem):
     properties = SchedulingItem.properties.copy()
     properties.update({
         'alias':
-            StringProp(),
+            StringProp(default=''),
         'host_name':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule'], special=True),
         'hostgroup_name':
