@@ -680,7 +680,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # We do not just del them in the check list, but also in their service/host
         # We want id of lower than max_id - 2*max_checks
         self.nb_checks_dropped = 0
-        if len(self.checks) > max_checks:
+        if max_checks and len(self.checks) > max_checks:
             # keys does not ensure sorted keys. Max is slow but we have no other way.
             to_del_checks = [c for c in self.checks.values()]
             to_del_checks.sort(key=lambda x: x.creation_time)
@@ -707,17 +707,22 @@ class Scheduler(object):  # pylint: disable=R0902
         # or broks, manage global but also all brokers
         self.nb_broks_dropped = 0
         for broker in self.brokers.values():
-            if len(broker['broks']) > max_broks:
-                logger.warning("I have to drop some broks (%d)..., sorry :(", len(broker['broks']))
+            if max_broks and len(broker['broks']) > max_broks:
+                logger.warning("I have to drop some broks (%d > %d) for the broker %s "
+                               "..., sorry :(", len(broker['broks']), max_broks, broker)
+                for brok in broker['broks'].values():
+                    logger.warning("- dropping: %s / %s", brok.type, brok.data)
+
                 to_del_broks = [c for c in broker['broks'].values()]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
                 self.nb_broks_dropped = len(to_del_broks)
                 for brok in to_del_broks:
+                    logger.warning("- dropped a %s brok: %s", brok.type, brok.data)
                     del broker['broks'][brok.uuid]
 
         self.nb_actions_dropped = 0
-        if len(self.actions) > max_actions:
+        if max_actions and len(self.actions) > max_actions:
             logger.warning("I have to del some actions (currently: %d, max: %d)..., sorry :(",
                            len(self.actions), max_actions)
             to_del_actions = [c for c in self.actions.values()]
