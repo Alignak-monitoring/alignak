@@ -536,12 +536,15 @@ class Dispatcher:
             if sat.alive and sat.reachable:
                 satellites.append(sat)
 
-        satellite_string = "[%s] Dispatching %s satellites ordered as: " % (
-            realm.get_name(), sat_type)
-        for sat in satellites:
-            satellite_string += '%s (spare:%s), ' % (
-                sat.get_name(), str(sat.spare))
-        logger.info(satellite_string)
+        if satellites:
+            satellite_string = "[%s] Dispatching %s satellites ordered as: " % (
+                realm.get_name(), sat_type)
+            for sat in satellites:
+                satellite_string += '%s (spare:%s), ' % (
+                    sat.get_name(), str(sat.spare))
+            logger.info(satellite_string)
+        else:
+            logger.info("[%s] No %s satellites", realm.get_name(), sat_type)
 
         conf_uuid = cfg.uuid
         # Now we dispatch cfg to every one ask for it
@@ -572,7 +575,8 @@ class Dispatcher:
 
         # I've got enough satellite, the next ones are considered spares
         if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
-            logger.info("[%s] OK, no more %s needed", realm.get_name(), sat_type)
+            if satellites:
+                logger.info("[%s] OK, no more %s needed", realm.get_name(), sat_type)
             realm.to_satellites_need_dispatch[sat_type][conf_uuid] = False
 
     def dispatch(self):

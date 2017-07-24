@@ -497,7 +497,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # This can so happen in an (http) client thread.
             results = sched['wait_homerun']
             if not results:
-                return
+                continue
             # So, at worst, some results would be received twice on the
             # scheduler level, which shouldn't be a problem given they are
             # indexed by their "action_id".
