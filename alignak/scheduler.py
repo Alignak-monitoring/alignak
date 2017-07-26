@@ -1070,9 +1070,9 @@ class Scheduler(object):  # pylint: disable=R0902
                                        "(exit code=%d): '%s'",
                                        action.command, action.exit_status, action.output)
 
-            except AttributeError as exp:  # pragma: no cover, simple protection
+            except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
-                logger.warning('put_results:: get bad notification : %s ', str(exp))
+                logger.warning('put_results:: got bad notification : %s ', str(exp))
         elif action.is_a == 'check':
             try:
                 self.checks[action.uuid]
@@ -1117,9 +1117,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 self.checks[action.uuid].get_return_from(action)
                 self.checks[action.uuid].status = 'waitconsume'
-            except ValueError as exp:  # pragma: no cover, simple protection
+            except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
-                logger.warning('put_results:: get bad check: %s ', str(exp))
+                logger.warning('put_results:: got bad check: %s ', str(exp))
 
         elif action.is_a == 'eventhandler':
             try:
@@ -1131,41 +1131,45 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.warning('put_results:: get bad check: %s ', str(exp))
                 return
 
-            self.counters[action.is_a]["total"]["results"]["total"] += 1
-            if action.status not in \
-                    self.counters[action.is_a]["total"]["results"]:
-                self.counters[action.is_a]["total"]["results"][action.status] = 0
-            self.counters[action.is_a]["total"]["results"][action.status] += 1
+            try:
+                self.counters[action.is_a]["total"]["results"]["total"] += 1
+                if action.status not in \
+                        self.counters[action.is_a]["total"]["results"]:
+                    self.counters[action.is_a]["total"]["results"][action.status] = 0
+                self.counters[action.is_a]["total"]["results"][action.status] += 1
 
-            self.counters[action.is_a]["loop"]["results"]["total"] += 1
-            if action.status not in \
-                    self.counters[action.is_a]["loop"]["results"]:
-                self.counters[action.is_a]["loop"]["results"][action.status] = 0
-            self.counters[action.is_a]["loop"]["results"][action.status] += 1
+                self.counters[action.is_a]["loop"]["results"]["total"] += 1
+                if action.status not in \
+                        self.counters[action.is_a]["loop"]["results"]:
+                    self.counters[action.is_a]["loop"]["results"][action.status] = 0
+                self.counters[action.is_a]["loop"]["results"][action.status] += 1
 
-            if action.status == 'timeout':
-                _type = 'event handler'
+                if action.status == 'timeout':
+                    _type = 'event handler'
+                    if action.is_snapshot:
+                        _type = 'snapshot'
+                    ref = self.find_item_by_id(self.checks[action.uuid].ref)
+                    logger.info("%s %s command '%s' timed out after %d seconds",
+                                ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
+                                _type, self.actions[action.uuid].command, int(action.execution_time))
+
+                    self.nb_checks_results_timeout += 1
+                    self.counters[action.is_a]["total"]["timeout"] += 1
+                    self.counters[action.is_a]["loop"]["timeout"] += 1
+                else:
+                    self.nb_checks_results += 1
+                    self.counters[action.is_a]["total"]["executed"] += 1
+                    self.counters[action.is_a]["loop"]["executed"] += 1
+
+                # If it's a snapshot we should get the output and export it
                 if action.is_snapshot:
-                    _type = 'snapshot'
-                ref = self.find_item_by_id(self.checks[action.uuid].ref)
-                logger.info("%s %s command '%s' timed out after %d seconds",
-                            ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
-                            _type, self.actions[action.uuid].command, int(action.execution_time))
-
-                self.nb_checks_results_timeout += 1
-                self.counters[action.is_a]["total"]["timeout"] += 1
-                self.counters[action.is_a]["loop"]["timeout"] += 1
-            else:
-                self.nb_checks_results += 1
-                self.counters[action.is_a]["total"]["executed"] += 1
-                self.counters[action.is_a]["loop"]["executed"] += 1
-
-            # If it's a snapshot we should get the output and export it
-            if action.is_snapshot:
-                old_action.get_return_from(action)
-                s_item = self.find_item_by_id(old_action.ref)
-                brok = s_item.get_snapshot_brok(old_action.output, old_action.exit_status)
-                self.add(brok)
+                    old_action.get_return_from(action)
+                    s_item = self.find_item_by_id(old_action.ref)
+                    brok = s_item.get_snapshot_brok(old_action.output, old_action.exit_status)
+                    self.add(brok)
+            except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
+                # bad object, drop it
+                logger.warning('put_results:: got bad event handler: %s ', str(exp))
         else:  # pragma: no cover, simple protection, should not happen!
             logger.error("The received result type in unknown! %s", str(action.is_a))
 
@@ -2136,7 +2140,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if o_id in items:
                 return items[o_id]
 
-        raise Exception("Item with id %s not found" % o_id)  # pragma: no cover,
+        raise AttributeError("Item with id %s not found" % o_id)  # pragma: no cover,
         # simple protection this should never happen
 
     def get_stats_struct(self):  # pragma: no cover, seems never called!
