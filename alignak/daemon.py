@@ -1222,8 +1222,11 @@ class Daemon(object):
             _, _ = self.make_a_pause(timeout, check_time_change=True)
             # sys.stdout.write(".")
             # sys.stdout.flush()
-        logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
-        statsmgr.timer('initial-configuration', time.time() - _ts)
+        if not self.interrupted:
+            logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
+            statsmgr.timer('initial-configuration', time.time() - _ts)
+        else:
+            logger.info("Interrupted before getting the initial configuration")
 
     def hook_point(self, hook_name):
         """Used to call module function that may define a hook function
