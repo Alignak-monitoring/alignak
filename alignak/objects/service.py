@@ -1534,9 +1534,11 @@ class Services(SchedulingItems):
                      'escalations', 'poller_tag', 'reactionner_tag', 'check_period',
                      'business_impact', 'maintenance_period'):
             for serv in self:
-                if not hasattr(serv, prop) and hasattr(serv, 'host_name'):
+                if hasattr(serv, 'host_name') and not getattr(serv, prop, None):
                     host = hosts.find_by_name(serv.host_name)
                     if host is not None and hasattr(host, prop):
+                        logger.debug("Implicit inheritance for %s/%s: %s = %s",
+                                     serv.host_name, serv, prop, getattr(host, prop))
                         setattr(serv, prop, getattr(host, prop))
 
     def apply_dependencies(self, hosts):

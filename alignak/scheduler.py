@@ -1151,7 +1151,8 @@ class Scheduler(object):  # pylint: disable=R0902
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     logger.info("%s %s command '%s' timed out after %d seconds",
                                 ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
-                                _type, self.actions[action.uuid].command, int(action.execution_time))
+                                _type, self.actions[action.uuid].command,
+                                int(action.execution_time))
 
                     self.nb_checks_results_timeout += 1
                     self.counters[action.is_a]["total"]["timeout"] += 1
