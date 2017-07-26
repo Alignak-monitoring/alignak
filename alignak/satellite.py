@@ -1103,6 +1103,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                                   statsd_enabled=self.statsd_enabled)
             else:
                 statsmgr.register(self.name, 'reactionner',
+                                  statsd_host=self.statsd_host, statsd_port=self.statsd_port,
                                   statsd_prefix=self.statsd_prefix,
                                   statsd_enabled=self.statsd_enabled)
 
