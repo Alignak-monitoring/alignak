@@ -142,7 +142,7 @@ class TestAction(AlignakTest):
             'output': 'Output ...',
             'execution_time': 0.0,
             'creation_time': time.time(),
-            'worker': 'test_worker',
+            'worker_id': 'test_worker',
             'timeout': 100,
             't_to_go': 0.0,
             'is_a': 'action',
@@ -186,7 +186,7 @@ class TestAction(AlignakTest):
             'timeout': 10,
             'type': '',
             'u_time': 0.0,
-            'worker': 'none'
+            'worker_id': 'none'
         }
         # Will fill the action properties with the parameters
         # The missing parameters will be set with their default value

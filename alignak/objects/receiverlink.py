@@ -46,7 +46,6 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
-from alignak.http.client import HTTPEXCEPTIONS
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -73,34 +72,6 @@ class ReceiverLink(SatelliteLink):
         :return: None
         """
         self.realm.receivers.append(self)
-
-    def push_host_names(self, sched_id, hnames):  # pragma: no cover, seems not to be used anywhere
-        """
-        Send host names to receiver
-
-        TODO: remove this function, because the receiver daemon implements its own push function
-        because of code refactoring
-
-        :param sched_id: id of the scheduler
-        :type sched_id: int
-        :param hnames: list of host names
-        :type hnames: list
-        :return: None
-        """
-        try:
-            if self.con is None:
-                self.create_connection()
-            logger.info(" (%s)", self.uri)
-
-            # If the connection failed to initialize, bail out
-            if self.con is None:
-                self.add_failed_check_attempt()
-                return
-
-            # r = self.con.push_host_names(sched_id, hnames)
-            self.con.post('push_host_names', {'sched_id': sched_id, 'hnames': hnames}, wait='long')
-        except HTTPEXCEPTIONS, exp:
-            self.add_failed_check_attempt(reason=str(exp))
 
 
 class ReceiverLinks(SatelliteLinks):

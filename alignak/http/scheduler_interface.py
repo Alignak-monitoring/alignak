@@ -63,7 +63,12 @@ class SchedulerInterface(GenericInterface):
         do_actions = (do_actions == 'True')
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
                                                worker_name, module_types)
-        self.app.sched.nb_checks_send += len(res)
+        # Count actions got by the poller/reactionner
+        if do_checks:
+            self.app.nb_pulled_checks += len(res)
+        if do_actions:
+            self.app.nb_pulled_actions += len(res)
+        # self.app.sched.nb_checks_send += len(res)
 
         return serialize(res, True)
 
@@ -77,24 +82,42 @@ class SchedulerInterface(GenericInterface):
         :rtype: bool
         """
         res = cherrypy.request.json
+        who_sent = res['from']
         results = res['results']
-        nb_received = len(results)
-        self.app.sched.nb_check_received += nb_received
-        if nb_received != 0:
-            logger.debug("Received %d results", nb_received)
-        for result in results:
-            resultobj = unserialize(result, True)
-            resultobj.set_type_active()  # pylint: disable=E1101
-            self.app.sched.waiting_results.put(resultobj)
 
-        # for c in results:
-        # self.sched.put_results(c)
+        results = unserialize(results, no_load=True)
+        if results:
+            logger.debug("Got some results: %d results from %s", len(results), who_sent)
+        else:
+            logger.debug("-> no results")
+        self.app.sched.nb_checks_results += len(results)
+
+        for result in results:
+            logger.debug("-> result: %s", result)
+            # resultobj = unserialize(result, True)
+            result.set_type_active()
+
+            # Update scheduler counters
+            self.app.sched.counters[result.is_a]["total"]["results"]["total"] += 1
+            if result.status not in \
+                    self.app.sched.counters[result.is_a]["total"]["results"]:
+                self.app.sched.counters[result.is_a]["total"]["results"][result.status] = 0
+            self.app.sched.counters[result.is_a]["total"]["results"][result.status] += 1
+            self.app.sched.counters[result.is_a]["active"]["results"]["total"] += 1
+            if result.status not in \
+                    self.app.sched.counters[result.is_a]["active"]["results"]:
+                self.app.sched.counters[result.is_a]["active"]["results"][result.status] = 0
+            self.app.sched.counters[result.is_a]["active"]["results"][result.status] += 1
+
+            # Append to the scheduler result queue
+            self.app.sched.waiting_results.put(result)
+
         return True
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_broks(self, bname):
-        """Get checks from scheduler, used by brokers
+        """Get broks from scheduler, used by brokers
 
         :param bname: broker name, used to filter broks
         :type bname: str
@@ -113,8 +136,7 @@ class SchedulerInterface(GenericInterface):
 
         # Now get the broks for this specific broker
         res = self.app.sched.get_broks(bname)
-        # got only one global counter for broks
-        self.app.sched.nb_broks_send += len(res)
+
         # we do not more have a full broks in queue
         self.app.sched.brokers[bname]['has_full_broks'] = False
         return serialize(res, True)
@@ -155,14 +177,7 @@ class SchedulerInterface(GenericInterface):
         """
         sched = self.app.sched
 
-        res = sched.get_checks_status_counts()
-
-        res = {
-            'nb_scheduled': res['scheduled'],
-            'nb_inpoller': res['inpoller'],
-            'nb_zombies': res['zombie'],
-            'nb_notifications': len(sched.actions)
-        }
+        res = {'counters': sched.counters}
 
         # Spare schedulers do not have such properties
         if hasattr(sched, 'services'):

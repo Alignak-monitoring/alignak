@@ -29,6 +29,7 @@ import subprocess
 from time import sleep
 import requests
 import shutil
+import psutil
 
 import pytest
 from alignak_test import AlignakTest
@@ -51,6 +52,49 @@ class DaemonsStartTest(AlignakTest):
 
         except Exception as err:
             print("Problem on terminate and wait subproc %s: %s" % (name, err))
+
+    def kill_running_daemons(self):
+        """Kill the running daemons
+
+        :return:
+        """
+        print("Stopping the daemons...")
+        start = time.time()
+        for daemon in list(self.procs):
+            print("Daemon %s" % (daemon))
+            name = daemon
+            proc = self.procs[daemon]
+            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+            try:
+                daemon_process = psutil.Process(proc.pid)
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                continue
+            children = daemon_process.children(recursive=True)
+            daemon_process.terminate()
+            try:
+                daemon_process.wait(10)
+            except psutil.TimeoutExpired:
+                print("***** timeout 10 seconds...")
+                daemon_process.kill()
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                pass
+            # for child in children:
+            #     try:
+            #         print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
+            #         child.terminate()
+            #     except psutil.NoSuchProcess:
+            #         pass
+            # gone, still_alive = psutil.wait_procs(children, timeout=10)
+            # for process in still_alive:
+            #     try:
+            #         print("Killing %s (pid=%d)!" % (child.name(), child.pid))
+            #         process.kill()
+            #     except psutil.NoSuchProcess:
+            #         pass
+            print("%s terminated" % (name))
+        print("Stopping daemons duration: %d seconds" % (time.time() - start))
 
     def setUp(self):
         self.procs = {}
@@ -302,10 +346,12 @@ class DaemonsStartTest(AlignakTest):
             if 'CRITICAL:' in line:
                 ok = False
         assert ok
+        ok = True
         for line in iter(arbiter.stderr.readline, b''):
+            ok = False
             print("*** " + line.rstrip())
-            if sys.version_info > (2, 7):
-                assert False, "stderr output!"
+        if not ok and sys.version_info > (2, 7):
+            assert False, "stderr output!"
 
     @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_spare_missing_configuration(self):
@@ -542,7 +588,7 @@ class DaemonsStartTest(AlignakTest):
             print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
 
         # Let the daemons start ...
-        sleep(5)
+        sleep(2)
 
         print("Testing pid files and log files...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
@@ -559,7 +605,7 @@ class DaemonsStartTest(AlignakTest):
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
 
-        sleep(5)
+        sleep(2)
 
         name = 'arbiter'
         print("Testing Arbiter start %s" % name)
@@ -604,33 +650,16 @@ class DaemonsStartTest(AlignakTest):
         # Arbiter only
         raw_data = req.get("%s://localhost:%s/get_satellite_list" %
                            (http, satellite_map['arbiter']), verify=False)
-        expected_data ={"reactionner": ["reactionner-master"],
-                        "broker": ["broker-master"],
-                        "arbiter": ["arbiter-master"],
-                        "scheduler": ["scheduler-master"],
-                        "receiver": ["receiver-master"],
-                        "poller": ["poller-master"]}
+        expected_data = {"reactionner": ["reactionner-master"],
+                         "broker": ["broker-master"],
+                         "arbiter": ["arbiter-master"],
+                         "scheduler": ["scheduler-master"],
+                         "receiver": ["receiver-master"],
+                         "poller": ["poller-master"]}
         data = raw_data.json()
         assert isinstance(data, dict), "Data is not a dict!"
         for k, v in expected_data.iteritems():
             assert set(data[k]) == set(v)
-
-        print("Testing have_conf")
-        # Except Arbiter (not spare)
-        for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
-            data = raw_data.json()
-            assert data == True, "Daemon %s has no conf!" % daemon
-            # TODO: test with magic_hash
-
-        print("Testing do_not_run")
-        # Arbiter only
-        raw_data = req.get("%s://localhost:%s/do_not_run" %
-                           (http, satellite_map['arbiter']), verify=False)
-        data = raw_data.json()
-        print("%s, do_not_run: %s" % (name, data))
-        # Arbiter master returns False, spare returns True
-        assert data is False
 
         print("Testing api")
         name_to_interface = {'arbiter': ArbiterInterface,
@@ -658,6 +687,42 @@ class DaemonsStartTest(AlignakTest):
             expected_data = set(name_to_interface[name](None).api_full())
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
 
+        print("Testing get_running_id")
+        for name, port in satellite_map.items():
+            raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
+            data = raw_data.json()
+            print("%s, my running id: %s" % (name, data))
+            assert isinstance(data, unicode), "Data is not an unicode!"
+
+        # print("Testing wait_new_conf")
+        # # Except Arbiter (not spare)
+        # for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+        #     raw_data = req.get("%s://localhost:%s/wait_new_conf" % (http, satellite_map[daemon]), verify=False)
+        #     data = raw_data.json()
+        #     assert data == None
+
+        print("Testing have_conf")
+        # Except Arbiter (not spare)
+        for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            raw_data = req.get("%s://localhost:%s/have_conf" % (http, satellite_map[daemon]), verify=False)
+            data = raw_data.json()
+            print("%s, have_conf: %s" % (daemon, data))
+            assert data == True, "Daemon %s should have a conf!" % daemon
+
+            # raw_data = req.get("%s://localhost:%s/have_conf?magic_hash=1234567890" % (http, satellite_map[daemon]), verify=False)
+            # data = raw_data.json()
+            # print("%s, have_conf: %s" % (daemon, data))
+            # assert data == False, "Daemon %s should not accept the magic hash!" % daemon
+
+        print("Testing do_not_run")
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/do_not_run" %
+                           (http, satellite_map['arbiter']), verify=False)
+        data = raw_data.json()
+        print("%s, do_not_run: %s" % (name, data))
+        # Arbiter master returns False, spare returns True
+        assert data is False
+
         # print("Testing get_checks on scheduler")
         # TODO: if have poller running, the poller will get the checks before us
         #
@@ -671,19 +736,39 @@ class DaemonsStartTest(AlignakTest):
         #     self.assertIsInstance(elem, Check, "One elem of the list is not a Check!")
 
         print("Testing get_raw_stats")
-        scheduler_id = "XxX"
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_raw_stats" % (http, port), verify=False)
-            print("%s, raw stats: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, raw stats: %s" % (name, data))
+            assert isinstance(data, dict), "Data is not a dict!"
+
             if name in ['reactionner', 'poller']:
+                scheduler_id = "XxX"
                 for sched_uuid in data:
-                    print("- scheduler: %s / %s" % (sched_uuid, raw_data))
+                    print("- scheduler: %s / %s" % (sched_uuid, data))
                     scheduler_id = sched_uuid
-            else:
-                assert isinstance(data, dict), "Data is not a dict!"
-        print("Got a scheduler uuid: %s" % scheduler_id)
+                    assert 'scheduler_name' in data[sched_uuid][0]
+                    assert 'module' in data[sched_uuid][0]
+                    assert 'worker' in data[sched_uuid][0]
+                    assert 'worker_queue_size' in data[sched_uuid][0]
+                    assert 'return_queue_size' in data[sched_uuid][0]
+                print("Got a scheduler uuid: %s" % scheduler_id)
+                assert scheduler_id != "XxX"
+
+            if name in ['arbiter']:
+                assert data == {}
+
+            if name in ['broker']:
+                assert 'modules_count' in data
+
+            if name in ['scheduler']:
+                assert 'latency_average' in data
+                assert 'latency_maximum' in data
+                assert 'latency_minimum' in data
+                assert 'counters' in data
+
+            if name in ['receiver']:
+                assert data == {"command_buffer_size": 0}
 
         print("Testing what_i_managed")
         for name, port in satellite_map.items():
@@ -706,7 +791,9 @@ class DaemonsStartTest(AlignakTest):
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
-            assert raw_data.json() == 'INFO'
+            data = raw_data.json()
+            print("%s, log level: %s" % (name, data))
+            assert data == 'INFO'
 
         print("Testing set_log_level")
         for name, port in satellite_map.items():
@@ -714,15 +801,19 @@ class DaemonsStartTest(AlignakTest):
                                 data=json.dumps({'loglevel': 'DEBUG'}),
                                 headers={'Content-Type': 'application/json'},
                                 verify=False)
-            assert raw_data.json() == 'DEBUG'
+            data = raw_data.json()
+            print("%s, log level set as : %s" % (name, data))
+            assert data == 'DEBUG'
 
         print("Testing get_log_level")
         for name, port in satellite_map.items():
             raw_data = req.get("%s://localhost:%s/get_log_level" % (http, port), verify=False)
+            data = raw_data.json()
+            print("%s, log level: %s" % (name, data))
             if sys.version_info < (2, 7):
-                assert raw_data.json() == 'UNKNOWN' # Cannot get log level with python 2.6
+                assert data == 'UNKNOWN' # Cannot get log level with python 2.6
             else:
-                assert raw_data.json() == 'DEBUG'
+                assert data == 'DEBUG'
 
         print("Testing get_all_states")
         # Arbiter only
@@ -763,13 +854,6 @@ class DaemonsStartTest(AlignakTest):
                 assert isinstance(element, dict), "Object data is not a dict!"
                 print("%s: %s" % (object, element['%s_name' % object]))
 
-        print("Testing get_running_id")
-        for name, port in satellite_map.items():
-            raw_data = req.get("%s://localhost:%s/get_running_id" % (http, port), verify=False)
-            data = raw_data.json()
-            print("%s, my running id: %s" % (name, data))
-            assert isinstance(data, unicode), "Data is not an unicode!"
-
         print("Testing fill_initial_broks")
         # Scheduler only
         raw_data = req.get("%s://localhost:%s/fill_initial_broks" %
@@ -784,6 +868,7 @@ class DaemonsStartTest(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_broks" % (http, satellite_map[name]),
                                params={'bname': 'broker-master'}, verify=False)
             data = raw_data.json()
+            print("%s, broks: %s" % (name, data))
             assert isinstance(data, dict), "Data is not a dict!"
 
         print("Testing get_returns")
@@ -802,10 +887,11 @@ class DaemonsStartTest(AlignakTest):
             # SIGUSR2: objects dump
             self.procs[name].send_signal(signal.SIGUSR2)
             # SIGHUP: reload configuration
-            self.procs[name].send_signal(signal.SIGUSR2)
+            # self.procs[name].send_signal(signal.SIGHUP)
 
             # Other signals is considered as a request to stop...
 
+        # self.kill_running_daemons()
         for name, proc in self.procs.items():
             print("Asking %s to end..." % name)
             os.kill(self.procs[name].pid, signal.SIGTERM)

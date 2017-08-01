@@ -64,7 +64,9 @@ about the configuration part. for the running one, it's better
 to look at the schedulingitem class that manage all
 scheduling/consume check smart things :)
 """
+# pylint: disable=too-many-lines
 
+import os
 import time
 import logging
 
@@ -639,6 +641,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         )
         self.broks.append(brok)
 
+        if 'TEST_LOG_ALERTS' in os.environ:
+            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+                logger.warning('HOST ALERT: %s;%s;%s;%d;%s', self.get_name(), self.state,
+                               self.state_type, self.attempt, self.output)
+            else:
+                logger.info('HOST ALERT: %s;%s;%s;%d;%s', self.get_name(), self.state,
+                            self.state_type, self.attempt, self.output)
+
     def raise_initial_state(self):
         """Raise CURRENT HOST ALERT entry (info level)
         Format is : "CURRENT HOST STATE: *get_name()*;*state*;*state_type*;*attempt*;*output*"
@@ -711,6 +721,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             )
         )
         self.broks.append(brok)
+
+        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+                logger.warning("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
+                               self.get_name(), state, command.get_name(), self.output)
+            else:
+                logger.info("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
+                            self.get_name(), state, command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)

@@ -48,21 +48,24 @@
 
 
 class Message:
-    """This is a simple message class for communications between actionners and
-    workers
+    """This is a simple message class for communications between actionners and workers"""
 
-    """
+    # Auto generated identifiers
+    _id = 0
 
     my_type = 'message'
     _type = None
     _data = None
     _from = None
 
-    def __init__(self, _id, _type, data=None, source=None):
+    def __init__(self, _type, data=None, source=None):
+        cls = self.__class__
+        self._id = cls._id
+        cls._id += 1
+
         self._type = _type
         self._data = data
-        self._from = _id
-        self.source = source
+        self._source = source
 
     def get_type(self):
         """Getter of _type attribute
@@ -80,20 +83,18 @@ class Message:
         """
         return self._data
 
-    def get_from(self):
-        """Getter of _from attribute
+    def get_source(self):
+        """Getter of _source attribute
 
-        :return: Message from (worker name)
+        :return: Message from (actionner/worker name)
         :rtype: str
         """
-        return self._from
+        return self._source
 
-    def str(self):
+    def __str__(self):
         """String representation of message
 
-        :return: "Message from %d (%s), Type: %s Data: %s" (from, source, type, data)
+        :return: source - id, type: %s, data: %s
         :rtype: str
-        TODO: Rename this __str__
         """
-        return "Message from %d (%s), Type: %s Data: %s" % (
-            self._from, self.source, self._type, self._data)
+        return "%s - %s, type: %s, data: %s" % (self._source, self._id, self._type, self._data)

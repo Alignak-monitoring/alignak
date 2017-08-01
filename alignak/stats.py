@@ -307,7 +307,7 @@ class Stats(object):
             self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
             self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         except (socket.error, socket.gaierror) as exp:
-            logger.exception('Cannot create StatsD socket: %s', exp)
+            logger.warning('Cannot create StatsD socket: %s', exp)
             return False
         except Exception as exp:  # pylint: disable=broad-except
             logger.exception('Cannot create StatsD socket (other): %s', exp)

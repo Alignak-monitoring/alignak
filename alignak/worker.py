@@ -48,19 +48,22 @@
 """
 This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
 """
-from Queue import Empty
-from multiprocessing import Process, Queue
+from Queue import Empty, Full
+from multiprocessing import Process
 
 import os
 import time
-import sys
 import signal
 import traceback
-import uuid
 import cStringIO
 import logging
 
+from alignak.message import Message
 from alignak.misc.common import setproctitle
+
+# Friendly names for the system signals
+SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
+                             if v.startswith('SIG') and not v.startswith('SIG_'))
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -68,77 +71,137 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 class Worker(object):
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
-    (self.s) (slave)
+    (self.actions_queue)
     They launch the Check and then send the result in the Queue self.m (master)
     they can die if they do not do anything (param timeout)
 
     """
+    # Auto generated identifiers
+    _worker_ids = {}
 
     uuid = ''  # None
     _process = None
-    _mortal = None
     _idletime = None
     _timeout = None
-    _control_q = None
 
-    def __init__(self, _id, slave_q, returns_queue, processes_by_worker,  # pylint: disable=W0613
-                 mortal=True, timeout=300, max_plugins_output_length=8192, target=None,
-                 loaded_into='unknown', http_daemon=None):
-        self.uuid = uuid.uuid4().hex
+    # pylint: disable=too-many-arguments
+    def __init__(self, module_name, actions_queue, returns_queue, processes_by_worker,
+                 timeout=300, max_plugins_output_length=8192, target=None,
+                 loaded_into='unknown'):
+        """
+
+        :param module_name:
+        :param actions_queue:
+        :param returns_queue:
+        :param processes_by_worker:
+        :param timeout:
+        :param max_plugins_output_length:
+        :param target:
+        :param loaded_into:
+        """
+        # Set our own identifier
+        cls = self.__class__
+        self.module_name = module_name
+        if module_name not in cls._worker_ids:
+            cls._worker_ids[module_name] = 1
+        self._id = '%s_%d' % (module_name, cls._worker_ids[module_name])
+        cls._worker_ids[module_name] += 1
+
+        # Update the logger with the worker identifier
+        global logger  # pylint: disable=invalid-name, global-statement
+        logger = logging.getLogger(__name__ + '.' + self._id)  # pylint: disable=C0103
+
+        self.actions_got = 0
+        self.actions_launched = 0
+        self.actions_finished = 0
 
         self.interrupted = False
 
-        self._mortal = mortal
         self._idletime = 0
         self._timeout = timeout
-        self.slave_q = None
         self.processes_by_worker = processes_by_worker
-        self._control_q = Queue()  # Private Control queue for the Worker
         # By default, take our own code
         if target is None:
             target = self.work
         self._process = Process(target=self._prework,
-                                args=(target, slave_q, returns_queue, self._control_q))
-        self.returns_queue = returns_queue
+                                args=(target, actions_queue, returns_queue))
+        logger.debug("[%s] created a new process", self.get_id())
+        # self.returns_queue = returns_queue
         self.max_plugins_output_length = max_plugins_output_length
         self.i_am_dying = False
         # Keep a trace where the worker is launched from (poller or reactionner?)
         self.loaded_into = loaded_into
-        if os.name != 'nt':
-            self.http_daemon = http_daemon
-        else:  # windows forker do not like serialize http/lock
-            self.http_daemon = None
 
     @staticmethod
     def _prework(real_work, *args):
-        """
-        Do the job...
+        """Do the job...
         :param real_work: function to execute
         :param args: arguments
         :return:
         """
         real_work(*args)
 
-    def is_mortal(self):
-        """
-        Accessor to _mortal attribute
+    def get_module(self):
+        """Accessor to get the worker module name
 
-        :return: A boolean indicating if the worker is mortal or not.
-        :rtype: bool
+        :return: the worker module name
+        :rtype: str
         """
-        return self._mortal
+        return self.module_name
+
+    def get_id(self):
+        """Accessor to get the worker identifier
+
+        :return: the worker auto-generated identifier
+        :rtype: str
+        """
+        return self._id
+
+    def get_pid(self):
+        """Accessor to get the worker process PID
+
+        :return: the worker PID
+        :rtype: int
+        """
+        return self._process.pid
 
     def start(self):
-        """
-        Start the worker. Wrapper for calling start method of the process attribute
+        """Start the worker. Wrapper for calling start method of the process attribute
 
         :return: None
         """
         self._process.start()
 
-    def terminate(self):
+    def manage_signal(self, sig, frame):  # pylint: disable=W0613
+        """Manage signals caught by the daemon
+        signal.SIGUSR1 : dump_memory
+        signal.SIGUSR2 : dump_object (nothing)
+        signal.SIGTERM, signal.SIGINT : terminate process
+
+        :param sig: signal caught by daemon
+        :type sig: str
+        :param frame: current stack frame
+        :type frame:
+        :return: None
         """
-        Wrapper for calling terminate method of the process attribute
+        logger.info("worker '%s' (pid=%d) received a signal: %s",
+                    self.get_id(), os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
+        # Do not do anything... our master daemon is managing our termination.
+        self.interrupted = True
+
+    def set_exit_handler(self):
+        """Set the signal handler to manage_signal (defined in this class)
+        Only set handlers for signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2
+
+        :return: None
+        """
+        signal.signal(signal.SIGINT, self.manage_signal)
+        signal.signal(signal.SIGTERM, self.manage_signal)
+        signal.signal(signal.SIGHUP, self.manage_signal)
+        signal.signal(signal.SIGQUIT, self.manage_signal)
+
+    def terminate(self):
+        """Wrapper for calling terminate method of the process attribute
         Also close queues (input and output) and terminate queues thread
 
         :return: None
@@ -147,16 +210,13 @@ class Worker(object):
         self._process.terminate()
         # Is we are with a Manager() way
         # there should be not such functions
-        if hasattr(self._control_q, 'close'):
-            self._control_q.close()
-            self._control_q.join_thread()
-        if hasattr(self.slave_q, 'close'):
-            self.slave_q.close()
-            self.slave_q.join_thread()
+        # todo: what is this???
+        # if hasattr(self.actions_queue, 'close'):
+        #     self.actions_queue.close()
+        #     self.actions_queue.join_thread()
 
     def join(self, timeout=None):
-        """
-         Wrapper for calling join method of the process attribute
+        """Wrapper for calling join method of the process attribute
 
         :param timeout: time to wait for the process to terminate
         :type timeout: int
@@ -165,93 +225,55 @@ class Worker(object):
         self._process.join(timeout)
 
     def is_alive(self):
-        """
-        Wrapper for calling is_alive method of the process attribute
+        """Wrapper for calling is_alive method of the process attribute
 
         :return: A boolean indicating if the process is alive
         :rtype: bool
         """
         return self._process.is_alive()
 
-    def is_killable(self):
-        """
-        Determine whether a process is killable :
-
-        * process is mortal
-        * idletime > timeout
-
-        :return: a boolean indicating if it is killable
-        :rtype: bool
-        """
-        return self._mortal and self._idletime > self._timeout
-
-    def add_idletime(self, amount):
-        """
-        Increment idletime
-
-        :param amount: time to increment in seconds
-        :type amount: int
-        :return: None
-        """
-        self._idletime += amount
-
-    def reset_idle(self):
-        """
-        Reset idletime (set to 0)
-
-        :return: None
-        """
-        self._idletime = 0
-
-    def send_message(self, msg):
-        """
-        Wrapper for calling put method of the _control_q attribute
-
-        :param msg: the message to put in queue
-        :type msg: str
-        :return: None
-        """
-        self._control_q.put(msg)
-
-    def set_zombie(self):
-        """
-        Set the process as zombie (mortal to False)
-
-        :return:None
-        """
-        self._mortal = False
-
-    def get_new_checks(self):
-        """
-        Get new checks if less than nb_checks_max
+    def get_new_checks(self, queue, return_queue):
+        """Get new checks if less than nb_checks_max
         If no new checks got and no check in queue, sleep for 1 sec
         REF: doc/alignak-action-queues.png (3)
 
         :return: None
         """
         try:
+            logger.debug("get_new_checks: %s / %s", len(self.checks), self.processes_by_worker)
             while len(self.checks) < self.processes_by_worker:
-                msg = self.slave_q.get(block=False)
+                msg = queue.get_nowait()
                 if msg is not None:
-                    self.checks.append(msg.get_data())
+                    logger.debug("Got a message: %s", msg)
+                    if msg.get_type() == 'Do':
+                        logger.debug("Got an action: %s", msg.get_data())
+                        self.checks.append(msg.get_data())
+                        self.actions_got += 1
+                    elif msg.get_type() == 'ping':
+                        msg = Message(_type='pong', data='pong!', source=self._id)
+                        logger.debug("Queuing message: %s", msg)
+                        return_queue.put_nowait(msg)
+                        logger.debug("Queued")
+                    else:
+                        logger.warning("Ignoring message of type: %s", msg.get_type())
+        except Full:
+            logger.warning("Actions queue is full")
         except Empty:
+            logger.debug("Actions queue is empty")
             if not self.checks:
                 self._idletime += 1
-                time.sleep(1)
+                time.sleep(0.5)
         # Maybe the Queue() has been deleted by our master ?
-        except EOFError:  # pragma: no cover, hardly testable with unit tests...
-            logger.warning("[%s] My queue is no more available", self.uuid)
+        except (IOError, EOFError) as exp:
+            logger.warning("My actions queue is no more available: %s", str(exp))
             self.interrupted = True
-            return
-        # Maybe the Queue() is not available, if so, just return
-        # get back to work :)
-        except IOError:  # pragma: no cover, hardly testable with unit tests...
-            logger.warning("[%s] My queue is not available", self.uuid)
-            return
+        except Exception as exp:  # pylint: disable=W0703
+            logger.error("Failed getting messages in actions queue: %s", str(exp))
+
+        logger.debug("get_new_checks exit")
 
     def launch_new_checks(self):
-        """
-        Launch checks that are in status
+        """Launch checks that are in status
         REF: doc/alignak-action-queues.png (4)
 
         :return: None
@@ -259,53 +281,65 @@ class Worker(object):
         # queue
         for chk in self.checks:
             if chk.status == 'queue':
+                logger.debug("Launch check: %s", chk.uuid)
                 self._idletime = 0
-                res = chk.execute()
+                self.actions_launched += 1
+                process = chk.execute()
                 # Maybe we got a true big problem in the action launching
-                if res == 'toomanyopenfiles':
+                if process == 'toomanyopenfiles':
                     # We should die as soon as we return all checks
-                    logger.error("[%s] I am dying because of too many open files %s ... ",
-                                 self.uuid, chk)
+                    logger.error("I am dying because of too many open files: %s", chk)
                     self.i_am_dying = True
+                else:
+                    if not isinstance(process, basestring):
+                        logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
-    def manage_finished_checks(self):
-        """
-        Check the status of checks
+    def manage_finished_checks(self, queue):
+        """Check the status of checks
         if done, return message finished :)
         REF: doc/alignak-action-queues.png (5)
 
         :return: None
         """
         to_del = []
-        wait_time = 1
+        wait_time = 1.0
         now = time.time()
+        logger.debug("--- manage finished checks")
         for action in self.checks:
+            logger.debug("--- checking: last poll: %s, now: %s, wait_time: %s, action: %s",
+                         action.last_poll, now, action.wait_time, action)
             if action.status == 'launched' and action.last_poll < now - action.wait_time:
                 action.check_finished(self.max_plugins_output_length)
                 wait_time = min(wait_time, action.wait_time)
-                # If action done, we can launch a new one
-            if action.status in ('done', 'timeout'):
+            # If action done, we can launch a new one
+            if action.status in ['done', 'timeout']:
+                logger.debug("--- check done/timeout: %s", action.uuid)
+                self.actions_finished += 1
                 to_del.append(action)
                 # We answer to the master
-                # msg = Message(_id=self.uuid, _type='Result', data=action)
                 try:
-                    self.returns_queue.put(action)
-                except IOError, exp:  # pragma: no cover, hardly testable with unit tests...
-                    logger.error("[%s] Exiting: %s", self.uuid, exp)
-                    sys.exit(2)
-
-        # Little sleep
-        self.wait_time = wait_time
+                    msg = Message(_type='Done', data=action, source=self._id)
+                    logger.debug("Queuing message: %s", msg)
+                    queue.put_nowait(msg)
+                    logger.debug("Queued")
+                except (IOError, EOFError) as exp:
+                    logger.warning("My returns queue is no more available: %s", str(exp))
+                    # sys.exit(2)
+                except Exception as exp:  # pylint: disable=W0703
+                    logger.error("Failed putting messages in returns queue: %s", str(exp))
+            else:
+                logger.debug("--- not yet finished")
 
         for chk in to_del:
+            logger.debug("--- delete check: %s", chk.uuid)
             self.checks.remove(chk)
 
         # Little sleep
+        logger.debug("--- manage finished checks terminated, I will wait: %s", wait_time)
         time.sleep(wait_time)
 
     def check_for_system_time_change(self):  # pragma: no cover, hardly testable with unit tests...
-        """
-        Check if our system time change. If so, change our
+        """Check if our system time change. If so, change our
 
         :return: 0 if the difference < 900, difference else
         :rtype: int
@@ -316,110 +350,106 @@ class Worker(object):
         # Now set the new value for the tick loop
         self.t_each_loop = now
 
-        # return the diff if it need, of just 0
-        if abs(difference) > 900:
+        # If we have more than 15 min time change, we need to compensate it
+        # todo: confirm that 15 minutes is a good choice...
+        if abs(difference) > 900:  # pragma: no cover, not with unit tests...
             return difference
 
         return 0
 
-    def work(self, slave_q, returns_queue, control_q):  # pragma: no cover, not with unit tests
-        """
-        Wrapper function for work in order to catch the exception
+    def work(self, actions_queue, returns_queue):  # pragma: no cover, not unit tests
+        """Wrapper function for do_work in order to catch the exception
         to see the real work, look at do_work
 
-        :param slave_q: Global Queue Master->Slave
-        :type slave_q: Queue.Queue
+        :param actions_queue: Global Queue Master->Slave
+        :type actions_queue: Queue.Queue
         :param returns_queue: queue managed by manager
         :type returns_queue: Queue.Queue
-        :param control_q: Control Queue for the worker
-        :type control_q: Queue.Queue
         :return: None
         """
         try:
-            self.do_work(slave_q, returns_queue, control_q)
+            logger.info("[%s] (pid=%d) starting my job...", self.get_id(), os.getpid())
+            self.do_work(actions_queue, returns_queue)
+            logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
         # Catch any exception, try to print it and exit anyway
         except Exception:
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("[%s] exit with an unmanaged exception : %s",
-                         self.uuid, output.getvalue())
+                         self._id, output.getvalue())
             output.close()
             # Ok I die now
             raise
 
-    def do_work(self, slave_q, returns_queue, control_q):  # pragma: no cover, not with unit tests
-        """
-        Main function of the worker.
+    def do_work(self, actions_queue, returns_queue):  # pragma: no cover, unit tests
+        """Main function of the worker.
         * Get checks
         * Launch new checks
         * Manage finished checks
 
-        :param slave_q: Global Queue Master->Slave
-        :type slave_q: Queue.Queue
+        :param actions_queue: Global Queue Master->Slave
+        :type actions_queue: Queue.Queue
         :param returns_queue: queue managed by manager
         :type returns_queue: Queue.Queue
-        :param control_q: Control Queue for the worker
-        :type control_q: Queue.Queue
         :return: None
         """
         # restore default signal handler for the workers:
-        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        # signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        self.interrupted = False
+        self.set_exit_handler()
 
         self.set_proctitle()
 
         timeout = 1.0
         self.checks = []
-        self.returns_queue = returns_queue
-        self.slave_q = slave_q
         self.t_each_loop = time.time()
         while True:
             begin = time.time()
+            logger.debug("--- loop start: %s", begin)
 
             # If we are dying (big problem!) we do not
             # take new jobs, we just finished the current one
             if not self.i_am_dying:
                 # REF: doc/alignak-action-queues.png (3)
-                self.get_new_checks()
+                self.get_new_checks(actions_queue, returns_queue)
                 # REF: doc/alignak-action-queues.png (4)
                 self.launch_new_checks()
             # REF: doc/alignak-action-queues.png (5)
-            self.manage_finished_checks()
+            self.manage_finished_checks(returns_queue)
 
-            # Now get order from master
-            # Todo: does our master reaaly send this kind of message? Not found it anywhere!
-            try:
-                cmsg = control_q.get(block=False)
-                if cmsg.get_type() == 'Die':
-                    logger.warning("[%s] Dad say we are dying...", self.uuid)
-                    break
-            except Exception:  # pylint: disable=W0703
-                pass
+            logger.debug("loop middle, %d checks", len(self.checks))
 
-            # Maybe we ask us to die, if so, do it :)
+            # Maybe someone asked us to die, if so, do it :)
             if self.interrupted:
-                logger.warning("[%s] I die because someone asked ;)", self.uuid)
+                logger.info("I die because someone asked ;)")
                 break
 
             # Look if we are dying, and if we finish all current checks
             # if so, we really die, our master poller will launch a new
             # worker because we were too weak to manage our job :(
             if not self.checks and self.i_am_dying:
-                logger.warning("[%s] I die because I cannot do my job as I should "
-                               "(too many open files?)... forgive me please.", self.uuid)
+                logger.warning("I die because I cannot do my job as I should "
+                               "(too many open files?)... forgive me please.")
                 break
 
             # Manage a possible time change (our avant will be change with the diff)
             diff = self.check_for_system_time_change()
             begin += diff
+            logger.debug("loop check timechange: %s", diff)
 
             timeout -= time.time() - begin
             if timeout < 0:
                 timeout = 1.0
 
+            logger.debug("idle: %ss, checks: %d, actions (got: %d, launched: %d, finished: %d)",
+                         self._idletime, len(self.checks),
+                         self.actions_got, self.actions_launched, self.actions_finished)
+
+            logger.debug("+++ loop stop: timeout = %s", timeout)
+
     def set_proctitle(self):  # pragma: no cover, not with unit tests
-        """
-        Set the proctitle of this worker for readability purpose
+        """Set the proctitle of this worker for readability purpose
 
         :return: None
         """
-        setproctitle("alignak-%s worker" % self.loaded_into)
+        setproctitle("alignak-%s worker %s" % (self.loaded_into, self._id))

@@ -105,6 +105,12 @@ class GenericInterface(object):
         :return: boolean indicating if the daemon has a conf
         :rtype: bool
         """
+        if magic_hash is not None:
+            # Beware, we got an str in entry, not an int
+            magic_hash = int(magic_hash)
+            # I've got a conf and a good one
+            return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
+
         return self.app.cur_conf is not None
 
     @cherrypy.expose
@@ -130,6 +136,8 @@ class GenericInterface(object):
     def get_log_level(self):  # pylint: disable=R0201
         """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
+        TODO: I am quite sure that this function does not return
+        the real log level of the current daemon :(
         :return: current log level
         :rtype: str
         """
@@ -204,9 +212,6 @@ class GenericInterface(object):
         :return: managed configuration ids
         :rtype: dict
         """
-        # todo: let this print here?
-        print "The arbiter asked me what I manage. It's %s", self.app.what_i_managed()
-        logger.debug("The arbiter asked me what I manage. It's %s", self.app.what_i_managed())
         return self.app.what_i_managed()
 
     @cherrypy.expose
@@ -292,17 +297,25 @@ class GenericInterface(object):
         res = {}
 
         if hasattr(app, 'schedulers'):
-            for sched_id in app.schedulers:
-                sched = app.schedulers[sched_id]
-                lst = []
-                res[sched_id] = lst
-                for mod in app.q_by_mod:
-                    # In workers we've got actions send to queue - queue size
-                    for (q_id, queue) in app.q_by_mod[mod].items():
-                        lst.append({
-                            'scheduler_name': sched['name'],
-                            'module': mod,
-                            'queue_number': q_id,
-                            'queue_size': queue.qsize(),
-                            'return_queue_len': app.get_returns_queue_len()})
+            try:
+                # Get queue stats
+                for sched_id, sched in app.schedulers.iteritems():
+                    lst = []
+                    res[sched_id] = lst
+                    for mod in app.q_by_mod:
+                        # In workers we've got actions sent to queue - queue size
+                        for (worker_id, queue) in app.q_by_mod[mod].items():
+                            try:
+                                lst.append({
+                                    'scheduler_name': sched['name'],
+                                    'module': mod,
+                                    'worker': worker_id,
+                                    'worker_queue_size': queue.qsize(),
+                                    'return_queue_size': app.returns_queue.qsize()})
+                            except (IOError, EOFError):
+                                pass
+
+            except Exception:  # pylint: disable=broad-except
+                pass
+
         return res

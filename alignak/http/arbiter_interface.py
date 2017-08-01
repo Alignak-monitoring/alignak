@@ -33,22 +33,6 @@ class ArbiterInterface(GenericInterface):
     """Interface for HA Arbiter. The Slave/Master arbiter can get /push conf
 
     """
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash=0):
-        """Does the daemon got a configuration (internal) (HTTP GET)
-
-        :param magic_hash: magic hash of configuration
-        :type magic_hash: int
-        :return: True if the arbiter has the specified conf, False otherwise
-        :rtype: bool
-        """
-        # Beware, we got an str in entry, not an int
-        magic_hash = int(magic_hash)
-        # I've got a conf and a good one
-        return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
-
     @cherrypy.expose
     def put_conf(self, conf=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)

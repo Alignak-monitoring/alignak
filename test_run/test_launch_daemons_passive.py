@@ -145,7 +145,7 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Run daemons for 2 minutes
         self.run_and_check_alignak_daemons(240)
@@ -156,26 +156,26 @@ class TestLaunchDaemonsPassive(AlignakTest):
                 "[alignak.satellite] Passive mode enabled.",
                 # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 # Check warning
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 # Check critical
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 # Check timeout
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'scheduler': [
@@ -208,13 +208,13 @@ class TestLaunchDaemonsPassive(AlignakTest):
                 logs = []
                 for line in lines:
                     # Catches WARNING and ERROR logs
-                    if 'WARNING' in line:
+                    if 'WARNING:' in line:
                         print("line: %s" % line)
-                    if 'ERROR' in line or 'CRITICAL' in line:
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
                         errors_raised += 1
                         print("error: %s" % line)
                     # Catches INFO logs
-                    if 'INFO' in line:
+                    if 'INFO:' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()

@@ -60,14 +60,15 @@ class TestLaunchDaemonsSpare(AlignakTest):
             print("-----\n%s log file\n-----\n" % daemon)
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
-                    if 'WARNING' in line or daemon_errors:
+                    if 'WARNING:' in line or daemon_errors:
                         print(line[:-1])
-                    if 'ERROR' in line or 'CRITICAL' in line:
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
                         if not daemon_errors:
                             print(line[:-1])
                         daemon_errors = True
                         nb_errors += 1
-        print("No error logs raised when daemons loaded the modules")
+        if nb_errors == 0:
+            print("No error logs raised when daemons were running.")
 
         return nb_errors
 
@@ -206,6 +207,7 @@ class TestLaunchDaemonsSpare(AlignakTest):
 
         assert errors_raised == 0, "Some error logs were raised!"
 
+    @pytest.mark.skip("Currently no spare daemons tests")
     def test_daemons_spare(self):
         """ Running the Alignak daemons for a spare configuration
 

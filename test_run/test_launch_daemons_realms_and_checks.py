@@ -137,28 +137,26 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         print("Get information from log files...")
         nb_errors = 0
-        nb_warning = 0
+        nb_warnings = 0
         for daemon in ['arbiter'] + daemons_list:
             assert os.path.exists('/tmp/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
             daemon_errors = False
             print("-----\n%s log file\n-----\n" % daemon)
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
-                    if 'WARNING' in line or daemon_errors:
+                    if 'WARNING:' in line or daemon_errors:
                         print(line[:-1])
-                        if daemon == 'arbiter' \
-                                and 'Cannot call the additional groups setting with initgroups (Operation not permitted)' not in line \
-                                and 'Cannot call the additional groups setting with setgroups' not in line:
-                            nb_warning += 1
-                    if 'ERROR' in line or 'CRITICAL' in line:
+                        if daemon == 'arbiter' and 'Cannot call the additional groups ' not in line:
+                            nb_warnings += 1
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
                         if not daemon_errors:
                             print(line[:-1])
                         daemon_errors = True
                         nb_errors += 1
         assert nb_errors == 0, "Error logs raised!"
-        print("No error logs raised when daemons loaded the modules")
+        print("No error logs raised when daemons were running")
 
-        assert nb_warning == 0, "Warning logs raised!"
+        assert nb_warnings == 0, "Warning logs raised!"
 
         print("Stopping the daemons...")
         for name, proc in self.procs.items():
@@ -183,7 +181,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
 
         # Run daemons for 2 minutes
         self.run_and_check_alignak_daemons(120)
@@ -193,59 +191,59 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'poller': [
                 # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 # Check warning
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 # Check critical
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 # Check timeout
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 # Check unknown
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-north': [
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-south': [
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh' exited with return code 3",
+                "[alignak.action] Action '/tmp/dummy_command.sh' exited with return code 3",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 1'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 1' exited with return code 1",
+                "[alignak.action] Action '/tmp/dummy_command.sh 1' exited with return code 1",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0' exited with return code 0",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 2'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 2' exited with return code 2",
+                "[alignak.action] Action '/tmp/dummy_command.sh 2' exited with return code 2",
                 "[alignak.action] Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
-                "[alignak.action] Check for '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
+                "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
             ],
             'scheduler': [
                 # Internal host check
@@ -281,6 +279,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             ]
         }
 
+        errors_raised = 0
         for name in ['poller', 'poller-north', 'poller-south',
                      'scheduler', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
@@ -289,11 +288,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 lines = f.readlines()
                 logs = []
                 for line in lines:
-                    # Catches INFO logs
-                    if 'WARNING' in line:
+                    # Catches WARNING and ERROR logs
+                    if 'WARNING:' in line:
                         print("line: %s" % line)
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
+                        errors_raised += 1
+                        print("error: %s" % line)
                     # Catches INFO logs
-                    if 'INFO' in line:
+                    if 'INFO:' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
@@ -301,6 +303,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
                         logs.append(line)
 
             for log in expected_logs[name]:
-                print("Last log: %s" % log)
+                print("Last checked log %s: %s" % (name, log))
                 assert log in logs
 

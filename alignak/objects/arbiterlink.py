@@ -50,7 +50,8 @@ import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
-from alignak.http.client import HTTPEXCEPTIONS
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -86,7 +87,9 @@ class ArbiterLink(SatelliteLink):
         :return: dictionary with information of the satellite
         :rtype: dict
         """
-        return {'port': self.port, 'address': self.address, 'name': self.get_name(),
+        return {'port': self.port, 'address': self.address,
+                'name': self.get_name(), 'instance_id': self.uuid,
+                'timeout': self.timeout, 'data_timeout': self.data_timeout,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def do_not_run(self):
@@ -96,14 +99,25 @@ class ArbiterLink(SatelliteLink):
         :return: true if satellite not running
         :rtype: bool
         """
+        logger.debug("[%s] do_not_run", self.get_name())
+
         if self.con is None:
             self.create_connection()
+
         try:
             self.con.get('do_not_run')
-            return True
-        except HTTPEXCEPTIONS:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Connection error when sending do_not_run", self.get_name())
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending do_not_run", self.get_name())
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending do_not_run: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return False
+        else:
+            return True
+
+        return False
 
     def get_all_states(self):  # pragma: no cover, seems not to be used anywhere
         """Get states of all satellites
@@ -113,14 +127,26 @@ class ArbiterLink(SatelliteLink):
         :return: list of all states
         :rtype: list | None
         """
+        logger.debug("[%s] get_all_states", self.get_name())
+
         if self.con is None:
             self.create_connection()
+
         try:
             res = self.con.get('get_all_states')
-            return res
-        except HTTPEXCEPTIONS:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending get_all_states: %s",
+                           self.get_name(), str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending get_all_states: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return None
+        else:
+            return res
+
+        return None
 
     def get_objects_properties(self, table, properties=None):  # pragma: no cover,
         # seems not to be used anywhere
@@ -135,16 +161,28 @@ class ArbiterLink(SatelliteLink):
         :return: list of objects
         :rtype: list | None
         """
+        logger.debug("[%s] get_objects_properties", self.get_name())
+
         if properties is None:
             properties = []
         if self.con is None:
             self.create_connection()
+
         try:
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
-            return res
-        except HTTPEXCEPTIONS:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending get_objects_properties: %s",
+                           self.get_name(), str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending get_objects_properties: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return None
+        else:
+            return res
+
+        return None
 
 
 class ArbiterLinks(SatelliteLinks):

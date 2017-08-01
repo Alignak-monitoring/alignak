@@ -114,7 +114,7 @@ class TestWorkerTimeout(AlignakTest):
         n.module_type = "fork"
 
         # Send the job to the worker
-        msg = Message(_id=0, _type='Do', data=n)
+        msg = Message(_type='Do', data=n)
         to_queue.put(msg)
 
         # Now we simulate the Worker's work() routine. We can't call it
@@ -124,15 +124,16 @@ class TestWorkerTimeout(AlignakTest):
         w.slave_q = to_queue
 
         for i in xrange(1, 10):
-            w.get_new_checks()
+            w.get_new_checks(to_queue, from_queue)
             # During the first loop the sleeping command is launched
             w.launch_new_checks()
-            w.manage_finished_checks()
+            w.manage_finished_checks(from_queue)
             time.sleep(1)
 
         # The worker should have finished its job now, either correctly or with a timeout
-        o = from_queue.get()
+        msg = from_queue.get()
 
+        o = msg.get_data()
         self.assertEqual('timeout', o.status)
         self.assertEqual(3, o.exit_status)
         self.assertLess(o.execution_time, n.timeout+1)

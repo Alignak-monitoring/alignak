@@ -107,6 +107,19 @@ class Alignak(BaseSatellite):
         self.uri = None
         self.uri2 = None
 
+        # stats part
+        # --- copied from scheduler.py
+        self.nb_pulled_checks = 0
+        self.nb_pulled_actions = 0
+        # self.nb_checks_send = 0
+
+        self.nb_pushed_checks = 0
+        self.nb_pushed_actions = 0
+
+        self.nb_broks_send = 0
+        self.nb_pulled_broks = 0
+        # ---
+
         # And possible links for satellites
         # from now only pollers
         self.pollers = {}
@@ -202,13 +215,14 @@ class Alignak(BaseSatellite):
         :return: None
         TODO: Refactor with Daemon one
         """
-        logger.info("process %d received a signal: %s", os.getpid(), str(sig))
+        logger.info("scheduler process %d received a signal: %s", os.getpid(), str(sig))
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
             self.sched.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # usr2, dump objects
             self.sched.need_objects_dump = True
         else:  # if not, die :)
+            logger.info("scheduler process %d is dying...", os.getpid())
             self.sched.die()
             self.must_run = False
             Daemon.manage_signal(self, sig, frame)
@@ -225,23 +239,24 @@ class Alignak(BaseSatellite):
             return
         logger.info("New configuration received")
         self.setup_new_conf()
-        logger.info("New configuration loaded, scheduling Alignak: %s", self.sched.alignak_name)
+        logger.info("[%s] New configuration loaded, scheduling for Alignak: %s",
+                    self.name, self.sched.alignak_name)
         self.sched.run()
 
-    def setup_new_conf(self):
+    def setup_new_conf(self):  # pylint: disable=too-many-statements
         """Setup new conf received for scheduler
 
         :return: None
         """
         with self.conf_lock:
             self.clean_previous_run()
-            new_c = self.new_conf
-            logger.info("Sending us a configuration: %s", new_c['push_flavor'])
-            conf_raw = new_c['conf']
-            override_conf = new_c['override_conf']
-            modules = new_c['modules']
-            satellites = new_c['satellites']
-            instance_name = new_c['instance_name']
+            new_conf = self.new_conf
+            logger.info("[%s] Sending us a configuration", self.name)
+            conf_raw = new_conf['conf']
+            override_conf = new_conf['override_conf']
+            modules = new_conf['modules']
+            satellites = new_conf['satellites']
+            instance_name = new_conf['instance_name']
 
             # Ok now we can save the retention data
             if hasattr(self.sched, 'conf'):
@@ -249,9 +264,10 @@ class Alignak(BaseSatellite):
 
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(instance_name, 'scheduler',
-                              statsd_host=new_c['statsd_host'], statsd_port=new_c['statsd_port'],
-                              statsd_prefix=new_c['statsd_prefix'],
-                              statsd_enabled=new_c['statsd_enabled'])
+                              statsd_host=new_conf['statsd_host'],
+                              statsd_port=new_conf['statsd_port'],
+                              statsd_prefix=new_conf['statsd_prefix'],
+                              statsd_enabled=new_conf['statsd_enabled'])
 
             t00 = time.time()
             try:
@@ -261,8 +277,8 @@ class Alignak(BaseSatellite):
             logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
 
-            if 'scheduler_name' in new_c:
-                name = new_c['scheduler_name']
+            if 'scheduler_name' in new_conf:
+                name = new_conf['scheduler_name']
             else:
                 name = instance_name
             self.name = name
@@ -270,14 +286,20 @@ class Alignak(BaseSatellite):
             # Set my own process title
             self.set_proctitle(self.name)
 
+            logger.info("[%s] Received a new configuration, containing: ", self.name)
+            for key in new_conf:
+                logger.info("[%s] - %s", self.name, key)
+            logger.info("[%s] configuration identifiers: %s (%s)",
+                        self.name, new_conf['conf_uuid'], new_conf['push_flavor'])
+
             # Tag the conf with our data
             self.conf = conf
-            self.conf.push_flavor = new_c['push_flavor']
-            self.conf.alignak_name = new_c['alignak_name']
+            self.conf.push_flavor = new_conf['push_flavor']
+            self.conf.alignak_name = new_conf['alignak_name']
             self.conf.instance_name = instance_name
-            self.conf.skip_initial_broks = new_c['skip_initial_broks']
+            self.conf.skip_initial_broks = new_conf['skip_initial_broks']
             self.conf.accept_passive_unknown_check_results = \
-                new_c['accept_passive_unknown_check_results']
+                new_conf['accept_passive_unknown_check_results']
 
             self.cur_conf = conf
             self.override_conf = override_conf
@@ -305,7 +327,11 @@ class Alignak(BaseSatellite):
                     uri = '%s://%s:%s/' % (proto, sat['address'], sat['port'])
 
                     sats[sat_id]['uri'] = uri
+                    sats[sat_id]['con'] = None
+                    sats[sat_id]['running_id'] = 0
                     sats[sat_id]['last_connection'] = 0
+                    sats[sat_id]['connection_attempt'] = 0
+                    sats[sat_id]['max_failed_connections'] = 3
                     setattr(self, sat_type, sats)
                 logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
                 logger.info("We have our %s:", sat_type)
@@ -365,6 +391,7 @@ class Alignak(BaseSatellite):
             self.sched.add_brok(brok)
 
     def what_i_managed(self):
+        # pylint: disable=no-member
         """Get my managed dict (instance id and push_flavor)
 
         :return: dict containing instance_id key and push flavor value
@@ -401,6 +428,10 @@ class Alignak(BaseSatellite):
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
 
+            # todo:
+            # This function returns False if some problem is detected during initialization
+            # (eg. communication port not free)
+            # Perharps we should stop the initialization process and exit?
             self.do_daemon_init_and_start()
 
             self.load_modules_manager(self.name)
