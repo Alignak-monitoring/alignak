@@ -129,7 +129,7 @@ except ImportError, exp:  # pragma: no cover, not for unit tests...
         return []
 
 from alignak.log import setup_logger, get_logger_fds
-from alignak.http.daemon import HTTPDaemon, InvalidWorkDir, PortNotFree
+from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
@@ -150,6 +150,11 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
+
+
+class InvalidWorkDir(Exception):
+    """Exception raised when daemon workdir is invalid"""
+    pass
 
 
 class InvalidPidFile(Exception):
@@ -742,6 +747,7 @@ class Daemon(object):
         self.change_to_workdir()
         self.check_parallel_run()
         if not self.setup_communication_daemon():
+            logger.warning("I could not setup my communication daemon...")
             return False
 
         if self.is_daemon:
@@ -1395,6 +1401,8 @@ class Daemon(object):
         # Log daemon header
         for line in self.get_header():
             logger.info(line)
+
+        logger.info("My pid: %s", os.getpid())
 
         logger.info("My configuration: ")
         for prop, _ in self.properties.items():

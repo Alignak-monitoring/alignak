@@ -83,11 +83,6 @@ class Pyopenssl(pyOpenSSLAdapter):
         return cont
 
 
-class InvalidWorkDir(Exception):
-    """Exception raised when daemon workdir is invalid"""
-    pass
-
-
 class PortNotFree(Exception):
     """Exception raised when port is already used by another application"""
     pass
