@@ -698,7 +698,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
-            self.do_daemon_init_and_start()
+            if not self.do_daemon_init_and_start():
+                return
 
             # Set my own process title
             self.set_proctitle(self.myself.get_name())

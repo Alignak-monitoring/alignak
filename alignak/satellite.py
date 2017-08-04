@@ -1255,7 +1255,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # This function returns False if some problem is detected during initialization
             # (eg. communication port not free)
             # Perharps we should stop the initialization process and exit?
-            self.do_daemon_init_and_start()
+            if not self.do_daemon_init_and_start():
+                return
 
             self.do_post_daemon_init()
 
