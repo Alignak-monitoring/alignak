@@ -901,7 +901,7 @@ class Daemon(object):
         if (self.user == 'root' or self.group == 'root') and not insane:  # pragma: no cover
             logger.error("You want the application run under the root account?")
             logger.error("I do not agree with it. If you really want it, put:")
-            logger.error("idontcareaboutsecurity=yes")
+            logger.error("idontcareaboutsecurity=1")
             logger.error("in the config file")
             logger.error("Exiting")
             sys.exit(2)
