@@ -55,6 +55,7 @@ class Comment(AlignakObject):
     It contains data like author, type etc..
     """
 
+    my_type = 'comment'
     properties = {
         'entry_time':   IntegerProp(),
         'author':       StringProp(default='(Alignak)'),
@@ -63,7 +64,7 @@ class Comment(AlignakObject):
         'entry_type':   IntegerProp(),
         'source':       IntegerProp(),
         'expires':      BoolProp(),
-        'ref':  StringProp(default='')
+        'ref':  StringProp(default=''),
     }
 
     def __init__(self, params, parsing=True):
