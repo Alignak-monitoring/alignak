@@ -73,6 +73,7 @@ class Downtime(AlignakObject):
 
     """
 
+    my_type = 'downtime'
     properties = {
         'activate_me': StringProp(default=[]),
         'entry_time': IntegerProp(default=0, fill_brok=['full_status']),
