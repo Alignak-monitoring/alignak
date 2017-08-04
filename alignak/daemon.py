@@ -217,7 +217,7 @@ class Daemon(object):
         'hard_ssl_name_check':
             BoolProp(default=False),
         'idontcareaboutsecurity':
-            BoolProp(default=False),
+            BoolProp(default=True),
         'daemon_enabled':
             BoolProp(default=True),
         'spare':
@@ -886,12 +886,12 @@ class Daemon(object):
         """ Change to user of the running program.
         If change failed we sys.exit(2)
 
-        :param insane: boolean to allow running as root
+        :param insane: boolean to allow running as root (True to allow)
         :type insane: bool
         :return: None
         """
         if insane is None:
-            insane = not self.idontcareaboutsecurity
+            insane = self.idontcareaboutsecurity
 
         # TODO: change user on nt
         if os.name == 'nt':  # pragma: no cover, no Windows implementation currently
