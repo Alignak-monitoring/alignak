@@ -74,7 +74,7 @@ class TestModules(AlignakTest):
         assert self.conf_is_correct
         self.show_configuration_logs()
 
-        # No arbiter modules created
+        # The only existing arbiter module is Example declared in the configuration
         modules = [m.module_alias for m in self.arbiter.myself.modules]
         assert modules == ['Example']
 
@@ -116,6 +116,21 @@ class TestModules(AlignakTest):
         self.assert_any_log_match(re.escape(
             "I correctly loaded my modules: [Example]"
         ))
+
+    def test_arbiter_configuration_module(self):
+        """ Test arbiter configuration loading
+
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('./cfg/cfg_arbiter_configuration_module.cfg')
+        assert self.conf_is_correct
+        self.show_configuration_logs()
+        self.show_logs()
+
+        # The arbiter module is 'backend_arbiter' declared in the configuration
+        modules = [m.module_alias for m in self.arbiter.myself.modules]
+        assert modules == ['backend_arbiter']
 
     def test_missing_module_detection(self):
         """ Detect missing module configuration

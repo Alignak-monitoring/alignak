@@ -635,21 +635,25 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
 
         params = []
-        logger.info("Got Alignak global configuration:")
-        for key, value in alignak_cfg.iteritems():
-            logger.info("- %s = %s", key, value)
-            # properties starting with an _ character are "transformed" to macro variables
-            if key.startswith('_'):
-                key = '$' + key[1:].upper()
-            # properties valued as None are filtered
-            if value is None:
-                continue
-            # properties valued as empty strings are filtered
-            if value == '':
-                continue
-            # set properties as legacy Shinken configuration files
-            params.append("%s=%s" % (key, value))
-        self.conf.load_params(params)
+        if alignak_cfg:
+            logger.info("Got Alignak global configuration:")
+            for key, value in alignak_cfg.iteritems():
+                logger.info("- %s = %s", key, value)
+                # properties starting with an _ character are "transformed" to macro variables
+                if key.startswith('_'):
+                    key = '$' + key[1:].upper()
+                # properties valued as None are filtered
+                if value is None:
+                    continue
+                # properties valued as None string are filtered
+                if value == 'None':
+                    continue
+                # properties valued as empty strings are filtered
+                if value == '':
+                    continue
+                # set properties as legacy Shinken configuration files
+                params.append("%s=%s" % (key, value))
+            self.conf.load_params(params)
 
     def launch_analyse(self):  # pragma: no cover, not used currently (see #607)
         """ Dump the number of objects we have for each type to a JSON formatted file
