@@ -1738,8 +1738,6 @@ class Scheduler(object):  # pylint: disable=R0902
             "flap_detection_enabled": self.conf.enable_flap_detection,
             "failure_prediction_enabled": 0,
             "process_performance_data": self.conf.process_performance_data,
-            "obsess_over_hosts": self.conf.obsess_over_hosts,
-            "obsess_over_services": self.conf.obsess_over_services,
             "modified_host_attributes": 0,
             "modified_service_attributes": 0,
             "global_host_event_handler": self.conf.global_host_event_handler.get_name()

@@ -549,7 +549,7 @@ class TestConfig(AlignakTest):
         self.show_logs()
 
         # Error messages
-        assert len(self.configuration_errors) == 10
+        assert len(self.configuration_errors) == 12
         self.assert_any_cfg_log_match(re.escape(
             "Your configuration parameters 'status_file = /tmp/status' and "
             "'object_cache_file = /tmp/cache' need to use an external module such "
@@ -584,7 +584,13 @@ class TestConfig(AlignakTest):
             "ochp_command parameter is not managed."
         ))
         self.assert_any_cfg_log_match(re.escape(
+            "obsess_over_hosts parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
             "ocsp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "obsess_over_services parameter is not managed."
         ))
         self.assert_any_cfg_log_match(re.escape(
             "Check global parameters failed"

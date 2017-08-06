@@ -420,14 +420,6 @@ class ExternalCommandManager:
             {'global': True, 'args': []},
         'start_executing_svc_checks':
             {'global': True, 'args': []},
-        'start_obsessing_over_host':
-            {'global': False, 'args': ['host']},
-        'start_obsessing_over_host_checks':
-            {'global': True, 'args': []},
-        'start_obsessing_over_svc':
-            {'global': False, 'args': ['service']},
-        'start_obsessing_over_svc_checks':
-            {'global': True, 'args': []},
         'stop_accepting_passive_host_checks':
             {'global': True, 'args': []},
         'stop_accepting_passive_svc_checks':
@@ -435,14 +427,6 @@ class ExternalCommandManager:
         'stop_executing_host_checks':
             {'global': True, 'args': []},
         'stop_executing_svc_checks':
-            {'global': True, 'args': []},
-        'stop_obsessing_over_host':
-            {'global': False, 'args': ['host']},
-        'stop_obsessing_over_host_checks':
-            {'global': True, 'args': []},
-        'stop_obsessing_over_svc':
-            {'global': False, 'args': ['service']},
-        'stop_obsessing_over_svc_checks':
             {'global': True, 'args': []},
         'launch_svc_event_handler':
             {'global': False, 'args': ['service']},
@@ -1321,7 +1305,6 @@ class ExternalCommandManager:
         MODATTR_FLAP_DETECTION_ENABLED          16
         MODATTR_FAILURE_PREDICTION_ENABLED      32
         MODATTR_PERFORMANCE_DATA_ENABLED        64
-        MODATTR_OBSESSIVE_HANDLER_ENABLED       128
         MODATTR_EVENT_HANDLER_COMMAND           256
         MODATTR_CHECK_COMMAND                   512
         MODATTR_NORMAL_CHECK_INTERVAL           1024
@@ -1347,7 +1330,7 @@ class ExternalCommandManager:
         for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
                         "MODATTR_PASSIVE_CHECKS_ENABLED", "MODATTR_EVENT_HANDLER_ENABLED",
                         "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
-                        "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_FRESHNESS_CHECKS_ENABLED",
                         "MODATTR_EVENT_HANDLER_COMMAND", "MODATTR_CHECK_COMMAND",
                         "MODATTR_NORMAL_CHECK_INTERVAL", "MODATTR_RETRY_CHECK_INTERVAL",
                         "MODATTR_MAX_CHECK_ATTEMPTS", "MODATTR_FRESHNESS_CHECKS_ENABLED",
@@ -1565,7 +1548,6 @@ class ExternalCommandManager:
         MODATTR_FLAP_DETECTION_ENABLED          16
         MODATTR_FAILURE_PREDICTION_ENABLED      32
         MODATTR_PERFORMANCE_DATA_ENABLED        64
-        MODATTR_OBSESSIVE_HANDLER_ENABLED       128
         MODATTR_EVENT_HANDLER_COMMAND           256
         MODATTR_CHECK_COMMAND                   512
         MODATTR_NORMAL_CHECK_INTERVAL           1024
@@ -1591,7 +1573,7 @@ class ExternalCommandManager:
         for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
                         "MODATTR_PASSIVE_CHECKS_ENABLED", "MODATTR_EVENT_HANDLER_ENABLED",
                         "MODATTR_FLAP_DETECTION_ENABLED", "MODATTR_PERFORMANCE_DATA_ENABLED",
-                        "MODATTR_OBSESSIVE_HANDLER_ENABLED", "MODATTR_FRESHNESS_CHECKS_ENABLED",
+                        "MODATTR_FRESHNESS_CHECKS_ENABLED",
                         "MODATTR_EVENT_HANDLER_COMMAND", "MODATTR_CHECK_COMMAND",
                         "MODATTR_NORMAL_CHECK_INTERVAL", "MODATTR_RETRY_CHECK_INTERVAL",
                         "MODATTR_MAX_CHECK_ATTEMPTS", "MODATTR_FRESHNESS_CHECKS_ENABLED",
@@ -3833,64 +3815,6 @@ class ExternalCommandManager:
             self.conf.explode_global_conf()
             self.daemon.get_and_register_update_program_status_brok()
 
-    def start_obsessing_over_host(self, host):
-        """Enable obsessing over host for a host
-        Format of the line that triggers function call::
-
-        START_OBSESSING_OVER_HOST;<host_name>
-
-        :param host: host to obsess over
-        :type host: alignak.objects.host.Host
-        :return: None
-        """
-        if not host.obsess_over_host:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            host.obsess_over_host = True
-            self.daemon.get_and_register_status_brok(host)
-
-    def start_obsessing_over_host_checks(self):
-        """Enable obsessing over host check (globally)
-        Format of the line that triggers function call::
-
-        START_OBSESSING_OVER_HOST_CHECKS
-
-        :return: None
-        """
-        if not self.conf.obsess_over_hosts:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            self.conf.obsess_over_hosts = True
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
-    def start_obsessing_over_svc(self, service):
-        """Enable obsessing over service for a service
-        Format of the line that triggers function call::
-
-        START_OBSESSING_OVER_SVC;<host_name>;<service_description>
-
-        :param service: service to obsess over
-        :type service: alignak.objects.service.Service
-        :return: None
-        """
-        if not service.obsess_over_service:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            service.obsess_over_service = True
-            self.daemon.get_and_register_status_brok(service)
-
-    def start_obsessing_over_svc_checks(self):
-        """Enable obsessing over service check (globally)
-        Format of the line that triggers function call::
-
-        START_OBSESSING_OVER_SVC_CHECKS
-
-        :return: None
-        """
-        if not self.conf.obsess_over_services:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            self.conf.obsess_over_services = True
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
     def stop_accepting_passive_host_checks(self):
         """Disable passive host check submission (globally)
         Format of the line that triggers function call::
@@ -3944,64 +3868,6 @@ class ExternalCommandManager:
         if self.conf.execute_service_checks:
             self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.conf.execute_service_checks = False
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
-    def stop_obsessing_over_host(self, host):
-        """Disable obsessing over host for a host
-        Format of the line that triggers function call::
-
-        STOP_OBSESSING_OVER_HOST;<host_name>
-
-        :param host: host to obsess over
-        :type host: alignak.objects.host.Host
-        :return: None
-        """
-        if host.obsess_over_host:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            host.obsess_over_host = False
-            self.daemon.get_and_register_status_brok(host)
-
-    def stop_obsessing_over_host_checks(self):
-        """Disable obsessing over host check (globally)
-        Format of the line that triggers function call::
-
-        STOP_OBSESSING_OVER_HOST_CHECKS
-
-        :return: None
-        """
-        if self.conf.obsess_over_hosts:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            self.conf.obsess_over_hosts = False
-            self.conf.explode_global_conf()
-            self.daemon.get_and_register_update_program_status_brok()
-
-    def stop_obsessing_over_svc(self, service):
-        """Disable obsessing over service for a service
-        Format of the line that triggers function call::
-
-        STOP_OBSESSING_OVER_SVC;<host_name>;<service_description>
-
-        :param service: service to obsess over
-        :type service: alignak.objects.service.Service
-        :return: None
-        """
-        if service.obsess_over_service:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            service.obsess_over_service = False
-            self.daemon.get_and_register_status_brok(service)
-
-    def stop_obsessing_over_svc_checks(self):
-        """Disable obsessing over service check (globally)
-        Format of the line that triggers function call::
-
-        STOP_OBSESSING_OVER_SVC_CHECKS
-
-        :return: None
-        """
-        if self.conf.obsess_over_services:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_OBSESSIVE_HANDLER_ENABLED"].value
-            self.conf.obsess_over_services = False
             self.conf.explode_global_conf()
             self.daemon.get_and_register_update_program_status_brok()
 

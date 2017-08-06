@@ -485,27 +485,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'notification_timeout':
             IntegerProp(default=30, class_inherit=[(Host, None), (Service, None)]),
 
-        'ocsp_timeout':
-            IntegerProp(default=15, class_inherit=[(Service, None)]),
-
-        'ochp_timeout':
-            IntegerProp(default=15, class_inherit=[(Host, None)]),
-
         'perfdata_timeout':
             IntegerProp(default=5, class_inherit=[(Host, None), (Service, None)]),
-
-        # Todo: Is it still of any interest to keep this Nagios distributed feature?
-        'obsess_over_services':
-            BoolProp(default=False, class_inherit=[(Service, 'obsess_over')]),
-
-        'ocsp_command':
-            StringProp(default='', class_inherit=[(Service, None)]),
-
-        'obsess_over_hosts':
-            BoolProp(default=False, class_inherit=[(Host, 'obsess_over')]),
-
-        'ochp_command':
-            StringProp(default='', class_inherit=[(Host, None)]),
 
         'process_performance_data':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
@@ -550,11 +531,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'service_perfdata_file_processing_command':
             StringProp(managed=False, default=None),
 
-        # Todo: not used anywhere in the source code
+        # Hosts/services orphanage check
+        # 'services_time_to_orphanage':
+        #     IntegerProp(default=300, class_inherit=[(Service, 'time_to_orphanage')]),
+
         'check_for_orphaned_services':
             BoolProp(default=True, class_inherit=[(Service, 'check_for_orphaned')]),
 
-        # Todo: not used anywhere in the source code
+        # 'hosts_time_to_orphanage':
+        #     IntegerProp(default=300, class_inherit=[(Service, 'time_to_orphanage')]),
+
         'check_for_orphaned_hosts':
             BoolProp(default=True, class_inherit=[(Host, 'check_for_orphaned')]),
 
@@ -810,8 +796,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # At deserialization, those are dictionaries
         # TODO: Separate parsing instance from recreated ones
-        for prop in ['ocsp_command', 'ochp_command',
-                     'host_perfdata_command', 'service_perfdata_command',
+        for prop in ['host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
             if prop in params and isinstance(params[prop], dict):
                 # We recreate the object
@@ -858,7 +843,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      'checkmodulations', 'macromodulations', 'businessimpactmodulations',
                      'resultmodulations', 'contacts', 'contactgroups',
                      'servicegroups', 'timeperiods', 'commands',
-                     'escalations', 'ocsp_command', 'ochp_command',
+                     'escalations',
                      'host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
             if getattr(self, prop) in [None, 'None']:
@@ -1353,8 +1338,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.services.optimize_service_search(self.hosts)
 
         # First linkify myself like for some global commands
-        self.linkify_one_command_with_commands(self.commands, 'ocsp_command')
-        self.linkify_one_command_with_commands(self.commands, 'ochp_command')
         self.linkify_one_command_with_commands(self.commands, 'host_perfdata_command')
         self.linkify_one_command_with_commands(self.commands, 'service_perfdata_command')
         self.linkify_one_command_with_commands(self.commands, 'global_host_event_handler')
@@ -2172,13 +2155,33 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.error(msg)
             self.configuration_errors.append(msg)
             valid &= False
-        if self.ochp_command:
+        if getattr(self, 'obsess_over_hosts', None):
+            msg = "obsess_over_hosts parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
+        if getattr(self, 'ochp_command', None):
             msg = "ochp_command parameter is not managed."
             logger.error(msg)
             self.configuration_errors.append(msg)
             valid &= False
-        if self.ocsp_command:
+        if getattr(self, 'ochp_timeout', None):
+            msg = "ochp_timeout parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
+        if getattr(self, 'obsess_over_services', None):
+            msg = "obsess_over_services parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
+        if getattr(self, 'ocsp_command', None):
             msg = "ocsp_command parameter is not managed."
+            logger.error(msg)
+            self.configuration_errors.append(msg)
+            valid &= False
+        if getattr(self, 'ocsp_timeout', None):
+            msg = "ocsp_timeout parameter is not managed."
             logger.error(msg)
             self.configuration_errors.append(msg)
             valid &= False
