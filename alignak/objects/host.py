@@ -128,8 +128,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
-        'obsess_over_host':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
             ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),

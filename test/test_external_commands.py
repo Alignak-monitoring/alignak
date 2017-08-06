@@ -2144,20 +2144,6 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: disable / enable checks
-        assert not host.obsess_over_host
-
-        excmd = '[%d] START_OBSESSING_OVER_HOST;test_host_0' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert host.obsess_over_host
-
-        excmd = '[%d] STOP_OBSESSING_OVER_HOST;test_host_0' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert not host.obsess_over_host
-
-        #  ---
-        # External command: disable / enable checks
         assert host.flap_detection_enabled
 
         excmd = '[%d] DISABLE_HOST_FLAP_DETECTION;test_host_0' % time.time()
@@ -2390,20 +2376,6 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: disable / enable checks
-        assert svc.obsess_over_service
-
-        excmd = '[%d] STOP_OBSESSING_OVER_SVC;test_host_0;test_ok_0' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert not svc.obsess_over_service
-
-        excmd = '[%d] START_OBSESSING_OVER_SVC;test_host_0;test_ok_0' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert svc.obsess_over_service
-
-        #  ---
-        # External command: disable / enable checks
         assert not svc.flap_detection_enabled
 
         excmd = '[%d] ENABLE_SVC_FLAP_DETECTION;test_host_0;test_ok_0' % time.time()
@@ -2569,33 +2541,6 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert self._scheduler.external_commands_manager.conf.accept_passive_service_checks
-
-        #  ---
-        # External command: disable / enable global obsessing hosts checks
-        assert not self._scheduler.external_commands_manager.conf.obsess_over_hosts
-        excmd = '[%d] START_OBSESSING_OVER_HOST_CHECKS' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert self._scheduler.external_commands_manager.conf.obsess_over_hosts
-        excmd = '[%d] STOP_OBSESSING_OVER_HOST_CHECKS' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert not self._scheduler.external_commands_manager.conf.obsess_over_hosts
-
-        #  ---
-        # External command: disable / enable global obsessing hosts checks
-        assert not self._scheduler.external_commands_manager.conf.obsess_over_services
-        self._scheduler.external_commands_manager.conf.modified_attributes = 0
-        excmd = '[%d] START_OBSESSING_OVER_SVC_CHECKS' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert self._scheduler.external_commands_manager.conf.obsess_over_services
-        assert self._scheduler.external_commands_manager.conf.modified_attributes == 128
-        excmd = '[%d] STOP_OBSESSING_OVER_SVC_CHECKS' % time.time()
-        self._scheduler.run_external_command(excmd)
-        self.external_command_loop()
-        assert not self._scheduler.external_commands_manager.conf.obsess_over_services
-        assert self._scheduler.external_commands_manager.conf.modified_attributes == 128
 
     def test_special_commands(self):
         """

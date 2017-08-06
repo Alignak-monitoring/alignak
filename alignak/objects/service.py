@@ -123,8 +123,6 @@ class Service(SchedulingItem):
             BoolProp(default=False, fill_brok=['full_status']),
         'check_command':
             StringProp(fill_brok=['full_status']),
-        'obsess_over_service':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
             ListProp(default=['o', 'w', 'c', 'u', 'x'], fill_brok=['full_status'],
                      split_on_coma=True),

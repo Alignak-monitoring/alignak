@@ -85,10 +85,6 @@ DICT_MODATTR = {
         ModAttr("MODATTR_PERFORMANCE_DATA_ENABLED", "process_performance_data", 64),
     "process_performance_data":
         ModAttr("MODATTR_PERFORMANCE_DATA_ENABLED", "process_performance_data", 64),
-    "MODATTR_OBSESSIVE_HANDLER_ENABLED":
-        ModAttr("MODATTR_OBSESSIVE_HANDLER_ENABLED", "obsess_over_service", 128),
-    "obsess_over_service":
-        ModAttr("MODATTR_OBSESSIVE_HANDLER_ENABLED", "obsess_over_service", 128),
     "MODATTR_EVENT_HANDLER_COMMAND": ModAttr("MODATTR_EVENT_HANDLER_COMMAND", "event_handler", 256),
     "event_handler": ModAttr("MODATTR_EVENT_HANDLER_COMMAND", "event_handler", 256),
     "MODATTR_CHECK_COMMAND": ModAttr("MODATTR_CHECK_COMMAND", "check_command", 512),

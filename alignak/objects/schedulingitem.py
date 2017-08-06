@@ -1868,7 +1868,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     if triggers[t].trigger_broker_raise_enabled) == 0:
             self.broks.append(self.get_check_result_brok())
 
-        self.get_obsessive_compulsive_processor_command(hosts, macromodulations, timeperiods)
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
         self.get_snapshot(hosts, macromodulations, timeperiods)
@@ -3052,36 +3051,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         pass
-
-    def get_obsessive_compulsive_processor_command(self, hosts, macromodulations, timeperiods):
-        """Create action for obsessive compulsive commands if such option is enabled
-
-        :param macromodulations: Macro modulations objects, used in commands (notif, check)
-        :type macromodulations: alignak.objects.macromodulation.Macromodulations
-        :return: None
-        """
-        cls = self.__class__
-        if not cls.obsess_over or not getattr(self, 'obsess_over_service', True)\
-                or not getattr(self, 'obsess_over_host', True):
-            return
-
-        # todo: to be deprecated Nagios feature
-        # pragma: no cover, to be deprecated
-        macroresolver = MacroResolver()
-        if self.my_type == "service":
-            data = [hosts[self.host], self]
-            command = cls.ocsp_command
-            timeout = cls.ocsp_timeout
-        else:
-            data = [self]
-            command = cls.ochp_command
-            timeout = cls.ochp_timeout
-
-        cmd = macroresolver.resolve_command(command, data, macromodulations, timeperiods)
-        event_h = EventHandler({'command': cmd, 'timeout': timeout})
-
-        # ok we can put it in our temp action queue
-        self.actions.append(event_h)
 
     def notification_is_blocked_by_item(self, notification_period, hosts, services, n_type,
                                         t_wished=None):  # pragma: no cover, base function
