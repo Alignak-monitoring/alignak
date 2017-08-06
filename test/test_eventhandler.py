@@ -25,6 +25,7 @@ This file test all cases of eventhandler
 """
 
 import time
+import pytest
 
 from alignak_test import AlignakTest
 
@@ -35,6 +36,17 @@ class TestEventhandler(AlignakTest):
     """
     This class test the eventhandler
     """
+
+    def test_global_unknown_event_handler(self):
+        """ Test global event handler unknown command
+
+        :return: None
+        """
+        self.print_header()
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/cfg_global_event_handlers_not_found.cfg')
+        assert self.conf_is_correct is False
+        self.show_configuration_logs()
 
     def test_global_event_handler(self):
         """ Test global event handler scenario 1:

@@ -765,7 +765,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if params is None:
             params = {}
 
-        # At deserialization, thoses are dict
+        # At deserialization, those are dictionaries
         # TODO: Separate parsing instance from recreated ones
         for prop in ['ocsp_command', 'ochp_command',
                      'host_perfdata_command', 'service_perfdata_command',
@@ -818,7 +818,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      'escalations', 'ocsp_command', 'ochp_command',
                      'host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
-            if getattr(self, prop) is None:
+            if getattr(self, prop) in [None, 'None']:
                 res[prop] = None
             else:
                 res[prop] = getattr(self, prop).serialize()
@@ -2157,6 +2157,32 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if not self.check_error_on_hard_unmanaged_parameters():
             valid = False
             self.add_error("Check global parameters failed")
+
+        # If we got global event handlers, they should be valid
+        if self.global_host_event_handler and not self.global_host_event_handler.is_valid():
+            msg = "[%s::%s] global host event_handler '%s' is invalid" \
+                  % (self.my_type, self.get_name(), self.global_host_event_handler.command)
+            self.configuration_errors.append(msg)
+            valid = False
+
+        if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
+            msg = "[%s::%s] global service event_handler '%s' is invalid" \
+                  % (self.my_type, self.get_name(), self.global_service_event_handler .command)
+            self.configuration_errors.append(msg)
+            valid = False
+
+        # If we got global performance data commands, they should be valid
+        if self.host_perfdata_command and not self.host_perfdata_command.is_valid():
+            msg = "[%s::%s] global host performance data command '%s' is invalid" \
+                  % (self.my_type, self.get_name(), self.host_perfdata_command.command)
+            self.configuration_errors.append(msg)
+            valid = False
+
+        if self.service_perfdata_command and not self.service_perfdata_command.is_valid():
+            msg = "[%s::%s] global service performance data command '%s' is invalid" \
+                  % (self.my_type, self.get_name(), self.service_perfdata_command.command)
+            self.configuration_errors.append(msg)
+            valid = False
 
         for obj in ['hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
                     'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
