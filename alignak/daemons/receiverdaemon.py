@@ -345,7 +345,7 @@ class Receiver(Satellite):
             is_active = sched['active']
             if not is_active:
                 logger.warning("The scheduler '%s' is not active, it is not possible to push "
-                               "external commands from its connection!", sched.scheduler_name)
+                               "external commands from its connection!", sched.get_name())
                 return
 
             # If there are some commands...
@@ -361,7 +361,7 @@ class Receiver(Satellite):
 
             if con is None:
                 logger.warning("The connection for the scheduler '%s' cannot be established, it is "
-                               "not possible to push external commands.", sched.scheduler_name)
+                               "not possible to push external commands.", sched.get_name())
                 continue
 
             sent = False
@@ -372,17 +372,17 @@ class Receiver(Satellite):
                 con.post('run_external_commands', {'cmds': cmds})
                 sent = True
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("[%s] %s", sched.scheduler_name, str(exp))
+                logger.warning("[%s] %s", sched.get_name(), str(exp))
                 sched['con'] = None
                 continue
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the scheduler '%s' when "
-                               "sending external commands: %s", sched.scheduler_name, str(exp))
+                               "sending external commands: %s", sched.get_name(), str(exp))
                 sched['con'] = None
                 continue
             except HTTPClientException as exp:  # pragma: no cover, simple protection
                 logger.error("Error with the scheduler '%s' when "
-                             "sending external commands: %s", sched.scheduler_name, str(exp))
+                             "sending external commands: %s", sched.get_name(), str(exp))
                 sched['con'] = None
                 continue
             except AttributeError as exp:  # pragma: no cover, simple protection
