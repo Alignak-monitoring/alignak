@@ -132,7 +132,6 @@ class TestConfig(AlignakTest):
         assert self.arbiter.conf.conf_is_correct
 
         # Configuration inner properties are valued
-        assert self.arbiter.conf.prefix == ''
         assert self.arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
         assert self.arbiter.conf.config_base_dir == 'cfg'
         # Default Alignak name is the arbiter name

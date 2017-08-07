@@ -104,8 +104,8 @@ class PropertiesTester(object):
 class TestConfig(PropertiesTester, AlignakTest):
 
     unused_props = [
-        'log_file', 'object_cache_file', 'precached_object_file',
-        'temp_file', 'status_file', 'status_update_interval',
+        'log_file', 'object_cache_file', 'precached_object_file', 'resource_file',
+        'temp_file', 'temp_path', 'status_file', 'status_update_interval',
         'command_check_interval', 'external_command_buffer_slots',
         'check_for_updates', 'bare_update_checks',
         'retain_state_information', 'use_retained_program_state',
@@ -154,7 +154,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('config_base_dir', ''),
         ('triggers_dir', ''),
         ('packs_dir', ''),
-        ('resource_file', '/tmp/resources.txt'),
+        # ('resource_file', '/tmp/resources.txt'),
         ('enable_notifications', True),
         ('execute_service_checks', True),
         ('accept_passive_service_checks', True),
