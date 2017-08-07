@@ -129,6 +129,7 @@ NO_LONGER_USED = ('This parameter is not longer take from the main file, but mus
                   'in the status_dat broker module instead. But Alignak will create you one '
                   'if there are no present and use this parameter in it, so no worry.')
 NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
+NOT_MANAGED = ('This Nagios legacy parameter is not managed by Alignak. Ignoring...')
 
 
 class Config(Item):  # pylint: disable=R0904,R0902
@@ -198,12 +199,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(default=''),
 
         # Used for the PREFIX macro
-        # Alignak prefix does not axist as for Nagios meaning.
+        # Alignak prefix does not exist as for Nagios meaning.
         # It is better to set this value as an empty string rather than a meaningless information!
         'prefix':
-            StringProp(default=''),
+            UnusedProp(text=NOT_MANAGED),
 
-        # Used for the PREFIX macro
+        # Used for the ALIGNAK macro
         # Alignak instance name is set as tha arbiter name if it is not defined in the config
         'alignak_name':
             StringProp(default=''),
@@ -215,24 +216,30 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
 
+        # Triggers directory
         'triggers_dir':
             StringProp(default=''),
 
+        # Packs directory
         'packs_dir':
             StringProp(default=''),
 
         # Inner objects cache file for Nagios CGI
         'object_cache_file':
-            UnusedProp(text=NO_LONGER_USED),
+            UnusedProp(text=NOT_MANAGED),
 
         'precached_object_file':
-            UnusedProp(text='Alignak does not use precached_object_files. Skipping.'),
+            UnusedProp(text=NOT_MANAGED),
 
+        # Unused Nagios configuration parameter
         'resource_file':
-            StringProp(default='/tmp/resources.txt'),
+            UnusedProp(text=NOT_MANAGED),
 
+        # Unused Nagios configuration parameter
         'temp_file':
-            UnusedProp(text='Temporary files are not used in the alignak architecture. Skipping'),
+            UnusedProp(text=NOT_MANAGED),
+        'temp_path':
+            UnusedProp(text=NOT_MANAGED),
 
         # Inner retention self created module parameter
         'status_file':
@@ -241,31 +248,35 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'status_update_interval':
             UnusedProp(text=NO_LONGER_USED),
 
+        # Enable the notifications
         'enable_notifications':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
+        # Service checks
         'execute_service_checks':
             BoolProp(default=True, class_inherit=[(Service, 'execute_checks')]),
 
         'accept_passive_service_checks':
             BoolProp(default=True, class_inherit=[(Service, 'accept_passive_checks')]),
 
+        # Host checks
         'execute_host_checks':
             BoolProp(default=True, class_inherit=[(Host, 'execute_checks')]),
 
         'accept_passive_host_checks':
             BoolProp(default=True, class_inherit=[(Host, 'accept_passive_checks')]),
 
+        # Enable event handlers
         'enable_event_handlers':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
         # Inner log self created module parameter
         'log_file':
-            UnusedProp(text=NO_LONGER_USED),
+            UnusedProp(text=NOT_MANAGED),
         'log_rotation_method':
-            CharProp(default='d'),
+            UnusedProp(text=NOT_MANAGED),
         'log_archive_path':
-            StringProp(default='/usr/local/alignak/var/log/archives'),
+            UnusedProp(text=NOT_MANAGED),
 
         # Inner external commands self created module parameter
         'check_external_commands':
@@ -277,6 +288,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'external_command_buffer_slots':
             UnusedProp(text='We do not limit the external command slot.'),
 
+        # Application updates checks
         'check_for_updates':
             UnusedProp(text='network administrators will never allow such communication between '
                             'server and the external world. Use your distribution packet manager '
@@ -286,11 +298,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'bare_update_checks':
             UnusedProp(text=None),
 
+        # Inner status.dat self created module parameters
         'retain_state_information':
             UnusedProp(text='sorry, retain state information will not be implemented '
                             'because it is useless.'),
 
-        # Inner status.dat self created module parameters
         'state_retention_file':
             StringProp(default=''),
 
@@ -413,11 +425,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(managed=False, default=180),
 
         'translate_passive_host_checks':
-            UnusedProp(text='Alignak passive checks management make this parameter unuseful.'),
+            UnusedProp(text='Alignak passive checks management makes this parameter unuseful.'),
             # BoolProp(managed=False, default=True),
 
         'passive_host_checks_are_soft':
-            UnusedProp(text='Alignak passive checks management make this parameter unuseful.'),
+            UnusedProp(text='Alignak passive checks management makes this parameter unuseful.'),
             # BoolProp(managed=False, default=True),
 
         # Todo: not used anywhere in the source code
@@ -446,11 +458,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text='this option is automatic in Python processes'),
 
         'child_processes_fork_twice':
-            UnusedProp(text='fork twice is not use.'),
+            UnusedProp(text='fork twice is not used.'),
 
         'enable_environment_macros':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
+        # Flapping management
         'enable_flap_detection':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
@@ -466,10 +479,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'high_host_flap_threshold':
             IntegerProp(default=30, class_inherit=[(Host, 'global_high_flap_threshold')]),
 
+        'flap_history':
+            IntegerProp(default=20, class_inherit=[(Host, None), (Service, None)]),
+
         # Todo: not used anywhere in the source code
         'soft_state_dependencies':
             BoolProp(managed=False, default=False),
 
+        # Check timeout
         'service_check_timeout':
             IntegerProp(default=60, class_inherit=[(Service, 'check_timeout')]),
 
@@ -485,6 +502,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'notification_timeout':
             IntegerProp(default=30, class_inherit=[(Host, None), (Service, None)]),
 
+        # Performance data management
         'perfdata_timeout':
             IntegerProp(default=5, class_inherit=[(Host, None), (Service, None)]),
 
@@ -532,18 +550,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(managed=False, default=None),
 
         # Hosts/services orphanage check
-        # 'services_time_to_orphanage':
-        #     IntegerProp(default=300, class_inherit=[(Service, 'time_to_orphanage')]),
-
         'check_for_orphaned_services':
             BoolProp(default=True, class_inherit=[(Service, 'check_for_orphaned')]),
-
-        # 'hosts_time_to_orphanage':
-        #     IntegerProp(default=300, class_inherit=[(Service, 'time_to_orphanage')]),
 
         'check_for_orphaned_hosts':
             BoolProp(default=True, class_inherit=[(Host, 'check_for_orphaned')]),
 
+        # Freshness checks
         'check_service_freshness':
             BoolProp(default=True, class_inherit=[(Service, 'global_check_freshness')]),
 
@@ -586,7 +599,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_regexp_matching':
             BoolProp(managed=False,
                      default=False,
-                     _help='If you go some host or service definition like prod*, '
+                     _help='If you got some host or service definition like prod*, '
                            'it will surely failed from now, sorry.'),
         'use_true_regexp_matching':
             BoolProp(managed=False, default=None),
@@ -603,6 +616,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'broker_module':
             StringProp(default=''),
 
+        # Debug
         'debug_file':
             UnusedProp(text=None),
 
@@ -620,9 +634,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'daemon_thread_pool_size':
             IntegerProp(default=8),
-
-        'flap_history':
-            IntegerProp(default=20, class_inherit=[(Host, None), (Service, None)]),
 
         'max_plugins_output_length':
             IntegerProp(default=8192, class_inherit=[(Host, None), (Service, None)]),
@@ -688,7 +699,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
     }
 
     macros = {
-        'PREFIX':               'prefix',
+        'PREFIX':               '',
         'ALIGNAK':              'alignak_name',
         'MAINCONFIGFILE':       'main_config_file',
         'STATUSDATAFILE':       '',
