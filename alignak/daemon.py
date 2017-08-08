@@ -485,8 +485,8 @@ class Daemon(object):
 
         :return: None
         """
-        logger.info("Changing working directory to: %s", self.workdir)
         self.workdir = os.path.abspath(self.workdir)
+        logger.info("Changing working directory to: %s", self.workdir)
         try:
             os.chdir(self.workdir)
         except Exception, exp:
@@ -572,7 +572,7 @@ class Daemon(object):
             return
 
         try:
-            logger.info("Killing process: '%s'", pid)
+            logger.info("Killing process, pid=%d", pid)
             os.kill(pid, 0)
         except Exception as err:  # pylint: disable=W0703
             # consider any exception as a stale pidfile.
@@ -583,10 +583,11 @@ class Daemon(object):
             return
 
         if not self.do_replace:
-            raise SystemExit("valid pidfile exists (pid=%s) and not forced to replace. Exiting."
+            raise SystemExit("valid pidfile exists (pid=%d) and not forced to replace. Exiting."
                              % pid)
 
-        self.debug_output.append("Replacing previous instance %d" % pid)
+        logger.info("Replacing previous instance, pid=%d", pid)
+        self.debug_output.append("Replacing previous instance, pid=%d" % pid)
         try:
             pgid = os.getpgid(pid)
             os.killpg(pgid, signal.SIGQUIT)
