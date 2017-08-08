@@ -305,3 +305,54 @@ class TestPassiveChecks(AlignakTest):
 
         assert "x" == svc6.freshness_state
         assert 3600 == svc6.freshness_threshold
+
+    def test_freshness_expiration_repeat(self):
+        """ We test the running property freshness_expired to know if we are in expiration freshness
+        or not
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_passive_checks.cfg')
+        self.clear_logs()
+        assert self.conf_is_correct
+        self.sched_ = self.schedulers['scheduler-master'].sched
+
+        # Check freshness on each scheduler tick
+        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+
+        host_b = self.sched_.hosts.find_by_name("test_host_B")
+
+        assert "x" == host_b.freshness_state
+
+        host_b.freshness_threshold = 1
+        host_b.__class__.additional_freshness_latency = 1
+
+        host = self.sched_.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+
+        # Set the host UP - this will run the scheduler loop to check for freshness
+        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(3)
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(3)
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(3)
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(0.1)
+
+        assert "UNREACHABLE" == host_b.state
+        assert True == host_b.freshness_expired
+        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 1
+
+        # Now receive check_result (passive), so we must be outside of freshness_expired
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_B;0;Host is UP' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+
+        assert "UP" == host_b.state
+        assert False == host_b.freshness_expired
+

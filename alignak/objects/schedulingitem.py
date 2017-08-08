@@ -429,7 +429,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'last_snapshot':  IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         # Keep the string of the last command launched for this element
         'last_check_command': StringProp(default=''),
-
+        # Define if we are in the freshness expiration period
+        'freshness_expired':
+            BoolProp(default=False, fill_brok=['full_status'], retention=True),
     })
 
     macros = {
@@ -674,7 +676,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         (self.freshness_threshold + cls.additional_freshness_latency):
                     # Do not raise a check for passive only checked hosts
                     # when not in check period ...
-                    if not self.active_checks_enabled:
+                    if not self.active_checks_enabled and not self.freshness_expired:
                         timeperiod = timeperiods[self.check_period]
                         if timeperiod is None or timeperiod.is_time_valid(now):
                             # Raise a log
@@ -682,6 +684,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                 int(now - self.last_state_update),
                                 int(now - self.freshness_threshold)
                             )
+                            self.freshness_expired = True
                             # And a new check
                             chk = self.launch_check(now, hosts, services, timeperiods,
                                                     macromodulations, checkmodulations, checks)
@@ -1557,7 +1560,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype list[alignak.check.Check]
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
-
+        if not chk.freshness_expired:
+            self.freshness_expired = False
         # ============ MANAGE THE CHECK ============ #
         if 'TEST_LOG_ACTIONS' in os.environ:
             if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
