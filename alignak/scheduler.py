@@ -2260,9 +2260,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        # Then we see if we've got info in the retention file
-        self.retention_load()
-
         # Finally start the external modules now we got our data
         self.hook_point('pre_scheduler_mod_start')
         self.sched_daemon.modules_manager.start_external_instances(late_start=True)
