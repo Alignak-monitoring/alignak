@@ -597,8 +597,11 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                         key=lambda x: x.creation_time)
+        actions = []
+        # I do this because sort take too times
+        if number != len(self.schedulers['scheduler-master'].sched.actions):
+            actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                             key=lambda x: x.creation_time)
         self.assertEqual(number, len(self.schedulers['scheduler-master'].sched.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, '

@@ -23,6 +23,7 @@ This file test notifications
 """
 
 import time
+import copy
 from alignak_test import AlignakTest
 
 
@@ -215,8 +216,8 @@ class TestNotifications(AlignakTest):
         host.event_handler_enabled = False
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly (1/2 second)
-        svc.notification_interval = 0.1 / 12
+        # notification_interval is in minute, to have 0.8s,
+        svc.notification_interval = 0.8 / 60
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
@@ -232,21 +233,45 @@ class TestNotifications(AlignakTest):
         assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
+        # create master notification + create first notification
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(1)
         assert "HARD" == svc.state_type
+        # 2 actions
+        # * 1 - VOID = notification master
+        # * 2 - notifier.pl to test_contact
         self.assert_actions_count(2)
         assert svc.current_notification_number == 1, 'Critical HARD, must have 1 ' \
                                                      'notification'
 
+        # no changes, because we are not in period to create a second notification
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(2)
+
+        # second notification creation
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(1)
         self.assert_actions_count(3)
         assert svc.current_notification_number == 2
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(1)
         self.assert_actions_count(4)
+        assert svc.current_notification_number == 3
+
+        # test first notification sent
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                         key=lambda x: x.creation_time)
+        action = copy.copy(actions[1])
+        action.exit_status = 0
+        action.status = 'launched'
+        action.status = ''
+        # and return to the scheduler
+        self.schedulers['scheduler-master'].sched.put_results(action)
+        # re-loop scheduler to manage this
+        self.external_command_loop()
+        self.external_command_loop()
+        self.assert_actions_count(3)
         assert svc.current_notification_number == 3
 
         now = time.time()
@@ -254,7 +279,7 @@ class TestNotifications(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(1)
-        self.assert_actions_count(4)
+        self.assert_actions_count(3)
         assert svc.current_notification_number == 3
 
         now = time.time()
@@ -262,33 +287,31 @@ class TestNotifications(AlignakTest):
         self.schedulers['scheduler-master'].sched.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(1)
-        self.assert_actions_count(5)
+        self.assert_actions_count(4)
         assert svc.current_notification_number == 4
 
         self.show_actions()
-        # 1st notification for service critical
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        # 1st notification for service critical => send so deleted (zombie)
 
         # 2nd notification for service critical
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
 
         # 3rd notification for service critical
-        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
 
         # 4th notification for service critical
-        self.assert_actions_match(3, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(3, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
 
-        self.assert_actions_match(4, 'VOID', 'command')
+        self.assert_actions_match(3, 'VOID', 'command')
 
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(1)
         assert 0 == svc.current_notification_number
-        self.assert_actions_count(6)
+        self.assert_actions_count(5)
         self.show_actions()
 
         # Notified simultaneously ... so -1 for the action index !
