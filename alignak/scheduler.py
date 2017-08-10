@@ -813,8 +813,8 @@ class Scheduler(object):  # pylint: disable=R0902
             if act.is_a != 'notification':
                 continue
             if act.status == 'scheduled' and act.is_launchable(now):
-                logger.debug("Scheduler got a master notification: %s", repr(act))
                 if not act.contact:
+                    logger.debug("Scheduler got a master notification: %s", repr(act))
                     logger.debug("No contact for this notification")
                     # This is a "master" notification created by create_notifications.
                     # It wont sent itself because it has no contact.
