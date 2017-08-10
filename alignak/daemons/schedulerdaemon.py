@@ -258,6 +258,10 @@ class Alignak(BaseSatellite):
             satellites = new_conf['satellites']
             instance_name = new_conf['instance_name']
 
+            # Ok now we can save the retention data
+            if hasattr(self.sched, 'conf'):
+                self.sched.update_retention_file(forced=True)
+
             # horay, we got a name, we can set it in our stats objects
             statsmgr.register(instance_name, 'scheduler',
                               statsd_host=new_conf['statsd_host'],
