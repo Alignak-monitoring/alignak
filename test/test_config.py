@@ -115,7 +115,7 @@ class TestConfig(AlignakTest):
 
     def test_config_conf_inner_properties(self):
         """ Default configuration has no loading problems ... and inner default proerties are
-        correctly values
+        correctly valued
 
         :return: None
         """
@@ -133,9 +133,44 @@ class TestConfig(AlignakTest):
 
         # Configuration inner properties are valued
         assert self.arbiter.conf.prefix == ''
-        assert self.arbiter.conf.main_config_file == \
-                         os.path.abspath('cfg/cfg_default.cfg')
+        assert self.arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
         assert self.arbiter.conf.config_base_dir == 'cfg'
+        # Default Alignak name is the arbiter name
+        assert self.arbiter.conf.alignak_name == 'arbiter-master'
+
+    def test_config_conf_inner_properties(self):
+        """ Default configuration with an alignak_name property
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default_alignak_name.cfg')
+        assert self.conf_is_correct
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        # Arbiter configuration is correct
+        assert self.arbiter.conf.conf_is_correct
+
+        # Alignak name is defined in the arbiter
+        assert self.arbiter.conf.alignak_name == 'my_alignak'
+        assert self.arbiter.alignak_name == 'my_alignak'
+
+        # Alignak name is defined in the configuration dispatched to the schedulers
+        assert len(self.arbiter.dispatcher.schedulers) == 1
+        for scheduler in self.arbiter.dispatcher.schedulers:
+            assert 'alignak_name' in scheduler.conf_package
+            assert scheduler.conf_package.get('alignak_name') == 'my_alignak'
+
+        # Alignak name is defined in the configuration dispatched to the satellites
+        assert len(self.arbiter.dispatcher.satellites) == 4
+        for satellite in self.arbiter.dispatcher.satellites:
+            print(satellite.cfg)
+            assert 'alignak_name' in satellite.cfg
+            assert satellite.cfg.get('alignak_name') == 'my_alignak'
 
     def test_config_ok_no_declared_daemons(self):
         """ Default configuration has no loading problems ... but no daemons are defined

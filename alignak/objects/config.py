@@ -2194,6 +2194,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     self.conf_is_correct)
         valid = self.conf_is_correct
 
+        # Check if alignak_name is defined
+        if not self.alignak_name:
+            logger.info('Alignak name is not defined, using the main arbiter name...')
+            for arbiter in self.arbiters:
+                if not arbiter.spare:
+                    self.alignak_name = arbiter.arbiter_name
+                    break
+        logger.info('Alignak name is: %s', self.alignak_name)
+
         # Globally unmanaged parameters
         if not self.read_config_silent:
             logger.info('Checking global parameters...')
