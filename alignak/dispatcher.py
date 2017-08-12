@@ -455,7 +455,8 @@ class Dispatcher:
                         'conf': realm.serialized_confs[conf.uuid],
                         'override_conf': sched.get_override_configuration(),
                         'modules': sched.modules,
-                        'alignak_name': self.arbiter.arbiter_name,
+                        'arbiter_name': self.arbiter.arbiter_name,
+                        'alignak_name': conf.alignak_name,
                         'satellites': satellites,
                         'instance_name': sched.scheduler_name,
                         'conf_uuid': conf.uuid,
@@ -554,6 +555,7 @@ class Dispatcher:
                 continue
             logger.info('[%s] Preparing configuration for the %s: %s',
                         realm.get_name(), sat_type, sat.get_name())
+            sat.cfg['alignak_name'] = cfg.alignak_name
             sat.cfg['schedulers'][conf_uuid] = realm.to_satellites[sat_type][conf_uuid]
             if sat.manage_arbiters:
                 sat.cfg['arbiters'] = arbiters_cfg
