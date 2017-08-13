@@ -341,6 +341,9 @@ class Receiver(Satellite):
         # Now for all alive schedulers, send the commands
         for sched_id in self.schedulers:
             sched = self.schedulers[sched_id]
+            # TODO:  sched should be a SatelliteLink object and, thus, have a get_name() method
+            # but sometimes when an exception is raised because the scheduler is not available
+            # this is not True ... sched is a simple dictionary!
 
             is_active = sched['active']
             if not is_active:
