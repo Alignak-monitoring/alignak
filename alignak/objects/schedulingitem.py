@@ -157,7 +157,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'notifications_enabled':
             BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'stalking_options':
-            ListProp(default=[''], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=['full_status'], merging='join'),
         'notes':
             StringProp(default='', fill_brok=['full_status']),
         'notes_url':
