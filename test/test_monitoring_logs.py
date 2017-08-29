@@ -402,6 +402,189 @@ class TestMonitoringLogs(AlignakTest):
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
 
+    def test_passive_checks_host(self):
+        """ Test logs for external commands - passive host checks
+
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        assert self.conf_is_correct
+
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        # -----------------------------
+        # Host part
+        # -----------------------------
+        # Get and configure host
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router which we depend of
+        host.event_handler_enabled = False
+        assert host is not None
+
+        now = int(time.time())
+
+        # Receive passive host check Down
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'DOWN' == host.state
+        assert 'SOFT' == host.state_type
+        assert 'Host is dead' == host.output
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'DOWN' == host.state
+        assert 'SOFT' == host.state_type
+        assert 'Host is dead' == host.output
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'DOWN' == host.state
+        assert 'HARD' == host.state_type
+        assert 'Host is dead' == host.output
+
+        # Extract monitoring logs
+        monitoring_logs = []
+        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+                print("Log (unicode: %s): %s" % (isinstance(data['message'], unicode), data['message']))
+
+        # Passive host check log contains:
+        # - host name,
+        # - host status,
+        # - output,
+        # - performance data and
+        # - long output
+        # All are separated with a semi-colon
+        expected_logs = [
+            (u'info',
+             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+            (u'info',
+             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+            (u'info',
+             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+            (u'warning',
+             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+            (u'warning',
+             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+            (u'warning',
+             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+            (u'error',
+             u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
+            (u'error',
+             u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
+            (u'error',
+             u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
+            (u'error',
+             u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead')
+        ]
+        for log_level, log_message in expected_logs:
+            print("Msg: %s" % log_message)
+            assert (log_level, log_message) in monitoring_logs
+
+    def test_passive_checks_service(self):
+        """ Test logs for external commands - passive service checks
+
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        assert self.conf_is_correct
+
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        now = int(time.time())
+
+        # -----------------------------
+        # Service part
+        # -----------------------------
+        # Get host
+        host = self._sched.hosts.find_by_name('test_host_0')
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+        host.active_checks_enabled = True
+        host.passive_checks_enabled = True
+        assert host is not None
+
+        # Get service
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
+        svc.active_checks_enabled = True
+        svc.passive_checks_enabled = True
+        assert svc is not None
+
+        # Passive checks for host and service
+        # ---------------------------------------------
+        # Receive passive host check Up
+        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
+        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'UP' == host.state
+        assert 'Host is UP' == host.output
+
+        # Service is going ok ...
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
+                'Service is OK|rtt=9999;5;10;0;10000' % now
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'OK' == svc.state
+        assert 'Service is OK' == svc.output
+        assert 'rtt=9999;5;10;0;10000' == svc.perf_data
+
+        # Service is going ok ... with long output
+        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
+                'Service is OK and have some special characters: àéèüäï' \
+                '|rtt=9999;5;10;0;10000' \
+                '\r\nLong output... also some specials: àéèüäï' % now
+        self._sched.run_external_command(excmd)
+        self.external_command_loop()
+        assert 'OK' == svc.state
+        assert u'Service is OK and have some special characters: àéèüäï' == svc.output
+        assert 'rtt=9999;5;10;0;10000' == svc.perf_data
+        assert u'Long output... also some specials: àéèüäï' == svc.long_output
+
+        # Extract monitoring logs
+        monitoring_logs = []
+        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+                print("Log (unicode: %s): %s" % (isinstance(data['message'], unicode), data['message']))
+
+        # Passive service check log contains:
+        # - host name,
+        # - host status,
+        # - output,
+        # - performance data and
+        # - long output
+        # All are separated with a semi-colon
+        expected_logs = [
+            (u'info',
+             u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
+             u'Service is OK|rtt=9999;5;10;0;10000' % now),
+            (u'info',
+             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;Service is OK;;rtt=9999;5;10;0;10000'),
+
+            (u'info',
+             u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
+             u'Service is OK and have some special characters: àéèüäï'
+             u'|rtt=9999;5;10;0;10000'
+             u'\r\nLong output... also some specials: àéèüäï' % now),
+            (u'info',
+             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;'
+             u'Service is OK and have some special characters: àéèüäï;'
+             u'Long output... also some specials: àéèüäï;'
+             u'rtt=9999;5;10;0;10000')
+        ]
+        for log_level, log_message in expected_logs:
+            print("Msg: %s" % log_message)
+            assert (log_level, log_message) in monitoring_logs
+
     def test_special_external_commands(self):
         """ Test logs for special external commands
         :return:

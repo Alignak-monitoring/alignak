@@ -2973,7 +2973,47 @@ class ExternalCommandManager:
         :return: None
         TODO: say that check is PASSIVE
         """
-        # raise a PASSIVE check only if needed
+        now = time.time()
+        cls = host.__class__
+
+        # If globally disabled OR host disabled, do not launch..
+        if not cls.accept_passive_checks or not host.passive_checks_enabled:
+            return
+
+        try:
+            plugin_output = plugin_output.decode('utf8', 'ignore')
+            logger.debug('%s > Passive host check plugin output: %s',
+                         host.get_full_name(), plugin_output)
+        except UnicodeError:
+            pass
+
+        # Maybe the check is just too old, if so, bail out!
+        if self.current_timestamp < host.last_chk:
+            logger.warning('%s > Passive host check is too old. Ignoring...',
+                           host.get_full_name())
+            return
+
+        chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
+                                self.daemon.macromodulations, self.daemon.checkmodulations,
+                                self.daemon.checks, force=True)
+        # Should not be possible to not find the check, but if so, don't crash
+        if not chk:
+            logger.error('%s > Passive host check failed. None check launched !?',
+                         host.get_full_name())
+            return
+        # Now we 'transform the check into a result'
+        # So exit_status, output and status is eaten by the host
+        chk.exit_status = status_code
+        chk.get_outputs(plugin_output, host.max_plugins_output_length)
+        chk.status = 'waitconsume'
+        chk.check_time = self.current_timestamp  # we are using the external command timestamps
+        # Set the corresponding host's check type to passive
+        chk.set_type_passive()
+        # self.daemon.nb_check_received += 1
+        self.send_an_element(chk)
+        # Ok now this result will be read by the scheduler the next loop
+
+        # raise a passive check log only if needed
         if self.conf.log_passive_checks:
             log_level = 'info'
             if status_code == 1:  # DOWN
@@ -2981,40 +3021,12 @@ class ExternalCommandManager:
             if status_code == 2:  # UNREACHABLE
                 log_level = 'warning'
             brok = make_monitoring_log(
-                log_level, 'PASSIVE HOST CHECK: %s;%d;%s'
+                log_level, 'PASSIVE HOST CHECK: %s;%d;%s;%s;%s'
                 % (host.get_name().decode('utf8', 'ignore'),
-                   status_code, plugin_output.decode('utf8', 'ignore'))
+                   status_code, chk.output, chk.long_output, chk.perf_data)
             )
             # Send a brok to our arbiter else to our scheduler
             self.send_an_element(brok)
-
-        now = time.time()
-        cls = host.__class__
-        # If globally disable OR locally, do not launch
-        if cls.accept_passive_checks and host.passive_checks_enabled:
-            # Maybe the check is just too old, if so, bail out!
-            if self.current_timestamp < host.last_chk:
-                return
-
-            chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
-                                    self.daemon.macromodulations, self.daemon.checkmodulations,
-                                    self.daemon.checks, force=True)
-            # Should not be possible to not find the check, but if so, don't crash
-            if not chk:
-                logger.error('%s > Passive host check failed. None check launched !?',
-                             host.get_full_name())
-                return
-            # Now we 'transform the check into a result'
-            # So exit_status, output and status is eaten by the host
-            chk.exit_status = status_code
-            chk.get_outputs(plugin_output, host.max_plugins_output_length)
-            chk.status = 'waitconsume'
-            chk.check_time = self.current_timestamp  # we are using the external command timestamps
-            # Set the corresponding host's check type to passive
-            chk.set_type_passive()
-            # self.daemon.nb_check_received += 1
-            self.send_an_element(chk)
-            # Ok now this result will be read by scheduler the next loop
 
     def process_host_output(self, host, plugin_output):
         """Process host output
@@ -3044,7 +3056,53 @@ class ExternalCommandManager:
         :type plugin_output: str
         :return: None
         """
-        # raise a PASSIVE check only if needed
+        now = time.time()
+        cls = service.__class__
+
+        # If globally disabled OR service disabled, do not launch..
+        if not cls.accept_passive_checks or not service.passive_checks_enabled:
+            return
+
+        try:
+            plugin_output = plugin_output.decode('utf8', 'ignore')
+            logger.debug('%s > Passive service check plugin output: %s',
+                         service.get_full_name(), plugin_output)
+        except UnicodeError:
+            pass
+
+        # Maybe the check is just too old, if so, bail out!
+        if self.current_timestamp < service.last_chk:
+            logger.warning('%s > Passive service check is too old. Ignoring...',
+                           service.get_full_name())
+            return
+
+        # Create a check object from the external command
+        chk = service.launch_check(now, self.hosts, self.services, self.timeperiods,
+                                   self.daemon.macromodulations, self.daemon.checkmodulations,
+                                   self.daemon.checks, force=True)
+        # Should not be possible to not find the check, but if so, don't crash
+        if not chk:
+            logger.error('%s > Passive service check failed. None check launched !?',
+                         service.get_full_name())
+            return
+
+        # Now we 'transform the check into a result'
+        # So exit_status, output and status is eaten by the service
+        chk.exit_status = return_code
+        chk.get_outputs(plugin_output, service.max_plugins_output_length)
+
+        logger.debug('%s > Passive service check output: %s',
+                     service.get_full_name(), chk.output)
+
+        chk.status = 'waitconsume'
+        chk.check_time = self.current_timestamp  # we are using the external command timestamps
+        # Set the corresponding service's check type to passive
+        chk.set_type_passive()
+        # self.daemon.nb_check_received += 1
+        self.send_an_element(chk)
+        # Ok now this result will be read by the scheduler the next loop
+
+        # raise a passive check log only if needed
         if self.conf.log_passive_checks:
             log_level = 'info'
             if return_code == 1:  # WARNING
@@ -3052,42 +3110,14 @@ class ExternalCommandManager:
             if return_code == 2:  # CRITICAL
                 log_level = 'error'
             brok = make_monitoring_log(
-                log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s' % (
+                log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s;%s;%s' % (
                     self.hosts[service.host].get_name().decode('utf8', 'ignore'),
                     service.get_name().decode('utf8', 'ignore'),
-                    return_code, plugin_output.decode('utf8', 'ignore')
+                    return_code, chk.output, chk.long_output, chk.perf_data
                 )
             )
-            # Send a brok to our arbiter else to our scheduler
+            # Notify the brok
             self.send_an_element(brok)
-
-        now = time.time()
-        cls = service.__class__
-        # If globally disable OR locally, do not launch
-        if cls.accept_passive_checks and service.passive_checks_enabled:
-            # Maybe the check is just too old, if so, bail out!
-            if self.current_timestamp < service.last_chk:
-                return
-
-            chk = service.launch_check(now, self.hosts, self.services, self.timeperiods,
-                                       self.daemon.macromodulations, self.daemon.checkmodulations,
-                                       self.daemon.checks, force=True)
-            # Should not be possible to not find the check, but if so, don't crash
-            if not chk:
-                logger.error('%s > Passive service check failed. None check launched !?',
-                             service.get_full_name())
-                return
-            # Now we 'transform the check into a result'
-            # So exit_status, output and status is eaten by the service
-            chk.exit_status = return_code
-            chk.get_outputs(plugin_output, service.max_plugins_output_length)
-            chk.status = 'waitconsume'
-            chk.check_time = self.current_timestamp  # we are using the external command timestamps
-            # Set the corresponding service's check type to passive
-            chk.set_type_passive()
-            # self.daemon.nb_check_received += 1
-            self.send_an_element(chk)
-            # Ok now this result will be reap by scheduler the next loop
 
     def process_service_output(self, service, plugin_output):
         """Process service output
