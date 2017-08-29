@@ -714,11 +714,6 @@ class Daemon(object):
         del self.fpid
         self.pid = os.getpid()
         self.debug_output.append("We are now fully daemonized :) pid=%d" % self.pid)
-        # We can now output some previously silenced debug output
-        logger.info("Printing stored debug messages prior to our daemonization")
-        for stored in self.debug_output:
-            logger.info(stored)
-        del self.debug_output
 
     # The Manager is a sub-process, so we must be sure it won't have
     # a socket of your http server alive
@@ -758,6 +753,12 @@ class Daemon(object):
                 self.daemonize()
         else:
             self.write_pid()
+
+        # We can now output some previously silenced debug output
+        logger.debug("Printing stored debug messages prior to our daemonization:")
+        for stored in self.debug_output:
+            logger.debug("- %s", stored)
+        del self.debug_output
 
         logger.info("Creating synchronization manager...")
         self.sync_manager = self._create_manager()
