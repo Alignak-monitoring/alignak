@@ -125,20 +125,19 @@ class template_Daemon_Start():
             # so bypass it and keep default value
             return
 
-    def create_daemon(self, is_daemon=False, do_replace=False):
+    def create_daemon(self, is_daemon=False, do_replace=False, debug_file=None):
         cls = self.daemon_cls
         # is_daemon, do_replace, debug, debug_file
-        return cls(daemons_config[cls], is_daemon, do_replace, False, None)
+        return cls(daemons_config[cls], is_daemon, do_replace, debug_file is not None, debug_file)
 
-    def get_daemon(self, is_daemon=False, do_replace=False, free_port=True,
-                   port=None, local_log=None, daemon_name=None):
+    def get_daemon(self, is_daemon=False, do_replace=False, free_port=True, debug_file=None):
         """
 
         :param free_port: get a free port (True) or use the configuration defined port (False)
         :return:
         """
 
-        d = self.create_daemon(is_daemon, do_replace)
+        d = self.create_daemon(is_daemon, do_replace, debug_file)
 
         # configuration may be "relative" :
         # some config file reference others with a relative path (from THIS_DIR).
@@ -175,6 +174,44 @@ class template_Daemon_Start():
         daemon.unlink()
         daemon.do_stop()
 
+    def test_debug_config_and_start_and_stop(self):
+        """ Test configuration loaded, daemon started and stopped - daemon in debug mode
+
+        :return:
+        """
+        self.print_header()
+
+        # Start normally
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
+                            debug_file='/tmp/debug-daemon.log')
+        assert d.debug_file == '/tmp/debug-daemon.log'
+        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
+        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+
+        # Update working dir to use temporary
+        d.workdir = tempfile.mkdtemp()
+        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+
+        # Start the daemon
+        self.start_daemon(d)
+        assert os.path.exists(d.pidfile)
+        assert os.path.exists(d.debug_file)
+
+        # Get daemon stratistics
+        stats = d.get_stats_struct()
+        assert 'metrics' in stats
+        assert 'version' in stats
+        assert 'name' in stats
+        assert stats['name'] == d.name
+        assert stats['type'] == d.daemon_type
+        assert 'modules' in stats
+
+        time.sleep(5)
+
+        # Stop the daemon
+        self.stop_daemon(d)
+        assert not os.path.exists(d.pidfile)
+
     def test_default_config_and_start_and_stop(self):
         """ Test configuration loaded, daemon started and stopped - default daemon configuration
 
@@ -184,6 +221,7 @@ class template_Daemon_Start():
 
         # Start normally
         d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert d.debug_file == None
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -237,8 +275,8 @@ class template_Daemon_Start():
         self.print_header()
 
         # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
-                            port=10000, local_log='my_logs', daemon_name=self.daemon_name)
+        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert d.debug_file == None
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -293,6 +331,7 @@ class template_Daemon_Start():
 
         # Start normally
         d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert d.debug_file == None
         assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
         assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
 
@@ -515,10 +554,13 @@ class Test_Arbiter_Start(template_Daemon_Start, AlignakTest):
     daemon_cls = Arbiter
     daemon_name = 'my_arbiter'
 
-    def create_daemon(self, is_daemon=False, do_replace=False):
+    def create_daemon(self, is_daemon=False, do_replace=False, debug_file=None):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
+        # verify is always False
         return cls(daemons_config[cls], alignak_config,
-                   False, True, False, False, None, 'arbiter-master', None)
+                   is_daemon, do_replace, False,
+                   debug_file is not None, debug_file,
+                   'arbiter-master', None)
 
 #############################################################################
