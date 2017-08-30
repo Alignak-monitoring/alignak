@@ -2163,38 +2163,38 @@ class Config(Item):  # pylint: disable=R0904,R0902
         valid = True
         if self.use_regexp_matching:
             msg = "use_regexp_matching parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'obsess_over_hosts', None):
             msg = "obsess_over_hosts parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'ochp_command', None):
             msg = "ochp_command parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'ochp_timeout', None):
             msg = "ochp_timeout parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'obsess_over_services', None):
             msg = "obsess_over_services parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'ocsp_command', None):
             msg = "ocsp_command parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.add_warning(msg)
             valid &= False
         if getattr(self, 'ocsp_timeout', None):
             msg = "ocsp_timeout parameter is not managed."
-            logger.error(msg)
-            self.configuration_errors.append(msg)
+            logger.warning(msg)
+            self.configuration_warnings.append(msg)
             valid &= False
         return valid
 
@@ -2220,9 +2220,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Globally unmanaged parameters
         if not self.read_config_silent:
             logger.info('Checking global parameters...')
-        if not self.check_error_on_hard_unmanaged_parameters():
-            valid = False
-            self.add_error("Check global parameters failed")
+
+        # Old Nagios legacy unmanaged parameters
+        self.check_error_on_hard_unmanaged_parameters()
 
         # If we got global event handlers, they should be valid
         if self.global_host_event_handler and not self.global_host_event_handler.is_valid():

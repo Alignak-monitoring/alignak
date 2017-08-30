@@ -548,7 +548,7 @@ class TestConfig(AlignakTest):
         self.show_logs()
 
         # Error messages
-        assert len(self.configuration_errors) == 12
+        assert len(self.configuration_errors) == 6
         self.assert_any_cfg_log_match(re.escape(
             "Your configuration parameters 'status_file = /tmp/status' and "
             "'object_cache_file = /tmp/cache' need to use an external module such "
@@ -576,6 +576,25 @@ class TestConfig(AlignakTest):
             "Your configuration parameter 'command_file = /tmp/command' needs to use an "
             "external module such as 'logs' but I did not found one!"
         ))
+
+        # Warning messages
+        assert len(self.configuration_warnings) == 9
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property obsess_over_hosts type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property ochp_command type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property obsess_over_services type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property ocsp_command type because "
+            "it is not in Config object properties"
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "use_regexp_matching parameter is not managed."
         ))
@@ -591,8 +610,52 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "obsess_over_services parameter is not managed."
         ))
+
+    def test_nagios_parameters_2(self):
+        """Configuration has some old nagios parameters - some are not raising a configuration error
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/config/deprecated_configuration_warning.cfg')
+        assert self.conf_is_correct
+        self.show_logs()
+
+        # Error messages
+        assert len(self.configuration_errors) == 0
+
+        # Warning messages
+        assert len(self.configuration_warnings) == 9
         self.assert_any_cfg_log_match(re.escape(
-            "Check global parameters failed"
+            "Guessing the property obsess_over_hosts type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property ochp_command type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property obsess_over_services type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property ocsp_command type because "
+            "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "use_regexp_matching parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ochp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "obsess_over_hosts parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "ocsp_command parameter is not managed."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "obsess_over_services parameter is not managed."
         ))
 
     def test_broken_configuration_2(self):
