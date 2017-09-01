@@ -315,31 +315,20 @@ class Contact(Item):
         # Oh, nobody..so NO :)
         return False
 
-    def get_notification_commands(self, notifways, n_type, command_name=False):
+    def get_notification_commands(self, notifways, n_type):
         """Get notification commands for object type
 
-        :param notifways: list of alignak.objects.NotificationWay objects
-        :type notifways: NotificationWays
         :param n_type: object type (host or service)
-        :type n_type: string
-        :param command_name: True to update the inner property with the name of the command,
-                             False to update with the Command objects list
-        :type command_name: bool
+        :type n_type: object
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
         res = []
-
+        # service_notification_commands for service
+        notif_commands_prop = n_type + '_notification_commands'
         for notifway_id in self.notificationways:
             notifway = notifways[notifway_id]
-            res.extend(notifway.get_notification_commands(n_type))
-
-        # Update inner notification commands property with command name or command
-        if command_name:
-            setattr(self, n_type + '_notification_commands', [c.get_name() for c in res])
-        else:
-            setattr(self, n_type + '_notification_commands', res)
-
+            res.extend(getattr(notifway, notif_commands_prop))
         return res
 
     def is_correct(self):
@@ -465,12 +454,8 @@ class Contacts(CommandCallItems):
                     err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
                           (i.__class__.my_type, i.get_name(), nw_name)
                     i.configuration_errors.append(err)
-            # Get the list, but first make elements unique
+            # Get the list, but first make elements uniq
             i.notificationways = list(set(new_notificationways))
-
-            # Update the contact host/service notification commands properties
-            i.get_notification_commands(notificationways, 'host', command_name=True)
-            i.get_notification_commands(notificationways, 'service', command_name=True)
 
     def explode(self, contactgroups, notificationways):
         """Explode all contact for each contactsgroup
