@@ -1,0 +1,3243 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_ALIGNAK-GRAPHITE-MY_GRAPHITE",
+      "label": "alignak-graphite-my-graphite",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "graphite",
+      "pluginName": "Graphite"
+    }
+  ],
+  "__requires": [
+    {
+      "type": "panel",
+      "id": "singlestat",
+      "name": "Singlestat",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "graph",
+      "name": "Graph",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "3.1.1"
+    },
+    {
+      "type": "datasource",
+      "id": "graphite",
+      "name": "Graphite",
+      "version": "1.0.0"
+    }
+  ],
+  "id": null,
+  "title": "Alignak internal metrics - 1.0",
+  "tags": [
+    "alignak",
+    "statsd"
+  ],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "hideControls": false,
+  "sharedCrosshair": true,
+  "rows": [
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "150px",
+      "panels": [
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 23,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 1,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": false
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.statsd.numStats"
+            }
+          ],
+          "thresholds": "",
+          "title": "Number of statistics",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 88,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 1,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.statsd.metrics_received.count"
+            }
+          ],
+          "thresholds": "",
+          "title": "Metrics received",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 89,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "span": 1,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.statsd.packets_received.count"
+            }
+          ],
+          "thresholds": "",
+          "title": "Packets received",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "aliasColors": {
+            "Processing time": "#6ED0E0"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 1,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Processing time",
+              "yaxis": 1
+            }
+          ],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias(scaleToSeconds($statsd_prefix.statsd.processing_time, 1), 'Processing time')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Processing time",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "Metrics received count": "#BF1B00"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 8,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 3,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Metrics received count"
+            }
+          ],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.statsd.bad_lines_seen.count, 'Metrics received count')"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Bad lines seen",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "Metrics received count": "#BF1B00",
+            "Timestamp lag": "#EAB839"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 90,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 3,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Metrics received count"
+            }
+          ],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.statsd.timestamp_lag, 'Timestamp lag')"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Timestamp lag",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "Calculation time": "#6ED0E0"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 7,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.statsd.graphiteStats.calculationtime, 'Calculation time')"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Graphite calculation time",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "Calculation time": "#6ED0E0",
+            "Flush time": "#6ED0E0"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 91,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.statsd.graphiteStats.flush_time, 'Flush time')"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Graphite flush time",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
+        },
+        {
+          "aliasColors": {
+            "Calculation time": "#6ED0E0",
+            "Flush length": "#6ED0E0"
+          },
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 92,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 3,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.statsd.graphiteStats.flush_length, 'Flush length')"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Flush length",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "transparent": false,
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": false,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "StatsD metrics"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "100px",
+      "panels": [
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 37,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": false
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.configuration.hosts",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers hosts",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 54,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": false
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.configuration.services",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers services",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 118,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": false
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.configuration.contacts",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers contacts",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        }
+      ],
+      "showTitle": true,
+      "title": "Scheduler objects"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "100px",
+      "panels": [
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 120,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.launched",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers launched checks",
+          "transparent": false,
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 119,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.active.executed",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers active checks",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 121,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.passive.executed",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers passive checks",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 38,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.executed",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers executed checks",
+          "transparent": false,
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 122,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 2,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": false,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.result.total",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers checks results",
+          "transparent": false,
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        }
+      ],
+      "showTitle": true,
+      "title": "Scheduler checks"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "100px",
+      "panels": [
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 39,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": true,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.notification.total.launched",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers sent notifications",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "current"
+        },
+        {
+          "cacheTimeout": null,
+          "colorBackground": false,
+          "colorValue": false,
+          "colors": [
+            "rgba(245, 54, 54, 0.9)",
+            "rgba(237, 129, 40, 0.89)",
+            "rgba(50, 172, 45, 0.97)"
+          ],
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "format": "none",
+          "gauge": {
+            "maxValue": 100,
+            "minValue": 0,
+            "show": false,
+            "thresholdLabels": false,
+            "thresholdMarkers": true
+          },
+          "id": 123,
+          "interval": null,
+          "isNew": true,
+          "links": [],
+          "mappingType": 1,
+          "mappingTypes": [
+            {
+              "name": "value to text",
+              "value": 1
+            },
+            {
+              "name": "range to text",
+              "value": 2
+            }
+          ],
+          "maxDataPoints": 100,
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "nullText": null,
+          "postfix": "",
+          "postfixFontSize": "50%",
+          "prefix": "",
+          "prefixFontSize": "50%",
+          "rangeMaps": [
+            {
+              "from": "null",
+              "text": "N/A",
+              "to": "null"
+            }
+          ],
+          "repeat": "schedulers",
+          "span": 4,
+          "sparkline": {
+            "fillColor": "rgba(31, 118, 189, 0.18)",
+            "full": true,
+            "lineColor": "rgb(31, 120, 193)",
+            "show": true
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "target": "$statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.notification.total.timeout",
+              "textEditor": false
+            }
+          ],
+          "thresholds": "",
+          "title": "Scheduler $schedulers timed-out notifications",
+          "type": "singlestat",
+          "valueFontSize": "80%",
+          "valueMaps": [
+            {
+              "op": "=",
+              "text": "N/A",
+              "value": "null"
+            }
+          ],
+          "valueName": "avg"
+        }
+      ],
+      "showTitle": true,
+      "title": "Scheduler notifications"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "150px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "height": "",
+          "id": 2,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "brokers",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.poller.mean, 'From poller')",
+              "textEditor": true
+            },
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.reactionner.mean, 'From reactionner')",
+              "textEditor": true
+            },
+            {
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.receiver.mean, 'From receiver')",
+              "textEditor": true
+            },
+            {
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.scheduler.mean, 'From scheduler')",
+              "textEditor": true
+            },
+            {
+              "refId": "E",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.arbiter.mean, 'From arbiter')",
+              "textEditor": true
+            },
+            {
+              "refId": "F",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.broker.mean, 'From self')",
+              "textEditor": true
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Broker $brokers, time to get broks",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 5,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "brokers",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.core.put-to-external-queue.mean, 'To external modules')",
+              "textEditor": true
+            },
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.core.manage-broks.mean, 'With internal modules')",
+              "textEditor": true
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Broker $brokers, time to manage broks",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "Brokers metrics"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 6,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-master.core.check-alive.mean, 'Check daemons are alive')",
+              "textEditor": false
+            },
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-master.core.check-dispatch.mean, 'Check configuration dispatch')",
+              "textEditor": false
+            },
+            {
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-master.core.dispatch.mean, 'Dispatch configuration')",
+              "textEditor": false
+            },
+            {
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-master.core.check-bad-dispatch.mean, 'Check correct dispatch')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Arbiter daemons monitoring",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 10,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-master.core.hook.get_objects.mean, 'Get objects hook')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Arbiter get objects",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 11,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.arbiter-$arbiters.core.push-external-commands.mean, 'Push external commands')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Push external commands",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "Arbiters metrics"
+    },
+    {
+      "collapse": true,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 9,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "pollers",
+          "seriesOverrides": [],
+          "span": 6,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "D",
+              "target": "$statsd_prefix.$alignak_prefix.poller-$pollers.core.worker-fork.queue-size",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Poller $pollers - workers queue size",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "Pollers metrics"
+    },
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 29,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": false,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Loop count",
+              "color": "#0A437C",
+              "fill": 0,
+              "yaxis": 2
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.loop.count, 'Loop count')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.loop.duration.mean, 'Loop mean duration')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.loop.duration.lower, 'Loop lower duration')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.loop.duration.upper, 'Loop upper duration')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers loop",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "Count",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 28,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": false,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": true,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Mean duration",
+              "yaxis": 1
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "G",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.core.hook.load_retention.mean, 'Load retention')",
+              "textEditor": false
+            },
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.core.hook.save_retention.mean, 'Save retention')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers retention",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 115,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Loop count",
+              "color": "#0A437C",
+              "fill": 0,
+              "yaxis": 2
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.launched, 'Checks total')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.active.launched, 'Checks active')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.passive.launched, 'Checks passive')",
+              "textEditor": false
+            },
+            {
+              "hide": true,
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.loop.launched, 'Checks loop')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers launched checks",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "Count",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 155,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Results total",
+              "color": "#0A437C",
+              "fill": 0,
+              "yaxis": 2
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.result.done, 'Results done')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.result.inpoller, 'Results in poller')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.result.scheduled, 'Results scheduled')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.check.total.result.total, 'Results total')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers checks results",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "Total",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 117,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Loop count",
+              "color": "#0A437C",
+              "fill": 0,
+              "yaxis": 2
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.eventhandler.total.launched, 'Event handlers total')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.eventhandler.loop.launched, 'Event handlers / loop')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers event handlers",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "Count",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 116,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "schedulers",
+          "seriesOverrides": [
+            {
+              "alias": "Loop count",
+              "color": "#0A437C",
+              "fill": 0,
+              "yaxis": 2
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.notification.total.launched, 'Notifications total')",
+              "textEditor": false
+            },
+            {
+              "hide": true,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.notification.total.launched, 'Notifications active')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.scheduler-$schedulers.actions.notification.loop.launched, 'Notifications / loop')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Scheduler $schedulers notifications",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": "",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": "Count",
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "Schedulers metrics"
+    },
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 36,
+          "isNew": true,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "receivers",
+          "seriesOverrides": [],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.core.get-objects-from-queues.mean, 'Get objects from modules')",
+              "textEditor": false
+            },
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.core.push-external-commands.mean, 'Push external commands')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Receiver $receivers timers",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        }
+      ],
+      "showTitle": true,
+      "title": "Receivers metrics"
+    },
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 113,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": false,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "reactionners",
+          "seriesOverrides": [
+            {
+              "alias": "Mean duration",
+              "yaxis": 1
+            }
+          ],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.core.manage-returns.mean, 'Manage returns')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.core.get-new-actions.mean, 'Get new actions')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.core.paused-loop.mean, 'Pause loop')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Reactionner $reactionners main metrics",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 114,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": false,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "reactionners",
+          "seriesOverrides": [
+            {
+              "alias": "Mean duration",
+              "yaxis": 1
+            }
+          ],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.con-init.scheduler.count, 'Connection init')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.con-get-running-id.scheduler.count, 'Connection id')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Reactionner $reactionners connections",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 154,
+          "isNew": true,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": false,
+            "max": true,
+            "min": false,
+            "rightSide": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": false,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 2,
+          "points": true,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "Mean duration",
+              "yaxis": 1
+            }
+          ],
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.core.worker-fork_1.actions-queue-size, 'Actions queue')",
+              "textEditor": false
+            },
+            {
+              "hide": false,
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.reactionner-$reactionners.core.worker-fork_1.results-queue-size, 'Results queue')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Reactionner $reactionners queues",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 1,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "ms",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": false
+            }
+          ]
+        }
+      ],
+      "repeat": "reactionners",
+      "scopedVars": {
+        "reactionners": {
+          "selected": false,
+          "text": "master",
+          "value": "master"
+        }
+      },
+      "showTitle": true,
+      "title": "Reactionners metrics"
+    }
+  ],
+  "time": {
+    "from": "now/d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "alignak-statsd",
+          "value": "alignak-statsd"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "StatsD Graphite prefix",
+        "multi": false,
+        "name": "statsd_prefix",
+        "options": [
+          {
+            "selected": true,
+            "text": "alignak-statsd",
+            "value": "alignak-statsd"
+          }
+        ],
+        "query": "alignak-statsd",
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "my-alignak",
+          "value": "my-alignak"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Alignak prefix",
+        "multi": false,
+        "name": "alignak_prefix",
+        "options": [
+          {
+            "selected": true,
+            "text": "my-alignak",
+            "value": "my-alignak"
+          }
+        ],
+        "query": "my-alignak",
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "arbiters",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/arbiter-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "schedulers",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/scheduler-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "brokers",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/broker-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "pollers",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/poller-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "reactionners",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/reactionner-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {},
+        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": false,
+        "name": "receivers",
+        "options": [],
+        "query": "$statsd_prefix.$alignak_prefix.*",
+        "refresh": 1,
+        "regex": "/receiver-(.*)/",
+        "sort": 0,
+        "tagValuesQuery": null,
+        "tagsQuery": null,
+        "type": "query"
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "refresh": "5m",
+  "schemaVersion": 13,
+  "version": 15,
+  "links": [],
+  "gnetId": null
+}
