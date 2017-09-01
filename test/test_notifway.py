@@ -160,8 +160,6 @@ class TestNotificationWay(AlignakTest):
         for nw in self._sched.notificationways:
             print "\t", nw.notificationway_name
             assert nw.is_correct()
-        # 3 defined NWs and 3 self created NWs
-        assert len(self._sched.notificationways) == 6
 
         email_in_day = self._sched.notificationways.find_by_name('email_in_day')
         assert email_in_day.uuid in contact.notificationways
@@ -173,9 +171,7 @@ class TestNotificationWay(AlignakTest):
         assert 0 == email_in_day.min_business_impact
         assert 5 == sms_the_night.min_business_impact
 
-        print "Contact '%s' notification way(s):" % contact.get_name()
-        # 2 NWs for 'test_contact'
-        assert len(contact.notificationways) == 2
+        print "Contact notification way(s):"
         for nw_id in contact.notificationways:
             nw = self._sched.notificationways[nw_id]
             print "\t %s (or %s)" % (nw.notificationway_name, nw.get_name())
@@ -189,22 +185,6 @@ class TestNotificationWay(AlignakTest):
                 print "\t\t", c.get_name()
             for c in nw.get_notification_commands('service'):
                 print "\t\t", c.get_name()
-
-        print "Contact '%s' commands:" % (contact.get_name())
-        # 2 commands for host notification (one from the NW and one contact defined)
-        assert len(contact.host_notification_commands) == 2
-        # 2 commands for service notification (one from the NW and one contact defined)
-        assert len(contact.service_notification_commands) == 2
-        # Get host notifications commands
-        for c in contact.host_notification_commands:
-            print "\t\tcontact host property:", c.get_name()
-        for c in contact.get_notification_commands(self._sched.notificationways, 'host'):
-            print "\t\tcontact host get_notification_commands:", c.get_name()
-        # Get service notifications commands
-        for c in contact.service_notification_commands:
-            print "\t\tcontact service property:", c.get_name()
-        for c in contact.get_notification_commands(self._sched.notificationways, 'service'):
-            print "\t\tcontact service get_notification_commands:", c.get_name()
 
         contact_simple = self._sched.contacts.find_by_name("test_contact_simple")
         # It's the created notification way for this simple contact
