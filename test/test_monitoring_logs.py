@@ -96,8 +96,8 @@ class TestMonitoringLogs(AlignakTest):
         # Host goes DOWN / HARD
         self.check(host, 2, 'Host is DOWN',
                    [(u'error', u'ACTIVE HOST CHECK: test_host_0;DOWN;HARD;3;Host is DOWN'), (
-                   u'error',
-                   u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is DOWN'),
+                       u'error',
+                       u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is DOWN'),
                     (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN'),
                     (u'error', u'HOST EVENT HANDLER: test_host_0;DOWN;HARD;3;eventhandler')])
 
@@ -164,11 +164,11 @@ class TestMonitoringLogs(AlignakTest):
         self.check(svc, 1, 'Service is WARNING',
                    [(u'warning',
                      u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;SOFT;1;eventhandler'), (
-                    u'warning',
-                    u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'), (
-                    u'warning',
-                    u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;SOFT;1;'
-                    u'Service is WARNING')])
+                        u'warning',
+                        u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'), (
+                        u'warning',
+                        u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;SOFT;1;'
+                        u'Service is WARNING')])
 
         # Service goes warning / HARD
         # Get a service check, an alert and a notification
@@ -179,9 +179,9 @@ class TestMonitoringLogs(AlignakTest):
                     (u'warning',
                      u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;'
                      u'Service is WARNING'), (
-                    u'warning',
-                    u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                    u'WARNING;notify-service;Service is WARNING'),
+                        u'warning',
+                        u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                        u'WARNING;notify-service;Service is WARNING'),
                     (u'warning',
                      u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;HARD;2;eventhandler')])
 
@@ -203,8 +203,8 @@ class TestMonitoringLogs(AlignakTest):
                      u'Service is OK'),
                     (u'info',
                      u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'), (
-                    u'info',
-                    u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK'),
+                        u'info',
+                        u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK'),
                     (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
 
         self.check(svc, 0, 'Service is OK',
@@ -215,20 +215,20 @@ class TestMonitoringLogs(AlignakTest):
         self.check(svc, 2, 'Service is CRITICAL',
                    [(u'error',
                      u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Service is CRITICAL'), (
-                    u'error',
-                    u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler'), (
-                    u'error',
-                    u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;SOFT;1;'
-                    u'Service is CRITICAL')])
+                        u'error',
+                        u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler'), (
+                        u'error',
+                        u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;SOFT;1;'
+                        u'Service is CRITICAL')])
 
         self.check(svc, 2, 'Service is CRITICAL',
                    [(u'error',
                      u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL'), (
-                    u'error',
-                    u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler'), (
-                    u'error',
-                    u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                    u'CRITICAL;notify-service;Service is CRITICAL'),
+                        u'error',
+                        u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler'), (
+                        u'error',
+                        u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                        u'CRITICAL;notify-service;Service is CRITICAL'),
                     (u'error',
                      u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;HARD;2;'
                      u'Service is CRITICAL')])
@@ -239,10 +239,10 @@ class TestMonitoringLogs(AlignakTest):
                      u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
                      u'OK;notify-service;Service is OK'),
                     (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'), (
-                    u'info',
-                    u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'), (
-                    u'info',
-                    u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK')])
+                        u'info',
+                        u'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'), (
+                        u'info',
+                        u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK')])
 
 
         self.check(svc, 0, 'Service OK',
@@ -403,7 +403,15 @@ class TestMonitoringLogs(AlignakTest):
             assert (log_level, log_message) in monitoring_logs
 
     def test_passive_checks_host(self):
-        """ Test logs for external commands - passive host checks
+        """ Test logs for external commands - passive host checks, log disabled """
+        self.passive_checks_host(False)
+
+    def test_passive_checks_host_2(self):
+        """ Test logs for external commands - passive host checks, log enabled """
+        self.passive_checks_host(True)
+
+    def passive_checks_host(self, log_passive_checks):
+        """ Test logs for external commands
 
         :return:
         """
@@ -412,6 +420,9 @@ class TestMonitoringLogs(AlignakTest):
         assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
+
+        # Force the log passive checks configuration parameter
+        self._sched.conf.log_passive_checks = log_passive_checks
 
         # -----------------------------
         # Host part
@@ -461,18 +472,6 @@ class TestMonitoringLogs(AlignakTest):
         # - long output
         # All are separated with a semi-colon
         expected_logs = [
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
-            (u'warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            (u'warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            (u'warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
             (u'error',
              u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
             (u'error',
@@ -482,12 +481,38 @@ class TestMonitoringLogs(AlignakTest):
             (u'error',
              u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead')
         ]
+        if log_passive_checks:
+            expected_logs.extend([
+                (u'warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+                (u'warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+                (u'warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+            ])
+        else:
+            expected_logs.extend([
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now)
+            ])
         for log_level, log_message in expected_logs:
             print("Msg: %s" % log_message)
             assert (log_level, log_message) in monitoring_logs
 
     def test_passive_checks_service(self):
-        """ Test logs for external commands - passive service checks
+        """ Test logs for external commands - passive service checks, log disabled """
+        self.passive_checks_service(False)
+
+    def test_passive_checks_service_2(self):
+        """ Test logs for external commands - passive service checks, log enabled """
+        self.passive_checks_service(True)
+
+    def passive_checks_service(self, log_passive_checks):
+        """ Test logs for external commands
 
         :return:
         """
@@ -496,6 +521,9 @@ class TestMonitoringLogs(AlignakTest):
         assert self.conf_is_correct
 
         self._sched = self.schedulers['scheduler-master'].sched
+
+        # Force the log passive checks configuration parameter
+        self._sched.conf.log_passive_checks = log_passive_checks
 
         now = int(time.time())
 
@@ -563,24 +591,27 @@ class TestMonitoringLogs(AlignakTest):
         # - performance data and
         # - long output
         # All are separated with a semi-colon
-        expected_logs = [
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
-             u'Service is OK|rtt=9999;5;10;0;10000' % now),
-            (u'info',
-             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;Service is OK;;rtt=9999;5;10;0;10000'),
-
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
-             u'Service is OK and have some special characters: àéèüäï'
-             u'|rtt=9999;5;10;0;10000'
-             u'\r\nLong output... also some specials: àéèüäï' % now),
-            (u'info',
-             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;'
-             u'Service is OK and have some special characters: àéèüäï;'
-             u'Long output... also some specials: àéèüäï;'
-             u'rtt=9999;5;10;0;10000')
-        ]
+        if log_passive_checks:
+            expected_logs = [
+                (u'info',
+                 u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;Service is OK;;rtt=9999;5;10;0;10000'),
+                (u'info',
+                 u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;0;'
+                 u'Service is OK and have some special characters: àéèüäï;'
+                 u'Long output... also some specials: àéèüäï;'
+                 u'rtt=9999;5;10;0;10000')
+            ]
+        else:
+            expected_logs = [
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
+                 u'Service is OK|rtt=9999;5;10;0;10000' % now),
+                (u'info',
+                 u'EXTERNAL COMMAND: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;'
+                 u'Service is OK and have some special characters: àéèüäï'
+                 u'|rtt=9999;5;10;0;10000'
+                 u'\r\nLong output... also some specials: àéèüäï' % now),
+            ]
         for log_level, log_message in expected_logs:
             print("Msg: %s" % log_message)
             assert (log_level, log_message) in monitoring_logs
