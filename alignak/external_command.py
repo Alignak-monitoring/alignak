@@ -533,10 +533,18 @@ class ExternalCommandManager:
             return res
 
         if self.mode == 'applyer' and self.conf.log_external_commands:
-            # I am a command dispatcher, notifies to my arbiter
-            brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command.rstrip())
-            # Send a brok to our daemon
-            self.send_an_element(brok)
+            make_a_log = True
+            # #912: only log an external command if it is not a passive check
+            if self.conf.log_passive_checks and res['c_name'] in ['process_host_check_result',
+                                                                  'process_service_check_result']:
+                # Do not log the command
+                make_a_log = False
+
+            if make_a_log:
+                # I am a command dispatcher, notifies to my arbiter
+                brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command.rstrip())
+                # Send a brok to our daemon
+                self.send_an_element(brok)
 
         is_global = res['global']
         if not is_global:
