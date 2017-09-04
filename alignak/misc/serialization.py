@@ -31,6 +31,9 @@ def serialize(obj, no_dump=False):
     """
     Serialize an object.
 
+    Returns a dict containing an `_error` property if a MemoryError happens during the
+    object serialization. See #369.
+
     :param obj: the object to serialize
     :type obj: alignak.objects.item.Item | dict | list | str
     :param no_dump: if True return dict, otherwise return a json
@@ -61,7 +64,15 @@ def serialize(obj, no_dump=False):
     if no_dump:
         return o_dict
 
-    return json.dumps(o_dict, ensure_ascii=False)
+    result = None
+    try:
+        result = json.dumps(o_dict, ensure_ascii=False)
+    except MemoryError:
+        return {'_error': 'Not enough memory on this computer to correctly manage Alignak '
+                          'objects serialization! '
+                          'Sorry for this, please log an issue in the project repository.'}
+
+    return result
 
 
 def unserialize(j_obj, no_load=False):
