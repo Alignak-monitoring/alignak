@@ -51,17 +51,17 @@ class TestConfig(AlignakTest):
         print self.configuration_warnings
         assert len(self.configuration_warnings) == 16
         assert self.configuration_warnings == [
-            u'Guessing the property modules_dir type because it is not in Config object properties',
             u'Guessing the property ca_cert type because it is not in Config object properties',
             u'Guessing the property daemon_enabled type because it is not in Config object properties',
-            u'Guessing the property lock_file type because it is not in Config object properties',
-            u'Guessing the property server_cert type because it is not in Config object properties',
-            u'Guessing the property workdir type because it is not in Config object properties',
             u'Guessing the property hard_ssl_name_check type because it is not in Config object properties',
-            u'Guessing the property server_key type because it is not in Config object properties',
             u'Guessing the property http_backend type because it is not in Config object properties',
             u'Guessing the property local_log type because it is not in Config object properties',
+            u'Guessing the property lock_file type because it is not in Config object properties',
+            u'Guessing the property modules_dir type because it is not in Config object properties',
+            u'Guessing the property server_cert type because it is not in Config object properties',
+            u'Guessing the property server_key type because it is not in Config object properties',
             u'Guessing the property use_ssl type because it is not in Config object properties',
+            u'Guessing the property workdir type because it is not in Config object properties',
             u'Host graphite use/inherit from an unknown template: graphite ! from: cfg/_shinken/hosts/graphite.cfg:1',
             'Guessing the property hostgroup_name type because it is not in Escalation object properties',
             "Guessed the property hostgroup_name type as a <type 'unicode'>",

@@ -1406,5 +1406,5 @@ class Daemon(object):
         logger.info("My pid: %s", os.getpid())
 
         logger.info("My configuration: ")
-        for prop, _ in self.properties.items():
+        for prop, _ in sorted(self.properties.items()):
             logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))

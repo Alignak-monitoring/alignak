@@ -914,7 +914,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         clean_params = self.clean_params(params)
 
         logger.info("Alignak parameters:")
-        for key, value in clean_params.items():
+        for key, value in sorted(clean_params.items()):
             if key in self.properties:
                 val = self.properties[key].pythonize(clean_params[key])
             elif key in self.running_properties:
@@ -932,7 +932,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 val = ToGuessProp.pythonize(clean_params[key])
 
             setattr(self, key, val)
-            logger.info("- : %s = %s", key, val)
+            logger.info("- %s = %s", key, val)
             # Maybe it's a variable as $USER$ or $ANOTHERVATRIABLE$
             # so look at the first character. If it's a $, it's a variable
             # and if it's end like it too
