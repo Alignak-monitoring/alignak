@@ -701,8 +701,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert len(broks) == 0
         # ...but a log
         self.show_logs()
-        self.assert_any_log_match('Passive check result was received for host .*, '
-                                  'but the host could not be found!')
+        self.assert_any_log_match("External command was received for host 'test_host_0', "
+                                  "but the host could not be found!")
 
     def test_unknown_check_result_brok(self):
         """ Unknown check results commands in broks
