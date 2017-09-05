@@ -170,8 +170,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             StringProp(default='', fill_brok=['full_status']),
         'icon_set':
             StringProp(default='', fill_brok=['full_status']),
-        'failure_prediction_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
 
         # Alignak specific
         'poller_tag':

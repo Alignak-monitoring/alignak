@@ -77,10 +77,6 @@ DICT_MODATTR = {
         ModAttr("MODATTR_FLAP_DETECTION_ENABLED", "flap_detection_enabled", 16),
     "flap_detection_enabled":
         ModAttr("MODATTR_FLAP_DETECTION_ENABLED", "flap_detection_enabled", 16),
-    "MODATTR_FAILURE_PREDICTION_ENABLED":
-        ModAttr("MODATTR_FAILURE_PREDICTION_ENABLED", "failure_prediction_enabled", 32),
-    "failure_prediction_enabled":
-        ModAttr("MODATTR_FAILURE_PREDICTION_ENABLED", "failure_prediction_enabled", 32),
     "MODATTR_PERFORMANCE_DATA_ENABLED":
         ModAttr("MODATTR_PERFORMANCE_DATA_ENABLED", "process_performance_data", 64),
     "process_performance_data":

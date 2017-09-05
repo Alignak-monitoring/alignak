@@ -183,8 +183,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
         'event_handlers_enabled':
             BoolProp(default=True),
-        'failure_prediction_enabled':
-            BoolProp(default=False),
         'flap_detection_enabled':
             BoolProp(default=True),
         'notifications_enabled':
@@ -2163,6 +2161,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         valid = True
         if self.use_regexp_matching:
             msg = "use_regexp_matching parameter is not managed."
+            logger.warning(msg)
+            self.add_warning(msg)
+            valid &= False
+        if getattr(self, 'failure_prediction_enabled', None):
+            msg = "failure_prediction_enabled parameter is not managed."
             logger.warning(msg)
             self.add_warning(msg)
             valid &= False

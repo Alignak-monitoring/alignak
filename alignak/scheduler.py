@@ -1736,7 +1736,6 @@ class Scheduler(object):  # pylint: disable=R0902
             "passive_host_checks_enabled": self.conf.accept_passive_host_checks,
             "event_handlers_enabled": self.conf.enable_event_handlers,
             "flap_detection_enabled": self.conf.enable_flap_detection,
-            "failure_prediction_enabled": 0,
             "process_performance_data": self.conf.process_performance_data,
             "modified_host_attributes": 0,
             "modified_service_attributes": 0,
