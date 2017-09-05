@@ -38,19 +38,39 @@ addgroup --system nagios || true
 
 ## Add user to nagios group
 id -Gn $ACCOUNT |grep -E '(^|[[:blank:]])nagios($|[[:blank:]])' >/dev/null ||
-    echo "Adding user '$ACCOUNT' to the nagios users group"
-    adduser $ACCOUNT nagios
+   echo "Adding user '$ACCOUNT' to the nagios users group"
+   adduser $ACCOUNT nagios
 
 ## Create directories with proper permissions
 for i in /usr/local/etc/alignak /usr/local/var/run/alignak /usr/local/var/log/alignak /usr/local/var/lib/alignak /usr/local/var/libexec/alignak
 do
-    mkdir -p $i
-    echo "Setting '$ACCOUNT' ownership on: $i"
-    chown -R $ACCOUNT:$ACCOUNT $i
+   mkdir -p $i
+   echo "Setting '$ACCOUNT' ownership on: $i"
+   chown -R $ACCOUNT:$ACCOUNT $i
 done
 
 echo "Setting file permissions on: /usr/local/etc/alignak"
 find /usr/local/etc/alignak -type f -exec chmod 664 {} +
 find /usr/local/etc/alignak -type d -exec chmod 775 {} +
+
+### Set permissions on alignak-backend settings
+if [ -d "/usr/local/etc/alignak-backend" ]; then
+   echo "Setting '$ACCOUNT' ownership on /usr/local/etc/alignak-backend"
+   chown -R $ACCOUNT:$ACCOUNT /usr/local/etc/alignak-backend
+   
+   echo "Setting file permissions on: /usr/local/etc/alignak-backend"
+   find /usr/local/etc/alignak-backend -type f -exec chmod 664 {} +
+   find /usr/local/etc/alignak-backend -type d -exec chmod 775 {} +
+fi
+
+### Set permissions on alignak-webui settings
+if [ -d "/usr/local/etc/alignak-webui" ]; then
+   echo "Setting '$ACCOUNT' ownership on /usr/local/etc/alignak-webui"
+   chown -R $ACCOUNT:$ACCOUNT /usr/local/etc/alignak-webui
+   
+   echo "Setting file permissions on: /usr/local/etc/alignak-webui"
+   find /usr/local/etc/alignak-webui -type f -exec chmod 664 {} +
+   find /usr/local/etc/alignak-webui -type d -exec chmod 775 {} +
+fi
 
 echo "Terminated"
