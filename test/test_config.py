@@ -578,7 +578,11 @@ class TestConfig(AlignakTest):
         ))
 
         # Warning messages
-        assert len(self.configuration_warnings) == 9
+        assert len(self.configuration_warnings) == 11
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property failure_prediction_enabled type because "
+            "it is not in Config object properties"
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "Guessing the property obsess_over_hosts type because "
             "it is not in Config object properties"
@@ -625,7 +629,11 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 0
 
         # Warning messages
-        assert len(self.configuration_warnings) == 9
+        assert len(self.configuration_warnings) == 11
+        self.assert_any_cfg_log_match(re.escape(
+            "Guessing the property failure_prediction_enabled type because "
+            "it is not in Config object properties"
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "Guessing the property obsess_over_hosts type because "
             "it is not in Config object properties"
@@ -641,6 +649,9 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "Guessing the property ocsp_command type because "
             "it is not in Config object properties"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "failure_prediction_enabled parameter is not managed."
         ))
         self.assert_any_cfg_log_match(re.escape(
             "use_regexp_matching parameter is not managed."
