@@ -602,11 +602,11 @@ class ExternalCommandManager:
                 if brok:
                     self.send_an_element(brok)
                 else:
-                    logger.warning("External command received for the host '%s', "
+                    logger.warning("External command was received for the host '%s', "
                                    "but the host could not be found! Command is: %s",
                                    host_name, command)
             else:
-                logger.warning("Passive check result was received for host '%s', "
+                logger.warning("External command was received for host '%s', "
                                "but the host could not be found!", host_name)
 
     @staticmethod
